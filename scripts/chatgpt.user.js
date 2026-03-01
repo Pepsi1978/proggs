@@ -14,6 +14,7 @@
 // @connect      generativelanguage.googleapis.com
 // @connect      *.googleapis.com
 // @connect      googleapis.com
+// @connect      api.groq.com
 // @updateURL    https://raw.githubusercontent.com/Pepsi1978/tampermonkey-skripte/main/scripts/chatgpt.user.js
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/tampermonkey-skripte/main/scripts/chatgpt.user.js
 // ==/UserScript==
@@ -76,14 +77,46 @@
     alert("🧹 Gemini API-Key gelöscht.");
   }
 
+  // ============================================================
+  // 🔑 GROQ KEY (für Whisper Speech-to-Text)
+  // ============================================================
+  function getGroqKey() {
+    let key = _tmGetValue("groqKey", "") || "";
+    key = String(key).trim();
+    if (!key) {
+      key = (prompt("Bitte Groq API-Key eingeben (kostenlos auf groq.com, wird nur in Tampermonkey gespeichert):") || "").trim();
+      if (key) _tmSetValue("groqKey", key);
+    }
+    return key;
+  }
+
+  function setGroqKey() {
+    let key = (prompt("Neuen Groq API-Key eingeben:") || "").trim();
+    if (key) {
+      _tmSetValue("groqKey", key);
+      alert("✅ Groq API-Key gespeichert.");
+    } else {
+      alert("⚠️ Kein Key eingegeben.");
+    }
+  }
+
+  function clearGroqKey() {
+    _tmSetValue("groqKey", "");
+    alert("🧹 Groq API-Key gelöscht.");
+  }
+
   (function registerMenus() {
     try {
       if (typeof GM_registerMenuCommand === "function") {
         GM_registerMenuCommand("🔑 Gemini-Key setzen/ändern", setGeminiKey);
         GM_registerMenuCommand("🧹 Gemini-Key löschen", clearGeminiKey);
+        GM_registerMenuCommand("🎙️ Groq-Key setzen/ändern", setGroqKey);
+        GM_registerMenuCommand("🗑️ Groq-Key löschen", clearGroqKey);
       } else if (typeof GM !== "undefined" && typeof GM.registerMenuCommand === "function") {
         GM.registerMenuCommand("🔑 Gemini-Key setzen/ändern", setGeminiKey);
         GM.registerMenuCommand("🧹 Gemini-Key löschen", clearGeminiKey);
+        GM.registerMenuCommand("🎙️ Groq-Key setzen/ändern", setGroqKey);
+        GM.registerMenuCommand("🗑️ Groq-Key löschen", clearGroqKey);
       }
     } catch {}
   })();
@@ -152,11 +185,6 @@ Speichere nur diese Punkte als dauerhafte Erinnerungen, exakt als einfache Sätz
 
 
   const CFG = {
-    speechLang: "de-DE",
-    interimResults: true,
-
-    stopGraceMs: 260,
-    debounceMsAfterStop: 120,
     minCharsForRewrite: 6,
 
     requestTimeoutMs: 120000, // 120s
@@ -169,31 +197,15 @@ Speichere nur diese Punkte als dauerhafte Erinnerungen, exakt als einfache Sätz
 
     previewChars: 140,
 
-    // Diktat-Bereinigung / Grammatik
+    // Diktat-Bereinigung / Grammatik (nur noch für Prompt-Builder)
     grammarMaxOutputTokens: 8192,
     grammarChunkChars: 3500,
     grammarTruncationRatio: 0.85,
-
-    // Cleanup-Charakter:
     dictationCleanupMode: "balanced",
 
-    // Overlap-Prevention beim Live-Diktat
-    overlapMaxChars: isMobileAndroid ? 200 : 80,  // ANDROID-FIX v2
-
-    // Zusätzliche Duplikat-Bremse für WebKit/Edge Android
-    recentFinalMemory: 8,
-    minRepeatSnippetChars: isMobileAndroid ? 40 : 12,
-    tailCompareChars: isMobileAndroid ? 120 : 260,
-
-    // Lokale Vorfilter
-    removeDisfluenciesLocally: true,
-    collapseDuplicateWordsLocally: true,
-
-    // 🔧 Speech Auto-Restart
-    autoRestart: true,
-    autoRestartBaseDelayMs: isMobileAndroid ? 800 : 250,
-    autoRestartMaxDelayMs: isMobileAndroid ? 4000 : 2000,
-    maxConsecutiveRestarts: 50 // Schutz gegen Endlosschleifen bei kaputter Audio-Session
+    // Groq Whisper Speech-to-Text
+    whisperModel: "whisper-large-v3",
+    whisperLang: "de"
   };
 
   // ============================================================
@@ -208,8 +220,7 @@ Speichere nur diese Punkte als dauerhafte Erinnerungen, exakt als einfache Sätz
     repairMaxOutputTokens: 1024
   };
 
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const supportedSpeech = !!SpeechRecognition;
+  const supportedSpeech = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
   // ── SVG-Icons für Mikrofon-Button (Stil: claude-code-spracheingabe) ──
   const MIC_ICON = {
@@ -594,117 +605,6 @@ Speichere nur diese Punkte als dauerhafte Erinnerungen, exakt als einfache Sätz
     dispatchReactInput(el, "insertReplacementText", text);
   }
 
-  // ============================================================
-  // Diktat: lokaler Vorfilter (Fülllaute/Doppler/Overlap)
-  // ============================================================
-  function removeDisfluencies(t) {
-    return t.replace(/\b(ähm?|öhm?|hm+|hmm+|mhm+)\b/gi, "");
-  }
-
-  function collapseDuplicateWords(t) {
-    try {
-      return t.replace(/\b(\p{L}{2,})(?:\s+\1\b)+/giu, "$1");
-    } catch {
-      return t.replace(/\b([A-Za-zÄÖÜäöüß]{2,})(?:\s+\1\b)+/gi, "$1");
-    }
-  }
-
-  function normalizeSpaces(t) {
-    return String(t || "")
-      .replace(/[ \t]+/g, " ")
-      .replace(/\s+([,.;:!?])/g, "$1")
-      .replace(/([,.;:!?])(\S)/g, "$1 $2")
-      .trim();
-  }
-
-  function postProcessDictationSnippet(t) {
-    let s = cleanText(t);
-    if (!s) return "";
-    if (CFG.removeDisfluenciesLocally) s = removeDisfluencies(s);
-    if (CFG.collapseDuplicateWordsLocally) s = collapseDuplicateWords(s);
-    s = normalizeSpaces(s);
-    return s;
-  }
-
-  function longestOverlapSuffixPrefix(a, b, maxLen = 80, minLen = 12) {
-    const A = normalizeSpaces(cleanText(a));
-    const B = normalizeSpaces(cleanText(b));
-    const m = Math.min(maxLen, A.length, B.length);
-    for (let len = m; len >= minLen; len--) {
-      const as = A.slice(-len).toLowerCase();
-      const bs = B.slice(0, len).toLowerCase();
-      if (as === bs) return len;
-    }
-    return 0;
-  }
-
-  function stripOverlap(curText, newText) {
-    // ANDROID-FIX v4: Mindest-Overlap-Länge auf 20 erhöht.
-    // Problem: Min=12 erkannte Einzelwörter (z.B. "funktionieren"=13 Zeichen)
-    // als Overlap zwischen Feld-Ende und neuem Snippet-Anfang → Wort wurde
-    // stumm gelöscht. Wort blieb für ~10 weitere Sätze verschluckt, bis genug
-    // neuer Text im Feld stand und die letzten 13 Zeichen nicht mehr das Wort
-    // enthielten.
-    // Fix: Min=20 → Wörter <20 Zeichen lösen keinen False-Positive aus.
-    //      Cumulative-Transkript-Duplikate (>>20 Zeichen) bleiben korrekt erkannt.
-    const minOv = isMobileAndroid ? 50 : 12;
-    const ov = longestOverlapSuffixPrefix(curText, newText, CFG.overlapMaxChars || 80, minOv);
-    if (!ov) return newText;
-    return newText.slice(ov).trimStart();
-  }
-
-  function normalizeForSpeechDedupe(s) {
-    const base = String(s || "")
-      .toLowerCase()
-      .replace(/[\u2018\u2019']/g, "");
-
-    try {
-      return base.replace(/[^\p{L}\p{N}\s]+/gu, " ").replace(/\s+/g, " ").trim();
-    } catch {
-      return base.replace(/[^a-z0-9äöüß\s]+/gi, " ").replace(/\s+/g, " ").trim();
-    }
-  }
-
-  function trimRepeatedPrefix(prev, current) {
-    const p = cleanText(prev);
-    const c = cleanText(current);
-    if (!p || !c) return c;
-
-    const pLower = p.toLowerCase();
-    const cLower = c.toLowerCase();
-    if (cLower.startsWith(pLower)) {
-      return c.slice(p.length).trimStart();
-    }
-
-    const pNorm = normalizeForSpeechDedupe(p);
-    const cNorm = normalizeForSpeechDedupe(c);
-    if (pNorm && cNorm && cNorm.startsWith(pNorm) && c.length > p.length) {
-      return c.slice(p.length).trimStart();
-    }
-
-    return c;
-  }
-
-  function appearsAlreadyInTail(baseText, snippet) {
-    // Android/Edge: Mindestl\u00e4nge 40 Zeichen (vs. 12 auf Desktop).
-    // Verhindert, dass kurze W\u00f6rter die Android als separate isFinal-
-    // Ergebnisse liefert, f\u00e4lschlich als Duplikat verschluckt werden.
-    const minChars = isMobileAndroid
-      ? Math.max(CFG.minRepeatSnippetChars || 12, 40)
-      : (CFG.minRepeatSnippetChars || 12);
-    if (!snippet || snippet.length < minChars) return false;
-
-    const tailLen = isMobileAndroid
-      ? Math.min(CFG.tailCompareChars || 260, 120)
-      : (CFG.tailCompareChars || 260);
-    const tail = String(baseText || "").slice(-tailLen);
-
-    const tailNorm = normalizeForSpeechDedupe(tail);
-    const snippetNorm = normalizeForSpeechDedupe(snippet);
-    if (!tailNorm || !snippetNorm) return false;
-
-    return tailNorm.includes(snippetNorm);
-  }
 
   // ============================================================
   // ✅ PASTE-APPLY (ohne execCommand selectAll/paste → kein Ganzseiten-Markieren)
@@ -790,37 +690,6 @@ Speichere nur diese Punkte als dauerhafte Erinnerungen, exakt als einfache Sätz
     return false;
   }
 
-  function insertText(el, text) {
-    if (!el || !text) return;
-
-    const cur = readPromptText(el);
-
-    let add = postProcessDictationSnippet(text);
-    add = stripOverlap(cur, add);
-    add = normalizeSpaces(add);
-
-    if (!add) return;
-
-    const spacer = cur && !cur.endsWith(" ") && !cur.endsWith("\n") ? " " : "";
-    const combined = cleanText(cur + spacer + add);
-
-    if (isTextInput(el)) {
-      setNativeValue(el, combined);
-      try { el.setSelectionRange(combined.length, combined.length); } catch {}
-      dispatchReactInput(el, "insertText", add);
-      return;
-    }
-
-    try {
-      el.focus();
-      // insertText ist hier ok; falls es hakt, fallback: komplett setzen
-      document.execCommand("insertText", false, spacer + add);
-      dispatchReactInput(el, "insertText", add);
-    } catch {
-      try { setContentEditablePreserveNewlines(el, combined); } catch {}
-      dispatchReactInput(el, "insertReplacementText", combined);
-    }
-  }
 
   // ============================================================
   // Gemini Calls
@@ -1495,297 +1364,101 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
   }
 
   // ============================================================
-  // Speech Flow (Auto-Restart bis User stoppt)
+  // Groq Whisper Speech-to-Text (MediaRecorder + Groq API)
   // ============================================================
-  let rec = null;
-
   let wantsRecording = false;
-  let stopRequested = false;
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let audioStream = null;
 
-  let stopTimer = null;
-  let runTicket = 0;
-
-  let restartCount = 0;
-  let restartAlreadyScheduled = false;
-  let restartTimer = null;
-  let lastFinalTranscript = "";
-  let recentFinalNorm = [];
-  let lastFinalTranscriptTime = 0;   // ANDROID-FIX: Alter des letzten Dedup-Snapshots
-  let consecutiveNoSpeech    = 0;   // ANDROID-FIX: Zähler aufeinanderfolgender no-speech
-  let processedResults = new Map(); // ANDROID-FIX v3: Duplikat-Tracking (Index→Transkript)
-  let sttWatchdogTimer = null;      // ANDROID-FIX: Watchdog erkennt "Stuck"-Zustand
-
-  function resetRestartCounterOnGoodInput() {
-    restartCount = 0;
-    consecutiveNoSpeech = 0; // ANDROID-FIX
-  }
-
-  function resetSpeechDedupeState() {
-    lastFinalTranscript = "";
-    recentFinalNorm = [];
-    lastFinalTranscriptTime = 0;   // ANDROID-FIX
-    processedResults.clear();       // ANDROID-FIX v3
-  }
-
-  function rememberFinalNorm(snippet) {
-    const n = normalizeForSpeechDedupe(snippet);
-    if (!n) return;
-    recentFinalNorm.push(n);
-    const maxKeep = CFG.recentFinalMemory || 8;
-    if (recentFinalNorm.length > maxKeep) {
-      recentFinalNorm = recentFinalNorm.slice(-maxKeep);
-    }
-  }
-
-  function wasRecentlySeenFinal(snippet) {
-    const n = normalizeForSpeechDedupe(snippet);
-    if (!n) return false;
-    // Android/Edge: kurze Fragmente (einzelne Wörter / sehr kurze Phrasen)
-    // sollen nicht global weggededuped werden, sonst lassen sie sich nach
-    // einem „Verschlucken“ nicht mehr erneut einfügen.
-    if (isMobileAndroid && n.length < 25) return false;
-    return recentFinalNorm.includes(n);
-  }
-
-  // ANDROID-FIX: Watchdog erkennt Stuck-Zustand (keine Events >25s) und erzwingt
-  // einen harten Reset. Betrifft nur Android (isMobileAndroid = true).
-  function resetSttWatchdog() {
-    clearTimeout(sttWatchdogTimer);
-    if (!isMobileAndroid) return;
-    sttWatchdogTimer = setTimeout(() => {
-      if (!wantsRecording || stopRequested) return;
-      console.warn("STT Watchdog: Keine Events seit 25 s → Hard Reset");
-      if (rec) { try { rec.stop(); } catch {} rec = null; }
-      restartCount = 0; consecutiveNoSpeech = 0;
-      lastFinalTranscript = ""; recentFinalNorm = []; processedResults.clear();
-      scheduleAutoRestart("watchdog");
-    }, 25000);
-  }
-
-  function scheduleAutoRestart(reason = "") {
-    if (!CFG.autoRestart) return;
-    if (!wantsRecording) return;
-    if (stopRequested) return;
-
-    if (restartCount >= (CFG.maxConsecutiveRestarts || 50)) {
-      wantsRecording = false;
-      setMicState("error", "Auto-Restart abgebrochen (zu viele Restarts)");
-      showToast("\u26a0\ufe0f Spracheingabe gestoppt (zu viele Neustarts).\nBitte erneut auf den Mikrofon-Button tippen.", 9000);
-      setTimeout(() => setMicState("idle"), 4000);
+  function groqTranscribe(audioBlob) {
+    const groqKey = getGroqKey();
+    if (!groqKey) {
+      setMicState("error", "Groq API-Key fehlt");
+      showToast("\u274c Groq API-Key fehlt.\nTampermonkey-Men\u00fc \u2192 Groq-Key setzen.", 8000);
+      setTimeout(() => setMicState("idle"), 3000);
       return;
     }
 
-    clearTimeout(restartTimer);
+    const formData = new FormData();
+    formData.append("file", audioBlob, "recording.webm");
+    formData.append("model", CFG.whisperModel);
+    formData.append("language", CFG.whisperLang);
+    formData.append("response_format", "text");
 
-    // BUG-FIX Android/Edge: onerror("no-speech") + onend feuern BEIDE scheduleAutoRestart
-    // f\u00fcr dieselbe Session \u2192 restartCount w\u00fcrde doppelt erh\u00f6ht.
-    // Das Flag verhindert das Doppel-Increment.
-    if (!restartAlreadyScheduled) {
-      // ANDROID-FIX: no-speech ist normal bei Sprechpausen → kein Delay-Anstieg.
-      if (reason !== "no-speech" || !isMobileAndroid) restartCount++;
-      restartAlreadyScheduled = true;
-    }
-
-    const base = CFG.autoRestartBaseDelayMs || 250;
-    const max  = CFG.autoRestartMaxDelayMs  || 2000;
-    // ANDROID-FIX: no-speech → sofort (<400ms) neu starten statt exponentiell
-    const delay = (reason === "no-speech" && isMobileAndroid)
-      ? Math.min(400, base)
-      : Math.min(max, base + restartCount * 120);
-
-    restartTimer = setTimeout(() => {
-      restartAlreadyScheduled = false;
-      if (!wantsRecording || stopRequested) return;
-      tryStartRecognition(true, reason);
-    }, delay);
-  }
-
-  async function runGrammarRewrite() {
-    const myTicket = ++runTicket;
-
-    await sleep(CFG.stopGraceMs);
-
-    const el = getUserTargetEditable();
-    if (!el) {
-      setMicState("error", "Eingabefeld nicht gefunden");
-      showToast("❌ Eingabefeld nicht gefunden. Tipp: erst ins gewünschte Feld klicken.", 6500);
-      setTimeout(() => setMicState("idle"), 2500);
+    const req = gmRequest();
+    if (!req) {
+      setMicState("error", "GM Request API fehlt");
+      showToast("\u274c GM Request API fehlt (Tampermonkey Grants).", 7000);
+      setTimeout(() => setMicState("idle"), 3000);
       return;
     }
 
-    const snap = readPromptText(el);
-    if (snap.length < CFG.minCharsForRewrite) {
-      setMicState("idle");
-      showToast(`Text zu kurz (${snap.length}) – keine Bereinigung gestartet.`, 3000);
-      return;
-    }
+    setMicState("working", "Whisper transkribiert\u2026");
+    showToast("\ud83c\udfa7 Whisper transkribiert\u2026", 2000);
 
-    setMicState("working", "Gemini bereinigt…");
-    showToast("Gemini-Bereinigung läuft…", 1600);
+    req({
+      method: "POST",
+      url: "https://api.groq.com/openai/v1/audio/transcriptions",
+      headers: { "Authorization": "Bearer " + groqKey },
+      data: formData,
+      timeout: CFG.requestTimeoutMs,
 
-    clearTimeout(stopTimer);
-    stopTimer = setTimeout(async () => {
-      try {
-        const fixedRaw = await geminiRewriteGrammarSmart(snap, (i, n) => {
-          setMicState("working", `Gemini bereinigt… Teil ${i}/${n}`);
-        });
-
-        if (myTicket !== runTicket) return;
-
-        const fixed = cleanText(fixedRaw);
-        const preview = fixed.replace(/\s+/g, " ").slice(0, CFG.previewChars);
-        showToast("💾 Gemini Output (Vorschau):\n" + preview + (fixed.length > CFG.previewChars ? " …" : ""), 3500);
-
-        if (!fixed || fixed.length < CFG.minCharsForRewrite) {
-          setMicState("idle");
-          showToast("Gemini hat keinen nutzbaren Text zurückgegeben.", 4500);
+      onload: async (r) => {
+        if (r.status !== 200) {
+          let msg = (r.responseText || "").slice(0, 400) || ("HTTP " + r.status);
+          try { const j = JSON.parse(r.responseText); if (j?.error?.message) msg = j.error.message; } catch {}
+          setMicState("error", msg);
+          showToast("\u274c Groq Fehler:\n" + msg, 9000);
+          setTimeout(() => setMicState("idle"), 3000);
           return;
         }
 
-        if (fixed === snap) {
+        const text = (r.responseText || "").trim();
+        if (!text) {
           setMicState("idle");
-          showToast("⚠️ Gemini hat exakt denselben Text zurückgegeben (keine Änderungen).", 5000);
+          showToast("\u26a0\ufe0f Keine Sprache erkannt.", 3000);
           return;
         }
 
-        const target = getUserTargetEditable() || el;
-        const ok = await setViaPaste(target, fixed);
-        if (!ok) {
-          setMicState("error", "Eingabefeld hat Text nicht übernommen");
-          showToast("❌ Eingabefeld hat den Gemini-Text nicht übernommen.", 6500);
+        const el = getUserTargetEditable();
+        if (!el) {
+          setMicState("error", "Kein Eingabefeld");
+          showToast("\u274c Eingabefeld nicht gefunden.", 5000);
           setTimeout(() => setMicState("idle"), 2500);
           return;
         }
 
-        setMicState("idle");
-        showToast("✅ Bereinigt & übernommen.", 1800);
-      } catch (e) {
-        const msg = String(e || "Unbekannter Fehler");
-        console.warn("Gemini Fehler:", msg);
-        setMicState("error", msg);
-        showToast("❌ Gemini Fehler:\n" + msg, 10000);
-        setTimeout(() => setMicState("idle"), 2500);
+        const cur = readPromptText(el);
+        const spacer = cur && !cur.endsWith(" ") && !cur.endsWith("\n") ? " " : "";
+        const combined = cur + spacer + text;
+
+        const ok = await setViaPaste(el, combined);
+        if (ok) {
+          setMicState("idle");
+          const preview = text.length > 80 ? text.slice(0, 80) + "\u2026" : text;
+          showToast("\u2705 " + preview, 3000);
+        } else {
+          setMicState("error", "Text nicht \u00fcbernommen");
+          showToast("\u274c Eingabefeld hat Text nicht \u00fcbernommen.", 5000);
+          setTimeout(() => setMicState("idle"), 2500);
+        }
+      },
+
+      onerror: () => {
+        setMicState("error", "Netzwerk-Fehler");
+        showToast("\u274c Netzwerk-Fehler bei Groq API.\nHinweise: @connect, Adblock/Privacy, VPN/Proxy.", 7000);
+        setTimeout(() => setMicState("idle"), 3000);
+      },
+      ontimeout: () => {
+        setMicState("error", "Timeout");
+        showToast("\u274c Groq API Timeout.", 5000);
+        setTimeout(() => setMicState("idle"), 3000);
       }
-    }, CFG.debounceMsAfterStop);
+    });
   }
 
-  function buildRecognitionInstance() {
-    const r = new SpeechRecognition();
-    r.lang = CFG.speechLang;
-    r.continuous = true;
-    r.interimResults = CFG.interimResults ?? true;
-
-    r.onresult = (e) => {
-      resetRestartCounterOnGoodInput();
-      resetSttWatchdog(); // ANDROID-FIX: Watchdog zurücksetzen
-      const curP = getUserTargetEditable();
-      if (curP) rememberEditable(curP);
-
-      const target = curP || lastUserEditable || findPrompt();
-      if (!target) return;
-
-      // ANDROID/EDGE-FIX v3: Map-Tracking ersetzt lastProcessedResultIdx.
-      // Problem: lastProcessedResultIdx blockierte Refinements (gleicher Index,
-      //          verbesserter Text von Edge/Android) → letztes Wort verschluckt.
-      // Fix: Map trackt (Index→Transkript). Gleiches Paar → skip. Neuer Text → verarbeiten.
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) {
-          const raw = cleanText(e.results[i][0].transcript);
-          if (!raw) continue;
-          if (processedResults.get(i) === raw) continue; // Exakt-Duplikat → skip
-          processedResults.set(i, raw);
-          if (processedResults.size > 60) processedResults.delete(processedResults.keys().next().value);
-
-          // ANDROID-FIX: lastFinalTranscript läuft ab wenn >15s alt.
-          // Verhindert, dass uralte Dedup-Daten neuen Text fälschlich verschlucken.
-          const _now = Date.now();
-          if (_now - lastFinalTranscriptTime > 15000) { lastFinalTranscript = ""; }
-
-          let t = trimRepeatedPrefix(lastFinalTranscript, raw);
-          if (!t && raw) {
-            lastFinalTranscript = raw; lastFinalTranscriptTime = _now;
-            continue;
-          }
-
-          const currentText = readPromptText(target);
-          if (wasRecentlySeenFinal(t) || appearsAlreadyInTail(currentText, t)) {
-            lastFinalTranscript = raw; lastFinalTranscriptTime = _now;
-            continue;
-          }
-
-          insertText(target, t);
-          rememberFinalNorm(t);
-          lastFinalTranscript = raw; lastFinalTranscriptTime = _now;
-        }
-      }
-    };
-
-    r.onerror = (e) => {
-      const err = String(e?.error || "speech-error");
-      console.warn("Speech error:", err);
-
-      // ANDROID-FIX: no-speech zählen → ≥8 in Folge ohne Input = Stuck-State → Hard Reset
-      if (err === "no-speech" && isMobileAndroid) {
-        consecutiveNoSpeech++;
-        if (consecutiveNoSpeech >= 8) {
-          console.warn("STT: " + consecutiveNoSpeech + "x no-speech → Hard Reset");
-          consecutiveNoSpeech = 0; restartCount = 0;
-          lastFinalTranscript = ""; recentFinalNorm = []; processedResults.clear();
-        }
-      }
-
-      const restartable = ["no-speech", "aborted", "network"].includes(err);
-      const fatal = ["not-allowed", "service-not-allowed", "audio-capture"].includes(err);
-
-      if (fatal) {
-        wantsRecording = false;
-        stopRequested = false;
-        try { r.stop(); } catch {}
-        setMicState("error", err);
-        showToast("❌ Speech Fehler: " + err + "\nHinweis: Mikrofon-Rechte, Gerät, oder Browser-Einstellungen prüfen.", 9000);
-        return;
-      }
-
-      if (restartable && wantsRecording && !stopRequested) {
-        showToast("ℹ️ Speech pausiert (" + err + ") – Auto-Restart…", 2500);
-        scheduleAutoRestart(err);
-        return;
-      }
-
-      wantsRecording = false;
-      stopRequested = false;
-      try { r.stop(); } catch {}
-      setMicState("error", err);
-      showToast("❌ Speech Fehler: " + err, 6500);
-      setTimeout(() => setMicState("idle"), 2500);
-    };
-
-    r.onend = () => {
-      rec = null;
-      clearTimeout(sttWatchdogTimer); // ANDROID-FIX
-
-      if (stopRequested) {
-        stopRequested = false;
-        wantsRecording = false;
-        runGrammarRewrite();
-        return;
-      }
-
-      if (wantsRecording && CFG.autoRestart) {
-        scheduleAutoRestart("onend");
-        setMicState("listening");
-        return;
-      }
-
-      wantsRecording = false;
-      stopRequested = false;
-      setMicState("idle");
-    };
-
-    return r;
-  }
-
-  function tryStartRecognition(isRestart = false, reason = "") {
+  function startListening() {
     if (!supportedSpeech) return;
 
     const t = getUserTargetEditable();
@@ -1795,68 +1468,73 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
       rememberEditable(t);
     }
 
-    // BUG-FIX Android/Edge: veraltete Dedup-Listen beim Neustart leeren.
-    // Verhindert, dass Phrasen aus vorigen Sessions f\u00e4lschlicherweise
-    // als Duplikat eingestuft und verschluckt werden.
-    if (isRestart) {
-      recentFinalNorm = [];
-      // ANDROID-FIX v2: lastFinalTranscript bei Restart leeren.
-      // BUG: Session 1 endet mit "X" → lastFinalTranscript="X".
-      //      Session 2: isFinal("X ist toll") → startsWith("X") → slice → "ist toll".
-      //      "X" wird verschluckt! stripOverlap() in insertText() fängt kumulative
-      //      Transkript-Duplikate ab (bis overlapMaxChars Zeichen).
-      lastFinalTranscript    = "";
-      lastFinalTranscriptTime = 0;
-    }
-    processedResults.clear();    // ANDROID-FIX v3: Map-Reset für neue Session
-    consecutiveNoSpeech    = 0;  // ANDROID-FIX
-
-    try {
-      rec = buildRecognitionInstance();
-      rec.start();
-      resetSttWatchdog(); // ANDROID-FIX: Watchdog starten
-      setMicState("listening");
-      if (!isRestart) {
-        showToast("\uD83C\uDF99\uFE0F Aufnahme l\u00e4uft\u2026 (Stop \u00fcber \u23F9\uFE0F)", 1500);
-      } else {
-        if (reason && reason !== "onend") showToast("\uD83C\uDF99\uFE0F Auto-Restart (" + reason + ") \u2026", 1200);
-      }
-    } catch (e) {
-      console.warn("rec.start failed:", e);
-      scheduleAutoRestart("start-failed");
-    }
-  }
-
-  function startListening() {
-    if (!supportedSpeech) return;
-
     wantsRecording = true;
-    stopRequested = false;
-    restartCount = 0;
-    restartAlreadyScheduled = false;
-    resetSpeechDedupeState();
-    clearTimeout(restartTimer);
-    clearTimeout(sttWatchdogTimer); // ANDROID-FIX
-    consecutiveNoSpeech = 0;        // ANDROID-FIX
+    audioChunks = [];
 
-    tryStartRecognition(false, "");
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        audioStream = stream;
+
+        const mimeType = typeof MediaRecorder.isTypeSupported === "function"
+          ? (MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus"
+            : MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm"
+            : "")
+          : "";
+
+        const options = mimeType ? { mimeType } : {};
+        mediaRecorder = new MediaRecorder(stream, options);
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) audioChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          stream.getTracks().forEach(t => t.stop());
+          audioStream = null;
+
+          if (audioChunks.length === 0) {
+            setMicState("idle");
+            return;
+          }
+
+          const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+          audioChunks = [];
+          groqTranscribe(audioBlob);
+        };
+
+        mediaRecorder.start(1000);
+        setMicState("listening");
+        showToast("\ud83c\udf99\ufe0f Aufnahme l\u00e4uft\u2026 (Stop \u00fcber \u23f9\ufe0f)", 1500);
+      })
+      .catch(err => {
+        wantsRecording = false;
+        setMicState("error", String(err));
+        showToast("\u274c Mikrofon-Zugriff fehlgeschlagen:\n" + String(err), 8000);
+        setTimeout(() => setMicState("idle"), 3000);
+      });
   }
 
   function stopListening() {
-    if (!supportedSpeech) return;
-
-    stopRequested = true;
     wantsRecording = false;
-    clearTimeout(restartTimer);
-    clearTimeout(sttWatchdogTimer); // ANDROID-FIX
 
-    setMicState("working", "Stop… dann Gemini…");
-    try { rec?.stop(); } catch {}
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      setMicState("working", "Aufnahme beendet\u2026");
+      mediaRecorder.stop();
+    } else {
+      if (audioStream) {
+        audioStream.getTracks().forEach(t => t.stop());
+        audioStream = null;
+      }
+      setMicState("idle");
+    }
   }
 
   function toggleMic() {
-    if (!supportedSpeech) return;
-    if (!wantsRecording && !stopRequested) startListening();
+    if (!supportedSpeech) {
+      showToast("\u274c Mikrofon nicht verf\u00fcgbar (getUserMedia).", 5000);
+      return;
+    }
+    if (!wantsRecording) startListening();
     else stopListening();
   }
 
@@ -2146,7 +1824,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
   // ============================================================
   function boot() {
     if (!supportedSpeech) {
-      showToast("SpeechRecognition nicht verfügbar (Chrome/Edge).", 7000);
+      showToast("Mikrofon nicht verfügbar (getUserMedia fehlt).", 7000);
     }
 
     mountOrRepairUI();
