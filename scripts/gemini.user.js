@@ -1471,6 +1471,60 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
   let audioChunks = [];
   let audioStream = null;
 
+  async function runGrammarRewrite(el) {
+    const target = el || getUserTargetEditable();
+    if (!target) { setMicState("idle"); return; }
+
+    const snap = readPromptText(target);
+    if (snap.length < CFG.minCharsForRewrite) {
+      setMicState("idle");
+      return;
+    }
+
+    setMicState("working", "Gemini bereinigt…");
+    showToast("Gemini-Bereinigung läuft…", 1600);
+
+    try {
+      const fixedRaw = await geminiRewriteGrammarSmart(snap, (i, n) => {
+        setMicState("working", `Gemini bereinigt… Teil ${i}/${n}`);
+      });
+
+      const fixed = cleanText(fixedRaw);
+      const preview = fixed.replace(/\s+/g, " ").slice(0, CFG.previewChars);
+      showToast("💾 Gemini Output (Vorschau):\n" + preview + (fixed.length > CFG.previewChars ? " …" : ""), 3500);
+
+      if (!fixed || fixed.length < CFG.minCharsForRewrite) {
+        setMicState("idle");
+        showToast("Gemini hat keinen nutzbaren Text zurückgegeben.", 4500);
+        return;
+      }
+
+      if (fixed === snap) {
+        setMicState("idle");
+        showToast("⚠️ Gemini hat exakt denselben Text zurückgegeben (keine Änderungen).", 5000);
+        return;
+      }
+
+      const finalTarget = getUserTargetEditable() || target;
+      const ok = await setViaPaste(finalTarget, fixed);
+      if (!ok) {
+        setMicState("error", "Eingabefeld hat Text nicht übernommen");
+        showToast("❌ Eingabefeld hat den Gemini-Text nicht übernommen.", 6500);
+        setTimeout(() => setMicState("idle"), 2500);
+        return;
+      }
+
+      setMicState("idle");
+      showToast("✅ Bereinigt & übernommen.", 1800);
+    } catch (e) {
+      const msg = String(e || "Unbekannter Fehler");
+      console.warn("Gemini Fehler:", msg);
+      setMicState("error", msg);
+      showToast("❌ Gemini Fehler:\n" + msg, 10000);
+      setTimeout(() => setMicState("idle"), 2500);
+    }
+  }
+
   function groqTranscribe(audioBlob) {
     const groqKey = getGroqKey();
     if (!groqKey) {
@@ -1535,9 +1589,9 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
 
         const ok = await setViaPaste(el, combined);
         if (ok) {
-          setMicState("idle");
           const preview = text.length > 80 ? text.slice(0, 80) + "…" : text;
           showToast("✅ " + preview, 3000);
+          runGrammarRewrite(el);
         } else {
           setMicState("error", "Text nicht übernommen");
           showToast("❌ Eingabefeld hat Text nicht übernommen.", 5000);
