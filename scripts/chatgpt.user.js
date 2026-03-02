@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         ChatGPT V.1.2.3
+// @name         ChatGPT V.1.2.4
 // @namespace    https://chatgpt.com/
-// @version      1.2.3
+// @version      1.2.4
 // @description  Speech-to-Text + Gemini-Diktat-Bereinigung (DE) auf ChatGPT. Mic-Button unten rechts. Zwei Prompt-Builder Buttons (Frank + für jedermann) über dem Mic. Memory-Button links neben dem Mic. Kein stilles Fallback. Mit Output-Preview. Fix: kein "SelectAll" auf ganzer Seite + Memory/Builder immer ins Composer-Feld.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
