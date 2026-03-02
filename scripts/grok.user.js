@@ -1415,7 +1415,13 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
             interimT += event.results[i][0].transcript;
           }
         }
-        updateLivePreview(finalT, interimT);
+        // Live-Text direkt ins Eingabefeld schreiben
+        const el = getUserTargetEditable();
+        if (el) {
+          const preview = finalT + interimT;
+          const spacer = textBeforeSpeech && !textBeforeSpeech.endsWith(" ") && !textBeforeSpeech.endsWith("\n") ? " " : "";
+          setViaPaste(el, textBeforeSpeech + spacer + preview);
+        }
       };
 
       speechRecognition.onerror = (event) => {
@@ -1431,7 +1437,6 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
       };
 
       speechRecognition.start();
-      createLivePreview();
     } catch (e) {
       console.log("[STT] Web Speech API nicht verfügbar:", e);
       speechRecognition = null;

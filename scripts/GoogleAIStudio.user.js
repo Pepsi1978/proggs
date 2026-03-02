@@ -1367,53 +1367,9 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
   let livePreviewEl = null;
   let textBeforeSpeech = "";
 
-  // ── Live-Preview Overlay ──
-  function createLivePreview() {
-    removeLivePreview();
-    livePreviewEl = document.createElement("div");
-    livePreviewEl.id = "stt-live-preview";
-    livePreviewEl.innerHTML =
-      '<div class="stt-pv-label">\u{1F3A4} Live-Vorschau</div>' +
-      '<div class="stt-pv-text">\u2026</div>';
-    document.body.appendChild(livePreviewEl);
-  }
-
-  function updateLivePreview(finalText, interimText) {
-    if (!livePreviewEl) return;
-    const box = livePreviewEl.querySelector(".stt-pv-text");
-    if (!box) return;
-    box.innerHTML = "";
-    if (finalText) {
-      const s = document.createElement("span");
-      s.className = "stt-pv-final";
-      s.textContent = finalText;
-      box.appendChild(s);
-    }
-    if (interimText) {
-      const s = document.createElement("span");
-      s.className = "stt-pv-interim";
-      s.textContent = (finalText ? " " : "") + interimText;
-      box.appendChild(s);
-    }
-    if (!finalText && !interimText) {
-      box.textContent = "\u2026";
-    }
-    box.scrollTop = box.scrollHeight;
-  }
-
-  function setLivePreviewWaiting() {
-    if (!livePreviewEl) return;
-    const box = livePreviewEl.querySelector(".stt-pv-text");
-    if (!box) return;
-    box.innerHTML = '<span class="stt-pv-waiting">Whisper transkribiert\u2026</span>';
-  }
-
-  function removeLivePreview() {
-    if (livePreviewEl) {
-      livePreviewEl.remove();
-      livePreviewEl = null;
-    }
-  }
+  // Stubs – kein Overlay, Text wird direkt ins Eingabefeld geschrieben
+  function removeLivePreview() {}
+  function setLivePreviewWaiting() {}
 
   function startWebSpeech() {
     if (!supportedWebSpeech) return;
@@ -1434,7 +1390,13 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
             interimT += event.results[i][0].transcript;
           }
         }
-        updateLivePreview(finalT, interimT);
+        // Live-Text direkt ins Eingabefeld schreiben
+        const el = getUserTargetEditable();
+        if (el) {
+          const preview = finalT + interimT;
+          const spacer = textBeforeSpeech && !textBeforeSpeech.endsWith(" ") && !textBeforeSpeech.endsWith("\n") ? " " : "";
+          setViaPaste(el, textBeforeSpeech + spacer + preview);
+        }
       };
 
       speechRecognition.onerror = (event) => {
@@ -1449,7 +1411,6 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
       };
 
       speechRecognition.start();
-      createLivePreview();
     } catch (e) {
       console.log("[STT] Web Speech API nicht verfügbar:", e);
       speechRecognition = null;
