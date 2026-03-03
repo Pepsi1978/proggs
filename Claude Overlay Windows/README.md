@@ -17,6 +17,49 @@ Zusatzfunktion:
 - Python 3.11+
 - Claude Desktop App installiert
 
+## Installation auf einem anderen Windows-Rechner
+
+1. Repository klonen:
+
+```powershell
+git clone https://github.com/Pepsi1978/tampermonkey-skripte.git
+cd "tampermonkey-skripte\Claude Overlay Windows"
+```
+
+2. Virtuelle Umgebung erstellen und aktivieren:
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\activate
+```
+
+3. Abhaengigkeiten installieren:
+
+```powershell
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+4. `.env` erstellen und API-Keys eintragen:
+
+```powershell
+copy .env.example .env
+notepad .env
+```
+
+Mindestens setzen:
+
+- `GROK_API_KEY=...`
+- `GEMINI_API_KEY=...`
+
+5. Watcher starten:
+
+```powershell
+start_watcher.bat
+```
+
+6. Claude Desktop App oeffnen. Das Overlay startet automatisch und beendet sich wieder, wenn Claude geschlossen wird.
+
 ## Installation
 
 1. In den Ordner wechseln:
