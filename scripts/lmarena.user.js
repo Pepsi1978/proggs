@@ -14,6 +14,7 @@
 // @grant        GM_setValue
 // @grant        GM.getValue
 // @grant        GM.setValue
+// @grant        GM_registerMenuCommand
 // @grant        GM_xmlhttpRequest
 // @grant        GM.xmlHttpRequest
 // @connect      generativelanguage.googleapis.com
@@ -70,12 +71,29 @@
     grammarMaxOutputTokens: 8192,
     grammarChunkChars: 3500,
     grammarTruncationRatio: 0.85,
-    dictationCleanupMode: "balanced",
+    autoGeminiCorrection: true,
 
     // Groq Whisper Speech-to-Text
     whisperModel: "whisper-large-v3",
     whisperLang: "de"
   };
+
+  // Gespeicherten Auto-Korrektur-Status laden
+  if (typeof GM_getValue === "function") {
+    CFG.autoGeminiCorrection = GM_getValue("autoGeminiCorrection", true) !== false;
+  }
+
+  // Toggle: Auto-Korrektur ein-/ausschalten (Tampermonkey-Menü)
+  (function() {
+    const reg = typeof GM_registerMenuCommand === "function" ? GM_registerMenuCommand
+      : (typeof GM !== "undefined" ? GM?.registerMenuCommand?.bind(GM) : null);
+    if (!reg) return;
+    reg("🔄 Auto-Korrektur [AN/AUS]", function() {
+      CFG.autoGeminiCorrection = !CFG.autoGeminiCorrection;
+      if (typeof GM_setValue === "function") GM_setValue("autoGeminiCorrection", CFG.autoGeminiCorrection);
+      showToast(CFG.autoGeminiCorrection ? "✅ Auto-Korrektur aktiviert" : "❌ Auto-Korrektur deaktiviert", 3000);
+    });
+  })();
 
   // ============================================================
   // DOMÄNEN-FINDER TUNING
@@ -678,48 +696,32 @@ async function setViaPaste(el, text) {
     return attempt(0);
   }
 
-  // ---- 1) Diktat-Bereinigung + Grammatik Prompt ----
+  // ---- 1) Intentions-basierte Textkorrektur ----
   function buildGrammarPrompt(text) {
-    const mode = (CFG.dictationCleanupMode || "balanced").toLowerCase();
-
-    const modeRules =
-      mode === "aggressive"
-        ? `
-- Entferne auch einzelne Wörter, die im Kontext sehr wahrscheinlich Fehlhörer sind und den Satz entgleisen lassen.
-- Glätte Satzstruktur stärker, aber ohne neue Fakten hinzuzufügen.
-`
-        : mode === "conservative"
-        ? `
-- Entferne nur extrem offensichtliches Kauderwelsch (z.B. Wortfragmente, lautmalerische Silben, unverbundene Tokens).
-- Wenn du unsicher bist, lass lieber stehen als zu viel zu löschen.
-`
-        : `
-- Entferne offensichtliches Kauderwelsch zuverlässig, aber ohne den Text stilistisch umzuschreiben.
-- Korrigiere offensichtliche Fehlhörer nur dann, wenn es genau eine sehr naheliegende Korrektur gibt.
-`;
-
     return `
-Du bist ein deutscher Diktat-Editor.
+Du bist ein deutscher Textredakteur für diktierte Spracheingaben.
 
-AUFGABE (in dieser Reihenfolge):
-1) Bereinige Diktat-Artefakte: entferne Fülllaute (z.B. "äh", "ähm", "öhm", "hm", "mhm").
-2) Entferne Doppler durch Stottern/ASR: doppelte Wörter oder kurze Wiederholungen (z.B. "ich ich", "das das", "und und").
-3) Entferne eindeutig sinnlose Kauderwelsch-Tokens (Wortfragmente, unverbundene Einzelwörter, semantisch nicht anschließbare Einsprengsel).
-4) Korrigiere Grammatik, Satzbau, Zeichensetzung und Groß-/Kleinschreibung.
-5) Erkenne Satzgrenzen korrekt.
+AUFGABE:
+Du erhältst einen diktierten Text (Speech-to-Text). Deine Aufgabe ist es, die **Intention** des Sprechers zu erkennen und den Text so umzuformulieren, dass diese Intention **klar, präzise und sprachlich hochwertig** zum Ausdruck kommt.
 
-MODUS:
-${modeRules.trim()}
+VORGEHEN (in dieser Reihenfolge):
+1) Erkenne die Absicht: Was will der Sprecher mitteilen, fragen, anweisen oder ausdrücken?
+2) Entferne Diktat-Artefakte: Fülllaute ("äh", "ähm", "öhm"), Stotterer, Wortwiederholungen, sinnlose Fragmente.
+3) Formuliere Sätze so um, dass die erkannte Intention **klar und gut lesbar** wird.
+   - Sätze dürfen umstrukturiert werden.
+   - Wortwahl darf verbessert werden.
+   - Satzgrenzen dürfen neu gesetzt werden.
+4) Korrigiere Grammatik, Zeichensetzung und Groß-/Kleinschreibung.
 
-WICHTIG (strikt):
-- Keine neuen Informationen hinzufügen.
-- Keine kreativen Ergänzungen, keine Vermutungen.
-- Keine stilistische Umformulierung: Wortwahl und Struktur so nah wie möglich am Original halten.
-- Wenn ein Wort falsch erkannt wirkt, aber nicht eindeutig reparierbar ist: entferne es lieber, statt zu raten.
+GRENZEN (strikt):
+- Keine neuen Informationen, Fakten oder Inhalte hinzufügen.
+- Keine Vermutungen über nicht Gesagtes.
+- Die Intention des Originals muss vollständig erhalten bleiben.
+- Sprache: Deutsch.
 
 REGEL:
-Gib AUSSCHLIESSLICH den bereinigten Text zurück.
-Keine Kommentare. Keine Erklärungen.
+Gib AUSSCHLIESSLICH den überarbeiteten Text zurück.
+Keine Kommentare. Keine Erklärungen. Kein Präfix.
 
 TEXT:
 ${text}
@@ -728,7 +730,7 @@ ${text}
 
   function geminiRewriteGrammar(text) {
     return geminiGenerate(buildGrammarPrompt(text), {
-      temperature: 0.03,
+      temperature: 0.4,
       maxOutputTokens: CFG.grammarMaxOutputTokens || 8192
     });
   }
@@ -1412,14 +1414,31 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
 
         const base = textBeforeSpeech;
         const spacer = base && !base.endsWith(" ") && !base.endsWith("\n") ? " " : "";
-        const combined = base + spacer + text;
+        let combined = base + spacer + text;
+        let corrected = false;
+
+        // Gemini Intentions-Korrektur (falls aktiviert)
+        if (CFG.autoGeminiCorrection && text.length >= CFG.minCharsForRewrite) {
+          try {
+            setMicState("working", "Gemini korrigiert…");
+            showToast("✨ Gemini korrigiert…", 3000);
+            const result = await geminiRewriteGrammarSmart(text);
+            if (result && result.trim().length > 0) {
+              combined = base + spacer + result.trim();
+              corrected = true;
+            }
+          } catch (err) {
+            console.warn("[STT] Gemini-Korrektur fehlgeschlagen:", err);
+            showToast("⚠️ Gemini-Korrektur fehlgeschlagen. Roher Text wird verwendet.", 4000);
+          }
+        }
 
         const ok = await setViaPaste(el, combined);
         removeLivePreview();
         if (ok) {
           setMicState("idle");
           const preview = text.length > 80 ? text.slice(0, 80) + "…" : text;
-          showToast("✅ " + preview, 3000);
+          showToast(corrected ? "✨ Korrigiert & eingefügt" : ("✅ " + preview), 3000);
         } else {
           setMicState("error", "Text nicht übernommen");
           showToast("❌ Eingabefeld hat Text nicht übernommen.", 5000);

@@ -12,6 +12,7 @@
 // @grant        GM.xmlHttpRequest
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_registerMenuCommand
 // @connect      generativelanguage.googleapis.com
 // @connect      *.googleapis.com
 // @connect      googleapis.com
@@ -68,12 +69,29 @@
     grammarMaxOutputTokens: 8192,
     grammarChunkChars: 3500,
     grammarTruncationRatio: 0.85,
-    dictationCleanupMode: "balanced",
+    autoGeminiCorrection: true,
 
     // Groq Whisper Speech-to-Text
     whisperModel: "whisper-large-v3",
     whisperLang: "de"
   };
+
+  // Gespeicherten Auto-Korrektur-Status laden
+  if (typeof GM_getValue === "function") {
+    CFG.autoGeminiCorrection = GM_getValue("autoGeminiCorrection", true) !== false;
+  }
+
+  // Toggle: Auto-Korrektur ein-/ausschalten (Tampermonkey-Menü)
+  (function() {
+    const reg = typeof GM_registerMenuCommand === "function" ? GM_registerMenuCommand
+      : (typeof GM !== "undefined" ? GM?.registerMenuCommand?.bind(GM) : null);
+    if (!reg) return;
+    reg("🔄 Auto-Korrektur [AN/AUS]", function() {
+      CFG.autoGeminiCorrection = !CFG.autoGeminiCorrection;
+      if (typeof GM_setValue === "function") GM_setValue("autoGeminiCorrection", CFG.autoGeminiCorrection);
+      showToast(CFG.autoGeminiCorrection ? "✅ Auto-Korrektur aktiviert" : "❌ Auto-Korrektur deaktiviert", 3000);
+    });
+  })();
 
   const supportedSpeech = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
@@ -1154,14 +1172,31 @@ ${text}
 
         const base = textBeforeSpeech;
         const spacer = base && !base.endsWith(" ") && !base.endsWith("\n") ? " " : "";
-        const combined = base + spacer + text;
+        let combined = base + spacer + text;
+        let corrected = false;
+
+        // Gemini Intentions-Korrektur (falls aktiviert)
+        if (CFG.autoGeminiCorrection && text.length >= CFG.minCharsForRewrite) {
+          try {
+            setMicState("working", "Gemini korrigiert…");
+            showToast("✨ Gemini korrigiert…", 3000);
+            const result = await geminiRewriteGrammarSmart(text);
+            if (result && result.trim().length > 0) {
+              combined = base + spacer + result.trim();
+              corrected = true;
+            }
+          } catch (err) {
+            console.warn("[STT] Gemini-Korrektur fehlgeschlagen:", err);
+            showToast("⚠️ Gemini-Korrektur fehlgeschlagen. Roher Text wird verwendet.", 4000);
+          }
+        }
 
         const ok = await setViaPaste(el, combined);
         removeLivePreview();
         if (ok) {
           setMicState("idle");
           const preview = text.length > 80 ? text.slice(0, 80) + "…" : text;
-          showToast("✅ " + preview, 3000);
+          showToast(corrected ? "✨ Korrigiert & eingefügt" : ("✅ " + preview), 3000);
         } else {
           setMicState("error", "Text nicht übernommen");
           showToast("❌ Eingabefeld hat Text nicht übernommen.", 5000);
