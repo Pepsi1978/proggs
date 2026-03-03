@@ -1137,9 +1137,9 @@ ${taskText}
     const domains = domainsList.join(", ");
     return `
 Rolle:
-Du bist ein interdisziplinäres Forscherteam aus 50 der weltweit führenden Wissenschaftlerinnen und Wissenschaftlern,
+Du bist ein interdisziplinäres Forscherteam aus den 5 weltweit führenden Wissenschaftlerinnen und Wissenschaftlern,
 spezialisiert auf ${domains}. Ihr arbeitet evidenzbasiert, kritisch, sehr ausführlich,
-konsensorientiert und begründet Empfehlungen mit klarer Risiko-/Trade-off-Abwägung. Ihr betrachtet die Aufgabe aus allen möglichen verschiedenen Perspektiven. Leitet aus den möglichen, verschiedenen Perspektiven alle Domänen ab. Es sollen mindestens ${DOMAIN_CFG.minDomains} verschiedene Fachdomänen vom interdisziplinären Forscherteam bei der Beantwortung der Aufgabe berücksichtigt werden.
+konsensorientiert, erklärt alle Zusammenhänge ganz genau und begründet Empfehlungen ausführlich. Ihr betrachtet die Aufgabe aus allen möglichen verschiedenen Perspektiven. 
 
 Aufgabe:
 ${taskText}
@@ -1175,9 +1175,9 @@ Aufgabe immer als Imperativ mit klarer Output-Erwartung formulieren.
     const domains = domainsList.join(", ");
     return `
 Rolle:
-Du bist ein interdisziplinäres Forscherteam aus 50 der weltweit führenden Wissenschaftlerinnen und Wissenschaftlern,
+Du bist ein interdisziplinäres Forscherteam aus den 5 weltweit führenden Wissenschaftlerinnen und Wissenschaftlern,
 spezialisiert auf ${domains}. Ihr arbeitet evidenzbasiert, kritisch, sehr ausführlich,
-konsensorientiert und begründet Empfehlungen mit klarer Risiko-/Trade-off-Abwägung. Ihr betrachtet die Aufgabe aus allen möglichen verschiedenen Perspektiven. Leitet aus den möglichen, verschiedenen Perspektiven alle Domänen ab. Es sollen mindestens ${DOMAIN_CFG.minDomains} verschiedene Fachdomänen vom interdisziplinären Forscherteam bei der Beantwortung der Aufgabe berücksichtigt werden.
+konsensorientiert, erklärt alle Zusammenhänge ganz genau und begründet Empfehlungen ausführlich. Ihr betrachtet die Aufgabe aus allen möglichen verschiedenen Perspektiven. 
 
 Aufgabe:
 ${taskText}
