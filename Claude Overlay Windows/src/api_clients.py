@@ -93,6 +93,19 @@ def improve_text_with_gemini(
         f"models/{settings.gemini_model}:generateContent"
     )
     params = {"key": settings.gemini_api_key}
+
+    generation_config: Dict[str, Any] = {
+        "maxOutputTokens": 800,
+    }
+
+    # thinkingConfig nur fuer Gemini 3.x Modelle hinzufuegen
+    if "gemini-3" in settings.gemini_model:
+        generation_config["thinkingConfig"] = {
+            "thinkingLevel": settings.gemini_thinking_level,
+        }
+    else:
+        generation_config["temperature"] = 0.2
+
     payload = {
         "contents": [
             {
@@ -100,12 +113,7 @@ def improve_text_with_gemini(
                 "parts": [{"text": prompt}],
             }
         ],
-        "generationConfig": {
-            "maxOutputTokens": 800,
-            "thinkingConfig": {
-                "thinkingLevel": settings.gemini_thinking_level,
-            },
-        },
+        "generationConfig": generation_config,
     }
 
     max_retries = 5

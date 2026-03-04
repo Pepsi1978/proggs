@@ -62,7 +62,7 @@ class Settings:
             ),
             whisper_lang=os.getenv("WHISPER_LANG", "de"),
             gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
-            gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite-preview"),
+            gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
             gemini_thinking_level=os.getenv("GEMINI_THINKING_LEVEL", "MEDIUM"),
             audio_sample_rate=int(os.getenv("AUDIO_SAMPLE_RATE", "16000")),
             audio_channels=int(os.getenv("AUDIO_CHANNELS", "1")),
