@@ -17,12 +17,17 @@ log = logging.getLogger(__name__)
 
 # Win32 API Konstanten
 SW_RESTORE = 9
-GW_OWNER = 4
 WS_EX_TOOLWINDOW = 0x00000080
-WS_EX_APPWINDOW = 0x00040000
 GWL_EXSTYLE = -20
 
 user32 = ctypes.windll.user32
+
+# Callback-Typ global definieren (verhindert Garbage Collection)
+WNDENUMPROC = ctypes.WINFUNCTYPE(
+    ctypes.wintypes.BOOL,
+    ctypes.wintypes.HWND,
+    ctypes.wintypes.LPARAM,
+)
 
 
 def is_claude_running(settings: Settings) -> bool:
@@ -36,24 +41,40 @@ def is_claude_running(settings: Settings) -> bool:
     return False
 
 
-def _find_claude_hwnd(overlay_hwnd: int | None = None) -> int | None:
-    """Findet das Claude Desktop Hauptfenster per win32 EnumWindows.
+def _get_claude_pids(settings: Settings) -> set[int]:
+    """Gibt alle PIDs von Claude-Prozessen zurueck."""
+    pids = set()
+    names = set(settings.claude_process_names)
+    for proc in psutil.process_iter(["name", "pid"]):
+        name = (proc.info.get("name") or "").lower()
+        for candidate in names:
+            if candidate and candidate in name:
+                pids.add(proc.info["pid"])
+    return pids
 
-    Sucht nach sichtbaren Top-Level-Fenstern deren Titel 'Claude' enthaelt,
-    aber schliesst das eigene Overlay-Fenster aus.
+
+def _find_claude_hwnd(overlay_hwnd: int | None = None,
+                      settings: Settings | None = None) -> int | None:
+    """Findet das Claude Desktop Hauptfenster.
+
+    Strategie 1: Suche nach sichtbaren Fenstern mit 'Claude' im Titel.
+    Strategie 2: Suche nach Fenstern die zum Claude.exe Prozess gehoeren.
     """
-    found_hwnd = None
+    results = []
     EXCLUDED_TITLES = {"mic overlay"}
 
+    # Alle sichtbaren Top-Level-Fenster sammeln
     def _enum_callback(hwnd, _lparam):
-        nonlocal found_hwnd
-
-        # Nur sichtbare Fenster
         if not user32.IsWindowVisible(hwnd):
             return True
 
-        # Eigenes Overlay-Fenster ausschliessen
+        # Eigenes Overlay ausschliessen
         if overlay_hwnd and hwnd == overlay_hwnd:
+            return True
+
+        # Toolwindows ausschliessen
+        ex_style = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+        if ex_style & WS_EX_TOOLWINDOW:
             return True
 
         # Fenstertitel lesen
@@ -63,39 +84,52 @@ def _find_claude_hwnd(overlay_hwnd: int | None = None) -> int | None:
 
         buf = ctypes.create_unicode_buffer(length + 1)
         user32.GetWindowTextW(hwnd, buf, length + 1)
-        title = buf.value.lower()
+        title = buf.value
 
-        # Overlay-Titel ausschliessen
-        if title in EXCLUDED_TITLES:
+        if title.lower() in EXCLUDED_TITLES:
             return True
 
-        # Pruefen ob es ein Claude-Fenster ist
-        if "claude" in title:
-            # Toolwindows (kleine Popups) ausschliessen
-            ex_style = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-            if ex_style & WS_EX_TOOLWINDOW:
-                return True
+        # PID des Fensters ermitteln
+        pid = ctypes.wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
 
-            found_hwnd = hwnd
-            return False  # Gefunden, Enumeration stoppen
-
+        results.append((hwnd, title, pid.value))
         return True
 
-    WNDENUMPROC = ctypes.WINFUNCTYPE(
-        ctypes.wintypes.BOOL,
-        ctypes.wintypes.HWND,
-        ctypes.wintypes.LPARAM,
-    )
-    user32.EnumWindows(WNDENUMPROC(_enum_callback), 0)
-    return found_hwnd
+    cb = WNDENUMPROC(_enum_callback)
+    user32.EnumWindows(cb, 0)
+
+    # Strategie 1: Titel enthaelt "claude"
+    for hwnd, title, pid in results:
+        if "claude" in title.lower():
+            log.info("Claude-Fenster gefunden (Titel): hwnd=%s title=%r pid=%s",
+                     hwnd, title, pid)
+            return hwnd
+
+    # Strategie 2: Fenster gehoert zu einem Claude-Prozess
+    if settings:
+        claude_pids = _get_claude_pids(settings)
+        if claude_pids:
+            log.info("Claude PIDs gefunden: %s", claude_pids)
+            # Suche das groesste sichtbare Fenster eines Claude-Prozesses
+            for hwnd, title, pid in results:
+                if pid in claude_pids and title:
+                    log.info("Claude-Fenster gefunden (PID): hwnd=%s title=%r pid=%s",
+                             hwnd, title, pid)
+                    return hwnd
+
+    # Debug: Alle Fenster loggen wenn nichts gefunden
+    log.warning("Claude-Fenster nicht gefunden. Sichtbare Fenster:")
+    for hwnd, title, pid in results[:20]:
+        log.warning("  hwnd=%s pid=%s title=%r", hwnd, pid, title)
+
+    return None
 
 
 def _activate_window(hwnd: int) -> None:
     """Bringt ein Fenster zuverlaessig in den Vordergrund."""
-    # Minimiertes Fenster wiederherstellen
     if user32.IsIconic(hwnd):
         user32.ShowWindow(hwnd, SW_RESTORE)
-
     user32.SetForegroundWindow(hwnd)
 
 
@@ -105,23 +139,25 @@ def _get_shell():
     return win32com.client.Dispatch("WScript.Shell")
 
 
-def insert_text_into_claude(text: str, overlay_hwnd: int | None = None, **_kwargs) -> None:
+def insert_text_into_claude(text: str, overlay_hwnd: int | None = None,
+                            settings: Settings | None = None, **_kwargs) -> None:
     """Fuegt Text an der aktuellen Cursorposition in Claude ein."""
     if not text.strip():
         return
 
-    hwnd = _find_claude_hwnd(overlay_hwnd)
+    hwnd = _find_claude_hwnd(overlay_hwnd, settings)
     if not hwnd:
         # Fallback: AppActivate versuchen
         try:
             shell = _get_shell()
             if shell.AppActivate("Claude"):
+                log.info("Claude via AppActivate gefunden (Fallback)")
                 pyperclip.copy(text)
                 time.sleep(0.3)
                 shell.SendKeys("^v")
                 return
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning("AppActivate Fallback fehlgeschlagen: %s", exc)
         finally:
             try:
                 pythoncom.CoUninitialize()
@@ -143,9 +179,10 @@ def insert_text_into_claude(text: str, overlay_hwnd: int | None = None, **_kwarg
             pass
 
 
-def clear_claude_input(overlay_hwnd: int | None = None, **_kwargs) -> None:
+def clear_claude_input(overlay_hwnd: int | None = None,
+                       settings: Settings | None = None, **_kwargs) -> None:
     """Leert das Eingabefeld in Claude (Ctrl+A, dann Backspace)."""
-    hwnd = _find_claude_hwnd(overlay_hwnd)
+    hwnd = _find_claude_hwnd(overlay_hwnd, settings)
     if not hwnd:
         try:
             shell = _get_shell()

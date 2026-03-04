@@ -399,7 +399,7 @@ class ClaudeOverlayApp:
                 final_text = transcript
 
             overlay_hwnd = self._get_overlay_hwnd()
-            insert_text_into_claude(final_text, overlay_hwnd=overlay_hwnd)
+            insert_text_into_claude(final_text, overlay_hwnd=overlay_hwnd, settings=self.settings)
 
             self.root.after(0, lambda: self._on_pipeline_success())
         except Exception as exc:
@@ -462,7 +462,7 @@ class ClaudeOverlayApp:
     # ------------------------------------------------------------------
     def _clear_input(self) -> None:
         try:
-            clear_claude_input(overlay_hwnd=self._get_overlay_hwnd())
+            clear_claude_input(overlay_hwnd=self._get_overlay_hwnd(), settings=self.settings)
             self._set_status("Feld geleert", COLOR_SUCCESS)
             self.root.after(2000, self._reset_to_idle)
         except Exception as exc:
