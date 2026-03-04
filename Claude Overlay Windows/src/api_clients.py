@@ -103,6 +103,9 @@ def improve_text_with_gemini(
         "generationConfig": {
             "temperature": 0.2,
             "maxOutputTokens": 800,
+            "thinkingConfig": {
+                "thinkingLevel": settings.gemini_thinking_level,
+            },
         },
     }
 
@@ -142,8 +145,18 @@ def improve_text_with_gemini(
 
     data = response.json()
     try:
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
-    except (KeyError, IndexError, TypeError) as exc:
+        parts = data["candidates"][0]["content"]["parts"]
+        # Thinking-Parts ueberspringen (thought: true), nur normalen Text extrahieren
+        text = ""
+        for part in parts:
+            if part.get("thought"):
+                continue
+            if "text" in part:
+                text = part["text"]
+                break
+        if not text:
+            raise ValueError("Kein Text-Part in der Antwort")
+    except (KeyError, IndexError, TypeError, ValueError) as exc:
         raise RuntimeError(f"Unerwartete Gemini-Antwort: {data}") from exc
 
     result = _extract_json_block(text)

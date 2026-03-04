@@ -33,6 +33,7 @@ class Settings:
     whisper_lang: str
     gemini_api_key: str
     gemini_model: str
+    gemini_thinking_level: str
     audio_sample_rate: int
     audio_channels: int
     claude_process_names: List[str]
@@ -61,7 +62,8 @@ class Settings:
             ),
             whisper_lang=os.getenv("WHISPER_LANG", "de"),
             gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
-            gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
+            gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite-preview"),
+            gemini_thinking_level=os.getenv("GEMINI_THINKING_LEVEL", "medium"),
             audio_sample_rate=int(os.getenv("AUDIO_SAMPLE_RATE", "16000")),
             audio_channels=int(os.getenv("AUDIO_CHANNELS", "1")),
             claude_process_names=process_names,
