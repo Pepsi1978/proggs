@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import json
 import re
+import sys
+import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Callable, Dict, Optional
 
 import requests
 
 from config import Settings
+
+# Retry-faehige HTTP-Statuscodes
+_RETRYABLE_STATUS_CODES = {429, 500, 503}
 
 
 def transcribe_with_grok(audio_path: Path, settings: Settings) -> str:
@@ -67,7 +72,11 @@ def _extract_json_block(text: str) -> Dict[str, Any]:
     raise ValueError("Keine JSON-Struktur in Gemini-Antwort gefunden.")
 
 
-def improve_text_with_gemini(transcript: str, settings: Settings) -> Dict[str, Any]:
+def improve_text_with_gemini(
+    transcript: str,
+    settings: Settings,
+    status_callback: Optional[Callable[[str], None]] = None,
+) -> Dict[str, Any]:
     """Sendet den transkribierten Text an die Gemini API zur Intentionserkennung und Textverbesserung."""
     prompt = (
         "Du bist ein Sprachassistent fuer Claude Code. "
@@ -97,8 +106,39 @@ def improve_text_with_gemini(transcript: str, settings: Settings) -> Dict[str, A
         },
     }
 
-    response = requests.post(url, params=params, json=payload, timeout=120)
-    response.raise_for_status()
+    max_retries = 5
+    delays = [2, 4, 8, 16, 32]
+    last_status = 0
+
+    for attempt in range(max_retries + 1):
+        response = requests.post(url, params=params, json=payload, timeout=120)
+
+        if response.ok:
+            break
+
+        last_status = response.status_code
+
+        if last_status in _RETRYABLE_STATUS_CODES and attempt < max_retries:
+            wait = delays[attempt]
+            if status_callback:
+                status_callback(f"API Retry {attempt + 1}/{max_retries} ({wait}s)")
+            print(
+                f"[Retry] Gemini {last_status} - Versuch {attempt + 1}/{max_retries}, "
+                f"warte {wait}s...",
+                file=sys.stderr,
+            )
+            time.sleep(wait)
+            continue
+
+        # Nicht retrybar oder alle Versuche aufgebraucht
+        if last_status == 429:
+            raise RuntimeError("Gemini API ueberlastet (Rate Limit) - alle Versuche fehlgeschlagen.")
+        elif last_status == 503:
+            raise RuntimeError("Gemini API nicht erreichbar - alle Versuche fehlgeschlagen.")
+        elif last_status == 500:
+            raise RuntimeError("Gemini API Serverfehler - alle Versuche fehlgeschlagen.")
+        else:
+            raise RuntimeError(f"Gemini API Fehler {last_status}")
 
     data = response.json()
     try:
