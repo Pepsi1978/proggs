@@ -98,7 +98,17 @@ def improve_text_with_gemini(transcript: str, settings: Settings) -> Dict[str, A
     }
 
     response = requests.post(url, params=params, json=payload, timeout=120)
-    response.raise_for_status()
+
+    if not response.ok:
+        status = response.status_code
+        if status == 429:
+            raise RuntimeError("Gemini API ueberlastet (Rate Limit). Bitte kurz warten.")
+        elif status == 503:
+            raise RuntimeError("Gemini API voruebergehend nicht erreichbar. Bitte spaeter versuchen.")
+        elif status == 500:
+            raise RuntimeError("Gemini API interner Serverfehler. Bitte erneut versuchen.")
+        else:
+            raise RuntimeError(f"Gemini API Fehler {status}")
 
     data = response.json()
     try:

@@ -300,7 +300,16 @@ class ClaudeOverlayApp:
     def _on_pipeline_error(self, msg: str) -> None:
         self.is_processing = False
         self.canvas.itemconfig(self.mic_circle, fill=COLOR_ERROR)
-        self._set_status("Fehler", COLOR_ERROR)
+        # Kurze Fehlermeldung im Overlay, volle Meldung im Terminal
+        if "Rate Limit" in msg or "429" in msg:
+            short = "API ueberlastet - warte kurz"
+        elif "503" in msg or "nicht erreichbar" in msg:
+            short = "API nicht erreichbar"
+        elif "Fenster wurde nicht gefunden" in msg:
+            short = "Claude nicht gefunden"
+        else:
+            short = "Fehler"
+        self._set_status(short, COLOR_ERROR)
         print(f"[Fehler] Pipeline: {msg}", file=sys.stderr)
         self.root.after(4000, self._reset_to_idle)
 
@@ -356,9 +365,16 @@ class ClaudeOverlayApp:
 def main() -> None:
     settings = Settings.load()
 
+    # Auf Claude Desktop warten (max 5 Minuten beim Autostart)
     if not is_claude_running(settings):
-        time.sleep(0.8)
-        return
+        print("Warte auf Claude Desktop...", file=sys.stderr)
+        for _ in range(60):
+            time.sleep(5)
+            if is_claude_running(settings):
+                break
+        else:
+            print("Claude Desktop nicht gestartet. Beende.", file=sys.stderr)
+            return
 
     app = ClaudeOverlayApp(settings)
     app.run()
