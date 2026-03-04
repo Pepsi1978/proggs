@@ -92,9 +92,9 @@ class ClaudeOverlayApp:
         total_w = d + self.BTN_GAP + d + self.PADDING * 2
         total_h = d + self.STATUS_HEIGHT + self.PADDING * 2
 
-        screen_w = self.root.winfo_screenwidth()
-        x = screen_w - total_w - 24
-        y = 24
+        screen_h = self.root.winfo_screenheight()
+        x = 24
+        y = screen_h - total_h - 80
         self.root.geometry(f"{total_w}x{total_h}+{x}+{y}")
 
         # ----- Canvas -----
