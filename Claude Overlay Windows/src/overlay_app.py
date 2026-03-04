@@ -28,6 +28,8 @@ COLOR_ERASER_IDLE = "#444444"
 COLOR_ERASER_HOVER = "#FF9800"
 COLOR_CLOSE_IDLE = "#333333"
 COLOR_CLOSE_HOVER = "#D73A49"
+COLOR_GEMINI_ON = "#43A047"
+COLOR_GEMINI_OFF = "#555555"
 COLOR_TEXT = "#FFFFFF"
 COLOR_STATUS = "#AAAAAA"
 TRANSPARENT = "magenta"
@@ -52,6 +54,7 @@ class ClaudeOverlayApp:
         )
         self.is_recording = False
         self.is_processing = False
+        self.gemini_enabled = True
         self._drag_data = {"x": 0, "y": 0}
 
         # ----- Fenster -----
@@ -116,8 +119,22 @@ class ClaudeOverlayApp:
             eraser_cx, eraser_cy, text="\U0001F9F9", font=eraser_font, fill=COLOR_TEXT,
         )
 
-        # ----- Beenden-Button (kleines X oben rechts) -----
+        # ----- Gemini-Toggle (kleines "G" oben links) -----
         cr = self.CLOSE_RADIUS
+        gemini_cx = cr + 6
+        gemini_cy = cr + 6
+
+        self.gemini_circle = self.canvas.create_oval(
+            gemini_cx - cr, gemini_cy - cr, gemini_cx + cr, gemini_cy + cr,
+            fill=COLOR_GEMINI_ON, outline="",
+        )
+
+        gemini_font = tkfont.Font(family="Segoe UI", size=8, weight="bold")
+        self.gemini_text = self.canvas.create_text(
+            gemini_cx, gemini_cy, text="G", font=gemini_font, fill=COLOR_TEXT,
+        )
+
+        # ----- Beenden-Button (kleines X oben rechts) -----
         close_cx = total_w - cr - 6
         close_cy = cr + 6
 
@@ -142,6 +159,7 @@ class ClaudeOverlayApp:
         # ----- Hitboxen speichern -----
         self._mic_bbox = (mic_cx - r, mic_cy - r, mic_cx + r, mic_cy + r)
         self._eraser_bbox = (eraser_cx - r, eraser_cy - r, eraser_cx + r, eraser_cy + r)
+        self._gemini_bbox = (gemini_cx - cr - 2, gemini_cy - cr - 2, gemini_cx + cr + 2, gemini_cy + cr + 2)
         self._close_bbox = (close_cx - cr - 2, close_cy - cr - 2, close_cx + cr + 2, close_cy + cr + 2)
 
         # ----- Events -----
@@ -191,6 +209,8 @@ class ClaudeOverlayApp:
     def _on_click(self, event: tk.Event) -> None:
         if self._in_bbox(event.x, event.y, self._close_bbox):
             self._quit()
+        elif self._in_bbox(event.x, event.y, self._gemini_bbox):
+            self._toggle_gemini()
         elif self._in_bbox(event.x, event.y, self._mic_bbox):
             self._toggle_recording()
         elif self._in_bbox(event.x, event.y, self._eraser_bbox):
@@ -204,6 +224,13 @@ class ClaudeOverlayApp:
         else:
             self.canvas.itemconfig(self.close_circle, fill=COLOR_CLOSE_IDLE)
             self.canvas.itemconfig(self.close_text, fill="#888888")
+
+        # Gemini-Toggle Hover
+        if self._in_bbox(event.x, event.y, self._gemini_bbox):
+            self.canvas.itemconfig(self.gemini_text, fill=COLOR_TEXT)
+        else:
+            base = COLOR_TEXT if self.gemini_enabled else "#888888"
+            self.canvas.itemconfig(self.gemini_text, fill=base)
 
         if self.is_recording or self.is_processing:
             return
@@ -234,6 +261,21 @@ class ClaudeOverlayApp:
         x = self.root.winfo_x() + dx
         y = self.root.winfo_y() + dy
         self.root.geometry(f"+{x}+{y}")
+
+    # ------------------------------------------------------------------
+    # Gemini-Toggle
+    # ------------------------------------------------------------------
+    def _toggle_gemini(self) -> None:
+        self.gemini_enabled = not self.gemini_enabled
+        if self.gemini_enabled:
+            self.canvas.itemconfig(self.gemini_circle, fill=COLOR_GEMINI_ON)
+            self.canvas.itemconfig(self.gemini_text, fill=COLOR_TEXT)
+            self._set_status("Gemini AN", COLOR_GEMINI_ON)
+        else:
+            self.canvas.itemconfig(self.gemini_circle, fill=COLOR_GEMINI_OFF)
+            self.canvas.itemconfig(self.gemini_text, fill="#888888")
+            self._set_status("Gemini AUS", COLOR_STATUS)
+        self.root.after(2000, self._reset_to_idle)
 
     # ------------------------------------------------------------------
     # Statustext
@@ -306,14 +348,17 @@ class ClaudeOverlayApp:
             self.root.after(0, lambda: self._set_status("Transkribiere...", COLOR_PROCESSING))
             transcript = transcribe_with_grok(audio_path, self.settings)
 
-            self.root.after(0, lambda: self._set_status("Verbessere Text...", COLOR_PROCESSING))
-            result = improve_text_with_gemini(
-                transcript,
-                self.settings,
-                status_callback=self._update_status_from_thread,
-            )
+            if self.gemini_enabled:
+                self.root.after(0, lambda: self._set_status("Verbessere Text...", COLOR_PROCESSING))
+                result = improve_text_with_gemini(
+                    transcript,
+                    self.settings,
+                    status_callback=self._update_status_from_thread,
+                )
+                final_text = result["verbesserter_text"]
+            else:
+                final_text = transcript
 
-            final_text = result["verbesserter_text"]
             overlay_hwnd = self._get_overlay_hwnd()
             insert_text_into_claude(final_text, overlay_hwnd=overlay_hwnd)
 
