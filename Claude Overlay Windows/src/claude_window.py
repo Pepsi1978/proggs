@@ -129,7 +129,11 @@ def is_claude_running(settings: Settings) -> bool:
 def _switch_and_paste() -> None:
     """Wechselt zum vorherigen Fenster und fuegt ein via SendInput."""
     _send_key_combo(VK_MENU, VK_TAB)
-    time.sleep(0.5)
+    time.sleep(0.8)
+
+    # Ctrl+V senden, bei Bedarf wiederholen (Fokus-Timing)
+    _send_key_combo(VK_CONTROL, VK_V)
+    time.sleep(0.2)
     _send_key_combo(VK_CONTROL, VK_V)
     time.sleep(0.3)
 
