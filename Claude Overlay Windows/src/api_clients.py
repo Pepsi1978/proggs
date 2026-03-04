@@ -101,7 +101,6 @@ def improve_text_with_gemini(
             }
         ],
         "generationConfig": {
-            "temperature": 0.2,
             "maxOutputTokens": 800,
             "thinkingConfig": {
                 "thinkingLevel": settings.gemini_thinking_level,

@@ -292,7 +292,7 @@ In der `.env`-Datei kannst du auch folgendes anpassen:
 |---|---|---|
 | `GROK_WHISPER_MODEL` | `grok-2-whisper-1` | Welches Whisper-Modell Grok nutzen soll |
 | `GEMINI_MODEL` | `gemini-3.1-flash-lite-preview` | Welches Gemini-Modell genutzt wird |
-| `GEMINI_THINKING_LEVEL` | `medium` | Thinking-Level für Gemini (none/low/medium/high) |
+| `GEMINI_THINKING_LEVEL` | `MEDIUM` | Thinking-Level für Gemini (LOW/MEDIUM/HIGH) |
 | `AUDIO_SAMPLE_RATE` | `16000` | Audio-Abtastrate in Hz (16000 ist Standard fuer Sprache) |
 | `AUDIO_CHANNELS` | `1` | Mono (1) oder Stereo (2) |
 | `CLAUDE_PROCESS_NAMES` | `Claude.exe,...` | Name(n) des Claude-Prozesses (kommagetrennt) |
