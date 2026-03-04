@@ -281,7 +281,8 @@ class ClaudeOverlayApp:
 
             self.root.after(0, lambda: self._on_pipeline_success())
         except Exception as exc:
-            self.root.after(0, lambda: self._on_pipeline_error(str(exc)))
+            err_msg = str(exc)
+            self.root.after(0, lambda: self._on_pipeline_error(err_msg))
         finally:
             try:
                 audio_path.unlink(missing_ok=True)
