@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import ctypes
 import logging
-import subprocess
 import time
 from typing import Optional
 
@@ -14,9 +12,6 @@ import win32com.client
 from config import Settings
 
 log = logging.getLogger(__name__)
-
-# Direkte ctypes-Referenz auf user32.dll
-_user32 = ctypes.windll.user32
 
 
 def is_claude_running(settings: Settings) -> bool:
@@ -30,35 +25,16 @@ def is_claude_running(settings: Settings) -> bool:
     return False
 
 
-def get_foreground_window() -> int | None:
-    """Gibt das aktuell aktive Fenster (HWND) zurueck."""
-    try:
-        hwnd = _user32.GetForegroundWindow()
-        if hwnd and hwnd != 0:
-            return hwnd
-    except Exception:
-        pass
-    return None
-
-
-def _activate_window(hwnd: int) -> bool:
-    """Aktiviert ein Fenster per ctypes user32."""
-    try:
-        if _user32.IsIconic(hwnd):
-            _user32.ShowWindow(hwnd, 9)  # SW_RESTORE
-        result = _user32.SetForegroundWindow(hwnd)
-        log.info("SetForegroundWindow(%s) = %s", hwnd, result)
-        return bool(result)
-    except Exception as exc:
-        log.warning("_activate_window fehlgeschlagen: %s", exc)
-        return False
+def _get_shell():
+    """Erstellt WScript.Shell mit COM-Initialisierung."""
+    pythoncom.CoInitialize()
+    return win32com.client.Dispatch("WScript.Shell")
 
 
 def _send_keys(keys: str) -> None:
     """Sendet Tasten via WScript.Shell COM."""
     try:
-        pythoncom.CoInitialize()
-        shell = win32com.client.Dispatch("WScript.Shell")
+        shell = _get_shell()
         shell.SendKeys(keys)
     finally:
         try:
@@ -67,63 +43,29 @@ def _send_keys(keys: str) -> None:
             pass
 
 
-def paste_text(text: str, target_hwnd: int | None = None, **_kwargs) -> None:
-    """Fuegt Text per Clipboard + Ctrl+V in das Ziel-Fenster ein."""
+def paste_text(text: str, **_kwargs) -> None:
+    """Fuegt Text per Clipboard + Alt+Tab + Ctrl+V ein.
+
+    Wechselt zum vorherigen Fenster (Alt+Tab) und fuegt dort ein.
+    """
     if not text.strip():
         return
 
     pyperclip.copy(text)
 
-    if target_hwnd:
-        if _activate_window(target_hwnd):
-            time.sleep(0.3)
-            _send_keys("^v")
-            return
+    # Alt+Tab zum vorherigen Fenster (Claude)
+    _send_keys("%{TAB}")
+    time.sleep(0.5)
 
-    # Fallback: AppActivate
-    try:
-        pythoncom.CoInitialize()
-        shell = win32com.client.Dispatch("WScript.Shell")
-        if shell.AppActivate("Claude"):
-            log.info("Claude via AppActivate gefunden")
-            time.sleep(0.3)
-            shell.SendKeys("^v")
-            return
-    except Exception as exc:
-        log.warning("AppActivate fehlgeschlagen: %s", exc)
-    finally:
-        try:
-            pythoncom.CoUninitialize()
-        except Exception:
-            pass
-    raise RuntimeError("Ziel-Fenster konnte nicht aktiviert werden.")
+    # Ctrl+V einfuegen
+    _send_keys("^v")
+    log.info("Text eingefuegt (%d Zeichen)", len(text))
 
 
-def clear_input(target_hwnd: int | None = None, **_kwargs) -> None:
-    """Leert das Eingabefeld (Ctrl+A, dann Backspace)."""
-    if target_hwnd:
-        if _activate_window(target_hwnd):
-            time.sleep(0.3)
-            _send_keys("^a")
-            time.sleep(0.05)
-            _send_keys("{BACKSPACE}")
-            return
-
-    # Fallback
-    try:
-        pythoncom.CoInitialize()
-        shell = win32com.client.Dispatch("WScript.Shell")
-        if shell.AppActivate("Claude"):
-            time.sleep(0.3)
-            shell.SendKeys("^a")
-            time.sleep(0.05)
-            shell.SendKeys("{BACKSPACE}")
-            return
-    except Exception:
-        pass
-    finally:
-        try:
-            pythoncom.CoUninitialize()
-        except Exception:
-            pass
-    raise RuntimeError("Ziel-Fenster konnte nicht aktiviert werden.")
+def clear_input(**_kwargs) -> None:
+    """Leert das Eingabefeld (Alt+Tab, Ctrl+A, Backspace)."""
+    _send_keys("%{TAB}")
+    time.sleep(0.5)
+    _send_keys("^a")
+    time.sleep(0.05)
+    _send_keys("{BACKSPACE}")

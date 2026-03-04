@@ -12,7 +12,7 @@ import tkinter.font as tkfont
 
 from api_clients import improve_text_with_gemini, transcribe_with_grok
 from audio_capture import AudioRecorder
-from claude_window import clear_input, get_foreground_window, is_claude_running, paste_text
+from claude_window import clear_input, is_claude_running, paste_text
 from config import Settings
 
 # ---------------------------------------------------------------------------
@@ -77,8 +77,7 @@ class ClaudeOverlayApp:
         self.is_processing = False
         self.gemini_enabled = self.settings.gemini_available
         self._drag_data = {"x": 0, "y": 0}
-        self._target_hwnd: int | None = None  # Fenster das vor der Aufnahme aktiv war
-        self._last_external_hwnd: int | None = None  # Letztes Nicht-Overlay-Fenster
+        self._target_hwnd: int | None = None  # Nicht mehr benoetigt, aber fuer Kompatibilitaet
 
         # ----- Fenster -----
         self.root = tk.Tk()
@@ -197,9 +196,6 @@ class ClaudeOverlayApp:
         self.canvas.bind("<B3-Motion>", self._on_drag_motion)
 
         self.root.bind("<Escape>", lambda _: self._quit())
-
-        # Vordergrund-Fenster-Tracker (merkt sich das letzte Nicht-Overlay-Fenster)
-        self.root.after(500, self._track_foreground_window)
 
         # Claude-Prozess-Watcher
         self.root.after(2000, self._watch_claude_process)
@@ -350,9 +346,6 @@ class ClaudeOverlayApp:
             self._start_recording()
 
     def _start_recording(self) -> None:
-        # Ziel-Fenster: das letzte Nicht-Overlay-Fenster (getrackt alle 300ms)
-        self._target_hwnd = self._last_external_hwnd
-        log.info("Aufnahme gestartet, Ziel-Fenster: hwnd=%s", self._target_hwnd)
         try:
             self.recorder.start()
             self.is_recording = True
@@ -378,11 +371,9 @@ class ClaudeOverlayApp:
         self.canvas.itemconfig(self.mic_circle, fill=COLOR_PROCESSING, outline="#555555")
         self._set_status("Verarbeite...", COLOR_PROCESSING)
 
-        target_hwnd = self._target_hwnd
-
         worker = threading.Thread(
             target=self._process_audio_pipeline,
-            args=(audio_path, target_hwnd),
+            args=(audio_path,),
             daemon=True,
         )
         worker.start()
@@ -391,7 +382,7 @@ class ClaudeOverlayApp:
         """Aktualisiert den Status-Text thread-sicher."""
         self.root.after(0, lambda: self._set_status(text, COLOR_PROCESSING))
 
-    def _process_audio_pipeline(self, audio_path: Path, target_hwnd: int | None = None) -> None:
+    def _process_audio_pipeline(self, audio_path: Path) -> None:
         transcript = None
         try:
             self.root.after(0, lambda: self._set_status("Transkribiere...", COLOR_PROCESSING))
@@ -408,7 +399,7 @@ class ClaudeOverlayApp:
             else:
                 final_text = transcript
 
-            paste_text(final_text, target_hwnd=target_hwnd)
+            paste_text(final_text)
 
             self.root.after(0, lambda: self._on_pipeline_success())
         except Exception as exc:
@@ -471,26 +462,13 @@ class ClaudeOverlayApp:
     # ------------------------------------------------------------------
     def _clear_input(self) -> None:
         try:
-            clear_input(target_hwnd=self._target_hwnd)
+            clear_input()
             self._set_status("Feld geleert", COLOR_SUCCESS)
             self.root.after(2000, self._reset_to_idle)
         except Exception as exc:
             self._set_status("Loeschen fehlgeschlagen", COLOR_ERROR)
             log.error("Eingabefeld leeren: %s", exc)
             self.root.after(3000, self._reset_to_idle)
-
-    # ------------------------------------------------------------------
-    # Vordergrund-Fenster-Tracker
-    # ------------------------------------------------------------------
-    def _track_foreground_window(self) -> None:
-        """Speichert regelmaessig das aktive Nicht-Overlay-Fenster."""
-        try:
-            hwnd = get_foreground_window()
-            if hwnd and hwnd != self._get_overlay_hwnd():
-                self._last_external_hwnd = hwnd
-        except Exception:
-            pass
-        self.root.after(300, self._track_foreground_window)
 
     # ------------------------------------------------------------------
     # Claude-Prozess-Watcher
