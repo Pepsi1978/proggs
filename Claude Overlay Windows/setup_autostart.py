@@ -1,4 +1,4 @@
-"""Erstellt einen Windows-Autostart-Eintrag und eine Desktop-Verknuepfung fuer das Mic Overlay."""
+"""Erstellt einen Windows-Autostart-Eintrag und eine Desktop-Verknuepfung fuer den Overlay-Watcher."""
 
 import os
 import sys
@@ -34,16 +34,16 @@ def main() -> None:
 
     # Windows-Autostart-Ordner
     autostart_dir = Path(os.environ["APPDATA"]) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
-    autostart_link = autostart_dir / "Mic Overlay.lnk"
+    autostart_link = autostart_dir / "Claude Overlay Watcher.lnk"
 
     # Desktop
     desktop_dir = Path(os.environ["USERPROFILE"]) / "Desktop"
-    desktop_link = desktop_dir / "Mic Overlay.lnk"
+    desktop_link = desktop_dir / "Claude Overlay Watcher.lnk"
 
     # WScript.exe als Target (um .vbs auszufuehren)
     wscript = Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "wscript.exe"
 
-    print("=== Mic Overlay Setup ===\n")
+    print("=== Claude Overlay Watcher Setup ===\n")
     print(f"Projekt: {project_dir}")
     print(f"Startskript: {vbs_path}\n")
 
@@ -55,10 +55,10 @@ def main() -> None:
         shortcut.TargetPath = str(wscript)
         shortcut.Arguments = f'"{vbs_path}"'
         shortcut.WorkingDirectory = str(project_dir)
-        shortcut.Description = "Mic Overlay fuer Claude Desktop"
+        shortcut.Description = "Claude Overlay Watcher - startet Overlay automatisch mit Claude Desktop"
         shortcut.WindowStyle = 7
         shortcut.Save()
-        print("   -> Erstellt! Das Overlay startet jetzt automatisch mit Windows.\n")
+        print("   -> Erstellt! Der Watcher startet jetzt automatisch mit Windows.\n")
     except Exception as exc:
         print(f"   -> Fehler: {exc}\n")
 
@@ -70,14 +70,14 @@ def main() -> None:
         shortcut.TargetPath = str(wscript)
         shortcut.Arguments = f'"{vbs_path}"'
         shortcut.WorkingDirectory = str(project_dir)
-        shortcut.Description = "Mic Overlay fuer Claude Desktop"
+        shortcut.Description = "Claude Overlay Watcher - startet Overlay automatisch mit Claude Desktop"
         shortcut.WindowStyle = 7
         shortcut.Save()
-        print("   -> Erstellt! Du kannst das Overlay jetzt per Doppelklick starten.\n")
+        print("   -> Erstellt! Du kannst den Watcher jetzt per Doppelklick starten.\n")
     except Exception as exc:
         print(f"   -> Fehler: {exc}\n")
 
-    print("Fertig! Das Overlay wartet automatisch auf Claude Desktop.")
+    print("Fertig! Der Watcher startet automatisch mit Windows und ueberwacht Claude Desktop.")
 
 
 if __name__ == "__main__":

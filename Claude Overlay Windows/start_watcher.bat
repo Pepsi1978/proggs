@@ -1,5 +1,4 @@
 @echo off
-setlocal
 cd /d "%~dp0"
-start "ClaudeOverlayWatcher" pythonw "%~dp0src\watcher.py"
-endlocal
+call .venv\Scripts\activate.bat
+pythonw src\watcher.py

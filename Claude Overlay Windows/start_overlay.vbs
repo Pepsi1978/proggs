@@ -1,4 +1,5 @@
-' start_overlay.vbs - Startet das Mic Overlay unsichtbar (ohne PowerShell-Fenster)
+' start_overlay.vbs - Startet den Watcher unsichtbar (ohne Konsolenfenster).
+' Der Watcher ueberwacht Claude Desktop und startet/beendet das Overlay automatisch.
 ' Kann in den Windows-Autostart gelegt werden.
 
 Dim objShell, scriptDir, venvPython
@@ -14,4 +15,4 @@ If Not CreateObject("Scripting.FileSystemObject").FileExists(venvPython) Then
 End If
 
 objShell.CurrentDirectory = scriptDir
-objShell.Run """" & venvPython & """ src\overlay_app.py", 0, False
+objShell.Run """" & venvPython & """ src\watcher.py", 0, False

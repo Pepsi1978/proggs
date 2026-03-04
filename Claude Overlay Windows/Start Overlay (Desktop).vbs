@@ -1,3 +1,3 @@
 Set WshShell = CreateObject("WScript.Shell")
 WshShell.CurrentDirectory = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)
-WshShell.Run "cmd /c start_overlay.bat", 0, False
+WshShell.Run "cmd /c start_watcher.bat", 0, False
