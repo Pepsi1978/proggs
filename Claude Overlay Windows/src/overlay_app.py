@@ -474,6 +474,8 @@ class ClaudeOverlayApp:
 
 def main() -> None:
     settings = Settings.load()
+    print(f"[Config] GEMINI_MODEL={settings.gemini_model!r}", file=sys.stderr)
+    print(f"[Config] GEMINI_THINKING_LEVEL={settings.gemini_thinking_level!r}", file=sys.stderr)
 
     # Auf Claude Desktop warten (max 5 Minuten beim Autostart)
     if not is_claude_running(settings):
