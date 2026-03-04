@@ -354,6 +354,7 @@ python setup_autostart.py
 
 > **Was passiert?**
 > - Es wird eine Verknuepfung im Windows-Autostart-Ordner erstellt
+> - Die Verknuepfung nutzt `wscript.exe` + `start_overlay.vbs` fuer einen komplett unsichtbaren Start (kein CMD-Fenster)
 > - `setup_autostart.py` erstellt zusaetzlich eine Desktop-Verknuepfung
 > - Nach dem naechsten Neustart/Login laeuft der Watcher automatisch
 > - Du musst nichts mehr manuell starten
@@ -464,6 +465,21 @@ python -m pip install -r requirements.txt
 - Das Tool versucht automatisch bis zu 3-5 Mal erneut (mit steigender Wartezeit)
 - Falls es trotzdem fehlschlaegt: Warte ein paar Minuten und versuche es erneut
 - Pruefe dein API-Kontingent auf der jeweiligen Plattform
+
+### Das Overlay startet nicht nach Windows-Neustart
+
+1. **Autostart neu einrichten** - fuehre das Skript erneut aus (jetzt mit verbessertem VBS-Start):
+   ```powershell
+   cd "$HOME\Documents\tampermonkey-skripte\Claude Overlay Windows"
+   powershell -ExecutionPolicy Bypass -File .\install_autostart.ps1
+   ```
+2. **COMODO/Antivirus pruefen** - Falls eine Firewall oder ein Antivirus `pythonw.exe` blockiert, fuege eine Ausnahme hinzu fuer:
+   ```
+   C:\Users\DEIN_NAME\...\Claude Overlay Windows\.venv\Scripts\pythonw.exe
+   ```
+3. **Manuell testen** - Doppelklicke auf `start_overlay.vbs`. Wenn das funktioniert, aber der Autostart nicht, liegt es am Autostart-Link.
+4. **Autostart-Ordner pruefen** - Druecke `Win + R`, tippe `shell:startup` und Enter. Dort muss `Claude Overlay Watcher.lnk` liegen.
+5. **Log pruefen** - Oeffne `watcher.log` im Projektordner fuer Fehlermeldungen.
 
 ### Das Overlay erscheint nicht
 
