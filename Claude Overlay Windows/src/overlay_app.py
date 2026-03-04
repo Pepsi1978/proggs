@@ -12,7 +12,7 @@ import tkinter.font as tkfont
 
 from api_clients import improve_text_with_gemini, transcribe_with_grok
 from audio_capture import AudioRecorder
-from claude_window import clear_input, is_claude_running, paste_text
+from claude_window import clear_input, get_foreground_window, is_claude_running, paste_text
 from config import Settings
 
 # ---------------------------------------------------------------------------
@@ -77,7 +77,7 @@ class ClaudeOverlayApp:
         self.is_processing = False
         self.gemini_enabled = self.settings.gemini_available
         self._drag_data = {"x": 0, "y": 0}
-        self._target_hwnd: int | None = None  # Nicht mehr benoetigt, aber fuer Kompatibilitaet
+        self._target_hwnd: int | None = None  # HWND des Fensters vor der Aufnahme
 
         # ----- Fenster -----
         self.root = tk.Tk()
@@ -346,6 +346,9 @@ class ClaudeOverlayApp:
             self._start_recording()
 
     def _start_recording(self) -> None:
+        # Vordergrund-Fenster merken (bevor Overlay den Fokus hat)
+        self._target_hwnd = get_foreground_window()
+        log.info("Ziel-HWND gespeichert: %s", self._target_hwnd)
         try:
             self.recorder.start()
             self.is_recording = True
@@ -432,7 +435,7 @@ class ClaudeOverlayApp:
     def _paste_and_finish(self, text: str) -> None:
         """Fuegt Text ein (laeuft im Hauptthread) und zeigt Erfolg."""
         try:
-            paste_text(text, tk_root=self.root)
+            paste_text(text, target_hwnd=self._target_hwnd, tk_root=self.root)
             self._on_pipeline_success()
         except Exception as exc:
             err_msg = str(exc)
@@ -471,7 +474,7 @@ class ClaudeOverlayApp:
     # ------------------------------------------------------------------
     def _clear_input(self) -> None:
         try:
-            clear_input()
+            clear_input(target_hwnd=self._target_hwnd)
             self._set_status("Feld geleert", COLOR_SUCCESS)
             self.root.after(2000, self._reset_to_idle)
         except Exception as exc:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import ctypes
 import ctypes.wintypes
 import logging
-import struct
+import subprocess
 import time
 from typing import Optional
 
@@ -12,6 +12,12 @@ import psutil
 from config import Settings
 
 log = logging.getLogger(__name__)
+
+# Fuer subprocess: kein sichtbares Konsolenfenster oeffnen
+CREATE_NO_WINDOW = 0x08000000
+
+# --- Win32 API ---
+_user32 = ctypes.windll.user32
 
 # --- ctypes Strukturen fuer SendInput ---
 INPUT_KEYBOARD = 1
@@ -43,14 +49,14 @@ class INPUT(ctypes.Structure):
     ]
 
 
-_user32 = ctypes.windll.user32
-
+# ---------------------------------------------------------------------------
+# Tastatur-Simulation
+# ---------------------------------------------------------------------------
 
 def _send_key_combo(*vk_codes: int) -> None:
     """Sendet eine Tastenkombination via SendInput (z.B. Ctrl+V)."""
     inputs = []
 
-    # Tasten druecken
     for vk in vk_codes:
         inp = INPUT()
         inp.type = INPUT_KEYBOARD
@@ -60,7 +66,6 @@ def _send_key_combo(*vk_codes: int) -> None:
         inp._input.ki.dwExtraInfo = ctypes.pointer(ctypes.c_ulong(0))
         inputs.append(inp)
 
-    # Tasten loslassen (umgekehrte Reihenfolge)
     for vk in reversed(vk_codes):
         inp = INPUT()
         inp.type = INPUT_KEYBOARD
@@ -75,6 +80,28 @@ def _send_key_combo(*vk_codes: int) -> None:
     log.info("SendInput: %d/%d Events gesendet", sent, len(inputs))
 
 
+def _send_keys_hidden(keys: str) -> None:
+    """Sendet Tasten via PowerShell SendKeys (ohne sichtbares Konsolenfenster).
+
+    Nutzt System.Windows.Forms.SendKeys, das einen Journaling-Hook verwendet
+    und dadurch auch in Electron-Apps (Claude Desktop) funktioniert.
+    """
+    ps_cmd = (
+        "Add-Type -AssemblyName System.Windows.Forms; "
+        f"[System.Windows.Forms.SendKeys]::SendWait('{keys}')"
+    )
+    subprocess.run(
+        ["powershell", "-NoProfile", "-Command", ps_cmd],
+        capture_output=True,
+        timeout=5,
+        creationflags=CREATE_NO_WINDOW,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Clipboard
+# ---------------------------------------------------------------------------
+
 def _set_clipboard_text(text: str) -> bool:
     """Setzt den Clipboard-Text direkt via Win32 API."""
     CF_UNICODETEXT = 13
@@ -87,7 +114,6 @@ def _set_clipboard_text(text: str) -> bool:
     try:
         _user32.EmptyClipboard()
 
-        # Text als Wide-String (UTF-16LE) + Null-Terminator
         data = text.encode("utf-16-le") + b"\x00\x00"
         h_mem = kernel32.GlobalAlloc(0x0042, len(data))  # GMEM_MOVEABLE | GMEM_ZEROINIT
         if not h_mem:
@@ -114,6 +140,57 @@ def _set_clipboard_text(text: str) -> bool:
         _user32.CloseClipboard()
 
 
+# ---------------------------------------------------------------------------
+# Fenster-Verwaltung
+# ---------------------------------------------------------------------------
+
+def get_foreground_window() -> int | None:
+    """Gibt das aktuell aktive Fenster (HWND) zurueck."""
+    try:
+        hwnd = _user32.GetForegroundWindow()
+        if hwnd and hwnd != 0:
+            log.info("GetForegroundWindow: %s", hwnd)
+            return hwnd
+    except Exception:
+        pass
+    return None
+
+
+def _find_claude_hwnd() -> int | None:
+    """Sucht das Claude Desktop Fenster via EnumWindows."""
+    result = []
+
+    @ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+    def _callback(hwnd, _lparam):
+        if _user32.IsWindowVisible(hwnd):
+            length = _user32.GetWindowTextLengthW(hwnd)
+            if length > 0:
+                buf = ctypes.create_unicode_buffer(length + 1)
+                _user32.GetWindowTextW(hwnd, buf, length + 1)
+                if "claude" in buf.value.lower():
+                    result.append(hwnd)
+        return True
+
+    _user32.EnumWindows(_callback, 0)
+    if result:
+        log.info("Claude-Fenster gefunden: HWND=%s", result[0])
+        return result[0]
+    return None
+
+
+def _activate_window(hwnd: int) -> bool:
+    """Aktiviert ein Fenster per SetForegroundWindow."""
+    try:
+        if _user32.IsIconic(hwnd):
+            _user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+        result = _user32.SetForegroundWindow(hwnd)
+        log.info("SetForegroundWindow(%s) = %s", hwnd, result)
+        return bool(result)
+    except Exception as exc:
+        log.warning("_activate_window fehlgeschlagen: %s", exc)
+        return False
+
+
 def is_claude_running(settings: Settings) -> bool:
     """Prueft, ob ein Claude-Prozess laeuft."""
     names = set(settings.claude_process_names)
@@ -125,28 +202,42 @@ def is_claude_running(settings: Settings) -> bool:
     return False
 
 
+# ---------------------------------------------------------------------------
+# Einfuegen / Leeren
+# ---------------------------------------------------------------------------
 
-def _switch_and_paste() -> None:
-    """Wechselt zum vorherigen Fenster und fuegt ein via SendInput."""
+def _activate_target(target_hwnd: int | None = None) -> bool:
+    """Aktiviert das Zielfenster. Versucht HWND, dann Claude-Suche, dann Alt+Tab."""
+    # 1. Gespeichertes HWND verwenden
+    if target_hwnd:
+        if _activate_window(target_hwnd):
+            time.sleep(0.3)
+            return True
+        log.warning("Gespeichertes HWND %s konnte nicht aktiviert werden", target_hwnd)
+
+    # 2. Claude-Fenster suchen
+    claude_hwnd = _find_claude_hwnd()
+    if claude_hwnd:
+        if _activate_window(claude_hwnd):
+            time.sleep(0.3)
+            return True
+        log.warning("Claude HWND %s konnte nicht aktiviert werden", claude_hwnd)
+
+    # 3. Fallback: Alt+Tab
+    log.info("Fallback: Alt+Tab")
     _send_key_combo(VK_MENU, VK_TAB)
     time.sleep(0.8)
-
-    # Ctrl+V senden, bei Bedarf wiederholen (Fokus-Timing)
-    _send_key_combo(VK_CONTROL, VK_V)
-    time.sleep(0.2)
-    _send_key_combo(VK_CONTROL, VK_V)
-    time.sleep(0.3)
+    return True
 
 
-def paste_text(text: str, tk_root=None, **_kwargs) -> None:
-    """Fuegt Text per Clipboard + Alt+Tab + Ctrl+V ein."""
+def paste_text(text: str, target_hwnd: int | None = None, tk_root=None, **_kwargs) -> None:
+    """Fuegt Text per Clipboard + Fensteraktivierung + Ctrl+V ein."""
     if not text.strip():
         return
 
-    # Clipboard setzen (direkt via Win32 API)
+    # Clipboard setzen
     clipboard_ok = _set_clipboard_text(text)
 
-    # Fallback: Tkinter Clipboard
     if not clipboard_ok and tk_root:
         try:
             tk_root.clipboard_clear()
@@ -160,14 +251,29 @@ def paste_text(text: str, tk_root=None, **_kwargs) -> None:
     if not clipboard_ok:
         raise RuntimeError("Clipboard konnte nicht gesetzt werden.")
 
-    _switch_and_paste()
+    # Zielfenster aktivieren
+    _activate_target(target_hwnd)
+
+    # Ctrl+V senden (PowerShell SendKeys fuer Electron-Kompatibilitaet)
+    try:
+        _send_keys_hidden("^v")
+    except Exception as exc:
+        log.warning("PowerShell Ctrl+V fehlgeschlagen, Fallback SendInput: %s", exc)
+        _send_key_combo(VK_CONTROL, VK_V)
+    time.sleep(0.3)
+
     log.info("Text eingefuegt (%d Zeichen)", len(text))
 
 
-def clear_input(tk_root=None, **_kwargs) -> None:
-    """Leert das Eingabefeld (Alt+Tab, Ctrl+A, Backspace)."""
-    _send_key_combo(VK_MENU, VK_TAB)
-    time.sleep(0.5)
-    _send_key_combo(VK_CONTROL, VK_A)
-    time.sleep(0.05)
-    _send_key_combo(VK_BACK)
+def clear_input(target_hwnd: int | None = None, tk_root=None, **_kwargs) -> None:
+    """Leert das Eingabefeld (Ctrl+A, Backspace)."""
+    _activate_target(target_hwnd)
+
+    try:
+        _send_keys_hidden("^a")
+        time.sleep(0.05)
+        _send_keys_hidden("{BACKSPACE}")
+    except Exception:
+        _send_key_combo(VK_CONTROL, VK_A)
+        time.sleep(0.05)
+        _send_key_combo(VK_BACK)
