@@ -181,6 +181,16 @@ python -m venv .venv
 
 Jetzt aktiviere die Umgebung:
 
+> **Wichtig vorab - PowerShell-Skripte erlauben:**
+> Windows blockiert standardmaessig das Ausfuehren von PowerShell-Skripten (auch lokale wie `activate`).
+> Das musst du einmalig erlauben - tippe diesen Befehl und bestatige mit **`Y`**:
+>
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
+>
+> **Warum?** `RemoteSigned` ist ein sicherer Kompromiss: Lokale Skripte (wie unser `activate`) duerfen laufen, aber aus dem Internet heruntergeladene Skripte muessen signiert sein. Diese Einstellung gilt nur fuer deinen Benutzer, nicht systemweit.
+
 ```powershell
 .\.venv\Scripts\activate
 ```
