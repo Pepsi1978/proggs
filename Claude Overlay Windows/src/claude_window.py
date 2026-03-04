@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import subprocess
 import time
 from typing import Optional
 
@@ -8,8 +9,6 @@ import psutil
 import pythoncom
 import pyperclip
 import win32com.client
-import win32gui
-import win32con
 
 from config import Settings
 
@@ -28,63 +27,80 @@ def is_claude_running(settings: Settings) -> bool:
 
 
 def get_foreground_window() -> int | None:
-    """Gibt das aktuell aktive Fenster (HWND) zurueck."""
+    """Gibt das aktuell aktive Fenster (HWND) zurueck via PowerShell."""
     try:
-        hwnd = win32gui.GetForegroundWindow()
-        if hwnd and hwnd != 0:
-            return hwnd
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             "Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;"
+             "public class WinAPI{[DllImport(\"user32.dll\")]"
+             "public static extern IntPtr GetForegroundWindow();}'; "
+             "[WinAPI]::GetForegroundWindow().ToInt64()"],
+            capture_output=True, text=True, timeout=3,
+        )
+        hwnd_str = result.stdout.strip()
+        if hwnd_str and hwnd_str.isdigit() and int(hwnd_str) != 0:
+            return int(hwnd_str)
     except Exception:
         pass
     return None
 
 
-def _activate_window(hwnd: int) -> None:
-    """Bringt ein Fenster zuverlaessig in den Vordergrund."""
+def _activate_and_paste(hwnd: int | None, keys: str = "^v") -> bool:
+    """Aktiviert ein Fenster per PowerShell und sendet Tasten."""
+    if not hwnd:
+        return False
     try:
-        if win32gui.IsIconic(hwnd):
-            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-        win32gui.SetForegroundWindow(hwnd)
-    except Exception:
-        try:
-            win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
-            win32gui.BringWindowToTop(hwnd)
-        except Exception as exc:
-            log.warning("Fenster konnte nicht aktiviert werden: %s", exc)
-
-
-def _get_shell():
-    """Erstellt WScript.Shell mit COM-Initialisierung fuer Background-Threads."""
-    pythoncom.CoInitialize()
-    return win32com.client.Dispatch("WScript.Shell")
+        ps_script = (
+            "Add-Type -TypeDefinition '"
+            "using System;using System.Runtime.InteropServices;"
+            "public class WinAPI{"
+            "[DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd);"
+            "[DllImport(\"user32.dll\")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);"
+            "[DllImport(\"user32.dll\")] public static extern bool IsIconic(IntPtr hWnd);"
+            "}';"
+            f"$h = [IntPtr]{hwnd};"
+            "if([WinAPI]::IsIconic($h)){[WinAPI]::ShowWindow($h, 9)};"
+            "[WinAPI]::SetForegroundWindow($h)"
+        )
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps_script],
+            capture_output=True, text=True, timeout=3,
+        )
+        if "True" in result.stdout:
+            time.sleep(0.3)
+            # SendKeys via COM
+            try:
+                pythoncom.CoInitialize()
+                shell = win32com.client.Dispatch("WScript.Shell")
+                shell.SendKeys(keys)
+                return True
+            finally:
+                try:
+                    pythoncom.CoUninitialize()
+                except Exception:
+                    pass
+        else:
+            log.warning("SetForegroundWindow fehlgeschlagen fuer hwnd=%s: %s",
+                        hwnd, result.stdout.strip())
+    except Exception as exc:
+        log.warning("_activate_and_paste fehlgeschlagen: %s", exc)
+    return False
 
 
 def paste_text(text: str, target_hwnd: int | None = None, **_kwargs) -> None:
-    """Fuegt Text per Clipboard + Ctrl+V in das Ziel-Fenster ein.
-
-    Wenn target_hwnd angegeben, wird dieses Fenster aktiviert.
-    Sonst wird AppActivate('Claude') als Fallback versucht.
-    """
+    """Fuegt Text per Clipboard + Ctrl+V in das Ziel-Fenster ein."""
     if not text.strip():
         return
 
     pyperclip.copy(text)
 
-    if target_hwnd:
-        _activate_window(target_hwnd)
-        time.sleep(0.3)
-        try:
-            shell = _get_shell()
-            shell.SendKeys("^v")
-        finally:
-            try:
-                pythoncom.CoUninitialize()
-            except Exception:
-                pass
+    if target_hwnd and _activate_and_paste(target_hwnd, "^v"):
         return
 
     # Fallback: AppActivate
     try:
-        shell = _get_shell()
+        pythoncom.CoInitialize()
+        shell = win32com.client.Dispatch("WScript.Shell")
         if shell.AppActivate("Claude"):
             log.info("Claude via AppActivate gefunden")
             time.sleep(0.3)
@@ -103,23 +119,23 @@ def paste_text(text: str, target_hwnd: int | None = None, **_kwargs) -> None:
 def clear_input(target_hwnd: int | None = None, **_kwargs) -> None:
     """Leert das Eingabefeld (Ctrl+A, dann Backspace)."""
     if target_hwnd:
-        _activate_window(target_hwnd)
-        time.sleep(0.3)
-        try:
-            shell = _get_shell()
-            shell.SendKeys("^a")
+        if _activate_and_paste(target_hwnd, "^a"):
             time.sleep(0.05)
-            shell.SendKeys("{BACKSPACE}")
-        finally:
             try:
-                pythoncom.CoUninitialize()
-            except Exception:
-                pass
-        return
+                pythoncom.CoInitialize()
+                shell = win32com.client.Dispatch("WScript.Shell")
+                shell.SendKeys("{BACKSPACE}")
+            finally:
+                try:
+                    pythoncom.CoUninitialize()
+                except Exception:
+                    pass
+            return
 
     # Fallback
     try:
-        shell = _get_shell()
+        pythoncom.CoInitialize()
+        shell = win32com.client.Dispatch("WScript.Shell")
         if shell.AppActivate("Claude"):
             time.sleep(0.3)
             shell.SendKeys("^a")
@@ -134,12 +150,3 @@ def clear_input(target_hwnd: int | None = None, **_kwargs) -> None:
         except Exception:
             pass
     raise RuntimeError("Ziel-Fenster konnte nicht aktiviert werden.")
-
-
-# Abwaertskompatible Aliase
-def insert_text_into_claude(text: str, claude_hwnd: int | None = None, **kwargs) -> None:
-    paste_text(text, target_hwnd=claude_hwnd, **kwargs)
-
-
-def clear_claude_input(claude_hwnd: int | None = None, **kwargs) -> None:
-    clear_input(target_hwnd=claude_hwnd, **kwargs)
