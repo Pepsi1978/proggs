@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import ctypes
-import ctypes.wintypes
 import logging
 import time
 from typing import Optional
@@ -10,24 +8,13 @@ import psutil
 import pythoncom
 import pyperclip
 import win32com.client
+import win32gui
+import win32con
+import win32process
 
 from config import Settings
 
 log = logging.getLogger(__name__)
-
-# Win32 API Konstanten
-SW_RESTORE = 9
-WS_EX_TOOLWINDOW = 0x00000080
-GWL_EXSTYLE = -20
-
-user32 = ctypes.windll.user32
-
-# Callback-Typ global definieren (verhindert Garbage Collection)
-WNDENUMPROC = ctypes.WINFUNCTYPE(
-    ctypes.wintypes.BOOL,
-    ctypes.wintypes.HWND,
-    ctypes.wintypes.LPARAM,
-)
 
 
 def is_claude_running(settings: Settings) -> bool:
@@ -55,7 +42,7 @@ def _get_claude_pids(settings: Settings) -> set[int]:
 
 def _find_claude_hwnd(overlay_hwnd: int | None = None,
                       settings: Settings | None = None) -> int | None:
-    """Findet das Claude Desktop Hauptfenster.
+    """Findet das Claude Desktop Hauptfenster per win32gui.
 
     Strategie 1: Suche nach sichtbaren Fenstern mit 'Claude' im Titel.
     Strategie 2: Suche nach Fenstern die zum Claude.exe Prozess gehoeren.
@@ -63,9 +50,9 @@ def _find_claude_hwnd(overlay_hwnd: int | None = None,
     results = []
     EXCLUDED_TITLES = {"mic overlay"}
 
-    # Alle sichtbaren Top-Level-Fenster sammeln
     def _enum_callback(hwnd, _lparam):
-        if not user32.IsWindowVisible(hwnd):
+        # Nur sichtbare Fenster
+        if not win32gui.IsWindowVisible(hwnd):
             return True
 
         # Eigenes Overlay ausschliessen
@@ -73,31 +60,27 @@ def _find_claude_hwnd(overlay_hwnd: int | None = None,
             return True
 
         # Toolwindows ausschliessen
-        ex_style = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-        if ex_style & WS_EX_TOOLWINDOW:
+        ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+        if ex_style & win32con.WS_EX_TOOLWINDOW:
             return True
 
         # Fenstertitel lesen
-        length = user32.GetWindowTextLengthW(hwnd)
-        if length == 0:
+        title = win32gui.GetWindowText(hwnd)
+        if not title:
             return True
-
-        buf = ctypes.create_unicode_buffer(length + 1)
-        user32.GetWindowTextW(hwnd, buf, length + 1)
-        title = buf.value
 
         if title.lower() in EXCLUDED_TITLES:
             return True
 
         # PID des Fensters ermitteln
-        pid = ctypes.wintypes.DWORD()
-        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        _, pid = win32process.GetWindowThreadProcessId(hwnd)
 
-        results.append((hwnd, title, pid.value))
+        results.append((hwnd, title, pid))
         return True
 
-    cb = WNDENUMPROC(_enum_callback)
-    user32.EnumWindows(cb, 0)
+    win32gui.EnumWindows(_enum_callback, None)
+
+    log.info("EnumWindows fand %d sichtbare Fenster", len(results))
 
     # Strategie 1: Titel enthaelt "claude"
     for hwnd, title, pid in results:
@@ -110,8 +93,7 @@ def _find_claude_hwnd(overlay_hwnd: int | None = None,
     if settings:
         claude_pids = _get_claude_pids(settings)
         if claude_pids:
-            log.info("Claude PIDs gefunden: %s", claude_pids)
-            # Suche das groesste sichtbare Fenster eines Claude-Prozesses
+            log.info("Claude PIDs: %s", claude_pids)
             for hwnd, title, pid in results:
                 if pid in claude_pids and title:
                     log.info("Claude-Fenster gefunden (PID): hwnd=%s title=%r pid=%s",
@@ -119,7 +101,7 @@ def _find_claude_hwnd(overlay_hwnd: int | None = None,
                     return hwnd
 
     # Debug: Alle Fenster loggen wenn nichts gefunden
-    log.warning("Claude-Fenster nicht gefunden. Sichtbare Fenster:")
+    log.warning("Claude-Fenster nicht gefunden. Top 20 sichtbare Fenster:")
     for hwnd, title, pid in results[:20]:
         log.warning("  hwnd=%s pid=%s title=%r", hwnd, pid, title)
 
@@ -128,9 +110,17 @@ def _find_claude_hwnd(overlay_hwnd: int | None = None,
 
 def _activate_window(hwnd: int) -> None:
     """Bringt ein Fenster zuverlaessig in den Vordergrund."""
-    if user32.IsIconic(hwnd):
-        user32.ShowWindow(hwnd, SW_RESTORE)
-    user32.SetForegroundWindow(hwnd)
+    if win32gui.IsIconic(hwnd):
+        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+    try:
+        win32gui.SetForegroundWindow(hwnd)
+    except Exception:
+        # Fallback: AllowSetForegroundWindow + Retry
+        try:
+            win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+            win32gui.BringWindowToTop(hwnd)
+        except Exception as exc:
+            log.warning("Fenster konnte nicht aktiviert werden: %s", exc)
 
 
 def _get_shell():
