@@ -24,20 +24,23 @@ COLOR_RECORDING = "#E53935"
 COLOR_PROCESSING = "#FF9800"
 COLOR_SUCCESS = "#43A047"
 COLOR_ERROR = "#E53935"
-COLOR_X_IDLE = "#444444"
-COLOR_X_HOVER = "#D73A49"
+COLOR_ERASER_IDLE = "#444444"
+COLOR_ERASER_HOVER = "#FF9800"
+COLOR_CLOSE_IDLE = "#333333"
+COLOR_CLOSE_HOVER = "#D73A49"
 COLOR_TEXT = "#FFFFFF"
 COLOR_STATUS = "#AAAAAA"
 TRANSPARENT = "magenta"
 
 
 class ClaudeOverlayApp:
-    """Modernes rahmenloses Overlay mit Mikrofon- und X-Button."""
+    """Modernes rahmenloses Overlay mit Mikrofon-, Radiergummi- und Beenden-Button."""
 
     BTN_RADIUS = 28
     BTN_GAP = 16
     PADDING = 12
     STATUS_HEIGHT = 22
+    CLOSE_RADIUS = 10
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -99,18 +102,33 @@ class ClaudeOverlayApp:
             mic_cx, mic_cy, text="\U0001F3A4", font=mic_font, fill=COLOR_TEXT,
         )
 
-        # ----- X-Button -----
-        x_cx = mic_cx + d + self.BTN_GAP
-        x_cy = mic_cy
+        # ----- Radiergummi-Button (Eingabefeld leeren) -----
+        eraser_cx = mic_cx + d + self.BTN_GAP
+        eraser_cy = mic_cy
 
-        self.x_circle = self.canvas.create_oval(
-            x_cx - r, x_cy - r, x_cx + r, x_cy + r,
-            fill=COLOR_X_IDLE, outline="#555555", width=2,
+        self.eraser_circle = self.canvas.create_oval(
+            eraser_cx - r, eraser_cy - r, eraser_cx + r, eraser_cy + r,
+            fill=COLOR_ERASER_IDLE, outline="#555555", width=2,
         )
 
-        x_font = tkfont.Font(family="Segoe UI", size=16, weight="bold")
-        self.x_text = self.canvas.create_text(
-            x_cx, x_cy, text="\u2715", font=x_font, fill=COLOR_TEXT,
+        eraser_font = tkfont.Font(family="Segoe UI Emoji", size=16)
+        self.eraser_text = self.canvas.create_text(
+            eraser_cx, eraser_cy, text="\U0001F9F9", font=eraser_font, fill=COLOR_TEXT,
+        )
+
+        # ----- Beenden-Button (kleines X oben rechts) -----
+        cr = self.CLOSE_RADIUS
+        close_cx = total_w - cr - 6
+        close_cy = cr + 6
+
+        self.close_circle = self.canvas.create_oval(
+            close_cx - cr, close_cy - cr, close_cx + cr, close_cy + cr,
+            fill=COLOR_CLOSE_IDLE, outline="",
+        )
+
+        close_font = tkfont.Font(family="Segoe UI", size=8, weight="bold")
+        self.close_text = self.canvas.create_text(
+            close_cx, close_cy, text="\u2715", font=close_font, fill="#888888",
         )
 
         # ----- Statustext -----
@@ -123,7 +141,8 @@ class ClaudeOverlayApp:
 
         # ----- Hitboxen speichern -----
         self._mic_bbox = (mic_cx - r, mic_cy - r, mic_cx + r, mic_cy + r)
-        self._x_bbox = (x_cx - r, x_cy - r, x_cx + r, x_cy + r)
+        self._eraser_bbox = (eraser_cx - r, eraser_cy - r, eraser_cx + r, eraser_cy + r)
+        self._close_bbox = (close_cx - cr - 2, close_cy - cr - 2, close_cx + cr + 2, close_cy + cr + 2)
 
         # ----- Events -----
         self.canvas.bind("<Button-1>", self._on_click)
@@ -133,10 +152,6 @@ class ClaudeOverlayApp:
         self.canvas.bind("<B3-Motion>", self._on_drag_motion)
 
         self.root.bind("<Escape>", lambda _: self._quit())
-
-        # Rechtsklick-Kontextmenue
-        self.menu = tk.Menu(self.root, tearoff=0)
-        self.menu.add_command(label="Beenden", command=self._quit)
 
         # Claude-Prozess-Watcher
         self.root.after(2000, self._watch_claude_process)
@@ -174,28 +189,40 @@ class ClaudeOverlayApp:
     # Maus-Events
     # ------------------------------------------------------------------
     def _on_click(self, event: tk.Event) -> None:
-        if self._in_bbox(event.x, event.y, self._mic_bbox):
+        if self._in_bbox(event.x, event.y, self._close_bbox):
+            self._quit()
+        elif self._in_bbox(event.x, event.y, self._mic_bbox):
             self._toggle_recording()
-        elif self._in_bbox(event.x, event.y, self._x_bbox):
+        elif self._in_bbox(event.x, event.y, self._eraser_bbox):
             self._clear_input()
 
     def _on_motion(self, event: tk.Event) -> None:
+        # Close-Button reagiert immer auf Hover
+        if self._in_bbox(event.x, event.y, self._close_bbox):
+            self.canvas.itemconfig(self.close_circle, fill=COLOR_CLOSE_HOVER)
+            self.canvas.itemconfig(self.close_text, fill=COLOR_TEXT)
+        else:
+            self.canvas.itemconfig(self.close_circle, fill=COLOR_CLOSE_IDLE)
+            self.canvas.itemconfig(self.close_text, fill="#888888")
+
         if self.is_recording or self.is_processing:
             return
         if self._in_bbox(event.x, event.y, self._mic_bbox):
             self.canvas.itemconfig(self.mic_circle, fill=COLOR_HOVER)
-            self.canvas.itemconfig(self.x_circle, fill=COLOR_X_IDLE)
-        elif self._in_bbox(event.x, event.y, self._x_bbox):
-            self.canvas.itemconfig(self.x_circle, fill=COLOR_X_HOVER)
+            self.canvas.itemconfig(self.eraser_circle, fill=COLOR_ERASER_IDLE)
+        elif self._in_bbox(event.x, event.y, self._eraser_bbox):
+            self.canvas.itemconfig(self.eraser_circle, fill=COLOR_ERASER_HOVER)
             self.canvas.itemconfig(self.mic_circle, fill=COLOR_IDLE)
         else:
             self.canvas.itemconfig(self.mic_circle, fill=COLOR_IDLE)
-            self.canvas.itemconfig(self.x_circle, fill=COLOR_X_IDLE)
+            self.canvas.itemconfig(self.eraser_circle, fill=COLOR_ERASER_IDLE)
 
     def _on_leave(self, event: tk.Event) -> None:
+        self.canvas.itemconfig(self.close_circle, fill=COLOR_CLOSE_IDLE)
+        self.canvas.itemconfig(self.close_text, fill="#888888")
         if not self.is_recording and not self.is_processing:
             self.canvas.itemconfig(self.mic_circle, fill=COLOR_IDLE)
-            self.canvas.itemconfig(self.x_circle, fill=COLOR_X_IDLE)
+            self.canvas.itemconfig(self.eraser_circle, fill=COLOR_ERASER_IDLE)
 
     def _on_drag_start(self, event: tk.Event) -> None:
         self._drag_data["x"] = event.x
