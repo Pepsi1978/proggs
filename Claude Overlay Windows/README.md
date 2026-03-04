@@ -1,8 +1,8 @@
 # Claude Overlay Windows
 
-Ein Python-Overlay fuer die **Windows Claude Code Desktop App** mit zwei Buttons:
+Ein Python-Overlay fuer die **Windows Claude Desktop App** mit zwei Buttons:
 
-- **Mikrofon-Button** (Mic): Nimmt deine Sprache auf, schickt das Audio an die **Grok Whisper API** (Transkription), dann an die **Gemini API** (Intentionserkennung + hochwertiges Deutsch) und fuegt den verbesserten Text automatisch in das Claude-Eingabefeld ein.
+- **Mikrofon-Button** (Mic): Nimmt deine Sprache auf, schickt das Audio an die **Groq Whisper API** (Transkription), dann optional an die **Gemini API** (Intentionserkennung + hochwertiges Deutsch) und fuegt den verbesserten Text automatisch in das Claude-Eingabefeld ein.
 - **X-Button**: Leert das gesamte Eingabefeld in der Claude Desktop App.
 
 **Zusatzfunktionen:**
@@ -12,6 +12,8 @@ Ein Python-Overlay fuer die **Windows Claude Code Desktop App** mit zwei Buttons
 - Wenn Claude geschlossen wird: Das Overlay beendet sich automatisch.
 - Das Overlay ist **rahmenlos** (kein Fenstertitel), **immer im Vordergrund** und kann per **Rechtsklick + Ziehen** frei verschoben werden.
 - Waehrend der Aufnahme **pulsiert** der Mikrofon-Button rot.
+- Lange Aufnahmen (>20 MB) werden automatisch in Teile aufgesplittet und stueckweise transkribiert.
+- Bei API-Fehlern (429/500/503) wird automatisch mit Backoff erneut versucht.
 
 ---
 
@@ -28,9 +30,10 @@ Ein Python-Overlay fuer die **Windows Claude Code Desktop App** mit zwei Buttons
 9. [Schritt 7: Tool starten](#9-schritt-7-tool-starten)
 10. [Schritt 8: Windows-Autostart einrichten (optional)](#10-schritt-8-windows-autostart-einrichten-optional)
 11. [Benutzung](#11-benutzung)
-12. [Fehlerbehebung / FAQ](#12-fehlerbehebung--faq)
-13. [Projektstruktur](#13-projektstruktur)
-14. [Deinstallation](#14-deinstallation)
+12. [Log-Dateien und Fehlerdiagnose](#12-log-dateien-und-fehlerdiagnose)
+13. [Fehlerbehebung / FAQ](#13-fehlerbehebung--faq)
+14. [Projektstruktur](#14-projektstruktur)
+15. [Deinstallation](#15-deinstallation)
 
 ---
 
@@ -39,7 +42,7 @@ Ein Python-Overlay fuer die **Windows Claude Code Desktop App** mit zwei Buttons
 Wenn du mit der Claude Desktop App arbeitest, moechtest du vielleicht manchmal **per Sprache** Eingaben machen, anstatt alles zu tippen. Dieses Tool:
 
 1. **Hoert dir zu** (Mikrofon-Aufnahme)
-2. **Wandelt deine Sprache in Text um** (Grok Whisper API - eine sehr gute Spracherkennung von xAI)
+2. **Wandelt deine Sprache in Text um** (Groq Whisper API - schnelle und praezise Spracherkennung)
 3. **Verbessert den Text** (Gemini API - erkennt deine Absichten und formuliert sie in gutem Deutsch)
 4. **Fuegt den fertigen Text ein** (automatisch in das Claude-Eingabefeld)
 
@@ -56,10 +59,10 @@ Bevor du loslegst, brauchst du folgendes auf deinem Windows-Rechner:
 | **Windows 10 oder 11** | Das Tool nutzt Windows-spezifische Funktionen (Fenstererkennung, UI-Automation) |
 | **Python 3.11 oder neuer** | Die Programmiersprache, in der das Tool geschrieben ist. Python fuehrt den Code aus |
 | **Claude Desktop App** | Die App, in die das Overlay den Text einfuegt |
-| **Internetverbindung** | Fuer die API-Aufrufe (Grok Whisper + Gemini) |
+| **Internetverbindung** | Fuer die API-Aufrufe (Groq Whisper + Gemini) |
 | **Ein Mikrofon** | Zum Aufnehmen deiner Sprache (eingebaut oder extern) |
-| **Grok API-Key** | Zugang zur Sprach-Transkription (von xAI / Grok) |
-| **Gemini API-Key** | Zugang zur Textverbesserung (von Google) |
+| **Groq API-Key** | Zugang zur Sprach-Transkription (von Groq Cloud) |
+| **Gemini API-Key** (optional) | Zugang zur Textverbesserung (von Google). Ohne Gemini wird der Rohtext direkt eingefuegt |
 
 ---
 
@@ -215,7 +218,7 @@ Abhaengigkeiten (Dependencies) sind externe Pakete/Bibliotheken, die unser Tool 
 | `sounddevice` | Zugriff auf dein Mikrofon (Audio aufnehmen) |
 | `soundfile` | Audio als WAV-Datei speichern |
 | `numpy` | Mathematische Berechnungen fuer Audio-Daten |
-| `requests` | HTTP-Anfragen an die APIs senden (Grok + Gemini) |
+| `requests` | HTTP-Anfragen an die APIs senden (Groq + Gemini) |
 | `psutil` | Laufende Prozesse pruefen (ist Claude gestartet?) |
 | `pywinauto` | Windows-Fenster finden und fernsteuern |
 | `pywin32` | Grundlegende Windows-Funktionen fuer pywinauto |
@@ -240,21 +243,21 @@ Das kann ein paar Minuten dauern, da manche Pakete gross sind. Warte, bis alles 
 
 ## 8. Schritt 6: API-Keys besorgen und eintragen
 
-Das Tool braucht zwei API-Keys (Zugangsschluessel), um die Cloud-Dienste nutzen zu koennen.
+Das Tool braucht mindestens einen API-Key (Zugangsschluessel), um die Cloud-Dienste nutzen zu koennen.
 
-### 8.1 Grok API-Key (fuer Sprach-Transkription)
+### 8.1 Groq API-Key (fuer Sprach-Transkription) - Pflicht
 
-Der Grok API-Key kommt von **xAI** (dem Unternehmen hinter Grok/X):
+Der Groq API-Key kommt von **Groq Cloud**:
 
-1. Gehe zu: **https://console.x.ai/**
+1. Gehe zu: **https://console.groq.com/**
 2. Erstelle ein Konto oder melde dich an
 3. Navigiere zu **"API Keys"**
 4. Klicke auf **"Create API Key"**
-5. Kopiere den Schluessel (er beginnt oft mit `xai-...`)
+5. Kopiere den Schluessel (er beginnt mit `gsk_...`)
 
 > **Was ist ein API-Key?** Ein API-Key ist wie ein Passwort, das deinem Tool erlaubt, den Dienst zu nutzen. Halte ihn geheim und teile ihn mit niemandem!
 
-### 8.2 Gemini API-Key (fuer Textverbesserung)
+### 8.2 Gemini API-Key (fuer Textverbesserung) - Optional
 
 Der Gemini API-Key kommt von **Google**:
 
@@ -263,6 +266,8 @@ Der Gemini API-Key kommt von **Google**:
 3. Klicke auf **"Create API Key"**
 4. Waehle ein Google Cloud Projekt (oder erstelle ein neues)
 5. Kopiere den Schluessel
+
+> **Hinweis:** Ohne Gemini-Key wird die Textverbesserung uebersprungen und der Rohtext direkt eingefuegt. Du kannst Gemini auch spaeter nachtraeglich aktivieren.
 
 ### 8.3 Keys in die .env-Datei eintragen
 
@@ -276,7 +281,7 @@ notepad .env
 Trage deine Keys ein:
 
 ```
-GROK_API_KEY=xai-dein-schluessel-hier
+GROQ_API_KEY=gsk_dein-schluessel-hier
 GEMINI_API_KEY=dein-gemini-schluessel-hier
 ```
 
@@ -290,7 +295,9 @@ In der `.env`-Datei kannst du auch folgendes anpassen:
 
 | Variable | Standard | Beschreibung |
 |---|---|---|
-| `GROK_WHISPER_MODEL` | `grok-2-whisper-1` | Welches Whisper-Modell Grok nutzen soll |
+| `WHISPER_MODEL` | `whisper-large-v3` | Welches Whisper-Modell Groq nutzen soll |
+| `WHISPER_LANG` | `de` | Sprache der Aufnahme (ISO 639-1 Code) |
+| `WHISPER_URL` | `https://api.groq.com/...` | Whisper API-Endpunkt |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini-Modell (auch `gemini-3.1-flash-lite-preview` moeglich) |
 | `GEMINI_THINKING_LEVEL` | `MEDIUM` | Thinking-Level, nur fuer Gemini 3.x (LOW/MEDIUM/HIGH) |
 | `AUDIO_SAMPLE_RATE` | `16000` | Audio-Abtastrate in Hz (16000 ist Standard fuer Sprache) |
@@ -301,17 +308,11 @@ In der `.env`-Datei kannst du auch folgendes anpassen:
 
 ## 9. Schritt 7: Tool starten
 
-Es gibt zwei Wege, das Tool zu starten:
+Es gibt mehrere Wege, das Tool zu starten:
 
-### Variante A: Watcher-Modus (empfohlen)
+### Variante A: VBS-Skript per Doppelklick (empfohlen)
 
-Der Watcher laeuft im Hintergrund und startet/stoppt das Overlay automatisch:
-
-```powershell
-.\start_watcher.bat
-```
-
-Oder per Doppelklick auf `start_watcher.bat` im Datei-Explorer.
+Doppelklicke auf **`start_overlay.vbs`** im Datei-Explorer. Das startet den Watcher unsichtbar im Hintergrund - kein Konsolenfenster, kein Blinken.
 
 > **Was passiert?**
 > - Der Watcher prueft alle 2 Sekunden, ob Claude laeuft
@@ -319,17 +320,19 @@ Oder per Doppelklick auf `start_watcher.bat` im Datei-Explorer.
 > - Wenn du Claude schliesst, verschwindet das Overlay
 > - Der Watcher laeuft unsichtbar im Hintergrund (kein Fenster)
 
-### Variante B: Debug-Modus (zum Testen)
+### Variante B: BAT-Datei per Doppelklick
 
-Wenn du Fehlermeldungen sehen moechtest:
+Doppelklicke auf **`start_watcher.bat`**. Funktioniert wie Variante A, kann aber kurz ein Konsolenfenster aufblitzen.
+
+### Variante C: Debug-Modus (zum Testen)
+
+Wenn du Fehlermeldungen live sehen moechtest:
 
 ```powershell
 .\start_overlay_debug.bat
 ```
 
-> Dieser Modus zeigt ein Konsolenfenster mit Ausgaben und Fehlermeldungen. Nuetzlich zum Debuggen.
-
-**Hinweis:** Im Debug-Modus muss Claude bereits laufen, sonst beendet sich das Overlay sofort.
+> Dieser Modus zeigt ein Konsolenfenster mit Ausgaben und Fehlermeldungen. Nuetzlich zum Debuggen. Druecke `Strg + C` zum Beenden.
 
 ---
 
@@ -337,12 +340,21 @@ Wenn du Fehlermeldungen sehen moechtest:
 
 Damit der Watcher nach jedem Windows-Login automatisch startet:
 
+### Variante A: PowerShell-Skript (einfach)
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install_autostart.ps1
 ```
 
+### Variante B: Python-Setup (erstellt zusaetzlich Desktop-Verknuepfung)
+
+```powershell
+python setup_autostart.py
+```
+
 > **Was passiert?**
-> - Das Skript erstellt eine Verknuepfung im Windows-Autostart-Ordner
+> - Es wird eine Verknuepfung im Windows-Autostart-Ordner erstellt
+> - `setup_autostart.py` erstellt zusaetzlich eine Desktop-Verknuepfung
 > - Nach dem naechsten Neustart/Login laeuft der Watcher automatisch
 > - Du musst nichts mehr manuell starten
 
@@ -364,10 +376,12 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_autostart.ps1
 2. **Sprich** deinen Text ins Mikrofon
 3. **Nochmal klicken** = Aufnahme stoppen (Button wird **orange** = Verarbeitung)
 4. Das Tool sendet dein Audio an:
-   - **Grok Whisper** (Sprache zu Text)
-   - **Gemini** (Text verbessern + Intentionen erkennen)
+   - **Groq Whisper** (Sprache zu Text)
+   - **Gemini** (Text verbessern + Intentionen erkennen) - falls konfiguriert
 5. Der verbesserte Text wird automatisch in das Claude-Eingabefeld eingefuegt
 6. Button wird **gruen** = Erfolg!
+
+> **Tipp:** Auch lange Aufnahmen sind moeglich. Dateien ueber 20 MB werden automatisch in Teile aufgesplittet und stueckweise transkribiert.
 
 ### X-Button (rechter Button)
 
@@ -395,7 +409,21 @@ powershell -ExecutionPolicy Bypass -File .\uninstall_autostart.ps1
 
 ---
 
-## 12. Fehlerbehebung / FAQ
+## 12. Log-Dateien und Fehlerdiagnose
+
+Das Tool schreibt Diagnose-Informationen in Log-Dateien im Projektordner:
+
+| Datei | Inhalt |
+|---|---|
+| `watcher.log` | Watcher-Aktivitaet: Claude-Erkennung, Overlay-Start/Stop, Crash-Erkennung |
+| `overlay.log` | Overlay-Aktivitaet: Config-Werte, Aufnahme, API-Aufrufe, Fehler |
+| `failed_transcripts/` | Gesicherte Transkripte bei API-Fehlern (Text geht nicht verloren) |
+
+> **Tipp:** Bei Problemen zuerst `overlay.log` pruefen - dort stehen die meisten Fehlermeldungen. Die Logs werden bei jedem Start fortgeschrieben (nicht ueberschrieben).
+
+---
+
+## 13. Fehlerbehebung / FAQ
 
 ### "python wird nicht erkannt"
 
@@ -419,7 +447,7 @@ python -m pip install -r requirements.txt
 - Stelle sicher, dass die Claude Desktop App geoeffnet ist
 - Falls deine Claude-App einen anderen Fenstertitel hat, passe `CLAUDE_PROCESS_NAMES` in der `.env` an
 
-### "Fehlende Umgebungsvariablen: GROK_API_KEY"
+### "Fehlende Umgebungsvariablen: GROQ_API_KEY"
 
 - Oeffne die `.env`-Datei und stelle sicher, dass du deinen API-Key eingetragen hast
 - Pruefe, dass kein Leerzeichen vor oder nach dem `=` steht
@@ -433,48 +461,56 @@ python -m pip install -r requirements.txt
 ### "API-Fehler / 429 Too Many Requests"
 
 - Du hast zu viele Anfragen in kurzer Zeit gesendet
-- Warte ein paar Minuten und versuche es erneut
+- Das Tool versucht automatisch bis zu 3-5 Mal erneut (mit steigender Wartezeit)
+- Falls es trotzdem fehlschlaegt: Warte ein paar Minuten und versuche es erneut
 - Pruefe dein API-Kontingent auf der jeweiligen Plattform
 
 ### Das Overlay erscheint nicht
 
-- Stelle sicher, dass der Watcher laeuft (`start_watcher.bat`)
+- Stelle sicher, dass der Watcher laeuft (per `start_overlay.vbs` oder `start_watcher.bat`)
 - Oeffne die Claude Desktop App
-- Pruefe im Task-Manager, ob `pythonw.exe` laeuft
+- Pruefe im Task-Manager, ob `pythonw.exe` oder `python.exe` laeuft
+- Pruefe `watcher.log` auf Fehlermeldungen
 
 ### Das Overlay reagiert nicht auf Klicks
 
-- Stelle sicher, dass du den **linken** Maustaste zum Klicken verwendest
+- Stelle sicher, dass du die **linke** Maustaste zum Klicken verwendest
 - Rechtsklick ist fuer Drag (Verschieben)
 - Falls das Overlay im Processing-Zustand (orange) haengt, beende es ueber den Task-Manager und starte neu
 
 ---
 
-## 13. Projektstruktur
+## 14. Projektstruktur
 
 ```
 Claude Overlay Windows/
-  .env.example            # Vorlage fuer API-Keys
-  .env                    # Deine echten API-Keys (wird nicht hochgeladen)
-  .gitignore              # Dateien, die Git ignorieren soll
-  requirements.txt        # Liste der Python-Abhaengigkeiten
-  start_watcher.bat       # Startet den Hintergrund-Watcher
-  start_overlay_debug.bat # Startet das Overlay im Debug-Modus
-  install_autostart.ps1   # Richtet Windows-Autostart ein
-  uninstall_autostart.ps1 # Entfernt Windows-Autostart
-  README.md               # Diese Anleitung
+  .env.example              # Vorlage fuer API-Keys
+  .env                      # Deine echten API-Keys (wird nicht hochgeladen)
+  .gitignore                # Dateien, die Git ignorieren soll
+  requirements.txt          # Liste der Python-Abhaengigkeiten
+  README.md                 # Diese Anleitung
+  start_overlay.vbs         # Startet den Watcher unsichtbar (empfohlen)
+  start_watcher.bat         # Startet den Watcher (BAT-Variante)
+  start_overlay.bat         # Startet das Overlay direkt (ohne Watcher)
+  start_overlay_debug.bat   # Startet den Watcher im Debug-Modus (mit Konsolenfenster)
+  install_autostart.ps1     # Richtet Windows-Autostart ein (PowerShell)
+  uninstall_autostart.ps1   # Entfernt Windows-Autostart (PowerShell)
+  setup_autostart.py        # Richtet Autostart + Desktop-Verknuepfung ein (Python)
+  watcher.log               # Log-Datei des Watchers (wird automatisch erstellt)
+  overlay.log               # Log-Datei des Overlays (wird automatisch erstellt)
+  failed_transcripts/       # Gesicherte Transkripte bei API-Fehlern
   src/
-    config.py             # Laedt .env-Datei und stellt Einstellungen bereit
-    audio_capture.py      # Nimmt Audio vom Mikrofon auf und speichert als WAV
-    api_clients.py        # Kommuniziert mit Grok Whisper + Gemini API
-    claude_window.py      # Findet das Claude-Fenster und fuegt Text ein/loescht
-    overlay_app.py        # Die sichtbare Overlay-Oberflaeche (Buttons, Farben)
-    watcher.py            # Ueberwacht, ob Claude laeuft; startet/stoppt Overlay
+    config.py               # Laedt .env-Datei und stellt Einstellungen bereit
+    audio_capture.py         # Nimmt Audio vom Mikrofon auf und speichert als WAV
+    api_clients.py           # Kommuniziert mit Groq Whisper + Gemini API
+    claude_window.py         # Findet das Claude-Fenster und fuegt Text ein/loescht
+    overlay_app.py           # Die sichtbare Overlay-Oberflaeche (Buttons, Farben)
+    watcher.py               # Ueberwacht, ob Claude laeuft; startet/stoppt Overlay
 ```
 
 ---
 
-## 14. Deinstallation
+## 15. Deinstallation
 
 ### Autostart entfernen:
 
