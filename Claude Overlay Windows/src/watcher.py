@@ -13,14 +13,18 @@ LOG_PATH = Path(__file__).resolve().parents[1] / "watcher.log"
 
 
 def _setup_logging() -> None:
+    handlers: list[logging.Handler] = [
+        logging.FileHandler(LOG_PATH, encoding="utf-8"),
+    ]
+    # pythonw.exe setzt sys.stderr auf None — StreamHandler wuerde abstuerzen
+    if sys.stderr is not None:
+        handlers.append(logging.StreamHandler(sys.stderr))
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s  %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
-        handlers=[
-            logging.FileHandler(LOG_PATH, encoding="utf-8"),
-            logging.StreamHandler(sys.stderr),
-        ],
+        handlers=handlers,
     )
 
 

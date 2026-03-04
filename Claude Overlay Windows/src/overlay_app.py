@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sys
 import threading
 import time
@@ -13,6 +14,26 @@ from api_clients import improve_text_with_gemini, transcribe_with_grok
 from audio_capture import AudioRecorder
 from claude_window import clear_claude_input, insert_text_into_claude, is_claude_running
 from config import Settings
+
+# ---------------------------------------------------------------------------
+# Logging (sicher fuer pythonw, wo sys.stderr = None)
+# ---------------------------------------------------------------------------
+_log_handlers: list[logging.Handler] = [
+    logging.FileHandler(
+        Path(__file__).resolve().parents[1] / "overlay.log",
+        encoding="utf-8",
+    ),
+]
+if sys.stderr is not None:
+    _log_handlers.append(logging.StreamHandler(sys.stderr))
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s  %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=_log_handlers,
+)
+log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Farben
@@ -331,7 +352,7 @@ class ClaudeOverlayApp:
             self._pulse_animation()
         except Exception as exc:
             self._set_status("Mikrofon-Fehler", COLOR_ERROR)
-            print(f"[Fehler] Aufnahme konnte nicht gestartet werden: {exc}", file=sys.stderr)
+            log.error("Aufnahme konnte nicht gestartet werden: %s", exc)
 
     def _stop_recording(self) -> None:
         try:
@@ -340,7 +361,7 @@ class ClaudeOverlayApp:
             self.is_recording = False
             self.canvas.itemconfig(self.mic_circle, fill=COLOR_IDLE, outline="#555555")
             self._set_status("Aufnahmefehler", COLOR_ERROR)
-            print(f"[Fehler] Aufnahme konnte nicht beendet werden: {exc}", file=sys.stderr)
+            log.error("Aufnahme konnte nicht beendet werden: %s", exc)
             return
 
         self.is_recording = False
@@ -404,9 +425,9 @@ class ClaudeOverlayApp:
                 f"Transkript:\n{transcript}\n",
                 encoding="utf-8",
             )
-            print(f"[Info] Transkript gesichert: {backup_file}", file=sys.stderr)
+            log.info("Transkript gesichert: %s", backup_file)
         except Exception as save_exc:
-            print(f"[Fehler] Transkript konnte nicht gesichert werden: {save_exc}", file=sys.stderr)
+            log.error("Transkript konnte nicht gesichert werden: %s", save_exc)
 
     def _on_pipeline_success(self) -> None:
         self.is_processing = False
@@ -427,7 +448,7 @@ class ClaudeOverlayApp:
         else:
             short = "Fehler"
         self._set_status(short, COLOR_ERROR)
-        print(f"[Fehler] Pipeline: {msg}", file=sys.stderr)
+        log.error("Pipeline: %s", msg)
         self.root.after(4000, self._reset_to_idle)
 
     def _reset_to_idle(self) -> None:
@@ -445,7 +466,7 @@ class ClaudeOverlayApp:
             self.root.after(2000, self._reset_to_idle)
         except Exception as exc:
             self._set_status("Loeschen fehlgeschlagen", COLOR_ERROR)
-            print(f"[Fehler] Eingabefeld leeren: {exc}", file=sys.stderr)
+            log.error("Eingabefeld leeren: %s", exc)
             self.root.after(3000, self._reset_to_idle)
 
     # ------------------------------------------------------------------
@@ -481,18 +502,18 @@ class ClaudeOverlayApp:
 
 def main() -> None:
     settings = Settings.load()
-    print(f"[Config] GEMINI_MODEL={settings.gemini_model!r}", file=sys.stderr)
-    print(f"[Config] GEMINI_THINKING_LEVEL={settings.gemini_thinking_level!r}", file=sys.stderr)
+    log.info("GEMINI_MODEL=%r", settings.gemini_model)
+    log.info("GEMINI_THINKING_LEVEL=%r", settings.gemini_thinking_level)
 
     # Auf Claude Desktop warten (max 5 Minuten beim Autostart)
     if not is_claude_running(settings):
-        print("Warte auf Claude Desktop...", file=sys.stderr)
+        log.info("Warte auf Claude Desktop...")
         for _ in range(60):
             time.sleep(5)
             if is_claude_running(settings):
                 break
         else:
-            print("Claude Desktop nicht gestartet. Beende.", file=sys.stderr)
+            log.info("Claude Desktop nicht gestartet. Beende.")
             return
 
     app = ClaudeOverlayApp(settings)
