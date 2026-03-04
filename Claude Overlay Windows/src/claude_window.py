@@ -125,6 +125,42 @@ def is_claude_running(settings: Settings) -> bool:
     return False
 
 
+def _send_keys_powershell(keys: str) -> None:
+    """Sendet Tasten via PowerShell System.Windows.Forms.SendKeys."""
+    import subprocess
+    ps_cmd = (
+        "Add-Type -AssemblyName System.Windows.Forms; "
+        f"[System.Windows.Forms.SendKeys]::SendWait('{keys}')"
+    )
+    subprocess.run(
+        ["powershell", "-NoProfile", "-Command", ps_cmd],
+        capture_output=True, timeout=5,
+    )
+
+
+def _switch_and_paste() -> None:
+    """Wechselt zum vorherigen Fenster und fuegt ein.
+
+    Versucht mehrere Methoden fuer Alt+Tab und Ctrl+V.
+    """
+    # Methode 1: SendInput fuer Alt+Tab
+    _send_key_combo(VK_MENU, VK_TAB)
+    time.sleep(0.5)
+
+    # Methode 1: SendInput fuer Ctrl+V
+    _send_key_combo(VK_CONTROL, VK_V)
+    time.sleep(0.3)
+
+    # Pruefen ob SendInput funktioniert hat (vereinfacht: immer auch PS versuchen)
+    # Methode 2: PowerShell SendKeys als Backup
+    try:
+        _send_keys_powershell("%{TAB}")
+        time.sleep(0.5)
+        _send_keys_powershell("^v")
+    except Exception as exc:
+        log.warning("PowerShell SendKeys fehlgeschlagen: %s", exc)
+
+
 def paste_text(text: str, tk_root=None, **_kwargs) -> None:
     """Fuegt Text per Clipboard + Alt+Tab + Ctrl+V ein."""
     if not text.strip():
@@ -147,19 +183,21 @@ def paste_text(text: str, tk_root=None, **_kwargs) -> None:
     if not clipboard_ok:
         raise RuntimeError("Clipboard konnte nicht gesetzt werden.")
 
-    # Alt+Tab zum vorherigen Fenster
-    _send_key_combo(VK_MENU, VK_TAB)
-    time.sleep(0.5)
-
-    # Ctrl+V einfuegen
-    _send_key_combo(VK_CONTROL, VK_V)
+    _switch_and_paste()
     log.info("Text eingefuegt (%d Zeichen)", len(text))
 
 
 def clear_input(tk_root=None, **_kwargs) -> None:
     """Leert das Eingabefeld (Alt+Tab, Ctrl+A, Backspace)."""
-    _send_key_combo(VK_MENU, VK_TAB)
-    time.sleep(0.5)
-    _send_key_combo(VK_CONTROL, VK_A)
-    time.sleep(0.05)
-    _send_key_combo(VK_BACK)
+    try:
+        _send_keys_powershell("%{TAB}")
+        time.sleep(0.5)
+        _send_keys_powershell("^a")
+        time.sleep(0.05)
+        _send_keys_powershell("{BACKSPACE}")
+    except Exception:
+        _send_key_combo(VK_MENU, VK_TAB)
+        time.sleep(0.5)
+        _send_key_combo(VK_CONTROL, VK_A)
+        time.sleep(0.05)
+        _send_key_combo(VK_BACK)
