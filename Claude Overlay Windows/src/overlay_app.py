@@ -442,8 +442,8 @@ class ClaudeOverlayApp:
     def _on_pipeline_success(self) -> None:
         self.is_processing = False
         self.canvas.itemconfig(self.mic_circle, fill=COLOR_SUCCESS)
-        self._set_status("Ctrl+V zum Einfuegen", COLOR_SUCCESS)
-        self.root.after(5000, self._reset_to_idle)
+        self._set_status("Eingefuegt!", COLOR_SUCCESS)
+        self.root.after(3000, self._reset_to_idle)
 
     def _on_pipeline_error(self, msg: str) -> None:
         self.is_processing = False
