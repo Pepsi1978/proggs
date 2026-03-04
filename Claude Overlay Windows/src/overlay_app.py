@@ -399,9 +399,8 @@ class ClaudeOverlayApp:
             else:
                 final_text = transcript
 
-            paste_text(final_text)
-
-            self.root.after(0, lambda: self._on_pipeline_success())
+            # Einfuegen im Hauptthread (SendKeys funktioniert nicht aus Background-Threads)
+            self.root.after(0, lambda ft=final_text: self._paste_and_finish(ft))
         except Exception as exc:
             err_msg = str(exc)
             # Transkript sichern, damit es nicht verloren geht
@@ -429,6 +428,16 @@ class ClaudeOverlayApp:
             log.info("Transkript gesichert: %s", backup_file)
         except Exception as save_exc:
             log.error("Transkript konnte nicht gesichert werden: %s", save_exc)
+
+    def _paste_and_finish(self, text: str) -> None:
+        """Fuegt Text ein (laeuft im Hauptthread) und zeigt Erfolg."""
+        try:
+            paste_text(text)
+            self._on_pipeline_success()
+        except Exception as exc:
+            err_msg = str(exc)
+            log.error("Einfuegen fehlgeschlagen: %s", err_msg)
+            self._on_pipeline_error(err_msg)
 
     def _on_pipeline_success(self) -> None:
         self.is_processing = False
