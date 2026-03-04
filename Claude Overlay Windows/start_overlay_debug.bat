@@ -1,5 +1,8 @@
 @echo off
-setlocal
 cd /d "%~dp0"
-python "%~dp0src\overlay_app.py"
-endlocal
+call .venv\Scripts\activate.bat
+echo === Watcher Debug-Modus ===
+echo Druecke Ctrl+C zum Beenden.
+echo.
+python src\watcher.py
+pause

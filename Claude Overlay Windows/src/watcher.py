@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 import sys
 import time
@@ -8,9 +9,24 @@ from pathlib import Path
 from claude_window import is_claude_running
 from config import Settings
 
+LOG_PATH = Path(__file__).resolve().parents[1] / "watcher.log"
+
+
+def _setup_logging() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s  %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[
+            logging.FileHandler(LOG_PATH, encoding="utf-8"),
+            logging.StreamHandler(sys.stderr),
+        ],
+    )
+
 
 def start_overlay(script_path: Path) -> subprocess.Popen:
     """Startet das Overlay als eigenen Prozess."""
+    logging.info("Starte Overlay: %s", script_path)
     return subprocess.Popen(
         [sys.executable, str(script_path)],
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
@@ -18,21 +34,44 @@ def start_overlay(script_path: Path) -> subprocess.Popen:
 
 
 def main() -> None:
-    settings = Settings.load()
+    _setup_logging()
+    logging.info("=== Watcher gestartet (Python: %s) ===", sys.executable)
+
+    try:
+        settings = Settings.load()
+    except Exception:
+        logging.exception("Fehler beim Laden der Einstellungen")
+        return
+
+    logging.info(
+        "Ueberwache Prozesse: %s", ", ".join(settings.claude_process_names)
+    )
+
     overlay_script = Path(__file__).resolve().parent / "overlay_app.py"
     overlay_process: subprocess.Popen | None = None
 
     while True:
-        claude_running = is_claude_running(settings)
+        try:
+            claude_running = is_claude_running(settings)
+        except Exception:
+            logging.exception("Fehler bei Prozessabfrage")
+            time.sleep(2)
+            continue
 
         if claude_running and overlay_process is None:
+            logging.info("Claude erkannt – starte Overlay")
             overlay_process = start_overlay(overlay_script)
 
         if claude_running and overlay_process is not None:
             if overlay_process.poll() is not None:
+                logging.info(
+                    "Overlay beendet (Code %s) – Neustart",
+                    overlay_process.returncode,
+                )
                 overlay_process = start_overlay(overlay_script)
 
         if not claude_running and overlay_process is not None:
+            logging.info("Claude nicht mehr aktiv – beende Overlay")
             if overlay_process.poll() is None:
                 overlay_process.terminate()
                 try:
