@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ctypes
 import logging
 import subprocess
 import time
@@ -14,6 +15,9 @@ from config import Settings
 
 log = logging.getLogger(__name__)
 
+# Direkte ctypes-Referenz auf user32.dll
+_user32 = ctypes.windll.user32
+
 
 def is_claude_running(settings: Settings) -> bool:
     """Prueft, ob ein Claude-Prozess laeuft."""
@@ -27,64 +31,40 @@ def is_claude_running(settings: Settings) -> bool:
 
 
 def get_foreground_window() -> int | None:
-    """Gibt das aktuell aktive Fenster (HWND) zurueck via PowerShell."""
+    """Gibt das aktuell aktive Fenster (HWND) zurueck."""
     try:
-        result = subprocess.run(
-            ["powershell", "-NoProfile", "-Command",
-             "Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;"
-             "public class WinAPI{[DllImport(\"user32.dll\")]"
-             "public static extern IntPtr GetForegroundWindow();}'; "
-             "[WinAPI]::GetForegroundWindow().ToInt64()"],
-            capture_output=True, text=True, timeout=3,
-        )
-        hwnd_str = result.stdout.strip()
-        if hwnd_str and hwnd_str.isdigit() and int(hwnd_str) != 0:
-            return int(hwnd_str)
+        hwnd = _user32.GetForegroundWindow()
+        if hwnd and hwnd != 0:
+            return hwnd
     except Exception:
         pass
     return None
 
 
-def _activate_and_paste(hwnd: int | None, keys: str = "^v") -> bool:
-    """Aktiviert ein Fenster per PowerShell und sendet Tasten."""
-    if not hwnd:
-        return False
+def _activate_window(hwnd: int) -> bool:
+    """Aktiviert ein Fenster per ctypes user32."""
     try:
-        ps_script = (
-            "Add-Type -TypeDefinition '"
-            "using System;using System.Runtime.InteropServices;"
-            "public class WinAPI{"
-            "[DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr hWnd);"
-            "[DllImport(\"user32.dll\")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);"
-            "[DllImport(\"user32.dll\")] public static extern bool IsIconic(IntPtr hWnd);"
-            "}';"
-            f"$h = [IntPtr]{hwnd};"
-            "if([WinAPI]::IsIconic($h)){[WinAPI]::ShowWindow($h, 9)};"
-            "[WinAPI]::SetForegroundWindow($h)"
-        )
-        result = subprocess.run(
-            ["powershell", "-NoProfile", "-Command", ps_script],
-            capture_output=True, text=True, timeout=3,
-        )
-        if "True" in result.stdout:
-            time.sleep(0.3)
-            # SendKeys via COM
-            try:
-                pythoncom.CoInitialize()
-                shell = win32com.client.Dispatch("WScript.Shell")
-                shell.SendKeys(keys)
-                return True
-            finally:
-                try:
-                    pythoncom.CoUninitialize()
-                except Exception:
-                    pass
-        else:
-            log.warning("SetForegroundWindow fehlgeschlagen fuer hwnd=%s: %s",
-                        hwnd, result.stdout.strip())
+        if _user32.IsIconic(hwnd):
+            _user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+        result = _user32.SetForegroundWindow(hwnd)
+        log.info("SetForegroundWindow(%s) = %s", hwnd, result)
+        return bool(result)
     except Exception as exc:
-        log.warning("_activate_and_paste fehlgeschlagen: %s", exc)
-    return False
+        log.warning("_activate_window fehlgeschlagen: %s", exc)
+        return False
+
+
+def _send_keys(keys: str) -> None:
+    """Sendet Tasten via WScript.Shell COM."""
+    try:
+        pythoncom.CoInitialize()
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shell.SendKeys(keys)
+    finally:
+        try:
+            pythoncom.CoUninitialize()
+        except Exception:
+            pass
 
 
 def paste_text(text: str, target_hwnd: int | None = None, **_kwargs) -> None:
@@ -94,8 +74,11 @@ def paste_text(text: str, target_hwnd: int | None = None, **_kwargs) -> None:
 
     pyperclip.copy(text)
 
-    if target_hwnd and _activate_and_paste(target_hwnd, "^v"):
-        return
+    if target_hwnd:
+        if _activate_window(target_hwnd):
+            time.sleep(0.3)
+            _send_keys("^v")
+            return
 
     # Fallback: AppActivate
     try:
@@ -119,17 +102,11 @@ def paste_text(text: str, target_hwnd: int | None = None, **_kwargs) -> None:
 def clear_input(target_hwnd: int | None = None, **_kwargs) -> None:
     """Leert das Eingabefeld (Ctrl+A, dann Backspace)."""
     if target_hwnd:
-        if _activate_and_paste(target_hwnd, "^a"):
+        if _activate_window(target_hwnd):
+            time.sleep(0.3)
+            _send_keys("^a")
             time.sleep(0.05)
-            try:
-                pythoncom.CoInitialize()
-                shell = win32com.client.Dispatch("WScript.Shell")
-                shell.SendKeys("{BACKSPACE}")
-            finally:
-                try:
-                    pythoncom.CoUninitialize()
-                except Exception:
-                    pass
+            _send_keys("{BACKSPACE}")
             return
 
     # Fallback
