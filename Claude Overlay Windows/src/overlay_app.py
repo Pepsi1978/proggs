@@ -78,6 +78,7 @@ class ClaudeOverlayApp:
         self.gemini_enabled = self.settings.gemini_available
         self._drag_data = {"x": 0, "y": 0}
         self._target_hwnd: int | None = None  # Fenster das vor der Aufnahme aktiv war
+        self._last_external_hwnd: int | None = None  # Letztes Nicht-Overlay-Fenster
 
         # ----- Fenster -----
         self.root = tk.Tk()
@@ -196,6 +197,9 @@ class ClaudeOverlayApp:
         self.canvas.bind("<B3-Motion>", self._on_drag_motion)
 
         self.root.bind("<Escape>", lambda _: self._quit())
+
+        # Vordergrund-Fenster-Tracker (merkt sich das letzte Nicht-Overlay-Fenster)
+        self.root.after(500, self._track_foreground_window)
 
         # Claude-Prozess-Watcher
         self.root.after(2000, self._watch_claude_process)
@@ -346,8 +350,9 @@ class ClaudeOverlayApp:
             self._start_recording()
 
     def _start_recording(self) -> None:
-        # Ziel-Fenster merken BEVOR Aufnahme startet (= wo der Cursor gerade ist)
-        self._target_hwnd = get_foreground_window()
+        # Ziel-Fenster: das letzte Nicht-Overlay-Fenster (getrackt alle 300ms)
+        self._target_hwnd = self._last_external_hwnd
+        log.info("Aufnahme gestartet, Ziel-Fenster: hwnd=%s", self._target_hwnd)
         try:
             self.recorder.start()
             self.is_recording = True
@@ -473,6 +478,19 @@ class ClaudeOverlayApp:
             self._set_status("Loeschen fehlgeschlagen", COLOR_ERROR)
             log.error("Eingabefeld leeren: %s", exc)
             self.root.after(3000, self._reset_to_idle)
+
+    # ------------------------------------------------------------------
+    # Vordergrund-Fenster-Tracker
+    # ------------------------------------------------------------------
+    def _track_foreground_window(self) -> None:
+        """Speichert regelmaessig das aktive Nicht-Overlay-Fenster."""
+        try:
+            hwnd = get_foreground_window()
+            if hwnd and hwnd != self._get_overlay_hwnd():
+                self._last_external_hwnd = hwnd
+        except Exception:
+            pass
+        self.root.after(300, self._track_foreground_window)
 
     # ------------------------------------------------------------------
     # Claude-Prozess-Watcher

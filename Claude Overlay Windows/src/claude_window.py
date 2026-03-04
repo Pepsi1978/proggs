@@ -32,11 +32,9 @@ def get_foreground_window() -> int | None:
     try:
         hwnd = win32gui.GetForegroundWindow()
         if hwnd and hwnd != 0:
-            title = win32gui.GetWindowText(hwnd)
-            log.info("Vordergrund-Fenster gespeichert: hwnd=%s title=%r", hwnd, title)
             return hwnd
-    except Exception as exc:
-        log.warning("GetForegroundWindow fehlgeschlagen: %s", exc)
+    except Exception:
+        pass
     return None
 
 
