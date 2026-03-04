@@ -221,8 +221,7 @@ Abhaengigkeiten (Dependencies) sind externe Pakete/Bibliotheken, die unser Tool 
 | `requests` | HTTP-Anfragen an die APIs senden (Groq + Gemini) |
 | `psutil` | Laufende Prozesse pruefen (ist Claude gestartet?) |
 | `pywinauto` | Windows-Fenster finden und fernsteuern |
-| `pywin32` | Grundlegende Windows-Funktionen fuer pywinauto |
-| `pyperclip` | Text in die Zwischenablage kopieren |
+| `pywin32` | Grundlegende Windows-Funktionen (Zwischenablage, Fenstersteuerung) |
 
 ### So installierst du sie:
 
@@ -312,13 +311,14 @@ Es gibt mehrere Wege, das Tool zu starten:
 
 ### Variante A: VBS-Skript per Doppelklick (empfohlen)
 
-Doppelklicke auf **`start_overlay.vbs`** im Datei-Explorer. Das startet den Watcher unsichtbar im Hintergrund - kein Konsolenfenster, kein Blinken.
+Doppelklicke auf **`start_watcher.vbs`** (oder alternativ `start_overlay.vbs`) im Datei-Explorer. Das startet den Watcher **komplett unsichtbar** im Hintergrund - kein Konsolenfenster, kein Taskleisten-Eintrag.
 
 > **Was passiert?**
 > - Der Watcher prueft alle 2 Sekunden, ob Claude laeuft
 > - Sobald du die Claude Desktop App oeffnest, erscheint das Overlay
 > - Wenn du Claude schliesst, verschwindet das Overlay
-> - Der Watcher laeuft unsichtbar im Hintergrund (kein Fenster)
+> - Der Watcher laeuft **unsichtbar** im Hintergrund (kein Fenster, kein Taskleisten-Eintrag)
+> - Das Overlay erscheint ebenfalls **nicht** in der Taskleiste
 
 ### Variante B: BAT-Datei per Doppelklick
 
@@ -354,9 +354,10 @@ python setup_autostart.py
 
 > **Was passiert?**
 > - Es wird eine Verknuepfung im Windows-Autostart-Ordner erstellt
-> - Die Verknuepfung nutzt `wscript.exe` + `start_overlay.vbs` fuer einen komplett unsichtbaren Start (kein CMD-Fenster)
+> - Die Verknuepfung nutzt die Kette: `wscript.exe` → `start_watcher.vbs` → `pythonw.exe` → `watcher.py`
+> - **Komplett unsichtbar**: Kein Konsolenfenster, kein Taskleisten-Eintrag, kein Blinken
 > - `setup_autostart.py` erstellt zusaetzlich eine Desktop-Verknuepfung
-> - Nach dem naechsten Neustart/Login laeuft der Watcher automatisch
+> - Nach dem naechsten Neustart/Login laeuft der Watcher automatisch im Hintergrund
 > - Du musst nichts mehr manuell starten
 
 ### Autostart wieder entfernen:
@@ -477,13 +478,13 @@ python -m pip install -r requirements.txt
    ```
    C:\Users\DEIN_NAME\...\Claude Overlay Windows\.venv\Scripts\pythonw.exe
    ```
-3. **Manuell testen** - Doppelklicke auf `start_overlay.vbs`. Wenn das funktioniert, aber der Autostart nicht, liegt es am Autostart-Link.
+3. **Manuell testen** - Doppelklicke auf `start_watcher.vbs`. Wenn das funktioniert, aber der Autostart nicht, liegt es am Autostart-Link.
 4. **Autostart-Ordner pruefen** - Druecke `Win + R`, tippe `shell:startup` und Enter. Dort muss `Claude Overlay Watcher.lnk` liegen.
 5. **Log pruefen** - Oeffne `watcher.log` im Projektordner fuer Fehlermeldungen.
 
 ### Das Overlay erscheint nicht
 
-- Stelle sicher, dass der Watcher laeuft (per `start_overlay.vbs` oder `start_watcher.bat`)
+- Stelle sicher, dass der Watcher laeuft (per `start_watcher.vbs` oder `start_watcher.bat`)
 - Oeffne die Claude Desktop App
 - Pruefe im Task-Manager, ob `pythonw.exe` oder `python.exe` laeuft
 - Pruefe `watcher.log` auf Fehlermeldungen
@@ -505,8 +506,9 @@ Claude Overlay Windows/
   .gitignore                # Dateien, die Git ignorieren soll
   requirements.txt          # Liste der Python-Abhaengigkeiten
   README.md                 # Diese Anleitung
-  start_overlay.vbs         # Startet den Watcher unsichtbar (empfohlen)
-  start_watcher.bat         # Startet den Watcher (BAT-Variante)
+  start_watcher.vbs         # Startet den Watcher unsichtbar (empfohlen)
+  start_overlay.vbs         # Startet den Watcher unsichtbar (Alias)
+  start_watcher.bat         # Startet den Watcher (BAT-Variante, kurz sichtbares Fenster)
   start_overlay.bat         # Startet das Overlay direkt (ohne Watcher)
   start_overlay_debug.bat   # Startet den Watcher im Debug-Modus (mit Konsolenfenster)
   install_autostart.ps1     # Richtet Windows-Autostart ein (PowerShell)
