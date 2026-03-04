@@ -1,0 +1,5 @@
+psutil==5.9.8
+requests==2.32.3
+sounddevice==0.4.7
+soundfile==0.12.1
+numpy>=2.1.3
