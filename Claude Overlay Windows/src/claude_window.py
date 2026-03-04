@@ -4,6 +4,7 @@ import time
 from typing import Optional
 
 import psutil
+import pythoncom
 import pyperclip
 import win32com.client
 
@@ -21,10 +22,10 @@ def is_claude_running(settings: Settings) -> bool:
     return False
 
 
-def _activate_claude() -> bool:
-    """Aktiviert das Claude-Fenster ueber WScript.Shell.AppActivate."""
-    shell = win32com.client.Dispatch("WScript.Shell")
-    return shell.AppActivate("Claude")
+def _get_shell():
+    """Erstellt WScript.Shell mit COM-Initialisierung fuer Background-Threads."""
+    pythoncom.CoInitialize()
+    return win32com.client.Dispatch("WScript.Shell")
 
 
 def insert_text_into_claude(text: str, **_kwargs) -> None:
@@ -32,23 +33,30 @@ def insert_text_into_claude(text: str, **_kwargs) -> None:
     if not text.strip():
         return
 
-    pyperclip.copy(text)
+    try:
+        shell = _get_shell()
+        pyperclip.copy(text)
 
-    if not _activate_claude():
-        raise RuntimeError("Claude-Fenster wurde nicht gefunden.")
+        if not shell.AppActivate("Claude"):
+            raise RuntimeError("Claude-Fenster wurde nicht gefunden.")
 
-    time.sleep(0.3)
-    shell = win32com.client.Dispatch("WScript.Shell")
-    shell.SendKeys("^v")
+        time.sleep(0.3)
+        shell.SendKeys("^v")
+    finally:
+        pythoncom.CoUninitialize()
 
 
 def clear_claude_input(**_kwargs) -> None:
     """Leert das Eingabefeld in Claude (Ctrl+A, dann Backspace)."""
-    if not _activate_claude():
-        raise RuntimeError("Claude-Fenster wurde nicht gefunden.")
+    try:
+        shell = _get_shell()
 
-    time.sleep(0.3)
-    shell = win32com.client.Dispatch("WScript.Shell")
-    shell.SendKeys("^a")
-    time.sleep(0.05)
-    shell.SendKeys("{BACKSPACE}")
+        if not shell.AppActivate("Claude"):
+            raise RuntimeError("Claude-Fenster wurde nicht gefunden.")
+
+        time.sleep(0.3)
+        shell.SendKeys("^a")
+        time.sleep(0.05)
+        shell.SendKeys("{BACKSPACE}")
+    finally:
+        pythoncom.CoUninitialize()
