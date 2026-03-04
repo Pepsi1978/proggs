@@ -432,7 +432,7 @@ class ClaudeOverlayApp:
     def _paste_and_finish(self, text: str) -> None:
         """Fuegt Text ein (laeuft im Hauptthread) und zeigt Erfolg."""
         try:
-            paste_text(text)
+            paste_text(text, tk_root=self.root)
             self._on_pipeline_success()
         except Exception as exc:
             err_msg = str(exc)
