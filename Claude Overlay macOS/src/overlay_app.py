@@ -80,11 +80,15 @@ class ClaudeOverlayApp:
         # ----- Fenster -----
         self.root = tk.Tk()
         self.root.title("Mic Overlay")
+
+        # macOS: overrideredirect muss nach withdraw/deiconify gesetzt werden,
+        # damit die Titelleiste wirklich verschwindet.
+        self.root.withdraw()
+        self.root.update_idletasks()
         self.root.overrideredirect(True)
+
         self.root.attributes("-topmost", True)
         self.root.attributes("-alpha", 0.93)
-
-        # macOS: Hintergrund dunkel setzen (kein -transparentcolor auf macOS)
         self.root.configure(bg=COLOR_BG)
 
         r = self.BTN_RADIUS
@@ -220,6 +224,9 @@ class ClaudeOverlayApp:
 
         # Claude-Prozess-Watcher
         self.root.after(2000, self._watch_claude_process)
+
+        # macOS: Fenster jetzt sichtbar machen (nach overrideredirect)
+        self.root.deiconify()
 
     # ------------------------------------------------------------------
     # Zeichenhilfe
