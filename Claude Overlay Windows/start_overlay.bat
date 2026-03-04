@@ -1,5 +1,4 @@
 @echo off
 cd /d "%~dp0"
 call .venv\Scripts\activate.bat
-python src\overlay_app.py
-pause
+pythonw src\overlay_app.py
