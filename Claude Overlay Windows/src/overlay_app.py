@@ -86,6 +86,7 @@ class ClaudeOverlayApp:
         self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
         self.root.attributes("-alpha", 0.93)
+        self.root.attributes("-toolwindow", True)  # Nicht in Taskleiste anzeigen
         self.root.configure(bg=TRANSPARENT)
         self.root.attributes("-transparentcolor", TRANSPARENT)
 

@@ -2,12 +2,15 @@ $ErrorActionPreference = "Stop"
 
 $startupPath = [Environment]::GetFolderPath("Startup")
 $shortcutPath = Join-Path $startupPath "Claude Overlay Watcher.lnk"
-$vbsPath = Join-Path $PSScriptRoot "start_overlay.vbs"
 $wscriptPath = "C:\Windows\System32\wscript.exe"
 
-# Pruefe ob VBS-Skript existiert
+# Beide VBS-Varianten pruefen (neuer Name bevorzugt)
+$vbsPath = Join-Path $PSScriptRoot "start_watcher.vbs"
 if (-not (Test-Path $vbsPath)) {
-    Write-Host "FEHLER: $vbsPath nicht gefunden!" -ForegroundColor Red
+    $vbsPath = Join-Path $PSScriptRoot "start_overlay.vbs"
+}
+if (-not (Test-Path $vbsPath)) {
+    Write-Host "FEHLER: Kein VBS-Startskript gefunden!" -ForegroundColor Red
     exit 1
 }
 
@@ -30,13 +33,16 @@ $shortcut = $wsh.CreateShortcut($shortcutPath)
 $shortcut.TargetPath = $wscriptPath
 $shortcut.Arguments = """$vbsPath"""
 $shortcut.WorkingDirectory = $PSScriptRoot
-$shortcut.WindowStyle = 1
+$shortcut.WindowStyle = 7  # Minimiert, kein Fokus
 $shortcut.Description = "Startet den Claude Overlay Watcher (unsichtbar via VBS)"
 $shortcut.Save()
 
 Write-Host ""
 Write-Host "Autostart eingerichtet!" -ForegroundColor Green
 Write-Host "  Verknuepfung: $shortcutPath"
-Write-Host "  Startet:      wscript.exe -> start_overlay.vbs -> pythonw.exe watcher.py"
+Write-Host "  Startet:      wscript.exe -> $($vbsPath | Split-Path -Leaf) -> pythonw.exe watcher.py"
+Write-Host ""
+Write-Host "Kette: wscript.exe (unsichtbar) -> VBS -> pythonw.exe (kein Fenster) -> watcher.py"
+Write-Host "  => Kein Konsolenfenster, kein Taskleisten-Eintrag."
 Write-Host ""
 Write-Host "Nach dem naechsten Neustart wird der Watcher automatisch gestartet."
