@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Claude V.1.2.4
+// @name         Claude V.1.2.5
 // @namespace    https://claude.ai/
-// @version      1.2.4
+// @version      1.2.5
 // @description  Speech-to-Text + Gemini-„Diktat-Bereinigung“ (DE) auf Claude: entfernt Kauderwelsch/Doubletten + setzt Satzbau/Zeichensetzung. Dazu 2 Prompt-Builder Buttons. ProseMirror-kompatible Textübernahme + UI-Reinject (Buttons verschwinden nicht mehr). Debounced Observer (verhindert Lade-Freeze). Fix: strengere Prompt-Feld-Erkennung (kein Seitentext mehr).
 // @match        https://claude.ai/*
 // @match        https://www.claude.ai/*
