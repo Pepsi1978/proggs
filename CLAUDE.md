@@ -65,6 +65,32 @@ Die CLAUDE.md existiert sowohl **lokal** im Repository als auch **auf GitHub** (
 - Neue Anweisungen oder Regeländerungen dürfen **niemals nur lokal** gespeichert werden
 - Der Workflow ist: Datei bearbeiten → committen → pushen
 
+## Commit-Nachrichten
+
+Jede Commit-Nachricht muss mit einer **fortlaufenden Nummer** beginnen, gefolgt von einer **ausführlichen Beschreibung** der Änderung. Das Format ist:
+
+```
+#NNN - Ausführliche Beschreibung was geändert wurde
+```
+
+**Regeln:**
+
+- Die Nummerierung beginnt bei **#001** und wird fortlaufend hochgezählt
+- Die Nummer wird **automatisch** von Claude Code vergeben – der Benutzer muss sie nicht selbst angeben
+- Die Beschreibung nach der Nummer erklärt **was geändert wurde und warum**
+- Wenn der Benutzer einen eigenen Namen für den Commit angibt (z.B. "Committe mit dem Namen Wassermelone"), wird dieser Name **nach der Nummer** eingefügt: `#NNN - Wassermelone`
+- Wenn der Benutzer keinen Namen angibt, erstellt Claude Code automatisch eine aussagekräftige Beschreibung
+- Die aktuelle Zählung wird anhand der bestehenden Commits im Repository ermittelt, um Doppelungen zu vermeiden
+
+**Beispiele:**
+
+```
+#001 - Initiales Projekt erstellt mit Grundstruktur
+#002 - Login-Seite mit E-Mail- und Passwort-Feld hinzugefügt
+#003 - Wassermelone
+#004 - Farbschema von blau auf dunkelgrün geändert
+```
+
 ## Sprache
 
 Sämtliche Inhalte in der CLAUDE.md müssen **immer auf Deutsch** verfasst werden. Das gilt auch für:
