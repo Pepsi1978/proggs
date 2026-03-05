@@ -127,6 +127,7 @@ class ClaudeOverlayApp:
         self.gemini_enabled = self.settings.gemini_available
         self._drag_data = {"x": 0, "y": 0}
         self._target_app: str | None = None  # Letztes Nicht-Overlay-Fenster (App-Name)
+        self._overlay_visible: bool = True  # Overlay-Sichtbarkeit
 
         # ----- Fenster -----
         self.root = tk.Tk()
@@ -365,10 +366,11 @@ class ClaudeOverlayApp:
             self.canvas.itemconfig(self.eraser_circle, fill=COLOR_ERASER_IDLE)
 
     def _keep_on_top(self) -> None:
-        """Hebt das Overlay periodisch in den Vordergrund."""
+        """Hebt das Overlay periodisch in den Vordergrund (nur wenn sichtbar)."""
         try:
-            self.root.lift()
-            self.root.attributes("-topmost", True)
+            if self._overlay_visible:
+                self.root.lift()
+                self.root.attributes("-topmost", True)
         except tk.TclError:
             return  # Fenster wurde geschlossen
         self.root.after(2000, self._keep_on_top)
@@ -590,14 +592,36 @@ class ClaudeOverlayApp:
     # Vordergrund-App-Tracking (macOS: ueber AppleScript)
     # ------------------------------------------------------------------
     def _track_frontmost_app(self) -> None:
-        """Speichert regelmaessig die aktive Nicht-Overlay-App."""
+        """Speichert die aktive Nicht-Overlay-App und blendet das Overlay
+        nur ein, wenn Claude Desktop im Vordergrund ist."""
         try:
             app = get_frontmost_app()
             if app and app.lower() not in ("python", "tkinter", "wish"):
                 self._target_app = app
+                if app == "Claude":
+                    self._show_overlay()
+                else:
+                    self._hide_overlay()
         except Exception:
             pass
         self.root.after(300, self._track_frontmost_app)
+
+    # ------------------------------------------------------------------
+    # Overlay ein-/ausblenden
+    # ------------------------------------------------------------------
+    def _show_overlay(self) -> None:
+        """Zeigt das Overlay an, falls es versteckt ist."""
+        if not self._overlay_visible:
+            self._overlay_visible = True
+            self.root.deiconify()
+            self.root.lift()
+            self.root.attributes("-topmost", True)
+
+    def _hide_overlay(self) -> None:
+        """Versteckt das Overlay, falls es sichtbar ist."""
+        if self._overlay_visible:
+            self._overlay_visible = False
+            self.root.withdraw()
 
     # ------------------------------------------------------------------
     # Claude-Prozess-Watcher
