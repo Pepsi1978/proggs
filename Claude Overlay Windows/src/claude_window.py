@@ -192,13 +192,17 @@ def _activate_window(hwnd: int) -> bool:
 
 
 def is_claude_running(settings: Settings) -> bool:
-    """Prueft, ob ein Claude-Prozess laeuft."""
+    """Prueft, ob die Claude Desktop App laeuft.
+
+    Verwendet einen exakten Vergleich des Prozessnamens, damit
+    Browser-Prozesse (z.B. Chrome mit einem Claude-Tab) nicht
+    faelschlicherweise als Claude Desktop erkannt werden.
+    """
     names = set(settings.claude_process_names)
     for proc in psutil.process_iter(["name"]):
-        name = (proc.info.get("name") or "").lower()
-        for candidate in names:
-            if candidate and candidate in name:
-                return True
+        proc_name = (proc.info.get("name") or "").lower()
+        if proc_name in names:
+            return True
     return False
 
 
