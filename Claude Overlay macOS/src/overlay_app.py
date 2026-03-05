@@ -23,29 +23,41 @@ from config import Settings
 def _hide_dock_icon() -> None:
     """Setzt die App auf 'Accessory' damit kein Dock-Icon erscheint.
 
-    Nutzt ctypes um direkt die Objective-C-Runtime aufzurufen –
-    funktioniert ohne PyObjC-Installation.
+    WICHTIG: Muss NACH tk.Tk() aufgerufen werden, da tkinter die
+    NSApplication-Instanz selbst erstellt. Vorher aufrufen fuehrt zu SIGABRT.
+
+    Nutzt ctypes mit separaten Funktionstypen (CFUNCTYPE) um die
+    Objective-C-Runtime sicher aufzurufen – ohne PyObjC.
     """
     try:
-        objc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))  # type: ignore[arg-type]
+        lib_path = ctypes.util.find_library("objc")
+        if lib_path is None:
+            return
+        objc = ctypes.cdll.LoadLibrary(lib_path)
 
         objc.objc_getClass.restype = ctypes.c_void_p
+        objc.objc_getClass.argtypes = [ctypes.c_char_p]
         objc.sel_registerName.restype = ctypes.c_void_p
-        objc.objc_msgSend.restype = ctypes.c_void_p
-        objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        objc.sel_registerName.argtypes = [ctypes.c_char_p]
 
-        NSApp = objc.objc_msgSend(
+        # Separater Funktionstyp fuer objc_msgSend ohne Extra-Argumente
+        _send = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)(
+            ("objc_msgSend", objc),
+        )
+        # Separater Funktionstyp fuer objc_msgSend mit int64-Argument
+        _send_int = ctypes.CFUNCTYPE(
+            ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int64,
+        )(("objc_msgSend", objc))
+
+        NSApp = _send(
             objc.objc_getClass(b"NSApplication"),
             objc.sel_registerName(b"sharedApplication"),
         )
+        if not NSApp:
+            return
 
         # setActivationPolicy: 1 = NSApplicationActivationPolicyAccessory
-        objc.objc_msgSend.argtypes = [
-            ctypes.c_void_p,
-            ctypes.c_void_p,
-            ctypes.c_int64,
-        ]
-        objc.objc_msgSend(
+        _send_int(
             NSApp,
             objc.sel_registerName(b"setActivationPolicy:"),
             1,
@@ -116,12 +128,12 @@ class ClaudeOverlayApp:
         self._drag_data = {"x": 0, "y": 0}
         self._target_app: str | None = None  # Letztes Nicht-Overlay-Fenster (App-Name)
 
-        # ----- Dock-Icon ausblenden (vor Tk-Fenster!) -----
-        _hide_dock_icon()
-
         # ----- Fenster -----
         self.root = tk.Tk()
         self.root.title("Mic Overlay")
+
+        # Dock-Icon ausblenden (NACH tk.Tk(), da tkinter NSApplication erstellt)
+        _hide_dock_icon()
 
         r = self.BTN_RADIUS
         d = r * 2
