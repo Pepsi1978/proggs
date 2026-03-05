@@ -164,13 +164,35 @@ def _activate_target(target_app: str | None = None) -> bool:
     return False
 
 
+def _verify_clipboard(expected: str) -> bool:
+    """Prueft ob der Clipboard-Inhalt dem erwarteten Text entspricht."""
+    try:
+        result = subprocess.run(
+            ["pbpaste"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        if result.returncode == 0:
+            return result.stdout == expected
+    except Exception:
+        pass
+    return False
+
+
 def paste_text(text: str, target_app: str | None = None, tk_root=None, **_kwargs) -> None:
     """Fuegt Text per Clipboard + Fensteraktivierung + Cmd+V ein."""
     if not text.strip():
         return
 
-    # Clipboard setzen
-    clipboard_ok = _set_clipboard_text(text)
+    # Clipboard setzen (mit Retry)
+    clipboard_ok = False
+    for attempt in range(3):
+        if _set_clipboard_text(text) and _verify_clipboard(text):
+            clipboard_ok = True
+            break
+        log.warning("Clipboard-Versuch %d fehlgeschlagen, wiederhole...", attempt + 1)
+        time.sleep(0.1)
 
     if not clipboard_ok and tk_root:
         try:
@@ -185,14 +207,30 @@ def paste_text(text: str, target_app: str | None = None, tk_root=None, **_kwargs
     if not clipboard_ok:
         raise RuntimeError("Clipboard konnte nicht gesetzt werden.")
 
-    # Zielfenster aktivieren
-    _activate_target(target_app)
+    # Zielfenster aktivieren (mit Retry)
+    activated = False
+    for attempt in range(3):
+        if _activate_target(target_app):
+            activated = True
+            break
+        log.warning("Aktivierung Versuch %d fehlgeschlagen", attempt + 1)
+        time.sleep(0.3)
 
-    # Cmd+V senden
-    if not _send_keystroke("v", "command down"):
-        log.warning("Cmd+V fehlgeschlagen")
-    time.sleep(0.3)
+    if not activated:
+        log.error("Zielfenster konnte nicht aktiviert werden – Text im Clipboard")
+        return
 
+    # Kurz warten bis Fenster bereit ist
+    time.sleep(0.15)
+
+    # Cmd+V senden (mit Retry)
+    for attempt in range(2):
+        if _send_keystroke("v", "command down"):
+            break
+        log.warning("Cmd+V Versuch %d fehlgeschlagen, wiederhole...", attempt + 1)
+        time.sleep(0.3)
+
+    time.sleep(0.2)
     log.info("Text eingefuegt (%d Zeichen)", len(text))
 
 

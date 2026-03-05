@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ctypes
+import ctypes.util
 import logging
 import sys
 import threading
@@ -13,6 +15,55 @@ from api_clients import improve_text_with_gemini, transcribe_with_grok
 from audio_capture import AudioRecorder
 from claude_window import clear_input, get_frontmost_app, is_claude_running, paste_text
 from config import Settings
+
+
+# ---------------------------------------------------------------------------
+# macOS: Python-Icon im Dock verstecken
+# ---------------------------------------------------------------------------
+def _hide_dock_icon() -> None:
+    """Setzt die App auf 'Accessory' damit kein Dock-Icon erscheint.
+
+    WICHTIG: Muss NACH tk.Tk() aufgerufen werden, da tkinter die
+    NSApplication-Instanz selbst erstellt. Vorher aufrufen fuehrt zu SIGABRT.
+
+    Nutzt ctypes mit separaten Funktionstypen (CFUNCTYPE) um die
+    Objective-C-Runtime sicher aufzurufen – ohne PyObjC.
+    """
+    try:
+        lib_path = ctypes.util.find_library("objc")
+        if lib_path is None:
+            return
+        objc = ctypes.cdll.LoadLibrary(lib_path)
+
+        objc.objc_getClass.restype = ctypes.c_void_p
+        objc.objc_getClass.argtypes = [ctypes.c_char_p]
+        objc.sel_registerName.restype = ctypes.c_void_p
+        objc.sel_registerName.argtypes = [ctypes.c_char_p]
+
+        # Separater Funktionstyp fuer objc_msgSend ohne Extra-Argumente
+        _send = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)(
+            ("objc_msgSend", objc),
+        )
+        # Separater Funktionstyp fuer objc_msgSend mit int64-Argument
+        _send_int = ctypes.CFUNCTYPE(
+            ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int64,
+        )(("objc_msgSend", objc))
+
+        NSApp = _send(
+            objc.objc_getClass(b"NSApplication"),
+            objc.sel_registerName(b"sharedApplication"),
+        )
+        if not NSApp:
+            return
+
+        # setActivationPolicy: 1 = NSApplicationActivationPolicyAccessory
+        _send_int(
+            NSApp,
+            objc.sel_registerName(b"setActivationPolicy:"),
+            1,
+        )
+    except Exception:
+        pass  # Nicht-macOS oder Fehler – ignorieren
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -80,12 +131,9 @@ class ClaudeOverlayApp:
         # ----- Fenster -----
         self.root = tk.Tk()
         self.root.title("Mic Overlay")
-        self.root.overrideredirect(True)
-        self.root.attributes("-topmost", True)
-        self.root.attributes("-alpha", 0.93)
 
-        # macOS: Hintergrund dunkel setzen (kein -transparentcolor auf macOS)
-        self.root.configure(bg=COLOR_BG)
+        # Dock-Icon ausblenden (NACH tk.Tk(), da tkinter NSApplication erstellt)
+        _hide_dock_icon()
 
         r = self.BTN_RADIUS
         d = r * 2
@@ -95,8 +143,25 @@ class ClaudeOverlayApp:
         screen_w = self.root.winfo_screenwidth()
         screen_h = self.root.winfo_screenheight()
         x = screen_w - total_w - 24
-        y = screen_h - total_h - 80
+        # Abstand zum Dock (~340px vom unteren Rand)
+        y = screen_h - total_h - 340
+
+        # Fenster unsichtbar vorbereiten
+        self.root.withdraw()
+        self.root.configure(bg=COLOR_BG)
         self.root.geometry(f"{total_w}x{total_h}+{x}+{y}")
+        self.root.update_idletasks()
+
+        # Rahmenlos: overrideredirect entfernt alle Fensterdekorationen
+        self.root.overrideredirect(True)
+
+        self.root.attributes("-topmost", True)
+        self.root.attributes("-alpha", 0.93)
+
+        # Fenster sichtbar machen
+        self.root.deiconify()
+        self.root.update_idletasks()
+        self.root.lift()
 
         # ----- Canvas -----
         self.canvas = tk.Canvas(
@@ -207,19 +272,30 @@ class ClaudeOverlayApp:
         self.canvas.bind("<Button-1>", self._on_click)
         self.canvas.bind("<Motion>", self._on_motion)
         self.canvas.bind("<Leave>", self._on_leave)
-        # macOS: Rechtsklick = Button-2 oder Ctrl+Click
+        # Verschieben per Rechtsklick oder Ctrl+Click
+        # macOS: Button-2 = Mitte, Button-3 = Rechtsklick (inkl. Trackpad)
         self.canvas.bind("<Button-2>", self._on_drag_start)
         self.canvas.bind("<B2-Motion>", self._on_drag_motion)
+        self.canvas.bind("<Button-3>", self._on_drag_start)
+        self.canvas.bind("<B3-Motion>", self._on_drag_motion)
         self.canvas.bind("<Control-ButtonPress-1>", self._on_drag_start)
         self.canvas.bind("<Control-B1-Motion>", self._on_drag_motion)
 
         self.root.bind("<Escape>", lambda _: self._quit())
+
+        # Overlay periodisch in den Vordergrund heben
+        # (overrideredirect-Fenster verlieren auf macOS den Vordergrund)
+        self.root.after(1000, self._keep_on_top)
 
         # Vordergrund-App-Tracking starten
         self.root.after(500, self._track_frontmost_app)
 
         # Claude-Prozess-Watcher
         self.root.after(2000, self._watch_claude_process)
+
+        # Fenster sichtbar machen
+        self.root.deiconify()
+        self.root.lift()
 
     # ------------------------------------------------------------------
     # Zeichenhilfe
@@ -253,16 +329,6 @@ class ClaudeOverlayApp:
     # ------------------------------------------------------------------
     # Maus-Events
     # ------------------------------------------------------------------
-    def _on_click(self, event: tk.Event) -> None:
-        if self._in_bbox(event.x, event.y, self._close_bbox):
-            self._quit()
-        elif self._in_bbox(event.x, event.y, self._gemini_bbox):
-            self._toggle_gemini()
-        elif self._in_bbox(event.x, event.y, self._mic_bbox):
-            self._toggle_recording()
-        elif self._in_bbox(event.x, event.y, self._eraser_bbox):
-            self._clear_input()
-
     def _on_motion(self, event: tk.Event) -> None:
         # Close-Button reagiert immer auf Hover
         if self._in_bbox(event.x, event.y, self._close_bbox):
@@ -297,6 +363,25 @@ class ClaudeOverlayApp:
         if not self.is_recording and not self.is_processing:
             self.canvas.itemconfig(self.mic_circle, fill=COLOR_IDLE)
             self.canvas.itemconfig(self.eraser_circle, fill=COLOR_ERASER_IDLE)
+
+    def _keep_on_top(self) -> None:
+        """Hebt das Overlay periodisch in den Vordergrund."""
+        try:
+            self.root.lift()
+            self.root.attributes("-topmost", True)
+        except tk.TclError:
+            return  # Fenster wurde geschlossen
+        self.root.after(2000, self._keep_on_top)
+
+    def _on_click(self, event: tk.Event) -> None:
+        if self._in_bbox(event.x, event.y, self._close_bbox):
+            self._quit()
+        elif self._in_bbox(event.x, event.y, self._gemini_bbox):
+            self._toggle_gemini()
+        elif self._in_bbox(event.x, event.y, self._mic_bbox):
+            self._toggle_recording()
+        elif self._in_bbox(event.x, event.y, self._eraser_bbox):
+            self._clear_input()
 
     def _on_drag_start(self, event: tk.Event) -> None:
         self._drag_data["x"] = event.x

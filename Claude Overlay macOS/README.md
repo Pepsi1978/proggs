@@ -10,7 +10,8 @@ Ein Python-Overlay fuer die **macOS Claude Desktop App** mit zwei Buttons:
 - Der **Watcher** (`watcher.py`) ueberwacht, ob die Claude Desktop App laeuft.
 - Wenn Claude gestartet wird: Das Overlay startet automatisch.
 - Wenn Claude geschlossen wird: Das Overlay beendet sich automatisch.
-- Das Overlay ist **rahmenlos** (kein Fenstertitel), **immer im Vordergrund** und kann per **Ctrl+Klick + Ziehen** oder **Rechtsklick + Ziehen** frei verschoben werden.
+- Das Overlay ist **rahmenlos** (kein Fenstertitel, kein Dock-Icon), **immer im Vordergrund** und kann per **Rechtsklick + Ziehen** oder **Ctrl+Klick + Ziehen** frei verschoben werden.
+- Der Watcher nutzt eine **PID-Lock-Datei**, sodass nie zwei Instanzen gleichzeitig laufen koennen.
 - Waehrend der Aufnahme **pulsiert** der Mikrofon-Button rot.
 - Lange Aufnahmen (>20 MB) werden automatisch in Teile aufgesplittet und stueckweise transkribiert.
 - Bei API-Fehlern (429/500/503) wird automatisch mit Backoff erneut versucht.
@@ -336,6 +337,9 @@ bash install_autostart.sh
 > **Was passiert?**
 > - Es wird ein macOS **LaunchAgent** erstellt (unter `~/Library/LaunchAgents/`)
 > - Der Watcher startet automatisch bei jedem Login
+> - Sobald du Claude oeffnest, erscheint das Overlay
+> - Sobald du Claude schliesst, verschwindet das Overlay
+> - Dank **PID-Lock** werden keine doppelten Instanzen gestartet
 > - Kein manuelles Starten mehr noetig
 
 ### Autostart entfernen:
@@ -371,8 +375,8 @@ bash uninstall_autostart.sh
 
 ### Overlay verschieben
 
-- **Ctrl+Klick + Ziehen** = Overlay an eine andere Stelle verschieben
-- **Rechtsklick (Button-2) + Ziehen** = Alternativ zum Verschieben
+- **Rechtsklick + Ziehen** = Overlay an eine andere Stelle verschieben
+- **Ctrl+Klick + Ziehen** = Alternative zum Verschieben (fuer Trackpads ohne Rechtsklick)
 
 ### Overlay schliessen
 
@@ -480,6 +484,7 @@ Claude Overlay macOS/
   start_overlay.sh          # Startet das Overlay direkt (ohne Watcher)
   install_autostart.sh      # Richtet macOS-Autostart ein (LaunchAgent)
   uninstall_autostart.sh    # Entfernt macOS-Autostart
+  watcher.pid               # PID-Lock-Datei (verhindert doppelte Instanzen)
   watcher.log               # Log-Datei des Watchers (wird automatisch erstellt)
   overlay.log               # Log-Datei des Overlays (wird automatisch erstellt)
   failed_transcripts/       # Gesicherte Transkripte bei API-Fehlern

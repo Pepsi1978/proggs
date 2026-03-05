@@ -1,5 +1,7 @@
 #!/bin/bash
-# Richtet den macOS LaunchAgent ein, damit der Watcher beim Login automatisch startet.
+# Richtet den macOS LaunchAgent ein, damit der Watcher permanent im Hintergrund
+# laeuft. Der Watcher ueberwacht ob Claude Desktop offen ist und startet/stoppt
+# das Overlay automatisch. Dank PID-Lock sind Doppelstarts ausgeschlossen.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLIST_NAME="com.claude-overlay.watcher"
@@ -26,7 +28,20 @@ if launchctl list | grep -q "$PLIST_NAME"; then
     echo "Bestehender LaunchAgent gestoppt."
 fi
 
+# Auch laufenden Watcher-Prozess beenden
+if [ -f "$SCRIPT_DIR/watcher.pid" ]; then
+    OLD_PID=$(cat "$SCRIPT_DIR/watcher.pid")
+    if kill -0 "$OLD_PID" 2>/dev/null; then
+        kill "$OLD_PID" 2>/dev/null
+        echo "Laufenden Watcher (PID $OLD_PID) gestoppt."
+    fi
+    rm -f "$SCRIPT_DIR/watcher.pid"
+fi
+
 # Plist-Datei erstellen
+# RunAtLoad: Startet beim Login
+# KeepAlive: macOS startet den Watcher automatisch neu falls er abstuerzt
+# Der Watcher selbst hat eine PID-Lock-Datei die Doppelstarts verhindert
 cat > "$PLIST_PATH" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -44,7 +59,9 @@ cat > "$PLIST_PATH" << EOF
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
-    <false/>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
     <key>StandardOutPath</key>
     <string>${SCRIPT_DIR}/watcher_stdout.log</string>
     <key>StandardErrorPath</key>
@@ -67,5 +84,10 @@ echo "LaunchAgent: $PLIST_PATH"
 echo "Python:      $PYTHON_PATH"
 echo "Watcher:     $WATCHER_SCRIPT"
 echo ""
-echo "Der Watcher startet jetzt automatisch bei jedem Login."
+echo "So funktioniert es:"
+echo "  - Watcher laeuft permanent im Hintergrund (startet bei Login)"
+echo "  - Wenn Claude Desktop geoeffnet wird: Overlay erscheint automatisch"
+echo "  - Wenn Claude Desktop geschlossen wird: Overlay verschwindet"
+echo "  - PID-Lock verhindert doppelte Instanzen"
+echo ""
 echo "Zum Entfernen: bash uninstall_autostart.sh"

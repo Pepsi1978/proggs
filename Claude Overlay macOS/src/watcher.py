@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import atexit
 import logging
+import os
+import signal
 import subprocess
 import sys
 import time
@@ -10,6 +13,7 @@ from claude_window import is_claude_running
 from config import Settings
 
 LOG_PATH = Path(__file__).resolve().parents[1] / "watcher.log"
+PID_FILE = Path(__file__).resolve().parents[1] / "watcher.pid"
 
 
 def _setup_logging() -> None:
@@ -27,6 +31,43 @@ def _setup_logging() -> None:
     )
 
 
+# ---------- Single-Instance Lock ----------
+
+def _is_process_alive(pid: int) -> bool:
+    """Prueft ob ein Prozess mit der PID noch laeuft."""
+    try:
+        os.kill(pid, 0)
+        return True
+    except (OSError, ProcessLookupError):
+        return False
+
+
+def _acquire_lock() -> bool:
+    """Erstellt eine Lock-Datei. Gibt False zurueck wenn bereits eine Instanz laeuft."""
+    if PID_FILE.exists():
+        try:
+            old_pid = int(PID_FILE.read_text().strip())
+            if _is_process_alive(old_pid):
+                return False
+            # Alter Prozess ist tot – Lock uebernehmen
+            logging.info("Verwaiste PID-Datei gefunden (PID %d tot), uebernehme Lock.", old_pid)
+        except (ValueError, OSError):
+            pass
+    PID_FILE.write_text(str(os.getpid()))
+    return True
+
+
+def _release_lock() -> None:
+    """Entfernt die Lock-Datei."""
+    try:
+        if PID_FILE.exists() and PID_FILE.read_text().strip() == str(os.getpid()):
+            PID_FILE.unlink()
+    except OSError:
+        pass
+
+
+# ---------- Overlay ----------
+
 def start_overlay(script_path: Path, log_file) -> subprocess.Popen:
     """Startet das Overlay als eigenen Prozess."""
     logging.info("Starte Overlay: %s", script_path)
@@ -40,6 +81,18 @@ def start_overlay(script_path: Path, log_file) -> subprocess.Popen:
 def main() -> None:
     _setup_logging()
     logging.info("=== Watcher gestartet (Python: %s) ===", sys.executable)
+
+    # Single-Instance: Nur eine Watcher-Instanz erlauben
+    if not _acquire_lock():
+        logging.info("Andere Watcher-Instanz laeuft bereits. Beende mich.")
+        return
+    atexit.register(_release_lock)
+
+    # Bei SIGTERM sauber beenden (z.B. durch launchctl stop)
+    def _handle_sigterm(signum, frame):
+        logging.info("SIGTERM empfangen – beende Watcher.")
+        raise SystemExit(0)
+    signal.signal(signal.SIGTERM, _handle_sigterm)
 
     try:
         settings = Settings.load()
@@ -127,3 +180,5 @@ if __name__ == "__main__":
         with open(LOG_PATH, "a", encoding="utf-8") as f:
             f.write(traceback.format_exc())
         raise
+    finally:
+        _release_lock()
