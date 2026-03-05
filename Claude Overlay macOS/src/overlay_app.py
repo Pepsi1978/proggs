@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ctypes
+import ctypes.util
 import logging
 import sys
 import threading
@@ -13,6 +15,43 @@ from api_clients import improve_text_with_gemini, transcribe_with_grok
 from audio_capture import AudioRecorder
 from claude_window import clear_input, get_frontmost_app, is_claude_running, paste_text
 from config import Settings
+
+
+# ---------------------------------------------------------------------------
+# macOS: Python-Icon im Dock verstecken
+# ---------------------------------------------------------------------------
+def _hide_dock_icon() -> None:
+    """Setzt die App auf 'Accessory' damit kein Dock-Icon erscheint.
+
+    Nutzt ctypes um direkt die Objective-C-Runtime aufzurufen –
+    funktioniert ohne PyObjC-Installation.
+    """
+    try:
+        objc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))  # type: ignore[arg-type]
+
+        objc.objc_getClass.restype = ctypes.c_void_p
+        objc.sel_registerName.restype = ctypes.c_void_p
+        objc.objc_msgSend.restype = ctypes.c_void_p
+        objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+
+        NSApp = objc.objc_msgSend(
+            objc.objc_getClass(b"NSApplication"),
+            objc.sel_registerName(b"sharedApplication"),
+        )
+
+        # setActivationPolicy: 1 = NSApplicationActivationPolicyAccessory
+        objc.objc_msgSend.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_int64,
+        ]
+        objc.objc_msgSend(
+            NSApp,
+            objc.sel_registerName(b"setActivationPolicy:"),
+            1,
+        )
+    except Exception:
+        pass  # Nicht-macOS oder Fehler – ignorieren
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -77,6 +116,9 @@ class ClaudeOverlayApp:
         self._drag_data = {"x": 0, "y": 0}
         self._target_app: str | None = None  # Letztes Nicht-Overlay-Fenster (App-Name)
 
+        # ----- Dock-Icon ausblenden (vor Tk-Fenster!) -----
+        _hide_dock_icon()
+
         # ----- Fenster -----
         self.root = tk.Tk()
         self.root.title("Mic Overlay")
@@ -91,30 +133,19 @@ class ClaudeOverlayApp:
         x = screen_w - total_w - 24
         y = screen_h - total_h - 80
 
-        # Fenster unsichtbar vorbereiten, Geometrie setzen
+        # Fenster unsichtbar vorbereiten
         self.root.withdraw()
         self.root.configure(bg=COLOR_BG)
         self.root.geometry(f"{total_w}x{total_h}+{x}+{y}")
         self.root.update_idletasks()
 
-        # Rahmenlos: MacWindowStyle (bevorzugt), sonst overrideredirect
-        _frameless_ok = False
-        try:
-            self.root.tk.call(
-                "::tk::unsupported::MacWindowStyle", "style",
-                self.root._w, "plain", "none",
-            )
-            _frameless_ok = True
-        except tk.TclError:
-            pass
-
-        if not _frameless_ok:
-            self.root.overrideredirect(True)
+        # Rahmenlos: overrideredirect entfernt alle Fensterdekorationen
+        self.root.overrideredirect(True)
 
         self.root.attributes("-topmost", True)
         self.root.attributes("-alpha", 0.93)
 
-        # Fenster sichtbar machen (nach Style-Aenderung)
+        # Fenster sichtbar machen
         self.root.deiconify()
         self.root.update_idletasks()
         self.root.lift()
