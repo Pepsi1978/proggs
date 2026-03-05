@@ -270,10 +270,9 @@ class ClaudeOverlayApp:
 
         # ----- Events -----
         self.canvas.bind("<Button-1>", self._on_click)
-        self.canvas.bind("<B1-Motion>", self._on_drag_motion)
         self.canvas.bind("<Motion>", self._on_motion)
         self.canvas.bind("<Leave>", self._on_leave)
-        # macOS: Rechtsklick = Button-2 oder Ctrl+Click (auch zum Verschieben)
+        # Verschieben nur per Rechtsklick (Button-2) oder Ctrl+Click
         self.canvas.bind("<Button-2>", self._on_drag_start)
         self.canvas.bind("<B2-Motion>", self._on_drag_motion)
         self.canvas.bind("<Control-ButtonPress-1>", self._on_drag_start)
@@ -380,9 +379,6 @@ class ClaudeOverlayApp:
             self._toggle_recording()
         elif self._in_bbox(event.x, event.y, self._eraser_bbox):
             self._clear_input()
-        else:
-            # Linksklick auf leere Flaeche = Drag starten
-            self._on_drag_start(event)
 
     def _on_drag_start(self, event: tk.Event) -> None:
         self._drag_data["x"] = event.x
