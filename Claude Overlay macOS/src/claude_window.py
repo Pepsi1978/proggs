@@ -40,16 +40,32 @@ def _run_applescript(script: str, timeout: int = 5) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 def is_claude_running(settings: Settings) -> bool:
-    """Prueft, ob ein Claude-Prozess laeuft (ueber pgrep)."""
+    """Prueft, ob die Claude Desktop App laeuft.
+
+    Verwendet AppleScript ueber System Events, um nur die native App zu
+    erkennen.  Browser-Tabs mit 'Claude' im Titel werden ignoriert.
+    Fallback auf ``pgrep -x`` (exakter Prozessname, ohne -f), falls
+    AppleScript fehlschlaegt.
+    """
+    # 1. Primaer: AppleScript – prueft ob die App als eigener Prozess existiert
+    check_script = (
+        'tell application "System Events" to get name of every '
+        'application process whose name is "Claude"'
+    )
+    result = _run_applescript(check_script, timeout=3)
+    if result and "Claude" in result:
+        return True
+
+    # 2. Fallback: pgrep mit -x (exakter Name, NICHT -f / full command line)
     names = settings.claude_process_names
     for name in names:
         try:
-            result = subprocess.run(
-                ["pgrep", "-i", "-f", name],
+            proc = subprocess.run(
+                ["pgrep", "-ix", name],
                 capture_output=True,
                 timeout=3,
             )
-            if result.returncode == 0:
+            if proc.returncode == 0:
                 return True
         except Exception:
             continue
