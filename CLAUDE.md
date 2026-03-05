@@ -64,3 +64,14 @@ Die CLAUDE.md existiert sowohl **lokal** im Repository als auch **auf GitHub** (
 - Nach jeder Bearbeitung der CLAUDE.md muss die Änderung **committet und gepusht** werden, damit die GitHub-Version aktuell bleibt
 - Neue Anweisungen oder Regeländerungen dürfen **niemals nur lokal** gespeichert werden
 - Der Workflow ist: Datei bearbeiten → committen → pushen
+
+## Sprache
+
+Sämtliche Inhalte in der CLAUDE.md müssen **immer auf Deutsch** verfasst werden. Das gilt auch für:
+
+- Alle Anweisungen und Regeln
+- Commit-Nachrichten
+- Pull-Request-Titel und -Beschreibungen
+- Kommentare in Dokumentationen
+
+Es darf **niemals** eine andere Sprache als Deutsch verwendet werden.
