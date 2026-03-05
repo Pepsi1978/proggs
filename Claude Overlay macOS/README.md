@@ -10,7 +10,7 @@ Ein Python-Overlay fuer die **macOS Claude Desktop App** mit zwei Buttons:
 - Der **Watcher** (`watcher.py`) ueberwacht, ob die Claude Desktop App laeuft.
 - Wenn Claude gestartet wird: Das Overlay startet automatisch.
 - Wenn Claude geschlossen wird: Das Overlay beendet sich automatisch.
-- Das Overlay ist **rahmenlos** (kein Fenstertitel, kein Dock-Icon), **immer im Vordergrund** und kann per **Rechtsklick + Ziehen** oder **Ctrl+Klick + Ziehen** frei verschoben werden.
+- Das Overlay ist **rahmenlos** (kein Fenstertitel, kein Dock-Icon) und **nur sichtbar, wenn Claude Desktop im Vordergrund ist**. Wechselst du zu einer anderen App (z.B. Chrome), verschwindet das Overlay automatisch. Es kann per **Rechtsklick + Ziehen** oder **Ctrl+Klick + Ziehen** frei verschoben werden.
 - Der Watcher nutzt eine **PID-Lock-Datei**, sodass nie zwei Instanzen gleichzeitig laufen koennen.
 - Waehrend der Aufnahme **pulsiert** der Mikrofon-Button rot.
 - Lange Aufnahmen (>20 MB) werden automatisch in Teile aufgesplittet und stueckweise transkribiert.
@@ -183,7 +183,7 @@ Abhaengigkeiten (Dependencies) sind externe Pakete, die das Tool braucht:
 | `soundfile` | Audio als WAV-Datei speichern |
 | `numpy` | Mathematische Berechnungen fuer Audio-Daten |
 | `requests` | HTTP-Anfragen an die APIs senden (Groq + Gemini) |
-| `psutil` | Laufende Prozesse pruefen (ist Claude gestartet?) |
+| `psutil` | Laufende Prozesse pruefen (Fallback, falls AppleScript nicht verfuegbar) |
 
 > **Hinweis:** Im Gegensatz zur Windows-Version braucht die macOS-Version kein `pywinauto` oder `pywin32` - stattdessen nutzt sie das eingebaute AppleScript.
 
@@ -261,7 +261,7 @@ Speichere mit `Ctrl + O`, dann `Enter`, dann `Ctrl + X` zum Beenden von nano.
 | `GEMINI_THINKING_LEVEL` | `MEDIUM` | Thinking-Level fuer Gemini 3.x (LOW/MEDIUM/HIGH) |
 | `AUDIO_SAMPLE_RATE` | `16000` | Audio-Abtastrate in Hz |
 | `AUDIO_CHANNELS` | `1` | Mono (1) oder Stereo (2) |
-| `CLAUDE_PROCESS_NAMES` | `Claude` | Name(n) des Claude-Prozesses (kommagetrennt) |
+| `CLAUDE_PROCESS_NAMES` | `Claude` | Name(n) des Claude-Prozesses (kommagetrennt). Hinweis: Die Erkennung nutzt primaer den Bundle-Identifier (`com.anthropic.claudefordesktop`) und ist damit unabhaengig vom Prozessnamen. |
 
 ---
 
@@ -436,8 +436,8 @@ pip install sounddevice
 
 ### "Claude nicht gefunden"
 
-- Stelle sicher, dass die Claude Desktop App geoeffnet ist
-- Falls deine Claude-App einen anderen Prozessnamen hat, passe `CLAUDE_PROCESS_NAMES` in der `.env` an
+- Stelle sicher, dass die Claude Desktop App geoeffnet ist (nicht nur ein Claude-Tab im Browser)
+- Die Erkennung nutzt den macOS Bundle-Identifier (`com.anthropic.claudefordesktop`) und reagiert nur auf die native Claude Desktop App, nicht auf Browser-Tabs oder PWAs
 
 ### "Fehlende Umgebungsvariablen: GROQ_API_KEY"
 
@@ -459,9 +459,10 @@ pip install sounddevice
 ### Das Overlay erscheint nicht
 
 - Stelle sicher, dass der Watcher laeuft (`bash start_watcher.sh`)
-- Oeffne die Claude Desktop App
+- Oeffne die Claude Desktop App und bringe sie in den Vordergrund (das Overlay ist nur sichtbar, wenn Claude Desktop die aktive App ist)
 - Pruefe im Aktivitaetsmonitor (Programme > Dienstprogramme), ob `python` laeuft
 - Pruefe `watcher.log` auf Fehlermeldungen
+- Falls Chrome mit claude.ai offen ist: Das Overlay reagiert nur auf die native Claude Desktop App, nicht auf Browser-Tabs
 
 ### tkinter fehlt / ImportError
 
@@ -492,7 +493,7 @@ Claude Overlay macOS/
     config.py               # Laedt .env-Datei und stellt Einstellungen bereit
     audio_capture.py         # Nimmt Audio vom Mikrofon auf und speichert als WAV
     api_clients.py           # Kommuniziert mit Groq Whisper + Gemini API
-    claude_window.py         # Findet Claude via AppleScript, fuegt Text ein/loescht
+    claude_window.py         # Erkennt Claude via Bundle-ID, fuegt Text ein/loescht
     overlay_app.py           # Die sichtbare Overlay-Oberflaeche (Buttons, Farben)
     watcher.py               # Ueberwacht, ob Claude laeuft; startet/stoppt Overlay
 ```
