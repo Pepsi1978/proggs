@@ -42,7 +42,8 @@
   // 🔑 NUR HIER EINTRAGEN
   // ============================================================
   // ⚠️ WICHTIG: API-Key NICHT öffentlich posten. Wenn der Key geleakt ist: rotieren.
-  const GEMINI_MODEL = "models/gemini-2.5-flash-lite";
+  const GEMINI_MODEL = "models/gemini-3.1-flash-lite-preview";
+  const GEMINI_THINKING_LEVEL = "MEDIUM";
   const STORAGE_KEYS = {
     geminiApiKey: "tm-mistral-gemini-api-key"
   };
@@ -680,7 +681,8 @@
   function extractGeminiText(json) {
     const parts = json?.candidates?.[0]?.content?.parts;
     if (Array.isArray(parts)) {
-      const out = parts.map(p => (p?.text ?? "")).join("").trim();
+      // Thinking-Parts überspringen (thought: true), nur normalen Text extrahieren
+      const out = parts.filter(p => !p?.thought).map(p => (p?.text ?? "")).join("").trim();
       if (out) return out;
     }
     const t = json?.candidates?.[0]?.text;
@@ -722,7 +724,9 @@
 
     const payload = {
       contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-      generationConfig: { temperature, maxOutputTokens }
+      generationConfig: GEMINI_MODEL.includes("gemini-3")
+        ? { maxOutputTokens, thinkingConfig: { thinkingLevel: GEMINI_THINKING_LEVEL } }
+        : { temperature, maxOutputTokens }
     };
 
     const req = gmRequest();
