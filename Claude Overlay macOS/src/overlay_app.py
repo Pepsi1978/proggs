@@ -143,7 +143,8 @@ class ClaudeOverlayApp:
         screen_w = self.root.winfo_screenwidth()
         screen_h = self.root.winfo_screenheight()
         x = screen_w - total_w - 24
-        y = screen_h - total_h - 80
+        # Genug Abstand zum Dock (ca. 150px) und Menubar (ca. 25px)
+        y = screen_h - total_h - 150
 
         # Fenster unsichtbar vorbereiten
         self.root.withdraw()
@@ -269,15 +270,20 @@ class ClaudeOverlayApp:
 
         # ----- Events -----
         self.canvas.bind("<Button-1>", self._on_click)
+        self.canvas.bind("<B1-Motion>", self._on_drag_motion)
         self.canvas.bind("<Motion>", self._on_motion)
         self.canvas.bind("<Leave>", self._on_leave)
-        # macOS: Rechtsklick = Button-2 oder Ctrl+Click
+        # macOS: Rechtsklick = Button-2 oder Ctrl+Click (auch zum Verschieben)
         self.canvas.bind("<Button-2>", self._on_drag_start)
         self.canvas.bind("<B2-Motion>", self._on_drag_motion)
         self.canvas.bind("<Control-ButtonPress-1>", self._on_drag_start)
         self.canvas.bind("<Control-B1-Motion>", self._on_drag_motion)
 
         self.root.bind("<Escape>", lambda _: self._quit())
+
+        # Overlay periodisch in den Vordergrund heben
+        # (overrideredirect-Fenster verlieren auf macOS den Vordergrund)
+        self.root.after(1000, self._keep_on_top)
 
         # Vordergrund-App-Tracking starten
         self.root.after(500, self._track_frontmost_app)
@@ -321,16 +327,6 @@ class ClaudeOverlayApp:
     # ------------------------------------------------------------------
     # Maus-Events
     # ------------------------------------------------------------------
-    def _on_click(self, event: tk.Event) -> None:
-        if self._in_bbox(event.x, event.y, self._close_bbox):
-            self._quit()
-        elif self._in_bbox(event.x, event.y, self._gemini_bbox):
-            self._toggle_gemini()
-        elif self._in_bbox(event.x, event.y, self._mic_bbox):
-            self._toggle_recording()
-        elif self._in_bbox(event.x, event.y, self._eraser_bbox):
-            self._clear_input()
-
     def _on_motion(self, event: tk.Event) -> None:
         # Close-Button reagiert immer auf Hover
         if self._in_bbox(event.x, event.y, self._close_bbox):
@@ -365,6 +361,28 @@ class ClaudeOverlayApp:
         if not self.is_recording and not self.is_processing:
             self.canvas.itemconfig(self.mic_circle, fill=COLOR_IDLE)
             self.canvas.itemconfig(self.eraser_circle, fill=COLOR_ERASER_IDLE)
+
+    def _keep_on_top(self) -> None:
+        """Hebt das Overlay periodisch in den Vordergrund."""
+        try:
+            self.root.lift()
+            self.root.attributes("-topmost", True)
+        except tk.TclError:
+            return  # Fenster wurde geschlossen
+        self.root.after(2000, self._keep_on_top)
+
+    def _on_click(self, event: tk.Event) -> None:
+        if self._in_bbox(event.x, event.y, self._close_bbox):
+            self._quit()
+        elif self._in_bbox(event.x, event.y, self._gemini_bbox):
+            self._toggle_gemini()
+        elif self._in_bbox(event.x, event.y, self._mic_bbox):
+            self._toggle_recording()
+        elif self._in_bbox(event.x, event.y, self._eraser_bbox):
+            self._clear_input()
+        else:
+            # Linksklick auf leere Flaeche = Drag starten
+            self._on_drag_start(event)
 
     def _on_drag_start(self, event: tk.Event) -> None:
         self._drag_data["x"] = event.x
