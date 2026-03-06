@@ -1,8 +1,0 @@
-__pycache__/
-*.pyc
-.env
-.venv/
-*.wav
-*.log
-*.pid
-failed_transcripts/
