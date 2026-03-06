@@ -73,16 +73,34 @@ def _is_bundle_running(bundle_id: str) -> bool:
     return False
 
 
+def _is_process_name_running(name: str) -> bool:
+    """Fallback: Prueft per pgrep ob ein Prozess mit diesem Namen laeuft."""
+    try:
+        proc = subprocess.run(
+            ["pgrep", "-ixq", name],
+            capture_output=True,
+            timeout=3,
+        )
+        return proc.returncode == 0
+    except Exception:
+        return False
+
+
 def is_claude_running(settings: Settings) -> bool:
     """Prueft, ob eine der Ziel-Apps (Claude Desktop oder Codex) laeuft.
 
-    Verwendet die Bundle-Identifier, um ausschliesslich die nativen
-    Desktop-Apps zu erkennen. Chrome-Tabs, PWAs oder andere Prozesse
-    werden zuverlaessig ignoriert.
+    Primaer: Bundle-Identifier (zuverlaessig, ignoriert Chrome-Tabs etc.)
+    Fallback: Prozessname aus Settings (falls AppleScript fehlschlaegt)
     """
     for bundle_id in _TARGET_BUNDLE_IDS:
         if _is_bundle_running(bundle_id):
             return True
+
+    # Fallback: Prozessnamen aus den Settings pruefen
+    for name in settings.claude_process_names:
+        if _is_process_name_running(name):
+            return True
+
     return False
 
 

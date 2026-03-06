@@ -110,6 +110,8 @@ def main() -> None:
     overlay_log_fh = None
     rapid_crash_count = 0
     last_start_time = 0.0
+    claude_not_found_count = 0
+    CLAUDE_MAX_MISS = 3  # Wie oft Claude fehlen darf bevor Overlay gestoppt wird
 
     while True:
         try:
@@ -118,6 +120,12 @@ def main() -> None:
             logging.exception("Fehler bei Prozessabfrage")
             time.sleep(2)
             continue
+
+        # Zaehler fuer aufeinanderfolgende Fehlerkennungen
+        if claude_running:
+            claude_not_found_count = 0
+        else:
+            claude_not_found_count += 1
 
         if claude_running and overlay_process is None:
             logging.info("Claude erkannt – starte Overlay")
@@ -155,8 +163,8 @@ def main() -> None:
                 overlay_process = start_overlay(overlay_script, overlay_log_fh)
                 last_start_time = time.time()
 
-        if not claude_running and overlay_process is not None:
-            logging.info("Claude nicht mehr aktiv – beende Overlay")
+        if not claude_running and overlay_process is not None and claude_not_found_count >= CLAUDE_MAX_MISS:
+            logging.info("Claude %dx nicht erkannt – beende Overlay", CLAUDE_MAX_MISS)
             if overlay_process.poll() is None:
                 overlay_process.terminate()
                 try:

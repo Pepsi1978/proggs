@@ -128,6 +128,7 @@ class ClaudeOverlayApp:
         self._drag_data = {"x": 0, "y": 0}
         self._target_app: str | None = None  # Letztes Nicht-Overlay-Fenster (App-Name)
         self._overlay_visible: bool = True  # Overlay-Sichtbarkeit
+        self._claude_not_found_count: int = 0  # Zaehler fuer fehlgeschlagene Prozessabfragen
 
         # ----- Fenster -----
         self.root = tk.Tk()
@@ -627,10 +628,27 @@ class ClaudeOverlayApp:
     # ------------------------------------------------------------------
     # Claude-Prozess-Watcher
     # ------------------------------------------------------------------
+    _CLAUDE_MAX_MISS = 3  # Anzahl Fehlversuche bevor Overlay beendet wird
+
     def _watch_claude_process(self) -> None:
-        if not is_claude_running(self.settings):
-            self._quit()
-            return
+        try:
+            running = is_claude_running(self.settings)
+        except Exception:
+            running = False
+
+        if running:
+            self._claude_not_found_count = 0
+        else:
+            self._claude_not_found_count += 1
+            log.info(
+                "Claude nicht erkannt (%d/%d)",
+                self._claude_not_found_count,
+                self._CLAUDE_MAX_MISS,
+            )
+            if self._claude_not_found_count >= self._CLAUDE_MAX_MISS:
+                log.info("Claude %dx nicht erkannt – beende Overlay", self._CLAUDE_MAX_MISS)
+                self._quit()
+                return
         self.root.after(2000, self._watch_claude_process)
 
     # ------------------------------------------------------------------
