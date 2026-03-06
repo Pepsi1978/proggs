@@ -161,12 +161,7 @@ def transcribe_with_grok(audio_path: Path, settings: Settings) -> str:
 
     # Leere Teile (gefilterte Halluzinationen) entfernen
     parts = [p for p in parts if p]
-    result = " ".join(parts).strip()
-
-    if not result:
-        raise RuntimeError("Nur Stille oder Halluzinationen erkannt - keine verwertbare Spracheingabe.")
-
-    return result
+    return " ".join(parts).strip()
 
 
 def _extract_json_block(text: str) -> Dict[str, Any]:
