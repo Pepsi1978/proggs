@@ -91,6 +91,25 @@ Jede Commit-Nachricht muss mit einer **fortlaufenden Nummer** beginnen, gefolgt 
 #004 - Farbschema von blau auf dunkelgrün geändert
 ```
 
+## Neustart-Anleitung nach Änderungen
+
+Nach jeder Änderung, die in den Main-Branch gemerged wurde, muss Claude Code dem Benutzer die **exakten Terminal-Befehle** geben, die nötig sind, um die neue Version auf seinem Rechner zu aktivieren. Der Benutzer kopiert diese Befehle einzeln in sein macOS-Terminal.
+
+**Ablauf (gilt für ALLE Projekte im Repository):**
+
+1. **Neuesten Code holen**: `git pull origin main` im Repository-Verzeichnis
+2. **Laufenden Prozess beenden**: Den alten Prozess killen (z.B. `pkill -f overlay_app.py` oder den jeweiligen Prozessnamen)
+3. **Neuen Prozess starten**: Das Tool mit dem korrekten Startbefehl neu starten
+
+**Regeln:**
+
+- Die Befehle müssen **projektspezifisch** sein – also den richtigen Pfad und den richtigen Startbefehl für das jeweilige Tool enthalten
+- Jeder Befehl steht in einem **eigenen Code-Block** (gemäß der Formatierungsregeln oben)
+- Vor jedem Befehl steht eine **kurze Erklärung**, was er tut
+- Falls ein Hintergrundprozess läuft, muss dieser **zuerst beendet** werden, bevor der neue gestartet wird
+- Falls Abhängigkeiten aktualisiert wurden (z.B. neue Python-Pakete), muss auch ein `pip install` oder vergleichbarer Befehl angegeben werden
+- Diese Anleitung wird **automatisch nach jedem erfolgreichen Merge** ausgegeben – der Benutzer muss nicht danach fragen
+
 ## Sprache
 
 Sämtliche Inhalte in der CLAUDE.md müssen **immer auf Deutsch** verfasst werden. Das gilt auch für:
