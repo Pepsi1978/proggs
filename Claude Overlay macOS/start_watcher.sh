@@ -22,6 +22,6 @@ if [ -d ".venv/bin" ]; then
     source .venv/bin/activate
 fi
 
-python src/watcher.py &
+python3 src/watcher.py &
 echo "Watcher gestartet (PID: $!)"
 echo "Log: $SCRIPT_DIR/watcher.log"
