@@ -102,8 +102,7 @@ def _transcribe_single(audio_path: Path, settings: Settings) -> str:
     data = {
         "model": settings.whisper_model,
         "language": settings.whisper_lang,
-        "response_format": "json",
-        "temperature": "0",
+        "response_format": "text",
     }
 
     max_retries = 3
@@ -138,11 +137,9 @@ def _transcribe_single(audio_path: Path, settings: Settings) -> str:
             f"Groq API Fehler {response.status_code}: {response.text}"
         )
 
-    payload = response.json()
-
-    text = payload.get("text") or payload.get("transcript") or ""
+    text = response.text or ""
     if not text.strip():
-        raise RuntimeError(f"Unerwartete Grok-Whisper-Antwort: {payload}")
+        raise RuntimeError("Groq Whisper lieferte keinen Text.")
 
     cleaned = text.strip()
 
