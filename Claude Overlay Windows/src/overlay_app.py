@@ -398,11 +398,6 @@ class ClaudeOverlayApp:
             self.root.after(0, lambda: self._set_status("Transkribiere...", COLOR_PROCESSING))
             transcript = transcribe_with_grok(audio_path, self.settings)
 
-            if not transcript:
-                log.info("Halluzination oder Stille erkannt - Aufnahme verworfen.")
-                self.root.after(0, lambda: self._set_status("Bereit", COLOR_READY))
-                return
-
             if self.gemini_enabled:
                 self.root.after(0, lambda: self._set_status("Verbessere Text...", COLOR_PROCESSING))
                 result = improve_text_with_gemini(
