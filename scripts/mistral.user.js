@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Mistral V.1.3.1
+// @name         Mistral V.1.2.9
 // @namespace    https://chat.mistral.ai/chat
-// @version      1.3.1
+// @version      1.2.9
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf Google Search. Mic-Button fest unten rechts. Kein stilles Fallback. Mit Output-Preview.
 // @match        https://chat.mistral.ai/chat*
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/tampermonkey-skripte/main/scripts/mistral.user.js
@@ -23,7 +23,7 @@
 (() => {
   "use strict";
     // ── CSS für Mikrofon-Button Animationen ──
-    (function(){if(document.getElementById("stt-mic-css"))return;var s=document.createElement("style");s.id="stt-mic-css";s.textContent=".stt-mic-btn{display:flex!important;align-items:center!important;justify-content:center!important;padding:0!important;transition:background .25s,transform .15s,box-shadow .25s!important}.stt-mic-btn:active{transform:scale(.93)!important}.stt-mic-btn[data-state=idle]{background:#2563eb!important;color:#fff!important;border-color:#2563eb!important}.stt-mic-btn[data-state=idle]:hover{background:#1d4ed8!important;transform:scale(1.06)!important}.stt-mic-btn[data-state=listening]{background:#dc2626!important;color:#fff!important;border-color:#dc2626!important;animation:stt-pulse 1.4s ease-in-out infinite!important}.stt-mic-btn[data-state=working]{background:#d97706!important;color:#fff!important;border-color:#d97706!important}.stt-mic-btn[data-state=error]{background:#8b0000!important;color:#fff!important;border-color:#8b0000!important}@keyframes stt-pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.45)}50%{box-shadow:0 0 0 14px rgba(220,38,38,0)}}.stt-mic-btn[data-state=working] svg{animation:stt-spin .8s linear infinite}@keyframes stt-spin{to{transform:rotate(360deg)}}#stt-live-preview{position:fixed;bottom:80px;right:16px;max-width:420px;min-width:180px;padding:10px 14px;background:rgba(0,0,0,.88);color:#fff;border-radius:10px;font-size:14px;line-height:1.5;z-index:2147483646;box-shadow:0 4px 20px rgba(0,0,0,.3);max-height:180px;overflow-y:auto;word-wrap:break-word;transition:opacity .25s}#stt-live-preview .stt-pv-label{font-size:11px;color:#aaa;margin-bottom:4px;letter-spacing:.4px}#stt-live-preview .stt-pv-interim{color:#9ca3af;font-style:italic}#stt-live-preview .stt-pv-final{color:#fff}#stt-live-preview .stt-pv-waiting{color:#fbbf24;font-style:italic}";(document.head||document.documentElement).appendChild(s)})();
+    (function(){if(document.getElementById("stt-mic-css"))return;var s=document.createElement("style");s.id="stt-mic-css";s.textContent=".stt-mic-btn{display:flex!important;align-items:center!important;justify-content:center!important;padding:0!important;transition:background .25s,transform .15s,box-shadow .25s!important}.stt-mic-btn:active{transform:scale(.93)!important}.stt-mic-btn[data-state=idle]{background:#2563eb!important;color:#fff!important;border-color:#2563eb!important}.stt-mic-btn[data-state=idle]:hover{background:#1d4ed8!important;transform:scale(1.06)!important}.stt-mic-btn[data-state=listening]{background:#dc2626!important;color:#fff!important;border-color:#dc2626!important;animation:stt-pulse 1.4s ease-in-out infinite!important}.stt-mic-btn[data-state=working]{background:#d97706!important;color:#fff!important;border-color:#d97706!important}.stt-mic-btn[data-state=error]{background:#8b0000!important;color:#fff!important;border-color:#8b0000!important}@keyframes stt-pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.45)}50%{box-shadow:0 0 0 14px rgba(220,38,38,0)}}.stt-mic-btn[data-state=working] svg{animation:stt-spin .8s linear infinite}@keyframes stt-spin{to{transform:rotate(360deg)}}#stt-live-preview{position:fixed;bottom:410px;right:16px;max-width:420px;min-width:180px;padding:10px 14px;background:rgba(0,0,0,.88);color:#fff;border-radius:10px;font-size:14px;line-height:1.5;z-index:2147483646;box-shadow:0 4px 20px rgba(0,0,0,.3);max-height:180px;overflow-y:auto;word-wrap:break-word;transition:opacity .25s}#stt-live-preview .stt-pv-label{font-size:11px;color:#aaa;margin-bottom:4px;letter-spacing:.4px}#stt-live-preview .stt-pv-interim{color:#9ca3af;font-style:italic}#stt-live-preview .stt-pv-final{color:#fff}#stt-live-preview .stt-pv-waiting{color:#fbbf24;font-style:italic}";(document.head||document.documentElement).appendChild(s)})();
 
 
   // Mehrfach-Injection verhindern (SPA/Reload/History-Edgecases)
@@ -35,8 +35,7 @@
     mic: "tm-mistral-mic",
     clear: "tm-mistral-clear",
     prompt: "tm-mistral-prompt",
-    prompt2: "tm-mistral-prompt2",
-    gemini: "tm-mistral-gemini-toggle"
+    prompt2: "tm-mistral-prompt2"
   };
 
   // ============================================================
@@ -52,7 +51,7 @@
   // ============================================================
   // UI POSITION
   // ============================================================
-  const UI_POS = { rightPx: 16, bottomPx: 16 };
+  const UI_POS = { rightPx: 16, bottomPx: 200 };
   // Android/Edge Mobile-Erkennung (für angepasste Restart-Delays)
   const isMobileAndroid = /Android/i.test(navigator.userAgent);
 
@@ -318,7 +317,6 @@
   let clearBtn = null;
   let promptBtn = null;
   let promptBtn2 = null;
-  let geminiBtn = null;
 
   function isAriaReadonly(el) {
     return (el?.getAttribute?.("aria-readonly") || "").toLowerCase() === "true";
@@ -329,7 +327,7 @@
     if (el === document.body || el === document.documentElement) return false;
 
     // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
-    if (el === micBtn || el === clearBtn || el === promptBtn || el === promptBtn2 || el === geminiBtn) return false;
+    if (el === micBtn || el === clearBtn || el === promptBtn || el === promptBtn2) return false;
 
     const tag = (el.tagName || "").toUpperCase();
     const ariaDisabled = (el.getAttribute?.("aria-disabled") || "").toLowerCase() === "true";
@@ -1760,24 +1758,6 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     showToast("🧹 Sprechblase geleert.", 1600);
   }
 
-  function updateGeminiBtn() {
-    if (!geminiBtn) return;
-    geminiBtn.textContent = "G";
-    geminiBtn.style.fontWeight = "bold";
-    geminiBtn.style.fontSize = "20px";
-    if (CFG.autoGeminiCorrection) {
-      geminiBtn.style.background = "#16a34a";
-      geminiBtn.style.color = "#fff";
-      geminiBtn.style.borderColor = "#16a34a";
-      geminiBtn.title = "Gemini-Korrektur aktiv (klicken zum Deaktivieren)";
-    } else {
-      geminiBtn.style.background = "#dc2626";
-      geminiBtn.style.color = "#fff";
-      geminiBtn.style.borderColor = "#dc2626";
-      geminiBtn.title = "Gemini-Korrektur deaktiviert (klicken zum Aktivieren)";
-    }
-  }
-
   // ============================================================
   // Boot + UI-Resilience (SPA)
   // ============================================================
@@ -1788,33 +1768,15 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
       showToast("Mikrofon nicht verfügbar (getUserMedia fehlt).", 7000);
     }
 
-    // GEMINI Toggle
-    geminiBtn = document.getElementById(UI_IDS.gemini);
-    if (!geminiBtn) {
-      geminiBtn = document.createElement("button");
-      geminiBtn.id = UI_IDS.gemini;
-      styleRoundButton(geminiBtn, 0, 0);
-      document.body.appendChild(geminiBtn);
-    } else {
-      styleRoundButton(geminiBtn, 0, 0);
-    }
-    geminiBtn.addEventListener("click", function() {
-      CFG.autoGeminiCorrection = !CFG.autoGeminiCorrection;
-      if (typeof GM_setValue === "function") GM_setValue("autoGeminiCorrection", CFG.autoGeminiCorrection);
-      updateGeminiBtn();
-      showToast(CFG.autoGeminiCorrection ? "✅ Gemini-Korrektur aktiviert" : "❌ Gemini-Korrektur deaktiviert", 3000);
-    });
-    updateGeminiBtn();
-
     // MIC
     micBtn = document.getElementById(UI_IDS.mic);
     if (!micBtn) {
       micBtn = document.createElement("button");
       micBtn.id = UI_IDS.mic;
-      styleRoundButton(micBtn, 0, 52);
+      styleRoundButton(micBtn, 0, 0);
       document.body.appendChild(micBtn);
     } else {
-      styleRoundButton(micBtn, 0, 52);
+      styleRoundButton(micBtn, 0, 0);
     }
     micBtn.innerHTML = MIC_ICON.mic; micBtn.setAttribute("data-state", "idle"); micBtn.classList.add("stt-mic-btn");
     micBtn.title = "Spracheingabe (Start/Stop)";
@@ -1824,10 +1786,10 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     if (!clearBtn) {
       clearBtn = document.createElement("button");
       clearBtn.id = UI_IDS.clear;
-      styleRoundButton(clearBtn, 52, 0);
+      styleRoundButton(clearBtn, 0, 52);
       document.body.appendChild(clearBtn);
     } else {
-      styleRoundButton(clearBtn, 52, 0);
+      styleRoundButton(clearBtn, 0, 52);
     }
     clearBtn.textContent = "❌";
     clearBtn.style.color = "#c40000";
@@ -1839,10 +1801,10 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     if (!promptBtn) {
       promptBtn = document.createElement("button");
       promptBtn.id = UI_IDS.prompt;
-      styleRoundButton(promptBtn, 0, 52);
+      styleRoundButton(promptBtn, 0, 104);
       document.body.appendChild(promptBtn);
     } else {
-      styleRoundButton(promptBtn, 0, 52);
+      styleRoundButton(promptBtn, 0, 104);
     }
     promptBtn.textContent = "✨";
     promptBtn.title = "Prompt (für Frank) einbetten";
@@ -1853,10 +1815,10 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     if (!promptBtn2) {
       promptBtn2 = document.createElement("button");
       promptBtn2.id = UI_IDS.prompt2;
-      styleRoundButton(promptBtn2, 0, 104);
+      styleRoundButton(promptBtn2, 0, 156);
       document.body.appendChild(promptBtn2);
     } else {
-      styleRoundButton(promptBtn2, 0, 104);
+      styleRoundButton(promptBtn2, 0, 156);
     }
     promptBtn2.textContent = "🪄";
     promptBtn2.title = "Prompt (allgemein / 12. Klasse) einbetten";
