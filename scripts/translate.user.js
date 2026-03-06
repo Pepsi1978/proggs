@@ -300,6 +300,7 @@
   // UI Button
   let micBtn = null;
   let clearBtn = null;
+  let geminiBtn = null;
 
 function isRoleTextbox(el) {
   return (el?.getAttribute?.("role") || "").toLowerCase() === "textbox";
@@ -326,7 +327,7 @@ function isEditableTarget(el) {
   if (el === document.body || el === document.documentElement) return false;
 
   // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
-  if ((typeof micBtn !== "undefined" && el === micBtn) || (typeof clearBtn !== "undefined" && el === clearBtn) || (typeof promptBtn !== "undefined" && el === promptBtn) || (typeof promptBtn2 !== "undefined" && el === promptBtn2) || (typeof memBtn !== "undefined" && el === memBtn)) return false;
+  if ((typeof micBtn !== "undefined" && el === micBtn) || (typeof clearBtn !== "undefined" && el === clearBtn) || (typeof promptBtn !== "undefined" && el === promptBtn) || (typeof promptBtn2 !== "undefined" && el === promptBtn2) || (typeof memBtn !== "undefined" && el === memBtn) || (typeof geminiBtn !== "undefined" && el === geminiBtn)) return false;
 
   const tag = (el.tagName || "").toUpperCase();
   const ariaDisabled = (el.getAttribute?.("aria-disabled") || "").toLowerCase() === "true";
@@ -849,7 +850,11 @@ ${text}
   // UI Button (BOTTOM RIGHT)
   // ============================================================
   // ── Button IDs (Watchdog) ──
-  const UI_IDS = { mic: "tm-translate-mic", clear: "tm-translate-clear" };
+  const UI_IDS = {
+    mic: "tm-translate-mic",
+    clear: "tm-translate-clear",
+    gemini: "tm-translate-gemini-toggle"
+  };
 
   function getOrCreateButton(id) {
     let b = document.getElementById(id);
@@ -1335,11 +1340,42 @@ ${text}
   // ============================================================
   // Boot
   // ============================================================
+  function updateGeminiBtn() {
+    if (!geminiBtn) return;
+    geminiBtn.textContent = "G";
+    geminiBtn.style.fontWeight = "bold";
+    geminiBtn.style.fontSize = "20px";
+    if (CFG.autoGeminiCorrection) {
+      geminiBtn.style.background = "#16a34a";
+      geminiBtn.style.color = "#fff";
+      geminiBtn.style.borderColor = "#16a34a";
+      geminiBtn.title = "Gemini-Korrektur aktiv (klicken zum Deaktivieren)";
+    } else {
+      geminiBtn.style.background = "#dc2626";
+      geminiBtn.style.color = "#fff";
+      geminiBtn.style.borderColor = "#dc2626";
+      geminiBtn.title = "Gemini-Korrektur deaktiviert (klicken zum Aktivieren)";
+    }
+  }
+
   function mountOrRepairUI() {
     if (!document.body) return;
 
+    geminiBtn = getOrCreateButton(UI_IDS.gemini);
+    styleRoundButton(geminiBtn, 0, 0);
+    geminiBtn.onclick = function() {
+      CFG.autoGeminiCorrection = !CFG.autoGeminiCorrection;
+      if (typeof GM_setValue === "function") GM_setValue("autoGeminiCorrection", CFG.autoGeminiCorrection);
+      updateGeminiBtn();
+      showToast(CFG.autoGeminiCorrection ? "✅ Gemini-Korrektur aktiviert" : "❌ Gemini-Korrektur deaktiviert", 3000);
+    };
+    geminiBtn.addEventListener("pointerdown", e => e.preventDefault(), true);
+    geminiBtn.addEventListener("mousedown", e => e.preventDefault(), true);
+    if (!geminiBtn.isConnected) document.body.appendChild(geminiBtn);
+    updateGeminiBtn();
+
     micBtn = getOrCreateButton(UI_IDS.mic);
-    styleRoundButton(micBtn, 0, 0);
+    styleRoundButton(micBtn, 0, 52);
     if (!micBtn.getAttribute("data-state")) {
       setSvgIcon(micBtn, MIC_ICON.mic);
       micBtn.setAttribute("data-state", "idle");

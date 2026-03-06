@@ -335,6 +335,7 @@ Speichere nur diese Punkte als dauerhafte Erinnerungen, exakt als einfache Sätz
   let memBtn = null;
   let promptBtn = null;
   let promptBtn2 = null;
+  let geminiBtn = null;
   let uiLayoutRaf = 0;
 
 function isRoleTextbox(el) {
@@ -362,7 +363,7 @@ function isEditableTarget(el) {
   if (el === document.body || el === document.documentElement) return false;
 
   // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
-  if ((typeof micBtn !== "undefined" && el === micBtn) || (typeof clearBtn !== "undefined" && el === clearBtn) || (typeof promptBtn !== "undefined" && el === promptBtn) || (typeof promptBtn2 !== "undefined" && el === promptBtn2) || (typeof memBtn !== "undefined" && el === memBtn)) return false;
+  if ((typeof micBtn !== "undefined" && el === micBtn) || (typeof clearBtn !== "undefined" && el === clearBtn) || (typeof promptBtn !== "undefined" && el === promptBtn) || (typeof promptBtn2 !== "undefined" && el === promptBtn2) || (typeof memBtn !== "undefined" && el === memBtn) || (typeof geminiBtn !== "undefined" && el === geminiBtn)) return false;
 
   const tag = (el.tagName || "").toUpperCase();
   const ariaDisabled = (el.getAttribute?.("aria-disabled") || "").toLowerCase() === "true";
@@ -1185,7 +1186,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
   // UI Buttons (BOTTOM RIGHT)
   // ============================================================
   function listUiButtons() {
-    return [micBtn, memBtn, clearBtn, promptBtn, promptBtn2].filter(Boolean);
+    return [micBtn, memBtn, clearBtn, promptBtn, promptBtn2, geminiBtn].filter(Boolean);
   }
 
   function setUiStyle(el, prop, value) {
@@ -1277,6 +1278,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     clear:         "tm-gemini-clear",
     promptFrank:   "tm-gemini-prompt",
     promptGeneral: "tm-gemini-prompt2",
+    gemini:        "tm-gemini-gemini-toggle",
   };
 
   function getOrCreateButton(id) {
@@ -1952,6 +1954,24 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     showToast("🧹 Sprechblase geleert.", 1600);
   }
 
+  function updateGeminiBtn() {
+    if (!geminiBtn) return;
+    geminiBtn.textContent = "G";
+    geminiBtn.style.fontWeight = "bold";
+    geminiBtn.style.fontSize = "20px";
+    if (CFG.autoGeminiCorrection) {
+      geminiBtn.style.background = "#16a34a";
+      geminiBtn.style.color = "#fff";
+      geminiBtn.style.borderColor = "#16a34a";
+      geminiBtn.title = "Gemini-Korrektur aktiv (klicken zum Deaktivieren)";
+    } else {
+      geminiBtn.style.background = "#dc2626";
+      geminiBtn.style.color = "#fff";
+      geminiBtn.style.borderColor = "#dc2626";
+      geminiBtn.title = "Gemini-Korrektur deaktiviert (klicken zum Aktivieren)";
+    }
+  }
+
   // ============================================================
   // Boot
   // ============================================================
@@ -1960,7 +1980,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     const mountNode = document.body;
 
     micBtn = getOrCreateButton(UI_IDS.mic);
-    styleRoundButton(micBtn, 0, 0);
+    styleRoundButton(micBtn, 0, 52);
     if (!micBtn.getAttribute("data-state")) {
       setSvgIcon(micBtn, MIC_ICON.mic);
       micBtn.setAttribute("data-state", "idle");
@@ -2034,7 +2054,8 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
         !document.getElementById("tm-gemini-mem") ||
         !document.getElementById("tm-gemini-clear") ||
         !document.getElementById("tm-gemini-prompt") ||
-        !document.getElementById("tm-gemini-prompt2"))
+        !document.getElementById("tm-gemini-prompt2") ||
+        !document.getElementById("tm-gemini-gemini-toggle"))
           scheduleEnsureUI();
       });
       mo.observe(document.documentElement, { childList: true, subtree: true });
@@ -2055,7 +2076,8 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
         !document.getElementById("tm-gemini-mem") ||
         !document.getElementById("tm-gemini-clear") ||
         !document.getElementById("tm-gemini-prompt") ||
-        !document.getElementById("tm-gemini-prompt2"))
+        !document.getElementById("tm-gemini-prompt2") ||
+        !document.getElementById("tm-gemini-gemini-toggle"))
         scheduleEnsureUI();
     }, 3000);
   }

@@ -263,6 +263,7 @@
   let clearBtn = null;
   let promptBtn = null;
   let promptBtn2 = null;
+  let geminiBtn = null;
 
 function isRoleTextbox(el) {
   return (el?.getAttribute?.("role") || "").toLowerCase() === "textbox";
@@ -289,7 +290,7 @@ function isEditableTarget(el) {
   if (el === document.body || el === document.documentElement) return false;
 
   // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
-  if ((typeof micBtn !== "undefined" && el === micBtn) || (typeof clearBtn !== "undefined" && el === clearBtn) || (typeof promptBtn !== "undefined" && el === promptBtn) || (typeof promptBtn2 !== "undefined" && el === promptBtn2) || (typeof memBtn !== "undefined" && el === memBtn)) return false;
+  if ((typeof micBtn !== "undefined" && el === micBtn) || (typeof clearBtn !== "undefined" && el === clearBtn) || (typeof promptBtn !== "undefined" && el === promptBtn) || (typeof promptBtn2 !== "undefined" && el === promptBtn2) || (typeof memBtn !== "undefined" && el === memBtn) || (typeof geminiBtn !== "undefined" && el === geminiBtn)) return false;
 
   const tag = (el.tagName || "").toUpperCase();
   const ariaDisabled = (el.getAttribute?.("aria-disabled") || "").toLowerCase() === "true";
@@ -1676,6 +1677,24 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
     showToast("🧹 Sprechblase geleert.", 1600);
   }
 
+  function updateGeminiBtn() {
+    if (!geminiBtn) return;
+    geminiBtn.textContent = "G";
+    geminiBtn.style.fontWeight = "bold";
+    geminiBtn.style.fontSize = "20px";
+    if (CFG.autoGeminiCorrection) {
+      geminiBtn.style.background = "#16a34a";
+      geminiBtn.style.color = "#fff";
+      geminiBtn.style.borderColor = "#16a34a";
+      geminiBtn.title = "Gemini-Korrektur aktiv (klicken zum Deaktivieren)";
+    } else {
+      geminiBtn.style.background = "#dc2626";
+      geminiBtn.style.color = "#fff";
+      geminiBtn.style.borderColor = "#dc2626";
+      geminiBtn.title = "Gemini-Korrektur deaktiviert (klicken zum Aktivieren)";
+    }
+  }
+
   // ============================================================
   // Boot
   // ============================================================
@@ -1685,7 +1704,7 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
     }
 
     micBtn = document.createElement("button");
-    styleRoundButton(micBtn, 0, 0);
+    styleRoundButton(micBtn, 0, 52);
     micBtn.innerHTML = MIC_ICON.mic; micBtn.setAttribute("data-state", "idle"); micBtn.classList.add("stt-mic-btn");
     micBtn.title = "Spracheingabe (Start/Stop)";
     micBtn.addEventListener("click", toggleMic);
@@ -1712,6 +1731,17 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
     promptBtn2.title = "Prompt (allgemein / 12. Klasse) einbetten";
     promptBtn2.addEventListener("click", runPromptBuilderGeneral);
     document.body.appendChild(promptBtn2);
+
+    geminiBtn = document.createElement("button");
+    styleRoundButton(geminiBtn, 0, 0);
+    geminiBtn.addEventListener("click", function() {
+      CFG.autoGeminiCorrection = !CFG.autoGeminiCorrection;
+      if (typeof GM_setValue === "function") GM_setValue("autoGeminiCorrection", CFG.autoGeminiCorrection);
+      updateGeminiBtn();
+      showToast(CFG.autoGeminiCorrection ? "✅ Gemini-Korrektur aktiviert" : "❌ Gemini-Korrektur deaktiviert", 3000);
+    });
+    document.body.appendChild(geminiBtn);
+    updateGeminiBtn();
 
     setMicState("idle");
     setPromptBtnState("idle");

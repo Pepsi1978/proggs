@@ -66,7 +66,8 @@
     mic: "tm_claude_mic_btn",
     prompt1: "tm_claude_prompt_btn",
     clear: "tm_claude_clear_btn",
-    prompt2: "tm_claude_prompt_btn2"
+    prompt2: "tm_claude_prompt_btn2",
+    gemini: "tm_claude_gemini_btn"
   };
   // Android/Edge Mobile-Erkennung (für angepasste Restart-Delays)
   const isMobileAndroid = /Android/i.test(navigator.userAgent);
@@ -327,13 +328,14 @@
   let clearBtn = null;
   let promptBtn = null;
   let promptBtn2 = null;
+  let geminiBtn = null;
 
   function isEditableTarget(el) {
     if (!el) return false;
     if (el === document.body || el === document.documentElement) return false;
 
     // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
-    if (el === micBtn || el === clearBtn || el === promptBtn || el === promptBtn2) return false;
+    if (el === micBtn || el === clearBtn || el === promptBtn || el === promptBtn2 || el === geminiBtn) return false;
 
     const tag = (el.tagName || "").toUpperCase();
     const ariaDisabled = (el.getAttribute?.("aria-disabled") || "").toLowerCase() === "true";
@@ -1755,6 +1757,24 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
     showToast("🧹 Sprechblase geleert.", 1600);
   }
 
+  function updateGeminiBtn() {
+    if (!geminiBtn) return;
+    geminiBtn.textContent = "G";
+    geminiBtn.style.fontWeight = "bold";
+    geminiBtn.style.fontSize = "20px";
+    if (CFG.autoGeminiCorrection) {
+      geminiBtn.style.background = "#16a34a";
+      geminiBtn.style.color = "#fff";
+      geminiBtn.style.borderColor = "#16a34a";
+      geminiBtn.title = "Gemini-Korrektur aktiv (klicken zum Deaktivieren)";
+    } else {
+      geminiBtn.style.background = "#dc2626";
+      geminiBtn.style.color = "#fff";
+      geminiBtn.style.borderColor = "#dc2626";
+      geminiBtn.title = "Gemini-Korrektur deaktiviert (klicken zum Aktivieren)";
+    }
+  }
+
   // ============================================================
   // Boot + UI-Reinject (Claude SPA)
   // ============================================================
@@ -1769,11 +1789,14 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
     const existingP1 = document.getElementById(UI_IDS.prompt1);
     const existingP2 = document.getElementById(UI_IDS.prompt2);
 
+    const existingGemini = document.getElementById(UI_IDS.gemini);
+
     if (existingMic && existingClear && existingP1 && existingP2) {
       micBtn = existingMic;
       clearBtn = existingClear;
       promptBtn = existingP1;
       promptBtn2 = existingP2;
+      geminiBtn = existingGemini;
 
       styleRoundButton(micBtn, 0, 0);
       styleRoundButton(clearBtn, 52, 0);
@@ -1783,6 +1806,7 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
       setMicState("idle");
       setPromptBtnState("idle");
       setPromptBtn2State("idle");
+      updateGeminiBtn();
       return;
     }
 

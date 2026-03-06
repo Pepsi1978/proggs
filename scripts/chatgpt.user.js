@@ -149,7 +149,8 @@
     mem: "tm_chatgpt_btn_mem",
     clear: "tm_chatgpt_btn_clear",
     promptFrank: "tm_chatgpt_btn_prompt_frank",
-    promptGeneral: "tm_chatgpt_btn_prompt_general"
+    promptGeneral: "tm_chatgpt_btn_prompt_general",
+    gemini: "tm_chatgpt_btn_gemini"
   };
 
   // ============================================================
@@ -434,6 +435,7 @@ Speichere nur diese Punkte als dauerhafte Erinnerungen, exakt als einfache Sätz
   let clearBtn = null;
   let promptBtn = null;
   let promptBtn2 = null;
+  let geminiBtn = null;
   let uiLayoutRaf = 0;
 
   function isEditableTarget(el) {
@@ -441,7 +443,7 @@ Speichere nur diese Punkte als dauerhafte Erinnerungen, exakt als einfache Sätz
     if (el === document.body || el === document.documentElement) return false;
 
     // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
-    if (el === micBtn || el === memBtn || el === clearBtn || el === promptBtn || el === promptBtn2) return false;
+    if (el === micBtn || el === memBtn || el === clearBtn || el === promptBtn || el === promptBtn2 || el === geminiBtn) return false;
 
     const tag = (el.tagName || "").toUpperCase();
     const ariaDisabled = (el.getAttribute?.("aria-disabled") || "").toLowerCase() === "true";
@@ -1241,7 +1243,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
   // UI Buttons (BOTTOM RIGHT)
   // ============================================================
   function listUiButtons() {
-    return [micBtn, memBtn, clearBtn, promptBtn, promptBtn2].filter(Boolean);
+    return [micBtn, memBtn, clearBtn, promptBtn, promptBtn2, geminiBtn].filter(Boolean);
   }
 
   function setUiStyle(el, prop, value) {
@@ -1943,6 +1945,24 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     return b;
   }
 
+  function updateGeminiBtn() {
+    if (!geminiBtn) return;
+    geminiBtn.textContent = "G";
+    geminiBtn.style.fontWeight = "bold";
+    geminiBtn.style.fontSize = "20px";
+    if (CFG.autoGeminiCorrection) {
+      geminiBtn.style.background = "#16a34a";
+      geminiBtn.style.color = "#fff";
+      geminiBtn.style.borderColor = "#16a34a";
+      geminiBtn.title = "Gemini-Korrektur aktiv (klicken zum Deaktivieren)";
+    } else {
+      geminiBtn.style.background = "#dc2626";
+      geminiBtn.style.color = "#fff";
+      geminiBtn.style.borderColor = "#dc2626";
+      geminiBtn.title = "Gemini-Korrektur deaktiviert (klicken zum Aktivieren)";
+    }
+  }
+
   function mountOrRepairUI() {
     const mountNode = document.body || document.documentElement;
     if (!mountNode) return;
@@ -1951,7 +1971,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
 
     // Mic (unten rechts)
     micBtn = getOrCreateButton(UI_IDS.mic);
-    styleRoundButton(micBtn, 0, 0);
+    styleRoundButton(micBtn, 0, 52);
     preventFocusSteal(micBtn);
     /* mic icon wird via setMicState gesetzt */
     micBtn.title = "Spracheingabe (Start/Stop)";
@@ -2019,7 +2039,8 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
       document.getElementById(UI_IDS.mem),
       document.getElementById(UI_IDS.clear),
       document.getElementById(UI_IDS.promptFrank),
-      document.getElementById(UI_IDS.promptGeneral)
+      document.getElementById(UI_IDS.promptGeneral),
+      document.getElementById(UI_IDS.gemini)
     ];
     if (nodes.some((n) => !n)) return true;
     return nodes.some((n) => !isButtonRenderable(n));

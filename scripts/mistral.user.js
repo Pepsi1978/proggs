@@ -35,7 +35,8 @@
     mic: "tm-mistral-mic",
     clear: "tm-mistral-clear",
     prompt: "tm-mistral-prompt",
-    prompt2: "tm-mistral-prompt2"
+    prompt2: "tm-mistral-prompt2",
+    gemini: "tm-mistral-gemini-toggle"
   };
 
   // ============================================================
@@ -317,6 +318,7 @@
   let clearBtn = null;
   let promptBtn = null;
   let promptBtn2 = null;
+  let geminiBtn = null;
 
   function isAriaReadonly(el) {
     return (el?.getAttribute?.("aria-readonly") || "").toLowerCase() === "true";
@@ -327,7 +329,7 @@
     if (el === document.body || el === document.documentElement) return false;
 
     // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
-    if (el === micBtn || el === clearBtn || el === promptBtn || el === promptBtn2) return false;
+    if (el === micBtn || el === clearBtn || el === promptBtn || el === promptBtn2 || el === geminiBtn) return false;
 
     const tag = (el.tagName || "").toUpperCase();
     const ariaDisabled = (el.getAttribute?.("aria-disabled") || "").toLowerCase() === "true";
@@ -1758,6 +1760,24 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     showToast("🧹 Sprechblase geleert.", 1600);
   }
 
+  function updateGeminiBtn() {
+    if (!geminiBtn) return;
+    geminiBtn.textContent = "G";
+    geminiBtn.style.fontWeight = "bold";
+    geminiBtn.style.fontSize = "20px";
+    if (CFG.autoGeminiCorrection) {
+      geminiBtn.style.background = "#16a34a";
+      geminiBtn.style.color = "#fff";
+      geminiBtn.style.borderColor = "#16a34a";
+      geminiBtn.title = "Gemini-Korrektur aktiv (klicken zum Deaktivieren)";
+    } else {
+      geminiBtn.style.background = "#dc2626";
+      geminiBtn.style.color = "#fff";
+      geminiBtn.style.borderColor = "#dc2626";
+      geminiBtn.title = "Gemini-Korrektur deaktiviert (klicken zum Aktivieren)";
+    }
+  }
+
   // ============================================================
   // Boot + UI-Resilience (SPA)
   // ============================================================
@@ -1768,15 +1788,33 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
       showToast("Mikrofon nicht verfügbar (getUserMedia fehlt).", 7000);
     }
 
+    // GEMINI Toggle
+    geminiBtn = document.getElementById(UI_IDS.gemini);
+    if (!geminiBtn) {
+      geminiBtn = document.createElement("button");
+      geminiBtn.id = UI_IDS.gemini;
+      styleRoundButton(geminiBtn, 0, 0);
+      document.body.appendChild(geminiBtn);
+    } else {
+      styleRoundButton(geminiBtn, 0, 0);
+    }
+    geminiBtn.addEventListener("click", function() {
+      CFG.autoGeminiCorrection = !CFG.autoGeminiCorrection;
+      if (typeof GM_setValue === "function") GM_setValue("autoGeminiCorrection", CFG.autoGeminiCorrection);
+      updateGeminiBtn();
+      showToast(CFG.autoGeminiCorrection ? "✅ Gemini-Korrektur aktiviert" : "❌ Gemini-Korrektur deaktiviert", 3000);
+    });
+    updateGeminiBtn();
+
     // MIC
     micBtn = document.getElementById(UI_IDS.mic);
     if (!micBtn) {
       micBtn = document.createElement("button");
       micBtn.id = UI_IDS.mic;
-      styleRoundButton(micBtn, 0, 0);
+      styleRoundButton(micBtn, 0, 52);
       document.body.appendChild(micBtn);
     } else {
-      styleRoundButton(micBtn, 0, 0);
+      styleRoundButton(micBtn, 0, 52);
     }
     micBtn.innerHTML = MIC_ICON.mic; micBtn.setAttribute("data-state", "idle"); micBtn.classList.add("stt-mic-btn");
     micBtn.title = "Spracheingabe (Start/Stop)";
