@@ -331,6 +331,7 @@ Speichere nur diese Punkte als dauerhafte Erinnerungen, exakt als einfache Sätz
 
   // UI Buttons werden später initialisiert, hier schon deklariert:
   let micBtn = null;
+  let geminiToggleBtn = null;
   let clearBtn = null;
   let memBtn = null;
   let promptBtn = null;
@@ -362,7 +363,7 @@ function isEditableTarget(el) {
   if (el === document.body || el === document.documentElement) return false;
 
   // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
-  if ((typeof micBtn !== "undefined" && el === micBtn) || (typeof clearBtn !== "undefined" && el === clearBtn) || (typeof promptBtn !== "undefined" && el === promptBtn) || (typeof promptBtn2 !== "undefined" && el === promptBtn2) || (typeof memBtn !== "undefined" && el === memBtn)) return false;
+  if ((typeof micBtn !== "undefined" && el === micBtn) || (typeof geminiToggleBtn !== "undefined" && el === geminiToggleBtn) || (typeof clearBtn !== "undefined" && el === clearBtn) || (typeof promptBtn !== "undefined" && el === promptBtn) || (typeof promptBtn2 !== "undefined" && el === promptBtn2) || (typeof memBtn !== "undefined" && el === memBtn)) return false;
 
   const tag = (el.tagName || "").toUpperCase();
   const ariaDisabled = (el.getAttribute?.("aria-disabled") || "").toLowerCase() === "true";
@@ -1273,6 +1274,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
   // ── Button IDs (Watchdog) ──
   const UI_IDS = {
     mic:           "tm-gemini-mic",
+    geminiToggle:  "tm-gemini-gemini-toggle",
     mem:           "tm-gemini-mem",
     clear:         "tm-gemini-clear",
     promptFrank:   "tm-gemini-prompt",
@@ -1356,6 +1358,22 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
   }
   function _sttStopAnims() {
     if (_sttAnim) { try { _sttAnim.cancel(); } catch(e) {} _sttAnim = null; }
+  }
+
+  function updateGeminiToggleBtn() {
+    if (!geminiToggleBtn) return;
+    geminiToggleBtn.textContent = "G";
+    geminiToggleBtn.style.fontWeight = "bold";
+    geminiToggleBtn.style.fontSize = "18px";
+    if (CFG.autoGeminiCorrection) {
+      geminiToggleBtn.style.background = "#22c55e";
+      geminiToggleBtn.style.color = "#fff";
+      geminiToggleBtn.title = "Gemini-Korrektur AN – Klicken zum Deaktivieren";
+    } else {
+      geminiToggleBtn.style.background = "#ef4444";
+      geminiToggleBtn.style.color = "#fff";
+      geminiToggleBtn.title = "Gemini-Korrektur AUS – Klicken zum Aktivieren";
+    }
   }
 
   function setMicState(state, msg = "") {
@@ -1972,8 +1990,20 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     micBtn.addEventListener("mousedown",   e => e.preventDefault(), true);
     if (!micBtn.isConnected) mountNode.appendChild(micBtn);
 
+    geminiToggleBtn = getOrCreateButton(UI_IDS.geminiToggle);
+    styleRoundButton(geminiToggleBtn, 0, 52);
+    geminiToggleBtn.addEventListener("click", async () => {
+      CFG.autoGeminiCorrection = !CFG.autoGeminiCorrection;
+      if (typeof GM_setValue === "function") GM_setValue("autoGeminiCorrection", CFG.autoGeminiCorrection);
+      updateGeminiToggleBtn();
+      showToast(CFG.autoGeminiCorrection ? "✅ Gemini-Korrektur aktiviert" : "❌ Gemini-Korrektur deaktiviert", 2000);
+    });
+    geminiToggleBtn.addEventListener("pointerdown", e => e.preventDefault(), true);
+    geminiToggleBtn.addEventListener("mousedown",   e => e.preventDefault(), true);
+    if (!geminiToggleBtn.isConnected) mountNode.appendChild(geminiToggleBtn);
+
     clearBtn = getOrCreateButton(UI_IDS.clear);
-    styleRoundButton(clearBtn, 0, 52);
+    styleRoundButton(clearBtn, 0, 104);
     clearBtn.textContent = clearBtn.textContent || "\u274C";
     setUiStyle(clearBtn, "color", "#c40000");
     clearBtn.title = "Sprechblase leeren";
@@ -1983,7 +2013,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     if (!clearBtn.isConnected) mountNode.appendChild(clearBtn);
 
     promptBtn = getOrCreateButton(UI_IDS.promptFrank);
-    styleRoundButton(promptBtn, 0, 104);
+    styleRoundButton(promptBtn, 0, 156);
     promptBtn.textContent = promptBtn.textContent || "\u2728";
     promptBtn.title = "Prompt (f\u00fcr Frank) einbetten";
     promptBtn.onclick = runPromptBuilder;
@@ -1992,7 +2022,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     if (!promptBtn.isConnected) mountNode.appendChild(promptBtn);
 
     promptBtn2 = getOrCreateButton(UI_IDS.promptGeneral);
-    styleRoundButton(promptBtn2, 0, 156);
+    styleRoundButton(promptBtn2, 0, 208);
     promptBtn2.textContent = promptBtn2.textContent || "\uD83E\uDEA7";
     promptBtn2.title = "Prompt (allgemein / 12. Klasse) einbetten";
     promptBtn2.onclick = runPromptBuilderGeneral;
@@ -2001,7 +2031,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     if (!promptBtn2.isConnected) mountNode.appendChild(promptBtn2);
 
     memBtn = getOrCreateButton(UI_IDS.mem);
-    styleRoundButton(memBtn, 0, 208);
+    styleRoundButton(memBtn, 0, 260);
     memBtn.textContent = memBtn.textContent || "\uD83D\uDCAE";
     memBtn.title = "Memory-Prompt einf\u00fcgen";
     memBtn.onclick = runMemoryPrompt;
@@ -2011,6 +2041,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
 
     scheduleUiRelayout();
     setMicState("idle");
+    updateGeminiToggleBtn();
     setMemBtnState("idle");
     setPromptBtnState("idle");
     setPromptBtn2State("idle");
@@ -2031,6 +2062,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     try {
       const mo = new MutationObserver(() => {
         if (!document.getElementById("tm-gemini-mic") ||
+        !document.getElementById("tm-gemini-gemini-toggle") ||
         !document.getElementById("tm-gemini-mem") ||
         !document.getElementById("tm-gemini-clear") ||
         !document.getElementById("tm-gemini-prompt") ||
@@ -2052,6 +2084,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     // Fallback-Interval (alle 3 s)
     setInterval(() => {
       if (!document.getElementById("tm-gemini-mic") ||
+        !document.getElementById("tm-gemini-gemini-toggle") ||
         !document.getElementById("tm-gemini-mem") ||
         !document.getElementById("tm-gemini-clear") ||
         !document.getElementById("tm-gemini-prompt") ||
@@ -2066,7 +2099,7 @@ function boot() {
     }
     try { mountOrRepairUI(); } catch(e) { console.error("[STT-gemini] mountOrRepairUI:", e); }
     try { startUiWatchdog(); } catch(e) { console.error("[STT-gemini] startUiWatchdog:", e); }
-    showToast("\u2705 Script aktiv. \uD83C\uDF99\uFE0F + \uD83D\uDCAE + \u274C + \u2728 + \uD83E\uDEA7 unten rechts.\nTipp: erst ins Ziel-Eingabefeld klicken, dann \uD83C\uDF99\uFE0F.", 2800);
+    showToast("\u2705 Script aktiv. \uD83C\uDF99\uFE0F + G + \uD83D\uDCAE + \u274C + \u2728 + \uD83E\uDEA7 unten rechts.\nTipp: erst ins Ziel-Eingabefeld klicken, dann \uD83C\uDF99\uFE0F.", 2800);
   }
 
   if (document.readyState === "loading") {

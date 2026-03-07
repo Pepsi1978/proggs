@@ -36,6 +36,14 @@
     geminiApiKey: "tm-platformopenai-gemini-api-key"
   };
 
+  const UI_IDS = {
+    mic:           "tm-platformopenai-mic",
+    geminiToggle:  "tm-platformopenai-gemini-toggle",
+    clear:         "tm-platformopenai-clear",
+    promptFrank:   "tm-platformopenai-prompt",
+    promptGeneral: "tm-platformopenai-prompt2",
+  };
+
   // ============================================================
   // UI POSITION
   // ============================================================
@@ -258,6 +266,7 @@
 
   // UI Buttons werden später initialisiert, hier schon deklariert:
   let micBtn = null;
+  let geminiToggleBtn = null;
   let clearBtn = null;
   let promptBtn = null;
   let promptBtn2 = null;
@@ -287,7 +296,7 @@ function isEditableTarget(el) {
   if (el === document.body || el === document.documentElement) return false;
 
   // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
-  if ((typeof micBtn !== "undefined" && el === micBtn) || (typeof clearBtn !== "undefined" && el === clearBtn) || (typeof promptBtn !== "undefined" && el === promptBtn) || (typeof promptBtn2 !== "undefined" && el === promptBtn2) || (typeof memBtn !== "undefined" && el === memBtn)) return false;
+  if ((typeof micBtn !== "undefined" && el === micBtn) || (typeof geminiToggleBtn !== "undefined" && el === geminiToggleBtn) || (typeof clearBtn !== "undefined" && el === clearBtn) || (typeof promptBtn !== "undefined" && el === promptBtn) || (typeof promptBtn2 !== "undefined" && el === promptBtn2) || (typeof memBtn !== "undefined" && el === memBtn)) return false;
 
   const tag = (el.tagName || "").toUpperCase();
   const ariaDisabled = (el.getAttribute?.("aria-disabled") || "").toLowerCase() === "true";
@@ -1154,6 +1163,22 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     b.style.top = "auto";
   }
 
+  function updateGeminiToggleBtn() {
+    if (!geminiToggleBtn) return;
+    geminiToggleBtn.textContent = "G";
+    geminiToggleBtn.style.fontWeight = "bold";
+    geminiToggleBtn.style.fontSize = "18px";
+    if (CFG.autoGeminiCorrection) {
+      geminiToggleBtn.style.background = "#22c55e";
+      geminiToggleBtn.style.color = "#fff";
+      geminiToggleBtn.title = "Gemini-Korrektur AN – Klicken zum Deaktivieren";
+    } else {
+      geminiToggleBtn.style.background = "#ef4444";
+      geminiToggleBtn.style.color = "#fff";
+      geminiToggleBtn.title = "Gemini-Korrektur AUS – Klicken zum Aktivieren";
+    }
+  }
+
   function setMicState(state, msg = "") {
     if (!micBtn) return;
     if (!micBtn.classList.contains("stt-mic-btn")) micBtn.classList.add("stt-mic-btn");
@@ -1679,14 +1704,27 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     }
 
     micBtn = document.createElement("button");
+    micBtn.id = UI_IDS.mic;
     styleRoundButton(micBtn, 0, 0);
     micBtn.innerHTML = MIC_ICON.mic; micBtn.setAttribute("data-state", "idle"); micBtn.classList.add("stt-mic-btn");
     micBtn.title = "Spracheingabe (Start/Stop)";
     micBtn.addEventListener("click", toggleMic);
     document.body.appendChild(micBtn);
 
+    geminiToggleBtn = document.createElement("button");
+    geminiToggleBtn.id = UI_IDS.geminiToggle;
+    styleRoundButton(geminiToggleBtn, 0, 52);
+    geminiToggleBtn.addEventListener("click", async () => {
+      CFG.autoGeminiCorrection = !CFG.autoGeminiCorrection;
+      await Promise.resolve(GM_setValue("autoGeminiCorrection", CFG.autoGeminiCorrection));
+      updateGeminiToggleBtn();
+      showToast(CFG.autoGeminiCorrection ? "✅ Gemini-Korrektur aktiviert" : "❌ Gemini-Korrektur deaktiviert", 2000);
+    });
+    document.body.appendChild(geminiToggleBtn);
+
     clearBtn = document.createElement("button");
-    styleRoundButton(clearBtn, 0, 52);
+    clearBtn.id = UI_IDS.clear;
+    styleRoundButton(clearBtn, 0, 104);
     clearBtn.textContent = "❌";
     clearBtn.style.color = "#c40000";
     clearBtn.title = "Sprechblase leeren";
@@ -1694,23 +1732,26 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     document.body.appendChild(clearBtn);
 
     promptBtn = document.createElement("button");
-    styleRoundButton(promptBtn, 0, 104);
+    promptBtn.id = UI_IDS.promptFrank;
+    styleRoundButton(promptBtn, 0, 156);
     promptBtn.textContent = "✨";
     promptBtn.title = "Prompt (für Frank) einbetten";
     promptBtn.addEventListener("click", runPromptBuilder);
     document.body.appendChild(promptBtn);
 
     promptBtn2 = document.createElement("button");
-    styleRoundButton(promptBtn2, 0, 156);
+    promptBtn2.id = UI_IDS.promptGeneral;
+    styleRoundButton(promptBtn2, 0, 208);
     promptBtn2.textContent = "🪄";
     promptBtn2.title = "Prompt (allgemein / 12. Klasse) einbetten";
     promptBtn2.addEventListener("click", runPromptBuilderGeneral);
     document.body.appendChild(promptBtn2);
 
     setMicState("idle");
+    updateGeminiToggleBtn();
     setPromptBtnState("idle");
     setPromptBtn2State("idle");
-    showToast("✅ Script aktiv. 🎙️ + ❌ + ✨ + 🪄 unten rechts.\nTipp: erst ins Ziel-Eingabefeld klicken, dann 🎙️.", 2800);
+    showToast("✅ Script aktiv. 🎙️ + G + ❌ + ✨ + 🪄 unten rechts.\nTipp: erst ins Ziel-Eingabefeld klicken, dann 🎙️.", 2800);
   }
 
   boot();

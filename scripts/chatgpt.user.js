@@ -146,6 +146,7 @@
   const UI_IDS = {
     toast: "tm_chatgpt_toast",
     mic: "tm_chatgpt_btn_mic",
+    geminiToggle: "tm_chatgpt_gemini_toggle",
     mem: "tm_chatgpt_btn_mem",
     clear: "tm_chatgpt_btn_clear",
     promptFrank: "tm_chatgpt_btn_prompt_frank",
@@ -430,6 +431,7 @@ Speichere nur diese Punkte als dauerhafte Erinnerungen, exakt als einfache Sätz
 
   // UI Buttons werden später initialisiert, hier schon deklariert:
   let micBtn = null;
+  let geminiToggleBtn = null;
   let memBtn = null;
   let clearBtn = null;
   let promptBtn = null;
@@ -441,7 +443,7 @@ Speichere nur diese Punkte als dauerhafte Erinnerungen, exakt als einfache Sätz
     if (el === document.body || el === document.documentElement) return false;
 
     // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
-    if (el === micBtn || el === memBtn || el === clearBtn || el === promptBtn || el === promptBtn2) return false;
+    if (el === micBtn || el === geminiToggleBtn || el === memBtn || el === clearBtn || el === promptBtn || el === promptBtn2) return false;
 
     const tag = (el.tagName || "").toUpperCase();
     const ariaDisabled = (el.getAttribute?.("aria-disabled") || "").toLowerCase() === "true";
@@ -1360,6 +1362,22 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     setUiStyle(btn, "color", fg);
   }
 
+  function updateGeminiToggleBtn() {
+    if (!geminiToggleBtn) return;
+    geminiToggleBtn.textContent = "G";
+    geminiToggleBtn.style.fontWeight = "bold";
+    geminiToggleBtn.style.fontSize = "18px";
+    if (CFG.autoGeminiCorrection) {
+      geminiToggleBtn.style.background = "#22c55e";
+      geminiToggleBtn.style.color = "#fff";
+      geminiToggleBtn.title = "Gemini-Korrektur AN – Klicken zum Deaktivieren";
+    } else {
+      geminiToggleBtn.style.background = "#ef4444";
+      geminiToggleBtn.style.color = "#fff";
+      geminiToggleBtn.title = "Gemini-Korrektur AUS – Klicken zum Aktivieren";
+    }
+  }
+
   function setMicState(state, msg = "") {
     if (!micBtn) return;
     if (!micBtn.classList.contains("stt-mic-btn")) micBtn.classList.add("stt-mic-btn");
@@ -1958,9 +1976,21 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     micBtn.onclick = toggleMic;
     if (!micBtn.isConnected || micBtn.parentNode !== mountNode) mountNode.appendChild(micBtn);
 
-    // Close (über Mic)
+    // Gemini Toggle (über Mic)
+    geminiToggleBtn = getOrCreateButton(UI_IDS.geminiToggle);
+    styleRoundButton(geminiToggleBtn, 0, 52);
+    preventFocusSteal(geminiToggleBtn);
+    geminiToggleBtn.onclick = async () => {
+      CFG.autoGeminiCorrection = !CFG.autoGeminiCorrection;
+      _tmSetValue("autoGeminiCorrection", CFG.autoGeminiCorrection);
+      updateGeminiToggleBtn();
+      showToast(CFG.autoGeminiCorrection ? "✅ Gemini-Korrektur aktiviert" : "❌ Gemini-Korrektur deaktiviert", 2000);
+    };
+    if (!geminiToggleBtn.isConnected || geminiToggleBtn.parentNode !== mountNode) mountNode.appendChild(geminiToggleBtn);
+
+    // Close (über Gemini Toggle)
     clearBtn = getOrCreateButton(UI_IDS.clear);
-    styleRoundButton(clearBtn, 0, 52);
+    styleRoundButton(clearBtn, 0, 104);
     preventFocusSteal(clearBtn);
     clearBtn.textContent = clearBtn.textContent || "❌";
     setUiStyle(clearBtn, "color", "#c40000");
@@ -1970,7 +2000,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
 
     // Prompt-Builder (Frank) über Close
     promptBtn = getOrCreateButton(UI_IDS.promptFrank);
-    styleRoundButton(promptBtn, 0, 104);
+    styleRoundButton(promptBtn, 0, 156);
     preventFocusSteal(promptBtn);
     promptBtn.textContent = promptBtn.textContent || "✨";
     promptBtn.title = "Prompt (für Frank) einbetten";
@@ -1979,7 +2009,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
 
     // Prompt-Builder (Allgemein) darüber
     promptBtn2 = getOrCreateButton(UI_IDS.promptGeneral);
-    styleRoundButton(promptBtn2, 0, 156);
+    styleRoundButton(promptBtn2, 0, 208);
     preventFocusSteal(promptBtn2);
     promptBtn2.textContent = promptBtn2.textContent || "🪄";
     promptBtn2.title = "Prompt (allgemein / 12. Klasse) einbetten";
@@ -1988,7 +2018,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
 
     // Memory (ganz oben - Diskette)
     memBtn = getOrCreateButton(UI_IDS.mem);
-    styleRoundButton(memBtn, 0, 208);
+    styleRoundButton(memBtn, 0, 260);
     preventFocusSteal(memBtn);
     memBtn.textContent = memBtn.textContent || "💾";
     memBtn.title = "Memory-Prompt einfügen";
@@ -1997,6 +2027,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
 
     scheduleUiRelayout();
     setMicState("idle");
+    updateGeminiToggleBtn();
     setMemBtnState("idle");
     setPromptBtnState("idle");
     setPromptBtn2State("idle");
@@ -2017,6 +2048,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
   function needsUiRepair() {
     const nodes = [
       document.getElementById(UI_IDS.mic),
+      document.getElementById(UI_IDS.geminiToggle),
       document.getElementById(UI_IDS.mem),
       document.getElementById(UI_IDS.clear),
       document.getElementById(UI_IDS.promptFrank),
@@ -2081,7 +2113,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     mountOrRepairUI();
     startUiWatchdog();
 
-    showToast("✅ Script aktiv. 💾 + ❌ + 🎙️ + ✨ + 🪄 unten rechts.\nTipp: erst ins Ziel-Eingabefeld klicken, dann Button drücken.", 3200);
+    showToast("✅ Script aktiv. 💾 + ❌ + 🎙️ + G + ✨ + 🪄 unten rechts.\nTipp: erst ins Ziel-Eingabefeld klicken, dann Button drücken.", 3200);
   }
 
   setTimeout(boot, 350);

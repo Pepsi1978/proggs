@@ -273,6 +273,7 @@
 
   // UI Buttons werden später initialisiert, hier schon deklariert:
   let micBtn = null;
+  let geminiToggleBtn = null;
   let clearBtn = null;
   let promptBtn = null;
   let promptBtn2 = null;
@@ -302,7 +303,7 @@ function isEditableTarget(el) {
   if (el === document.body || el === document.documentElement) return false;
 
   // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
-  if ((typeof micBtn !== "undefined" && el === micBtn) || (typeof clearBtn !== "undefined" && el === clearBtn) || (typeof promptBtn !== "undefined" && el === promptBtn) || (typeof promptBtn2 !== "undefined" && el === promptBtn2) || (typeof memBtn !== "undefined" && el === memBtn)) return false;
+  if ((typeof micBtn !== "undefined" && el === micBtn) || (typeof geminiToggleBtn !== "undefined" && el === geminiToggleBtn) || (typeof clearBtn !== "undefined" && el === clearBtn) || (typeof promptBtn !== "undefined" && el === promptBtn) || (typeof promptBtn2 !== "undefined" && el === promptBtn2) || (typeof memBtn !== "undefined" && el === memBtn)) return false;
 
   const tag = (el.tagName || "").toUpperCase();
   const ariaDisabled = (el.getAttribute?.("aria-disabled") || "").toLowerCase() === "true";
@@ -1131,6 +1132,7 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
   // ── Button IDs (Watchdog) ──
   const UI_IDS = {
     mic:           "tm-notebooklm-mic",
+    geminiToggle:  "tm-notebooklm-gemini-toggle",
     clear:         "tm-notebooklm-clear",
     promptFrank:   "tm-notebooklm-prompt",
     promptGeneral: "tm-notebooklm-prompt2",
@@ -1236,6 +1238,22 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
   }
   function _sttStopAnims() {
     if (_sttAnim) { try { _sttAnim.cancel(); } catch(e) {} _sttAnim = null; }
+  }
+
+  function updateGeminiToggleBtn() {
+    if (!geminiToggleBtn) return;
+    geminiToggleBtn.textContent = "G";
+    geminiToggleBtn.style.fontWeight = "bold";
+    geminiToggleBtn.style.fontSize = "18px";
+    if (CFG.autoGeminiCorrection) {
+      geminiToggleBtn.style.background = "#22c55e";
+      geminiToggleBtn.style.color = "#fff";
+      geminiToggleBtn.title = "Gemini-Korrektur AN – Klicken zum Deaktivieren";
+    } else {
+      geminiToggleBtn.style.background = "#ef4444";
+      geminiToggleBtn.style.color = "#fff";
+      geminiToggleBtn.title = "Gemini-Korrektur AUS – Klicken zum Aktivieren";
+    }
   }
 
   function setMicState(state, msg = "") {
@@ -1787,8 +1805,20 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
     micBtn.addEventListener("mousedown",   e => e.preventDefault(), true);
     if (!micBtn.isConnected) document.body.appendChild(micBtn);
 
+    geminiToggleBtn = getOrCreateButton(UI_IDS.geminiToggle);
+    styleRoundButton(geminiToggleBtn, 0, 52);
+    geminiToggleBtn.addEventListener("click", async () => {
+      CFG.autoGeminiCorrection = !CFG.autoGeminiCorrection;
+      await Promise.resolve(GM_setValue("autoGeminiCorrection", CFG.autoGeminiCorrection));
+      updateGeminiToggleBtn();
+      showToast(CFG.autoGeminiCorrection ? "✅ Gemini-Korrektur aktiviert" : "❌ Gemini-Korrektur deaktiviert", 2000);
+    });
+    geminiToggleBtn.addEventListener("pointerdown", e => e.preventDefault(), true);
+    geminiToggleBtn.addEventListener("mousedown",   e => e.preventDefault(), true);
+    if (!geminiToggleBtn.isConnected) document.body.appendChild(geminiToggleBtn);
+
     clearBtn = getOrCreateButton(UI_IDS.clear);
-    styleRoundButton(clearBtn, 0, 52);
+    styleRoundButton(clearBtn, 0, 104);
     clearBtn.textContent = clearBtn.textContent || "\u274C";
     setUiStyle(clearBtn, "color", "#c40000");
     clearBtn.title = "Sprechblase leeren";
@@ -1798,7 +1828,7 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
     if (!clearBtn.isConnected) document.body.appendChild(clearBtn);
 
     promptBtn = getOrCreateButton(UI_IDS.promptFrank);
-    styleRoundButton(promptBtn, 0, 104);
+    styleRoundButton(promptBtn, 0, 156);
     promptBtn.textContent = promptBtn.textContent || "\u2728";
     promptBtn.title = "Prompt (f\u00fcr Frank) einbetten";
     promptBtn.onclick = runPromptBuilder;
@@ -1807,7 +1837,7 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
     if (!promptBtn.isConnected) document.body.appendChild(promptBtn);
 
     promptBtn2 = getOrCreateButton(UI_IDS.promptGeneral);
-    styleRoundButton(promptBtn2, 0, 156);
+    styleRoundButton(promptBtn2, 0, 208);
     promptBtn2.textContent = promptBtn2.textContent || "\uD83E\uDEA7";
     promptBtn2.title = "Prompt (allgemein / 12. Klasse) einbetten";
     promptBtn2.onclick = runPromptBuilderGeneral;
@@ -1816,6 +1846,7 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
     if (!promptBtn2.isConnected) document.body.appendChild(promptBtn2);
 
     setMicState("idle");
+    updateGeminiToggleBtn();
     setPromptBtnState("idle");
     setPromptBtn2State("idle");
   }
@@ -1835,6 +1866,7 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
     try {
       const mo = new MutationObserver(() => {
         if (!document.getElementById("tm-notebooklm-mic") ||
+        !document.getElementById("tm-notebooklm-gemini-toggle") ||
         !document.getElementById("tm-notebooklm-clear") ||
         !document.getElementById("tm-notebooklm-prompt") ||
         !document.getElementById("tm-notebooklm-prompt2"))
@@ -1855,6 +1887,7 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
     // Fallback-Interval (alle 3 s)
     setInterval(() => {
       if (!document.getElementById("tm-notebooklm-mic") ||
+        !document.getElementById("tm-notebooklm-gemini-toggle") ||
         !document.getElementById("tm-notebooklm-clear") ||
         !document.getElementById("tm-notebooklm-prompt") ||
         !document.getElementById("tm-notebooklm-prompt2"))
@@ -1867,7 +1900,7 @@ function boot() {
     }
     try { mountOrRepairUI(); } catch(e) { console.error("[STT-notebooklm] mountOrRepairUI:", e); }
     try { startUiWatchdog(); } catch(e) { console.error("[STT-notebooklm] startUiWatchdog:", e); }
-    showToast("\u2705 Script aktiv. \uD83C\uDF99\uFE0F + \u274C + \u2728 + \uD83E\uDEA7 unten rechts.\nTipp: erst ins Ziel-Eingabefeld klicken, dann \uD83C\uDF99\uFE0F.", 2800);
+    showToast("\u2705 Script aktiv. \uD83C\uDF99\uFE0F + G + \u274C + \u2728 + \uD83E\uDEA7 unten rechts.\nTipp: erst ins Ziel-Eingabefeld klicken, dann \uD83C\uDF99\uFE0F.", 2800);
   }
 
   if (document.readyState === "loading") {

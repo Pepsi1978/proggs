@@ -64,6 +64,7 @@
   // IDs, damit wir UI wiederfinden / neu injizieren können
   const UI_IDS = {
     mic: "tm_claude_mic_btn",
+    geminiToggle: "tm_claude_gemini_toggle",
     prompt1: "tm_claude_prompt_btn",
     clear: "tm_claude_clear_btn",
     prompt2: "tm_claude_prompt_btn2"
@@ -324,6 +325,7 @@
 
   // UI Buttons werden später initialisiert, hier schon deklariert:
   let micBtn = null;
+  let geminiToggleBtn = null;
   let clearBtn = null;
   let promptBtn = null;
   let promptBtn2 = null;
@@ -333,7 +335,7 @@
     if (el === document.body || el === document.documentElement) return false;
 
     // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
-    if (el === micBtn || el === clearBtn || el === promptBtn || el === promptBtn2) return false;
+    if (el === micBtn || el === geminiToggleBtn || el === clearBtn || el === promptBtn || el === promptBtn2) return false;
 
     const tag = (el.tagName || "").toUpperCase();
     const ariaDisabled = (el.getAttribute?.("aria-disabled") || "").toLowerCase() === "true";
@@ -1235,6 +1237,22 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
     b.style.top = "auto";
   }
 
+  function updateGeminiToggleBtn() {
+    if (!geminiToggleBtn) return;
+    geminiToggleBtn.textContent = "G";
+    geminiToggleBtn.style.fontWeight = "bold";
+    geminiToggleBtn.style.fontSize = "18px";
+    if (CFG.autoGeminiCorrection) {
+      geminiToggleBtn.style.background = "#22c55e";
+      geminiToggleBtn.style.color = "#fff";
+      geminiToggleBtn.title = "Gemini-Korrektur AN – Klicken zum Deaktivieren";
+    } else {
+      geminiToggleBtn.style.background = "#ef4444";
+      geminiToggleBtn.style.color = "#fff";
+      geminiToggleBtn.title = "Gemini-Korrektur AUS – Klicken zum Aktivieren";
+    }
+  }
+
   function setMicState(state, msg = "") {
     if (!micBtn) return;
     if (!micBtn.classList.contains("stt-mic-btn")) micBtn.classList.add("stt-mic-btn");
@@ -1765,22 +1783,26 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
 
     // Falls UI schon existiert (z.B. nach Reinjection), nur Referenzen setzen
     const existingMic = document.getElementById(UI_IDS.mic);
+    const existingGT = document.getElementById(UI_IDS.geminiToggle);
     const existingClear = document.getElementById(UI_IDS.clear);
     const existingP1 = document.getElementById(UI_IDS.prompt1);
     const existingP2 = document.getElementById(UI_IDS.prompt2);
 
-    if (existingMic && existingClear && existingP1 && existingP2) {
+    if (existingMic && existingGT && existingClear && existingP1 && existingP2) {
       micBtn = existingMic;
+      geminiToggleBtn = existingGT;
       clearBtn = existingClear;
       promptBtn = existingP1;
       promptBtn2 = existingP2;
 
       styleRoundButton(micBtn, 0, 0);
-      styleRoundButton(clearBtn, 0, 52);
-      styleRoundButton(promptBtn, 0, 104);
-      styleRoundButton(promptBtn2, 0, 156);
+      styleRoundButton(geminiToggleBtn, 0, 52);
+      styleRoundButton(clearBtn, 0, 104);
+      styleRoundButton(promptBtn, 0, 156);
+      styleRoundButton(promptBtn2, 0, 208);
 
       setMicState("idle");
+      updateGeminiToggleBtn();
       setPromptBtnState("idle");
       setPromptBtn2State("idle");
       return;
@@ -1788,6 +1810,7 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
 
     // Alte Reste entfernen (falls halb vorhanden)
     try { existingMic?.remove(); } catch {}
+    try { existingGT?.remove(); } catch {}
     try { existingClear?.remove(); } catch {}
     try { existingP1?.remove(); } catch {}
     try { existingP2?.remove(); } catch {}
@@ -1800,9 +1823,20 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
     micBtn.addEventListener("click", toggleMic);
     document.body.appendChild(micBtn);
 
+    geminiToggleBtn = document.createElement("button");
+    geminiToggleBtn.id = UI_IDS.geminiToggle;
+    styleRoundButton(geminiToggleBtn, 0, 52);
+    geminiToggleBtn.addEventListener("click", async () => {
+      CFG.autoGeminiCorrection = !CFG.autoGeminiCorrection;
+      await Promise.resolve(gmSetValue("autoGeminiCorrection", CFG.autoGeminiCorrection));
+      updateGeminiToggleBtn();
+      showToast(CFG.autoGeminiCorrection ? "✅ Gemini-Korrektur aktiviert" : "❌ Gemini-Korrektur deaktiviert", 2000);
+    });
+    document.body.appendChild(geminiToggleBtn);
+
     clearBtn = document.createElement("button");
     clearBtn.id = UI_IDS.clear;
-    styleRoundButton(clearBtn, 0, 52);
+    styleRoundButton(clearBtn, 0, 104);
     clearBtn.textContent = "❌";
     clearBtn.style.color = "#c40000";
     clearBtn.title = "Sprechblase leeren";
@@ -1811,7 +1845,7 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
 
     promptBtn = document.createElement("button");
     promptBtn.id = UI_IDS.prompt1;
-    styleRoundButton(promptBtn, 0, 104);
+    styleRoundButton(promptBtn, 0, 156);
     promptBtn.textContent = "✨";
     promptBtn.title = "Prompt (für Frank) einbetten";
     promptBtn.addEventListener("click", runPromptBuilder);
@@ -1819,21 +1853,23 @@ Die Aufgabe wird immer 1:1 übernommen, ohne Umformulierung oder Ergänzung.
 
     promptBtn2 = document.createElement("button");
     promptBtn2.id = UI_IDS.prompt2;
-    styleRoundButton(promptBtn2, 0, 156);
+    styleRoundButton(promptBtn2, 0, 208);
     promptBtn2.textContent = "🪄";
     promptBtn2.title = "Prompt (allgemein / 12. Klasse) einbetten";
     promptBtn2.addEventListener("click", runPromptBuilderGeneral);
     document.body.appendChild(promptBtn2);
 
     setMicState("idle");
+    updateGeminiToggleBtn();
     setPromptBtnState("idle");
     setPromptBtn2State("idle");
-    showToast("✅ Script aktiv. 🎙️ + ❌ + ✨ + 🪄 unten rechts.\nTipp: erst ins Ziel-Eingabefeld klicken, dann Button.", 2800);
+    showToast("✅ Script aktiv. 🎙️ + G + ❌ + ✨ + 🪄 unten rechts.\nTipp: erst ins Ziel-Eingabefeld klicken, dann Button.", 2800);
   }
 
   function uiIsMissing() {
     return (
       !document.getElementById(UI_IDS.mic) ||
+      !document.getElementById(UI_IDS.geminiToggle) ||
       !document.getElementById(UI_IDS.clear) ||
       !document.getElementById(UI_IDS.prompt1) ||
       !document.getElementById(UI_IDS.prompt2)

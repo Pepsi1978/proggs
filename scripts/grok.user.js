@@ -108,6 +108,7 @@
     root: "tm-grok-ui-root",
     toast: "tm-grok-toast",
     mic: "tm-grok-mic",
+    geminiToggle: "tm-grok-gemini-toggle",
     clear: "tm-grok-clear",
     prompt: "tm-grok-prompt",
     prompt2: "tm-grok-prompt2"
@@ -373,6 +374,7 @@
 
   // UI Buttons werden später initialisiert, hier schon deklariert:
   let micBtn = null;
+  let geminiToggleBtn = null;
   let clearBtn = null;
   let promptBtn = null;
   let promptBtn2 = null;
@@ -387,7 +389,7 @@
     if (el === document.body || el === document.documentElement) return false;
 
     // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
-    if (el === micBtn || el === clearBtn || el === promptBtn || el === promptBtn2) return false;
+    if (el === micBtn || el === geminiToggleBtn || el === clearBtn || el === promptBtn || el === promptBtn2) return false;
 
     const tag = (el.tagName || "").toUpperCase();
     const ariaDisabled = (el.getAttribute?.("aria-disabled") || "").toLowerCase() === "true";
@@ -1262,6 +1264,22 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     b.style.top = "auto";
   }
 
+  function updateGeminiToggleBtn() {
+    if (!geminiToggleBtn) return;
+    geminiToggleBtn.textContent = "G";
+    geminiToggleBtn.style.fontWeight = "bold";
+    geminiToggleBtn.style.fontSize = "18px";
+    if (CFG.autoGeminiCorrection) {
+      geminiToggleBtn.style.background = "#22c55e";
+      geminiToggleBtn.style.color = "#fff";
+      geminiToggleBtn.title = "Gemini-Korrektur AN – Klicken zum Deaktivieren";
+    } else {
+      geminiToggleBtn.style.background = "#ef4444";
+      geminiToggleBtn.style.color = "#fff";
+      geminiToggleBtn.title = "Gemini-Korrektur AUS – Klicken zum Aktivieren";
+    }
+  }
+
   function setMicState(state, msg = "") {
     if (!micBtn) return;
     if (!micBtn.classList.contains("stt-mic-btn")) micBtn.classList.add("stt-mic-btn");
@@ -1786,12 +1804,29 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
       micBtn = micExisting;
     }
 
+    // Gemini Toggle
+    const existingGT = document.getElementById(UI_IDS.geminiToggle);
+    if (!existingGT) {
+      geminiToggleBtn = document.createElement("button");
+      geminiToggleBtn.id = UI_IDS.geminiToggle;
+      styleRoundButton(geminiToggleBtn, 0, 52);
+      geminiToggleBtn.addEventListener("click", async () => {
+        CFG.autoGeminiCorrection = !CFG.autoGeminiCorrection;
+        await Promise.resolve(GM_setValue("autoGeminiCorrection", CFG.autoGeminiCorrection));
+        updateGeminiToggleBtn();
+        showToast(CFG.autoGeminiCorrection ? "✅ Gemini-Korrektur aktiviert" : "❌ Gemini-Korrektur deaktiviert", 2000);
+      });
+      uiRoot.appendChild(geminiToggleBtn);
+    } else {
+      geminiToggleBtn = existingGT;
+    }
+
     // Close (über Mic)
     const clearExisting = document.getElementById(UI_IDS.clear);
     if (!clearExisting) {
       clearBtn = document.createElement("button");
       clearBtn.id = UI_IDS.clear;
-      styleRoundButton(clearBtn, 0, 52);
+      styleRoundButton(clearBtn, 0, 104);
       clearBtn.textContent = "❌";
       clearBtn.style.color = "#c40000";
       clearBtn.title = "Sprechblase leeren";
@@ -1799,7 +1834,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
       uiRoot.appendChild(clearBtn);
     } else {
       clearBtn = clearExisting;
-      styleRoundButton(clearBtn, 0, 52);
+      styleRoundButton(clearBtn, 0, 104);
     }
 
     // Prompt (Frank)
@@ -1807,7 +1842,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     if (!p1Existing) {
       promptBtn = document.createElement("button");
       promptBtn.id = UI_IDS.prompt;
-      styleRoundButton(promptBtn, 0, 104);
+      styleRoundButton(promptBtn, 0, 156);
       promptBtn.textContent = "✨";
       promptBtn.title = "Prompt (für Frank) einbetten";
       promptBtn.addEventListener("click", runPromptBuilder);
@@ -1821,7 +1856,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     if (!p2Existing) {
       promptBtn2 = document.createElement("button");
       promptBtn2.id = UI_IDS.prompt2;
-      styleRoundButton(promptBtn2, 0, 156);
+      styleRoundButton(promptBtn2, 0, 208);
       promptBtn2.textContent = "🪄";
       promptBtn2.title = "Prompt (allgemein / 12. Klasse) einbetten";
       promptBtn2.addEventListener("click", runPromptBuilderGeneral);
@@ -1831,6 +1866,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     }
 
     setMicState("idle");
+    updateGeminiToggleBtn();
     setPromptBtnState("idle");
     setPromptBtn2State("idle");
   }
@@ -1868,11 +1904,12 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     // DOM watchdog: wenn Grok den DOM remounted und Buttons verschwinden → neu injizieren
     const mo = new MutationObserver(() => {
       const mic = document.getElementById(UI_IDS.mic);
+      const gt = document.getElementById(UI_IDS.geminiToggle);
       const clear = document.getElementById(UI_IDS.clear);
       const p1 = document.getElementById(UI_IDS.prompt);
       const p2 = document.getElementById(UI_IDS.prompt2);
       const t = document.getElementById(UI_IDS.toast);
-      if (!mic || !clear || !p1 || !p2 || !t) scheduleEnsureUI();
+      if (!mic || !gt || !clear || !p1 || !p2 || !t) scheduleEnsureUI();
     });
     mo.observe(document.documentElement, { childList: true, subtree: true });
 
@@ -1908,7 +1945,7 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
     }
 
     installSpaWatchdog();
-    showToast("✅ Script aktiv. 🎙️ + ❌ + ✨ + 🪄 unten rechts.\nTipp: erst ins Ziel-Eingabefeld klicken, dann 🎙️.", 2800);
+    showToast("✅ Script aktiv. 🎙️ + G + ❌ + ✨ + 🪄 unten rechts.\nTipp: erst ins Ziel-Eingabefeld klicken, dann 🎙️.", 2800);
   }
 
   boot();
