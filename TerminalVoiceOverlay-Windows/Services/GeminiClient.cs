@@ -10,8 +10,9 @@ namespace TerminalVoiceOverlay.Services
     public sealed class GeminiClient
     {
         private readonly string _apiKey;
+        private readonly string _model;
+        private readonly string _thinkingLevel;
         private readonly HttpClient _http;
-        private const string Model = "gemini-3.1-flash-lite-preview";
         private static readonly int[] RetryableStatusCodes = { 429, 500, 503 };
         private const int MaxRetries = 5;
         private static readonly int[] DelaysMs = { 2000, 4000, 8000, 16000, 32000 };
@@ -43,9 +44,11 @@ Keine Kommentare. Keine Erklärungen. Kein Präfix.
 TEXT:
 ";
 
-        public GeminiClient(string apiKey)
+        public GeminiClient(string apiKey, string model, string thinkingLevel)
         {
             _apiKey = apiKey;
+            _model = model;
+            _thinkingLevel = thinkingLevel;
             _http = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
         }
 
@@ -56,7 +59,7 @@ TEXT:
 
         private async Task<string> SendWithRetry(string prompt, int attempt)
         {
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{Model}:generateContent?key={_apiKey}";
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
 
             var payload = new
             {
@@ -71,7 +74,7 @@ TEXT:
                 generationConfig = new
                 {
                     maxOutputTokens = 8192,
-                    thinkingConfig = new { thinkingLevel = "MEDIUM" }
+                    thinkingConfig = new { thinkingLevel = _thinkingLevel }
                 }
             };
 

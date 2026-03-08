@@ -7,32 +7,76 @@ namespace TerminalVoiceOverlay.Services
 {
     public sealed class Config
     {
+        // Groq
         public string GroqApiKey { get; }
+        public string WhisperModel { get; }
+        public string WhisperLang { get; }
+        public string WhisperUrl { get; }
+
+        // Gemini
         public string? GeminiApiKey { get; }
+        public string GeminiModel { get; }
+        public string GeminiThinkingLevel { get; }
         public bool GeminiAvailable => !string.IsNullOrEmpty(GeminiApiKey);
 
-        private Config(string groqApiKey, string? geminiApiKey)
+        // Audio
+        public int AudioSampleRate { get; }
+        public int AudioChannels { get; }
+
+        // Terminal-Erkennung
+        public string[] TerminalProcessNames { get; }
+
+        private Config(Dictionary<string, string> env)
         {
-            GroqApiKey = groqApiKey;
-            GeminiApiKey = geminiApiKey;
+            // Groq (erforderlich)
+            GroqApiKey = GetRequired(env, "GROQ_API_KEY");
+            WhisperModel = Get(env, "WHISPER_MODEL", "whisper-large-v3");
+            WhisperLang = Get(env, "WHISPER_LANG", "de");
+            WhisperUrl = Get(env, "WHISPER_URL", "https://api.groq.com/openai/v1/audio/transcriptions");
+
+            // Gemini (optional)
+            env.TryGetValue("GEMINI_API_KEY", out var geminiKey);
+            GeminiApiKey = string.IsNullOrEmpty(geminiKey) ? null : geminiKey;
+            GeminiModel = Get(env, "GEMINI_MODEL", "gemini-3.1-flash-lite-preview");
+            GeminiThinkingLevel = Get(env, "GEMINI_THINKING_LEVEL", "MEDIUM");
+
+            // Audio
+            AudioSampleRate = GetInt(env, "AUDIO_SAMPLE_RATE", 16000);
+            AudioChannels = GetInt(env, "AUDIO_CHANNELS", 1);
+
+            // Terminal-Erkennung
+            var processNames = Get(env, "TERMINAL_PROCESS_NAMES", "WindowsTerminal,pwsh,powershell");
+            TerminalProcessNames = processNames.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         }
 
         public static Config Load()
         {
             var env = ParseEnvFile();
+            return new Config(env);
+        }
 
-            if (!env.TryGetValue("GROQ_API_KEY", out var groqKey) || string.IsNullOrEmpty(groqKey))
+        private static string GetRequired(Dictionary<string, string> env, string key)
+        {
+            if (!env.TryGetValue(key, out var value) || string.IsNullOrEmpty(value))
             {
                 throw new InvalidOperationException(
-                    "GROQ_API_KEY nicht gefunden. Bitte .env Datei anlegen.\n" +
+                    $"{key} nicht gefunden. Bitte .env Datei anlegen.\n" +
                     "Suchpfade:\n" +
                     "  - Neben der .exe\n" +
                     "  - %USERPROFILE%\\.env\n" +
                     "  - %APPDATA%\\TerminalVoiceOverlay\\.env");
             }
+            return value;
+        }
 
-            env.TryGetValue("GEMINI_API_KEY", out var geminiKey);
-            return new Config(groqKey, geminiKey);
+        private static string Get(Dictionary<string, string> env, string key, string defaultValue)
+        {
+            return env.TryGetValue(key, out var value) && !string.IsNullOrEmpty(value) ? value : defaultValue;
+        }
+
+        private static int GetInt(Dictionary<string, string> env, string key, int defaultValue)
+        {
+            return env.TryGetValue(key, out var value) && int.TryParse(value, out var result) ? result : defaultValue;
         }
 
         private static Dictionary<string, string> ParseEnvFile()

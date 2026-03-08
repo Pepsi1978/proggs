@@ -23,10 +23,10 @@ namespace TerminalVoiceOverlay.Views
         private static readonly SolidColorBrush BrushGeminiOff = new(Color.FromRgb(0xEF, 0x44, 0x44));
 
         // ── Services ──
-        private readonly AudioRecorder _audioRecorder = new();
+        private readonly AudioRecorder _audioRecorder;
         private readonly GroqWhisperClient _groqClient;
         private readonly GeminiClient? _geminiClient;
-        private readonly TerminalWatcher _terminalWatcher = new();
+        private readonly TerminalWatcher _terminalWatcher;
 
         // ── State ──
         private RecordingState _micState = RecordingState.Idle;
@@ -40,10 +40,13 @@ namespace TerminalVoiceOverlay.Views
         {
             InitializeComponent();
 
-            _groqClient = new GroqWhisperClient(config.GroqApiKey);
+            _audioRecorder = new AudioRecorder(config.AudioSampleRate, config.AudioChannels);
+            _groqClient = new GroqWhisperClient(config.GroqApiKey, config.WhisperModel, config.WhisperLang, config.WhisperUrl);
+            _terminalWatcher = new TerminalWatcher(config.TerminalProcessNames);
+
             if (config.GeminiAvailable)
             {
-                _geminiClient = new GeminiClient(config.GeminiApiKey!);
+                _geminiClient = new GeminiClient(config.GeminiApiKey!, config.GeminiModel, config.GeminiThinkingLevel);
             }
             else
             {

@@ -7,22 +7,27 @@ namespace TerminalVoiceOverlay.Services
 {
     public sealed class AudioRecorder : IDisposable
     {
+        private readonly int _sampleRate;
+        private readonly int _channels;
         private WaveInEvent? _waveIn;
         private WaveFileWriter? _writer;
         private string? _tempFile;
 
         public bool IsRecording { get; private set; }
 
-        /// <summary>
-        /// Start recording in 16kHz mono 16-bit WAV.
-        /// </summary>
+        public AudioRecorder(int sampleRate = 16000, int channels = 1)
+        {
+            _sampleRate = sampleRate;
+            _channels = channels;
+        }
+
         public void Start()
         {
             if (IsRecording) return;
 
             _tempFile = Path.Combine(Path.GetTempPath(), $"tvo_recording_{Guid.NewGuid():N}.wav");
 
-            var waveFormat = new WaveFormat(16000, 16, 1); // 16kHz, 16-bit, Mono
+            var waveFormat = new WaveFormat(_sampleRate, 16, _channels);
             _writer = new WaveFileWriter(_tempFile, waveFormat);
 
             _waveIn = new WaveInEvent
@@ -46,12 +51,9 @@ namespace TerminalVoiceOverlay.Services
 
             _waveIn.StartRecording();
             IsRecording = true;
-            Debug.WriteLine("AudioRecorder: Aufnahme gestartet");
+            Debug.WriteLine($"AudioRecorder: Aufnahme gestartet ({_sampleRate}Hz, {_channels}ch)");
         }
 
-        /// <summary>
-        /// Stop recording and return the path to the WAV file, or null on error.
-        /// </summary>
         public string? Stop()
         {
             if (!IsRecording) return null;

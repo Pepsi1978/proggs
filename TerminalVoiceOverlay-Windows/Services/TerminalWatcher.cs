@@ -7,12 +7,7 @@ namespace TerminalVoiceOverlay.Services
 {
     public sealed class TerminalWatcher : IDisposable
     {
-        private static readonly string[] TerminalProcessNames =
-        {
-            "WindowsTerminal",
-            "pwsh",
-            "powershell",
-        };
+        private readonly string[] _terminalProcessNames;
 
         private Win32.WinEventDelegate? _winEventDelegate;
         private IntPtr _hookHandle;
@@ -22,6 +17,11 @@ namespace TerminalVoiceOverlay.Services
         public event Action? TerminalDeactivated;
 
         public IntPtr ActiveTerminalHwnd => _lastTerminalHwnd;
+
+        public TerminalWatcher(string[]? processNames = null)
+        {
+            _terminalProcessNames = processNames ?? new[] { "WindowsTerminal", "pwsh", "powershell" };
+        }
 
         public void Start()
         {
@@ -67,7 +67,7 @@ namespace TerminalVoiceOverlay.Services
             }
         }
 
-        private static bool IsTerminalWindow(IntPtr hwnd)
+        private bool IsTerminalWindow(IntPtr hwnd)
         {
             Win32.GetWindowThreadProcessId(hwnd, out uint pid);
             if (pid == 0) return false;
@@ -76,7 +76,7 @@ namespace TerminalVoiceOverlay.Services
             {
                 using var proc = Process.GetProcessById((int)pid);
                 var name = proc.ProcessName;
-                foreach (var target in TerminalProcessNames)
+                foreach (var target in _terminalProcessNames)
                 {
                     if (name.Equals(target, StringComparison.OrdinalIgnoreCase))
                         return true;
@@ -90,10 +90,6 @@ namespace TerminalVoiceOverlay.Services
             return false;
         }
 
-        /// <summary>
-        /// Gets the monitor working area for the given terminal window handle.
-        /// Returns the screen rect where the overlay should appear.
-        /// </summary>
         public static Rect GetMonitorWorkArea(IntPtr hwnd)
         {
             var hMonitor = Win32.MonitorFromWindow(hwnd, Win32.MONITOR_DEFAULTTONEAREST);

@@ -10,14 +10,20 @@ namespace TerminalVoiceOverlay.Services
     public sealed class GroqWhisperClient
     {
         private readonly string _apiKey;
+        private readonly string _model;
+        private readonly string _language;
+        private readonly string _url;
         private readonly HttpClient _http;
         private static readonly int[] RetryableStatusCodes = { 429, 500, 503 };
         private const int MaxRetries = 3;
         private static readonly int[] DelaysMs = { 2000, 4000, 8000 };
 
-        public GroqWhisperClient(string apiKey)
+        public GroqWhisperClient(string apiKey, string model, string language, string url)
         {
             _apiKey = apiKey;
+            _model = model;
+            _language = language;
+            _url = url;
             _http = new HttpClient { Timeout = TimeSpan.FromSeconds(180) };
         }
 
@@ -31,8 +37,8 @@ namespace TerminalVoiceOverlay.Services
             using var content = new MultipartFormDataContent();
 
             // Add fields
-            content.Add(new StringContent("whisper-large-v3"), "model");
-            content.Add(new StringContent("de"), "language");
+            content.Add(new StringContent(_model), "model");
+            content.Add(new StringContent(_language), "language");
             content.Add(new StringContent("text"), "response_format");
             content.Add(new StringContent("0"), "temperature");
 
@@ -42,8 +48,7 @@ namespace TerminalVoiceOverlay.Services
             fileContent.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
             content.Add(fileContent, "file", "recording.wav");
 
-            using var request = new HttpRequestMessage(HttpMethod.Post,
-                "https://api.groq.com/openai/v1/audio/transcriptions")
+            using var request = new HttpRequestMessage(HttpMethod.Post, _url)
             {
                 Content = content
             };
