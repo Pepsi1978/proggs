@@ -91,7 +91,7 @@ TEXT:
 
             if (Array.IndexOf(RetryableStatusCodes, statusCode) >= 0 && attempt < MaxRetries)
             {
-                Debug.WriteLine($"Gemini {statusCode} - Versuch {attempt + 1}/{MaxRetries}, warte {DelaysMs[attempt]}ms...");
+                Console.WriteLine($"Gemini {statusCode} - Versuch {attempt + 1}/{MaxRetries}, warte {DelaysMs[attempt]}ms...");
                 await Task.Delay(DelaysMs[attempt]);
                 return await SendWithRetry(prompt, attempt + 1);
             }

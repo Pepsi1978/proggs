@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using NAudio.Wave;
 
@@ -12,6 +11,7 @@ namespace TerminalVoiceOverlay.Services
         private WaveInEvent? _waveIn;
         private WaveFileWriter? _writer;
         private string? _tempFile;
+        private readonly object _lock = new();
 
         public bool IsRecording { get; private set; }
 
@@ -38,20 +38,15 @@ namespace TerminalVoiceOverlay.Services
 
             _waveIn.DataAvailable += (_, e) =>
             {
-                _writer?.Write(e.Buffer, 0, e.BytesRecorded);
-            };
-
-            _waveIn.RecordingStopped += (_, e) =>
-            {
-                _writer?.Dispose();
-                _writer = null;
-                _waveIn?.Dispose();
-                _waveIn = null;
+                lock (_lock)
+                {
+                    _writer?.Write(e.Buffer, 0, e.BytesRecorded);
+                }
             };
 
             _waveIn.StartRecording();
             IsRecording = true;
-            Debug.WriteLine($"AudioRecorder: Aufnahme gestartet ({_sampleRate}Hz, {_channels}ch)");
+            Console.WriteLine($"AudioRecorder: Aufnahme gestartet ({_sampleRate}Hz, {_channels}ch)");
         }
 
         public string? Stop()
@@ -62,12 +57,23 @@ namespace TerminalVoiceOverlay.Services
             try
             {
                 _waveIn?.StopRecording();
-                Debug.WriteLine("AudioRecorder: Aufnahme gestoppt");
+
+                // Dispose writer under lock so no DataAvailable callback can write after this
+                lock (_lock)
+                {
+                    _writer?.Dispose();
+                    _writer = null;
+                }
+
+                _waveIn?.Dispose();
+                _waveIn = null;
+
+                Console.WriteLine("AudioRecorder: Aufnahme gestoppt");
                 return _tempFile;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"AudioRecorder: Fehler beim Stoppen: {ex.Message}");
+                Console.WriteLine($"AudioRecorder: Fehler beim Stoppen: {ex.Message}");
                 return null;
             }
         }

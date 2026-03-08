@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Interop;
@@ -118,7 +117,7 @@ namespace TerminalVoiceOverlay.Views
             if (!IsVisible)
             {
                 Show();
-                Debug.WriteLine("Overlay: sichtbar (Terminal aktiv)");
+                Console.WriteLine("Overlay: sichtbar (Terminal aktiv)");
             }
         }
 
@@ -131,7 +130,7 @@ namespace TerminalVoiceOverlay.Views
             if (IsVisible)
             {
                 Hide();
-                Debug.WriteLine("Overlay: versteckt (Terminal nicht aktiv)");
+                Console.WriteLine("Overlay: versteckt (Terminal nicht aktiv)");
             }
         }
 
@@ -139,7 +138,7 @@ namespace TerminalVoiceOverlay.Views
 
         private void BtnClear_Click(object sender, RoutedEventArgs e)
         {
-            TerminalController.ClearLine();
+            TerminalController.ClearLine(_terminalWatcher.ActiveTerminalHwnd);
         }
 
         private async void BtnMic_Click(object sender, RoutedEventArgs e)
@@ -158,25 +157,25 @@ namespace TerminalVoiceOverlay.Views
 
                 _isProcessing = true;
                 SetMicState(RecordingState.Processing);
-                Debug.WriteLine("Aufnahme gestoppt, transkribiere...");
+                Console.WriteLine("Aufnahme gestoppt, transkribiere...");
 
                 try
                 {
                     var transcript = await _groqClient.TranscribeAsync(wavFile);
-                    Debug.WriteLine($"Transkription: {transcript}");
+                    Console.WriteLine($"Transkription: {transcript}");
 
                     string finalText;
                     if (_geminiEnabled && _geminiClient != null)
                     {
-                        Debug.WriteLine("Gemini-Korrektur...");
+                        Console.WriteLine("Gemini-Korrektur...");
                         try
                         {
                             finalText = await _geminiClient.CorrectTextAsync(transcript);
-                            Debug.WriteLine($"Korrigiert: {finalText}");
+                            Console.WriteLine($"Korrigiert: {finalText}");
                         }
                         catch (Exception ex)
                         {
-                            Debug.WriteLine($"Gemini-Fehler: {ex.Message}, verwende Rohtext");
+                            Console.WriteLine($"Gemini-Fehler: {ex.Message}, verwende Rohtext");
                             finalText = transcript;
                         }
                     }
@@ -185,13 +184,13 @@ namespace TerminalVoiceOverlay.Views
                         finalText = transcript;
                     }
 
-                    TerminalController.PasteText(finalText);
+                    TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd);
                     SetMicState(RecordingState.Success);
-                    Debug.WriteLine("Text eingefügt");
+                    Console.WriteLine("Text eingefügt");
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Transkriptionsfehler: {ex.Message}");
+                    Console.WriteLine($"Transkriptionsfehler: {ex.Message}");
                     SetMicState(RecordingState.Error);
                 }
                 finally
@@ -211,11 +210,11 @@ namespace TerminalVoiceOverlay.Views
                 {
                     _audioRecorder.Start();
                     SetMicState(RecordingState.Recording);
-                    Debug.WriteLine("Aufnahme gestartet");
+                    Console.WriteLine("Aufnahme gestartet");
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Mikrofon-Fehler: {ex.Message}");
+                    Console.WriteLine($"Mikrofon-Fehler: {ex.Message}");
                     SetMicState(RecordingState.Error);
                     ScheduleReset();
                 }
@@ -227,7 +226,7 @@ namespace TerminalVoiceOverlay.Views
             if (_geminiClient == null) return;
             _geminiEnabled = !_geminiEnabled;
             UpdateGeminiButton();
-            Debug.WriteLine($"Gemini {(_geminiEnabled ? "AN" : "AUS")}");
+            Console.WriteLine($"Gemini {(_geminiEnabled ? "AN" : "AUS")}");
         }
 
         // ── State management ──

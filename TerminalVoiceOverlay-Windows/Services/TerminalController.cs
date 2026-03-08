@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
@@ -10,72 +9,73 @@ namespace TerminalVoiceOverlay.Services
     public static class TerminalController
     {
         /// <summary>
-        /// Pastes text into the active terminal via Clipboard + Ctrl+V.
+        /// Pastes text into the terminal via Clipboard + Ctrl+V.
+        /// Ensures the terminal window is focused first.
         /// </summary>
-        public static void PasteText(string text)
+        public static void PasteText(string text, IntPtr terminalHwnd)
         {
             // Set clipboard on UI thread
             Application.Current.Dispatcher.Invoke(() => Clipboard.SetText(text));
 
-            // Small delay to ensure clipboard is set
-            Thread.Sleep(50);
+            // Bring terminal to foreground
+            if (terminalHwnd != IntPtr.Zero)
+            {
+                Win32.SetForegroundWindow(terminalHwnd);
+                Thread.Sleep(100);
+            }
 
             // Send Ctrl+V
             SendCtrlV();
-            Debug.WriteLine("TerminalController: Text eingefügt");
+            Console.WriteLine($"TerminalController: Text eingefügt (hwnd={terminalHwnd})");
         }
 
         /// <summary>
-        /// Clears the current terminal input line by sending Escape.
-        /// Works with PSReadLine in all target terminals.
+        /// Clears the current terminal input line.
+        /// Goes to End, then spams Backspace to delete everything.
         /// </summary>
-        public static void ClearLine()
+        public static void ClearLine(IntPtr terminalHwnd)
         {
+            if (terminalHwnd != IntPtr.Zero)
+            {
+                Win32.SetForegroundWindow(terminalHwnd);
+                Thread.Sleep(150);
+            }
+
+            // Escape to dismiss autocomplete/menus
             SendKey(Win32.VK_ESCAPE);
-            Debug.WriteLine("TerminalController: Zeile gelöscht");
+            Thread.Sleep(100);
+
+            // End — go to end of line
+            SendKey(VK_END);
+            Thread.Sleep(50);
+
+            // Send many Backspaces to delete entire line (max ~500 chars)
+            for (int i = 0; i < 500; i++)
+            {
+                Win32.keybd_event(VK_BACKSPACE, 0, 0, UIntPtr.Zero);
+                Win32.keybd_event(VK_BACKSPACE, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            }
+
+            Console.WriteLine("TerminalController: Zeile gelöscht");
         }
+
+        private const byte VK_END = 0x23;
+        private const byte VK_BACKSPACE = 0x08;
 
         private static void SendCtrlV()
         {
-            var inputs = new Win32.INPUT[4];
-
-            // Ctrl down
-            inputs[0] = MakeKeyInput(Win32.VK_CONTROL, false);
-            // V down
-            inputs[1] = MakeKeyInput(Win32.VK_V, false);
-            // V up
-            inputs[2] = MakeKeyInput(Win32.VK_V, true);
-            // Ctrl up
-            inputs[3] = MakeKeyInput(Win32.VK_CONTROL, true);
-
-            Win32.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Win32.INPUT>());
+            // Use keybd_event — works across UIPI boundaries unlike SendInput
+            Win32.keybd_event((byte)Win32.VK_CONTROL, 0, 0, UIntPtr.Zero);
+            Win32.keybd_event((byte)Win32.VK_V, 0, 0, UIntPtr.Zero);
+            Win32.keybd_event((byte)Win32.VK_V, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            Win32.keybd_event((byte)Win32.VK_CONTROL, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            Console.WriteLine("TerminalController: Ctrl+V gesendet (keybd_event)");
         }
 
         private static void SendKey(ushort vk)
         {
-            var inputs = new Win32.INPUT[2];
-            inputs[0] = MakeKeyInput(vk, false);
-            inputs[1] = MakeKeyInput(vk, true);
-            Win32.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Win32.INPUT>());
-        }
-
-        private static Win32.INPUT MakeKeyInput(ushort vk, bool keyUp)
-        {
-            return new Win32.INPUT
-            {
-                type = Win32.INPUT_KEYBOARD,
-                u = new Win32.INPUTUNION
-                {
-                    ki = new Win32.KEYBDINPUT
-                    {
-                        wVk = vk,
-                        wScan = 0,
-                        dwFlags = keyUp ? Win32.KEYEVENTF_KEYUP : 0,
-                        time = 0,
-                        dwExtraInfo = IntPtr.Zero
-                    }
-                }
-            };
+            Win32.keybd_event((byte)vk, 0, 0, UIntPtr.Zero);
+            Win32.keybd_event((byte)vk, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
         }
     }
 }

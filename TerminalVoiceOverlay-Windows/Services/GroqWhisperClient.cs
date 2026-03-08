@@ -67,7 +67,7 @@ namespace TerminalVoiceOverlay.Services
 
             if (Array.IndexOf(RetryableStatusCodes, statusCode) >= 0 && attempt < MaxRetries)
             {
-                Debug.WriteLine($"Groq {statusCode} - Versuch {attempt + 1}/{MaxRetries}, warte {DelaysMs[attempt]}ms...");
+                Console.WriteLine($"Groq {statusCode} - Versuch {attempt + 1}/{MaxRetries}, warte {DelaysMs[attempt]}ms...");
                 await Task.Delay(DelaysMs[attempt]);
                 return await TranscribeWithRetry(wavFilePath, attempt + 1);
             }

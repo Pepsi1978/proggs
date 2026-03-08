@@ -82,12 +82,14 @@ namespace TerminalVoiceOverlay.Services
         private static Dictionary<string, string> ParseEnvFile()
         {
             var exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".";
+            var cwd = Environment.CurrentDirectory;
             var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 
             string[] searchPaths =
             {
                 Path.Combine(exeDir, ".env"),
+                Path.Combine(cwd, ".env"),
                 Path.Combine(userProfile, ".env"),
                 Path.Combine(appData, "TerminalVoiceOverlay", ".env"),
             };
@@ -96,7 +98,7 @@ namespace TerminalVoiceOverlay.Services
             {
                 if (File.Exists(path))
                 {
-                    System.Diagnostics.Debug.WriteLine($"Config: .env geladen von {path}");
+                    Console.WriteLine($"Config: .env geladen von {path}");
                     return ParseEnvContents(File.ReadAllText(path));
                 }
             }

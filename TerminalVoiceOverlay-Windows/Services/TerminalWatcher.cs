@@ -37,7 +37,7 @@ namespace TerminalVoiceOverlay.Services
                 Win32.WINEVENT_OUTOFCONTEXT | Win32.WINEVENT_SKIPOWNPROCESS);
 
             if (_hookHandle == IntPtr.Zero)
-                Debug.WriteLine("TerminalWatcher: SetWinEventHook fehlgeschlagen");
+                Console.WriteLine("TerminalWatcher: SetWinEventHook fehlgeschlagen");
 
             // Check initial state
             CheckForegroundWindow(Win32.GetForegroundWindow());
