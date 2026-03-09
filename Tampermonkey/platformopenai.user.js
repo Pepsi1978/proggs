@@ -4,8 +4,8 @@
 // @version      1.2.7
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf Google Search. Mic-Button fest unten rechts. Kein stilles Fallback. Mit Output-Preview.
 // @match        https://platform.openai.com/chat/*
-// @downloadURL  https://raw.githubusercontent.com/Pepsi1978/tampermonkey-skripte/main/scripts/platformopenai.user.js
-// @updateURL    https://raw.githubusercontent.com/Pepsi1978/tampermonkey-skripte/main/scripts/platformopenai.user.js
+// @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/platformopenai.user.js
+// @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/platformopenai.user.js
 // @run-at       document-idle
 // @grant        GM_xmlhttpRequest
 // @grant        GM.xmlHttpRequest

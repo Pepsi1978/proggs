@@ -5,8 +5,8 @@
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf Google Search. Mic-Button fest unten links. Kein stilles Fallback. Mit Output-Preview.
 // @match        https://notebooklm.google.com/*
 // @run-at       document-idle
-// @updateURL    https://raw.githubusercontent.com/Pepsi1978/tampermonkey-skripte/main/scripts/notebooklm.user.js
-// @downloadURL  https://raw.githubusercontent.com/Pepsi1978/tampermonkey-skripte/main/scripts/notebooklm.user.js
+// @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/notebooklm.user.js
+// @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/notebooklm.user.js
 // @grant        GM_xmlhttpRequest
 // @grant        GM.xmlHttpRequest
 // @grant        GM_getValue

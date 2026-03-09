@@ -6,8 +6,8 @@
 // @match        https://claude.ai/*
 // @match        https://www.claude.ai/*
 // @run-at       document-idle
-// @downloadURL  https://raw.githubusercontent.com/Pepsi1978/tampermonkey-skripte/main/scripts/claude.user.js
-// @updateURL    https://raw.githubusercontent.com/Pepsi1978/tampermonkey-skripte/main/scripts/claude.user.js
+// @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/claude.user.js
+// @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/claude.user.js
 // @grant        GM_xmlhttpRequest
 // @grant        GM.xmlHttpRequest
 // @grant        GM_getValue

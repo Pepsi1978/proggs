@@ -15,8 +15,8 @@
 // @connect      *.googleapis.com
 // @connect      googleapis.com
 // @connect      api.groq.com
-// @updateURL    https://raw.githubusercontent.com/Pepsi1978/tampermonkey-skripte/main/scripts/chatgpt.user.js
-// @downloadURL  https://raw.githubusercontent.com/Pepsi1978/tampermonkey-skripte/main/scripts/chatgpt.user.js
+// @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/chatgpt.user.js
+// @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/chatgpt.user.js
 // ==/UserScript==
 
 (() => {

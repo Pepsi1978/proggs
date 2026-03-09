@@ -7,8 +7,8 @@
 // @match        https://web.arena.ai/*
 // @match        https://chat.lmsys.org/*
 // @match        https://arena.lmsys.org/*
-// @updateURL    https://raw.githubusercontent.com/Pepsi1978/tampermonkey-skripte/main/scripts/lmarena.user.js
-// @downloadURL  https://raw.githubusercontent.com/Pepsi1978/tampermonkey-skripte/main/scripts/lmarena.user.js
+// @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/lmarena.user.js
+// @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/lmarena.user.js
 // @run-at       document-idle
 // @grant        GM_getValue
 // @grant        GM_setValue
