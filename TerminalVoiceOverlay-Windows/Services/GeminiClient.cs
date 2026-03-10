@@ -36,8 +36,10 @@ GRENZEN:
 - Englische Fachbegriffe und Code-Referenzen NIEMALS eindeutschen.
 - Sprache: Deutsch (außer technische Begriffe).
 
-AUSGABE:
-Ausschließlich den überarbeiteten Text. Keine Kommentare, keine Erklärungen, kein Präfix.
+AUSGABEFORMAT:
+- Ausschließlich den überarbeiteten Text. Keine Kommentare, keine Erklärungen, kein Präfix.
+- Ausführliche, vollständige Sätze, sodass jede Intention des Sprechers klar und unmissverständlich beim Leser ankommt.
+- Natürlicher, verständlicher Ton – so wie man einem Kollegen etwas erklärt. Kein Behördendeutsch, keine Geschäftsbrief-Floskeln, keine gestelzte Sprache.
 
 TEXT_START
 ";
