@@ -75,7 +75,7 @@ final class OverlayPanel: NSPanel {
     private var dragStartPanelOrigin: NSPoint = .zero
     private var globalRightMouseMonitor: Any?
     private var localRightMouseMonitor: Any?
-    private static let positionKey = "overlayPanelPosition"
+    private static let positionKey = "terminalOverlayPanelPosition"
 
     var onXClicked: (() -> Void)?
     var onMicClicked: (() -> Void)?
