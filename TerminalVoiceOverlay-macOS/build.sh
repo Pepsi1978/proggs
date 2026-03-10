@@ -39,6 +39,10 @@ swiftc \
     -framework CoreGraphics \
     "${SWIFT_FILES[@]}"
 
+# Copy entitlements and sign the app so macOS keeps permissions across rebuilds
+cp "$SRC_DIR/$APP_NAME.entitlements" "$APP_BUNDLE/Contents/Resources/"
+codesign --force --sign - --entitlements "$SRC_DIR/$APP_NAME.entitlements" --deep "$APP_BUNDLE"
+
 echo "=== Build erfolgreich: $APP_BUNDLE ==="
 echo ""
 echo "App starten:"

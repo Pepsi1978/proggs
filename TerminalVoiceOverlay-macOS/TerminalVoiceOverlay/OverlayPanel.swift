@@ -69,6 +69,14 @@ final class OverlayPanel: NSPanel {
     let enterButton: RoundButton
     private var pulseTimer: Timer?
 
+    // Right-click drag state
+    private var isDragging = false
+    private var dragStartMouseLocation: NSPoint = .zero
+    private var dragStartPanelOrigin: NSPoint = .zero
+    private var globalRightMouseMonitor: Any?
+    private var localRightMouseMonitor: Any?
+    private static let positionKey = "overlayPanelPosition"
+
     var onXClicked: (() -> Void)?
     var onMicClicked: (() -> Void)?
     var onWClicked: (() -> Void)?
@@ -91,8 +99,16 @@ final class OverlayPanel: NSPanel {
 
         // Calculate screen position (right edge, vertically centered)
         let screenFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
-        let x = screenFrame.maxX - panelWidth - 23
-        let y = screenFrame.midY - panelHeight / 2
+        var x = screenFrame.maxX - panelWidth - 23
+        var y = screenFrame.midY - panelHeight / 2
+
+        // Restore saved position if available
+        if let savedPosition = UserDefaults.standard.dictionary(forKey: OverlayPanel.positionKey),
+           let savedX = savedPosition["x"] as? Double,
+           let savedY = savedPosition["y"] as? Double {
+            x = CGFloat(savedX)
+            y = CGFloat(savedY)
+        }
 
         let contentRect = NSRect(x: x, y: y, width: panelWidth, height: panelHeight)
 
@@ -138,6 +154,8 @@ final class OverlayPanel: NSPanel {
         wButton.onClick = { [weak self] in self?.onWClicked?() }
         gButton.onClick = { [weak self] in self?.onGClicked?() }
         enterButton.onClick = { [weak self] in self?.onEnterClicked?() }
+
+        setupDragMonitors()
     }
 
     // MARK: - State Updates
@@ -192,6 +210,66 @@ final class OverlayPanel: NSPanel {
     private func stopPulse() {
         pulseTimer?.invalidate()
         pulseTimer = nil
+    }
+
+    // MARK: - Right-click drag to reposition
+
+    private func setupDragMonitors() {
+        // Global monitor: catches right-mouse events even when another app is frontmost
+        globalRightMouseMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.rightMouseDown, .rightMouseDragged, .rightMouseUp]
+        ) { [weak self] event in
+            self?.handleDragEvent(event)
+        }
+
+        // Local monitor: catches right-mouse events when our app is frontmost
+        localRightMouseMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.rightMouseDown, .rightMouseDragged, .rightMouseUp]
+        ) { [weak self] event in
+            guard let self = self else { return event }
+            let consumed = self.handleDragEvent(event)
+            return consumed ? nil : event
+        }
+    }
+
+    @discardableResult
+    private func handleDragEvent(_ event: NSEvent) -> Bool {
+        let mouseLocation = NSEvent.mouseLocation
+
+        switch event.type {
+        case .rightMouseDown:
+            if frame.contains(mouseLocation) {
+                isDragging = true
+                dragStartMouseLocation = mouseLocation
+                dragStartPanelOrigin = frame.origin
+                return true
+            }
+        case .rightMouseDragged:
+            guard isDragging else { return false }
+            let dx = mouseLocation.x - dragStartMouseLocation.x
+            let dy = mouseLocation.y - dragStartMouseLocation.y
+            setFrameOrigin(NSPoint(x: dragStartPanelOrigin.x + dx, y: dragStartPanelOrigin.y + dy))
+            return true
+        case .rightMouseUp:
+            if isDragging {
+                isDragging = false
+                savePosition()
+                return true
+            }
+        default:
+            break
+        }
+        return false
+    }
+
+    private func savePosition() {
+        let position: [String: Double] = ["x": Double(frame.origin.x), "y": Double(frame.origin.y)]
+        UserDefaults.standard.set(position, forKey: OverlayPanel.positionKey)
+    }
+
+    deinit {
+        if let monitor = globalRightMouseMonitor { NSEvent.removeMonitor(monitor) }
+        if let monitor = localRightMouseMonitor { NSEvent.removeMonitor(monitor) }
     }
 
     // MARK: - Prevent panel from becoming key
