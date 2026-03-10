@@ -20,5 +20,7 @@
     <true/>
     <key>NSMicrophoneUsageDescription</key>
     <string>ClaudeCodexVoiceOverlay benötigt Zugriff auf das Mikrofon für Spracheingabe.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>ClaudeCodexVoiceOverlay benötigt Zugriff auf System Events für Tastatureingaben.</string>
 </dict>
 </plist>
