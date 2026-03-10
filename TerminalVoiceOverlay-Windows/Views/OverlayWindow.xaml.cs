@@ -30,7 +30,7 @@ namespace TerminalVoiceOverlay.Views
         // ── State ──
         private RecordingState _micState = RecordingState.Idle;
         private bool _isProcessing;
-        private bool _geminiEnabled = true;
+        private bool _geminiEnabled = false;
         private readonly DispatcherTimer _pulseTimer;
         private readonly DispatcherTimer _resetTimer;
         private bool _pulseBright;
@@ -111,7 +111,7 @@ namespace TerminalVoiceOverlay.Views
         {
             // Position overlay on the correct monitor
             var workArea = TerminalWatcher.GetMonitorWorkArea(terminalHwnd);
-            Left = workArea.X + workArea.Width - Width - 42;
+            Left = workArea.X + workArea.Width - Width - 23;
             Top = workArea.Y + (workArea.Height - Height) / 2;
 
             if (!IsVisible)
