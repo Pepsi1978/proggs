@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         AI Studio V.1.4.2
+// @name         AI Studio V.1.4.3
 // @namespace    https://aistudio.google.com/prompts/new_chat
-// @version      1.4.2
+// @version      1.4.3
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf ChatGPT. Mic-Button unten links. Zwei Prompt-Builder Buttons (Frank + für jedermann) über dem Mic. Kein stilles Fallback. Mit Output-Preview.
 // @match        https://aistudio.google.com/*
 // @match        https://www.aistudio.google.com/*
