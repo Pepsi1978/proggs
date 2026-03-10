@@ -136,7 +136,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isRecording = false
         isProcessing = true
         panel.setMicState(.processing)
-        // Audio feedback: beep on stop
+        // Audio feedback: double beep on stop
+        NSSound.beep()
+        usleep(150_000) // 150ms pause
         NSSound.beep()
         NSLog("Aufnahme gestoppt, transkribiere...")
 

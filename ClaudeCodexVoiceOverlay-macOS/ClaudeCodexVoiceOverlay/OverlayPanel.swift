@@ -91,7 +91,7 @@ final class OverlayPanel: NSPanel {
 
         // Calculate screen position (right edge, vertically centered)
         let screenFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
-        let x = screenFrame.maxX - panelWidth - 4
+        let x = screenFrame.maxX - panelWidth - 23
         let y = screenFrame.midY - panelHeight / 2
 
         let contentRect = NSRect(x: x, y: y, width: panelWidth, height: panelHeight)

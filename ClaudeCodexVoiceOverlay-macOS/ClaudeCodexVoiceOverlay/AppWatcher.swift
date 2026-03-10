@@ -16,6 +16,7 @@ final class AppWatcher {
         if let frontApp = NSWorkspace.shared.frontmostApplication,
            let bundleID = frontApp.bundleIdentifier,
            targetBundleIDs.contains(bundleID) {
+            InputController.lastActiveTargetBundleID = bundleID
             onTargetAppActivated?()
         }
     }
@@ -23,6 +24,7 @@ final class AppWatcher {
     @objc private func appActivated(_ notification: Notification) {
         guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
         if let bundleID = app.bundleIdentifier, targetBundleIDs.contains(bundleID) {
+            InputController.lastActiveTargetBundleID = bundleID
             onTargetAppActivated?()
         } else {
             onTargetAppDeactivated?()

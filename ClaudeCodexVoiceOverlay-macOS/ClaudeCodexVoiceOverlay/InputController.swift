@@ -8,11 +8,15 @@ final class InputController {
         return AXIsProcessTrustedWithOptions(options)
     }
 
-    /// Sends Ctrl+C to discard the entire input (works for multi-line)
+    /// Sends Cmd+A + Backspace to clear the current input field (works in Electron apps)
     static func clearLine() {
         activateTargetApp()
         usleep(150_000) // 150ms to ensure app is frontmost
-        sendKeyCombo(keyCode: 0x08, flags: .maskControl) // 'c' = 0x08
+        // Cmd+A to select all text in the input field
+        sendKeyCombo(keyCode: 0x00, flags: .maskCommand) // 'a' = 0x00
+        usleep(50_000) // 50ms to ensure selection is applied
+        // Backspace to delete selected text
+        sendKeyCombo(keyCode: 0x33, flags: []) // Backspace = 0x33
     }
 
     /// Pastes text via clipboard + Cmd+V, optionally sends Enter afterwards
@@ -47,14 +51,15 @@ final class InputController {
         }
     }
 
-    /// Brings the target app (Claude Desktop or Codex) to the front so CGEvent reaches it
-    private static let targetBundleIDs: Set<String> = ["com.anthropic.claudefordesktop", "com.openai.codex"]
+    /// Tracks the last active target app so we activate the correct one
+    static var lastActiveTargetBundleID: String?
 
+    /// Brings the last active target app (Claude Desktop or Codex) to the front so CGEvent reaches it
     private static func activateTargetApp() {
-        if let app = NSWorkspace.shared.runningApplications
-            .first(where: { targetBundleIDs.contains($0.bundleIdentifier ?? "") }) {
-            app.activate(options: [])
-        }
+        guard let bundleID = lastActiveTargetBundleID,
+              let app = NSWorkspace.shared.runningApplications
+                .first(where: { $0.bundleIdentifier == bundleID }) else { return }
+        app.activate(options: [])
     }
 
     private static func sendKeyCombo(keyCode: CGKeyCode, flags: CGEventFlags) {
