@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         ChatGPT V.1.3.8
+// @name         ChatGPT V.1.3.9
 // @namespace    https://chatgpt.com/
-// @version      1.3.8
+// @version      1.3.9
 // @description  Speech-to-Text + Gemini-Diktat-Bereinigung (DE) auf ChatGPT. Mic-Button unten rechts. Zwei Prompt-Builder Buttons (Frank + für jedermann) über dem Mic. Memory-Button links neben dem Mic. Kein stilles Fallback. Mit Output-Preview. Fix: kein "SelectAll" auf ganzer Seite + Memory/Builder immer ins Composer-Feld + robustere Button-Sichtbarkeit auf Chrome + Startup-Fix fuer CFG-Ladereihenfolge.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -1287,9 +1287,8 @@ Zielgruppe, Kontext, Format und Ton dürfen niemals abweichen.
       return;
     }
 
-    const rect = button.getBoundingClientRect();
-    const buttonW = rect.width || UI_BUTTON_SIZE;
-    const buttonH = rect.height || UI_BUTTON_SIZE;
+    const buttonW = UI_BUTTON_SIZE;
+    const buttonH = UI_BUTTON_SIZE;
 
     const left = vv.offsetLeft + vv.width - buttonW - rightPx;
     const top = vv.offsetTop + vv.height - buttonH - bottomPx;
