@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -156,6 +157,7 @@ namespace TerminalVoiceOverlay.Views
             {
                 // ── Stop recording ──
                 var wavFile = _audioRecorder.Stop();
+                Task.Run(() => { Console.Beep(660, 120); Console.Beep(440, 120); });
                 if (wavFile == null)
                 {
                     SetMicState(RecordingState.Idle);
@@ -228,6 +230,7 @@ namespace TerminalVoiceOverlay.Views
                 {
                     _audioRecorder.Start();
                     SetMicState(RecordingState.Recording);
+                    Task.Run(() => Console.Beep(880, 150));
                     Console.WriteLine("Aufnahme gestartet");
                 }
                 catch (Exception ex)
