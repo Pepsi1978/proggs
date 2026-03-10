@@ -12,7 +12,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var isRecording = false
     private var isProcessing = false
-    private var geminiEnabled = true
+    private var geminiEnabled = false
+    private var autoEnterEnabled = false
+    private var hasPastedText = false
+    private var lastRawTranscript: String?
     private var resetTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -43,10 +46,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Create overlay panel
         panel = OverlayPanel()
         panel.setGeminiEnabled(geminiEnabled)
+        panel.setAutoEnterEnabled(autoEnterEnabled)
 
         panel.onXClicked = { [weak self] in self?.clearLine() }
         panel.onMicClicked = { [weak self] in self?.toggleRecording() }
+        panel.onWClicked = { [weak self] in self?.whisperUndo() }
         panel.onGClicked = { [weak self] in self?.toggleGemini() }
+        panel.onEnterClicked = { [weak self] in self?.toggleAutoEnter() }
 
         // Setup menu bar icon
         setupStatusItem()
@@ -111,6 +117,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try audioRecorder.start()
             isRecording = true
             panel.setMicState(.recording)
+            // Audio feedback: high beep on start
+            NSSound.beep()
             NSLog("Aufnahme gestartet")
         } catch {
             NSLog("Mikrofon-Fehler: %@", error.localizedDescription)
@@ -128,6 +136,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isRecording = false
         isProcessing = true
         panel.setMicState(.processing)
+        // Audio feedback: beep on stop
+        NSSound.beep()
         NSLog("Aufnahme gestoppt, transkribiere...")
 
         groqClient.transcribe(fileURL: fileURL) { [weak self] result in
@@ -137,6 +147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch result {
             case .success(let transcript):
                 NSLog("Transkription: %@", transcript)
+                self?.lastRawTranscript = transcript
                 self?.handleTranscript(transcript)
             case .failure(let error):
                 NSLog("Transkriptionsfehler: %@", error.localizedDescription)
@@ -173,10 +184,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func insertText(_ text: String) {
-        InputController.pasteText(text)
+        // Prepend space if text was already pasted on this line
+        var finalText = text
+        if hasPastedText {
+            finalText = " " + finalText
+        }
+
+        InputController.pasteText(finalText, autoEnter: autoEnterEnabled)
         isProcessing = false
         panel.setMicState(.success)
         NSLog("Text eingefuegt")
+
+        // Track paste state: reset after Enter, keep for next paste
+        if autoEnterEnabled {
+            hasPastedText = false
+        } else {
+            hasPastedText = true
+        }
+
         scheduleReset()
     }
 
@@ -184,6 +209,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func clearLine() {
         InputController.clearLine()
+        hasPastedText = false
+    }
+
+    // MARK: - Whisper Undo
+
+    private func whisperUndo() {
+        guard let rawTranscript = lastRawTranscript else { return }
+
+        // Clear the current line
+        InputController.clearLine()
+
+        // Small delay, then paste raw transcript
+        usleep(100_000) // 100ms
+        InputController.pasteText(rawTranscript)
+        hasPastedText = true
+        NSLog("Whisper-Rohtext eingefuegt: %@", rawTranscript)
     }
 
     // MARK: - Gemini Toggle
@@ -193,6 +234,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         geminiEnabled.toggle()
         panel.setGeminiEnabled(geminiEnabled)
         NSLog("Gemini %@", geminiEnabled ? "AN" : "AUS")
+    }
+
+    // MARK: - Auto-Enter Toggle
+
+    private func toggleAutoEnter() {
+        autoEnterEnabled.toggle()
+        panel.setAutoEnterEnabled(autoEnterEnabled)
+        NSLog("Auto-Enter %@", autoEnterEnabled ? "AN" : "AUS")
     }
 
     // MARK: - Reset Timer

@@ -18,8 +18,8 @@ final class InputController {
         sendKeyCombo(keyCode: 0x33, flags: []) // Backspace = 0x33
     }
 
-    /// Pastes text via clipboard + Cmd+V
-    static func pasteText(_ text: String) {
+    /// Pastes text via clipboard + Cmd+V, optionally sends Enter afterwards
+    static func pasteText(_ text: String, autoEnter: Bool = false) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
@@ -28,6 +28,11 @@ final class InputController {
         usleep(50_000) // 50ms
 
         sendKeyCombo(keyCode: 0x09, flags: .maskCommand) // 'v' = 0x09
+
+        if autoEnter {
+            usleep(500_000) // 500ms
+            sendKeyCombo(keyCode: 0x24, flags: []) // Return = 0x24
+        }
     }
 
     private static func sendKeyCombo(keyCode: CGKeyCode, flags: CGEventFlags) {
