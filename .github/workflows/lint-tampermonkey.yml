@@ -1,0 +1,31 @@
+name: Tampermonkey Lint
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - 'Tampermonkey/**'
+  pull_request:
+    branches: ["main"]
+    paths:
+      - 'Tampermonkey/**'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: ESLint Tampermonkey-Skripte
+
+    steps:
+      - name: Projektdateien laden
+        uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: ESLint installieren
+        run: npm install eslint@9 @eslint/js globals --no-save
+
+      - name: ESLint ausfuehren
+        run: npx eslint Tampermonkey/*.user.js

@@ -1,0 +1,84 @@
+name: Windows Build (.NET/WPF)
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - 'TerminalVoiceOverlay-Windows/**'
+      - 'ClaudeVoiceOverlay-Windows/**'
+  pull_request:
+    branches: ["main"]
+    paths:
+      - 'TerminalVoiceOverlay-Windows/**'
+      - 'ClaudeVoiceOverlay-Windows/**'
+
+jobs:
+  build-terminal-overlay:
+    runs-on: windows-latest
+    name: TerminalVoiceOverlay-Windows
+
+    steps:
+      - name: Projektdateien laden
+        uses: actions/checkout@v4
+
+      - name: .NET SDK einrichten
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: NuGet-Pakete wiederherstellen
+        run: dotnet restore TerminalVoiceOverlay-Windows/TerminalVoiceOverlay.csproj
+
+      - name: Build ausfuehren
+        run: |
+          dotnet publish TerminalVoiceOverlay-Windows/TerminalVoiceOverlay.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            --output TerminalVoiceOverlay-Windows/publish
+
+      - name: Build-Artefakt pruefen
+        run: |
+          if (Test-Path "TerminalVoiceOverlay-Windows/publish/TerminalVoiceOverlay.exe") {
+            Write-Host "Build erfolgreich: TerminalVoiceOverlay.exe erstellt."
+          } else {
+            Write-Host "FEHLER: Build-Artefakt nicht gefunden!"
+            exit 1
+          }
+
+  build-claude-overlay:
+    runs-on: windows-latest
+    name: ClaudeVoiceOverlay-Windows
+
+    steps:
+      - name: Projektdateien laden
+        uses: actions/checkout@v4
+
+      - name: .NET SDK einrichten
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: NuGet-Pakete wiederherstellen
+        run: dotnet restore ClaudeVoiceOverlay-Windows/ClaudeVoiceOverlay.csproj
+
+      - name: Build ausfuehren
+        run: |
+          dotnet publish ClaudeVoiceOverlay-Windows/ClaudeVoiceOverlay.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            --output ClaudeVoiceOverlay-Windows/publish
+
+      - name: Build-Artefakt pruefen
+        run: |
+          if (Test-Path "ClaudeVoiceOverlay-Windows/publish/ClaudeVoiceOverlay.exe") {
+            Write-Host "Build erfolgreich: ClaudeVoiceOverlay.exe erstellt."
+          } else {
+            Write-Host "FEHLER: Build-Artefakt nicht gefunden!"
+            exit 1
+          }

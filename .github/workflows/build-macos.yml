@@ -1,0 +1,102 @@
+name: macOS Build (Swift)
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - 'TerminalVoiceOverlay-macOS/**'
+      - 'ClaudeCodexVoiceOverlay-macOS/**'
+  pull_request:
+    branches: ["main"]
+    paths:
+      - 'TerminalVoiceOverlay-macOS/**'
+      - 'ClaudeCodexVoiceOverlay-macOS/**'
+
+jobs:
+  build-terminal-overlay:
+    runs-on: macos-latest
+    name: TerminalVoiceOverlay-macOS
+
+    steps:
+      - name: Projektdateien laden
+        uses: actions/checkout@v4
+
+      - name: Xcode-Version anzeigen
+        run: xcodebuild -version
+
+      - name: Swift-Version anzeigen
+        run: swift --version
+
+      - name: Build ausfuehren
+        run: |
+          cd TerminalVoiceOverlay-macOS
+
+          APP_NAME="TerminalVoiceOverlay"
+          SRC_DIR="$APP_NAME"
+          BUILD_DIR="build"
+          APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
+
+          mkdir -p "$APP_BUNDLE/Contents/MacOS"
+          mkdir -p "$APP_BUNDLE/Contents/Resources"
+
+          cp "$SRC_DIR/Info.plist" "$APP_BUNDLE/Contents/"
+
+          SDK_PATH=$(xcrun --show-sdk-path)
+          SWIFT_FILES=($(find "$SRC_DIR" -name "*.swift"))
+
+          swiftc \
+              -o "$APP_BUNDLE/Contents/MacOS/$APP_NAME" \
+              -sdk "$SDK_PATH" \
+              -target arm64-apple-macos13.0 \
+              -framework Cocoa \
+              -framework AVFoundation \
+              -framework CoreGraphics \
+              "${SWIFT_FILES[@]}"
+
+          echo "Build erfolgreich: $APP_BUNDLE"
+
+      - name: Build-Artefakt pruefen
+        run: |
+          test -f TerminalVoiceOverlay-macOS/build/TerminalVoiceOverlay.app/Contents/MacOS/TerminalVoiceOverlay
+          echo "Binary existiert und wurde korrekt erstellt."
+
+  build-codex-overlay:
+    runs-on: macos-latest
+    name: ClaudeCodexVoiceOverlay-macOS
+
+    steps:
+      - name: Projektdateien laden
+        uses: actions/checkout@v4
+
+      - name: Build ausfuehren
+        run: |
+          cd ClaudeCodexVoiceOverlay-macOS
+
+          APP_NAME="ClaudeCodexVoiceOverlay"
+          SRC_DIR="$APP_NAME"
+          BUILD_DIR="build"
+          APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
+
+          mkdir -p "$APP_BUNDLE/Contents/MacOS"
+          mkdir -p "$APP_BUNDLE/Contents/Resources"
+
+          cp "$SRC_DIR/Info.plist" "$APP_BUNDLE/Contents/"
+
+          SDK_PATH=$(xcrun --show-sdk-path)
+          SWIFT_FILES=($(find "$SRC_DIR" -name "*.swift"))
+
+          swiftc \
+              -o "$APP_BUNDLE/Contents/MacOS/$APP_NAME" \
+              -sdk "$SDK_PATH" \
+              -target arm64-apple-macos13.0 \
+              -framework Cocoa \
+              -framework AVFoundation \
+              -framework CoreGraphics \
+              "${SWIFT_FILES[@]}"
+
+          echo "Build erfolgreich: $APP_BUNDLE"
+
+      - name: Build-Artefakt pruefen
+        run: |
+          test -f ClaudeCodexVoiceOverlay-macOS/build/ClaudeCodexVoiceOverlay.app/Contents/MacOS/ClaudeCodexVoiceOverlay
+          echo "Binary existiert und wurde korrekt erstellt."

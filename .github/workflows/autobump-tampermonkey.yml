@@ -41,7 +41,7 @@ jobs:
             BEFORE="$(git rev-list --max-parents=0 HEAD)"
           fi
 
-          CHANGED="$(git diff --name-only "$BEFORE" "$AFTER" | grep -E '^scripts/.*\.user\.js$' || true)"
+          CHANGED="$(git diff --name-only "$BEFORE" "$AFTER" | grep -E '^Tampermonkey/.*\.user\.js$' || true)"
           echo "changed_files<<EOF" >> "$GITHUB_OUTPUT"
           echo "$CHANGED" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
@@ -57,7 +57,7 @@ jobs:
           files = [f.strip() for f in changed if f.strip()]
 
           if not files:
-            print("Keine geänderten Userscripts in scripts/*.user.js – nichts zu tun.")
+            print("Keine geänderten Userscripts in Tampermonkey/*.user.js – nichts zu tun.")
             raise SystemExit(0)
 
           version_re = re.compile(r'^(\s*//\s*@version\s+)(\S+)\s*$')
@@ -148,6 +148,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add scripts/*.user.js
+          git add Tampermonkey/*.user.js
           git commit -m "chore: tampermonkey autobump"
           git push

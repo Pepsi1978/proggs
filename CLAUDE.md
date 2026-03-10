@@ -86,6 +86,14 @@ Beim **ersten Start** von Claude Code in diesem Repository soll automatisch gepr
 - macOS/Linux: `bash claude-code-setup/setup.sh`
 - Windows: `powershell claude-code-setup/setup.ps1`
 
+## Automatisierung und Transparenz
+
+Claude Code soll Aufgaben **vollstaendig automatisiert** ausfuehren — inklusive Testen, Verifizieren, Committen und Pushen wenn die CLAUDE.md-Regeln es erfordern. Dabei gilt:
+
+- **Immer mitteilen was getan wurde**: Nach jeder automatischen Aktion (Commit, Push, Plugin-Installation, Build, etc.) dem Benutzer kurz berichten, was passiert ist
+- **Nicht vorher fragen, aber nachher informieren**: Automatisierung bedeutet, dass Claude Code eigenstaendig handelt — aber der Benutzer muss immer wissen, was getan wurde
+- **Keine stille Ausfuehrung**: Niemals Aenderungen vornehmen, ohne sie dem Benutzer mitzuteilen
+
 ## Sprache
 
 Sämtliche Inhalte in der CLAUDE.md müssen **immer auf Deutsch** verfasst werden. Das gilt auch für:
