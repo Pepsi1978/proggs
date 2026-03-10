@@ -91,6 +91,24 @@ Jede Commit-Nachricht muss mit einer **fortlaufenden Nummer** beginnen, gefolgt 
 #004 - Farbschema von blau auf dunkelgrün geändert
 ```
 
+## Claude Code Setup-Pruefung (Automatisch)
+
+Beim **ersten Start** von Claude Code in diesem Repository soll automatisch geprueft werden, ob alle benoetigten Plugins und Skills installiert sind. Dazu wird die Datei `claude-code-setup/manifest.json` gelesen.
+
+**Ablauf:**
+
+1. Pruefe ob `claude-code-setup/manifest.json` existiert
+2. Vergleiche die dort gelisteten Plugins mit den aktuell installierten
+3. Wenn Plugins oder Skills fehlen:
+   - Dem Benutzer mitteilen: "Es fehlen X Plugins und Y Skills. Soll ich diese jetzt installieren?"
+   - Nach Bestaetigung: Fehlende Plugins mit `claude plugins install` nachinstallieren
+   - Custom Skills aus `claude-code-setup/skills/` nach `~/.claude/skills/` kopieren
+4. Wenn alles vorhanden ist: Nichts tun, normal weiterarbeiten
+
+**Alternativ** kann das Setup manuell ausgefuehrt werden:
+- macOS/Linux: `bash claude-code-setup/setup.sh`
+- Windows: `powershell claude-code-setup/setup.ps1`
+
 ## Sprache
 
 Sämtliche Inhalte in der CLAUDE.md müssen **immer auf Deutsch** verfasst werden. Das gilt auch für:

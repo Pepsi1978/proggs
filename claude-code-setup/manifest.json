@@ -1,0 +1,58 @@
+{
+  "description": "Claude Code Setup-Manifest - Installiert alle Plugins, Skills und Settings auf einem neuen Rechner",
+  "version": "1.0.0",
+  "author": "Pepsi1978",
+  "github_user": "Pepsi1978",
+  "repo": "https://github.com/Pepsi1978/proggs",
+
+  "plugins": {
+    "claude-plugins-official": [
+      "swift-lsp",
+      "typescript-lsp",
+      "csharp-lsp",
+      "superpowers",
+      "frontend-design",
+      "context7",
+      "github",
+      "feature-dev",
+      "code-simplifier",
+      "commit-commands",
+      "security-guidance",
+      "claude-md-management",
+      "pr-review-toolkit",
+      "claude-code-setup",
+      "hookify",
+      "playground",
+      "ralph-loop",
+      "code-review"
+    ],
+    "superpowers-marketplace": [
+      "episodic-memory",
+      "double-shot-latte",
+      "superpowers-chrome",
+      "claude-session-driver"
+    ]
+  },
+
+  "extra_marketplaces": {
+    "superpowers-marketplace": {
+      "source": "github",
+      "repo": "obra/superpowers-marketplace",
+      "autoUpdate": true
+    }
+  },
+
+  "custom_skills": [
+    "auto-verify-iterate",
+    "cross-platform",
+    "tampermonkey-version"
+  ],
+
+  "settings": {
+    "effortLevel": "high",
+    "permissions": [
+      "Bash", "Read", "Edit", "Write", "Glob", "Grep",
+      "WebFetch", "WebSearch", "Agent", "NotebookEdit"
+    ]
+  }
+}
