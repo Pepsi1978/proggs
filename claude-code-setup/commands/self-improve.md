@@ -5,6 +5,50 @@ description: Systematic self-improvement of the Claude Code development environm
 
 # Self-Improve: Systematic Environment Optimization
 
+**Before doing ANYTHING, show the user this overview in German:**
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  Self-Improve Skill v1.1 — Deine Entwicklungsumgebung       ║
+║  automatisch pruefen, aktualisieren und verbessern           ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  Was passiert jetzt:                                         ║
+║  Ich durchlaufe 3 Verbesserungsschleifen. Jede Schleife     ║
+║  hat 5 Phasen — mit jeder Runde grabe ich tiefer.           ║
+║                                                              ║
+║  Phase 1: CHECK — Umgebung pruefen                           ║
+║    Tools, Plugins, Agents, Regeln, Speicherplatz,            ║
+║    Git-Einstellungen, verwaiste Dateien aufspueren            ║
+║                                                              ║
+║  Phase 2: RESEARCH — Nach Neuem suchen                       ║
+║    Neue Claude Code Features, Plugin-Updates,                ║
+║    Sicherheitsupdates, Tool-Versionen im Web recherchieren   ║
+║                                                              ║
+║  Phase 3: UPDATE — Gefundene Updates anwenden                ║
+║    Homebrew, Rust, Plugins etc. aktualisieren                ║
+║                                                              ║
+║  Phase 4: IMPROVE — Kreativ verbessern                       ║
+║    Regeln optimieren, neue Hooks, bessere Automatisierung    ║
+║                                                              ║
+║  Phase 5: REPORT — Dir ausfuehrlich berichten                ║
+║    Jede einzelne Aenderung dokumentieren (was, wo, warum)    ║
+║                                                              ║
+║  Nach allen 3 Schleifen:                                     ║
+║  Phase 6: META-IMPROVE — Diesen Skill selbst verbessern     ║
+║    Vorschlaege machen (du entscheidest, ob umgesetzt wird)   ║
+║                                                              ║
+║  Danach: Alles nach GitHub pushen (Pepsi1978/proggs)         ║
+║                                                              ║
+║  Sicherheit: Externer Code wird auf Prompt Injection         ║
+║  geprueft. Nichts wird geloescht ohne deine Erlaubnis.       ║
+║  Du kannst jeden Schritt live mitlesen.                      ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+**Then proceed with the skill.**
+
 You are performing a systematic self-improvement of your development environment. This is not a one-shot check — you run **3 improvement loops**, each time digging deeper. Think of it like polishing: each pass reveals new things to fix.
 
 The user is not a programmer. Explain everything in German, in simple terms, so they understand what you did and why.
@@ -246,4 +290,4 @@ Give a final comprehensive summary:
 - Keep the memory file under 200 lines (it gets truncated otherwise)
 
 ---
-<!-- Skill Version: v1.1 | Date: 2026-03-11 | Last Meta-Improve: 2026-03-11 -->
+<!-- Skill Version: v1.2 | Date: 2026-03-11 | Last Meta-Improve: 2026-03-11 | Lines: 293/400 -->
