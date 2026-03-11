@@ -8,7 +8,7 @@ description: Systematic code health scanner that audits projects or individual f
 **Before doing ANYTHING, show the user this overview in German:**
 
 ```
-Tool-Check v1.2 — Code-Gesundheitscheck
+Tool-Check v1.3 — Code-Gesundheitscheck
 ========================================
 
 Was passiert jetzt:
@@ -158,6 +158,8 @@ Each loop collects findings into a shared list that grows across all 3 loops. Fi
 **CRITICAL: NEVER apply fixes during the loops.** Only collect findings. All fixes are applied after the user reviews and approves the final list.
 
 **CRITICAL: No duplicates across loops.** Each loop builds on the previous ones. Before adding a finding, check if it (or a closely related issue) was already captured in a previous loop or in the pre-scan. If yes, skip it — don't repeat. Each loop should only contribute NEW insights that the previous phases missed.
+
+**CRITICAL: Consistent numbering.** Assign FINAL finding numbers during the loops — the numbers used in Loop 1/2/3 MUST be identical to the numbers in the final presentation. Use a single running counter across all loops (e.g., Loop 1 finds #1-#8, Loop 2 continues with #9-#17, Loop 3 with #18-#25). NEVER renumber findings between the loop analysis and the final list. The user will reference these numbers when selecting which items to implement — any mismatch causes confusion and wrong fixes.
 
 ---
 
@@ -336,12 +338,26 @@ Welche Punkte soll ich umsetzen?
 
 After the user selects items:
 
+**Step 0: Confirmation table (MANDATORY before ANY fix is applied).**
+Parse the user's selection and present a summary table for confirmation:
+```
+Verstanden — hier meine Zuordnung:
+  Umsetzen:   1, 2, 3, 5, 7
+  Erklaeren:  4, 6, 12
+  Weglassen:  8, 9, 10, 11
+Stimmt das?
+```
+Wait for user confirmation. Only proceed after they confirm. This is especially important because the user dictates via Whisper (speech-to-text) and selections can be misheard. If the user skips confirmation and says "ja mach" or similar, proceed — but the table must always be shown first.
+
+**When the user asks for explanations:** provide the explanations immediately, then include them again in the final Fix-Bericht under a separate "Erklaert" section so the user can decide if they want those items implemented too.
+
 1. Apply ONLY the selected fixes, one by one, visibly
 2. After each fix, briefly confirm what was changed
-3. Bump version numbers if the project uses versioned files (check for version patterns in file headers, package.json, Cargo.toml, Info.plist, etc.)
-4. Run any available tests or linters to verify fixes don't break functionality
-5. Commit and push (per CLAUDE.md automation rules)
-6. Present a structured fix report:
+3. **Build after each thematic block** — don't wait until all fixes are done. Group related fixes (e.g., all thread-safety fixes together), apply them, then build. If the build breaks, you know which block caused it. For single-file projects, build after every 2-3 fixes.
+4. Bump version numbers if the project uses versioned files (check for version patterns in file headers, package.json, Cargo.toml, Info.plist, etc.)
+5. Run any available tests or linters to verify fixes don't break functionality
+6. Commit and push (per CLAUDE.md automation rules)
+7. Present a structured fix report:
 
 ```
 ## Fix-Bericht
@@ -349,6 +365,13 @@ After the user selects items:
 - Nicht umgesetzt: Punkte X, Y, Z (auf Wunsch des Benutzers)
 - Version: [alt] → [neu]
 - Commit: #NNN
+
+### Erklaert (zur Entscheidung)
+Die folgenden Punkte wurden erklaert, aber noch nicht umgesetzt.
+Falls du davon etwas umsetzen moechtest, sag einfach die Nummer(n).
+
+- Punkt [A]: [Kurzbeschreibung] — [1-2 Saetze Erklaerung warum es sinnvoll waere]
+- Punkt [B]: [Kurzbeschreibung] — [1-2 Saetze Erklaerung warum es sinnvoll waere]
 ```
 
 ---
@@ -455,4 +478,4 @@ After the skill is modified, sync to the cross-platform repo:
 - NEVER create new GitHub repositories. ALL changes go to `Pepsi1978/proggs`.
 
 ---
-<!-- Skill Version: v1.2 | Date: 2026-03-11 | Last Meta-Improve: 2026-03-11 | Lines: 458/600 -->
+<!-- Skill Version: v1.3 | Date: 2026-03-11 | Last Meta-Improve: 2026-03-11 | Lines: 481/600 -->
