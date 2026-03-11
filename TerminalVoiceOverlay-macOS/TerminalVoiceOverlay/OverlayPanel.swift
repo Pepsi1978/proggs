@@ -11,6 +11,8 @@ private extension NSColor {
     static let toggleBtw = NSColor(hex: "#2196F3")
     static let btnBtwRecording = NSColor(hex: "#1E88E5")
     static let btnBtwPulse = NSColor(hex: "#64B5F6")
+    static let btnX = NSColor(hex: "#E53935")
+    static let btnXPressed = NSColor(hex: "#FF6666")
 
     convenience init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
@@ -107,7 +109,7 @@ final class OverlayPanel: NSPanel {
         let panelHeight: CGFloat = btnSize * 6 + gap * 5 + 16
 
         // Create buttons
-        xButton = RoundButton(label: "X", color: .btnIdle)
+        xButton = RoundButton(label: "X", color: .btnX)
         btwButton = RoundButton(label: "?", color: .toggleOff)
         micButton = RoundButton(label: "\u{1F3A4}", color: .btnIdle)
         micButton.labelFont = .systemFont(ofSize: 14)
@@ -207,6 +209,16 @@ final class OverlayPanel: NSPanel {
     func setGeminiEnabled(_ enabled: Bool) {
         DispatchQueue.main.async { [weak self] in
             self?.gButton.buttonColor = enabled ? .toggleOn : .toggleOff
+            self?.wButton.buttonColor = enabled ? .toggleOff : .toggleOn
+        }
+    }
+
+    func flashXButton() {
+        DispatchQueue.main.async { [weak self] in
+            self?.xButton.buttonColor = .btnXPressed
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                self?.xButton.buttonColor = .btnX
+            }
         }
     }
 

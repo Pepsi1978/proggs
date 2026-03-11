@@ -61,7 +61,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.setGeminiEnabled(geminiEnabled)
         panel.setAutoEnterEnabled(autoEnterEnabled)
 
-        panel.onXClicked = { [weak self] in self?.clearLine() }
+        panel.onXClicked = { [weak self] in
+            self?.panel.flashXButton()
+            self?.clearLine()
+        }
         panel.onMicClicked = { [weak self] in self?.toggleRecording() }
         panel.onWClicked = { [weak self] in self?.whisperUndo() }
         panel.onGClicked = { [weak self] in self?.toggleGemini() }
