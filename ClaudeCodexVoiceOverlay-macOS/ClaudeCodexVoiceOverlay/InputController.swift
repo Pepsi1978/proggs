@@ -4,7 +4,7 @@ import Foundation
 final class InputController {
 
     static func checkAccessibility() -> Bool {
-        let options = [kAXTrustedCheckOptionPrompt.takeRetainedValue(): true] as CFDictionary
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
         return AXIsProcessTrustedWithOptions(options)
     }
 
@@ -21,33 +21,34 @@ final class InputController {
 
     /// Pastes text via clipboard + Cmd+V, optionally sends Enter afterwards
     static func pasteText(_ text: String, autoEnter: Bool = false) {
-        NSLog("=== pasteText aufgerufen: '%@' ===", text)
-        NSLog("AXIsProcessTrusted: %@", AXIsProcessTrusted() ? "JA" : "NEIN")
-
-        if let frontApp = NSWorkspace.shared.frontmostApplication {
-            NSLog("Frontmost App VOR activate: %@ (BundleID: %@, PID: %d)",
-                  frontApp.localizedName ?? "?", frontApp.bundleIdentifier ?? "?", frontApp.processIdentifier)
-        }
+        #if DEBUG
+        NSLog("pasteText: '%@'", text)
+        #endif
 
         let pasteboard = NSPasteboard.general
+        let previousContents = pasteboard.string(forType: .string)
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
-        NSLog("Clipboard gesetzt")
 
         activateTargetApp()
-        usleep(150_000) // 150ms to ensure app is frontmost
+        usleep(150_000)
 
-        if let frontApp2 = NSWorkspace.shared.frontmostApplication {
-            NSLog("Frontmost App NACH activate: %@ (BundleID: %@, PID: %d)",
-                  frontApp2.localizedName ?? "?", frontApp2.bundleIdentifier ?? "?", frontApp2.processIdentifier)
-        }
-
-        NSLog("Sende CGEvent Cmd+V...")
-        sendKeyCombo(keyCode: 0x09, flags: .maskCommand) // 'v' = 0x09
+        sendKeyCombo(keyCode: 0x09, flags: .maskCommand) // Cmd+V
 
         if autoEnter {
-            usleep(500_000) // 500ms
-            sendKeyCombo(keyCode: 0x24, flags: []) // Return = 0x24
+            usleep(300_000)
+            sendKeyCombo(keyCode: 0x24, flags: []) // Return
+        }
+
+        // Restore previous clipboard after paste completes
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 0.5) {
+            if let previous = previousContents {
+                DispatchQueue.main.async {
+                    let pb = NSPasteboard.general
+                    pb.clearContents()
+                    pb.setString(previous, forType: .string)
+                }
+            }
         }
     }
 
