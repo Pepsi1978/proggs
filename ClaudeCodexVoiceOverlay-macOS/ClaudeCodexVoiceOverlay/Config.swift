@@ -6,10 +6,21 @@ struct Config {
 
     var geminiAvailable: Bool { geminiApiKey != nil && !geminiApiKey!.isEmpty }
 
-    static func load() -> Config {
+    enum ConfigError: Error, LocalizedError {
+        case missingApiKey(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .missingApiKey(let key):
+                return "\(key) nicht gefunden. Bitte .env Datei anlegen."
+            }
+        }
+    }
+
+    static func load() throws -> Config {
         let env = parseEnvFile()
         guard let groqKey = env["GROQ_API_KEY"], !groqKey.isEmpty else {
-            fatalError("GROQ_API_KEY nicht gefunden. Bitte .env Datei anlegen.")
+            throw ConfigError.missingApiKey("GROQ_API_KEY")
         }
         return Config(
             groqApiKey: groqKey,

@@ -19,7 +19,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var resetTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        config = Config.load()
+        do {
+            config = try Config.load()
+        } catch {
+            NSLog("Konfigurationsfehler: %@", error.localizedDescription)
+            let alert = NSAlert()
+            alert.messageText = "Konfigurationsfehler"
+            alert.informativeText = error.localizedDescription
+            alert.alertStyle = .critical
+            alert.addButton(withTitle: "Beenden")
+            alert.runModal()
+            NSApp.terminate(nil)
+            return
+        }
         NSLog("TerminalVoiceOverlay gestartet")
 
         // Check accessibility
@@ -128,35 +140,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func stopRecording() {
-        guard let fileURL = audioRecorder.stop() else {
-            isRecording = false
-            panel.setMicState(.idle)
-            return
-        }
         isRecording = false
         isProcessing = true
         panel.setMicState(.processing)
-        // Audio feedback: double beep on stop
-        NSSound.beep()
-        usleep(150_000) // 150ms pause
-        NSSound.beep()
-        NSLog("Aufnahme gestoppt, transkribiere...")
 
-        groqClient.transcribe(fileURL: fileURL) { [weak self] result in
-            // Clean up temp file
-            try? FileManager.default.removeItem(at: fileURL)
-
-            switch result {
-            case .success(let transcript):
-                NSLog("Transkription: %@", transcript)
-                self?.lastRawTranscript = transcript
-                self?.handleTranscript(transcript)
-            case .failure(let error):
-                NSLog("Transkriptionsfehler: %@", error.localizedDescription)
+        // Stop recording on background thread to avoid blocking UI
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            guard let fileURL = self.audioRecorder.stop() else {
                 DispatchQueue.main.async {
-                    self?.isProcessing = false
-                    self?.panel.setMicState(.error)
-                    self?.scheduleReset()
+                    self.isProcessing = false
+                    self.panel.setMicState(.idle)
+                }
+                return
+            }
+
+            // Audio feedback: double beep on stop (on main thread)
+            DispatchQueue.main.async {
+                NSSound.beep()
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                NSSound.beep()
+            }
+            NSLog("Aufnahme gestoppt, transkribiere...")
+
+            self.groqClient.transcribe(fileURL: fileURL) { [weak self] result in
+                // Clean up temp file
+                try? FileManager.default.removeItem(at: fileURL)
+
+                switch result {
+                case .success(let transcript):
+                    NSLog("Transkription: %@", transcript)
+                    self?.lastRawTranscript = transcript
+                    self?.handleTranscript(transcript)
+                case .failure(let error):
+                    NSLog("Transkriptionsfehler: %@", error.localizedDescription)
+                    DispatchQueue.main.async {
+                        self?.isProcessing = false
+                        self?.panel.setMicState(.error)
+                        self?.scheduleReset()
+                    }
                 }
             }
         }
@@ -210,7 +233,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Clear Line
 
     private func clearLine() {
-        TerminalController.clearLine()
+        DispatchQueue.global(qos: .userInitiated).async {
+            TerminalController.clearLine()
+        }
         hasPastedText = false
     }
 
@@ -219,14 +244,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func whisperUndo() {
         guard let rawTranscript = lastRawTranscript else { return }
 
-        // Clear the current line
-        TerminalController.clearLine()
-
-        // Small delay, then paste raw transcript
-        usleep(100_000) // 100ms
-        TerminalController.pasteText(rawTranscript)
-        hasPastedText = true
-        NSLog("Whisper-Rohtext eingefuegt: %@", rawTranscript)
+        // Clear the current line, then paste raw transcript after short delay
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            TerminalController.clearLine()
+            usleep(100_000) // 100ms for terminal to process Ctrl+C
+            TerminalController.pasteText(rawTranscript)
+            DispatchQueue.main.async {
+                self?.hasPastedText = true
+            }
+            NSLog("Whisper-Rohtext eingefuegt: %@", rawTranscript)
+        }
     }
 
     // MARK: - Gemini Toggle

@@ -5,7 +5,14 @@ final class AudioRecorder {
     private var audioEngine: AVAudioEngine?
     private var outputFile: AVAudioFile?
     private var tempURL: URL?
-    private(set) var isRecording = false
+    private let lock = NSLock()
+    private var _isRecording = false
+
+    var isRecording: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return _isRecording
+    }
 
     func start() throws {
         let engine = AVAudioEngine()
@@ -22,17 +29,28 @@ final class AudioRecorder {
 
         let tempDir = FileManager.default.temporaryDirectory
         let url = tempDir.appendingPathComponent("recording_\(UUID().uuidString).wav")
-        self.tempURL = url
 
         let file = try AVAudioFile(forWriting: url, settings: wavFormat.settings)
-        self.outputFile = file
 
         guard let converter = AVAudioConverter(from: recordingFormat, to: wavFormat) else {
             throw RecorderError.converterError
         }
 
+        lock.lock()
+        self.tempURL = url
+        self.outputFile = file
+        self._isRecording = true
+        lock.unlock()
+
         inputNode.installTap(onBus: 0, bufferSize: 4096, format: recordingFormat) { [weak self] buffer, _ in
-            guard let self = self, self.isRecording else { return }
+            guard let self = self else { return }
+
+            self.lock.lock()
+            let recording = self._isRecording
+            let currentFile = self.outputFile
+            self.lock.unlock()
+
+            guard recording, let file = currentFile else { return }
 
             let frameCount = AVAudioFrameCount(
                 Double(buffer.frameLength) * wavFormat.sampleRate / recordingFormat.sampleRate
@@ -53,16 +71,32 @@ final class AudioRecorder {
 
         try engine.start()
         self.audioEngine = engine
-        self.isRecording = true
     }
 
     func stop() -> URL? {
-        isRecording = false
-        audioEngine?.inputNode.removeTap(onBus: 0)
-        audioEngine?.stop()
-        audioEngine = nil
-        outputFile = nil
-        return tempURL
+        // Signal recording to stop first — the tap closure checks this flag
+        lock.lock()
+        _isRecording = false
+        let engine = self.audioEngine
+        let url = self.tempURL
+        lock.unlock()
+
+        // Remove the tap before stopping the engine to prevent
+        // the tap closure from accessing freed resources
+        engine?.inputNode.removeTap(onBus: 0)
+
+        // Small delay to let any in-flight audio callbacks finish
+        // before we deallocate the engine and file
+        Thread.sleep(forTimeInterval: 0.05)
+
+        engine?.stop()
+
+        lock.lock()
+        self.audioEngine = nil
+        self.outputFile = nil
+        lock.unlock()
+
+        return url
     }
 
     enum RecorderError: Error, LocalizedError {
