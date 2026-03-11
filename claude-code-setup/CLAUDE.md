@@ -25,8 +25,9 @@
 - Alle Projekte muessen reibungslos auf macOS und Windows funktionieren.
 - macOS: Swift/AppKit, Windows: C#/WPF.
 - Bei Cross-Platform-Features immer beide Plattformen beruecksichtigen.
-- Claude Code Konfiguration lebt in `~/claude-config/` (GitHub: Pepsi1978/claude-code-setup).
-- Bei Aenderungen an Regeln, Agents, Commands oder Hooks: Immer auch ins Repo uebertragen und pushen.
+- Claude Code Konfiguration lebt in `~/proggs/claude-code-setup/` (GitHub: Pepsi1978/proggs/claude-code-setup/).
+- NIEMALS neue GitHub-Repos erstellen. ALLES gehoert in `Pepsi1978/proggs`.
+- Bei Aenderungen an Regeln, Agents, Commands oder Hooks: Immer auch nach `~/proggs/claude-code-setup/` kopieren und zu `Pepsi1978/proggs` pushen.
 - UI-Design: Modern, poliert, professionell — muss aussehen wie gekaufte Software aus dem Laden.
 - KEIN Python fuer GUIs oder Desktop-Apps. Python so weit wie moeglich vermeiden.
 - Wenn Python unvermeidbar ist (z.B. ML-Backend): IMMER vorher den Benutzer fragen und erklaeren ob der Python-Code sichtbar oder unsichtbar (Backend) ist. Nie stillschweigend Python einsetzen.

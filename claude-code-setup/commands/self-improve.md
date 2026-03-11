@@ -1,6 +1,6 @@
 ---
 name: self-improve
-description: Systematic self-improvement of the Claude Code development environment. Use when the user says "/self-improve", "verbessere dich", "optimiere deine Umgebung", "check dein Setup", "update alles", or wants Claude to audit and improve its own tools, plugins, settings, and capabilities. Also use proactively when you notice something outdated or suboptimal during normal work.
+description: Systematic self-improvement of the Claude Code development environment. ONLY use when the user explicitly says "/self-improve", "verbessere dich", "optimiere deine Umgebung", "check dein Setup", or "update alles". NEVER run this proactively or automatically — only on manual user request.
 context: fork
 ---
 
@@ -109,25 +109,25 @@ After each loop, give a clear summary:
 
 After all 3 loops are complete, **always sync changes to the cross-platform repo**:
 
-1. **Copy changed files** from `~/.claude/` to `~/claude-config/`:
-   - `cp ~/.claude/rules/*.md ~/claude-config/rules/`
-   - `cp ~/.claude/agents/*.md ~/claude-config/agents/`
-   - `cp ~/.claude/commands/*.md ~/claude-config/commands/`
-   - `cp ~/.claude/hooks/auto-format.sh ~/claude-config/hooks/`
-   - `cp ~/CLAUDE.md ~/claude-config/CLAUDE.md`
-   - `cp ~/.gitignore_global ~/claude-config/.gitignore_global`
-   - Update `~/claude-config/settings.json` (without platform-specific hooks)
+1. **Copy changed files** from `~/.claude/` to `~/proggs/claude-code-setup/`:
+   - `cp ~/.claude/rules/*.md ~/proggs/claude-code-setup/rules/`
+   - `cp ~/.claude/agents/*.md ~/proggs/claude-code-setup/agents/`
+   - `cp ~/.claude/commands/*.md ~/proggs/claude-code-setup/commands/`
+   - `cp ~/.claude/hooks/auto-format.sh ~/proggs/claude-code-setup/hooks/`
+   - `cp ~/CLAUDE.md ~/proggs/claude-code-setup/CLAUDE.md`
+   - `cp ~/.gitignore_global ~/proggs/claude-code-setup/.gitignore_global`
+   - Update `~/proggs/claude-code-setup/settings.json` (without platform-specific hooks)
 
 2. **Check if Windows variants need updating**: If a rule, agent, or hook changed, consider whether the Windows equivalent (`hooks/auto-format.ps1`, `hooks-windows.json`) also needs to be updated to match.
 
-3. **Commit and push** to `Pepsi1978/claude-code-setup`:
+3. **Commit and push** to `Pepsi1978/proggs` (NEVER create a separate repo!):
    ```
-   cd ~/claude-config && git add -A && git commit -m "Update: [brief summary of changes]" && git push
+   cd ~/proggs && git add claude-code-setup/ && git commit -m "Update claude-code-setup: [brief summary]" && git push
    ```
 
 4. **Report sync status** in the final summary.
 
-This ensures the Windows machine always has access to the latest optimizations. The repo is the single source of truth for both platforms.
+This ensures the Windows machine always has access to the latest optimizations. Everything lives in `Pepsi1978/proggs/claude-code-setup/` — the single source of truth for both platforms.
 
 ## Final Summary
 
@@ -140,6 +140,7 @@ Give a final comprehensive summary:
 
 ## Important Rules
 
+- NEVER create new GitHub repositories. ALL files belong in `Pepsi1978/proggs`. Always push to the existing repo, never create separate repos.
 - NEVER downgrade the model from Opus or reduce effort level
 - NEVER install Python tools for visible/GUI purposes
 - NEVER remove existing working configurations without replacement
