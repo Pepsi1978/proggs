@@ -79,9 +79,10 @@ final class GeminiClient {
             if !(200...299).contains(statusCode) {
                 if self.retryableStatusCodes.contains(statusCode) && attempt < self.maxRetries {
                     let delay = self.delays[attempt]
-                    NSLog("Gemini %d - Versuch %d/%d, warte %.0fs...", statusCode, attempt + 1, self.maxRetries, delay)
-                    Thread.sleep(forTimeInterval: delay)
-                    self.sendRequest(prompt: prompt, attempt: attempt + 1, completion: completion)
+                    NSLog("Gemini %d - retry %d/%d, waiting %.0fs...", statusCode, attempt + 1, self.maxRetries, delay)
+                    DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay) {
+                        self.sendRequest(prompt: prompt, attempt: attempt + 1, completion: completion)
+                    }
                     return
                 }
                 let responseText = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""

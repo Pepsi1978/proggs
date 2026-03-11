@@ -6,8 +6,14 @@ final class AppWatcher {
         "com.googlecode.iterm2",
     ]
 
+    private(set) var lastActiveTerminalBundleID: String?
+
     var onTerminalActivated: (() -> Void)?
     var onTerminalDeactivated: (() -> Void)?
+
+    deinit {
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+    }
 
     static func isTargetApp(_ bundleID: String?) -> Bool {
         guard let id = bundleID else { return false }
@@ -24,6 +30,8 @@ final class AppWatcher {
         // Check initial state
         if let frontApp = NSWorkspace.shared.frontmostApplication,
            Self.isTargetApp(frontApp.bundleIdentifier) {
+            lastActiveTerminalBundleID = frontApp.bundleIdentifier
+            TerminalController.lastActiveTerminalBundleID = frontApp.bundleIdentifier
             onTerminalActivated?()
         }
     }
@@ -31,6 +39,8 @@ final class AppWatcher {
     @objc private func appActivated(_ notification: Notification) {
         guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
         if Self.isTargetApp(app.bundleIdentifier) {
+            lastActiveTerminalBundleID = app.bundleIdentifier
+            TerminalController.lastActiveTerminalBundleID = app.bundleIdentifier
             onTerminalActivated?()
         } else {
             onTerminalDeactivated?()

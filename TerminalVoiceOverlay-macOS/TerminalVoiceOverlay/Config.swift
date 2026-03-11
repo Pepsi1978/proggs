@@ -4,7 +4,7 @@ struct Config {
     let groqApiKey: String
     let geminiApiKey: String?
 
-    var geminiAvailable: Bool { geminiApiKey != nil && !geminiApiKey!.isEmpty }
+    var geminiAvailable: Bool { !(geminiApiKey?.isEmpty ?? true) }
 
     enum ConfigError: Error, LocalizedError {
         case missingApiKey(String)

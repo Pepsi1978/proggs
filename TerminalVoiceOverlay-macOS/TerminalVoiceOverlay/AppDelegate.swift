@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var config: Config!
     private var statusItem: NSStatusItem!
 
+    // All state flags are only read/written on the main thread (Fix 4)
     private var isRecording = false
     private var isProcessing = false
     private var geminiEnabled = false
@@ -23,7 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             config = try Config.load()
         } catch {
-            NSLog("Konfigurationsfehler: %@", error.localizedDescription)
+            NSLog("Config error: %@", error.localizedDescription)
             let alert = NSAlert()
             alert.messageText = "Konfigurationsfehler"
             alert.informativeText = error.localizedDescription
@@ -33,18 +34,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.terminate(nil)
             return
         }
-        NSLog("TerminalVoiceOverlay gestartet")
+        NSLog("TerminalVoiceOverlay started")
 
-        // Check accessibility
         if !TerminalController.checkAccessibility() {
-            NSLog("Accessibility-Berechtigung fehlt - CGEvent funktioniert nicht")
+            NSLog("Accessibility permission missing")
         }
 
-        // Request microphone permission
         AVCaptureDevice.requestAccess(for: .audio) { granted in
-            if !granted {
-                NSLog("Mikrofon-Berechtigung verweigert")
-            }
+            if !granted { NSLog("Microphone permission denied") }
         }
 
         // Init clients
@@ -73,7 +70,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.onBtwClicked = { [weak self] in self?.toggleBtwRecording() }
         panel.onEnterClicked = { [weak self] in self?.handleEnterClick() }
 
-        // Setup menu bar icon
         setupStatusItem()
 
         // Setup app watcher
@@ -138,7 +134,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if isRecording && isBtwRecording {
             stopRecording()
         } else if isRecording && !isBtwRecording {
-            // Regular recording in progress — ignore BTW click
             return
         } else {
             startRecording(btw: true)
@@ -156,9 +151,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 panel.setMicState(.recording)
             }
             NSSound.beep()
-            NSLog("Aufnahme gestartet (BTW: %@)", btw ? "JA" : "NEIN")
         } catch {
-            NSLog("Mikrofon-Fehler: %@", error.localizedDescription)
+            NSLog("Microphone error: %@", error.localizedDescription)
             pasteError("Mikrofon nicht verfuegbar — \(error.localizedDescription)")
         }
     }
@@ -189,27 +183,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             // Audio feedback: double beep on stop
-            DispatchQueue.main.async {
-                NSSound.beep()
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                NSSound.beep()
-            }
-            NSLog("Aufnahme gestoppt, transkribiere...")
+            DispatchQueue.main.async { NSSound.beep() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { NSSound.beep() }
 
             self.groqClient.transcribe(fileURL: fileURL) { [weak self] result in
                 try? FileManager.default.removeItem(at: fileURL)
 
-                switch result {
-                case .success(let transcript):
-                    NSLog("Transkription: %@", transcript)
-                    self?.lastRawTranscript = transcript
-                    self?.handleTranscript(transcript, wasBtw: wasBtw)
-                case .failure(let error):
-                    NSLog("Transkriptionsfehler: %@", error.localizedDescription)
-                    let msg = Self.describeTranscriptionError(error)
-                    DispatchQueue.main.async {
-                        self?.pasteError(msg, wasBtw: wasBtw)
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    switch result {
+                    case .success(let transcript):
+                        #if DEBUG
+                        NSLog("Transcript: %@", transcript)
+                        #endif
+                        self.lastRawTranscript = transcript
+                        self.handleTranscript(transcript, wasBtw: wasBtw)
+                    case .failure(let error):
+                        NSLog("Transcription error: %@", error.localizedDescription)
+                        let msg = ErrorDescriptions.describeTranscriptionError(error)
+                        self.pasteError(msg, wasBtw: wasBtw)
                     }
                 }
             }
@@ -218,24 +210,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func handleTranscript(_ transcript: String, wasBtw: Bool) {
         if geminiEnabled, let geminiClient = geminiClient {
-            NSLog("Gemini-Korrektur...")
             geminiClient.correctText(transcript) { [weak self] result in
                 DispatchQueue.main.async {
+                    guard let self = self else { return }
                     switch result {
                     case .success(let corrected):
-                        NSLog("Korrigiert: %@", corrected)
-                        self?.insertText(corrected, wasBtw: wasBtw)
+                        self.insertText(corrected, wasBtw: wasBtw)
                     case .failure(let error):
-                        NSLog("Gemini-Fehler: %@, verwende Rohtext", error.localizedDescription)
-                        let hint = Self.describeGeminiError(error)
-                        self?.insertText("\(transcript) # [VoiceOverlay] \(hint)", wasBtw: wasBtw)
+                        NSLog("Gemini error: %@", error.localizedDescription)
+                        let hint = ErrorDescriptions.describeGeminiError(error)
+                        self.insertText("\(transcript) # [VoiceOverlay] \(hint)", wasBtw: wasBtw)
                     }
                 }
             }
         } else {
-            DispatchQueue.main.async { [weak self] in
-                self?.insertText(transcript, wasBtw: wasBtw)
-            }
+            insertText(transcript, wasBtw: wasBtw)
         }
     }
 
@@ -256,93 +245,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             panel.setMicState(.idle)
         }
-        NSLog("Text eingefuegt")
 
-        if autoEnterEnabled {
-            hasPastedText = false
-        } else {
-            hasPastedText = true
-        }
+        hasPastedText = !autoEnterEnabled
     }
 
     // MARK: - Error Feedback
 
-    private static func describeTranscriptionError(_ error: Error) -> String {
-        let nsError = error as NSError
-
-        if nsError.domain == NSURLErrorDomain {
-            switch nsError.code {
-            case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
-                return "Kein Internet — Spracheingabe konnte nicht transkribiert werden"
-            case NSURLErrorTimedOut:
-                return "Timeout — Groq API antwortet nicht (Internet-Problem?)"
-            case NSURLErrorCannotFindHost, NSURLErrorCannotConnectToHost, NSURLErrorDNSLookupFailed:
-                return "Groq API nicht erreichbar — DNS oder Server-Problem"
-            case NSURLErrorSecureConnectionFailed:
-                return "SSL-Fehler — sichere Verbindung zu Groq fehlgeschlagen"
-            default:
-                return "Netzwerkfehler — \(error.localizedDescription)"
-            }
-        }
-
-        if let apiError = error as? GroqWhisperClient.APIError {
-            switch apiError {
-            case .fileReadError:
-                return "Audio-Datei konnte nicht gelesen werden"
-            case .httpError(let code, _):
-                if code == 429 {
-                    return "Groq API Rate-Limit erreicht — zu viele Anfragen, kurz warten"
-                } else if (500...599).contains(code) {
-                    return "Groq API Server-Fehler (\(code)) — spaeter nochmal versuchen"
-                } else {
-                    return "Groq API Fehler \(code) — \(error.localizedDescription)"
-                }
-            }
-        }
-
-        return "Transkription fehlgeschlagen — \(error.localizedDescription)"
-    }
-
-    private static func describeGeminiError(_ error: Error) -> String {
-        let nsError = error as NSError
-
-        if nsError.domain == NSURLErrorDomain {
-            switch nsError.code {
-            case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
-                return "Gemini offline (kein Internet) — Rohtext verwendet"
-            case NSURLErrorTimedOut:
-                return "Gemini Timeout — Rohtext verwendet"
-            case NSURLErrorCannotFindHost, NSURLErrorCannotConnectToHost, NSURLErrorDNSLookupFailed:
-                return "Gemini nicht erreichbar — Rohtext verwendet"
-            default:
-                return "Gemini Netzwerkfehler — Rohtext verwendet"
-            }
-        }
-
-        if let apiError = error as? GeminiClient.APIError {
-            switch apiError {
-            case .httpError(let code, _):
-                if code == 429 {
-                    return "Gemini Rate-Limit — Rohtext verwendet"
-                } else if (500...599).contains(code) {
-                    return "Gemini Server-Fehler (\(code)) — Rohtext verwendet"
-                } else {
-                    return "Gemini Fehler \(code) — Rohtext verwendet"
-                }
-            case .noData, .unexpectedResponse, .noTextInResponse:
-                return "Gemini lieferte keine Antwort — Rohtext verwendet"
-            }
-        }
-
-        return "Gemini-Korrektur fehlgeschlagen — Rohtext verwendet"
-    }
-
     private func pasteError(_ message: String, wasBtw: Bool = false) {
-        if wasBtw {
-            isBtwRecording = false
-        }
+        if wasBtw { isBtwRecording = false }
         let errorText = "# [VoiceOverlay] FEHLER: \(message)"
-        NSLog("Fehler ins Terminal eingefuegt: %@", errorText)
         DispatchQueue.global(qos: .userInitiated).async {
             TerminalController.clearLine()
             usleep(100_000)
@@ -379,7 +290,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async {
                 self?.hasPastedText = true
             }
-            NSLog("Whisper-Rohtext eingefuegt: %@", rawTranscript)
         }
     }
 
@@ -389,7 +299,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard config.geminiAvailable else { return }
         geminiEnabled.toggle()
         panel.setGeminiEnabled(geminiEnabled)
-        NSLog("Gemini %@", geminiEnabled ? "AN" : "AUS")
     }
 
     // MARK: - Auto-Enter Toggle & Manual Enter
@@ -398,11 +307,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if autoEnterEnabled {
             autoEnterEnabled = false
             panel.setAutoEnterEnabled(autoEnterEnabled)
-            NSLog("Auto-Enter AUS")
         } else {
             autoEnterEnabled = true
             panel.setAutoEnterEnabled(autoEnterEnabled)
-            NSLog("Auto-Enter AN + Enter gesendet")
             DispatchQueue.global(qos: .userInitiated).async {
                 TerminalController.activateTerminal()
                 usleep(150_000)
