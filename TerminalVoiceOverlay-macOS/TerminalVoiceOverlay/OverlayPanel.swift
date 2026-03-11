@@ -111,6 +111,7 @@ final class OverlayPanel: NSPanel {
     let enterButton: RoundButton
     private var pulseTimer: Timer?
     private var btwPulseTimer: Timer?
+    private var xButtonCooldown = false
 
     // Right-click drag state
     private var isDragging = false
@@ -262,13 +263,19 @@ final class OverlayPanel: NSPanel {
         }
     }
 
-    func flashXButton() {
+    func flashXButton() -> Bool {
+        if xButtonCooldown { return false }
+        xButtonCooldown = true
         DispatchQueue.main.async { [weak self] in
             self?.xButton.buttonColor = .btnXPressed
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
                 self?.xButton.buttonColor = .btnX
             }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.xButtonCooldown = false
+            }
         }
+        return true
     }
 
     func setAutoEnterEnabled(_ enabled: Bool) {

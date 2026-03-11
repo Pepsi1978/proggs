@@ -62,8 +62,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.setAutoEnterEnabled(autoEnterEnabled)
 
         panel.onXClicked = { [weak self] in
-            self?.panel.flashXButton()
-            self?.clearLine()
+            guard let self = self else { return }
+            if self.panel.flashXButton() {
+                self.clearLine()
+            }
         }
         panel.onMicClicked = { [weak self] in self?.toggleRecording() }
         panel.onWClicked = { [weak self] in self?.whisperUndo() }
