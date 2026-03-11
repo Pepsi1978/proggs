@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Translate V.1.3.7
+// @name         Translate V.1.3.9
 // @namespace    https://translate.google.com/
-// @version      1.3.8
+// @version      1.3.9
 // @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/translate.user.js
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/translate.user.js
 // @description  Speech-to-Text + Gemini-Diktat-Bereinigung (DE) auf Google Translate. Mic-Button unten rechts. Kein stilles Fallback. Mit Output-Preview. API-Key wird in Tampermonkey gespeichert.
