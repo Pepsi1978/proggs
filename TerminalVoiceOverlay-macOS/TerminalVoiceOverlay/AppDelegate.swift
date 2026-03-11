@@ -13,7 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isRecording = false
     private var isProcessing = false
     private var geminiEnabled = false
-    private var autoEnterEnabled = false
+    private var autoEnterEnabled = true
     private var btwEnabled = false
     private var hasPastedText = false
     private var lastRawTranscript: String?
