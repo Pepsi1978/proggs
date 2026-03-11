@@ -35,6 +35,7 @@ class RoundButton: NSView {
     var buttonColor: NSColor = .btnIdle { didSet { needsDisplay = true } }
     var label: String = "" { didSet { needsDisplay = true } }
     var labelFont: NSFont = .systemFont(ofSize: 16, weight: .bold)
+    var symbolImage: NSImage?
     var useSquareShape: Bool = false
     var onClick: (() -> Void)?
     var onMouseDown: (() -> Void)?
@@ -63,14 +64,29 @@ class RoundButton: NSView {
         buttonColor.setFill()
         path.fill()
 
-        let attrs: [NSAttributedString.Key: Any] = [
-            .foregroundColor: NSColor.white,
-            .font: labelFont
-        ]
-        let str = NSAttributedString(string: label, attributes: attrs)
-        let size = str.size()
-        let point = NSPoint(x: (bounds.width - size.width) / 2, y: (bounds.height - size.height) / 2)
-        str.draw(at: point)
+        if let img = symbolImage {
+            let imgSize = CGSize(width: bounds.width * 0.5, height: bounds.height * 0.5)
+            let imgRect = NSRect(
+                x: (bounds.width - imgSize.width) / 2,
+                y: (bounds.height - imgSize.height) / 2,
+                width: imgSize.width, height: imgSize.height
+            )
+            let tinted = img.copy() as! NSImage
+            tinted.lockFocus()
+            NSColor.white.set()
+            NSRect(origin: .zero, size: tinted.size).fill(using: .sourceAtop)
+            tinted.unlockFocus()
+            tinted.draw(in: imgRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+        } else {
+            let attrs: [NSAttributedString.Key: Any] = [
+                .foregroundColor: NSColor.white,
+                .font: labelFont
+            ]
+            let str = NSAttributedString(string: label, attributes: attrs)
+            let size = str.size()
+            let point = NSPoint(x: (bounds.width - size.width) / 2, y: (bounds.height - size.height) / 2)
+            str.draw(at: point)
+        }
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -147,11 +163,11 @@ final class OverlayPanel: NSPanel {
 
         // Create buttons
         xButton = RoundButton(label: "X", color: .btnX)
-        btwButton = RoundButton(label: "\u{1F3A4}", color: .btnBtwIdle)
-        btwButton.labelFont = .systemFont(ofSize: 18)
+        btwButton = RoundButton(label: "", color: .btnBtwIdle)
+        btwButton.symbolImage = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "BTW Microphone")
         btwButton.useSquareShape = true
-        micButton = RoundButton(label: "\u{1F3A4}", color: .btnMicIdle)
-        micButton.labelFont = .systemFont(ofSize: 18)
+        micButton = RoundButton(label: "", color: .btnMicIdle)
+        micButton.symbolImage = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Microphone")
         micButton.useSquareShape = true
         wButton = RoundButton(label: "W", color: .btnIdle)
         gButton = RoundButton(label: "G", color: .toggleOff)
