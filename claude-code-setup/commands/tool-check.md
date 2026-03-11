@@ -8,7 +8,7 @@ description: Systematic code health scanner that audits projects or individual f
 **Before doing ANYTHING, show the user this overview in German:**
 
 ```
-Tool-Check v1.1 — Code-Gesundheitscheck
+Tool-Check v1.2 — Code-Gesundheitscheck
 ========================================
 
 Was passiert jetzt:
@@ -49,6 +49,18 @@ You are performing a systematic code health check. This is not a quick lint — 
 
 The user is not a programmer. Explain everything in German, in simple terms, so they understand what you found and why it matters.
 
+## Available Tools (USE THEM)
+
+You have access to ALL installed plugins, skills, agents, and MCP servers during your analysis. Use them whenever they can help — for example:
+- **Serena** for semantic code analysis (symbol navigation, references, overview)
+- **Context7** for up-to-date library documentation
+- **LSP plugins** for type-checking, diagnostics, and go-to-definition
+- **WebSearch/WebFetch** for looking up deprecation notices, security advisories, or best practices
+- **Custom agents** (tester, code-reviewer, optimizer, debugger) as subagents for parallel analysis
+- Any other available tool that improves the quality or speed of the analysis
+
+Don't limit yourself to basic file reading — leverage the full toolset.
+
 ## Visibility Rules (CRITICAL)
 
 - NEVER run anything in the background (no `run_in_background`, no silent subagents)
@@ -77,28 +89,63 @@ Adjust the analysis depth based on the project size to stay effective:
 
 Always tell the user upfront: "Dein Projekt hat [N] Dateien — ich arbeite im [Klein/Mittel/Gross]-Modus."
 
+## Parallelization with Subagents
+
+Use parallel subagents to speed up the analysis. All agents work visibly in the foreground (never hidden/background).
+
+**Klein-Modus (single file or <10 files):** No subagents needed — analyze directly. The overhead of spawning agents outweighs the benefit.
+
+**Mittel/Gross-Modus (10+ files):**
+```
+→ Pre-Scan: Run linter + LSP in parallel tool calls (no agent needed)
+→ Then spawn 3 parallel analysis agents:
+  Agent 1: Loop 1 — Surface Scan (bugs, typos, security)
+  Agent 2: Loop 2 — Deep Analysis (race conditions, performance, leaks)
+  Agent 3: Loop 3 — Architecture & Creative (structure, language, ideas)
+→ Each agent gets: full file list, language info, pre-scan results
+→ Each agent returns: numbered findings in the standard format
+→ Merge all findings, deduplicate, renumber, present to user
+```
+
+**Rules for parallel loop agents:**
+- Each agent receives the FULL context: project files, language, pre-scan findings, and instructions for its specific loop
+- Agents must NOT duplicate findings — pass pre-scan results to all agents so they can skip already-found issues
+- After all agents return, merge findings and remove any cross-loop duplicates before presenting
+- If a project is a single file, skip subagents entirely — direct analysis is faster
+
+**Applying fixes** always happens in the main conversation (not in subagents), so the user can follow every change live.
+
 ## Pre-Scan: Automated Tool Check
 
 Before the manual loops, run available linters and LSP diagnostics to catch objective, tool-detectable issues automatically. This frees the manual loops to focus on what only human-like analysis can find.
 
-**Detect and run the appropriate tools based on the project language(s):**
+**Step A: Run linters based on the project language(s):**
 
 | Language | Linter / Formatter | Command |
 |----------|-------------------|---------|
 | Swift | swift-format, swiftlint | `swiftlint lint --quiet [path]` |
-| TypeScript/JS | Biome | `biome check [path]` |
+| TypeScript/JS | Biome | `biome check [path]` or `biome check --no-errors-on-unmatched [file]` for standalone files |
 | Go | golangci-lint | `golangci-lint run [path]` |
 | Rust | cargo clippy | `cargo clippy -- -W warnings` |
 | C# | dotnet format | `dotnet format --verify-no-changes [path]` |
 
-Also check for LSP diagnostics if available (errors, warnings reported by the language server).
+For standalone files without a project setup (e.g., Tampermonkey scripts, single .js files), run `biome check --no-errors-on-unmatched [file]` directly — Biome works with good defaults even without a config file.
 
-**After running tools:**
-- Collect all warnings and errors
-- Add them to the shared findings list, tagged as `[Auto]` so the user knows these came from tools
-- Briefly report: "Pre-Scan abgeschlossen — [N] automatische Findings. Starte Loop 1 (Oberflaeche)."
+**Step B: Collect LSP diagnostics (language-independent):**
 
-If no tools are available for the detected language, skip the pre-scan and note it: "Kein Linter fuer [Sprache] verfuegbar — starte direkt mit Loop 1."
+Use the LSP tool to check for diagnostics on each scanned file. All installed LSPs (TypeScript, Swift, Rust, Go, C#, etc.) can report:
+- Unused variables, functions, and imports
+- Type errors and type mismatches
+- Deprecated API usage
+- Unreachable code
+
+This step works for ANY language with an installed LSP and catches things linters miss (e.g., unused functions that are syntactically valid but dead code).
+
+**After running both steps:**
+- Combine linter + LSP findings into the shared list, tagged as `[Auto]`
+- Briefly report: "Pre-Scan abgeschlossen — [N] automatische Findings ([X] Linter, [Y] LSP). Starte Loop 1."
+
+If neither linters nor LSP are available, note it: "Kein automatisches Tool verfuegbar — starte direkt mit Loop 1."
 
 ## The 3-Loop Process
 
@@ -294,7 +341,15 @@ After the user selects items:
 3. Bump version numbers if the project uses versioned files (check for version patterns in file headers, package.json, Cargo.toml, Info.plist, etc.)
 4. Run any available tests or linters to verify fixes don't break functionality
 5. Commit and push (per CLAUDE.md automation rules)
-6. Report which fixes were applied and which were skipped
+6. Present a structured fix report:
+
+```
+## Fix-Bericht
+- Umgesetzt: [N] von [M] Findings (Punkte 1, 2, 3, ...)
+- Nicht umgesetzt: Punkte X, Y, Z (auf Wunsch des Benutzers)
+- Version: [alt] → [neu]
+- Commit: #NNN
+```
 
 ---
 
@@ -328,16 +383,27 @@ wc -l ~/.claude/commands/tool-check.md
 
 ### Step 3: Present Suggestions (NEVER auto-apply!)
 
+Each suggestion MUST use the detailed 3-part structure so the user can fully evaluate it:
+
 ```
 ## Meta-Verbesserung: Vorschlaege fuer Tool-Check
 
 ### Vorschlag 1: [Titel]
-**Was**: [Was soll geaendert werden]
-**Warum**: [Begruendung aus der Analyse]
-**Wo im Skill**: [Phase/Zeile die betroffen ist]
+
+**Was ist das Problem?**
+[Explain in plain German what currently happens and why it's suboptimal.
+Give a concrete example from the run that just happened. 3-5 sentences minimum.]
+
+**Was moechte ich aendern?**
+[Describe the specific change — what gets added, removed, or rewritten.
+Show before/after if applicable. 3-5 sentences minimum.]
+
+**Warum ist das nuetzlich?**
+[Explain the practical benefit. How does this save time, prevent errors,
+or improve quality? 2-3 sentences minimum.]
 
 ### Vorschlag 2: [Titel]
-...
+[same 3-part structure]
 
 ### Skill-Status
 - Aktuelle Zeilenzahl: [N]/600
@@ -346,7 +412,7 @@ wc -l ~/.claude/commands/tool-check.md
 Soll ich diese Aenderungen umsetzen? (Ja/Nein/Teilweise)
 ```
 
-**CRITICAL**: NEVER modify this skill file without explicit user approval. Only suggest, never auto-apply.
+**CRITICAL**: NEVER modify this skill file without explicit user approval. Only suggest, never auto-apply. The detailed 3-part format is non-negotiable — never fall back to short one-liners.
 
 ### Step 4: Apply (only after user says yes)
 
@@ -389,4 +455,4 @@ After the skill is modified, sync to the cross-platform repo:
 - NEVER create new GitHub repositories. ALL changes go to `Pepsi1978/proggs`.
 
 ---
-<!-- Skill Version: v1.1 | Date: 2026-03-11 | Last Meta-Improve: none | Lines: 392/600 -->
+<!-- Skill Version: v1.2 | Date: 2026-03-11 | Last Meta-Improve: 2026-03-11 | Lines: 458/600 -->
