@@ -43,11 +43,15 @@ class RoundButton: NSView {
         self.buttonColor = color
         super.init(frame: NSRect(x: 0, y: 0, width: diameter, height: diameter))
         wantsLayer = true
-        let trackingArea = NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways], owner: self)
-        addTrackingArea(trackingArea)
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        for area in trackingAreas { removeTrackingArea(area) }
+        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways], owner: self))
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         let path = NSBezierPath(ovalIn: bounds.insetBy(dx: 1, dy: 1))
@@ -130,16 +134,18 @@ final class OverlayPanel: NSPanel {
 
     init() {
         let btnSize: CGFloat = 40
+        let micSize: CGFloat = 52
         let gap: CGFloat = 8
-        let panelWidth: CGFloat = btnSize + 16
-        let panelHeight: CGFloat = btnSize * 6 + gap * 5 + 16
+        let panelWidth: CGFloat = micSize + 20
+        // Height: 4 small buttons + 2 large mic buttons + 5 gaps + padding
+        let panelHeight: CGFloat = btnSize * 4 + micSize * 2 + gap * 5 + 16
 
         // Create buttons
         xButton = RoundButton(label: "X", color: .btnX)
         btwButton = RoundButton(label: "\u{1F3A4}", color: .btnBtwIdle)
-        btwButton.labelFont = .systemFont(ofSize: 14)
+        btwButton.labelFont = .systemFont(ofSize: 18)
         micButton = RoundButton(label: "\u{1F3A4}", color: .btnMicIdle)
-        micButton.labelFont = .systemFont(ofSize: 14)
+        micButton.labelFont = .systemFont(ofSize: 18)
         wButton = RoundButton(label: "W", color: .btnIdle)
         gButton = RoundButton(label: "G", color: .toggleOff)
         enterButton = RoundButton(label: "\u{23CE}", color: .toggleOff)
@@ -182,14 +188,21 @@ final class OverlayPanel: NSPanel {
         self.contentView?.layer?.backgroundColor = NSColor(white: 0.12, alpha: 0.9).cgColor
 
         // Layout buttons vertically (in AppKit, y=0 is bottom)
-        // Bottom to top: Enter, G, Mic, BTW-Mic, W, X
-        let inset = (panelWidth - btnSize) / 2
-        enterButton.frame = NSRect(x: inset, y: 8, width: btnSize, height: btnSize)
-        gButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap), width: btnSize, height: btnSize)
-        micButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 2, width: btnSize, height: btnSize)
-        btwButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 3, width: btnSize, height: btnSize)
-        wButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 4, width: btnSize, height: btnSize)
-        xButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 5, width: btnSize, height: btnSize)
+        // Bottom to top: Enter, G, Mic(big), BTW-Mic(big), W, X
+        let smallInset = (panelWidth - btnSize) / 2
+        let micInset = (panelWidth - micSize) / 2
+        var yPos: CGFloat = 8
+        enterButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
+        yPos += btnSize + gap
+        gButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
+        yPos += btnSize + gap
+        micButton.frame = NSRect(x: micInset, y: yPos, width: micSize, height: micSize)
+        yPos += micSize + gap
+        btwButton.frame = NSRect(x: micInset, y: yPos, width: micSize, height: micSize)
+        yPos += micSize + gap
+        wButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
+        yPos += btnSize + gap
+        xButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
 
         self.contentView?.addSubview(xButton)
         self.contentView?.addSubview(btwButton)
