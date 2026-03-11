@@ -277,7 +277,7 @@ final class OverlayPanel: NSPanel {
                 self.stopBtwPulse()
                 self.btwButton.buttonColor = .btnBtwIdle
             case .recording:
-                self.btwButton.buttonColor = .btnBtwRecording
+                self.btwButton.buttonColor = .btnRecording
                 self.startBtwPulse()
             case .processing:
                 self.stopBtwPulse()
@@ -287,7 +287,7 @@ final class OverlayPanel: NSPanel {
                 self.btwButton.buttonColor = .btnSuccess
             case .error:
                 self.stopBtwPulse()
-                self.btwButton.buttonColor = .btnBtwRecording
+                self.btwButton.buttonColor = .btnRecording
             }
         }
     }
@@ -343,7 +343,7 @@ final class OverlayPanel: NSPanel {
         btwPulseTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             bright.toggle()
-            self.btwButton.buttonColor = bright ? .btnBtwPulse : .btnBtwRecording
+            self.btwButton.buttonColor = bright ? NSColor(hex: "#FF6666") : .btnRecording
         }
     }
 
