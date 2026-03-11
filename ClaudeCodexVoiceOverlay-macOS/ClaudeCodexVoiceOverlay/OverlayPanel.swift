@@ -8,6 +8,9 @@ private extension NSColor {
     static let btnSuccess = NSColor(hex: "#43A047")
     static let toggleOn = NSColor(hex: "#22c55e")
     static let toggleOff = NSColor(hex: "#2D2D2D")
+    static let toggleBtw = NSColor(hex: "#2196F3")
+    static let btnBtwRecording = NSColor(hex: "#1E88E5")
+    static let btnBtwPulse = NSColor(hex: "#64B5F6")
 
     convenience init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
@@ -73,6 +76,7 @@ class RoundButton: NSView {
 // MARK: - OverlayPanel
 final class OverlayPanel: NSPanel {
     let xButton: RoundButton
+    let btwButton: RoundButton
     let micButton: RoundButton
     let wButton: RoundButton
     let gButton: RoundButton
@@ -87,7 +91,10 @@ final class OverlayPanel: NSPanel {
     private var localRightMouseMonitor: Any?
     private static let positionKey = "claudeCodexOverlayPanelPosition"
 
+    var isBtwMode: Bool = false
+
     var onXClicked: (() -> Void)?
+    var onBtwClicked: (() -> Void)?
     var onMicClicked: (() -> Void)?
     var onWClicked: (() -> Void)?
     var onGClicked: (() -> Void)?
@@ -97,10 +104,11 @@ final class OverlayPanel: NSPanel {
         let btnSize: CGFloat = 40
         let gap: CGFloat = 8
         let panelWidth: CGFloat = btnSize + 16
-        let panelHeight: CGFloat = btnSize * 5 + gap * 4 + 16
+        let panelHeight: CGFloat = btnSize * 6 + gap * 5 + 16
 
         // Create buttons
         xButton = RoundButton(label: "X", color: .btnIdle)
+        btwButton = RoundButton(label: "?", color: .toggleOff)
         micButton = RoundButton(label: "\u{1F3A4}", color: .btnIdle)
         micButton.labelFont = .systemFont(ofSize: 14)
         wButton = RoundButton(label: "W", color: .btnIdle)
@@ -110,7 +118,7 @@ final class OverlayPanel: NSPanel {
         // Calculate screen position (right edge, vertically centered)
         let screenFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
         var x = screenFrame.maxX - panelWidth - 23
-        var y = screenFrame.midY - panelHeight / 2
+        var y = screenFrame.maxY - panelHeight - 58
 
         // Restore saved position if available
         if let savedPosition = UserDefaults.standard.dictionary(forKey: OverlayPanel.positionKey),
@@ -151,15 +159,18 @@ final class OverlayPanel: NSPanel {
         gButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap), width: btnSize, height: btnSize)
         wButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 2, width: btnSize, height: btnSize)
         micButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 3, width: btnSize, height: btnSize)
-        xButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 4, width: btnSize, height: btnSize)
+        btwButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 4, width: btnSize, height: btnSize)
+        xButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 5, width: btnSize, height: btnSize)
 
         self.contentView?.addSubview(xButton)
+        self.contentView?.addSubview(btwButton)
         self.contentView?.addSubview(micButton)
         self.contentView?.addSubview(wButton)
         self.contentView?.addSubview(gButton)
         self.contentView?.addSubview(enterButton)
 
         xButton.onClick = { [weak self] in self?.onXClicked?() }
+        btwButton.onClick = { [weak self] in self?.onBtwClicked?() }
         micButton.onClick = { [weak self] in self?.onMicClicked?() }
         wButton.onClick = { [weak self] in self?.onWClicked?() }
         gButton.onClick = { [weak self] in self?.onGClicked?() }
@@ -178,7 +189,7 @@ final class OverlayPanel: NSPanel {
                 self.stopPulse()
                 self.micButton.buttonColor = .btnIdle
             case .recording:
-                self.micButton.buttonColor = .btnRecording
+                self.micButton.buttonColor = self.isBtwMode ? .btnBtwRecording : .btnRecording
                 self.startPulse()
             case .processing:
                 self.stopPulse()
@@ -205,6 +216,13 @@ final class OverlayPanel: NSPanel {
         }
     }
 
+    func setBtwEnabled(_ enabled: Bool) {
+        DispatchQueue.main.async { [weak self] in
+            self?.isBtwMode = enabled
+            self?.btwButton.buttonColor = enabled ? .toggleBtw : .toggleOff
+        }
+    }
+
     // MARK: - Pulse Animation
 
     private func startPulse() {
@@ -213,7 +231,11 @@ final class OverlayPanel: NSPanel {
         pulseTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             bright.toggle()
-            self.micButton.buttonColor = bright ? NSColor(hex: "#FF6666") : .btnRecording
+            if self.isBtwMode {
+                self.micButton.buttonColor = bright ? .btnBtwPulse : .btnBtwRecording
+            } else {
+                self.micButton.buttonColor = bright ? NSColor(hex: "#FF6666") : .btnRecording
+            }
         }
     }
 
