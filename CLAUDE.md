@@ -7,6 +7,13 @@
 - Vor jeder Aktion kurz auf Deutsch erklaeren, was gleich passiert.
 - Nach jeder Aktion das Ergebnis zeigen, damit der Benutzer den Fortschritt verfolgen kann.
 
+## Einziges Repository (KRITISCH)
+- **ALLE Dateien gehoeren in `Pepsi1978/proggs`** — es gibt kein anderes Repo.
+- NIEMALS neue GitHub-Repos erstellen. Egal welches Projekt, welche Sprache, welcher Zweck.
+- Jeder Push geht ausschliesslich nach `Pepsi1978/proggs` — nirgendwo anders hin.
+- Neue Projekte werden als Unterordner in `~/proggs/` angelegt und in dasselbe Repo gepusht.
+- Lokaler Pfad: `~/proggs/` — GitHub: `https://github.com/Pepsi1978/proggs`
+
 ## Automatisierung & Workflow
 - Maximale Automatisierung: Nie nach Erlaubnis fragen fuer Standardaktionen (Build, Test, Commit, Push).
 - Committen und Pushen immer direkt machen — nicht vorher fragen.
@@ -33,9 +40,8 @@
 - Alle Projekte muessen reibungslos auf macOS und Windows funktionieren.
 - macOS: Swift/AppKit, Windows: C#/WPF.
 - Bei Cross-Platform-Features immer beide Plattformen beruecksichtigen.
-- Claude Code Konfiguration lebt in `~/proggs/claude-code-setup/` (GitHub: Pepsi1978/proggs/claude-code-setup/).
-- NIEMALS neue GitHub-Repos erstellen. ALLES gehoert in `Pepsi1978/proggs`.
-- Bei Aenderungen an Regeln, Agents, Commands oder Hooks: Immer auch nach `~/proggs/claude-code-setup/` kopieren und zu `Pepsi1978/proggs` pushen.
+- Claude Code Konfiguration lebt in `~/proggs/claude-code-setup/`.
+- Bei Aenderungen an Regeln, Agents, Commands oder Hooks: Immer auch nach `~/proggs/claude-code-setup/` kopieren und pushen.
 - UI-Design: Modern, poliert, professionell — muss aussehen wie gekaufte Software aus dem Laden.
 - KEIN Python fuer GUIs oder Desktop-Apps. Python so weit wie moeglich vermeiden.
 - Wenn Python unvermeidbar ist (z.B. ML-Backend): IMMER vorher den Benutzer fragen und erklaeren ob der Python-Code sichtbar oder unsichtbar (Backend) ist. Nie stillschweigend Python einsetzen.
