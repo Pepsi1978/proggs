@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using TerminalVoiceOverlay.NativeMethods;
 
@@ -14,8 +15,14 @@ namespace TerminalVoiceOverlay.Services
         /// </summary>
         public static void PasteText(string text, IntPtr terminalHwnd, bool autoEnter = false)
         {
-            // Set clipboard on UI thread
-            Application.Current.Dispatcher.Invoke(() => Clipboard.SetText(text));
+            // Save previous clipboard content
+            string? previousClipboard = null;
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                if (Clipboard.ContainsText())
+                    previousClipboard = Clipboard.GetText();
+                Clipboard.SetText(text);
+            });
 
             // Bring terminal to foreground
             if (terminalHwnd != IntPtr.Zero)
@@ -26,20 +33,27 @@ namespace TerminalVoiceOverlay.Services
 
             // Send Ctrl+V
             SendCtrlV();
-            Console.WriteLine($"TerminalController: Text eingefügt (hwnd={terminalHwnd})");
 
             // Send Enter if auto-enter is enabled
             if (autoEnter)
             {
-                Thread.Sleep(500);
-                // Re-focus terminal before Enter
+                Thread.Sleep(300); // Reduced from 500ms
                 if (terminalHwnd != IntPtr.Zero)
                 {
                     Win32.SetForegroundWindow(terminalHwnd);
                     Thread.Sleep(100);
                 }
                 SendKey(VK_RETURN);
-                Console.WriteLine("TerminalController: Enter gesendet (Auto-Enter)");
+            }
+
+            // Restore previous clipboard after paste completes
+            if (previousClipboard != null)
+            {
+                var prev = previousClipboard;
+                Task.Delay(500).ContinueWith(_ =>
+                {
+                    Application.Current.Dispatcher.Invoke(() => Clipboard.SetText(prev));
+                });
             }
         }
 
@@ -70,7 +84,6 @@ namespace TerminalVoiceOverlay.Services
                 Win32.keybd_event(VK_BACKSPACE, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
             }
 
-            Console.WriteLine("TerminalController: Zeile gelöscht");
         }
 
         private const byte VK_END = 0x23;
@@ -84,7 +97,6 @@ namespace TerminalVoiceOverlay.Services
             Win32.keybd_event((byte)Win32.VK_V, 0, 0, UIntPtr.Zero);
             Win32.keybd_event((byte)Win32.VK_V, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
             Win32.keybd_event((byte)Win32.VK_CONTROL, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            Console.WriteLine("TerminalController: Ctrl+V gesendet (keybd_event)");
         }
 
         private static void SendKey(ushort vk)
