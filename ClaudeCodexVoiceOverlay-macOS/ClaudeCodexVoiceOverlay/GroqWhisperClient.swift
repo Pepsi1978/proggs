@@ -13,11 +13,11 @@ final class GroqWhisperClient {
 
     func transcribe(fileURL: URL, completion: @escaping (Result<String, Error>) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async { [self] in
-            self.transcribeSync(fileURL: fileURL, attempt: 0, completion: completion)
+            self.sendRequest(fileURL: fileURL, attempt: 0, completion: completion)
         }
     }
 
-    private func transcribeSync(fileURL: URL, attempt: Int, completion: @escaping (Result<String, Error>) -> Void) {
+    private func sendRequest(fileURL: URL, attempt: Int, completion: @escaping (Result<String, Error>) -> Void) {
         guard let audioData = try? Data(contentsOf: fileURL) else {
             completion(.failure(APIError.fileReadError))
             return
@@ -38,16 +38,16 @@ final class GroqWhisperClient {
             ("temperature", "0"),
         ]
         for (key, value) in fields {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(value)\r\n".data(using: .utf8)!)
+            body.append(Data("--\(boundary)\r\n".utf8))
+            body.append(Data("Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n".utf8))
+            body.append(Data("\(value)\r\n".utf8))
         }
         // File part
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"recording.wav\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: audio/wav\r\n\r\n".data(using: .utf8)!)
+        body.append(Data("--\(boundary)\r\n".utf8))
+        body.append(Data("Content-Disposition: form-data; name=\"file\"; filename=\"recording.wav\"\r\n".utf8))
+        body.append(Data("Content-Type: audio/wav\r\n\r\n".utf8))
         body.append(audioData)
-        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        body.append(Data("\r\n--\(boundary)--\r\n".utf8))
 
         request.httpBody = body
 
@@ -68,9 +68,10 @@ final class GroqWhisperClient {
 
             if self.retryableStatusCodes.contains(statusCode) && attempt < self.maxRetries {
                 let delay = self.delays[attempt]
-                NSLog("Groq %d - Versuch %d/%d, warte %.0fs...", statusCode, attempt + 1, self.maxRetries, delay)
-                Thread.sleep(forTimeInterval: delay)
-                self.transcribeSync(fileURL: fileURL, attempt: attempt + 1, completion: completion)
+                NSLog("Groq %d - retry %d/%d, waiting %.0fs...", statusCode, attempt + 1, self.maxRetries, delay)
+                DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay) {
+                    self.sendRequest(fileURL: fileURL, attempt: attempt + 1, completion: completion)
+                }
                 return
             }
 
