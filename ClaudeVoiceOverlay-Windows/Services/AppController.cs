@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using ClaudeVoiceOverlay.NativeMethods;
 
@@ -16,6 +17,14 @@ namespace ClaudeVoiceOverlay.Services
         /// </summary>
         public static void PasteText(string text, IntPtr appHwnd, bool autoEnter = false)
         {
+            // Save previous clipboard content before overwriting
+            string previousClipboard = null;
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                if (Clipboard.ContainsText())
+                    previousClipboard = Clipboard.GetText();
+            });
+
             // Set clipboard on UI thread
             Application.Current.Dispatcher.Invoke(() => Clipboard.SetText(text));
 
@@ -30,18 +39,27 @@ namespace ClaudeVoiceOverlay.Services
             try
             {
                 System.Windows.Forms.SendKeys.SendWait("^v");
-                Console.WriteLine($"AppController: Text eingefuegt via SendKeys (hwnd={appHwnd})");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"AppController: SendKeys fehlgeschlagen ({ex.Message}), verwende keybd_event Fallback");
+                Console.WriteLine($"AppController: SendKeys failed ({ex.Message}), using keybd_event fallback");
                 SendCtrlVFallback();
+            }
+
+            // Restore previous clipboard asynchronously after 500ms
+            if (previousClipboard != null)
+            {
+                var prev = previousClipboard;
+                Task.Delay(500).ContinueWith(_ =>
+                {
+                    Application.Current.Dispatcher.Invoke(() => Clipboard.SetText(prev));
+                });
             }
 
             // Send Enter if auto-enter is enabled
             if (autoEnter)
             {
-                Thread.Sleep(500);
+                Thread.Sleep(300);
                 // Re-focus app before Enter
                 if (appHwnd != IntPtr.Zero)
                 {
@@ -49,7 +67,6 @@ namespace ClaudeVoiceOverlay.Services
                     Thread.Sleep(100);
                 }
                 SendKey(VK_RETURN);
-                Console.WriteLine("AppController: Enter gesendet (Auto-Enter)");
             }
         }
 
@@ -73,11 +90,10 @@ namespace ClaudeVoiceOverlay.Services
 
                 // Delete selected text
                 System.Windows.Forms.SendKeys.SendWait("{BACKSPACE}");
-                Console.WriteLine("AppController: Eingabe geloescht via SendKeys");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"AppController: SendKeys fehlgeschlagen ({ex.Message}), verwende keybd_event Fallback");
+                Console.WriteLine($"AppController: SendKeys failed ({ex.Message}), using keybd_event fallback");
                 ClearInputFallback();
             }
         }
@@ -89,7 +105,6 @@ namespace ClaudeVoiceOverlay.Services
             Win32.keybd_event((byte)Win32.VK_V, 0, 0, UIntPtr.Zero);
             Win32.keybd_event((byte)Win32.VK_V, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
             Win32.keybd_event((byte)Win32.VK_CONTROL, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            Console.WriteLine("AppController: Ctrl+V gesendet (keybd_event Fallback)");
         }
 
         private static void ClearInputFallback()
@@ -106,7 +121,6 @@ namespace ClaudeVoiceOverlay.Services
 
             Win32.keybd_event(VK_BACKSPACE, 0, 0, UIntPtr.Zero);
             Win32.keybd_event(VK_BACKSPACE, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            Console.WriteLine("AppController: Eingabe geloescht (keybd_event Fallback)");
         }
 
         private static void SendKey(byte vk)
