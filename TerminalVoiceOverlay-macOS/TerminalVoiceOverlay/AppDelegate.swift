@@ -14,7 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isProcessing = false
     private var geminiEnabled = false
     private var autoEnterEnabled = true
-    private var btwEnabled = false
+    private var isBtwRecording = false
     private var hasPastedText = false
     private var lastRawTranscript: String?
     private var resetTimer: Timer?
@@ -68,7 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.onMicClicked = { [weak self] in self?.toggleRecording() }
         panel.onWClicked = { [weak self] in self?.whisperUndo() }
         panel.onGClicked = { [weak self] in self?.toggleGemini() }
-        panel.onBtwClicked = { [weak self] in self?.toggleBtw() }
+        panel.onBtwClicked = { [weak self] in self?.toggleBtwRecording() }
         panel.onEnterClicked = { [weak self] in self?.handleEnterClick() }
 
         // Setup menu bar icon
@@ -118,26 +118,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.terminate(nil)
     }
 
-    // MARK: - Recording
+    // MARK: - Regular Mic Recording
 
     private func toggleRecording() {
         if isProcessing { return }
         if isRecording {
             stopRecording()
         } else {
-            startRecording()
+            startRecording(btw: false)
         }
     }
 
-    private func startRecording() {
-        panel.isBtwMode = btwEnabled
+    // MARK: - BTW Mic Recording
+
+    private func toggleBtwRecording() {
+        if isProcessing { return }
+        if isRecording && isBtwRecording {
+            stopRecording()
+        } else if isRecording && !isBtwRecording {
+            // Regular recording in progress — ignore BTW click
+            return
+        } else {
+            startRecording(btw: true)
+        }
+    }
+
+    private func startRecording(btw: Bool) {
+        isBtwRecording = btw
         do {
             try audioRecorder.start()
             isRecording = true
-            panel.setMicState(.recording)
-            // Audio feedback: beep on start
+            if btw {
+                panel.setBtwMicState(.recording)
+            } else {
+                panel.setMicState(.recording)
+            }
             NSSound.beep()
-            NSLog("Aufnahme gestartet")
+            NSLog("Aufnahme gestartet (BTW: %@)", btw ? "JA" : "NEIN")
         } catch {
             NSLog("Mikrofon-Fehler: %@", error.localizedDescription)
             pasteError("Mikrofon nicht verfuegbar — \(error.localizedDescription)")
@@ -147,20 +164,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func stopRecording() {
         isRecording = false
         isProcessing = true
-        panel.setMicState(.processing)
+        let wasBtw = isBtwRecording
 
-        // Stop recording on background thread to avoid blocking UI
+        if wasBtw {
+            panel.setBtwMicState(.processing)
+        } else {
+            panel.setMicState(.processing)
+        }
+
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             guard let fileURL = self.audioRecorder.stop() else {
                 DispatchQueue.main.async {
                     self.isProcessing = false
-                    self.panel.setMicState(.idle)
+                    if wasBtw {
+                        self.panel.setBtwMicState(.idle)
+                    } else {
+                        self.panel.setMicState(.idle)
+                    }
                 }
                 return
             }
 
-            // Audio feedback: double beep on stop (on main thread)
+            // Audio feedback: double beep on stop
             DispatchQueue.main.async {
                 NSSound.beep()
             }
@@ -170,26 +196,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSLog("Aufnahme gestoppt, transkribiere...")
 
             self.groqClient.transcribe(fileURL: fileURL) { [weak self] result in
-                // Clean up temp file
                 try? FileManager.default.removeItem(at: fileURL)
 
                 switch result {
                 case .success(let transcript):
                     NSLog("Transkription: %@", transcript)
                     self?.lastRawTranscript = transcript
-                    self?.handleTranscript(transcript)
+                    self?.handleTranscript(transcript, wasBtw: wasBtw)
                 case .failure(let error):
                     NSLog("Transkriptionsfehler: %@", error.localizedDescription)
                     let msg = Self.describeTranscriptionError(error)
                     DispatchQueue.main.async {
-                        self?.pasteError(msg)
+                        self?.pasteError(msg, wasBtw: wasBtw)
                     }
                 }
             }
         }
     }
 
-    private func handleTranscript(_ transcript: String) {
+    private func handleTranscript(_ transcript: String, wasBtw: Bool) {
         if geminiEnabled, let geminiClient = geminiClient {
             NSLog("Gemini-Korrektur...")
             geminiClient.correctText(transcript) { [weak self] result in
@@ -197,46 +222,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     switch result {
                     case .success(let corrected):
                         NSLog("Korrigiert: %@", corrected)
-                        self?.insertText(corrected)
+                        self?.insertText(corrected, wasBtw: wasBtw)
                     case .failure(let error):
                         NSLog("Gemini-Fehler: %@, verwende Rohtext", error.localizedDescription)
                         let hint = Self.describeGeminiError(error)
-                        self?.insertText("\(transcript) # [VoiceOverlay] \(hint)")
+                        self?.insertText("\(transcript) # [VoiceOverlay] \(hint)", wasBtw: wasBtw)
                     }
                 }
             }
         } else {
             DispatchQueue.main.async { [weak self] in
-                self?.insertText(transcript)
+                self?.insertText(transcript, wasBtw: wasBtw)
             }
         }
     }
 
-    private func insertText(_ text: String) {
-        // Prepend /btw prefix if BTW mode is active (one-shot)
+    private func insertText(_ text: String, wasBtw: Bool) {
         var finalText = text
-        if btwEnabled {
+        if wasBtw {
             finalText = "/btw " + finalText
-            btwEnabled = false
-            panel.setBtwEnabled(false)
-            NSLog("BTW-Modus automatisch deaktiviert")
+            isBtwRecording = false
         } else if hasPastedText {
             finalText = " " + finalText
         }
 
         TerminalController.pasteText(finalText, autoEnter: autoEnterEnabled)
         isProcessing = false
-        panel.setMicState(.success)
+
+        if wasBtw {
+            panel.setBtwMicState(.success)
+        } else {
+            panel.setMicState(.success)
+        }
         NSLog("Text eingefuegt")
 
-        // Track paste state: reset after Enter, keep for next paste
         if autoEnterEnabled {
             hasPastedText = false
         } else {
             hasPastedText = true
         }
 
-        scheduleReset()
+        scheduleReset(wasBtw: wasBtw)
     }
 
     // MARK: - Error Feedback
@@ -244,7 +270,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static func describeTranscriptionError(_ error: Error) -> String {
         let nsError = error as NSError
 
-        // Network connectivity issues
         if nsError.domain == NSURLErrorDomain {
             switch nsError.code {
             case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
@@ -260,7 +285,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // Groq API errors (from GroqWhisperClient)
         if let apiError = error as? GroqWhisperClient.APIError {
             switch apiError {
             case .fileReadError:
@@ -313,11 +337,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return "Gemini-Korrektur fehlgeschlagen — Rohtext verwendet"
     }
 
-    private func pasteError(_ message: String) {
-        // Deactivate BTW on error (one-shot behavior)
-        if btwEnabled {
-            btwEnabled = false
-            panel.setBtwEnabled(false)
+    private func pasteError(_ message: String, wasBtw: Bool = false) {
+        if wasBtw {
+            isBtwRecording = false
         }
         let errorText = "# [VoiceOverlay] FEHLER: \(message)"
         NSLog("Fehler ins Terminal eingefuegt: %@", errorText)
@@ -328,8 +350,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         hasPastedText = false
         isProcessing = false
-        panel.setMicState(.error)
-        scheduleReset()
+        if wasBtw {
+            panel.setBtwMicState(.error)
+        } else {
+            panel.setMicState(.error)
+        }
+        scheduleReset(wasBtw: wasBtw)
     }
 
     // MARK: - Clear Line
@@ -346,10 +372,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func whisperUndo() {
         guard let rawTranscript = lastRawTranscript else { return }
 
-        // Clear the current line, then paste raw transcript after short delay
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             TerminalController.clearLine()
-            usleep(100_000) // 100ms for terminal to process Ctrl+C
+            usleep(100_000)
             TerminalController.pasteText(rawTranscript)
             DispatchQueue.main.async {
                 self?.hasPastedText = true
@@ -367,24 +392,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSLog("Gemini %@", geminiEnabled ? "AN" : "AUS")
     }
 
-    // MARK: - BTW Toggle
-
-    private func toggleBtw() {
-        btwEnabled.toggle()
-        panel.setBtwEnabled(btwEnabled)
-        NSLog("BTW %@", btwEnabled ? "AN" : "AUS")
-    }
-
     // MARK: - Auto-Enter Toggle & Manual Enter
 
     private func handleEnterClick() {
         if autoEnterEnabled {
-            // AN → ausschalten
             autoEnterEnabled = false
             panel.setAutoEnterEnabled(autoEnterEnabled)
             NSLog("Auto-Enter AUS")
         } else {
-            // AUS → einschalten UND sofort Enter senden
             autoEnterEnabled = true
             panel.setAutoEnterEnabled(autoEnterEnabled)
             NSLog("Auto-Enter AN + Enter gesendet")
@@ -398,10 +413,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Reset Timer
 
-    private func scheduleReset() {
+    private func scheduleReset(wasBtw: Bool = false) {
         resetTimer?.invalidate()
         resetTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
-            self?.panel.setMicState(.idle)
+            if wasBtw {
+                self?.panel.setBtwMicState(.idle)
+            } else {
+                self?.panel.setMicState(.idle)
+            }
         }
     }
 }

@@ -8,9 +8,9 @@ private extension NSColor {
     static let btnSuccess = NSColor(hex: "#43A047")
     static let toggleOn = NSColor(hex: "#22c55e")
     static let toggleOff = NSColor(hex: "#2D2D2D")
-    static let toggleBtw = NSColor(hex: "#2196F3")
+    static let btnBtwIdle = NSColor(hex: "#64B5F6")
     static let btnBtwRecording = NSColor(hex: "#1E88E5")
-    static let btnBtwPulse = NSColor(hex: "#64B5F6")
+    static let btnBtwPulse = NSColor(hex: "#90CAF9")
     static let btnX = NSColor(hex: "#E53935")
     static let btnXPressed = NSColor(hex: "#FF6666")
     static let btnMicIdle = NSColor(hex: "#FFE082")
@@ -110,6 +110,7 @@ final class OverlayPanel: NSPanel {
     let gButton: RoundButton
     let enterButton: RoundButton
     private var pulseTimer: Timer?
+    private var btwPulseTimer: Timer?
 
     // Right-click drag state
     private var isDragging = false
@@ -118,8 +119,6 @@ final class OverlayPanel: NSPanel {
     private var globalRightMouseMonitor: Any?
     private var localRightMouseMonitor: Any?
     private static let positionKey = "claudeCodexOverlayPanelPosition"
-
-    var isBtwMode: Bool = false
 
     var onXClicked: (() -> Void)?
     var onBtwClicked: (() -> Void)?
@@ -136,14 +135,15 @@ final class OverlayPanel: NSPanel {
 
         // Create buttons
         xButton = RoundButton(label: "X", color: .btnX)
-        btwButton = RoundButton(label: "?", color: .toggleOff)
+        btwButton = RoundButton(label: "\u{1F3A4}", color: .btnBtwIdle)
+        btwButton.labelFont = .systemFont(ofSize: 14)
         micButton = RoundButton(label: "\u{1F3A4}", color: .btnMicIdle)
         micButton.labelFont = .systemFont(ofSize: 14)
         wButton = RoundButton(label: "W", color: .btnIdle)
         gButton = RoundButton(label: "G", color: .toggleOff)
         enterButton = RoundButton(label: "\u{23CE}", color: .toggleOff)
 
-        // Calculate screen position (right edge, vertically centered)
+        // Calculate screen position (right edge, bottom)
         let screenFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
         var x = screenFrame.maxX - panelWidth - 23
         var y = screenFrame.minY + 24
@@ -181,7 +181,7 @@ final class OverlayPanel: NSPanel {
         self.contentView?.layer?.backgroundColor = NSColor(white: 0.12, alpha: 0.9).cgColor
 
         // Layout buttons vertically (in AppKit, y=0 is bottom)
-        // Bottom to top: Enter, G, W, Mic, X
+        // Bottom to top: Enter, G, W, Mic, BTW-Mic, X
         let inset = (panelWidth - btnSize) / 2
         enterButton.frame = NSRect(x: inset, y: 8, width: btnSize, height: btnSize)
         gButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap), width: btnSize, height: btnSize)
@@ -217,7 +217,7 @@ final class OverlayPanel: NSPanel {
                 self.stopPulse()
                 self.micButton.buttonColor = .btnMicIdle
             case .recording:
-                self.micButton.buttonColor = self.isBtwMode ? .btnBtwRecording : .btnRecording
+                self.micButton.buttonColor = .btnRecording
                 self.startPulse()
             case .processing:
                 self.stopPulse()
@@ -228,6 +228,29 @@ final class OverlayPanel: NSPanel {
             case .error:
                 self.stopPulse()
                 self.micButton.buttonColor = .btnRecording
+            }
+        }
+    }
+
+    func setBtwMicState(_ state: MicState) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            switch state {
+            case .idle:
+                self.stopBtwPulse()
+                self.btwButton.buttonColor = .btnBtwIdle
+            case .recording:
+                self.btwButton.buttonColor = .btnBtwRecording
+                self.startBtwPulse()
+            case .processing:
+                self.stopBtwPulse()
+                self.btwButton.buttonColor = .btnProcessing
+            case .success:
+                self.stopBtwPulse()
+                self.btwButton.buttonColor = .btnSuccess
+            case .error:
+                self.stopBtwPulse()
+                self.btwButton.buttonColor = .btnBtwRecording
             }
         }
     }
@@ -254,14 +277,7 @@ final class OverlayPanel: NSPanel {
         }
     }
 
-    func setBtwEnabled(_ enabled: Bool) {
-        DispatchQueue.main.async { [weak self] in
-            self?.isBtwMode = enabled
-            self?.btwButton.buttonColor = enabled ? .toggleBtw : .toggleOff
-        }
-    }
-
-    // MARK: - Pulse Animation
+    // MARK: - Mic Pulse Animation
 
     private func startPulse() {
         stopPulse()
@@ -269,17 +285,30 @@ final class OverlayPanel: NSPanel {
         pulseTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             bright.toggle()
-            if self.isBtwMode {
-                self.micButton.buttonColor = bright ? .btnBtwPulse : .btnBtwRecording
-            } else {
-                self.micButton.buttonColor = bright ? NSColor(hex: "#FF6666") : .btnRecording
-            }
+            self.micButton.buttonColor = bright ? NSColor(hex: "#FF6666") : .btnRecording
         }
     }
 
     private func stopPulse() {
         pulseTimer?.invalidate()
         pulseTimer = nil
+    }
+
+    // MARK: - BTW Pulse Animation
+
+    private func startBtwPulse() {
+        stopBtwPulse()
+        var bright = false
+        btwPulseTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            bright.toggle()
+            self.btwButton.buttonColor = bright ? .btnBtwPulse : .btnBtwRecording
+        }
+    }
+
+    private func stopBtwPulse() {
+        btwPulseTimer?.invalidate()
+        btwPulseTimer = nil
     }
 
     // MARK: - Right-click drag to reposition
