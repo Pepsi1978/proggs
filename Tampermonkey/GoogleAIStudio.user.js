@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         AI Studio V.1.4.6
+// @name         AI Studio V.1.4.7
 // @namespace    https://aistudio.google.com/prompts/new_chat
-// @version      1.4.6
+// @version      1.4.7
 // @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/GoogleAIStudio.user.js
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/GoogleAIStudio.user.js
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf ChatGPT. Mic-Button unten links. Zwei Prompt-Builder Buttons (Frank + für jedermann) über dem Mic. Kein stilles Fallback. Mit Output-Preview.
@@ -25,8 +25,8 @@
   "use strict";
         // ── CSS für Mikrofon-Button Animationen (mit Fehlerbehandlung) ──
     try {
-      (function(){if(document.getElementById("stt-mic-css"))return;var s=document.createElement("style");s.id="stt-mic-css";s.textContent=".stt-mic-btn{display:flex!important;align-items:center!important;justify-content:center!important;padding:0!important;transition:background .25s,transform .15s,box-shadow .25s!important}.stt-mic-btn:active{transform:scale(.93)!important}.stt-mic-btn[data-state=idle]{background:#2563eb!important;color:#fff!important;border-color:#2563eb!important}.stt-mic-btn[data-state=idle]:hover{background:#1d4ed8!important;transform:scale(1.15)!important}.stt-mic-btn[data-state=listening]{background:#dc2626!important;color:#fff!important;border-color:#dc2626!important;animation:stt-pulse 1.4s ease-in-out infinite!important}.stt-mic-btn[data-state=working]{background:#d97706!important;color:#fff!important;border-color:#d97706!important}.stt-mic-btn[data-state=error]{background:#8b0000!important;color:#fff!important;border-color:#8b0000!important}@keyframes stt-pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.45)}50%{box-shadow:0 0 0 14px rgba(220,38,38,0)}}.stt-mic-btn[data-state=working] svg{animation:stt-spin .8s linear infinite}@keyframes stt-spin{to{transform:rotate(360deg)}}#stt-live-preview{position:fixed;bottom:410px;left:16px;max-width:420px;min-width:180px;padding:10px 14px;background:rgba(0,0,0,.88);color:#fff;border-radius:10px;font-size:14px;line-height:1.5;z-index:2147483646;box-shadow:0 4px 20px rgba(0,0,0,.3);max-height:180px;overflow-y:auto;word-wrap:break-word;transition:opacity .25s}#stt-live-preview .stt-pv-label{font-size:11px;color:#aaa;margin-bottom:4px;letter-spacing:.4px}#stt-live-preview .stt-pv-interim{color:#9ca3af;font-style:italic}#stt-live-preview .stt-pv-final{color:#fff}#stt-live-preview .stt-pv-waiting{color:#fbbf24;font-style:italic}";try{(document.head||document.documentElement).appendChild(s);}catch(e){document.documentElement.appendChild(s);}})();
-    } catch(e) { /* CSS-Animation nicht verfügbar, Buttons funktionieren trotzdem */ }
+      (function(){if(document.getElementById("stt-mic-css"))return;var s=document.createElement("style");s.id="stt-mic-css";s.textContent=".stt-mic-btn{display:flex!important;align-items:center!important;justify-content:center!important;padding:0!important;transition:background .25s,transform .15s,box-shadow .25s!important}.stt-mic-btn:active{transform:scale(.93)!important}.stt-mic-btn[data-state=idle]{background:#2563eb!important;color:#fff!important;border-color:#2563eb!important}.stt-mic-btn[data-state=idle]:hover{background:#1d4ed8!important;transform:scale(1.15)!important}.stt-mic-btn[data-state=listening]{background:#dc2626!important;color:#fff!important;border-color:#dc2626!important;animation:stt-pulse 1.4s ease-in-out infinite!important}.stt-mic-btn[data-state=working]{background:#d97706!important;color:#fff!important;border-color:#d97706!important}.stt-mic-btn[data-state=error]{background:#8b0000!important;color:#fff!important;border-color:#8b0000!important}@keyframes stt-pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.45)}50%{box-shadow:0 0 0 14px rgba(220,38,38,0)}}.stt-mic-btn[data-state=working] svg{animation:stt-spin .8s linear infinite}@keyframes stt-spin{to{transform:rotate(360deg)}}#stt-live-preview{position:fixed;bottom:410px;left:16px;max-width:420px;min-width:180px;padding:10px 14px;background:rgba(0,0,0,.88);color:#fff;border-radius:10px;font-size:14px;line-height:1.5;z-index:2147483646;box-shadow:0 4px 20px rgba(0,0,0,.3);max-height:180px;overflow-y:auto;word-wrap:break-word;transition:opacity .25s}#stt-live-preview .stt-pv-label{font-size:11px;color:#aaa;margin-bottom:4px;letter-spacing:.4px}#stt-live-preview .stt-pv-interim{color:#9ca3af;font-style:italic}#stt-live-preview .stt-pv-final{color:#fff}#stt-live-preview .stt-pv-waiting{color:#fbbf24;font-style:italic}";try{(document.head||document.documentElement).appendChild(s);}catch(_e){document.documentElement.appendChild(s);}})();
+    } catch(_e) { /* CSS-Animation nicht verfügbar, Buttons funktionieren trotzdem */ }
 
 
   // ============================================================
@@ -43,7 +43,7 @@
   // ============================================================
   const UI_POS = { leftPx: 27, bottomPx: 124 };
   // Android/Edge Mobile-Erkennung (für angepasste Restart-Delays)
-  const isMobileAndroid = /Android/i.test(navigator.userAgent);
+  const _isMobileAndroid = /Android/i.test(navigator.userAgent);
 
 
   // ============================================================
@@ -51,11 +51,11 @@
   // ============================================================
   function getGroqKey() {
     let key = "";
-    try { key = String(GM_getValue("groqKey", "") || ""); } catch {}
+    try { key = String(GM_getValue("groqKey", "") || ""); } catch { /* GM API unavailable */ }
     key = key.trim();
     if (!key) {
       key = (prompt("Bitte Groq API-Key eingeben (kostenlos auf groq.com, wird nur lokal in Tampermonkey gespeichert):") || "").trim();
-      if (key) { try { GM_setValue("groqKey", key); } catch {} }
+      if (key) { try { GM_setValue("groqKey", key); } catch { /* GM API unavailable */ } }
     }
     return key;
   }
@@ -139,11 +139,11 @@
   toast.style.color = "white";
   toast.style.display = "none";
   toast.style.whiteSpace = "pre-wrap";
-  try { if (document.body) document.body.appendChild(toast); } catch(e) {}
+  try { if (document.body) document.body.appendChild(toast); } catch { /* DOM not ready */ }
 
   let toastTimer = null;
   function showToast(msg, ms = 5500) {
-    if (!toast.isConnected && document.body) { try { document.body.appendChild(toast); } catch(e) {} }
+    if (!toast.isConnected && document.body) { try { document.body.appendChild(toast); } catch { /* DOM not ready */ } }
     clearTimeout(toastTimer);
     toast.textContent = msg;
     toast.style.display = "block";
@@ -342,6 +342,7 @@ function isEditableTarget(el) {
   if (el === document.body || el === document.documentElement) return false;
 
   // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
+  // eslint-disable-next-line no-undef
   if ((typeof micBtn !== "undefined" && el === micBtn) || (typeof geminiToggleBtn !== "undefined" && el === geminiToggleBtn) || (typeof clearBtn !== "undefined" && el === clearBtn) || (typeof promptBtn !== "undefined" && el === promptBtn) || (typeof promptBtn2 !== "undefined" && el === promptBtn2) || (typeof memBtn !== "undefined" && el === memBtn)) return false;
 
   const tag = (el.tagName || "").toUpperCase();
@@ -444,11 +445,11 @@ document.addEventListener("click", (e) => rememberEditable(pickEditableFromEvent
   // React/Input Events
   // ============================================================
   function dispatchReactInput(el, inputType, data) {
-    try { el.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, inputType, data })); } catch {}
+    try { el.dispatchEvent(new InputEvent("beforeinput", { bubbles: true, cancelable: true, inputType, data })); } catch { /* browser compat */ }
     try { el.dispatchEvent(new InputEvent("input", { bubbles: true, inputType, data })); } catch {
-      try { el.dispatchEvent(new Event("input", { bubbles: true })); } catch {}
+      try { el.dispatchEvent(new Event("input", { bubbles: true })); } catch { /* fallback failed */ }
     }
-    try { el.dispatchEvent(new Event("change", { bubbles: true })); } catch {}
+    try { el.dispatchEvent(new Event("change", { bubbles: true })); } catch { /* ignore */ }
   }
 
   function dispatchKey(el, type, key) {

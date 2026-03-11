@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Notebook LM V.1.4.0
+// @name         Notebook LM V.1.4.1
 // @namespace    https://www.notebooklm.google.com/
-// @version      1.4.0
+// @version      1.4.1
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf Google Search. Mic-Button fest unten links. Kein stilles Fallback. Mit Output-Preview.
 // @match        https://notebooklm.google.com/*
 // @run-at       document-idle
@@ -303,6 +303,7 @@ function isEditableTarget(el) {
   if (el === document.body || el === document.documentElement) return false;
 
   // niemals unsere eigenen UI-Buttons als Eingabefeld nehmen
+  // eslint-disable-next-line no-undef
   if ((typeof micBtn !== "undefined" && el === micBtn) || (typeof geminiToggleBtn !== "undefined" && el === geminiToggleBtn) || (typeof clearBtn !== "undefined" && el === clearBtn) || (typeof promptBtn !== "undefined" && el === promptBtn) || (typeof promptBtn2 !== "undefined" && el === promptBtn2) || (typeof memBtn !== "undefined" && el === memBtn)) return false;
 
   const tag = (el.tagName || "").toUpperCase();
