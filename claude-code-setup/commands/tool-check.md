@@ -8,43 +8,44 @@ description: Systematic code health scanner that audits projects or individual f
 **Before doing ANYTHING, show the user this overview in German:**
 
 ```
-+==============================================================+
-|  Tool-Check v1.0 — Code-Gesundheitscheck                    |
-|  Projekte und Dateien systematisch durchleuchten             |
-+==============================================================+
-|                                                              |
-|  Was passiert jetzt:                                         |
-|  Ich durchlaufe 3 Analyse-Schleifen. Jede Runde graebt      |
-|  tiefer und findet subtilere Probleme.                       |
-|                                                              |
-|  Loop 1 — Oberflaeche                                        |
-|    Offensichtliche Bugs, Crashes, fehlende Fehlerbehandlung  |
-|    + kreative Verbesserungsideen                             |
-|                                                              |
-|  Loop 2 — Tiefenanalyse                                      |
-|    Race Conditions, Memory Leaks, Sicherheitsluecken,        |
-|    Performance-Probleme + kreative Verbesserungsideen        |
-|                                                              |
-|  Loop 3 — Architektur & Kreativ                              |
-|    Sprachenwahl, Strukturverbesserung, moderne APIs,         |
-|    alternative Ansaetze + kreative Verbesserungsideen        |
-|                                                              |
-|  Danach:                                                     |
-|  Alle Ergebnisse als nummerierte Liste praesentieren.        |
-|  Du entscheidest, was davon umgesetzt wird.                  |
-|                                                              |
-|  Zum Schluss:                                                |
-|  Meta-Verbesserung — Vorschlaege fuer den Skill selbst      |
-|                                                              |
-|  Sicherheit: Nichts wird geaendert ohne deine Erlaubnis.    |
-|  Du kannst jeden Schritt live mitlesen.                      |
-|                                                              |
-+==============================================================+
+Tool-Check v1.1 — Code-Gesundheitscheck
+========================================
+
+Was passiert jetzt:
+Zuerst lasse ich automatische Tools laufen (Linter, LSP),
+dann durchlaufe ich 3 manuelle Analyse-Schleifen.
+Jede Runde graebt tiefer und findet subtilere Probleme.
+
+  Pre-Scan — Automatische Tools
+    Linter und LSP-Diagnosen fuer schnelle, objektive Checks
+
+  Loop 1 — Oberflaeche
+    Offensichtliche Bugs, Crashes, fehlende Fehlerbehandlung
+    + kreative Verbesserungsideen
+
+  Loop 2 — Tiefenanalyse
+    Race Conditions, Memory Leaks, Sicherheitsluecken,
+    Performance-Probleme + kreative Verbesserungsideen
+
+  Loop 3 — Architektur & Kreativ
+    Sprachenwahl, Strukturverbesserung, moderne APIs,
+    alternative Ansaetze + kreative Verbesserungsideen
+
+Danach:
+  Alle Ergebnisse als nummerierte Liste praesentieren.
+  Du entscheidest, was davon umgesetzt wird.
+
+Zum Schluss:
+  Meta-Verbesserung — Vorschlaege fuer den Skill selbst
+
+Sicherheit: Nichts wird geaendert ohne deine Erlaubnis.
+Du kannst jeden Schritt live mitlesen.
+========================================
 ```
 
 **Then proceed with the skill.**
 
-You are performing a systematic code health check. This is not a quick lint — you run 3 analysis loops, each at increasing depth, to find everything from obvious bugs to subtle architectural issues. Each loop also includes a creative layer where you think beyond "what's broken" and ask "what could be better".
+You are performing a systematic code health check. This is not a quick lint — you run an automated pre-scan followed by 3 analysis loops, each at increasing depth, to find everything from obvious bugs to subtle architectural issues. Each loop also includes a creative layer where you think beyond "what's broken" and ask "what could be better".
 
 The user is not a programmer. Explain everything in German, in simple terms, so they understand what you found and why it matters.
 
@@ -66,7 +67,38 @@ Determine what to scan based on the user's input:
 
 Detect the programming language(s) automatically and note them. This determines which checks are relevant (e.g., memory management checks only matter for languages without garbage collection).
 
-Read the target files thoroughly before starting analysis. For large projects, focus on the most critical files first (entry points, core logic, API handlers).
+## Project Size Scaling
+
+Adjust the analysis depth based on the project size to stay effective:
+
+- **Klein (unter 10 Dateien):** Read all files completely. Analyze everything in every loop.
+- **Mittel (10–30 Dateien):** Read entry points, core logic, and API handlers first. Read secondary files (utils, helpers, configs) only when referenced by findings or when time permits.
+- **Gross (30+ Dateien):** Focus on the architecture and critical paths. In Loop 1, scan only entry points and core modules. In Loop 2, follow the call chains that Loop 1 flagged. In Loop 3, assess the overall structure. Report which files were skipped and why.
+
+Always tell the user upfront: "Dein Projekt hat [N] Dateien — ich arbeite im [Klein/Mittel/Gross]-Modus."
+
+## Pre-Scan: Automated Tool Check
+
+Before the manual loops, run available linters and LSP diagnostics to catch objective, tool-detectable issues automatically. This frees the manual loops to focus on what only human-like analysis can find.
+
+**Detect and run the appropriate tools based on the project language(s):**
+
+| Language | Linter / Formatter | Command |
+|----------|-------------------|---------|
+| Swift | swift-format, swiftlint | `swiftlint lint --quiet [path]` |
+| TypeScript/JS | Biome | `biome check [path]` |
+| Go | golangci-lint | `golangci-lint run [path]` |
+| Rust | cargo clippy | `cargo clippy -- -W warnings` |
+| C# | dotnet format | `dotnet format --verify-no-changes [path]` |
+
+Also check for LSP diagnostics if available (errors, warnings reported by the language server).
+
+**After running tools:**
+- Collect all warnings and errors
+- Add them to the shared findings list, tagged as `[Auto]` so the user knows these came from tools
+- Briefly report: "Pre-Scan abgeschlossen — [N] automatische Findings. Starte Loop 1 (Oberflaeche)."
+
+If no tools are available for the detected language, skip the pre-scan and note it: "Kein Linter fuer [Sprache] verfuegbar — starte direkt mit Loop 1."
 
 ## The 3-Loop Process
 
@@ -78,11 +110,13 @@ Each loop collects findings into a shared list that grows across all 3 loops. Fi
 
 **CRITICAL: NEVER apply fixes during the loops.** Only collect findings. All fixes are applied after the user reviews and approves the final list.
 
+**CRITICAL: No duplicates across loops.** Each loop builds on the previous ones. Before adding a finding, check if it (or a closely related issue) was already captured in a previous loop or in the pre-scan. If yes, skip it — don't repeat. Each loop should only contribute NEW insights that the previous phases missed.
+
 ---
 
 ### Loop 1 — Oberflaeche (Surface Scan)
 
-Focus on immediately visible issues that don't require deep code understanding.
+Focus on immediately visible issues that don't require deep code understanding. Skip anything the pre-scan already caught.
 
 **Bug-Scan:**
 - Syntax errors, typos in variable/function names
@@ -101,18 +135,23 @@ Focus on immediately visible issues that don't require deep code understanding.
 - Insecure default configurations
 
 **Kreative Ebene (Creative Layer):**
-- Could any function be simplified or made more readable?
-- Are there modern language features that would make the code cleaner?
-- Is the naming consistent and self-documenting?
-- Are comments accurate and helpful (or outdated/misleading)?
 
-After Loop 1, briefly report: "Loop 1 abgeschlossen — [N] Findings bisher. Starte Loop 2 (Tiefenanalyse)."
+Start with these concrete heuristics, then think freely beyond them:
+- Functions over 50 lines → candidate for splitting
+- Nesting depth > 3 levels → candidate for early returns or extraction
+- Repeated code blocks (3+ similar lines) → candidate for abstraction
+- Boolean parameters that change behavior → candidate for separate functions
+- Comments explaining "what" instead of "why" → the code itself should be clearer
+
+But these are just starting points. The creative layer is about genuine creativity — think about what would make this code a joy to read, maintain, and extend. Consider unconventional ideas, surprising simplifications, or entirely different approaches that nobody asked for but that would make the project better. No idea is too bold here.
+
+After Loop 1, briefly report: "Loop 1 abgeschlossen — [N] neue Findings (gesamt: [M]). Starte Loop 2 (Tiefenanalyse)."
 
 ---
 
 ### Loop 2 — Tiefenanalyse (Deep Analysis)
 
-Focus on issues that require understanding control flow, state management, and timing.
+Focus on issues that require understanding control flow, state management, and timing. Only add findings that Loop 1 and the pre-scan did not already cover.
 
 **Bug-Scan:**
 - Race conditions (concurrent access to shared state, async timing issues)
@@ -139,18 +178,22 @@ Focus on issues that require understanding control flow, state management, and t
 - Improper token/session handling
 
 **Kreative Ebene (Creative Layer):**
-- Would design patterns improve the architecture? (Observer, Strategy, Factory, etc.)
-- Would caching significantly improve performance?
-- Are there well-tested libraries that solve a problem better than the current custom code?
-- Could error handling be made more robust with a consistent strategy?
 
-After Loop 2, briefly report: "Loop 2 abgeschlossen — [N] Findings bisher. Starte Loop 3 (Architektur & Kreativ)."
+Start with these structural questions, then let your imagination run:
+- Would a design pattern eliminate recurring complexity? (Observer, Strategy, Factory, etc.)
+- Would caching cut response time by 50%+ or eliminate redundant work?
+- Is there a battle-tested library that replaces 100+ lines of custom code?
+- Could a consistent error-handling strategy (Result types, error boundaries) prevent entire categories of bugs?
+
+Then go further: What if this code were written by someone who had unlimited time and cared deeply about elegance? What would they change? What would surprise the user in a good way?
+
+After Loop 2, briefly report: "Loop 2 abgeschlossen — [N] neue Findings (gesamt: [M]). Starte Loop 3 (Architektur & Kreativ)."
 
 ---
 
 ### Loop 3 — Architektur & Kreativ (Architecture & Creative)
 
-Focus on the big picture — is the approach fundamentally right?
+Focus on the big picture — is the approach fundamentally right? Only add findings not covered by previous loops.
 
 **Architektur:**
 - Is the code structure logical? Are responsibilities clearly separated?
@@ -172,12 +215,18 @@ Focus on the big picture — is the approach fundamentally right?
 - **Only suggest a language change if the benefit is substantial.** "Could be 5% faster" is not worth a rewrite. "Would eliminate an entire class of bugs" might be.
 
 **Kreative Ebene (Creative Layer):**
+
+This is the most open loop — think big:
 - Could the entire approach be rethought for better results?
 - Are there emerging technologies or APIs that could replace complex custom code?
 - Could the UX/DX be significantly improved with a different architecture?
 - Would splitting or merging components improve maintainability?
 - Is there a way to make the tool self-healing or more resilient?
 - Could the tool benefit from a plugin/extension system?
+- What would a v2.0 look like if you could start from scratch with everything you now know?
+- Is there a way to make this tool 10x simpler while keeping 90% of the functionality?
+
+The creative layer thrives on bold ideas. Not every idea needs to be practical — some are sparks that lead to unexpected breakthroughs. Capture them all and let the user decide what resonates.
 
 After Loop 3, report: "Alle 3 Loops abgeschlossen — [N] Findings insgesamt. Erstelle die Zusammenfassung."
 
@@ -192,7 +241,8 @@ Present ALL findings as a single numbered list, grouped by category. This is the
 
 ### Erkannte Sprache(n): [z.B. JavaScript, TypeScript]
 ### Analysierte Dateien: [Anzahl]
-### Gefundene Probleme: [Anzahl total]
+### Projekt-Modus: [Klein/Mittel/Gross]
+### Gefundene Probleme: [Anzahl total] ([N] automatisch, [M] manuell)
 
 ---
 
@@ -228,6 +278,7 @@ Welche Punkte soll ich umsetzen?
 
 **Each finding must include:**
 - Exact file and line number (where applicable)
+- `[Auto]` tag if it came from the pre-scan
 - Clear description of the problem in German
 - Concrete fix suggestion (not just "fix this" — show what the code should look like)
 - Why it matters (what could go wrong, or what improves)
@@ -240,7 +291,7 @@ After the user selects items:
 
 1. Apply ONLY the selected fixes, one by one, visibly
 2. After each fix, briefly confirm what was changed
-3. Bump version numbers if applicable (e.g., Tampermonkey scripts follow `tampermonkey-version` skill rules)
+3. Bump version numbers if the project uses versioned files (check for version patterns in file headers, package.json, Cargo.toml, Info.plist, etc.)
 4. Run any available tests or linters to verify fixes don't break functionality
 5. Commit and push (per CLAUDE.md automation rules)
 6. Report which fixes were applied and which were skipped
@@ -261,6 +312,8 @@ Reflect on the analysis that just ran:
 - Were there new patterns or techniques discovered that should become standard checks?
 - Was the loop depth distribution right? (Too much surface, not enough depth?)
 - Did the creative layer produce genuinely useful ideas?
+- Did the pre-scan catch things the manual loops would have found? (Good — that's the point)
+- Did the project size scaling work well, or were important files skipped/included unnecessarily?
 
 ### Step 2: Line Count Check
 
@@ -332,7 +385,8 @@ After the skill is modified, sync to the cross-platform repo:
 - **Security**: If a critical vulnerability is found (exposed secrets, remote code execution), report it IMMEDIATELY — don't wait for all loops to finish
 - **Visibility**: Everything happens in the main conversation, nothing hidden, no background work
 - **Scope respect**: Only analyze and fix what the user asked for. Don't expand scope without asking.
+- **No duplicates**: Each loop only adds NEW findings. Check previous loops before adding.
 - NEVER create new GitHub repositories. ALL changes go to `Pepsi1978/proggs`.
 
 ---
-<!-- Skill Version: v1.0 | Date: 2026-03-11 | Last Meta-Improve: none | Lines: ???/600 -->
+<!-- Skill Version: v1.1 | Date: 2026-03-11 | Last Meta-Improve: none | Lines: 392/600 -->
