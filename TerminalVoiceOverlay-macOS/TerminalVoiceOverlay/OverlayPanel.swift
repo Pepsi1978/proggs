@@ -13,6 +13,7 @@ private extension NSColor {
     static let btnBtwPulse = NSColor(hex: "#64B5F6")
     static let btnX = NSColor(hex: "#E53935")
     static let btnXPressed = NSColor(hex: "#FF6666")
+    static let btnMicIdle = NSColor(hex: "#FFE082")
 
     convenience init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
@@ -136,7 +137,7 @@ final class OverlayPanel: NSPanel {
         // Create buttons
         xButton = RoundButton(label: "X", color: .btnX)
         btwButton = RoundButton(label: "?", color: .toggleOff)
-        micButton = RoundButton(label: "\u{1F3A4}", color: .btnIdle)
+        micButton = RoundButton(label: "\u{1F3A4}", color: .btnMicIdle)
         micButton.labelFont = .systemFont(ofSize: 14)
         wButton = RoundButton(label: "W", color: .btnIdle)
         gButton = RoundButton(label: "G", color: .toggleOff)
@@ -214,7 +215,7 @@ final class OverlayPanel: NSPanel {
             switch state {
             case .idle:
                 self.stopPulse()
-                self.micButton.buttonColor = .btnIdle
+                self.micButton.buttonColor = .btnMicIdle
             case .recording:
                 self.micButton.buttonColor = self.isBtwMode ? .btnBtwRecording : .btnRecording
                 self.startPulse()
