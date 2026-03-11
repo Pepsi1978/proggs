@@ -1,7 +1,6 @@
 ---
 name: self-improve
 description: Systematic self-improvement of the Claude Code development environment. ONLY use when the user explicitly says "/self-improve", "verbessere dich", "optimiere deine Umgebung", "check dein Setup", or "update alles". NEVER run this proactively or automatically — only on manual user request.
-context: fork
 ---
 
 # Self-Improve: Systematic Environment Optimization
