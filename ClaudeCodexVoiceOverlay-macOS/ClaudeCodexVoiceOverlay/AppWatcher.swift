@@ -21,6 +21,10 @@ final class AppWatcher {
         }
     }
 
+    deinit {
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+    }
+
     @objc private func appActivated(_ notification: Notification) {
         guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
         if let bundleID = app.bundleIdentifier, targetBundleIDs.contains(bundleID) {
