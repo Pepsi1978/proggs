@@ -3,6 +3,7 @@
 ## Sichtbarkeit (KRITISCH)
 - NIEMALS unsichtbar im Hintergrund arbeiten. Kein `context: fork`, keine stillen Subagents die der Benutzer nicht sehen kann.
 - Der Benutzer MUSS jede Aktion in Echtzeit mitlesen koennen.
+- **CLAUDE_AUTOCOMPACT_PCT_OVERRIDE NIEMALS unter 95 setzen.** Der Benutzer will maximalen Text sehen, Komprimierung so spaet wie moeglich.
 - Jede Aktion bekommt eine eigene sichtbare Zeile — vorherige Ausgaben NIEMALS ueberschreiben.
 - Vor jeder Aktion kurz auf Deutsch erklaeren, was gleich passiert.
 - Nach jeder Aktion das Ergebnis zeigen, damit der Benutzer den Fortschritt verfolgen kann.
