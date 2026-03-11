@@ -153,8 +153,8 @@ final class OverlayPanel: NSPanel {
 
         // Calculate screen position (right edge, vertically centered)
         let screenFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
-        var x = screenFrame.maxX - panelWidth - 23
-        var y = screenFrame.maxY - panelHeight - 37
+        var x = screenFrame.maxX - panelWidth - 11
+        var y = screenFrame.maxY - panelHeight - 77
 
         // Restore saved position if available
         if let savedPosition = UserDefaults.standard.dictionary(forKey: OverlayPanel.positionKey),
