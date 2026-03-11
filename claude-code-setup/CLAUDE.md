@@ -79,6 +79,25 @@
 - Beispiel: Debugging mit konkurrierenden Hypothesen — Teammates testen verschiedene Theorien
 - 5-6 Tasks pro Teammate, Datei-Ownership strikt trennen
 
+### Geschwindigkeitsstufen (Speed Tiers)
+
+Richtiges Modell fuer die richtige Aufgabe — Opus denkt, Sonnet macht:
+
+| Aufgabe | Agent / Modus | Modell | Warum |
+|---------|---------------|--------|-------|
+| Architektur, Design | `architect` | Opus | Braucht tiefes Reasoning |
+| Debugging | `debugger` | Opus | Komplexe Ursachenanalyse |
+| Code Review (Sicherheit) | `code-reviewer` | Opus | Sicherheitsluecken erkennen |
+| Performance-Optimierung | `optimizer` | Opus | Systemweites Verstaendnis |
+| UI-Verbesserung | `ui-polisher` | Opus | Design-Expertise |
+| Implementation | `coder` | **Sonnet** | Schnell, fokussiert, guenstig |
+| Bulk-Reviews | `batch-reviewer` | **Sonnet** | Viele Dateien schnell pruefen |
+| Tests schreiben | `tester` | Opus | Qualitaet bei Tests wichtig |
+| Recherche | `researcher` | **Sonnet** | Schnelles Web-Lookup |
+| Generische Subagents | Explore/Plan | **Sonnet** | Via CLAUDE_CODE_SUBAGENT_MODEL |
+
+**Faustregel**: 3-5 `coder`-Agents (Sonnet) fuer parallele Implementation spawnen, dann 1 `code-reviewer` (Opus) fuer die Qualitaetskontrolle.
+
 ### Konkrete Parallel-Muster
 
 **Nach jedem Feature (Qualitaetsschleife parallel):**
@@ -98,6 +117,17 @@
 → Ergebnisse zusammenfuehren, dann implementieren
 ```
 
+**Bei Implementation (NEU — maximale Geschwindigkeit):**
+```
+→ Gleichzeitig 3-5 coder-Agents (Sonnet) starten:
+  Coder 1: Datei A implementieren (z.B. Model-Schicht)
+  Coder 2: Datei B implementieren (z.B. View-Schicht)
+  Coder 3: Datei C implementieren (z.B. Controller-Schicht)
+→ Jeder Coder bekommt: Projektkontext, eigene Dateien, Konventionen
+→ Danach: batch-reviewer fuer schnellen Bulk-Review
+→ Dann: code-reviewer (Opus) fuer tiefe Qualitaetspruefung
+```
+
 **Bei Cross-Platform-Feature:**
 ```
 → Gleichzeitig 2 Agents starten:
@@ -108,14 +138,22 @@
 
 **Bei Recherche-Aufgaben:**
 ```
-→ Gleichzeitig 3-5 WebSearch/WebFetch parallel
-→ Oder 3 Explore-Agents fuer verschiedene Bereiche
+→ Gleichzeitig 3-5 researcher-Agents (Sonnet) parallel spawnen
+→ Jeder recherchiert ein anderes Thema
+→ Ergebnisse zusammenfuehren
 ```
 
 **Bei Code-Verbesserungen:**
 ```
 → Gleichzeitig verschiedene Dateien von verschiedenen Agents bearbeiten lassen
 → Datei-Ownership: Jeder Agent bekommt eigene Dateien, NIE die gleiche Datei
+```
+
+**Bei grossen Migrationen:**
+```
+→ /batch Command verwenden (bis zu 10x schneller)
+→ Zerlegt automatisch in unabhaengige Einheiten
+→ Parallele Worker in eigenen Git-Worktrees
 ```
 
 ### Regeln fuer parallele Agenten

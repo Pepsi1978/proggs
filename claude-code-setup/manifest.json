@@ -134,7 +134,9 @@
     "optimizer",
     "researcher",
     "tester",
-    "ui-polisher"
+    "ui-polisher",
+    "coder",
+    "batch-reviewer"
   ],
 
   "settings": {
