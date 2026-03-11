@@ -455,7 +455,7 @@ After the skill is modified, sync to the cross-platform repo:
 1. Copy: `cp ~/.claude/commands/tool-check.md ~/proggs/claude-code-setup/commands/`
 2. Commit and push to `Pepsi1978/proggs` (NEVER create a separate repo):
    ```
-   cd ~/proggs && git add claude-code-setup/commands/ && git commit -m "#NNN - Update tool-check skill" && git push
+   cd ~/proggs && git add claude-code-setup/commands/ && git diff --cached --quiet || git commit -m "#NNN - Update tool-check skill" && git push
    ```
 3. Report sync status
 

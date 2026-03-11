@@ -289,11 +289,12 @@ Soll ich diese Aenderungen umsetzen? (Ja/Nein/Teilweise)
 ### Step 4: Apply (only after user says yes)
 
 If the user approves:
-1. **BACKUP FIRST**: Commit the current skill version to GitHub BEFORE making changes:
+1. **BACKUP FIRST**: Sync the current skill version to GitHub BEFORE making changes:
    ```
    cp ~/.claude/commands/self-improve.md ~/proggs/claude-code-setup/commands/self-improve.md
-   cd ~/proggs && git add claude-code-setup/commands/ && git commit -m "Backup self-improve v[VERSION] before meta-improve" && git push
+   cd ~/proggs && git add claude-code-setup/commands/ && git diff --cached --quiet || git commit -m "Backup self-improve v[VERSION] before meta-improve" && git push
    ```
+   Note: `git diff --cached --quiet ||` ensures we only commit if there are actual changes. If the backup is already in sync, this is a no-op (no error).
 2. Apply the approved changes to `~/.claude/commands/self-improve.md`
 3. Update the version number and date at the bottom of this file
 4. Document exactly what changed (old → new)
@@ -315,7 +316,7 @@ After all 3 loops are complete, **always sync changes to the cross-platform repo
 
 3. **Commit and push** to `Pepsi1978/proggs` (NEVER create a separate repo!):
    ```
-   cd ~/proggs && git add claude-code-setup/ && git commit -m "Update claude-code-setup: [brief summary]" && git push
+   cd ~/proggs && git add claude-code-setup/ && git diff --cached --quiet || git commit -m "Update claude-code-setup: [brief summary]" && git push
    ```
 
 4. **Report sync status** in the final summary.
