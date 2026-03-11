@@ -6,7 +6,7 @@ private extension NSColor {
     static let btnRecording = NSColor(hex: "#E53935")
     static let btnProcessing = NSColor(hex: "#FF9800")
     static let btnSuccess = NSColor(hex: "#43A047")
-    static let toggleOn = NSColor(hex: "#22c55e")
+    static let toggleOn = NSColor(hex: "#16a34a")
     static let toggleOff = NSColor(hex: "#2D2D2D")
     static let btnBtwIdle = NSColor(hex: "#64B5F6")
     static let btnBtwRecording = NSColor(hex: "#1E88E5")
