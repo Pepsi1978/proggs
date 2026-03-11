@@ -23,5 +23,10 @@ switch ($ext) {
             & prettier --write $filePath 2>$null
         }
     }
+    { $_ -in 'c','cpp','h','hpp' } {
+        if (Get-Command clang-format -ErrorAction SilentlyContinue) {
+            & clang-format -i $filePath 2>$null
+        }
+    }
 }
 exit 0

@@ -28,5 +28,11 @@ case "${file_path##*.}" in
       proj_dir=$(dirname "$proj_dir")
     done
     ;;
+  c|cpp|h|hpp)
+    # Format C/C++ with clang-format if available
+    if command -v clang-format &>/dev/null; then
+      clang-format -i "$file_path" 2>/dev/null
+    fi
+    ;;
 esac
 exit 0

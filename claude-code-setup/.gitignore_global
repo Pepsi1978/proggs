@@ -60,6 +60,10 @@ bun.lockb
 .claude/memory/
 .claude-trace/
 
+# Parry (Prompt Injection Scanner)
+.parry-guard.redb
+.parry/
+
 # Crash reports & logs
 *.crash
 *.log
