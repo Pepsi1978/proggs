@@ -26,6 +26,7 @@ SWIFT_FILES=(
     "$SRC_DIR/GeminiClient.swift"
     "$SRC_DIR/InputController.swift"
     "$SRC_DIR/OverlayPanel.swift"
+    "$SRC_DIR/ErrorDescriptions.swift"
     "$SRC_DIR/AppDelegate.swift"
     "$SRC_DIR/main.swift"
 )
