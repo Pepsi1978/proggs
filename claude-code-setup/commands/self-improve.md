@@ -80,7 +80,7 @@ For each loop (1, 2, 3), execute ALL 5 phases. Each loop should find progressive
 Run a comprehensive audit. Use parallel tool calls for speed.
 
 **Check these in parallel:**
-- `claude --version` — is Claude Code itself up to date?
+- `claude --version` vs `npm view @anthropic-ai/claude-code version` — auto-compare local vs latest available
 - `brew outdated` — any Homebrew packages need updating?
 - `rustup check` — Rust toolchain updates?
 - `dotnet workload update --check` — .NET workload updates?
@@ -90,7 +90,7 @@ Run a comprehensive audit. Use parallel tool calls for speed.
 - List `~/.claude/agents/` — verify all agents use `model: opus`
 - List `~/.claude/commands/` — check custom commands
 - Read `~/.claude/projects/-Users-frank/memory/MEMORY.md` — is memory accurate?
-- Count enabled plugins in settings.json — compare against known available plugins
+- Count plugins precisely: `jq '.plugins | keys | length' ~/.claude/plugins/installed_plugins.json` — compare with `enabledPlugins` count in settings.json
 - Check `~/.zshrc` — verify PATH and aliases are correct
 - Run `git config --global --list` — verify git settings
 - Check disk space with `df -h /`
@@ -290,4 +290,4 @@ Give a final comprehensive summary:
 - Keep the memory file under 200 lines (it gets truncated otherwise)
 
 ---
-<!-- Skill Version: v1.2 | Date: 2026-03-11 | Last Meta-Improve: 2026-03-11 | Lines: 293/400 -->
+<!-- Skill Version: v1.3 | Date: 2026-03-11 | Last Meta-Improve: 2026-03-11 | Lines: 293/400 | Changes: auto version compare, precise plugin counting with jq -->
