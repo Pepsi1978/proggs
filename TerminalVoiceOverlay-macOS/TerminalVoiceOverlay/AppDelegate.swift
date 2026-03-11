@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isProcessing = false
     private var geminiEnabled = false
     private var autoEnterEnabled = false
+    private var btwEnabled = false
     private var hasPastedText = false
     private var lastRawTranscript: String?
     private var resetTimer: Timer?
@@ -64,6 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.onMicClicked = { [weak self] in self?.toggleRecording() }
         panel.onWClicked = { [weak self] in self?.whisperUndo() }
         panel.onGClicked = { [weak self] in self?.toggleGemini() }
+        panel.onBtwClicked = { [weak self] in self?.toggleBtw() }
         panel.onEnterClicked = { [weak self] in self?.handleEnterClick() }
 
         // Setup menu bar icon
@@ -125,6 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startRecording() {
+        panel.isBtwMode = btwEnabled
         do {
             try audioRecorder.start()
             isRecording = true
@@ -207,9 +210,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func insertText(_ text: String) {
-        // Prepend space if text was already pasted on this line
+        // Prepend /btw prefix if BTW mode is active (one-shot)
         var finalText = text
-        if hasPastedText {
+        if btwEnabled {
+            finalText = "/btw " + finalText
+            btwEnabled = false
+            panel.setBtwEnabled(false)
+            NSLog("BTW-Modus automatisch deaktiviert")
+        } else if hasPastedText {
             finalText = " " + finalText
         }
 
@@ -303,6 +311,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func pasteError(_ message: String) {
+        // Deactivate BTW on error (one-shot behavior)
+        if btwEnabled {
+            btwEnabled = false
+            panel.setBtwEnabled(false)
+        }
         let errorText = "# [VoiceOverlay] FEHLER: \(message)"
         NSLog("Fehler ins Terminal eingefuegt: %@", errorText)
         DispatchQueue.global(qos: .userInitiated).async {
@@ -349,6 +362,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         geminiEnabled.toggle()
         panel.setGeminiEnabled(geminiEnabled)
         NSLog("Gemini %@", geminiEnabled ? "AN" : "AUS")
+    }
+
+    // MARK: - BTW Toggle
+
+    private func toggleBtw() {
+        btwEnabled.toggle()
+        panel.setBtwEnabled(btwEnabled)
+        NSLog("BTW %@", btwEnabled ? "AN" : "AUS")
     }
 
     // MARK: - Auto-Enter Toggle & Manual Enter
