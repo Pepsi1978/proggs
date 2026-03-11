@@ -35,6 +35,7 @@ class RoundButton: NSView {
     var buttonColor: NSColor = .btnIdle { didSet { needsDisplay = true } }
     var label: String = "" { didSet { needsDisplay = true } }
     var labelFont: NSFont = .systemFont(ofSize: 16, weight: .bold)
+    var useSquareShape: Bool = false
     var onClick: (() -> Void)?
     var onMouseDown: (() -> Void)?
     var onMouseUp: (() -> Void)?
@@ -55,7 +56,10 @@ class RoundButton: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 6, yRadius: 6)
+        let inset = bounds.insetBy(dx: 1, dy: 1)
+        let path = useSquareShape
+            ? NSBezierPath(roundedRect: inset, xRadius: 6, yRadius: 6)
+            : NSBezierPath(ovalIn: inset)
         buttonColor.setFill()
         path.fill()
 
@@ -145,8 +149,10 @@ final class OverlayPanel: NSPanel {
         xButton = RoundButton(label: "X", color: .btnX)
         btwButton = RoundButton(label: "\u{1F3A4}", color: .btnBtwIdle)
         btwButton.labelFont = .systemFont(ofSize: 18)
+        btwButton.useSquareShape = true
         micButton = RoundButton(label: "\u{1F3A4}", color: .btnMicIdle)
         micButton.labelFont = .systemFont(ofSize: 18)
+        micButton.useSquareShape = true
         wButton = RoundButton(label: "W", color: .btnIdle)
         gButton = RoundButton(label: "G", color: .toggleOff)
         enterButton = RoundButton(label: "\u{23CE}", color: .toggleOff)
@@ -184,7 +190,7 @@ final class OverlayPanel: NSPanel {
 
         // Round corners – use content view layer for rounded background
         self.contentView?.wantsLayer = true
-        self.contentView?.layer?.cornerRadius = 12
+        self.contentView?.layer?.cornerRadius = panelWidth / 2
         self.contentView?.layer?.masksToBounds = true
         self.contentView?.layer?.backgroundColor = NSColor(white: 0.12, alpha: 0.9).cgColor
 
