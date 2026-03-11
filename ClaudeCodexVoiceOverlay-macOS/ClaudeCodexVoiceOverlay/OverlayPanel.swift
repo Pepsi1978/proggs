@@ -182,13 +182,13 @@ final class OverlayPanel: NSPanel {
         self.contentView?.layer?.backgroundColor = NSColor(white: 0.12, alpha: 0.9).cgColor
 
         // Layout buttons vertically (in AppKit, y=0 is bottom)
-        // Bottom to top: Enter, G, W, Mic, BTW-Mic, X
+        // Bottom to top: Enter, G, Mic, BTW-Mic, W, X
         let inset = (panelWidth - btnSize) / 2
         enterButton.frame = NSRect(x: inset, y: 8, width: btnSize, height: btnSize)
         gButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap), width: btnSize, height: btnSize)
-        wButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 2, width: btnSize, height: btnSize)
-        micButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 3, width: btnSize, height: btnSize)
-        btwButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 4, width: btnSize, height: btnSize)
+        micButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 2, width: btnSize, height: btnSize)
+        btwButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 3, width: btnSize, height: btnSize)
+        wButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 4, width: btnSize, height: btnSize)
         xButton.frame = NSRect(x: inset, y: 8 + (btnSize + gap) * 5, width: btnSize, height: btnSize)
 
         self.contentView?.addSubview(xButton)
