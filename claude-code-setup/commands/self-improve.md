@@ -9,7 +9,7 @@ description: Systematic self-improvement of the Claude Code development environm
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║  Self-Improve Skill v1.1 — Deine Entwicklungsumgebung       ║
+║  Self-Improve Skill v1.4 — Deine Entwicklungsumgebung       ║
 ║  automatisch pruefen, aktualisieren und verbessern           ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
@@ -77,10 +77,12 @@ For each loop (1, 2, 3), execute ALL 5 phases. Each loop should find progressive
 
 ### Phase 1: CHECK (Audit)
 
-Run a comprehensive audit. Use parallel tool calls for speed.
+Run a comprehensive audit. **Fire as many parallel tool calls as possible in a single message block** — aim for 4-6 simultaneous calls. Group independent checks together and launch them at once. Never run checks one after another when they could run simultaneously.
 
-**Check these in parallel:**
-- `claude --version` vs `npm view @anthropic-ai/claude-code version` — auto-compare local vs latest available
+**Version check (run this as a single Bash command):**
+- `claude --version && echo "---" && npm view @anthropic-ai/claude-code version` — compare both outputs in one call. If the npm version is higher, flag for update in Phase 3.
+
+**Check these in parallel (all at once, same message block):**
 - `brew outdated` — any Homebrew packages need updating?
 - `rustup check` — Rust toolchain updates?
 - `dotnet workload update --check` — .NET workload updates?
@@ -103,12 +105,23 @@ Run a comprehensive audit. Use parallel tool calls for speed.
 
 ### Phase 2: RESEARCH (Discover New Things)
 
-Use WebSearch and WebFetch to find improvements. Run these searches in parallel via subagents:
+Use WebSearch and WebFetch to find improvements. **Launch all research queries in parallel** — either as multiple WebSearch tool calls in one message, or by spawning 3-5 `researcher` agents (Sonnet-based, fast and cheap) simultaneously for different topics.
 
-1. **Claude Code updates**: Search for "Claude Code new features" or "Claude Code changelog" — any new settings, flags, or capabilities?
-2. **Plugin marketplace**: Fetch the superpowers-marketplace catalog and the official plugins — any new plugins since last check?
-3. **Skills and best practices**: Search for "Claude Code skills best practices" or "Claude Code optimization" — any new techniques?
-4. **Language tooling**: Check if there are newer versions of key tools (Xcode, .NET SDK, Rust, Go, Node, Bun)
+**Preferred pattern — parallel researcher agents:**
+```
+→ Spawn 3-5 researcher agents simultaneously:
+  Researcher 1: "Claude Code changelog latest version features"
+  Researcher 2: "superpowers marketplace new plugins [current month+year]"
+  Researcher 3: "Claude Code agent teams best practices"
+  Researcher 4: "[language] toolchain latest version" (for each main language)
+  Researcher 5: "security vulnerabilities [tool names]"
+```
+
+**Fallback — direct parallel WebSearch (if researcher agents are not available):**
+1. **Claude Code updates**: Search for "Claude Code new features" or "Claude Code changelog"
+2. **Plugin marketplace**: Fetch the superpowers-marketplace catalog and the official plugins
+3. **Skills and best practices**: Search for "Claude Code skills best practices"
+4. **Language tooling**: Check for newer versions of key tools (Xcode, .NET SDK, Rust, Go, Node, Bun)
 5. **Security**: Any known vulnerabilities in installed tools?
 
 **Important**: Only suggest installing things that align with the user's goals. Don't suggest Python tools or frameworks unless they're invisible backend components.
@@ -290,4 +303,4 @@ Give a final comprehensive summary:
 - Keep the memory file under 200 lines (it gets truncated otherwise)
 
 ---
-<!-- Skill Version: v1.3 | Date: 2026-03-11 | Last Meta-Improve: 2026-03-11 | Lines: 293/400 | Changes: auto version compare, precise plugin counting with jq -->
+<!-- Skill Version: v1.4 | Date: 2026-03-11 | Last Meta-Improve: 2026-03-11 | Lines: 306/400 | Changes: parallel tool-call mandate in Phase 1, researcher agent pattern in Phase 2, combined version check command -->
