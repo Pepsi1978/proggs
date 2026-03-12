@@ -16,5 +16,7 @@ paths:
 - Build with CMake: `cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build`
 - Compile with warnings: `-Wall -Wextra -Werror` (or `/W4 /WX` on MSVC)
 - Cross-compile for Windows: Use MinGW or set up CMake toolchain file
-- Format code: `clang-format -i`
-- Static analysis: `clang-tidy`
+- Format: `clang-format -i <file>`
+- Lint: `clang-tidy <file> -- -std=c++20` (or use clangd LSP diagnostics)
+- Test: `cmake --build build --target test` (CTest) or `ctest --test-dir build`
+- Audit: Check for buffer overflows, use-after-free, double-free with AddressSanitizer: `-fsanitize=address`

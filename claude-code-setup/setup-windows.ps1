@@ -19,8 +19,18 @@ Copy-Item "$ScriptDir\rules\*.md" "$ClaudeDir\rules\" -Force
 Copy-Item "$ScriptDir\agents\*.md" "$ClaudeDir\agents\" -Force
 Copy-Item "$ScriptDir\commands\*.md" "$ClaudeDir\commands\" -Force
 Copy-Item "$ScriptDir\hooks\auto-format.ps1" "$ClaudeDir\hooks\" -Force
+Copy-Item "$ScriptDir\hooks\notify.ps1" "$ClaudeDir\hooks\" -Force
 Copy-Item "$ScriptDir\CLAUDE.md" "$env:USERPROFILE\CLAUDE.md" -Force
 Copy-Item "$ScriptDir\.gitignore_global" "$env:USERPROFILE\.gitignore_global" -Force
+
+# Copy custom skills
+$skillDirs = Get-ChildItem "$ScriptDir\skills" -Directory -ErrorAction SilentlyContinue
+foreach ($skill in $skillDirs) {
+    $targetDir = "$ClaudeDir\skills\$($skill.Name)"
+    New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
+    Copy-Item "$($skill.FullName)\*" $targetDir -Force -Recurse
+}
+if ($skillDirs) { Write-Host "Custom skills copied ($($skillDirs.Count) skills)" -ForegroundColor Green }
 
 # Add Windows-specific hooks to settings.json
 $settings = Get-Content "$ClaudeDir\settings.json" -Raw | ConvertFrom-Json
