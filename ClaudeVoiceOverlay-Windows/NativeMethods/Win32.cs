@@ -102,8 +102,9 @@ namespace ClaudeVoiceOverlay.NativeMethods
 
         // Virtual key codes
         public const ushort VK_CONTROL = 0x11;
-        public const ushort VK_ESCAPE = 0x1B;
-        public const ushort VK_V = 0x56;
+        public const ushort VK_SHIFT   = 0x10;
+        public const ushort VK_ESCAPE  = 0x1B;
+        public const ushort VK_V       = 0x56;
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
@@ -120,6 +121,12 @@ namespace ClaudeVoiceOverlay.NativeMethods
         public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
 
         public const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
+
+        // ── MapVirtualKey ──
+        public const uint MAPVK_VK_TO_VSC = 0;
+
+        [DllImport("user32.dll")]
+        public static extern uint MapVirtualKey(uint uCode, uint uMapType);
         // KEYEVENTF_KEYUP = 0x0002 already defined
 
         // ── DPI ──

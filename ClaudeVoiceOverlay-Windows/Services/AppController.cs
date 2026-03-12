@@ -8,45 +8,48 @@ namespace ClaudeVoiceOverlay.Services
 {
     public static class AppController
     {
+        private const byte VK_A = 0x41;
+        private const byte VK_BACKSPACE = 0x08;
         private const byte VK_RETURN = 0x0D;
 
         /// <summary>
-        /// Pastes text into the target app (Claude/Codex) via Clipboard + SendKeys Ctrl+V.
-        /// Uses SendKeys.SendWait for Electron-App compatibility, with keybd_event fallback.
-        /// Optionally sends Enter afterwards (auto-enter).
+        /// Pastes text into the target app (Claude/Codex) via Clipboard + keybd_event Ctrl+V.
+        /// Uses keybd_event with proper scan codes for reliability with Electron apps.
         /// </summary>
         public static void PasteText(string text, IntPtr appHwnd, bool autoEnter = false)
         {
-            // Save previous clipboard content before overwriting
-            string previousClipboard = null;
+            // Save previous clipboard content
+            string? previousClipboard = null;
             Application.Current.Dispatcher.Invoke(() =>
             {
                 if (Clipboard.ContainsText())
                     previousClipboard = Clipboard.GetText();
+                Clipboard.SetText(text);
             });
-
-            // Set clipboard on UI thread
-            Application.Current.Dispatcher.Invoke(() => Clipboard.SetText(text));
 
             // Bring target app to foreground
             if (appHwnd != IntPtr.Zero)
             {
                 Win32.SetForegroundWindow(appHwnd);
-                Thread.Sleep(100);
+                Thread.Sleep(150);
             }
 
-            // Send Ctrl+V via SendKeys (works reliably with Electron apps)
-            try
+            // Send Ctrl+V via keybd_event with scan codes
+            SendCtrlV();
+
+            // Send Enter if auto-enter is enabled
+            if (autoEnter)
             {
-                System.Windows.Forms.SendKeys.SendWait("^v");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"AppController: SendKeys failed ({ex.Message}), using keybd_event fallback");
-                SendCtrlVFallback();
+                Thread.Sleep(300);
+                if (appHwnd != IntPtr.Zero)
+                {
+                    Win32.SetForegroundWindow(appHwnd);
+                    Thread.Sleep(100);
+                }
+                SendKey(VK_RETURN);
             }
 
-            // Restore previous clipboard asynchronously after 500ms
+            // Restore previous clipboard after 500ms
             if (previousClipboard != null)
             {
                 var prev = previousClipboard;
@@ -55,78 +58,81 @@ namespace ClaudeVoiceOverlay.Services
                     Application.Current.Dispatcher.Invoke(() => Clipboard.SetText(prev));
                 });
             }
-
-            // Send Enter if auto-enter is enabled
-            if (autoEnter)
-            {
-                Thread.Sleep(300);
-                // Re-focus app before Enter
-                if (appHwnd != IntPtr.Zero)
-                {
-                    Win32.SetForegroundWindow(appHwnd);
-                    Thread.Sleep(100);
-                }
-                SendKey(VK_RETURN);
-            }
         }
 
         /// <summary>
         /// Clears the current input in the target app (Claude/Codex).
-        /// Uses Ctrl+A (select all) + Backspace — works for Electron text areas.
+        /// Ctrl+A (select all) + Backspace — works for Electron text areas.
+        /// Uses keybd_event with scan codes for reliability.
         /// </summary>
         public static void ClearInput(IntPtr appHwnd)
         {
             if (appHwnd != IntPtr.Zero)
             {
+                Win32.AllowSetForegroundWindow(unchecked((uint)-1));
                 Win32.SetForegroundWindow(appHwnd);
                 Thread.Sleep(150);
             }
 
-            try
-            {
-                // Select all text in the input field
-                System.Windows.Forms.SendKeys.SendWait("^a");
-                Thread.Sleep(50);
-
-                // Delete selected text
-                System.Windows.Forms.SendKeys.SendWait("{BACKSPACE}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"AppController: SendKeys failed ({ex.Message}), using keybd_event fallback");
-                ClearInputFallback();
-            }
-        }
-
-        private static void SendCtrlVFallback()
-        {
-            // Use keybd_event — works across UIPI boundaries
-            Win32.keybd_event((byte)Win32.VK_CONTROL, 0, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_V, 0, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_V, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_CONTROL, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-        }
-
-        private static void ClearInputFallback()
-        {
-            // Ctrl+A via keybd_event
-            const byte VK_A = 0x41;
-            const byte VK_BACKSPACE = 0x08;
-
-            Win32.keybd_event((byte)Win32.VK_CONTROL, 0, 0, UIntPtr.Zero);
-            Win32.keybd_event(VK_A, 0, 0, UIntPtr.Zero);
-            Win32.keybd_event(VK_A, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_CONTROL, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            // Ctrl+A to select all
+            SendKeyCombo(Win32.VK_CONTROL, VK_A);
             Thread.Sleep(50);
 
-            Win32.keybd_event(VK_BACKSPACE, 0, 0, UIntPtr.Zero);
-            Win32.keybd_event(VK_BACKSPACE, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            // Backspace to delete selection
+            SendKey(VK_BACKSPACE);
         }
 
-        private static void SendKey(byte vk)
+        /// <summary>
+        /// Sends the Enter/Return key without focusing any window.
+        /// </summary>
+        public static void SendReturn()
         {
-            Win32.keybd_event(vk, 0, 0, UIntPtr.Zero);
-            Win32.keybd_event(vk, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            SendKey(VK_RETURN);
+        }
+
+        /// <summary>
+        /// Focuses the target app then sends Enter/Return.
+        /// Called by EnterButton when toggling auto-enter ON.
+        /// </summary>
+        public static void PressReturn(IntPtr appHwnd)
+        {
+            if (appHwnd != IntPtr.Zero)
+            {
+                Win32.SetForegroundWindow(appHwnd);
+                Thread.Sleep(100);
+            }
+            SendKey(VK_RETURN);
+        }
+
+        private static void SendKeyCombo(ushort modifier, ushort key)
+        {
+            byte modScan = (byte)Win32.MapVirtualKey(modifier, Win32.MAPVK_VK_TO_VSC);
+            byte keyScan = (byte)Win32.MapVirtualKey(key, Win32.MAPVK_VK_TO_VSC);
+
+            Win32.keybd_event((byte)modifier, modScan, 0, UIntPtr.Zero);
+            Win32.keybd_event((byte)key, keyScan, 0, UIntPtr.Zero);
+            Win32.keybd_event((byte)key, keyScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            Win32.keybd_event((byte)modifier, modScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+        }
+
+        private static void SendCtrlV()
+        {
+            byte ctrlScan = (byte)Win32.MapVirtualKey(Win32.VK_CONTROL, Win32.MAPVK_VK_TO_VSC);
+            byte vScan    = (byte)Win32.MapVirtualKey(Win32.VK_V, Win32.MAPVK_VK_TO_VSC);
+
+            Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, 0, UIntPtr.Zero);
+            Win32.keybd_event((byte)Win32.VK_V, vScan, 0, UIntPtr.Zero);
+            Win32.keybd_event((byte)Win32.VK_V, vScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+        }
+
+        private static void SendKey(ushort vk)
+        {
+            byte scan = (byte)Win32.MapVirtualKey(vk, Win32.MAPVK_VK_TO_VSC);
+            uint flags = (vk >= 0x21 && vk <= 0x2E) ? Win32.KEYEVENTF_EXTENDEDKEY : 0;
+
+            Win32.keybd_event((byte)vk, scan, flags, UIntPtr.Zero);
+            Win32.keybd_event((byte)vk, scan, flags | Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
         }
     }
 }

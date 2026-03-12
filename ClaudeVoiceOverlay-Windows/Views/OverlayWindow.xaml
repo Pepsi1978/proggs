@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="ClaudeVoiceOverlay"
-        Width="56" Height="256"
+        Width="72" Height="336"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -12,86 +12,116 @@
         ResizeMode="NoResize">
 
     <Window.Resources>
-        <!-- Round button style -->
-        <Style x:Key="RoundButton" TargetType="Button">
+        <!-- Circle button style: 40x40, CornerRadius=20 -->
+        <Style x:Key="CircleButton" TargetType="Button">
             <Setter Property="Width" Value="40"/>
             <Setter Property="Height" Value="40"/>
+            <Setter Property="Background" Value="#FF2D2D2D"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Grid>
-                            <Ellipse x:Name="BtnEllipse"
-                                     Fill="{TemplateBinding Background}"
-                                     Width="{TemplateBinding Width}"
-                                     Height="{TemplateBinding Height}"/>
+                        <Border x:Name="BtnBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="20"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}">
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"/>
-                        </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Mic button style: 52x52, CornerRadius=10 (rounded square) -->
+        <Style x:Key="MicButton" TargetType="Button">
+            <Setter Property="Width" Value="52"/>
+            <Setter Property="Height" Value="52"/>
+            <Setter Property="Background" Value="#FF2D2D2D"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="10"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
     </Window.Resources>
 
-    <!-- Panel background: rounded rect, semi-transparent black -->
-    <Border CornerRadius="28"
-            Background="#B3000000"
-            Padding="8">
+    <!-- Panel background: pill shape, semi-transparent dark -->
+    <Border CornerRadius="36"
+            Background="#B31E1E1E"
+            Width="72" Height="336">
         <StackPanel VerticalAlignment="Center"
-                    HorizontalAlignment="Center">
+                    HorizontalAlignment="Center"
+                    Margin="0,16">
 
-            <!-- X Button (clear input) -->
-            <Button x:Name="BtnClear"
-                    Style="{StaticResource RoundButton}"
-                    Background="#2D2D2D"
+            <!-- X Button (clear input) — top -->
+            <Button x:Name="XButton"
+                    Style="{StaticResource CircleButton}"
                     Click="BtnClear_Click"
-                    ToolTip="Eingabe loeschen">
+                    ToolTip="Clear input">
                 <TextBlock Text="X" FontWeight="Bold" FontSize="16" Foreground="White"/>
             </Button>
 
-            <!-- Mic Button -->
-            <Button x:Name="BtnMic"
-                    Style="{StaticResource RoundButton}"
-                    Background="#2D2D2D"
-                    Margin="0,8,0,0"
-                    Click="BtnMic_Click"
-                    ToolTip="Aufnahme starten/stoppen">
-                <TextBlock Text="&#x1F3A4;" FontSize="14" Foreground="White"/>
-            </Button>
-
-            <!-- Whisper Undo Button (replace Gemini text with raw Whisper text) -->
-            <Button x:Name="BtnWhisperUndo"
-                    Style="{StaticResource RoundButton}"
-                    Background="#2D2D2D"
+            <!-- W Button (Whisper undo) -->
+            <Button x:Name="WButton"
+                    Style="{StaticResource CircleButton}"
                     Margin="0,8,0,0"
                     Click="BtnWhisperUndo_Click"
-                    ToolTip="Gemini-Text durch Whisper-Rohtext ersetzen">
+                    ToolTip="Replace with raw Whisper text">
                 <TextBlock Text="W" FontWeight="Bold" FontSize="16" Foreground="White"/>
             </Button>
 
-            <!-- Gemini Toggle Button -->
-            <Button x:Name="BtnGemini"
-                    Style="{StaticResource RoundButton}"
-                    Background="#2D2D2D"
+            <!-- BTW Button (BTW mic — rounded square, blue tint set in code-behind) -->
+            <Button x:Name="BtwButton"
+                    Style="{StaticResource MicButton}"
+                    Margin="0,8,0,0"
+                    Click="BtnBtw_Click"
+                    ToolTip="BTW voice input">
+                <TextBlock Text="&#x1F3A4;" FontSize="20" Foreground="White"/>
+            </Button>
+
+            <!-- Mic Button (main mic — rounded square) -->
+            <Button x:Name="MicButton"
+                    Style="{StaticResource MicButton}"
+                    Margin="0,8,0,0"
+                    Click="BtnMic_Click"
+                    ToolTip="Start / stop recording">
+                <TextBlock Text="&#x1F3A4;" FontSize="20" Foreground="White"/>
+            </Button>
+
+            <!-- G Button (Gemini toggle) -->
+            <Button x:Name="GButton"
+                    Style="{StaticResource CircleButton}"
                     Margin="0,8,0,0"
                     Click="BtnGemini_Click"
-                    ToolTip="Gemini an/aus">
+                    ToolTip="Toggle Gemini">
                 <TextBlock Text="G" FontWeight="Bold" FontSize="16" Foreground="White"/>
             </Button>
 
-            <!-- Auto-Enter Toggle Button -->
-            <Button x:Name="BtnAutoEnter"
-                    Style="{StaticResource RoundButton}"
-                    Background="#2D2D2D"
+            <!-- Enter Button (auto-enter toggle) — bottom -->
+            <Button x:Name="EnterButton"
+                    Style="{StaticResource CircleButton}"
                     Margin="0,8,0,0"
                     Click="BtnAutoEnter_Click"
-                    ToolTip="Auto-Enter an/aus">
-                <TextBlock Text="⏎" FontWeight="Bold" FontSize="16" Foreground="White"/>
+                    ToolTip="Toggle auto-enter">
+                <TextBlock Text="&#x23CE;" FontSize="18" Foreground="White"/>
             </Button>
 
         </StackPanel>
