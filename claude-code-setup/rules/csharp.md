@@ -15,6 +15,9 @@ paths:
 - Build with: `dotnet build -c Release`
 - Publish self-contained: `dotnet publish -c Release -r win-x64 --self-contained`
 - Follow Fluent Design System for modern Windows UI
-- Format code: `dotnet format` (or `dotnet format whitespace` for whitespace only)
+- Format code: `csharpier .` (opinionated formatter, like Prettier for C#) or `dotnet format`
 - Lint/analyze code: `dotnet format analyzers` (style and quality checks)
 - Run tests: `dotnet test` (or `dotnet test -c Release` for release config)
+- Check NuGet vulnerabilities: `dotnet list package --vulnerable --include-transitive`
+- Check outdated packages: `dotnet outdated` (global tool)
+- Sign executables: `signtool sign /fd SHA256 /a MyApp.exe` (uses dev certificate)
