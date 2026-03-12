@@ -9,7 +9,7 @@ description: Systematic self-improvement of the Claude Code development environm
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║  Self-Improve Skill v1.8 — Deine Entwicklungsumgebung       ║
+║  Self-Improve Skill v1.9 — Deine Entwicklungsumgebung       ║
 ║  automatisch pruefen, aktualisieren und verbessern           ║
 ║  Cross-Platform: macOS + Windows (automatische Erkennung)    ║
 ╠══════════════════════════════════════════════════════════════╣
@@ -145,6 +145,10 @@ Run a comprehensive audit. **Fire as many parallel tool calls as possible in a s
 
 - **Rule completeness audit**: For each rule file in `~/.claude/rules/`, verify it documents at least: (1) a **format** command, (2) a **lint** command, (3) a **test** command. Use: `for f in ~/.claude/rules/*.md; do echo "=== $(basename $f) ==="; grep -ci "format\|lint\|test\|clippy\|audit" "$f"; done` — any file with 0 matches = flag for Phase 4 improvement. This prevents quality gaps between languages (e.g. Rust having all three while C# has none).
 
+- **Hook existence check (CRITICAL)**: For every hook command in `~/.claude/settings.json`, verify that the referenced executable or script actually exists on disk. A hook referencing a non-existent program (e.g. `parry.exe` when Parry isn't installed) causes silent errors and up to N seconds delay per invocation. Check: extract all `"command"` values from the `hooks` section, resolve `%USERPROFILE%` / `~` paths, and verify each file exists with `ls` or `test -f`. Any missing program = flag for immediate removal in Phase 3.
+
+- **Auto-format coverage check**: Compare the file extensions handled by the auto-format hook (`auto-format.sh` or `auto-format.ps1`) against the file extensions defined in `~/.claude/rules/*.md` path globs. Any extension in a rule file but missing from the auto-format hook = flag for Phase 4 improvement. This ensures every language with a rule also gets automatic formatting.
+
 **Collect all findings into a status report before proceeding.**
 
 **IMPORTANT for cleanup**: If you find things to clean up (orphaned folders, stale repos, unused files), ALWAYS ask the user for permission before deleting anything. Never auto-delete.
@@ -183,6 +187,10 @@ Based on findings from CHECK and RESEARCH:
 - Update rule files if language versions changed
 - Update memory file if information is outdated
 - Install any new plugins or tools discovered in RESEARCH phase
+
+**PROTECTED SETTINGS (NEVER change these, even if changelogs suggest otherwise):**
+- `effortLevel`: MUST stay `"max"`. The user pays for the Max Plan and explicitly forbids reducing it to `"high"` or lower. If a researcher agent or changelog reports that `"max"` is deprecated, note it in the report but DO NOT modify the setting.
+- `CLAUDE_CODE_EFFORT_LEVEL`: MUST stay `"max"` in the env block. Same reasoning as above.
 
 **Always explain what you're updating and why before doing it.**
 
@@ -343,7 +351,7 @@ Give a final comprehensive summary:
 - NEVER create new GitHub repositories. ALL files belong in `Pepsi1978/proggs`. Always push to the existing repo, never create separate repos.
 - NEVER modify this skill file without explicit user approval (Meta-Improve is suggest-only)
 - NEVER delete files, folders or repos without asking the user first (cleanup is suggest-only too)
-- NEVER downgrade the model from Opus or reduce effort level
+- NEVER downgrade the model from Opus or reduce effort level. `effortLevel` MUST stay `"max"` — this is a user-protected setting (see Phase 3 PROTECTED SETTINGS)
 - NEVER install Python tools for visible/GUI purposes
 - NEVER remove existing working configurations without replacement
 - **Before modifying this skill**: Always commit the current version as a backup first, so it can be restored if needed
@@ -362,4 +370,4 @@ Give a final comprehensive summary:
 - Keep the memory file under 200 lines (it gets truncated otherwise)
 
 ---
-<!-- Skill Version: v1.8 | Date: 2026-03-12 | Last Meta-Improve: 2026-03-12 | Lines: ~375/600 | Changes: v1.8 — Added 3 new Phase 1 checks: cargo audit for Rust CVEs, notification hook quality (dynamic vs static), rule completeness audit (format/lint/test per language) -->
+<!-- Skill Version: v1.9 | Date: 2026-03-12 | Last Meta-Improve: 2026-03-12 | Lines: ~390/600 | Changes: v1.9 — Added 3 meta-improvements from pass 2: (1) hook existence check — verifies all hook commands reference existing executables, (2) effortLevel protection — PROTECTED SETTINGS block prevents changing effortLevel from "max", (3) auto-format coverage check — compares auto-format hook extensions against rule file glob patterns -->
