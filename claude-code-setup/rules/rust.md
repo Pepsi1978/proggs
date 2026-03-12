@@ -17,3 +17,4 @@ paths:
 - Run tests: `cargo test`
 - Avoid `unsafe` unless performance-critical and well-documented
 - Use `serde` for serialization, `tokio` for async runtime
+- Security audit: `cargo audit` before release (checks crates for known CVEs)

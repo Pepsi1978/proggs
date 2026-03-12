@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "terminal-notifier -title 'Claude Code' -message 'Braucht deine Aufmerksamkeit' -sound Glass -group claude-code",
+            "command": "~/.claude/hooks/notify.sh",
             "timeout": 5
           }
         ]

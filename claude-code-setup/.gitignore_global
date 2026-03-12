@@ -64,8 +64,19 @@ bun.lockb
 .parry-guard.redb
 .parry/
 
+# Archives & compressed
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+
 # Crash reports & logs
 *.crash
 *.log
 npm-debug.log*
 yarn-error.log*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak

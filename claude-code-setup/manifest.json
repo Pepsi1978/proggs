@@ -1,6 +1,6 @@
 {
   "description": "Claude Code Setup-Manifest - Installiert alle Plugins, Skills, Dev-Tools, MCP-Server und Settings auf einem neuen Rechner",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "author": "Pepsi1978",
   "github_user": "Pepsi1978",
   "repo": "https://github.com/Pepsi1978/proggs",
@@ -107,6 +107,13 @@
           "timeout": 2
         }
       }
+    },
+    "cargo-audit": {
+      "install": {
+        "macos": "cargo install cargo-audit",
+        "windows": "cargo install cargo-audit"
+      },
+      "description": "Scans Rust crate dependencies for known CVEs (run: cargo audit)"
     }
   },
 

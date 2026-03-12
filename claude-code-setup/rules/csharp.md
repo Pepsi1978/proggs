@@ -15,3 +15,5 @@ paths:
 - Build with: `dotnet build -c Release`
 - Publish self-contained: `dotnet publish -c Release -r win-x64 --self-contained`
 - Follow Fluent Design System for modern Windows UI
+- Format code: `dotnet format` (or `dotnet format whitespace` for whitespace only)
+- Analyze code: `dotnet format analyzers` (style and quality checks)

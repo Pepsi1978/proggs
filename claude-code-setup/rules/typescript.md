@@ -17,4 +17,5 @@ paths:
 - Always run `tsc --noEmit` to type-check before committing
 - ESM modules preferred over CommonJS
 - Run tests: `bun test` (preferred) or `npx vitest`
+- Lint code: `bunx biome check .` (catches bugs, complexity, accessibility issues)
 - Format code: `bunx biome format --write .` or `npx prettier --write .`
