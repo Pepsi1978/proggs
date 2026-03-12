@@ -9,7 +9,7 @@ description: Systematic self-improvement of the Claude Code development environm
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║  Self-Improve Skill v1.7 — Deine Entwicklungsumgebung       ║
+║  Self-Improve Skill v1.8 — Deine Entwicklungsumgebung       ║
 ║  automatisch pruefen, aktualisieren und verbessern           ║
 ║  Cross-Platform: macOS + Windows (automatische Erkennung)    ║
 ╠══════════════════════════════════════════════════════════════╣
@@ -138,6 +138,12 @@ Run a comprehensive audit. **Fire as many parallel tool calls as possible in a s
 - List all GitHub repos with `gh repo list` — are there any that shouldn't exist?
 
 - **Backup drift check**: Compare local config with backup — diff `~/.claude/agents/` vs `~/proggs/claude-code-setup/agents/`, same for `rules/`, `hooks/`, `commands/`. On macOS use `diff`, on Windows use `Compare-Object`.
+
+- **Rust security audit**: `cargo audit 2>/dev/null || echo "no Cargo.lock"` — checks all Rust projects with Cargo.lock for known CVEs in dependencies. Skip silently if no Rust project exists.
+
+- **Notification hook quality check**: Verify that Notification hooks extract dynamic messages (not static text). Check if `notify.sh` (macOS) or `notify.ps1` (Windows) exist and parse JSON input to show the actual notification message. Static "Braucht deine Aufmerksamkeit" text = flag for improvement in Phase 4.
+
+- **Rule completeness audit**: For each rule file in `~/.claude/rules/`, verify it documents at least: (1) a **format** command, (2) a **lint** command, (3) a **test** command. Use: `for f in ~/.claude/rules/*.md; do echo "=== $(basename $f) ==="; grep -ci "format\|lint\|test\|clippy\|audit" "$f"; done` — any file with 0 matches = flag for Phase 4 improvement. This prevents quality gaps between languages (e.g. Rust having all three while C# has none).
 
 **Collect all findings into a status report before proceeding.**
 
@@ -356,4 +362,4 @@ Give a final comprehensive summary:
 - Keep the memory file under 200 lines (it gets truncated otherwise)
 
 ---
-<!-- Skill Version: v1.7 | Date: 2026-03-12 | Last Meta-Improve: 2026-03-12 | Lines: ~370/600 | Changes: v1.7 — cross-platform support (macOS+Windows auto-detection), platform-specific command mapping table, line limit raised 500→600 -->
+<!-- Skill Version: v1.8 | Date: 2026-03-12 | Last Meta-Improve: 2026-03-12 | Lines: ~375/600 | Changes: v1.8 — Added 3 new Phase 1 checks: cargo audit for Rust CVEs, notification hook quality (dynamic vs static), rule completeness audit (format/lint/test per language) -->
