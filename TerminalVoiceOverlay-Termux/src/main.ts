@@ -3,181 +3,322 @@ import { AudioRecorder } from "./audio-recorder.js";
 import { GroqWhisperClient } from "./groq-client.js";
 import { GeminiClient } from "./gemini-client.js";
 import { TerminalController } from "./terminal-controller.js";
-import { clearScreen, renderOverlay, type OverlayState, type MicState } from "./ui.js";
+import { renderOverlay, initUI, cleanupUI, type MicState, type OverlayState } from "./ui.js";
 
-// ── State ──────────────────────────────────────────────
-let micState: MicState = "idle";
-let geminiEnabled = true;
-let autoEnterEnabled = false;
-let hasPastedText = false;
-let lastRawTranscript = "";
-let lastText = "";
+// ── State ──────────────────────────────────────────────────────────────────
 
-// ── Instances ──────────────────────────────────────────
+interface AppState {
+  micState: MicState;
+  btwMicState: MicState;
+  geminiEnabled: boolean;
+  autoEnterEnabled: boolean;
+  lastText: string;
+  rawText: string;
+  recordingSeconds: number;
+  xCooldown: boolean;
+  activeMic: "main" | "btw" | null;
+}
+
+const state: AppState = {
+  micState: "idle",
+  btwMicState: "idle",
+  geminiEnabled: true,
+  autoEnterEnabled: false,
+  lastText: "",
+  rawText: "",
+  recordingSeconds: 0,
+  xCooldown: false,
+  activeMic: null,
+};
+
+// ── Instances ──────────────────────────────────────────────────────────────
+
 const recorder = new AudioRecorder();
 let groqClient: GroqWhisperClient;
 let geminiClient: GeminiClient | null = null;
 
-// ── Render ─────────────────────────────────────────────
-function render(): void {
-  const state: OverlayState = {
-    micState,
-    geminiEnabled,
-    autoEnterEnabled,
-    lastText,
-  };
-  renderOverlay(state);
+// ── Timers ─────────────────────────────────────────────────────────────────
+
+let recordingTimer: ReturnType<typeof setInterval> | null = null;
+let pulseTimer: ReturnType<typeof setInterval> | null = null;
+
+function startTimers(): void {
+  state.recordingSeconds = 0;
+
+  recordingTimer = setInterval(() => {
+    state.recordingSeconds += 1;
+    render();
+  }, 1000);
+
+  pulseTimer = setInterval(() => {
+    render();
+  }, 500);
 }
 
-// ── Actions ────────────────────────────────────────────
-
-async function toggleRecording(): Promise<void> {
-  if (micState === "processing") return;
-
-  if (recorder.isRecording) {
-    await stopRecording();
-  } else {
-    startRecording();
+function stopTimers(): void {
+  if (recordingTimer !== null) {
+    clearInterval(recordingTimer);
+    recordingTimer = null;
+  }
+  if (pulseTimer !== null) {
+    clearInterval(pulseTimer);
+    pulseTimer = null;
   }
 }
 
-function startRecording(): void {
-  hasPastedText = false;
-  lastRawTranscript = "";
-  lastText = "";
-  micState = "recording";
-  render();
+// ── Render ─────────────────────────────────────────────────────────────────
 
-  TerminalController.vibrate(100);
-  recorder.start();
+function render(): void {
+  const overlayState: OverlayState = {
+    micState: state.micState,
+    btwMicState: state.btwMicState,
+    geminiEnabled: state.geminiEnabled,
+    autoEnterEnabled: state.autoEnterEnabled,
+    lastText: state.lastText,
+    rawText: state.rawText,
+    recordingSeconds: state.recordingSeconds,
+    xCooldown: state.xCooldown,
+    activeMic: state.activeMic,
+  };
+  renderOverlay(overlayState);
 }
 
-async function stopRecording(): Promise<void> {
-  micState = "processing";
+// ── Reset helper ──────────────────────────────────────────────────────────
+
+function resetAfterDelay(which: "main" | "btw"): void {
+  setTimeout(() => {
+    if (which === "main") {
+      if (state.micState === "success" || state.micState === "error") {
+        state.micState = "idle";
+        render();
+      }
+    } else {
+      if (state.btwMicState === "success" || state.btwMicState === "error") {
+        state.btwMicState = "idle";
+        render();
+      }
+    }
+  }, 2000);
+}
+
+// ── Aufnahme-Logik ────────────────────────────────────────────────────────
+
+function startRecording(which: "main" | "btw"): void {
+  // Verhindere Doppelaufnahme
+  if (state.activeMic !== null) return;
+
+  state.activeMic = which;
+  state.recordingSeconds = 0;
+  state.lastText = "";
+  state.rawText = "";
+
+  if (which === "main") {
+    state.micState = "recording";
+  } else {
+    state.btwMicState = "recording";
+  }
+
+  render();
+  TerminalController.vibrate(100);
+  recorder.start();
+  startTimers();
+}
+
+async function stopRecording(which: "main" | "btw"): Promise<void> {
+  stopTimers();
+
+  if (which === "main") {
+    state.micState = "processing";
+  } else {
+    state.btwMicState = "processing";
+  }
+  state.activeMic = null;
   render();
 
   const filePath = recorder.stop();
   if (!filePath) {
-    micState = "error";
-    lastText = "Keine Aufnahme-Datei gefunden";
+    const errMsg = "Keine Aufnahme-Datei gefunden";
+    state.lastText = errMsg;
+    if (which === "main") {
+      state.micState = "error";
+    } else {
+      state.btwMicState = "error";
+    }
     render();
-    resetAfterDelay();
+    resetAfterDelay(which);
     return;
   }
 
   try {
-    // 1) Transcribe with Groq Whisper
-    const rawText = await groqClient.transcribe(filePath);
+    // Transkription via Groq Whisper
+    const rawTranscript = await groqClient.transcribe(filePath);
 
-    if (!rawText || !rawText.trim()) {
-      micState = "error";
-      lastText = "Kein Text erkannt";
+    if (!rawTranscript || !rawTranscript.trim()) {
+      const errMsg = "Kein Text erkannt";
+      state.lastText = errMsg;
+      if (which === "main") {
+        state.micState = "error";
+      } else {
+        state.btwMicState = "error";
+      }
       render();
-      resetAfterDelay();
+      resetAfterDelay(which);
       return;
     }
 
-    lastRawTranscript = rawText.trim();
-    let finalText = lastRawTranscript;
+    state.rawText = rawTranscript.trim();
+    let finalText = state.rawText;
 
-    // 2) Optional Gemini correction
-    if (geminiEnabled && geminiClient) {
+    // Optionale Gemini-Korrektur
+    if (state.geminiEnabled && geminiClient) {
       try {
-        finalText = await geminiClient.correctText(finalText);
+        const corrected = await geminiClient.correctText(finalText);
+        finalText = corrected;
       } catch {
-        // Fallback to raw transcript on Gemini error
+        // Fallback auf Roh-Transkript
       }
     }
 
-    // 3) Insert text
-    lastText = finalText;
-    insertText(finalText);
+    // BTW-Prefix hinzufügen
+    if (which === "btw") {
+      finalText = `/btw ${finalText}`;
+    }
 
-    micState = "success";
+    state.lastText = finalText;
+
+    // Text ins Clipboard
+    TerminalController.setClipboard(finalText);
+    TerminalController.toast(finalText.length > 60 ? `${finalText.slice(0, 60)}…` : finalText);
+
+    if (which === "main") {
+      state.micState = "success";
+    } else {
+      state.btwMicState = "success";
+    }
+
     TerminalController.vibrate(200);
     render();
-    resetAfterDelay();
+    resetAfterDelay(which);
   } catch (err) {
-    micState = "error";
-    lastText = `Fehler: ${err instanceof Error ? err.message : String(err)}`;
+    const errMsg = `Fehler: ${err instanceof Error ? err.message : String(err)}`;
+    state.lastText = errMsg;
+    if (which === "main") {
+      state.micState = "error";
+    } else {
+      state.btwMicState = "error";
+    }
     render();
-    resetAfterDelay();
+    resetAfterDelay(which);
   } finally {
-    recorder.cleanup(filePath);
+    if (filePath) {
+      recorder.cleanup(filePath);
+    }
   }
 }
 
-function insertText(text: string): void {
-  TerminalController.setClipboard(text);
-  hasPastedText = true;
-  TerminalController.toast("Text in Zwischenablage kopiert");
-  TerminalController.notify("Voice Overlay", text);
+async function toggleRecording(which: "main" | "btw"): Promise<void> {
+  const currentState = which === "main" ? state.micState : state.btwMicState;
+
+  // Verarbeitung läuft — nichts tun
+  if (currentState === "processing") return;
+
+  if (currentState === "recording") {
+    // Aufnahme stoppen
+    await stopRecording(which);
+  } else {
+    // Nur starten wenn keine andere Aufnahme läuft
+    if (state.activeMic !== null) {
+      TerminalController.toast("Aufnahme läuft bereits");
+      return;
+    }
+    startRecording(which);
+  }
 }
 
-function clearLine(): void {
-  if (recorder.isRecording) {
+// ── Tasten-Handler ────────────────────────────────────────────────────────
+
+function handleClearLine(): void {
+  // Cooldown aktiv — ignorieren
+  if (state.xCooldown) return;
+
+  if (state.activeMic !== null) {
+    // Laufende Aufnahme abbrechen
+    stopTimers();
     const filePath = recorder.stop();
     if (filePath) recorder.cleanup(filePath);
-    micState = "idle";
-    lastText = "";
-    hasPastedText = false;
-    lastRawTranscript = "";
+
+    if (state.activeMic === "main") {
+      state.micState = "idle";
+    } else {
+      state.btwMicState = "idle";
+    }
+    state.activeMic = null;
+    state.lastText = "";
+    state.rawText = "";
     render();
     TerminalController.toast("Aufnahme abgebrochen");
-    return;
-  }
-  if (micState === "processing") {
-    // Don't interfere while API calls are running
+  } else if (state.micState === "processing" || state.btwMicState === "processing") {
     TerminalController.toast("Verarbeitung laeuft...");
     return;
+  } else {
+    // Clipboard leeren
+    TerminalController.setClipboard("");
+    state.lastText = "";
+    state.rawText = "";
+    render();
+    TerminalController.toast("Zwischenablage geloescht");
   }
-  // Clear clipboard
-  TerminalController.setClipboard("");
-  lastText = "";
-  hasPastedText = false;
-  lastRawTranscript = "";
+
+  // 2s Cooldown setzen
+  state.xCooldown = true;
   render();
-  TerminalController.toast("Zwischenablage geloescht");
+  setTimeout(() => {
+    state.xCooldown = false;
+    render();
+  }, 2000);
 }
 
-function whisperUndo(): void {
-  if (!lastRawTranscript) {
+function handleWhisperUndo(): void {
+  if (!state.rawText) {
     TerminalController.toast("Kein Whisper-Text zum Wiederherstellen");
     return;
   }
-  // Replace Gemini-corrected text with raw Whisper transcript
-  lastText = lastRawTranscript;
-  insertText(lastRawTranscript);
+
+  // Gemini-korrigierten Text durch Roh-Whisper-Text ersetzen
+  const restoredText =
+    state.btwMicState === "success" && state.lastText.startsWith("/btw ")
+      ? `/btw ${state.rawText}`
+      : state.rawText;
+
+  state.lastText = restoredText;
+  TerminalController.setClipboard(restoredText);
   TerminalController.toast("Whisper-Rohtext wiederhergestellt");
   render();
 }
 
-function toggleGemini(): void {
-  geminiEnabled = !geminiEnabled;
+function handleGeminiToggle(): void {
+  if (!geminiClient) {
+    TerminalController.toast("Kein Gemini API-Key konfiguriert");
+    return;
+  }
+  state.geminiEnabled = !state.geminiEnabled;
   render();
-  TerminalController.toast(`Gemini ${geminiEnabled ? "AN" : "AUS"}`);
+  TerminalController.toast(`Gemini ${state.geminiEnabled ? "AN" : "AUS"}`);
 }
 
-function toggleAutoEnter(): void {
-  autoEnterEnabled = !autoEnterEnabled;
+function handleAutoEnterToggle(): void {
+  state.autoEnterEnabled = !state.autoEnterEnabled;
   render();
-  TerminalController.toast(`Auto-Enter ${autoEnterEnabled ? "AN" : "AUS"}`);
+  TerminalController.toast(`Auto-Enter ${state.autoEnterEnabled ? "AN" : "AUS"}`);
 }
 
-function resetAfterDelay(): void {
-  setTimeout(() => {
-    if (micState === "success" || micState === "error") {
-      micState = "idle";
-      render();
-    }
-  }, 3000);
-}
-
-// ── Keyboard Input ─────────────────────────────────────
+// ── Keyboard Input ────────────────────────────────────────────────────────
 
 function setupKeyboardInput(): void {
   if (!process.stdin.isTTY) {
-    console.error("Fehler: Kein TTY verfuegbar. Starten Sie das Overlay in einem interaktiven Terminal.");
+    console.error(
+      "Fehler: Kein TTY verfuegbar. Starten Sie das Overlay in einem interaktiven Terminal."
+    );
     process.exit(1);
   }
 
@@ -190,28 +331,41 @@ function setupKeyboardInput(): void {
 
     switch (k) {
       case "m":
-        toggleRecording().catch((err) => {
-          micState = "error";
-          lastText = `Fehler: ${err instanceof Error ? err.message : String(err)}`;
+        toggleRecording("main").catch((err) => {
+          state.micState = "error";
+          state.lastText = `Fehler: ${err instanceof Error ? err.message : String(err)}`;
+          state.activeMic = null;
+          stopTimers();
           render();
-          resetAfterDelay();
+          resetAfterDelay("main");
+        });
+        break;
+
+      case "b":
+        toggleRecording("btw").catch((err) => {
+          state.btwMicState = "error";
+          state.lastText = `Fehler: ${err instanceof Error ? err.message : String(err)}`;
+          state.activeMic = null;
+          stopTimers();
+          render();
+          resetAfterDelay("btw");
         });
         break;
 
       case "x":
-        clearLine();
+        handleClearLine();
         break;
 
       case "w":
-        whisperUndo();
+        handleWhisperUndo();
         break;
 
       case "g":
-        toggleGemini();
+        handleGeminiToggle();
         break;
 
       case "e":
-        toggleAutoEnter();
+        handleAutoEnterToggle();
         break;
 
       case "q":
@@ -225,19 +379,39 @@ function setupKeyboardInput(): void {
   });
 }
 
-// ── Lifecycle ──────────────────────────────────────────
+// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 function shutdown(): void {
-  if (recorder.isRecording) {
-    recorder.stop();
+  // Laufende Aufnahme stoppen
+  if (state.activeMic !== null || recorder.isRecording) {
+    stopTimers();
+    try {
+      const filePath = recorder.stop();
+      if (filePath) recorder.cleanup(filePath);
+    } catch {
+      // Ignore errors during shutdown
+    }
   }
-  process.stdout.write("\x1b[?25h"); // Show cursor
-  clearScreen();
+
+  // Timer sicherheitshalber nochmals clearen
+  stopTimers();
+
+  // Cursor wieder einblenden + Terminal zurücksetzen
+  cleanupUI();
+
   console.log("Voice Overlay beendet.");
   process.exit(0);
 }
 
 function main(): void {
+  // TTY-Check vor allem anderen
+  if (!process.stdin.isTTY) {
+    console.error(
+      "Fehler: Kein TTY verfuegbar. Starten Sie das Overlay in einem interaktiven Terminal."
+    );
+    process.exit(1);
+  }
+
   try {
     const config = loadConfig();
 
@@ -249,22 +423,24 @@ function main(): void {
 
     if (config.geminiApiKey) {
       geminiClient = new GeminiClient(config.geminiApiKey, config.geminiModel);
+      state.geminiEnabled = true;
     } else {
-      geminiEnabled = false;
+      geminiClient = null;
+      state.geminiEnabled = false;
     }
 
-    // Hide cursor for cleaner UI
-    process.stdout.write("\x1b[?25l");
+    // UI initialisieren (Cursor verstecken, Bildschirm vorbereiten)
+    initUI();
 
-    clearScreen();
     render();
 
     setupKeyboardInput();
 
-    // Graceful shutdown handlers
+    // Graceful-Shutdown-Handler
     process.on("SIGINT", shutdown);
     process.on("SIGTERM", shutdown);
     process.on("exit", () => {
+      // Cursor sicherstellen (falls shutdown() nicht aufgerufen wurde)
       process.stdout.write("\x1b[?25h");
     });
   } catch (err) {
