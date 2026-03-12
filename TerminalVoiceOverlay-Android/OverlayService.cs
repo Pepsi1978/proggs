@@ -96,26 +96,35 @@ public class OverlayService : Service
         _clipboard     = GetSystemService(ClipboardService)?.JavaCast<ClipboardManager>();
         _vibrator      = GetSystemService(VibratorService)?.JavaCast<Vibrator>();
 
-        _config      = Config.Load(this);
-        _recorder    = new AudioRecorder();
-        _btwRecorder = new AudioRecorder();
-        _whisper     = new GroqWhisperClient(
-            _config.GroqApiKey,
-            _config.WhisperModel,
-            _config.WhisperLang,
-            _config.WhisperUrl);
+        try
+        {
+            _config      = Config.Load(this);
+            _recorder    = new AudioRecorder();
+            _btwRecorder = new AudioRecorder();
+            _whisper     = new GroqWhisperClient(
+                _config.GroqApiKey,
+                _config.WhisperModel,
+                _config.WhisperLang,
+                _config.WhisperUrl);
 
-        if (_config.GeminiAvailable)
-            _gemini = new GeminiClient(
-                _config.GeminiApiKey!,
-                _config.GeminiModel,
-                _config.GeminiThinkingLevel);
+            if (_config.GeminiAvailable)
+                _gemini = new GeminiClient(
+                    _config.GeminiApiKey!,
+                    _config.GeminiModel,
+                    _config.GeminiThinkingLevel);
 
-        CreateNotificationChannel();
-        StartForeground(NotifId, BuildNotification(),
-            Android.Content.PM.ForegroundService.TypeMicrophone);
+            CreateNotificationChannel();
+            StartForeground(NotifId, BuildNotification(),
+                Android.Content.PM.ForegroundService.TypeMicrophone);
 
-        CreateOverlay();
+            CreateOverlay();
+        }
+        catch (Exception ex)
+        {
+            // Show error to user and stop the service gracefully instead of crashing silently.
+            Toast.MakeText(this, $"Voice Overlay failed to start: {ex.Message}", ToastLength.Long)?.Show();
+            StopSelf();
+        }
     }
 
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
@@ -367,14 +376,14 @@ public class OverlayService : Service
         SetMicState(RecordingState.Processing);
         SetButtonColor(_btnMic!, ColBtnProcessing);
 
-        var wavPath = _recorder!.Stop();
+        var wavFile = _recorder!.Stop();
 
         _ = Task.Run(async () =>
         {
             try
             {
-                string raw = wavPath != null
-                    ? await _whisper!.TranscribeAsync(wavPath)
+                string raw = wavFile != null
+                    ? await _whisper!.TranscribeAsync(wavFile)
                     : string.Empty;
 
                 _lastRawTranscript = raw;
@@ -406,6 +415,15 @@ public class OverlayService : Service
                     SetButtonColor(_btnMic!, ColBtnX);
                     ScheduleMicReset(3000);
                 });
+            }
+            finally
+            {
+                // Clean up temp WAV file after transcription is complete.
+                if (wavFile != null)
+                {
+                    try { File.Delete(wavFile); }
+                    catch { /* ignore — file may already be gone */ }
+                }
             }
         });
     }
@@ -444,14 +462,14 @@ public class OverlayService : Service
         _isBtwRecording = false;
         SetButtonColor(_btnBtw!, ColBtnProcessing);
 
-        var wavPath = _btwRecorder!.Stop();
+        var wavFile = _btwRecorder!.Stop();
 
         _ = Task.Run(async () =>
         {
             try
             {
-                string raw = wavPath != null
-                    ? await _whisper!.TranscribeAsync(wavPath)
+                string raw = wavFile != null
+                    ? await _whisper!.TranscribeAsync(wavFile)
                     : string.Empty;
 
                 string final = (_geminiEnabled && _gemini != null)
@@ -466,6 +484,9 @@ public class OverlayService : Service
                 _handler.Post(() =>
                 {
                     CopyToClipboard(final);
+                    // Mirror Windows version: track whether text was pasted without auto-enter.
+                    _hasPastedText = !_autoEnterEnabled;
+                    if (_autoEnterEnabled) _hasPastedText = false;
                     SetButtonColor(_btnBtw!, ColBtnSuccess);
                     ScheduleBtwReset(3000);
                 });
@@ -477,6 +498,15 @@ public class OverlayService : Service
                     SetButtonColor(_btnBtw!, ColBtnX);
                     ScheduleBtwReset(3000);
                 });
+            }
+            finally
+            {
+                // Clean up temp WAV file after transcription is complete.
+                if (wavFile != null)
+                {
+                    try { File.Delete(wavFile); }
+                    catch { /* ignore — file may already be gone */ }
+                }
             }
         });
     }
