@@ -17,6 +17,7 @@
 - Lokaler Pfad: `~/proggs/` — GitHub: `https://github.com/Pepsi1978/proggs`
 
 ## Automatisierung & Workflow
+- **Effort Level: IMMER "max"** — der Benutzer hat den Max Plan (100 Euro) und will maximale Denktiefe. Niemals auf niedrigeren Effort-Level wechseln. Settings: `"effortLevel": "max"` in settings.json.
 - Maximale Automatisierung: Nie nach Erlaubnis fragen fuer Standardaktionen (Build, Test, Commit, Push).
 - Committen und Pushen immer direkt machen — nicht vorher fragen.
 - **IMMER so viele Aufgaben wie moeglich PARALLEL ausfuehren** — das ist keine Option, sondern die Standardarbeitsweise.
