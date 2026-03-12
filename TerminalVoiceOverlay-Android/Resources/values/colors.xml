@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Panel -->
+  <color name="pill_background">#B31E1E1E</color>
+
+  <!-- Button idle states -->
+  <color name="btn_idle">#FF2D2D2D</color>
+  <color name="btn_mic_idle">#FF2A5DA8</color>
+  <color name="btn_btw_idle">#FF64B5F6</color>
+  <color name="btn_x">#FFE53935</color>
+  <color name="btn_x_pressed">#FFFF6666</color>
+
+  <!-- Recording states -->
+  <color name="btn_recording">#FFE53935</color>
+  <color name="btn_recording_bright">#FFFF6666</color>
+  <color name="btn_btw_recording">#FF1E88E5</color>
+  <color name="btn_btw_pulse">#FF90CAF9</color>
+  <color name="btn_processing">#FFFF9800</color>
+  <color name="btn_success">#FF43A047</color>
+
+  <!-- Toggles -->
+  <color name="toggle_on">#FF16a34a</color>
+  <color name="toggle_off">#FF2D2D2D</color>
+
+  <!-- App theme -->
+  <color name="colorPrimary">#FF2A5DA8</color>
+  <color name="colorPrimaryDark">#FF1E3F6F</color>
+  <color name="colorAccent">#FFFF9800</color>
+  <color name="background_dark">#FF121212</color>
+  <color name="surface_dark">#FF1E1E1E</color>
+  <color name="text_primary">#FFFFFFFF</color>
+  <color name="text_secondary">#B3FFFFFF</color>
+</resources>

@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_dark"
+    android:fillViewport="true">
+
+  <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:orientation="vertical"
+      android:padding="24dp">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="&#127908; Voice Overlay"
+        android:textSize="28sp"
+        android:textColor="@color/text_primary"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Floating voice-to-text overlay for Termux"
+        android:textSize="14sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="32dp" />
+
+    <!-- Status indicator -->
+    <TextView
+        android:id="@+id/status_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/status_overlay_stopped"
+        android:textSize="16sp"
+        android:textColor="@color/btn_recording"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:padding="12dp"
+        android:background="@color/surface_dark"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Groq API Key -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/groq_api_key_label"
+        android:textSize="14sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/edit_groq_key"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@color/surface_dark"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_secondary"
+        android:hint="gsk_..."
+        android:inputType="textPassword"
+        android:padding="12dp"
+        android:textSize="14sp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Gemini API Key -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/gemini_api_key_label"
+        android:textSize="14sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/edit_gemini_key"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@color/surface_dark"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_secondary"
+        android:hint="AIza..."
+        android:inputType="textPassword"
+        android:padding="12dp"
+        android:textSize="14sp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Whisper Model -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/whisper_model_label"
+        android:textSize="14sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/edit_whisper_model"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@color/surface_dark"
+        android:textColor="@color/text_primary"
+        android:text="whisper-large-v3"
+        android:padding="12dp"
+        android:textSize="14sp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Language -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/whisper_lang_label"
+        android:textSize="14sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/edit_whisper_lang"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@color/surface_dark"
+        android:textColor="@color/text_primary"
+        android:text="de"
+        android:padding="12dp"
+        android:textSize="14sp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Gemini Model -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/gemini_model_label"
+        android:textSize="14sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/edit_gemini_model"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@color/surface_dark"
+        android:textColor="@color/text_primary"
+        android:text="gemini-3.1-flash-lite-preview"
+        android:padding="12dp"
+        android:textSize="14sp"
+        android:layout_marginBottom="32dp" />
+
+    <!-- Save button -->
+    <Button
+        android:id="@+id/btn_save"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="@string/btn_save_settings"
+        android:textSize="16sp"
+        android:textAllCaps="false"
+        android:backgroundTint="@color/colorPrimary"
+        android:textColor="@android:color/white"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Start/Stop button -->
+    <Button
+        android:id="@+id/btn_toggle_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="@string/btn_start_overlay"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textAllCaps="false"
+        android:backgroundTint="@color/btn_success"
+        android:textColor="@android:color/white"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Info text -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="The overlay will appear as a floating pill on the right side of the screen. Tap the mic button to record, and the transcribed text will be copied to your clipboard. Paste it in Termux with long-press or Volume Down + V."
+        android:textSize="12sp"
+        android:textColor="@color/text_secondary"
+        android:lineSpacingExtra="4dp" />
+
+  </LinearLayout>
+</ScrollView>
