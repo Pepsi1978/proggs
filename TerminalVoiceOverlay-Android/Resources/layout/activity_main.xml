@@ -204,13 +204,50 @@
         android:textAllCaps="false"
         android:backgroundTint="@color/btn_success"
         android:textColor="@android:color/white"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Accessibility Service section -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/surface_dark"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Auto-Paste (Accessibility Service)"
+        android:textSize="16sp"
+        android:textColor="@color/text_primary"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/accessibility_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/accessibility_not_enabled"
+        android:textSize="14sp"
+        android:textColor="#FF9800"
+        android:padding="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/btn_accessibility"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Enable Auto-Paste"
+        android:textSize="14sp"
+        android:textAllCaps="false"
+        android:backgroundTint="#FF9800"
+        android:textColor="@android:color/white"
         android:layout_marginBottom="24dp" />
 
     <!-- Info text -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="The overlay will appear as a floating pill on the right side of the screen. Tap the mic button to record, and the transcribed text will be copied to your clipboard. Paste it in Termux with long-press or Volume Down + V."
+        android:text="The overlay appears as a floating pill on the right side. Tap the mic to record — text is automatically pasted into Termux. Tap X to delete the pasted text. Enable the Accessibility Service above for auto-paste to work."
         android:textSize="12sp"
         android:textColor="@color/text_secondary"
         android:lineSpacingExtra="4dp" />

@@ -1,4 +1,5 @@
 using Android;
+using Android.AccessibilityServices;
 using Android.Content;
 using Android.Content.PM;
 using Android.Net;
@@ -6,6 +7,7 @@ using Android.OS;
 using Android.Provider;
 using Android.Text;
 using Android.Views;
+using Android.Views.Accessibility;
 using Android.Widget;
 using TerminalVoiceOverlay.Services;
 
@@ -25,7 +27,9 @@ public class MainActivity : Activity
     private EditText? _editGeminiModel;
     private Button? _btnSave;
     private Button? _btnToggle;
+    private Button? _btnAccessibility;
     private TextView? _statusText;
+    private TextView? _accessibilityStatus;
 
     private bool _isOverlayRunning;
 
@@ -42,7 +46,9 @@ public class MainActivity : Activity
         _editGeminiModel = FindViewById<EditText>(Resource.Id.edit_gemini_model);
         _btnSave = FindViewById<Button>(Resource.Id.btn_save);
         _btnToggle = FindViewById<Button>(Resource.Id.btn_toggle_overlay);
+        _btnAccessibility = FindViewById<Button>(Resource.Id.btn_accessibility);
         _statusText = FindViewById<TextView>(Resource.Id.status_text);
+        _accessibilityStatus = FindViewById<TextView>(Resource.Id.accessibility_status);
 
         // Load saved settings
         LoadSettings();
@@ -50,6 +56,7 @@ public class MainActivity : Activity
         // Button clicks
         _btnSave!.Click += (_, _) => SaveSettings();
         _btnToggle!.Click += (_, _) => ToggleOverlay();
+        _btnAccessibility!.Click += (_, _) => OpenAccessibilitySettings();
 
         // API key visibility toggles (eye icon)
         SetupPasswordToggle(Resource.Id.btn_toggle_groq, _editGroqKey!);
@@ -63,6 +70,7 @@ public class MainActivity : Activity
     {
         base.OnResume();
         UpdateStatus();
+        UpdateAccessibilityStatus();
     }
 
     private void LoadSettings()
@@ -231,5 +239,41 @@ public class MainActivity : Activity
             else
                 Toast.MakeText(this, GetString(Resource.String.error_overlay_permission), ToastLength.Long)?.Show();
         }
+    }
+
+    private bool IsAccessibilityServiceEnabled()
+    {
+        var serviceName = $"{PackageName}/{Java.Lang.Class.FromType(typeof(PasteAccessibilityService)).Name}";
+
+        var enabledServices = Settings.Secure.GetString(
+            ContentResolver,
+            Settings.Secure.EnabledAccessibilityServices) ?? "";
+
+        return enabledServices.Split(':')
+            .Any(s => s.Equals(serviceName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void UpdateAccessibilityStatus()
+    {
+        if (_accessibilityStatus == null || _btnAccessibility == null) return;
+
+        if (IsAccessibilityServiceEnabled())
+        {
+            _accessibilityStatus.Text = GetString(Resource.String.accessibility_enabled);
+            _accessibilityStatus.SetTextColor(Android.Graphics.Color.ParseColor("#43A047"));
+            _btnAccessibility.Visibility = ViewStates.Gone;
+        }
+        else
+        {
+            _accessibilityStatus.Text = GetString(Resource.String.accessibility_not_enabled);
+            _accessibilityStatus.SetTextColor(Android.Graphics.Color.ParseColor("#FF9800"));
+            _btnAccessibility.Visibility = ViewStates.Visible;
+        }
+    }
+
+    private void OpenAccessibilitySettings()
+    {
+        var intent = new Intent(Settings.ActionAccessibilitySettings);
+        StartActivity(intent);
     }
 }

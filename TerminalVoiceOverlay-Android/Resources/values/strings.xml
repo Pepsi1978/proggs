@@ -22,4 +22,7 @@
   <string name="error_mic_permission">Microphone permission required</string>
   <string name="toast_copied">Copied to clipboard</string>
   <string name="toast_settings_saved">Settings saved</string>
+  <string name="accessibility_description">Allows Voice Overlay to automatically paste transcribed text into Termux and other apps. No data is collected.</string>
+  <string name="accessibility_not_enabled">Auto-paste requires Accessibility Service. Tap to enable.</string>
+  <string name="accessibility_enabled">Auto-paste is active</string>
 </resources>

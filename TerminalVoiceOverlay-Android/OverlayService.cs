@@ -275,10 +275,15 @@ public class OverlayService : Service
     // Button handlers
     // ─────────────────────────────────────────────────────────────────────────
 
-    // X — clear clipboard, flash gray then back to red
+    // X — delete pasted text from terminal, clear clipboard, flash gray then back to red
     private void OnXClick()
     {
-        ClearClipboard();
+        // If text was pasted into the terminal, send Ctrl+U to clear the line
+        if (_hasPastedText)
+            DeletePastedText();
+        else
+            ClearClipboard();
+
         _hasPastedText = false;
 
         SetButtonColor(_btnX!, ColBtnIdle);
@@ -400,7 +405,7 @@ public class OverlayService : Service
 
                 _handler.Post(() =>
                 {
-                    CopyToClipboard(final);
+                    CopyAndPaste(final);
                     _hasPastedText = true;
                     SetMicState(RecordingState.Success);
                     SetButtonColor(_btnMic!, ColBtnSuccess);
@@ -483,10 +488,9 @@ public class OverlayService : Service
 
                 _handler.Post(() =>
                 {
-                    CopyToClipboard(final);
-                    // Mirror Windows version: track whether text was pasted without auto-enter.
+                    CopyAndPaste(final);
+                    // Track whether text was pasted without auto-enter (for X-button delete).
                     _hasPastedText = !_autoEnterEnabled;
-                    if (_autoEnterEnabled) _hasPastedText = false;
                     SetButtonColor(_btnBtw!, ColBtnSuccess);
                     ScheduleBtwReset(3000);
                 });
@@ -582,7 +586,7 @@ public class OverlayService : Service
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Helper — clipboard
+    // Helper — clipboard + auto-paste
     // ─────────────────────────────────────────────────────────────────────────
 
     private void CopyToClipboard(string text)
@@ -590,6 +594,47 @@ public class OverlayService : Service
         var clip = ClipData.NewPlainText("voice_overlay", text);
         _clipboard!.PrimaryClip = clip;
         VibrateShort(50);
+    }
+
+    /// <summary>
+    /// Copies text to clipboard, then triggers paste into the focused app via AccessibilityService.
+    /// </summary>
+    private void CopyAndPaste(string text)
+    {
+        CopyToClipboard(text);
+        TriggerPaste();
+    }
+
+    /// <summary>
+    /// Triggers paste in the focused app via the AccessibilityService.
+    /// Small delay (150ms) to ensure clipboard content is ready.
+    /// </summary>
+    private void TriggerPaste()
+    {
+        if (!PasteAccessibilityService.IsConnected) return;
+
+        _handler.PostDelayed(new Java.Lang.Runnable(() =>
+        {
+            PasteAccessibilityService.Instance?.PerformPaste();
+        }), 150);
+    }
+
+    /// <summary>
+    /// Deletes previously pasted text from the terminal by sending Ctrl+U (line kill).
+    /// Only effective when auto-enter was OFF (text still on the input line).
+    /// </summary>
+    private void DeletePastedText()
+    {
+        if (!PasteAccessibilityService.IsConnected) return;
+
+        // Ctrl+U (\x15) clears the entire input line in bash/zsh
+        CopyAndPaste("\x15");
+
+        // Clear clipboard after the delete so Ctrl+U doesn't linger
+        _handler.PostDelayed(new Java.Lang.Runnable(() =>
+        {
+            ClearClipboard();
+        }), 400);
     }
 
     private void ClearClipboard()
