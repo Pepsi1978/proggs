@@ -58,8 +58,10 @@ namespace TerminalVoiceOverlay.Services
         }
 
         /// <summary>
-        /// Clears the current terminal input line.
-        /// Sends Escape (clears line in PowerShell/cmd), then Home+Shift+End+Delete as fallback.
+        /// Clears the current terminal input line by sending Ctrl+C.
+        /// Matches macOS approach (TerminalController.swift clearLine).
+        /// Ctrl+C discards the entire pending input and gives a fresh prompt
+        /// in PowerShell (PSReadLine CancelLine), cmd.exe, and bash/zsh.
         /// </summary>
         public static void ClearLine(IntPtr terminalHwnd)
         {
@@ -67,24 +69,14 @@ namespace TerminalVoiceOverlay.Services
             {
                 Win32.AllowSetForegroundWindow(unchecked((uint)-1));
                 Win32.SetForegroundWindow(terminalHwnd);
-                Thread.Sleep(200);
+                Thread.Sleep(150);
             }
 
-            // Escape clears the current input line in PowerShell and cmd
-            SendKey(Win32.VK_ESCAPE);
-            Thread.Sleep(100);
-
-            // Fallback: Home → Shift+End → Delete (in case Escape wasn't enough)
-            SendKey(VK_HOME);
-            Thread.Sleep(50);
-
-            Win32.keybd_event((byte)Win32.VK_SHIFT, 0, 0, UIntPtr.Zero);
-            SendKey(VK_END);
-            Win32.keybd_event((byte)Win32.VK_SHIFT, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            Thread.Sleep(50);
-
-            SendKey(VK_DELETE);
+            // Ctrl+C — cancels current input, fresh prompt (same as macOS)
+            SendKeyCombo(Win32.VK_CONTROL, VK_C);
         }
+
+        private const ushort VK_C = 0x43;
 
         private const byte VK_HOME = 0x24;
         private const byte VK_END = 0x23;
@@ -115,19 +107,37 @@ namespace TerminalVoiceOverlay.Services
             SendKey(VK_RETURN);
         }
 
+        private static void SendKeyCombo(ushort modifier, ushort key)
+        {
+            byte modScan = (byte)Win32.MapVirtualKey(modifier, Win32.MAPVK_VK_TO_VSC);
+            byte keyScan = (byte)Win32.MapVirtualKey(key, Win32.MAPVK_VK_TO_VSC);
+
+            Win32.keybd_event((byte)modifier, modScan, 0, UIntPtr.Zero);
+            Win32.keybd_event((byte)key, keyScan, 0, UIntPtr.Zero);
+            Win32.keybd_event((byte)key, keyScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            Win32.keybd_event((byte)modifier, modScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+        }
+
         private static void SendCtrlV()
         {
-            // Use keybd_event — works across UIPI boundaries unlike SendInput
-            Win32.keybd_event((byte)Win32.VK_CONTROL, 0, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_V, 0, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_V, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_CONTROL, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            // Use keybd_event with proper scan codes
+            byte ctrlScan = (byte)Win32.MapVirtualKey(Win32.VK_CONTROL, Win32.MAPVK_VK_TO_VSC);
+            byte vScan    = (byte)Win32.MapVirtualKey(Win32.VK_V, Win32.MAPVK_VK_TO_VSC);
+
+            Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, 0, UIntPtr.Zero);
+            Win32.keybd_event((byte)Win32.VK_V, vScan, 0, UIntPtr.Zero);
+            Win32.keybd_event((byte)Win32.VK_V, vScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
         }
 
         private static void SendKey(ushort vk)
         {
-            Win32.keybd_event((byte)vk, 0, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)vk, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            byte scan = (byte)Win32.MapVirtualKey(vk, Win32.MAPVK_VK_TO_VSC);
+            // Home, End, Delete, Insert, Page Up/Down, Arrow keys (0x21–0x2E) are extended keys
+            uint flags = (vk >= 0x21 && vk <= 0x2E) ? Win32.KEYEVENTF_EXTENDEDKEY : 0;
+
+            Win32.keybd_event((byte)vk, scan, flags, UIntPtr.Zero);
+            Win32.keybd_event((byte)vk, scan, flags | Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
         }
     }
 }

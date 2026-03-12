@@ -123,6 +123,12 @@ namespace TerminalVoiceOverlay.NativeMethods
         public const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
         // KEYEVENTF_KEYUP = 0x0002 already defined
 
+        // ── MapVirtualKey (VK → scan code) ──
+        public const uint MAPVK_VK_TO_VSC = 0;
+
+        [DllImport("user32.dll")]
+        public static extern uint MapVirtualKey(uint uCode, uint uMapType);
+
         // ── DPI ──
         [DllImport("shcore.dll")]
         public static extern int GetDpiForMonitor(IntPtr hmonitor, int dpiType, out uint dpiX, out uint dpiY);
