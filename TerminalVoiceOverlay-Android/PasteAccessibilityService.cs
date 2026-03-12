@@ -11,6 +11,7 @@ namespace TerminalVoiceOverlay;
 //
 // The user must manually enable this service in Android Settings → Accessibility.
 [Service(
+    Name = "com.pepsi1978.terminalvoiceoverlay.PasteAccessibilityService",
     Permission = "android.permission.BIND_ACCESSIBILITY_SERVICE",
     Exported = false)]
 [IntentFilter(new[] { "android.accessibilityservice.AccessibilityService" })]
