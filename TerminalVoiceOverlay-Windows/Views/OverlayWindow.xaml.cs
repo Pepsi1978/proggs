@@ -2,8 +2,10 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using TerminalVoiceOverlay.Models;
 using TerminalVoiceOverlay.NativeMethods;
@@ -13,60 +15,80 @@ namespace TerminalVoiceOverlay.Views
 {
     public partial class OverlayWindow : Window
     {
-        // ── Colors ──
-        private static readonly SolidColorBrush BrushIdle = new(Color.FromRgb(0x2D, 0x2D, 0x2D));
-        private static readonly SolidColorBrush BrushRecording = new(Color.FromRgb(0xE5, 0x39, 0x35));
-        private static readonly SolidColorBrush BrushRecordingBright = new(Color.FromRgb(0xFF, 0x66, 0x66));
-        private static readonly SolidColorBrush BrushProcessing = new(Color.FromRgb(0xFF, 0x98, 0x00));
-        private static readonly SolidColorBrush BrushSuccess = new(Color.FromRgb(0x43, 0xA0, 0x47));
-        private static readonly SolidColorBrush BrushGeminiOn = new(Color.FromRgb(0x22, 0xC5, 0x5E));
-        private static readonly SolidColorBrush BrushGeminiOff = new(Color.FromRgb(0x2D, 0x2D, 0x2D));
-        private static readonly SolidColorBrush BrushAutoEnterOn = new(Color.FromRgb(0x22, 0xC5, 0x5E));
-        private static readonly SolidColorBrush BrushAutoEnterOff = new(Color.FromRgb(0x2D, 0x2D, 0x2D));
+        // ── Color constants (matches macOS OverlayPanel.swift) ──
+
+        // Idle/base
+        private static readonly SolidColorBrush BtnIdle       = Brush("#2D2D2D");
+        private static readonly SolidColorBrush BtnRecording  = Brush("#E53935");
+        private static readonly SolidColorBrush BtnProcessing = Brush("#FF9800");
+        private static readonly SolidColorBrush BtnSuccess    = Brush("#43A047");
+        // Toggles
+        private static readonly SolidColorBrush ToggleOn      = Brush("#16a34a");
+        private static readonly SolidColorBrush ToggleOff     = Brush("#2D2D2D");
+        // BTW mic
+        private static readonly SolidColorBrush BtnBtwIdle      = Brush("#64B5F6");
+        private static readonly SolidColorBrush BtnBtwRecording = Brush("#1E88E5");
+        private static readonly SolidColorBrush BtnBtwPulse     = Brush("#90CAF9");
+        // Special
+        private static readonly SolidColorBrush BtnX         = Brush("#E53935");
+        private static readonly SolidColorBrush BtnXPressed  = Brush("#FF6666");
+        private static readonly SolidColorBrush BtnMicIdle   = Brush("#2A5DA8");
+
+        // Pulse colours for main mic
+        private static readonly SolidColorBrush BtnRecordingBright = Brush("#FF6666");
 
         // ── Services ──
-        private readonly AudioRecorder _audioRecorder;
+        private readonly AudioRecorder     _audioRecorder;
         private readonly GroqWhisperClient _groqClient;
-        private readonly GeminiClient? _geminiClient;
-        private readonly TerminalWatcher _terminalWatcher;
+        private readonly GeminiClient?     _geminiClient;
+        private readonly TerminalWatcher   _terminalWatcher;
 
         // ── State ──
-        private RecordingState _micState = RecordingState.Idle;
-        private bool _isProcessing;
-        private bool _geminiEnabled = false;
-        private bool _autoEnterEnabled = false;
-        private bool _hasPastedText = false;
-        private string? _lastRawTranscript;
+        private RecordingState _micState    = RecordingState.Idle;
+        private bool _isProcessing          = false;
+        private bool isBtwRecording         = false;
+        private bool geminiEnabled          = false; // macOS default
+        private bool autoEnterEnabled       = true;  // macOS default (was false in Windows)
+        private bool hasPastedText          = false;
+        private string? lastRawTranscript   = null;
+
+        // ── Timers ──
         private readonly DispatcherTimer _pulseTimer;
+        private readonly DispatcherTimer _btwPulseTimer;
         private readonly DispatcherTimer _resetTimer;
-        private bool _pulseBright;
+        private bool _pulseBright    = false;
+        private bool _btwPulseBright = false;
+
+        // ── Constructor ──
 
         public OverlayWindow(Config config)
         {
             InitializeComponent();
 
-            _audioRecorder = new AudioRecorder(config.AudioSampleRate, config.AudioChannels);
-            _groqClient = new GroqWhisperClient(config.GroqApiKey, config.WhisperModel, config.WhisperLang, config.WhisperUrl);
+            _audioRecorder   = new AudioRecorder(config.AudioSampleRate, config.AudioChannels);
+            _groqClient      = new GroqWhisperClient(config.GroqApiKey, config.WhisperModel, config.WhisperLang, config.WhisperUrl);
             _terminalWatcher = new TerminalWatcher(config.TerminalProcessNames);
 
             if (config.GeminiAvailable)
-            {
                 _geminiClient = new GeminiClient(config.GeminiApiKey!, config.GeminiModel, config.GeminiThinkingLevel);
-            }
-            else
-            {
-                _geminiEnabled = false;
-            }
 
-            // Pulse timer (0.5s toggle for recording animation)
+            // ── Pulse timer: main mic (500 ms, #FF6666 ↔ #E53935) ──
             _pulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _pulseTimer.Tick += (_, _) =>
             {
                 _pulseBright = !_pulseBright;
-                BtnMic.Background = _pulseBright ? BrushRecordingBright : BrushRecording;
+                MicButton.Background = _pulseBright ? BtnRecordingBright : BtnRecording;
             };
 
-            // Reset timer (3s back to idle after success/error)
+            // ── Pulse timer: BTW mic (500 ms, #90CAF9 ↔ #1E88E5) ──
+            _btwPulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+            _btwPulseTimer.Tick += (_, _) =>
+            {
+                _btwPulseBright = !_btwPulseBright;
+                BtwButton.Background = _btwPulseBright ? BtnBtwPulse : BtnBtwRecording;
+            };
+
+            // ── Reset timer: 3 s back to idle after success/error ──
             _resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
             _resetTimer.Tick += (_, _) =>
             {
@@ -74,14 +96,50 @@ namespace TerminalVoiceOverlay.Views
                 SetMicState(RecordingState.Idle);
             };
 
-            // Set initial button states
-            UpdateGeminiButton();
-            UpdateAutoEnterButton();
+            // ── Initial button colours ──
+            XButton.Background    = BtnX;           // red
+            WButton.Background    = ToggleOn;        // green  (Whisper-raw active, Gemini off)
+            MicButton.Background  = BtnMicIdle;      // dark blue
+            BtwButton.Background  = BtnBtwIdle;      // light blue
+            GButton.Background    = ToggleOff;       // dark   (Gemini starts disabled)
+            EnterButton.Background = BtnProcessing;  // orange (autoEnter starts true)
 
-            // Terminal watcher events
-            _terminalWatcher.TerminalActivated += OnTerminalActivated;
+            // ── Hover animations ──
+            AttachHover(XButton);
+            AttachHover(WButton);
+            AttachHover(BtwButton);
+            AttachHover(MicButton);
+            AttachHover(GButton);
+            AttachHover(EnterButton);
+
+            // ── Terminal watcher ──
+            _terminalWatcher.TerminalActivated   += OnTerminalActivated;
             _terminalWatcher.TerminalDeactivated += OnTerminalDeactivated;
             _terminalWatcher.Start();
+        }
+
+        // ── Hover animation helper ──
+
+        private static void AttachHover(System.Windows.Controls.Button btn)
+        {
+            btn.RenderTransformOrigin = new Point(0.5, 0.5);
+            btn.RenderTransform       = new ScaleTransform(1.0, 1.0);
+
+            btn.MouseEnter += (_, _) => AnimateScale(btn, 1.15, TimeSpan.FromMilliseconds(150));
+            btn.MouseLeave += (_, _) => AnimateScale(btn, 1.0,  TimeSpan.FromMilliseconds(150));
+        }
+
+        private static void AnimateScale(System.Windows.Controls.Button btn, double to, TimeSpan duration)
+        {
+            var ease  = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+            var animX = new DoubleAnimation(to, new Duration(duration)) { EasingFunction = ease };
+            var animY = new DoubleAnimation(to, new Duration(duration)) { EasingFunction = ease };
+
+            if (btn.RenderTransform is ScaleTransform st)
+            {
+                st.BeginAnimation(ScaleTransform.ScaleXProperty, animX);
+                st.BeginAnimation(ScaleTransform.ScaleYProperty, animY);
+            }
         }
 
         // ── Non-activating window setup ──
@@ -116,48 +174,58 @@ namespace TerminalVoiceOverlay.Views
 
         private void OnTerminalActivated(IntPtr terminalHwnd)
         {
-            // Position overlay on the correct monitor
             var workArea = TerminalWatcher.GetMonitorWorkArea(terminalHwnd);
             Left = workArea.X + workArea.Width - Width - 23;
-            Top = workArea.Y + (workArea.Height - Height) / 2;
+            Top  = workArea.Y + (workArea.Height - Height) / 2;
 
             if (!IsVisible)
             {
                 Show();
-                Console.WriteLine("Overlay: sichtbar (Terminal aktiv)");
+                Console.WriteLine("Overlay: visible (terminal active)");
             }
         }
 
         private void OnTerminalDeactivated()
         {
-            // Don't hide while recording or processing
-            if (_micState == RecordingState.Recording || _isProcessing)
+            if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording)
                 return;
 
             if (IsVisible)
             {
                 Hide();
-                Console.WriteLine("Overlay: versteckt (Terminal nicht aktiv)");
+                Console.WriteLine("Overlay: hidden (terminal inactive)");
             }
         }
 
         // ── Button handlers ──
 
-        private void BtnClear_Click(object sender, RoutedEventArgs e)
+        /// <summary>X button — clear current terminal line.</summary>
+        private async void BtnClear_Click(object sender, RoutedEventArgs e)
         {
             TerminalController.ClearLine(_terminalWatcher.ActiveTerminalHwnd);
-            _hasPastedText = false;
+            hasPastedText = false;
+
+            // Flash X button: gray for 2 s then back to red
+            XButton.Background = BtnIdle;
+            await Task.Delay(2000);
+            XButton.Background = BtnX;
         }
 
+        /// <summary>Main mic button — start / stop recording.</summary>
         private async void BtnMic_Click(object sender, RoutedEventArgs e)
         {
-            if (_isProcessing) return;
+            // Ignore if BTW mic is active
+            if (isBtwRecording) return;
+            if (_isProcessing)  return;
 
             if (_micState == RecordingState.Recording)
             {
                 // ── Stop recording ──
                 var wavFile = _audioRecorder.Stop();
-                Task.Run(() => { Console.Beep(660, 120); Console.Beep(440, 120); });
+                _ = Task.Run(() => { Console.Beep(660, 120); Console.Beep(440, 120); });
+                _pulseTimer.Stop();
+                _pulseBright = false;
+
                 if (wavFile == null)
                 {
                     SetMicState(RecordingState.Idle);
@@ -166,26 +234,26 @@ namespace TerminalVoiceOverlay.Views
 
                 _isProcessing = true;
                 SetMicState(RecordingState.Processing);
-                Console.WriteLine("Aufnahme gestoppt, transkribiere...");
+                Console.WriteLine("Recording stopped, transcribing...");
 
                 try
                 {
                     var transcript = await _groqClient.TranscribeAsync(wavFile);
-                    Console.WriteLine($"Transkription: {transcript}");
-                    _lastRawTranscript = transcript;
+                    Console.WriteLine($"Transcript: {transcript}");
+                    lastRawTranscript = transcript;
 
                     string finalText;
-                    if (_geminiEnabled && _geminiClient != null)
+                    if (geminiEnabled && _geminiClient != null)
                     {
-                        Console.WriteLine("Gemini-Korrektur...");
+                        Console.WriteLine("Gemini correction...");
                         try
                         {
                             finalText = await _geminiClient.CorrectTextAsync(transcript);
-                            Console.WriteLine($"Korrigiert: {finalText}");
+                            Console.WriteLine($"Corrected: {finalText}");
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"Gemini-Fehler: {ex.Message}, verwende Rohtext");
+                            Console.WriteLine($"Gemini error: {ex.Message}, using raw text");
                             finalText = transcript;
                         }
                     }
@@ -195,22 +263,21 @@ namespace TerminalVoiceOverlay.Views
                     }
 
                     // Prepend space if text was already pasted on this line
-                    if (_hasPastedText)
+                    if (hasPastedText)
                         finalText = " " + finalText;
 
-                    TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, _autoEnterEnabled);
+                    TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
                     SetMicState(RecordingState.Success);
-                    Console.WriteLine("Text eingefügt");
+                    Console.WriteLine("Text inserted");
 
-                    // Track paste state: reset after Enter, keep for next paste
-                    if (_autoEnterEnabled)
-                        _hasPastedText = false;
-                    else
-                        _hasPastedText = true;
+                    // Track paste state
+                    hasPastedText = !autoEnterEnabled;
+                    if (autoEnterEnabled)
+                        hasPastedText = false;
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Transkriptionsfehler: {ex.Message}");
+                    Console.WriteLine($"Transcription error: {ex.Message}");
                     SetMicState(RecordingState.Error);
                 }
                 finally
@@ -218,7 +285,6 @@ namespace TerminalVoiceOverlay.Views
                     _isProcessing = false;
                     ScheduleReset();
 
-                    // Clean up temp file
                     try { if (wavFile != null) File.Delete(wavFile); }
                     catch { /* ignore */ }
                 }
@@ -230,48 +296,187 @@ namespace TerminalVoiceOverlay.Views
                 {
                     _audioRecorder.Start();
                     SetMicState(RecordingState.Recording);
-                    Task.Run(() => Console.Beep(880, 150));
-                    Console.WriteLine("Aufnahme gestartet");
+                    _ = Task.Run(() => Console.Beep(880, 150));
+                    Console.WriteLine("Recording started");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Mikrofon-Fehler: {ex.Message}");
+                    Console.WriteLine($"Microphone error: {ex.Message}");
                     SetMicState(RecordingState.Error);
                     ScheduleReset();
                 }
             }
         }
 
-        private void BtnWhisperUndo_Click(object sender, RoutedEventArgs e)
+        /// <summary>BTW mic button — record and prepend "/btw " to the text.</summary>
+        private async void BtnBtw_Click(object sender, RoutedEventArgs e)
         {
-            if (_lastRawTranscript == null) return;
+            // Ignore if main mic is active
+            if (_micState == RecordingState.Recording) return;
+            if (_isProcessing) return;
 
-            // Clear the current line (same logic as X button)
-            TerminalController.ClearLine(_terminalWatcher.ActiveTerminalHwnd);
+            if (isBtwRecording)
+            {
+                // ── Stop BTW recording ──
+                var wavFile = _audioRecorder.Stop();
+                _ = Task.Run(() => { Console.Beep(660, 120); Console.Beep(440, 120); });
+                _btwPulseTimer.Stop();
+                _btwPulseBright = false;
+                isBtwRecording = false;
 
-            // Paste the raw Whisper transcript
-            System.Threading.Thread.Sleep(100);
-            TerminalController.PasteText(_lastRawTranscript, _terminalWatcher.ActiveTerminalHwnd);
-            _hasPastedText = true;
-            Console.WriteLine($"Whisper-Rohtext eingefügt: {_lastRawTranscript}");
+                if (wavFile == null)
+                {
+                    SetBtwMicState(RecordingState.Idle);
+                    return;
+                }
+
+                _isProcessing = true;
+                SetBtwMicState(RecordingState.Processing);
+                Console.WriteLine("BTW recording stopped, transcribing...");
+
+                try
+                {
+                    var transcript = await _groqClient.TranscribeAsync(wavFile);
+                    Console.WriteLine($"BTW transcript: {transcript}");
+
+                    string finalText;
+                    if (geminiEnabled && _geminiClient != null)
+                    {
+                        Console.WriteLine("BTW Gemini correction...");
+                        try
+                        {
+                            finalText = await _geminiClient.CorrectTextAsync(transcript);
+                            Console.WriteLine($"BTW corrected: {finalText}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"BTW Gemini error: {ex.Message}, using raw text");
+                            finalText = transcript;
+                        }
+                    }
+                    else
+                    {
+                        finalText = transcript;
+                    }
+
+                    // Prepend space if text was already pasted on this line, then /btw prefix
+                    if (hasPastedText)
+                        finalText = " /btw " + finalText;
+                    else
+                        finalText = "/btw " + finalText;
+
+                    TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
+                    SetBtwMicState(RecordingState.Success);
+                    Console.WriteLine("BTW text inserted");
+
+                    hasPastedText = !autoEnterEnabled;
+                    if (autoEnterEnabled)
+                        hasPastedText = false;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"BTW transcription error: {ex.Message}");
+                    SetBtwMicState(RecordingState.Error);
+                }
+                finally
+                {
+                    _isProcessing = false;
+
+                    // Reset BTW button to idle after 3 s
+                    await Task.Delay(3000);
+                    if (!isBtwRecording)
+                        SetBtwMicState(RecordingState.Idle);
+
+                    try { if (wavFile != null) File.Delete(wavFile); }
+                    catch { /* ignore */ }
+                }
+            }
+            else
+            {
+                // ── Start BTW recording ──
+                try
+                {
+                    isBtwRecording = true;
+                    _audioRecorder.Start();
+                    SetBtwMicState(RecordingState.Recording);
+                    _ = Task.Run(() => Console.Beep(880, 150));
+                    Console.WriteLine("BTW recording started");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"BTW microphone error: {ex.Message}");
+                    isBtwRecording = false;
+                    SetBtwMicState(RecordingState.Error);
+
+                    await Task.Delay(3000);
+                    SetBtwMicState(RecordingState.Idle);
+                }
+            }
         }
 
+        /// <summary>W button — undo Gemini correction, paste raw Whisper text.</summary>
+        private void BtnWhisperUndo_Click(object sender, RoutedEventArgs e)
+        {
+            if (lastRawTranscript == null) return;
+
+            TerminalController.ClearLine(_terminalWatcher.ActiveTerminalHwnd);
+            System.Threading.Thread.Sleep(100);
+            TerminalController.PasteText(lastRawTranscript, _terminalWatcher.ActiveTerminalHwnd);
+            hasPastedText = true;
+            Console.WriteLine($"Whisper raw text inserted: {lastRawTranscript}");
+
+            lastRawTranscript = null;
+        }
+
+        /// <summary>G button — toggle Gemini on/off.
+        /// G=on → GButton green, WButton dark.
+        /// G=off → GButton dark, WButton green (Whisper-raw active).</summary>
         private void BtnGemini_Click(object sender, RoutedEventArgs e)
         {
             if (_geminiClient == null) return;
-            _geminiEnabled = !_geminiEnabled;
-            UpdateGeminiButton();
-            Console.WriteLine($"Gemini {(_geminiEnabled ? "AN" : "AUS")}");
+            geminiEnabled = !geminiEnabled;
+
+            if (geminiEnabled)
+            {
+                GButton.Background = ToggleOn;
+                WButton.Background = ToggleOff;
+            }
+            else
+            {
+                GButton.Background = ToggleOff;
+                WButton.Background = ToggleOn;
+            }
+
+            Console.WriteLine($"Gemini {(geminiEnabled ? "ON" : "OFF")}");
         }
 
+        /// <summary>Enter button — toggle auto-enter.
+        /// ON→OFF: button goes dark.
+        /// OFF→ON: button goes orange AND fires Return immediately.</summary>
         private void BtnAutoEnter_Click(object sender, RoutedEventArgs e)
         {
-            _autoEnterEnabled = !_autoEnterEnabled;
-            UpdateAutoEnterButton();
-            Console.WriteLine($"Auto-Enter {(_autoEnterEnabled ? "AN" : "AUS")}");
+            if (autoEnterEnabled)
+            {
+                // Turn OFF
+                autoEnterEnabled = false;
+                EnterButton.Background = ToggleOff;
+                hasPastedText = false;
+                Console.WriteLine("Auto-enter OFF");
+            }
+            else
+            {
+                // Turn ON → fire Return immediately
+                autoEnterEnabled = true;
+                EnterButton.Background = BtnProcessing;
+                hasPastedText = false;
+                Console.WriteLine("Auto-enter ON — firing Return");
+
+                // Fire a Return key press into the active terminal
+                TerminalController.PressReturn(_terminalWatcher.ActiveTerminalHwnd);
+            }
         }
 
-        // ── State management ──
+        // ── Mic state helpers ──
 
         private void SetMicState(RecordingState state)
         {
@@ -282,32 +487,48 @@ namespace TerminalVoiceOverlay.Views
             switch (state)
             {
                 case RecordingState.Idle:
-                    BtnMic.Background = BrushIdle;
+                    MicButton.Background = BtnMicIdle;
                     break;
                 case RecordingState.Recording:
-                    BtnMic.Background = BrushRecording;
+                    MicButton.Background = BtnRecording;
                     _pulseTimer.Start();
                     break;
                 case RecordingState.Processing:
-                    BtnMic.Background = BrushProcessing;
+                    MicButton.Background = BtnProcessing;
                     break;
                 case RecordingState.Success:
-                    BtnMic.Background = BrushSuccess;
+                    MicButton.Background = BtnSuccess;
                     break;
                 case RecordingState.Error:
-                    BtnMic.Background = BrushRecording;
+                    MicButton.Background = BtnX;
                     break;
             }
         }
 
-        private void UpdateGeminiButton()
+        private void SetBtwMicState(RecordingState state)
         {
-            BtnGemini.Background = _geminiEnabled ? BrushGeminiOn : BrushGeminiOff;
-        }
+            _btwPulseTimer.Stop();
+            _btwPulseBright = false;
 
-        private void UpdateAutoEnterButton()
-        {
-            BtnAutoEnter.Background = _autoEnterEnabled ? BrushAutoEnterOn : BrushAutoEnterOff;
+            switch (state)
+            {
+                case RecordingState.Idle:
+                    BtwButton.Background = BtnBtwIdle;
+                    break;
+                case RecordingState.Recording:
+                    BtwButton.Background = BtnBtwRecording;
+                    _btwPulseTimer.Start();
+                    break;
+                case RecordingState.Processing:
+                    BtwButton.Background = BtnProcessing;
+                    break;
+                case RecordingState.Success:
+                    BtwButton.Background = BtnSuccess;
+                    break;
+                case RecordingState.Error:
+                    BtwButton.Background = BtnX;
+                    break;
+            }
         }
 
         private void ScheduleReset()
@@ -316,11 +537,22 @@ namespace TerminalVoiceOverlay.Views
             _resetTimer.Start();
         }
 
+        // ── Brush factory ──
+
+        private static SolidColorBrush Brush(string hex)
+        {
+            var color = (Color)ColorConverter.ConvertFromString(hex);
+            var brush  = new SolidColorBrush(color);
+            brush.Freeze();
+            return brush;
+        }
+
         // ── Cleanup ──
 
         protected override void OnClosed(EventArgs e)
         {
             _pulseTimer.Stop();
+            _btwPulseTimer.Stop();
             _resetTimer.Stop();
             _terminalWatcher.Dispose();
             _audioRecorder.Dispose();

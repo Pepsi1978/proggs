@@ -28,7 +28,7 @@ namespace TerminalVoiceOverlay.Services
             if (terminalHwnd != IntPtr.Zero)
             {
                 Win32.SetForegroundWindow(terminalHwnd);
-                Thread.Sleep(100);
+                Thread.Sleep(150); // macOS uses usleep 150ms
             }
 
             // Send Ctrl+V
@@ -37,7 +37,7 @@ namespace TerminalVoiceOverlay.Services
             // Send Enter if auto-enter is enabled
             if (autoEnter)
             {
-                Thread.Sleep(300); // Reduced from 500ms
+                Thread.Sleep(300); // macOS uses 300ms before optional Enter
                 if (terminalHwnd != IntPtr.Zero)
                 {
                     Win32.SetForegroundWindow(terminalHwnd);
@@ -59,7 +59,7 @@ namespace TerminalVoiceOverlay.Services
 
         /// <summary>
         /// Clears the current terminal input line.
-        /// Goes to End, then spams Backspace to delete everything.
+        /// Escape → Home → Shift+End → Delete (fast and reliable, matches macOS Ctrl+C approach).
         /// </summary>
         public static void ClearLine(IntPtr terminalHwnd)
         {
@@ -69,26 +69,52 @@ namespace TerminalVoiceOverlay.Services
                 Thread.Sleep(150);
             }
 
-            // Escape to dismiss autocomplete/menus
+            // Escape to cancel any selection/mode
             SendKey(Win32.VK_ESCAPE);
-            Thread.Sleep(100);
-
-            // End — go to end of line
-            SendKey(VK_END);
             Thread.Sleep(50);
 
-            // Send many Backspaces to delete entire line (max ~500 chars)
-            for (int i = 0; i < 500; i++)
-            {
-                Win32.keybd_event(VK_BACKSPACE, 0, 0, UIntPtr.Zero);
-                Win32.keybd_event(VK_BACKSPACE, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            }
+            // Home — go to start of line
+            SendKey(VK_HOME);
+            Thread.Sleep(50);
 
+            // Shift+End — select entire line
+            Win32.keybd_event((byte)Win32.VK_SHIFT, 0, 0, UIntPtr.Zero);
+            SendKey(VK_END);
+            Win32.keybd_event((byte)Win32.VK_SHIFT, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            Thread.Sleep(50);
+
+            // Delete — delete the selection
+            SendKey(VK_DELETE);
         }
 
+        private const byte VK_HOME = 0x24;
         private const byte VK_END = 0x23;
+        private const byte VK_DELETE = 0x2E;
         private const byte VK_BACKSPACE = 0x08;
         private const byte VK_RETURN = 0x0D;
+
+        /// <summary>
+        /// Sends the Enter/Return key. Used for the Enter button's immediate-fire behavior
+        /// when toggling autoEnter on.
+        /// </summary>
+        public static void SendReturn()
+        {
+            SendKey(VK_RETURN);
+        }
+
+        /// <summary>
+        /// Focuses the terminal window then sends the Enter/Return key.
+        /// Called by EnterButton when toggling auto-enter ON to fire a Return immediately.
+        /// </summary>
+        public static void PressReturn(IntPtr terminalHwnd)
+        {
+            if (terminalHwnd != IntPtr.Zero)
+            {
+                Win32.SetForegroundWindow(terminalHwnd);
+                Thread.Sleep(100);
+            }
+            SendKey(VK_RETURN);
+        }
 
         private static void SendCtrlV()
         {
