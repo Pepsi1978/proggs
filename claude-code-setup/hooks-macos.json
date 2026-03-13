@@ -35,6 +35,40 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/safety-gate.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Check the conversation: Were any protected settings modified? Verify in ~/.claude/settings.json that: (1) effortLevel is 'high', (2) env.CLAUDE_CODE_EFFORT_LEVEL is 'high', (3) env.CLAUDE_CODE_SUBAGENT_MODEL is 'sonnet', (4) model is 'claude-opus-4-6'. If ANY of these changed, respond with {\"ok\": false, \"reason\": \"Protected setting was modified: [which one]\"}. If all are intact, respond with {\"ok\": true}.",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Before context compression: Extract and list any critical information that should survive compaction: (1) Current task status and progress, (2) File paths that were modified, (3) Decisions made by the user, (4) Any pending actions. Format as a concise summary that can be injected after compaction.",
+            "timeout": 15
+          }
+        ]
+      }
     ]
   }
 }
