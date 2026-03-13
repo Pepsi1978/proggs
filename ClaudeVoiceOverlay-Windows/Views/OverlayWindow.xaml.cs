@@ -52,6 +52,13 @@ namespace ClaudeVoiceOverlay.Views
         private bool hasPastedText          = false;
         private string? lastRawTranscript   = null;
 
+        // ── Right-click drag state ──
+        private bool _isDragging;
+        private bool _manuallyPositioned;
+        private int _dragStartCursorX, _dragStartCursorY;
+        private double _dragStartLeft, _dragStartTop;
+        private double _dragDpiX, _dragDpiY;
+
         // ── Timers ──
         private readonly DispatcherTimer _pulseTimer;
         private readonly DispatcherTimer _btwPulseTimer;
@@ -174,9 +181,12 @@ namespace ClaudeVoiceOverlay.Views
 
         private void OnAppActivated(IntPtr appHwnd)
         {
-            var workArea = AppWatcher.GetMonitorWorkArea(appHwnd);
-            Left = workArea.X + workArea.Width - Width - 23;
-            Top  = workArea.Y + (workArea.Height - Height) / 4;
+            if (!_manuallyPositioned)
+            {
+                var workArea = AppWatcher.GetMonitorWorkArea(appHwnd);
+                Left = workArea.X + workArea.Width - Width - 23;
+                Top  = workArea.Y + (workArea.Height - Height) / 4;
+            }
 
             if (!IsVisible)
             {
@@ -192,9 +202,59 @@ namespace ClaudeVoiceOverlay.Views
 
             if (IsVisible)
             {
+                _manuallyPositioned = false;
                 Hide();
                 Console.WriteLine("Overlay: hidden (app inactive)");
             }
+        }
+
+        // ── Right-click drag handlers ──
+
+        private void Border_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!Win32.GetCursorPos(out var pt)) return;
+            _isDragging = true;
+            _dragStartCursorX = pt.X;
+            _dragStartCursorY = pt.Y;
+            _dragStartLeft = Left;
+            _dragStartTop = Top;
+            var source = PresentationSource.FromVisual(this);
+            _dragDpiX = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+            _dragDpiY = source?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
+            ((UIElement)sender).CaptureMouse();
+            ((FrameworkElement)sender).Cursor = Cursors.SizeAll;
+            e.Handled = true;
+        }
+
+        private void Border_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isDragging) return;
+            if (e.RightButton != MouseButtonState.Pressed)
+            {
+                StopDrag(sender);
+                return;
+            }
+
+            if (!Win32.GetCursorPos(out var pt)) return;
+            Left = _dragStartLeft + (pt.X - _dragStartCursorX) / _dragDpiX;
+            Top  = _dragStartTop  + (pt.Y - _dragStartCursorY) / _dragDpiY;
+        }
+
+        private void Border_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_isDragging)
+            {
+                StopDrag(sender);
+                e.Handled = true;
+            }
+        }
+
+        private void StopDrag(object sender)
+        {
+            _isDragging = false;
+            _manuallyPositioned = true;
+            ((FrameworkElement)sender).Cursor = null;
+            ((UIElement)sender).ReleaseMouseCapture();
         }
 
         // ── Button handlers ──
