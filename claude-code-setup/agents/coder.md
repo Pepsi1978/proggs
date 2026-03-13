@@ -30,7 +30,6 @@ Rules:
 Language conventions:
 - **Swift**: Follow Apple HIG, use async/await, @MainActor for UI
 - **C#/WPF**: Fluent Design, MVVM pattern, async/await
-- **Kotlin/Android**: Jetpack Compose + Material 3, MVVM, Hilt DI, ktfmt formatting
 - **TypeScript**: Strict mode, Biome formatting
 - **Rust**: Clippy-clean, no unwrap() in production code
 - **Go**: gofmt, golangci-lint clean
