@@ -6,7 +6,8 @@
     "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000",
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "95",
     "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
-    "CLAUDE_CODE_EFFORT_LEVEL": "high"
+    "CLAUDE_CODE_EFFORT_LEVEL": "high",
+    "CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS": "5000"
   },
   "permissions": {
     "allow": [
@@ -154,6 +155,40 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/safety-gate.ps1\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Check the conversation: Were any protected settings modified? Verify in ~/.claude/settings.json that: (1) effortLevel is 'high', (2) env.CLAUDE_CODE_EFFORT_LEVEL is 'high', (3) env.CLAUDE_CODE_SUBAGENT_MODEL is 'sonnet', (4) model is 'claude-opus-4-6'. If ANY of these changed, respond with {\"ok\": false, \"reason\": \"Protected setting was modified: [which one]\"}. If all are intact, respond with {\"ok\": true}.",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Before context compression: Extract and list any critical information that should survive compaction: (1) Current task status and progress, (2) File paths that were modified, (3) Decisions made by the user, (4) Any pending actions. Format as a concise summary that can be injected after compaction.",
+            "timeout": 15
+          }
+        ]
+      }
     ]
   },
   "worktree": {
@@ -202,7 +237,52 @@
     "lua-lsp@claude-plugins-official": true,
     "php-lsp@claude-plugins-official": true,
     "pyright-lsp@claude-plugins-official": true,
-    "ruby-lsp@claude-plugins-official": true
+    "ruby-lsp@claude-plugins-official": true,
+    "ask-questions-if-underspecified@trailofbits": true,
+    "audit-context-building@trailofbits": true,
+    "building-secure-contracts@trailofbits": true,
+    "burpsuite-project-parser@trailofbits": true,
+    "claude-in-chrome-troubleshooting@trailofbits": true,
+    "constant-time-analysis@trailofbits": true,
+    "differential-review@trailofbits": true,
+    "firebase-apk-scanner@trailofbits": true,
+    "gh-cli@trailofbits": true,
+    "dwarf-expert@trailofbits": true,
+    "entry-point-analyzer@trailofbits": true,
+    "property-based-testing@trailofbits": true,
+    "semgrep-rule-creator@trailofbits": true,
+    "semgrep-rule-variant-creator@trailofbits": true,
+    "sharp-edges@trailofbits": true,
+    "static-analysis@trailofbits": true,
+    "spec-to-code-compliance@trailofbits": true,
+    "testing-handbook-skills@trailofbits": true,
+    "variant-analysis@trailofbits": true,
+    "insecure-defaults@trailofbits": true,
+    "second-opinion@trailofbits": true,
+    "yara-authoring@trailofbits": true,
+    "git-cleanup@trailofbits": true,
+    "workflow-skill-design@trailofbits": true,
+    "seatbelt-sandboxer@trailofbits": true,
+    "supply-chain-risk-auditor@trailofbits": true,
+    "zeroize-audit@trailofbits": true,
+    "agentic-actions-auditor@trailofbits": true,
+    "skill-improver@trailofbits": true,
+    "fp-check@trailofbits": true,
+    "claude-mem@thedotmack": true,
+    "everything-claude-code@everything-claude-code": true,
+    "compound-engineering@compound-engineering-plugin": true,
+    "reflexion@context-engineering-kit": true,
+    "git@context-engineering-kit": true,
+    "tdd@context-engineering-kit": true,
+    "sadd@context-engineering-kit": true,
+    "ddd@context-engineering-kit": true,
+    "sdd@context-engineering-kit": true,
+    "kaizen@context-engineering-kit": true,
+    "customaize-agent@context-engineering-kit": true,
+    "docs@context-engineering-kit": true,
+    "tech-stack@context-engineering-kit": true,
+    "mcp@context-engineering-kit": true,
+    "fpf@context-engineering-kit": true
   },
   "extraKnownMarketplaces": {
     "superpowers-marketplace": {
@@ -211,6 +291,36 @@
         "repo": "obra/superpowers-marketplace"
       },
       "autoUpdate": true
+    },
+    "trailofbits": {
+      "source": {
+        "source": "github",
+        "repo": "trailofbits/skills"
+      }
+    },
+    "thedotmack": {
+      "source": {
+        "source": "github",
+        "repo": "thedotmack/claude-mem"
+      }
+    },
+    "everything-claude-code": {
+      "source": {
+        "source": "github",
+        "repo": "affaan-m/everything-claude-code"
+      }
+    },
+    "compound-engineering-plugin": {
+      "source": {
+        "source": "github",
+        "repo": "EveryInc/compound-engineering-plugin"
+      }
+    },
+    "context-engineering-kit": {
+      "source": {
+        "source": "github",
+        "repo": "NeoLabHQ/context-engineering-kit"
+      }
     }
   },
   "language": "de",

@@ -19,6 +19,8 @@ paths:
 - Use AGP 9.1.0+ (Android Gradle Plugin), Kotlin 2.3.0+, Compose BOM 2026.03.00
 - Build command: `./gradlew assembleDebug` (debug APK) or `./gradlew assembleRelease` (signed release)
 - Bundle command: `./gradlew bundleRelease` (AAB for Play Store)
+- Format command: `./gradlew spotlessApply` (requires Spotless Gradle plugin with ktlint)
+- Add Spotless to `build.gradle.kts`: `id("com.diffplug.spotless")` with `kotlin { ktlint() }` config
 
 ## Two Development Paths
 
