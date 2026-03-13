@@ -34,11 +34,34 @@ if ($local -eq $remote) {
 $behind = git rev-list --count "HEAD..@{u}" 2>$null
 Write-Output "Auto-Sync: $behind neue Commits auf GitHub gefunden — aktualisiere..."
 
+# Stash local changes if working tree is dirty (so rebase can proceed)
+$dirty = git status --porcelain 2>$null
+$stashed = $false
+if ($dirty) {
+    $null = git stash --include-untracked -m "auto-sync-stash" 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        $stashed = $true
+        Write-Output "Auto-Sync: Lokale Aenderungen temporaer gesichert (git stash)."
+    }
+}
+
 # Pull with rebase
 $null = git pull --rebase --quiet 2>&1
 if ($LASTEXITCODE -ne 0) {
+    # Restore stash if pull failed
+    if ($stashed) { $null = git stash pop 2>&1 }
     Write-Output "Auto-Sync: FEHLER beim Pull (Merge-Konflikt?). Bitte manuell pruefen: cd ~/proggs; git status"
     exit 1
+}
+
+# Restore stashed changes
+if ($stashed) {
+    $null = git stash pop 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Output "Auto-Sync: WARNUNG — Stash-Restore hatte Konflikte. Bitte manuell pruefen: cd ~/proggs; git stash show"
+    } else {
+        Write-Output "Auto-Sync: Lokale Aenderungen wiederhergestellt."
+    }
 }
 
 Write-Output "Auto-Sync: Git Pull erfolgreich."
