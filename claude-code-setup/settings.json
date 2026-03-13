@@ -85,7 +85,7 @@
       "mcp__plugin_playwright_playwright__browser_take_screenshot",
       "mcp__plugin_playwright_playwright__browser_type",
       "mcp__plugin_playwright_playwright__browser_wait_for",
-"mcp__plugin_context7_context7__query-docs",
+      "mcp__plugin_context7_context7__query-docs",
       "mcp__plugin_context7_context7__resolve-library-id",
       "mcp__plugin_episodic-memory_episodic-memory__read",
       "mcp__plugin_episodic-memory_episodic-memory__search",
@@ -125,7 +125,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/auto-sync.ps1\"",
+            "command": "pwsh -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/auto-sync.ps1\"",
             "timeout": 30
           }
         ]
@@ -136,7 +136,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/notify.ps1\"",
+            "command": "pwsh -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/notify.ps1\"",
             "timeout": 5
           }
         ]
@@ -148,7 +148,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/auto-format.ps1\"",
+            "command": "pwsh -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/auto-format.ps1\"",
             "timeout": 5,
             "async": true
           }

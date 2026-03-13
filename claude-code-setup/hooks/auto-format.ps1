@@ -28,5 +28,15 @@ switch ($ext) {
             & clang-format -i $filePath 2>$null
         }
     }
+    { $_ -in 'kt','kts' } {
+        if (Get-Command ktfmt -ErrorAction SilentlyContinue) {
+            & ktfmt --kotlinlang-style $filePath 2>$null
+        }
+    }
+    'java' {
+        if (Get-Command google-java-format -ErrorAction SilentlyContinue) {
+            & google-java-format --replace $filePath 2>$null
+        }
+    }
 }
 exit 0
