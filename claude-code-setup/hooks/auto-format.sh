@@ -8,8 +8,8 @@ case "${file_path##*.}" in
   swift) swift-format --in-place "$file_path" 2>/dev/null ;;
   go)    gofmt -w "$file_path" 2>/dev/null ;;
   rs)    rustfmt "$file_path" 2>/dev/null ;;
-  js|ts|tsx|mts|mjs|jsx)
-    # Format JS/TS with Biome if available, else Prettier
+  js|ts|tsx|mts|mjs|jsx|json|css)
+    # Format JS/TS/JSON/CSS with Biome if available, else Prettier
     dir=$(dirname "$file_path")
     if command -v biome &>/dev/null; then
       biome format --write "$file_path" 2>/dev/null
@@ -38,6 +38,12 @@ case "${file_path##*.}" in
     # Format Kotlin with ktfmt (kotlinlang style)
     if command -v ktfmt &>/dev/null; then
       ktfmt --kotlinlang-style "$file_path" 2>/dev/null
+    fi
+    ;;
+  java)
+    # Format Java with google-java-format
+    if command -v google-java-format &>/dev/null; then
+      google-java-format --replace "$file_path" 2>/dev/null
     fi
     ;;
 esac
