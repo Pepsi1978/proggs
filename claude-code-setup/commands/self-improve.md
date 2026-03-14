@@ -44,11 +44,23 @@ echo $PREFIX  # Termux if /data/data/com.termux/files/usr
 Rule: Never `brew` on Windows, `winget` on macOS, `pkg` outside Termux.
 Windows: Use `pwsh` for complex commands (write temp `.ps1` files).
 
+## Stufe 0: META-CHECK (NEW v5.1)
+
+**Before env-checker**: Start `evolution-analyst` agent in parallel with Stufe 1.
+The evolution-analyst reads `~/.claude/session-scores.jsonl` and `~/.claude/agent-memory/shared/MEMORY.md`
+to identify quality trends and recurring weaknesses BEFORE the scan begins.
+
+Its output feeds into Stufe 2: If quality is declining in a specific area (e.g., Rust builds),
+the corresponding researcher gets a focused prompt. If capability gaps are detected,
+R6 Creative is directed to search for solutions to those specific gaps.
+
+If `session-scores.jsonl` doesn't exist or has < 3 entries: skip Stufe 0 silently.
+
 ## Stufe 1: SCAN
 
 Delegate to `env-checker` agent: `mode: quick|full`, `Platform: [detected]`, `Date: [today]`.
 Full mode includes: Android deep-scan, agent tiers, language readiness, rules, git config.
-**Stufe 1 and 2 start SIMULTANEOUSLY.**
+**Stufe 0, 1 and 2 start SIMULTANEOUSLY.**
 
 ## Stufe 2: DEEP-DIVE
 
@@ -130,6 +142,10 @@ git diff --cached --quiet || git commit -m "#NNN - Self-improve sync ([Platform]
 
 Always end with: Change counter, Gesamtstatus, GitHub sync, offene Punkte,
 naechster empfohlener Lauf, Commit/Push-Status als LETZTER Satz.
+
+**Session-Score-Trend (NEW v5.1):** Read `~/.claude/session-scores.jsonl`, compute 5-session
+moving average, compare to previous period. Display as: `Evolution: X.X → Y.Y (↑/↓/→)`.
+If < 5 entries: show "Evolution: Noch zu wenig Daten (N/5 Sessions)".
 
 ## Important Rules
 

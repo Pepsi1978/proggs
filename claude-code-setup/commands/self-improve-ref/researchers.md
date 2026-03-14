@@ -28,6 +28,12 @@ Expires: [today + 7 days]
 
 ## R4 Cache: Tool Versions
 [version comparison table]
+
+## R6 Cache: Meta-Evolution (NEW v5.1)
+[recommended plugins with status: reviewed/installed/skipped]
+[generated ideas with status: built/planned/rejected]
+[evolution-analyst findings: quality trend, top weaknesses]
+[R6 research approach for next run: what to search for, what to feed into evolution-analyst]
 ```
 
 ## Researcher Templates
