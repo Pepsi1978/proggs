@@ -1,5 +1,6 @@
 #!/bin/bash
 # Auto-format: runs the appropriate code formatter after file edits
+HOOK_NAME="auto-format" source "$HOME/.claude/hooks/hook-log.sh" 2>/dev/null
 input=$(cat)
 file_path=$(echo "$input" | yq -r '.tool_input.file_path // empty' 2>/dev/null)
 [[ -z "$file_path" || ! -f "$file_path" ]] && exit 0

@@ -2,18 +2,35 @@
 # Auto-Sync: Syncs Claude Code config from GitHub on every session start
 # Runs as SessionStart hook — output is visible to the user
 # Works on: macOS, Linux, Termux (Android)
+# DESIGN: This hook NEVER exits non-zero. Errors are logged and reported,
+# but the hook always succeeds so Claude Code starts cleanly.
+
+HOOK_NAME="auto-sync" source "$HOME/.claude/hooks/hook-log.sh" 2>/dev/null
 
 REPO_DIR="$HOME/proggs"
 SETUP_DIR="$REPO_DIR/claude-code-setup"
 CLAUDE_DIR="$HOME/.claude"
 
-# Check if repo exists
+# Check prerequisites
+if ! command -v git &>/dev/null; then
+    hook_log_error "git not found in PATH" 2>/dev/null
+    echo "Auto-Sync: git nicht gefunden — uebersprungen."
+    exit 0
+fi
+
 if [ ! -d "$REPO_DIR/.git" ]; then
     echo "Auto-Sync: ~/proggs Repo nicht gefunden — uebersprungen."
     exit 0
 fi
 
 cd "$REPO_DIR" || exit 0
+
+# Skip if rebase or merge is in progress
+if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ] || [ -f ".git/MERGE_HEAD" ]; then
+    echo "Auto-Sync: Rebase/Merge in Arbeit — uebersprungen."
+    hook_log "skipped: rebase/merge in progress" 2>/dev/null
+    exit 0
+fi
 
 # Fetch latest from remote (quick metadata check)
 if ! git fetch --quiet 2>/dev/null; then
@@ -25,19 +42,47 @@ fi
 LOCAL=$(git rev-parse HEAD 2>/dev/null)
 REMOTE=$(git rev-parse @{u} 2>/dev/null)
 
+if [ -z "$REMOTE" ]; then
+    echo "Auto-Sync: Kein Upstream-Branch konfiguriert — uebersprungen."
+    exit 0
+fi
+
 if [ "$LOCAL" = "$REMOTE" ]; then
     echo "Auto-Sync: Alle Dateien aktuell."
     exit 0
 fi
 
 # Updates available!
-BEHIND=$(git rev-list --count HEAD..@{u} 2>/dev/null)
+BEHIND=$(git rev-list --count HEAD..@{u} 2>/dev/null || echo "?")
 echo "Auto-Sync: $BEHIND neue Commits auf GitHub gefunden — aktualisiere..."
 
-# Pull with rebase
-if ! git pull --rebase --quiet 2>/dev/null; then
-    echo "Auto-Sync: FEHLER beim Pull (Merge-Konflikt?). Bitte manuell pruefen: cd ~/proggs && git status"
-    exit 1
+# Stash dirty changes before pull (prevents rebase conflicts)
+STASHED=false
+if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+    if git stash push -m "auto-sync-$(date +%s)" --quiet 2>/dev/null; then
+        STASHED=true
+        hook_log "stashed dirty changes before pull" 2>/dev/null
+    fi
+fi
+
+# Pull with rebase — capture output for error logging
+PULL_OUTPUT=$(git pull --rebase --quiet 2>&1)
+PULL_RC=$?
+
+# Restore stashed changes
+if [ "$STASHED" = true ]; then
+    if ! git stash pop --quiet 2>/dev/null; then
+        hook_log_error "stash pop failed — changes saved in git stash" 2>/dev/null
+        echo "Auto-Sync: Hinweis — gestashte Aenderungen konnten nicht wiederhergestellt werden (git stash list)"
+    fi
+fi
+
+if [ $PULL_RC -ne 0 ]; then
+    hook_log_error "git pull failed (rc=$PULL_RC): $PULL_OUTPUT" 2>/dev/null
+    echo "Auto-Sync: Pull fehlgeschlagen — Details: ~/.claude/logs/hooks/$(date +%Y-%m-%d).log"
+    # Abort any leftover rebase from the failed pull
+    git rebase --abort 2>/dev/null
+    exit 0  # Never fail the hook
 fi
 
 echo "Auto-Sync: Git Pull erfolgreich."

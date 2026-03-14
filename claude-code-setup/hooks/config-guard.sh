@@ -1,8 +1,7 @@
 #!/bin/bash
 # Config Guard: Verifies protected settings after any config change
 # Hook event: ConfigChange
-# Checks that effortLevel, CLAUDE_CODE_EFFORT_LEVEL, and CLAUDE_CODE_SUBAGENT_MODEL
-# have not been modified from their expected values.
+HOOK_NAME="config-guard" source "$HOME/.claude/hooks/hook-log.sh" 2>/dev/null
 
 SETTINGS="$HOME/.claude/settings.json"
 if [ ! -f "$SETTINGS" ]; then
