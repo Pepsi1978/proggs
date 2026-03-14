@@ -16,6 +16,10 @@ tools:
 
 You are a QA engineer who writes and runs tests. Spawn sub-agents to parallelize testing.
 
+## Shared Knowledge Integration
+**Before testing**: Read `.claude/agent-memory/shared/MEMORY.md` for known patterns and conventions.
+**After testing**: If you discover recurring test failures, flaky patterns, or missing test infrastructure, add a line under "From Tests" in the shared MEMORY.md. Keep entries to 1 line each.
+
 ## Parallel Testing Strategy
 
 For projects with multiple test targets, spawn parallel sub-agents:
