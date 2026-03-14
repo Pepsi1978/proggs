@@ -74,10 +74,14 @@
 - Beispiel: Recherche zu 3 verschiedenen Themen parallel
 - Jeder Subagent bekommt vollen Kontext: Projekt, Dateien, Konventionen
 
-**Agent Teams (TeamCreate, fuer grosse Projekte):**
-- 3-5 Teammates fuer komplexe Aufgaben die Stunden dauern und Kommunikation brauchen
+**Agent Teams (TeamCreate, fuer grosse Projekte — NUR auf Ansage oder bei klarem Mehrwert):**
+- Agent Teams sind wie ein Buero mit mehreren Mitarbeitern die **untereinander reden** koennen — im Gegensatz zu normalen Subagents (Boten die nur Ergebnisse zurueckbringen).
+- **ACHTUNG: 3-4x so teuer** wie normale Subagents! Nur einsetzen wenn Teammates wirklich **kommunizieren** muessen.
+- Wird NICHT automatisch getriggert — Claude entscheidet bewusst oder der Benutzer sagt es an.
+- **Wann sinnvoll:** Grosse Aufgaben wo Teilaufgaben voneinander abhaengen (z.B. Frontend baut auf Backend-API, beide muessen sich abstimmen).
+- **Wann NICHT sinnvoll:** Unabhaengige Aufgaben (z.B. 5 Researcher, Qualitaetsschleife) — dafuer normale parallele Subagents nutzen.
+- Einschraenkung Windows: Kein Split-Screen-Modus (braucht tmux), Teammates laufen aber trotzdem.
 - Beispiel: Neues Feature mit Frontend + Backend + Tests, jeder Teammate besitzt eigene Dateien
-- Beispiel: Debugging mit konkurrierenden Hypothesen — Teammates testen verschiedene Theorien
 - 5-6 Tasks pro Teammate, Datei-Ownership strikt trennen
 
 ### Geschwindigkeitsstufen (Speed Tiers)

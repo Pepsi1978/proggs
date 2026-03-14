@@ -306,7 +306,7 @@ After the report, analyze this skill and suggest improvements:
 
 1. **Self-Analysis**: Which parts of this skill worked well? Which were slow, redundant, or missing?
 2. **Line Count**: `wc -l ~/.claude/commands/self-improve.md` — warn if approaching 1000.
-3. **Present Suggestions** using this 3-part structure (NEVER auto-apply):
+3. **Present EXACTLY 3 Suggestions** to improve THIS SKILL (not the environment — those go in 4F). Use this structure (NEVER auto-apply):
 
 ```
 ### Vorschlag N: [Titel]
@@ -440,6 +440,38 @@ The goal: over time, build a complete knowledge base of what THIS Claude Code ca
   - What changes for the user's daily workflow?
   - Can it be turned off?
 
+### 4F: Mandatory Action Proposals (MINIMUM 3 per run)
+
+Every Stufe 4 MUST produce EXACTLY 3 concrete "Handlungsvorschlaege" to improve the ENVIRONMENT/WORKFLOW. These appear at the END of the report, alongside the 3 Meta-Improve proposals (Stufe 3C). Each proposal follows this structure:
+
+```
+### Handlungsvorschlag N: [Titel]
+**Was wuerde sich aendern?** [2-3 Saetze, verstaendlich fuer Nicht-Programmierer]
+**Wie wuerde ich das umsetzen?** [Konkreter Implementierungsplan: welche Dateien, welche Tools, geschaetzter Aufwand]
+**Vorteile:** [Was wird besser, schneller, sicherer, einfacher?]
+**Nachteile/Risiken:** [Gibt es Kosten, Komplexitaet, Abhaengigkeiten?]
+**Empfehlung:** [Sofort umsetzen / Beim naechsten Lauf / Nur auf Wunsch]
+```
+
+These are NOT the Meta-Improve suggestions (those are about improving THIS SKILL). These are about improving the ENVIRONMENT, WORKFLOW, and CAPABILITIES.
+
+### 4G: Meta-Creativity (reflect on creativity itself)
+
+Do NOT just follow a fixed creative schema. Each run, actively think about WHAT CREATIVITY MEANS for environment improvement:
+- What NEW ways of being creative exist that this skill doesn't yet cover?
+- What research perspectives haven't been tried?
+- What would a human creative director do differently?
+- Are there patterns from art, science, or other domains that could inspire new improvement approaches?
+- How can the creative process itself be improved for next time?
+
+Add a brief "Kreativitaets-Reflexion" section to the report:
+```
+### Kreativitaets-Reflexion
+**Was hat heute funktioniert?** [which creative approach yielded results]
+**Was war Sackgasse?** [which approach didn't work and why]
+**Neuer Ansatz fuer naechstes Mal:** [a concrete new creative technique to try]
+```
+
 ### 4D: Anti-Patterns (STRICTLY FORBIDDEN)
 
 - ❌ "X exists" without explanation, action, or recommendation
@@ -519,6 +551,7 @@ Always end with:
 - NEVER downgrade model or reduce effort level.
 - NEVER install Python tools for visible/GUI purposes.
 - NEVER remove existing working configurations without replacement.
+- **Meta-Improve (Stufe 3C) ist PFLICHT** — wird JEDES MAL ausgefuehrt, egal welcher Modus oder Fokus. Mindestens 1 konkreter Verbesserungsvorschlag fuer diesen Skill pro Lauf. NIEMALS ueberspringen.
 - **1000-line limit** on this skill file. Warn if approaching.
 - **Transparency**: Every change must be documented in the report.
 - **Security**: All external code (plugins, skills, agents, MCP servers, hooks, commands, npm packages) must be checked for prompt injection before installation.
@@ -526,4 +559,4 @@ Always end with:
 - **Commit messages**: `#NNN - Description` format, auto-numbered from existing commits.
 
 ---
-<!-- Skill Version: v4.1 | Date: 2026-03-14 | Last Meta-Improve: 2026-03-14 | Lines: ~570/1000 | Changes: v4.1 — (1) Schema validation rule for researcher claims, (2) Complete Stufe 4 overhaul: ALL 6 lenses mandatory, Non-Programmer Rule, Knowledge Integration step, mandatory artifact creation per run, DISCOVER→EXPLAIN→BUILD→TEACH cycle, stricter anti-patterns (no reporting without building), Usage Gap Analysis table. -->
+<!-- Skill Version: v4.2 | Date: 2026-03-14 | Last Meta-Improve: 2026-03-14 | Lines: ~570/1000 | Changes: v4.2 — (1) Mandatory 3+ action proposals per creative run (4F), (2) Meta-Creativity section (4G) — reflect on creativity itself, find new creative approaches, (3) Meta-Improve declared MANDATORY in Important Rules — never skip, (4) Agent Teams excluded from self-improve, documented in CLAUDE.md with cost warning. -->
