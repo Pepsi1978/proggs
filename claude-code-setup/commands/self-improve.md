@@ -70,14 +70,21 @@ Commit if files changed.
 
 **Load report template + creative research details from**: [self-improve-ref/report-and-creative.md](self-improve-ref/report-and-creative.md)
 
-### 3A: Creative Improvements
+### 3A: Shared Knowledge Integration (NEW v5.0)
+**Before improvements**: Read `.claude/agent-memory/shared/MEMORY.md` (the Shared Knowledge Hub).
+Check what the code-reviewer has learned since the last run — recurring issues, patterns, conventions.
+Use these findings to create targeted improvements (e.g., new rules, hooks, agent configs).
+**After improvements**: Update the "From Self-Improve" section with new environment knowledge.
+
+### 3B: Creative Improvements
 Implement at least 1 concrete improvement per run: new hooks, agents, rules, configs.
 Use the `quality-gate` agent for quality checks instead of 3 separate agents.
 
-### 3B: Structured Report
+### 3C: Structured Report
 Use the template from reference file. Includes new **Performance-Benchmark** section.
+Add a "Shared Knowledge" section showing what code-reviewer learned and what self-improve contributed.
 
-### 3C: Meta-Improve (MANDATORY)
+### 3D: Meta-Improve (MANDATORY)
 Present 3 suggestions for THIS SKILL. Apply only after user approval. Backup first.
 
 ## Stufe 4: CREATIVE RESEARCH
