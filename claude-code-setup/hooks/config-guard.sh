@@ -17,15 +17,15 @@ try:
     d = json.load(open('$SETTINGS'))
     warnings = []
     blocks = []
-    # effortLevel: WARN only (user may set to medium to save tokens)
-    eff = d.get('effortLevel', 'high')
-    if eff != 'high':
-        warnings.append(f'effortLevel={eff}')
+    # effortLevel: Default is medium. Only warn if changed to something unexpected.
+    eff = d.get('effortLevel', 'medium')
+    if eff not in ('medium', 'high'):
+        warnings.append(f'effortLevel={eff}(erwartet:medium oder high)')
     env = d.get('env', {})
-    # CLAUDE_CODE_EFFORT_LEVEL in env: also warn only
-    env_eff = env.get('CLAUDE_CODE_EFFORT_LEVEL', 'high')
-    if env_eff != 'high':
-        warnings.append(f'CLAUDE_CODE_EFFORT_LEVEL={env_eff}')
+    # CLAUDE_CODE_EFFORT_LEVEL in env: default is medium
+    env_eff = env.get('CLAUDE_CODE_EFFORT_LEVEL', 'medium')
+    if env_eff not in ('medium', 'high'):
+        warnings.append(f'CLAUDE_CODE_EFFORT_LEVEL={env_eff}(erwartet:medium oder high)')
     # SUBAGENT_MODEL: BLOCK if changed (critical for cost/quality)
     if env.get('CLAUDE_CODE_SUBAGENT_MODEL') != 'sonnet':
         blocks.append(f\"CLAUDE_CODE_SUBAGENT_MODEL={env.get('CLAUDE_CODE_SUBAGENT_MODEL')}(erwartet:sonnet)\")
@@ -47,8 +47,8 @@ if [ -n "$BLOCKS" ] && [ "$BLOCKS" != " " ]; then
 fi
 
 if [ -n "$WARNINGS" ] && [ "$WARNINGS" != " " ]; then
-    echo "CONFIG-GUARD: WARNUNG — Ab sofort wird mit geaendertem Effort gearbeitet: $WARNINGS"
-    echo "Hinweis: Beim naechsten Session-Start wird automatisch auf 'high' zurueckgesetzt."
+    echo "CONFIG-GUARD: WARNUNG — Unerwartete Setting-Aenderung: $WARNINGS"
+    echo "Hinweis: Beim naechsten Session-Start wird automatisch auf 'medium' zurueckgesetzt."
     exit 0
 fi
 

@@ -17,7 +17,7 @@
 - Lokaler Pfad: `~/proggs/` — GitHub: `https://github.com/Pepsi1978/proggs`
 
 ## Automatisierung & Workflow
-- **Effort Level: IMMER "high"** — der Benutzer hat den Max Plan (100 Euro) und will hohe Denktiefe bei sparsamerem Kontingent-Verbrauch. Niemals auf niedrigeren Effort-Level wechseln. Settings: `"effortLevel": "high"` und `"CLAUDE_CODE_EFFORT_LEVEL": "high"` in settings.json. NIEMALS auf "medium" oder niedriger aendern.
+- **Effort Level: Standard ist "medium"** — Claude Code startet IMMER mit Medium Effort um Tokens zu sparen. Der Benutzer kann waehrend einer Session manuell auf "high" wechseln (z.B. via `/effort high`) — das gilt dann bis zum Session-Ende. Bei jedem Neustart von Claude Code wird automatisch auf "medium" zurueckgesetzt. Settings: `"effortLevel": "medium"` und `"CLAUDE_CODE_EFFORT_LEVEL": "medium"` in settings.json. Den Effort NIEMALS selbststaendig aendern — nur der Benutzer entscheidet.
 - Maximale Automatisierung: Nie nach Erlaubnis fragen fuer Standardaktionen (Build, Test, Commit, Push).
 - Committen und Pushen immer direkt machen — nicht vorher fragen.
 - **IMMER so viele Aufgaben wie moeglich PARALLEL ausfuehren** — das ist keine Option, sondern die Standardarbeitsweise.

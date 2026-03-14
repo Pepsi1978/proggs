@@ -27,8 +27,8 @@ Also check npm registry for Claude Code latest: `npm view @anthropic-ai/claude-c
 ### 2. Settings Verification
 Read `~/.claude/settings.json` and verify:
 - `model` = "claude-opus-4-6"
-- `effortLevel` = "high"
-- `env.CLAUDE_CODE_EFFORT_LEVEL` = "high"
+- `effortLevel` = "medium"
+- `env.CLAUDE_CODE_EFFORT_LEVEL` = "medium"
 - `env.CLAUDE_CODE_SUBAGENT_MODEL` = "sonnet"
 - `env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` = "95"
 - `env.CLAUDE_CODE_MAX_OUTPUT_TOKENS` = "64000"

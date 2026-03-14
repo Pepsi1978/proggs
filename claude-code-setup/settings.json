@@ -6,7 +6,7 @@
     "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000",
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "95",
     "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
-    "CLAUDE_CODE_EFFORT_LEVEL": "high",
+    "CLAUDE_CODE_EFFORT_LEVEL": "medium",
     "CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS": "5000"
   },
   "permissions": {
@@ -183,7 +183,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "RESPOND WITH ONLY A RAW JSON OBJECT. NO markdown, NO explanation, NO text before or after.\n\nCheck the conversation: Were any protected settings in ~/.claude/settings.json modified this turn?\n\nProtected settings and their required values:\n1. effortLevel must be 'high'\n2. env.CLAUDE_CODE_EFFORT_LEVEL must be 'high'\n3. env.CLAUDE_CODE_SUBAGENT_MODEL must be 'sonnet'\n4. model must be 'claude-opus-4-6'\n\nIf NONE were changed (most common case), respond EXACTLY: {\"decision\":true}\nIf ANY were modified, respond EXACTLY: {\"decision\":false,\"reason\":\"Modified: [which setting and to what value]\"}",
+            "prompt": "RESPOND WITH ONLY A RAW JSON OBJECT. NO markdown, NO explanation, NO text before or after.\n\nCheck the conversation: Were any protected settings in ~/.claude/settings.json modified this turn?\n\nProtected settings (BLOCK if changed):\n1. env.CLAUDE_CODE_SUBAGENT_MODEL must be 'sonnet'\n2. env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE must be >= 95\n\nWARNING-ONLY settings (allow but note in reason):\n3. effortLevel — user may intentionally switch between 'medium' and 'high'. Do NOT block.\n4. model — user may change models. Do NOT block.\n\nIf NONE were changed (most common case), respond EXACTLY: {\"decision\":true}\nIf a BLOCKED setting was modified, respond: {\"decision\":false,\"reason\":\"BLOCKED: [which setting and to what value]\"}\nIf only WARNING settings were changed, respond: {\"decision\":true,\"reason\":\"WARNUNG: effortLevel/model geaendert — ab sofort mit geaendertem Setting aktiv\"}",
             "timeout": 15
           }
         ]
@@ -408,7 +408,7 @@
   },
   "language": "de",
   "alwaysThinkingEnabled": true,
-  "effortLevel": "high",
+  "effortLevel": "medium",
   "autoUpdatesChannel": "latest",
   "skipDangerousModePermissionPrompt": true
 }

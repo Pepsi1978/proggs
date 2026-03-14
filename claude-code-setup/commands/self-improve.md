@@ -24,7 +24,7 @@ description: Systematic self-improvement of the Claude Code development environm
 ## Core Rules
 
 - NEVER run hidden (no `run_in_background`, no silent subagents). User reads EVERYTHING.
-- Protected: `effortLevel: high`, `model: claude-opus-4-6`, `SUBAGENT_MODEL: sonnet`
+- Default: `effortLevel: medium` (Benutzer kann manuell auf high wechseln, gilt bis Session-Ende). Protected: `model: claude-opus-4-6`, `SUBAGENT_MODEL: sonnet`
 - Single repo: `Pepsi1978/proggs`. NEVER create new repos.
 - Parallel execution: Maximum simultaneous agents wherever possible.
 - No Python for visible things. Preferred: Swift, C#, TypeScript, Rust, Go, Kotlin.
@@ -172,7 +172,7 @@ If < 5 entries: show "Evolution: Noch zu wenig Daten (N/5 Sessions)".
 ## Important Rules
 
 - NEVER create new repos. NEVER modify this skill without user approval.
-- NEVER delete files/repos without asking. NEVER downgrade model/effort.
+- NEVER delete files/repos without asking. NEVER downgrade model. Effort-Level Standard ist medium.
 - NEVER install Python for visible/GUI. NEVER remove working configs without replacement.
 - Meta-Improve (3C) is MANDATORY every run. NEVER skip.
 - Main file limit: 300 lines. Reference files: no limit but keep lean.
