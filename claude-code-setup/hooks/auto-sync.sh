@@ -107,19 +107,27 @@ if [ -d "$SETUP_DIR/agents" ]; then
     [ "$COUNT" -gt 0 ] && SYNCED="$SYNCED Agents($COUNT)"
 fi
 
-# Commands (skills like /self-improve, /tool-check)
+# Commands (skills like /self-improve, /tool-check) + subdirectories (self-improve-ref/)
 if [ -d "$SETUP_DIR/commands" ]; then
     mkdir -p "$CLAUDE_DIR/commands"
     COUNT=$(ls "$SETUP_DIR/commands/"*.md 2>/dev/null | wc -l | tr -d ' ')
     cp "$SETUP_DIR/commands/"*.md "$CLAUDE_DIR/commands/" 2>/dev/null
+    # Sync command subdirectories (e.g., self-improve-ref/)
+    for subdir in "$SETUP_DIR/commands/"*/; do
+        [ -d "$subdir" ] || continue
+        SUBNAME=$(basename "$subdir")
+        mkdir -p "$CLAUDE_DIR/commands/$SUBNAME"
+        cp "$subdir"* "$CLAUDE_DIR/commands/$SUBNAME/" 2>/dev/null
+        COUNT=$((COUNT + 1))
+    done
     [ "$COUNT" -gt 0 ] && SYNCED="$SYNCED Commands($COUNT)"
 fi
 
-# Hooks (shell scripts only — not JSON config, not this script itself during execution)
+# Hooks (shell + TypeScript scripts — not JSON config)
 if [ -d "$SETUP_DIR/hooks" ]; then
     mkdir -p "$CLAUDE_DIR/hooks"
     HOOKS_COUNT=0
-    for hook in "$SETUP_DIR/hooks/"*.sh; do
+    for hook in "$SETUP_DIR/hooks/"*.sh "$SETUP_DIR/hooks/"*.ts; do
         [ -f "$hook" ] || continue
         cp "$hook" "$CLAUDE_DIR/hooks/" 2>/dev/null
         chmod +x "$CLAUDE_DIR/hooks/$(basename "$hook")" 2>/dev/null
@@ -141,32 +149,63 @@ if [ -f "$SETUP_DIR/.gitignore_global" ]; then
     SYNCED="$SYNCED .gitignore"
 fi
 
-# Plugin settings (enabledPlugins sync from settings-reference.json)
+# Settings sync from settings-reference.json (plugins, marketplaces, env, hooks)
 REF_SETTINGS="$SETUP_DIR/settings-reference.json"
 LOCAL_SETTINGS="$CLAUDE_DIR/settings.json"
 if [ -f "$REF_SETTINGS" ] && [ -f "$LOCAL_SETTINGS" ]; then
-    PLUGIN_CHANGES=$(python3 -c "
-import json, sys
+    SETTINGS_CHANGES=$(python3 -c "
+import json, sys, copy
 ref = json.load(open('$REF_SETTINGS'))
 local = json.load(open('$LOCAL_SETTINGS'))
+changes = 0
+
+# Sync enabledPlugins (add missing, update changed)
 ref_plugins = ref.get('enabledPlugins', {})
 local_plugins = local.get('enabledPlugins', {})
-changes = 0
 for key, value in ref_plugins.items():
-    if key in local_plugins and local_plugins[key] != value:
+    if key not in local_plugins or local_plugins[key] != value:
         local_plugins[key] = value
         changes += 1
 if changes > 0:
     local['enabledPlugins'] = local_plugins
+
+# Sync extraKnownMarketplaces (add missing)
+ref_markets = ref.get('extraKnownMarketplaces', {})
+local_markets = local.get('extraKnownMarketplaces', {})
+for key, value in ref_markets.items():
+    if key not in local_markets:
+        local_markets[key] = value
+        changes += 1
+if ref_markets:
+    local['extraKnownMarketplaces'] = local_markets
+
+# Sync env vars (add missing, don't overwrite existing)
+ref_env = ref.get('env', {})
+local_env = local.get('env', {})
+for key, value in ref_env.items():
+    if key not in local_env:
+        local_env[key] = value
+        changes += 1
+if ref_env:
+    local['env'] = local_env
+
+# Sync hooks (REPLACE entire section — hooks should be consistent)
+ref_hooks = ref.get('hooks', {})
+if ref_hooks:
+    local_hooks = local.get('hooks', {})
+    if json.dumps(ref_hooks, sort_keys=True) != json.dumps(local_hooks, sort_keys=True):
+        local['hooks'] = ref_hooks
+        changes += 1
+
+if changes > 0:
     json.dump(local, open('$LOCAL_SETTINGS', 'w'), indent=2)
-    # Ensure trailing newline
     with open('$LOCAL_SETTINGS', 'a') as f:
         f.write('\n')
 print(changes)
 " 2>/dev/null)
-    if [ -n "$PLUGIN_CHANGES" ] && [ "$PLUGIN_CHANGES" -gt 0 ] 2>/dev/null; then
-        SYNCED="$SYNCED Plugins($PLUGIN_CHANGES)"
-        hook_log "synced $PLUGIN_CHANGES plugin settings from reference" 2>/dev/null
+    if [ -n "$SETTINGS_CHANGES" ] && [ "$SETTINGS_CHANGES" -gt 0 ] 2>/dev/null; then
+        SYNCED="$SYNCED Settings($SETTINGS_CHANGES)"
+        hook_log "synced $SETTINGS_CHANGES settings sections from reference" 2>/dev/null
     fi
 fi
 

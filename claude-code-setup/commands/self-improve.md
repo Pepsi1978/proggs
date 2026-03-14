@@ -125,15 +125,37 @@ Focus adds depth, doesn't skip standard checks.
 **Built-in focus topics**: Rust, Android, Security, TypeScript, Performance, Cross-Platform, Self-Improve.
 For any focus: After checklist-based checks, explore BEYOND the checklist.
 
-## Sync to GitHub
+## Cross-Platform Sync (PFLICHT — v5.1)
+
+**REGEL: Jede Verbesserung muss plattformuebergreifend wirksam werden.**
+Alle Aenderungen die /self-improve macht — neue Hooks, Agents, Skills, Configs, Settings —
+muessen bei GitHub hinterlegt werden, damit andere Plattformen (Windows, Termux) beim
+naechsten Session-Start automatisch die neuesten Verbesserungen erhalten.
+
+**Was synchronisiert werden muss:**
+1. Hook-Scripts (*.sh + *.ts) → `~/proggs/claude-code-setup/hooks/`
+2. Agent-Definitionen (*.md) → `~/proggs/claude-code-setup/agents/`
+3. Commands + Unterordner → `~/proggs/claude-code-setup/commands/` (inkl. self-improve-ref/)
+4. Rules → `~/proggs/claude-code-setup/rules/`
+5. CLAUDE.md → `~/proggs/CLAUDE.md`
+6. **settings-reference.json** → `~/proggs/claude-code-setup/settings-reference.json`
+   (Hooks, Plugins, Marketplaces, Env — wird von auto-sync in settings.json gemerged)
+
+**Was NICHT synchronisiert wird (maschinenspezifisch):**
+- settings.json direkt (Permissions, LSP-Pfade sind plattformabhaengig)
+- Plugin-Caches (~/.claude/plugins/cache/)
+- Session-Transcripts, session-scores.jsonl
 
 ```bash
 cp ~/.claude/rules/*.md ~/proggs/claude-code-setup/rules/
 cp ~/.claude/agents/*.md ~/proggs/claude-code-setup/agents/
 cp ~/.claude/commands/self-improve.md ~/proggs/claude-code-setup/commands/
 cp -r ~/.claude/commands/self-improve-ref/ ~/proggs/claude-code-setup/commands/self-improve-ref/
-cp ~/.claude/hooks/*.ps1 ~/proggs/claude-code-setup/hooks/
+cp ~/.claude/hooks/*.sh ~/proggs/claude-code-setup/hooks/
+cp ~/.claude/hooks/*.ts ~/proggs/claude-code-setup/hooks/ 2>/dev/null
+cp ~/.claude/hooks/*.ps1 ~/proggs/claude-code-setup/hooks/ 2>/dev/null
 cp ~/CLAUDE.md ~/proggs/CLAUDE.md
+# settings-reference.json muss MANUELL aktualisiert werden wenn Hooks/Plugins/Env sich aendern!
 cd ~/proggs && git pull --rebase && git add claude-code-setup/ CLAUDE.md
 git diff --cached --quiet || git commit -m "#NNN - Self-improve sync ([Platform])" && git push
 ```
