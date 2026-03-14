@@ -141,5 +141,34 @@ if [ -f "$SETUP_DIR/.gitignore_global" ]; then
     SYNCED="$SYNCED .gitignore"
 fi
 
+# Plugin settings (enabledPlugins sync from settings-reference.json)
+REF_SETTINGS="$SETUP_DIR/settings-reference.json"
+LOCAL_SETTINGS="$CLAUDE_DIR/settings.json"
+if [ -f "$REF_SETTINGS" ] && [ -f "$LOCAL_SETTINGS" ]; then
+    PLUGIN_CHANGES=$(python3 -c "
+import json, sys
+ref = json.load(open('$REF_SETTINGS'))
+local = json.load(open('$LOCAL_SETTINGS'))
+ref_plugins = ref.get('enabledPlugins', {})
+local_plugins = local.get('enabledPlugins', {})
+changes = 0
+for key, value in ref_plugins.items():
+    if key in local_plugins and local_plugins[key] != value:
+        local_plugins[key] = value
+        changes += 1
+if changes > 0:
+    local['enabledPlugins'] = local_plugins
+    json.dump(local, open('$LOCAL_SETTINGS', 'w'), indent=2)
+    # Ensure trailing newline
+    with open('$LOCAL_SETTINGS', 'a') as f:
+        f.write('\n')
+print(changes)
+" 2>/dev/null)
+    if [ -n "$PLUGIN_CHANGES" ] && [ "$PLUGIN_CHANGES" -gt 0 ] 2>/dev/null; then
+        SYNCED="$SYNCED Plugins($PLUGIN_CHANGES)"
+        hook_log "synced $PLUGIN_CHANGES plugin settings from reference" 2>/dev/null
+    fi
+fi
+
 echo "Auto-Sync: Lokale Konfiguration aktualisiert:$SYNCED"
 echo "Auto-Sync: Hinweis — CLAUDE.md und Rules werden erst nach Neustart von Claude Code wirksam."
