@@ -66,4 +66,7 @@ $entry = @{
 $entry | Out-File -FilePath $ScoreFile -Append -Encoding utf8
 
 Hook-Log "score=$score commits=$recentCommits fixes=$fixCommits disk=${freeGB}GB"
-Write-Output "Session-Score: $score/10 (Commits: $recentCommits, Fixes: $fixCommits)"
+
+# Output valid JSON for Claude Code hook validation
+# Use Write-Host for log display (stderr), not Write-Output (stdout parsed as JSON)
+Write-Host "Session-Score: $score/10 (Commits: $recentCommits, Fixes: $fixCommits)"

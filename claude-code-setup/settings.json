@@ -252,7 +252,7 @@
     "claude-session-driver@superpowers-marketplace": true,
     "code-review@claude-plugins-official": true,
     "playwright@claude-plugins-official": true,
-    "coderabbit@claude-plugins-official": true,
+    "coderabbit@claude-plugins-official": false,
     "explanatory-output-style@claude-plugins-official": true,
     "superpowers-lab@superpowers-marketplace": true,
     "superpowers-developing-for-claude-code@superpowers-marketplace": true,
@@ -289,13 +289,13 @@
     "testing-handbook-skills@trailofbits": true,
     "variant-analysis@trailofbits": true,
     "insecure-defaults@trailofbits": true,
-    "second-opinion@trailofbits": true,
+    "second-opinion@trailofbits": false,
     "yara-authoring@trailofbits": true,
     "git-cleanup@trailofbits": true,
     "workflow-skill-design@trailofbits": true,
     "seatbelt-sandboxer@trailofbits": true,
     "supply-chain-risk-auditor@trailofbits": true,
-    "zeroize-audit@trailofbits": true,
+    "zeroize-audit@trailofbits": false,
     "agentic-actions-auditor@trailofbits": true,
     "skill-improver@trailofbits": true,
     "fp-check@trailofbits": true,
@@ -315,7 +315,7 @@
     "mcp@context-engineering-kit": true,
     "fpf@context-engineering-kit": true,
     "claude-code-lsps@boostvolt": true,
-    "serena@claude-plugins-official": true
+    "serena@claude-plugins-official": false
   },
   "extraKnownMarketplaces": {
     "superpowers-marketplace": {
