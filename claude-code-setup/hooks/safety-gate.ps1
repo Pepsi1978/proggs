@@ -1,4 +1,9 @@
 # Safety Gate: Block dangerous commands before execution
+# Hook event: PreToolUse (Bash)
+# Platform: Windows (PowerShell 7+)
+
+. "$PSScriptRoot/hook-log.ps1"
+
 $input = [Console]::In.ReadToEnd()
 try {
     $json = $input | ConvertFrom-Json
@@ -29,6 +34,7 @@ $dangerous = @(
 
 foreach ($pattern in $dangerous) {
     if ($cmd -match $pattern) {
+        Hook-LogError "BLOCKED dangerous command: $pattern — cmd: $($cmd.Substring(0, [Math]::Min(100, $cmd.Length)))"
         Write-Output "{`"error`":`"BLOCKED: Dangerous command detected — $pattern`"}"
         exit 2
     }
