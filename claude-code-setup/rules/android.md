@@ -57,12 +57,16 @@ paths:
 - GUI: Use Gio UI (`gioui.org`) for Material Design apps
 
 ## Environment (Windows)
-- JAVA_HOME: C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot
+- JAVA_HOME: C:\Program Files\Microsoft\jdk-21.0.10.7-hotspot
 - ANDROID_HOME: %LOCALAPPDATA%\Android\Sdk
-- Kotlin: C:\Kotlin\kotlinc\bin
-- Gradle: C:\Gradle\gradle-8.14\bin
 - ADB: %ANDROID_HOME%\platform-tools\adb.exe
 - sdkmanager: %ANDROID_HOME%\cmdline-tools\latest\bin\sdkmanager.bat
+- bundletool: ~/bin/bundletool (v1.18.3, wraps bundletool-all.jar)
+- Firebase CLI: firebase (v15.10.0, global npm)
+- scrcpy: scrcpy (for device mirroring, installed via winget)
+- cargo-audit: ~/.cargo/bin/cargo-audit (v0.22.1, for Rust dependency CVE scanning)
+- ADB MCP: registered as 'android-adb' in Claude Code (npx android-debug-bridge-mcp)
+- Kotlin/Gradle: use gradlew from project (no standalone install needed)
 
 ## APK Signing
 - Debug: auto-signed with debug keystore (~/.android/debug.keystore)
