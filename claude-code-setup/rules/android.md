@@ -169,6 +169,75 @@ implementation("androidx.window:window:1.5.1")  // Foldable posture APIs
 - **Paparazzi**: `./gradlew recordPaparazziDebug` / `./gradlew verifyPaparazziDebug`
 - Test multiple form factors via `@Config(qualifiers = "w600dp-h960dp")` for foldable, `"w800dp-h1280dp"` for tablet
 
+## Audio & Sound (Professional Quality)
+
+### API Decision Tree
+- **Low-latency (< 20ms)**: Oboe (C++ NDK) — `implementation("com.google.oboe:oboe:1.9.0")`
+- **Short sound effects (< 5s)**: SoundPool — built-in, max 10 streams, OGG Vorbis preferred
+- **Music/Streaming/Podcasts**: Jetpack Media3 — `implementation("androidx.media3:media3-exoplayer:1.6.0")`
+- **Procedural audio**: TarsosDSP (Java/Kotlin) or MWEngine (C++/Kotlin)
+- **3D spatial audio**: Spatializer API (API 32+)
+- **Audio + haptics sync**: HapticGenerator on AudioTrack (API 31+)
+
+### Oboe Setup (C++ Low-Latency)
+```cmake
+# CMakeLists.txt
+find_package(oboe REQUIRED CONFIG)
+target_link_libraries(native-lib oboe::oboe)
+```
+```kotlin
+// build.gradle.kts
+android {
+    defaultConfig {
+        externalNativeBuild {
+            cmake { arguments("-DANDROID_STL=c++_static"); cppFlags("-std=c++17") }
+        }
+    }
+    externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt") } }
+}
+dependencies { implementation("com.google.oboe:oboe:1.9.0") }
+```
+- Golden rules for Oboe callback: NO memory allocation, NO I/O, NO mutexes, NO sleep — pure math only
+- Set `PerformanceMode::LowLatency`, `SharingMode::Exclusive`, sample rate 48000 Hz
+- Buffer size: `stream->getFramesPerBurst() * 2`
+
+### SoundPool (Short Effects)
+```kotlin
+val soundPool = SoundPool.Builder()
+    .setMaxStreams(10)
+    .setAudioAttributes(AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_GAME)
+        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+    .build()
+val soundId = soundPool.load(context, R.raw.click, 1)
+soundPool.play(soundId, 1.0f, 1.0f, 1, 0, 1.0f)
+```
+
+### Jetpack Media3 (Music/Streaming)
+```kotlin
+val media3Version = "1.6.0"
+implementation("androidx.media3:media3-exoplayer:$media3Version")
+implementation("androidx.media3:media3-session:$media3Version")
+implementation("androidx.media3:media3-common-ktx:$media3Version") // Kotlin Coroutines
+```
+
+### Audio Formats (Best for Android)
+- **OGG Vorbis** (128-192kbps): Best quality/size for effects and music — native since API 1
+- **OGG Opus**: Best for speech/low-bitrate — native since API 21
+- **WAV**: Development/raw only — too large for production
+- **FLAC**: Lossless music — native since API 12
+
+### Audio Focus (MANDATORY for playback apps)
+- Always request AudioFocus before playback, release when done
+- Media3 handles this automatically when using MediaSession
+- Handle AUDIOFOCUS_LOSS_TRANSIENT (duck or pause) and AUDIOFOCUS_LOSS (stop)
+
+### Free Sound Resources (Commercial Use OK)
+- Zapsplat.com: 160,000+ royalty-free sounds
+- Freesound.org: Creative Commons, OGG downloads
+- SONNISS GameAudioGDC: Annual free pack, top quality
+- Mixkit.co: Clean categories, game-focused
+
 ## Security
 - Never hardcode API keys or secrets — use BuildConfig fields or local.properties
 - **EncryptedSharedPreferences is deprecated** — use DataStore + Tink encryption for new code
