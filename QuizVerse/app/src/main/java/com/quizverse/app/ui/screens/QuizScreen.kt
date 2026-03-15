@@ -98,27 +98,25 @@ fun QuizScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     val soundManager = app.soundManager
-    val isBundesliga = categoryId == 13 || categoryId == 14
 
     // Load questions once when the screen first appears
     LaunchedEffect(Unit) {
         viewModel.loadQuestions(categoryId, difficulty, questionCount)
     }
 
-    // Start stadium ambience for Bundesliga categories
-    LaunchedEffect(isBundesliga) {
-        if (isBundesliga) soundManager.startStadiumAmbience(0.2f)
-    }
-    // Stop stadium ambience when leaving the screen
-    androidx.compose.runtime.DisposableEffect(Unit) {
-        onDispose { soundManager.stopStadiumAmbience() }
-    }
-
-    // Timer tick sound — gets louder as time runs out
+    // Timer tick sound — only in the last third, gets louder and deeper
+    val maxTime = Constants.TIMER_DURATIONS[difficulty] ?: 40
+    val tickThreshold = maxTime / 3  // last third of the time
     LaunchedEffect(uiState.timeRemaining) {
-        if (!uiState.isAnswered && uiState.currentQuestion != null && uiState.timeRemaining in 1..10) {
-            val volume = 1.0f - (uiState.timeRemaining - 1) / 9.0f  // 0.1 at 10s → 1.0 at 1s
-            soundManager.playCountdownTick(volume.coerceIn(0.2f, 1.0f))
+        if (!uiState.isAnswered && uiState.currentQuestion != null
+            && uiState.timeRemaining in 1..tickThreshold
+        ) {
+            // Volume: quiet at threshold → loud at 1 second
+            val progress = 1.0f - (uiState.timeRemaining - 1).toFloat() / (tickThreshold - 1).coerceAtLeast(1).toFloat()
+            val volume = 0.2f + 0.8f * progress
+            // Pitch: normal (1.0) at start → deep (0.6) at end
+            val pitch = 1.0f - 0.4f * progress
+            soundManager.playCountdownTickPitched(volume, pitch)
         }
     }
 
@@ -141,7 +139,6 @@ fun QuizScreen(
     }
 
     // Determine timer progress fraction (0.0 = empty, 1.0 = full)
-    val maxTime = Constants.TIMER_DURATIONS[difficulty] ?: 20
     val timerFraction = if (maxTime > 0) uiState.timeRemaining.toFloat() / maxTime.toFloat() else 0f
 
     // Animate the timer bar smoothly

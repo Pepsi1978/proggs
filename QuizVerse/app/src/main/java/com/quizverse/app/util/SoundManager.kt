@@ -80,6 +80,12 @@ class SoundManager(context: Context) {
     /** Played as countdown tick with adjustable volume (gets louder as time runs out). */
     fun playCountdownTick(volume: Float = 0.5f) = play(soundCountdownTick, volume = volume.coerceIn(0.1f, 1.0f))
 
+    /** Countdown tick with adjustable volume AND pitch (lower pitch = deeper sound). */
+    fun playCountdownTickPitched(volume: Float = 0.5f, pitch: Float = 1.0f) {
+        if (!enabled || soundCountdownTick == 0) return
+        soundPool.play(soundCountdownTick, volume, volume, 1, 0, pitch.coerceIn(0.5f, 2.0f))
+    }
+
     /** Played when a correct-answer streak is achieved. */
     fun playStreak() = play(soundStreak, volume = 0.7f)
 

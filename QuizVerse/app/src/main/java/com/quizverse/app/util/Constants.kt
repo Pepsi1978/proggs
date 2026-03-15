@@ -8,11 +8,11 @@ object Constants {
 
     // --- Timer durations in seconds per difficulty level ---
     val TIMER_DURATIONS: Map<Int, Int> = mapOf(
-        1 to 30,
-        2 to 20,
-        3 to 15,
-        4 to 10,
-        5 to 8
+        1 to 60,
+        2 to 40,
+        3 to 30,
+        4 to 20,
+        5 to 16
     )
 
     // --- Score multipliers per difficulty level ---
