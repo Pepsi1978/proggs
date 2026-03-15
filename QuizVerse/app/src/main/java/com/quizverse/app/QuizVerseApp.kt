@@ -3,6 +3,7 @@ package com.quizverse.app
 import android.app.Application
 import com.quizverse.app.data.database.QuizDatabase
 import com.quizverse.app.data.repository.SettingsRepository
+import com.quizverse.app.util.HapticManager
 import com.quizverse.app.util.SoundManager
 
 /**
@@ -33,10 +34,16 @@ class QuizVerseApp : Application() {
         SoundManager(this)
     }
 
+    /** Manages haptic feedback (vibration) for in-game events. */
+    val hapticManager: HapticManager by lazy {
+        HapticManager(this)
+    }
+
     override fun onCreate() {
         super.onCreate()
-        // Sync SoundManager enabled state with saved settings
+        // Sync SoundManager and HapticManager enabled state with saved settings
         soundManager.enabled = settingsRepository.soundEnabled.value
+        hapticManager.enabled = settingsRepository.vibrationEnabled.value
     }
 
     override fun onTerminate() {

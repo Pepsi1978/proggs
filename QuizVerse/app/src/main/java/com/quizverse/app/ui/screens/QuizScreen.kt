@@ -98,6 +98,7 @@ fun QuizScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     val soundManager = app.soundManager
+    val hapticManager = app.hapticManager
 
     // Load questions once when the screen first appears
     LaunchedEffect(Unit) {
@@ -127,6 +128,8 @@ fun QuizScreen(
         // Extra ticks for speed-up effect in final seconds
         // Every 10s bracket gets faster: last 20s = double tick, last 10s = triple tick
         if (remaining <= 10) {
+            // Haptic warning pulse in the last 10 seconds
+            hapticManager.vibrateWarning()
             kotlinx.coroutines.delay(300)
             soundManager.playCountdownTickPitched(volume, pitch)
             kotlinx.coroutines.delay(300)
@@ -226,12 +229,16 @@ fun QuizScreen(
                     timerColor          = timerColor,
                     onAnswerSelected    = { index ->
                         viewModel.submitAnswer(index)
-                        // Play sound effect based on correctness
+                        // Play sound + haptic feedback based on correctness
                         val question = uiState.currentQuestion
                         if (question != null) {
                             val correct = index == question.correctAnswer
-                            if (correct) app.soundManager.playCorrect()
-                            else app.soundManager.playWrong()
+                            if (correct) {
+                                soundManager.playCorrect()
+                            } else {
+                                soundManager.playWrong()
+                                hapticManager.vibrateWrong()
+                            }
                         }
                     },
                     onNextQuestion      = { viewModel.nextQuestion() },

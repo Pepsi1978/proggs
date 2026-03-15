@@ -174,7 +174,10 @@ fun SettingsScreen(navController: NavHostController) {
                         label = "Vibration",
                         description = "Haptisches Feedback bei Aktionen",
                         checked = vibrationEnabled,
-                        onCheckedChange = { settings.setVibrationEnabled(it) }
+                        onCheckedChange = {
+                            settings.setVibrationEnabled(it)
+                            app.hapticManager.enabled = it
+                        }
                     )
                 }
 
