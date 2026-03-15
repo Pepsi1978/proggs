@@ -104,34 +104,36 @@ fun QuizScreen(
         viewModel.loadQuestions(categoryId, difficulty, questionCount)
     }
 
-    // Timer tick sound — 3 phases, each louder, faster and deeper
+    // Timer tick: every second from the start, getting louder + higher + faster
     val maxTime = Constants.TIMER_DURATIONS[difficulty] ?: 40
-    val tickThreshold = maxTime / 3  // last third triggers ticking
-    // Phase boundaries within the last third
-    val phaseCritical = tickThreshold / 3        // last ~1/9 of total time (critical)
-    val phaseUrgent = tickThreshold * 2 / 3      // middle part of last third (urgent)
 
-    // Tick every second in last third — but add extra ticks in final phase
     LaunchedEffect(uiState.timeRemaining) {
         if (uiState.isAnswered || uiState.currentQuestion == null) return@LaunchedEffect
         val remaining = uiState.timeRemaining
-        if (remaining !in 1..tickThreshold) return@LaunchedEffect
+        if (remaining < 1 || remaining >= maxTime) return@LaunchedEffect
 
-        when {
-            // CRITICAL: last few seconds — loud, deep, double-tick
-            remaining <= phaseCritical -> {
-                soundManager.playCountdownTickPitched(volume = 1.0f, pitch = 0.6f)
-                kotlinx.coroutines.delay(250)
-                soundManager.playCountdownTickPitched(volume = 0.9f, pitch = 0.55f)
-            }
-            // URGENT: middle of last third — medium loud, slightly deep
-            remaining <= phaseUrgent -> {
-                soundManager.playCountdownTickPitched(volume = 0.7f, pitch = 0.8f)
-            }
-            // WARNING: start of last third — quiet, normal pitch
-            else -> {
-                soundManager.playCountdownTickPitched(volume = 0.4f, pitch = 1.0f)
-            }
+        // progress: 0.0 at start (full time) → 1.0 at last second
+        val progress = 1.0f - remaining.toFloat() / maxTime.toFloat()
+
+        // Volume: 0.15 at start → 1.0 at end (continuous ramp)
+        val volume = (0.15f + 0.85f * progress).coerceIn(0.15f, 1.0f)
+
+        // Pitch: 0.6 (deep) at start → 1.8 (high) at end
+        val pitch = (0.6f + 1.2f * progress).coerceIn(0.5f, 2.0f)
+
+        // Play the tick
+        soundManager.playCountdownTickPitched(volume, pitch)
+
+        // Extra ticks for speed-up effect in final seconds
+        // Every 10s bracket gets faster: last 20s = double tick, last 10s = triple tick
+        if (remaining <= 10) {
+            kotlinx.coroutines.delay(300)
+            soundManager.playCountdownTickPitched(volume, pitch)
+            kotlinx.coroutines.delay(300)
+            soundManager.playCountdownTickPitched(volume, pitch)
+        } else if (remaining <= 20) {
+            kotlinx.coroutines.delay(400)
+            soundManager.playCountdownTickPitched(volume * 0.8f, pitch)
         }
     }
 
