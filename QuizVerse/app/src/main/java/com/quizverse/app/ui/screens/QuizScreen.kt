@@ -104,19 +104,34 @@ fun QuizScreen(
         viewModel.loadQuestions(categoryId, difficulty, questionCount)
     }
 
-    // Timer tick sound — only in the last third, gets louder and deeper
+    // Timer tick sound — 3 phases, each louder, faster and deeper
     val maxTime = Constants.TIMER_DURATIONS[difficulty] ?: 40
-    val tickThreshold = maxTime / 3  // last third of the time
+    val tickThreshold = maxTime / 3  // last third triggers ticking
+    // Phase boundaries within the last third
+    val phaseCritical = tickThreshold / 3        // last ~1/9 of total time (critical)
+    val phaseUrgent = tickThreshold * 2 / 3      // middle part of last third (urgent)
+
+    // Tick every second in last third — but add extra ticks in final phase
     LaunchedEffect(uiState.timeRemaining) {
-        if (!uiState.isAnswered && uiState.currentQuestion != null
-            && uiState.timeRemaining in 1..tickThreshold
-        ) {
-            // Volume: quiet at threshold → loud at 1 second
-            val progress = 1.0f - (uiState.timeRemaining - 1).toFloat() / (tickThreshold - 1).coerceAtLeast(1).toFloat()
-            val volume = 0.2f + 0.8f * progress
-            // Pitch: normal (1.0) at start → deep (0.6) at end
-            val pitch = 1.0f - 0.4f * progress
-            soundManager.playCountdownTickPitched(volume, pitch)
+        if (uiState.isAnswered || uiState.currentQuestion == null) return@LaunchedEffect
+        val remaining = uiState.timeRemaining
+        if (remaining !in 1..tickThreshold) return@LaunchedEffect
+
+        when {
+            // CRITICAL: last few seconds — loud, deep, double-tick
+            remaining <= phaseCritical -> {
+                soundManager.playCountdownTickPitched(volume = 1.0f, pitch = 0.6f)
+                kotlinx.coroutines.delay(250)
+                soundManager.playCountdownTickPitched(volume = 0.9f, pitch = 0.55f)
+            }
+            // URGENT: middle of last third — medium loud, slightly deep
+            remaining <= phaseUrgent -> {
+                soundManager.playCountdownTickPitched(volume = 0.7f, pitch = 0.8f)
+            }
+            // WARNING: start of last third — quiet, normal pitch
+            else -> {
+                soundManager.playCountdownTickPitched(volume = 0.4f, pitch = 1.0f)
+            }
         }
     }
 

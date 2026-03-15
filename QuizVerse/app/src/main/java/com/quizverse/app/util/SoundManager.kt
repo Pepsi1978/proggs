@@ -31,6 +31,10 @@ class SoundManager(context: Context) {
     // Track currently playing stadium stream so we can stop it
     private var stadiumStreamId: Int = 0
 
+    // Track which sound IDs have finished loading (SoundPool loads asynchronously)
+    private val loadedSounds = mutableSetOf<Int>()
+    private var allLoaded = false
+
     init {
         val attributes = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_GAME)
@@ -41,6 +45,13 @@ class SoundManager(context: Context) {
             .setMaxStreams(6)
             .setAudioAttributes(attributes)
             .build()
+
+        // Track when each sound finishes loading — SoundPool loads asynchronously!
+        soundPool.setOnLoadCompleteListener { _, sampleId, status ->
+            if (status == 0) {
+                loadedSounds.add(sampleId)
+            }
+        }
 
         // Load all sound resources
         soundCorrect = loadSafe(context, R.raw.sound_correct)
@@ -82,7 +93,7 @@ class SoundManager(context: Context) {
 
     /** Countdown tick with adjustable volume AND pitch (lower pitch = deeper sound). */
     fun playCountdownTickPitched(volume: Float = 0.5f, pitch: Float = 1.0f) {
-        if (!enabled || soundCountdownTick == 0) return
+        if (!enabled || soundCountdownTick == 0 || soundCountdownTick !in loadedSounds) return
         soundPool.play(soundCountdownTick, volume, volume, 1, 0, pitch.coerceIn(0.5f, 2.0f))
     }
 
@@ -119,7 +130,7 @@ class SoundManager(context: Context) {
     // ---- Private helpers --------------------------------------------------
 
     private fun play(soundId: Int, volume: Float = 1.0f) {
-        if (!enabled || soundId == 0) return
+        if (!enabled || soundId == 0 || soundId !in loadedSounds) return
         soundPool.play(soundId, volume, volume, 1, 0, 1.0f)
     }
 
