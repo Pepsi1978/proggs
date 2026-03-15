@@ -46,6 +46,13 @@ val MixedEnd        = Color(0xFFF97316)
 val LogicStart      = Color(0xFF0EA5E9)
 val LogicEnd        = Color(0xFF6366F1)
 
+// Bundesliga subcategories
+val HerthaStart     = Color(0xFF1A5276)
+val HerthaEnd       = Color(0xFF2E86C1)
+
+val DortmundStart   = Color(0xFFFDD835)
+val DortmundEnd     = Color(0xFF212121)
+
 // ── Surface / neutral tokens ─────────────────────────────────────────────────
 // Light theme surfaces
 val SurfaceLight         = Color(0xFFFAF9FF)

@@ -2,18 +2,19 @@ package com.quizverse.app.ui.screens
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,15 +32,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -52,12 +49,16 @@ import androidx.navigation.compose.rememberNavController
 import com.quizverse.app.ui.navigation.Screen
 import com.quizverse.app.ui.theme.AnimalsEnd
 import com.quizverse.app.ui.theme.AnimalsStart
+import com.quizverse.app.ui.theme.DortmundEnd
+import com.quizverse.app.ui.theme.DortmundStart
 import com.quizverse.app.ui.theme.FilmEnd
 import com.quizverse.app.ui.theme.FilmStart
 import com.quizverse.app.ui.theme.FoodEnd
 import com.quizverse.app.ui.theme.FoodStart
 import com.quizverse.app.ui.theme.GeoEnd
 import com.quizverse.app.ui.theme.GeoStart
+import com.quizverse.app.ui.theme.HerthaEnd
+import com.quizverse.app.ui.theme.HerthaStart
 import com.quizverse.app.ui.theme.HistoryEnd
 import com.quizverse.app.ui.theme.HistoryStart
 import com.quizverse.app.ui.theme.LiteratureEnd
@@ -82,23 +83,30 @@ private data class CategoryItem(
     val name: String,
     val emoji: String,
     val gradientStart: Color,
-    val gradientEnd: Color
+    val gradientEnd: Color,
+    val isSubcategory: Boolean = false
 )
 
-// Hardcoded list of 12 quiz categories with emoji icons and gradient color pairs
-private val categories = listOf(
-    CategoryItem(1,  "Wissenschaft",   "🔬", ScienceStart,    ScienceEnd),
-    CategoryItem(2,  "Geschichte",     "🏛️", HistoryStart,    HistoryEnd),
-    CategoryItem(3,  "Geografie",      "🌍", GeoStart,        GeoEnd),
-    CategoryItem(4,  "Sport",          "⚽", SportStart,      SportEnd),
-    CategoryItem(5,  "Musik",          "🎵", MusicStart,      MusicEnd),
-    CategoryItem(6,  "Film & TV",      "🎬", FilmStart,       FilmEnd),
-    CategoryItem(7,  "Technologie",    "💻", TechStart,       TechEnd),
-    CategoryItem(8,  "Natur",          "🌿", AnimalsStart,    AnimalsEnd),
-    CategoryItem(9,  "Kunst",          "🎨", LiteratureStart, LiteratureEnd),
-    CategoryItem(10, "Literatur",      "📚", LogicStart,      LogicEnd),
-    CategoryItem(11, "Mathematik",     "🔢", FoodStart,       FoodEnd),
-    CategoryItem(12, "Essen & Trinken","🍕", MixedStart,      MixedEnd)
+// ── Main categories — IDs MUST match categoryId in Question entities ────────
+private val mainCategories = listOf(
+    CategoryItem(1,  "Weltgeographie",      "\uD83C\uDF0D", GeoStart,        GeoEnd),
+    CategoryItem(2,  "Wissenschaft & Natur","\uD83D\uDD2C", ScienceStart,    ScienceEnd),
+    CategoryItem(3,  "Geschichte",          "\uD83D\uDCDC", HistoryStart,    HistoryEnd),
+    CategoryItem(4,  "Film & Fernsehen",    "\uD83C\uDFAC", FilmStart,       FilmEnd),
+    CategoryItem(5,  "Musik",               "\uD83C\uDFB5", MusicStart,      MusicEnd),
+    CategoryItem(6,  "Sport",               "\u26BD",       SportStart,      SportEnd),
+    CategoryItem(7,  "Technologie",         "\uD83D\uDCBB", TechStart,       TechEnd),
+    CategoryItem(8,  "Essen & Trinken",     "\uD83C\uDF73", FoodStart,       FoodEnd),
+    CategoryItem(9,  "Tierwelt",            "\uD83D\uDC3E", AnimalsStart,    AnimalsEnd),
+    CategoryItem(10, "Sprache & Literatur", "\uD83D\uDCDA", LiteratureStart, LiteratureEnd),
+    CategoryItem(11, "Bunt Gemischt",       "\uD83C\uDFB2", MixedStart,      MixedEnd),
+    CategoryItem(12, "Logik & Denksport",   "\uD83E\uDDE0", LogicStart,      LogicEnd),
+)
+
+// ── Bundesliga subcategories ────────────────────────────────────────────────
+private val bundesligaCategories = listOf(
+    CategoryItem(13, "Hertha BSC",          "\u26BD", HerthaStart,   HerthaEnd,   isSubcategory = true),
+    CategoryItem(14, "Borussia Dortmund",   "\u26BD", DortmundStart, DortmundEnd, isSubcategory = true),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -136,10 +144,42 @@ fun CategoryScreen(navController: NavHostController) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            itemsIndexed(categories) { index, category ->
+            // ── Main categories grid (2 columns) ──
+            itemsIndexed(mainCategories) { index, category ->
                 AnimatedCategoryCard(
                     category = category,
                     animationDelayMillis = index * 50,
+                    onClick = {
+                        navController.navigate(Screen.Difficulty.createRoute(category.id))
+                    }
+                )
+            }
+
+            // ── Section header for Bundesliga ──
+            item(span = { GridItemSpan(2) }) {
+                Column(modifier = Modifier.padding(top = 20.dp, bottom = 4.dp)) {
+                    Text(
+                        text = "\u26BD Bundesliga-Vereine",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Teste dein Wissen über deinen Lieblingsverein",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+            }
+
+            // ── Bundesliga category cards ──
+            itemsIndexed(bundesligaCategories) { index, category ->
+                AnimatedCategoryCard(
+                    category = category,
+                    animationDelayMillis = (mainCategories.size + index) * 50,
                     onClick = {
                         navController.navigate(Screen.Difficulty.createRoute(category.id))
                     }
@@ -159,9 +199,6 @@ private fun AnimatedCategoryCard(
 ) {
     val offsetY = remember { Animatable(50f) }
     val alpha = remember { Animatable(0f) }
-    // Scale for the bounce-on-tap effect
-    var emojiScale by remember { mutableFloatStateOf(1f) }
-    val emojiScaleAnim = remember { Animatable(1f) }
 
     // Staggered entrance: slide up + fade in
     LaunchedEffect(Unit) {
@@ -177,10 +214,7 @@ private fun AnimatedCategoryCard(
     }
 
     Card(
-        onClick = {
-            // Trigger emoji bounce on tap before navigating
-            onClick()
-        },
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
@@ -211,11 +245,10 @@ private fun AnimatedCategoryCard(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Emoji with scale animation
+                // Emoji icon
                 Text(
                     text = category.emoji,
-                    fontSize = 40.sp,
-                    modifier = Modifier.scale(emojiScaleAnim.value)
+                    fontSize = 40.sp
                 )
                 Text(
                     text = category.name,
