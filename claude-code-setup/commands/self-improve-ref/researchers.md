@@ -75,14 +75,6 @@ Return: plugin name, source, what it does, stars, recommendation."
 "Research Claude Code agent teams, parallelization, automation best practices as of [today].
 Search: (1) Agent Teams patterns, (2) new hook events/types,
 (3) skill structuring for large skills, (4) worktree isolation patterns.
-
-DYNAMIC HOOK EVENT CHECK (MANDATORY v5.2):
-Before researching, read the actual hook events from the Claude Code settings schema.
-The env-checker should run: Read the 'hooks' property schema from settings.json validation
-to get the EXACT list of supported events. Do NOT hardcode a number like '18' or '22'.
-Compare the schema list against currently registered hooks in settings.json.
-Flag any new events that are NOT yet in use.
-
 Spawn sub-agents per topic. Return actionable patterns with code examples."
 ```
 
@@ -138,8 +130,6 @@ After all researchers return, validate against scan data:
 4. **"Not installed" claims**: Verify against scan + plugin list
 5. **Contradictions**: Trust more specific source
 6. **Schema validation**: Before implementing new hooks/settings, verify they exist in actual JSON schema
-7. **Hook event count**: NEVER hardcode the number of available hook events — always derive from the settings schema at runtime
-8. **Settings that don't exist**: If a researcher recommends a new setting, TRY to set it — the schema validator will reject invalid settings. Trust the validator, not the researcher.
 
 ## Plugin Security Review Template
 
