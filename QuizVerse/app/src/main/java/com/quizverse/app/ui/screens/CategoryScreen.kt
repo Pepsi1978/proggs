@@ -1,25 +1,31 @@
 package com.quizverse.app.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,7 +38,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -40,7 +49,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,36 +85,38 @@ import com.quizverse.app.ui.theme.TechEnd
 import com.quizverse.app.ui.theme.TechStart
 import kotlinx.coroutines.delay
 
-// Data model for a category tile displayed in the grid
+// Data model for a category displayed as a full-width row
 private data class CategoryItem(
     val id: Int,
     val name: String,
     val emoji: String,
     val gradientStart: Color,
     val gradientEnd: Color,
-    val isSubcategory: Boolean = false
+    val subcategories: List<CategoryItem> = emptyList()
 )
 
 // ── Main categories — IDs MUST match categoryId in Question entities ────────
-private val mainCategories = listOf(
-    CategoryItem(1,  "Weltgeographie",      "\uD83C\uDF0D", GeoStart,        GeoEnd),
-    CategoryItem(2,  "Wissenschaft & Natur","\uD83D\uDD2C", ScienceStart,    ScienceEnd),
-    CategoryItem(3,  "Geschichte",          "\uD83D\uDCDC", HistoryStart,    HistoryEnd),
-    CategoryItem(4,  "Film & Fernsehen",    "\uD83C\uDFAC", FilmStart,       FilmEnd),
-    CategoryItem(5,  "Musik",               "\uD83C\uDFB5", MusicStart,      MusicEnd),
-    CategoryItem(6,  "Sport",               "\u26BD",       SportStart,      SportEnd),
-    CategoryItem(7,  "Technologie",         "\uD83D\uDCBB", TechStart,       TechEnd),
-    CategoryItem(8,  "Essen & Trinken",     "\uD83C\uDF73", FoodStart,       FoodEnd),
-    CategoryItem(9,  "Tierwelt",            "\uD83D\uDC3E", AnimalsStart,    AnimalsEnd),
+private val categories = listOf(
+    CategoryItem(1, "Weltgeographie", "\uD83C\uDF0D", GeoStart, GeoEnd),
+    CategoryItem(2, "Wissenschaft & Natur", "\uD83D\uDD2C", ScienceStart, ScienceEnd),
+    CategoryItem(3, "Geschichte", "\uD83D\uDCDC", HistoryStart, HistoryEnd),
+    CategoryItem(4, "Film & Fernsehen", "\uD83C\uDFAC", FilmStart, FilmEnd),
+    CategoryItem(5, "Musik", "\uD83C\uDFB5", MusicStart, MusicEnd),
+    // Sport has Bundesliga subcategories
+    CategoryItem(
+        id = 6, name = "Sport", emoji = "\u26BD",
+        gradientStart = SportStart, gradientEnd = SportEnd,
+        subcategories = listOf(
+            CategoryItem(13, "Hertha BSC", "\uD83D\uDC99", HerthaStart, HerthaEnd),
+            CategoryItem(14, "Borussia Dortmund", "\uD83D\uDC9B", DortmundStart, DortmundEnd),
+        )
+    ),
+    CategoryItem(7, "Technologie", "\uD83D\uDCBB", TechStart, TechEnd),
+    CategoryItem(8, "Essen & Trinken", "\uD83C\uDF73", FoodStart, FoodEnd),
+    CategoryItem(9, "Tierwelt", "\uD83D\uDC3E", AnimalsStart, AnimalsEnd),
     CategoryItem(10, "Sprache & Literatur", "\uD83D\uDCDA", LiteratureStart, LiteratureEnd),
-    CategoryItem(11, "Bunt Gemischt",       "\uD83C\uDFB2", MixedStart,      MixedEnd),
-    CategoryItem(12, "Logik & Denksport",   "\uD83E\uDDE0", LogicStart,      LogicEnd),
-)
-
-// ── Bundesliga subcategories ────────────────────────────────────────────────
-private val bundesligaCategories = listOf(
-    CategoryItem(13, "Hertha BSC",          "\u26BD", HerthaStart,   HerthaEnd,   isSubcategory = true),
-    CategoryItem(14, "Borussia Dortmund",   "\u26BD", DortmundStart, DortmundEnd, isSubcategory = true),
+    CategoryItem(11, "Bunt Gemischt", "\uD83C\uDFB2", MixedStart, MixedEnd),
+    CategoryItem(12, "Logik & Denksport", "\uD83E\uDDE0", LogicStart, LogicEnd),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -135,128 +145,217 @@ fun CategoryScreen(navController: NavHostController) {
             )
         }
     ) { innerPadding ->
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // ── Main categories grid (2 columns) ──
-            itemsIndexed(mainCategories) { index, category ->
-                AnimatedCategoryCard(
+            item { Spacer(modifier = Modifier.height(4.dp)) }
+
+            itemsIndexed(categories) { index, category ->
+                CategoryRow(
                     category = category,
                     animationDelayMillis = index * 50,
-                    onClick = {
-                        navController.navigate(Screen.Difficulty.createRoute(category.id))
+                    onCategoryClick = { id ->
+                        navController.navigate(Screen.Difficulty.createRoute(id))
                     }
                 )
             }
 
-            // ── Section header for Bundesliga ──
-            item(span = { GridItemSpan(2) }) {
-                Column(modifier = Modifier.padding(top = 20.dp, bottom = 4.dp)) {
-                    Text(
-                        text = "\u26BD Bundesliga-Vereine",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(start = 4.dp)
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+        }
+    }
+}
+
+// ── Full-width category row with optional expandable subcategories ───────────
+@Composable
+private fun CategoryRow(
+    category: CategoryItem,
+    animationDelayMillis: Int,
+    onCategoryClick: (Int) -> Unit
+) {
+    val alpha = remember { Animatable(0f) }
+    var expanded by remember { mutableStateOf(false) }
+    val hasSubcategories = category.subcategories.isNotEmpty()
+
+    LaunchedEffect(Unit) {
+        delay(animationDelayMillis.toLong())
+        alpha.animateTo(1f, animationSpec = tween(350, easing = FastOutSlowInEasing))
+    }
+
+    Column(modifier = Modifier.alpha(alpha.value)) {
+        // Main category card
+        Card(
+            onClick = {
+                if (hasSubcategories) {
+                    expanded = !expanded
+                } else {
+                    onCategoryClick(category.id)
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(category.gradientStart, category.gradientEnd)
+                        )
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Teste dein Wissen über deinen Lieblingsverein",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Emoji in semi-transparent circle
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color.White.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = category.emoji, fontSize = 24.sp)
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = category.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        if (hasSubcategories) {
+                            Text(
+                                text = "${category.subcategories.size} Vereine",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+
+                    if (hasSubcategories) {
+                        Icon(
+                            imageVector = if (expanded) Icons.Default.KeyboardArrowUp
+                            else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (expanded) "Einklappen" else "Ausklappen",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "\u203A",
+                            fontSize = 24.sp,
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontWeight = FontWeight.Light
+                        )
+                    }
                 }
             }
+        }
 
-            // ── Bundesliga category cards ──
-            itemsIndexed(bundesligaCategories) { index, category ->
-                AnimatedCategoryCard(
-                    category = category,
-                    animationDelayMillis = (mainCategories.size + index) * 50,
-                    onClick = {
-                        navController.navigate(Screen.Difficulty.createRoute(category.id))
+        // ── Clickable main "Sport allgemein" button when expanded ──
+        if (hasSubcategories) {
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(animationSpec = tween(250)),
+                exit = shrinkVertically(animationSpec = tween(200))
+            ) {
+                Column(
+                    modifier = Modifier.padding(start = 24.dp, top = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // "Alle Sport-Fragen" button
+                    SubcategoryCard(
+                        emoji = "\u26BD",
+                        name = "Sport allgemein",
+                        gradientStart = category.gradientStart.copy(alpha = 0.7f),
+                        gradientEnd = category.gradientEnd.copy(alpha = 0.7f),
+                        onClick = { onCategoryClick(category.id) }
+                    )
+
+                    // Individual club subcategories
+                    category.subcategories.forEach { sub ->
+                        SubcategoryCard(
+                            emoji = sub.emoji,
+                            name = sub.name,
+                            gradientStart = sub.gradientStart,
+                            gradientEnd = sub.gradientEnd,
+                            onClick = { onCategoryClick(sub.id) }
+                        )
                     }
-                )
+                }
             }
         }
     }
 }
 
-// Single category card with gradient background and staggered slide-up entrance
-@OptIn(ExperimentalMaterial3Api::class)
+// ── Subcategory card (indented, slightly smaller) ────────────────────────────
 @Composable
-private fun AnimatedCategoryCard(
-    category: CategoryItem,
-    animationDelayMillis: Int,
+private fun SubcategoryCard(
+    emoji: String,
+    name: String,
+    gradientStart: Color,
+    gradientEnd: Color,
     onClick: () -> Unit
 ) {
-    val offsetY = remember { Animatable(50f) }
-    val alpha = remember { Animatable(0f) }
-
-    // Staggered entrance: slide up + fade in
-    LaunchedEffect(Unit) {
-        delay(animationDelayMillis.toLong())
-        offsetY.animateTo(
-            targetValue = 0f,
-            animationSpec = tween(350, easing = FastOutSlowInEasing)
-        )
-    }
-    LaunchedEffect(Unit) {
-        delay(animationDelayMillis.toLong())
-        alpha.animateTo(1f, animationSpec = tween(350))
-    }
-
     Card(
-        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f)
-            .alpha(alpha.value),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 4.dp,
-            pressedElevation = 8.dp
-        ),
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(16.dp))
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
                 .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            category.gradientStart,
-                            category.gradientEnd
-                        )
+                    Brush.horizontalGradient(
+                        colors = listOf(gradientStart, gradientEnd)
                     )
                 )
-                .padding(8.dp),
-            contentAlignment = Alignment.Center
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // Emoji icon
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color.White.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = emoji, fontSize = 18.sp)
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
                 Text(
-                    text = category.emoji,
-                    fontSize = 40.sp
-                )
-                Text(
-                    text = category.name,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = name,
+                    style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
                     color = Color.White,
-                    modifier = Modifier.padding(top = 8.dp, start = 4.dp, end = 4.dp)
+                    modifier = Modifier.weight(1f)
+                )
+
+                Text(
+                    text = "\u203A",
+                    fontSize = 20.sp,
+                    color = Color.White.copy(alpha = 0.7f)
                 )
             }
         }

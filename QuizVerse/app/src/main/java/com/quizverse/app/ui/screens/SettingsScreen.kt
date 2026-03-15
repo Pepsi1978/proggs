@@ -201,9 +201,9 @@ fun SettingsScreen(navController: NavHostController) {
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
                     SettingsInfoRow(
-                        emoji = "🛠️",
-                        label = "Entwickelt mit",
-                        value = "❤️ und Kotlin"
+                        emoji = "\uD83D\uDEE0\uFE0F",
+                        label = "Entwickelt von",
+                        value = "\u00A9 Frank Barwandt"
                     )
                 }
 

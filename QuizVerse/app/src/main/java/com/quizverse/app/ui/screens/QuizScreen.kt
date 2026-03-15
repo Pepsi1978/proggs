@@ -97,9 +97,29 @@ fun QuizScreen(
 
     val uiState by viewModel.uiState.collectAsState()
 
+    val soundManager = app.soundManager
+    val isBundesliga = categoryId == 13 || categoryId == 14
+
     // Load questions once when the screen first appears
     LaunchedEffect(Unit) {
         viewModel.loadQuestions(categoryId, difficulty, questionCount)
+    }
+
+    // Start stadium ambience for Bundesliga categories
+    LaunchedEffect(isBundesliga) {
+        if (isBundesliga) soundManager.startStadiumAmbience(0.2f)
+    }
+    // Stop stadium ambience when leaving the screen
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { soundManager.stopStadiumAmbience() }
+    }
+
+    // Timer tick sound — gets louder as time runs out
+    LaunchedEffect(uiState.timeRemaining) {
+        if (!uiState.isAnswered && uiState.currentQuestion != null && uiState.timeRemaining in 1..10) {
+            val volume = 1.0f - (uiState.timeRemaining - 1) / 9.0f  // 0.1 at 10s → 1.0 at 1s
+            soundManager.playCountdownTick(volume.coerceIn(0.2f, 1.0f))
+        }
     }
 
     // Auto-navigate to ResultScreen when quiz ends

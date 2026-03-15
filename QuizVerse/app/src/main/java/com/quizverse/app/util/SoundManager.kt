@@ -8,11 +8,6 @@ import com.quizverse.app.R
 /**
  * Manages all in-game sound effects via Android's [SoundPool].
  * SoundPool is used for short, low-latency clips (correct, wrong, tick, etc.).
- *
- * Usage:
- *   val sounds = SoundManager(context)
- *   sounds.enabled = userPrefsEnabled
- *   sounds.playCorrect()
  */
 class SoundManager(context: Context) {
 
@@ -20,12 +15,21 @@ class SoundManager(context: Context) {
     var enabled: Boolean = true
 
     private val soundPool: SoundPool
-    private var soundCorrect: Int     = 0
-    private var soundWrong: Int       = 0
-    private var soundLevelUp: Int     = 0
-    private var soundTick: Int        = 0
+    private var soundCorrect: Int = 0
+    private var soundWrong: Int = 0
+    private var soundLevelUp: Int = 0
+    private var soundTick: Int = 0
     private var soundAchievement: Int = 0
-    private var soundClick: Int       = 0
+    private var soundClick: Int = 0
+    private var soundTimerWarning: Int = 0
+    private var soundCountdownTick: Int = 0
+    private var soundStreak: Int = 0
+    private var soundStadium: Int = 0
+    private var soundTimeUp: Int = 0
+    private var soundQuizComplete: Int = 0
+
+    // Track currently playing stadium stream so we can stop it
+    private var stadiumStreamId: Int = 0
 
     init {
         val attributes = AudioAttributes.Builder()
@@ -34,17 +38,23 @@ class SoundManager(context: Context) {
             .build()
 
         soundPool = SoundPool.Builder()
-            .setMaxStreams(4)
+            .setMaxStreams(6)
             .setAudioAttributes(attributes)
             .build()
 
-        // Load all sound resources — add the actual raw resource files under res/raw/
-        soundCorrect     = loadSafe(context, R.raw.sound_correct)
-        soundWrong       = loadSafe(context, R.raw.sound_wrong)
-        soundLevelUp     = loadSafe(context, R.raw.sound_level_up)
-        soundTick        = loadSafe(context, R.raw.sound_tick)
+        // Load all sound resources
+        soundCorrect = loadSafe(context, R.raw.sound_correct)
+        soundWrong = loadSafe(context, R.raw.sound_wrong)
+        soundLevelUp = loadSafe(context, R.raw.sound_level_up)
+        soundTick = loadSafe(context, R.raw.sound_tick)
         soundAchievement = loadSafe(context, R.raw.sound_achievement)
-        soundClick       = loadSafe(context, R.raw.sound_click)
+        soundClick = loadSafe(context, R.raw.sound_click)
+        soundTimerWarning = loadSafe(context, R.raw.sound_timer_warning)
+        soundCountdownTick = loadSafe(context, R.raw.sound_countdown_tick)
+        soundStreak = loadSafe(context, R.raw.sound_streak)
+        soundStadium = loadSafe(context, R.raw.sound_stadium_ambience)
+        soundTimeUp = loadSafe(context, R.raw.sound_time_up)
+        soundQuizComplete = loadSafe(context, R.raw.sound_quiz_complete)
     }
 
     // ---- Public methods ----------------------------------------------------
@@ -67,8 +77,36 @@ class SoundManager(context: Context) {
     /** Played on button taps and navigation actions. */
     fun playClick() = play(soundClick, volume = 0.6f)
 
-    /** Releases all SoundPool resources. Call from the Activity/Application's onDestroy. */
+    /** Played as countdown tick with adjustable volume (gets louder as time runs out). */
+    fun playCountdownTick(volume: Float = 0.5f) = play(soundCountdownTick, volume = volume.coerceIn(0.1f, 1.0f))
+
+    /** Played when a correct-answer streak is achieved. */
+    fun playStreak() = play(soundStreak, volume = 0.7f)
+
+    /** Played when time runs out. */
+    fun playTimeUp() = play(soundTimeUp)
+
+    /** Played when a quiz is completed (victory jingle). */
+    fun playQuizComplete() = play(soundQuizComplete)
+
+    /** Start looping stadium ambience in the background. */
+    fun startStadiumAmbience(volume: Float = 0.25f) {
+        if (!enabled || soundStadium == 0) return
+        // Loop = -1 means infinite loop
+        stadiumStreamId = soundPool.play(soundStadium, volume, volume, 1, -1, 1.0f)
+    }
+
+    /** Stop the stadium ambience loop. */
+    fun stopStadiumAmbience() {
+        if (stadiumStreamId != 0) {
+            soundPool.stop(stadiumStreamId)
+            stadiumStreamId = 0
+        }
+    }
+
+    /** Releases all SoundPool resources. Call from the Application's onTerminate. */
     fun release() {
+        stopStadiumAmbience()
         soundPool.release()
     }
 
@@ -79,10 +117,6 @@ class SoundManager(context: Context) {
         soundPool.play(soundId, volume, volume, 1, 0, 1.0f)
     }
 
-    /**
-     * Loads a sound resource without throwing if the resource is missing.
-     * Returns 0 (invalid ID) when the resource does not exist yet.
-     */
     private fun loadSafe(context: Context, resId: Int): Int {
         return try {
             soundPool.load(context, resId, 1)
