@@ -69,7 +69,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.delay
+import kotlin.math.sin
 
 // Data model for a home screen navigation card
 private data class HomeCard(
@@ -454,16 +456,46 @@ fun HomeScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // App title with entrance animation
-            Text(
-                text = "QuizVerse",
-                style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.ExtraBold,
-                color = Primary,
+            // App title — animated wave with color gradient per letter
+            Row(
                 modifier = Modifier
                     .scale(logoScale.value)
-                    .alpha(logoAlpha.value)
-            )
+                    .alpha(logoAlpha.value),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                val titleColors = listOf(
+                    Primary,
+                    Color(0xFF6366F1),
+                    Secondary,
+                    Color(0xFFA855F7),
+                    Accent,
+                    Color(0xFFF59E0B),
+                    Primary,
+                    Color(0xFF6366F1),
+                    Secondary
+                )
+                "QuizVerse".forEachIndexed { i, char ->
+                    val wavePhase = infiniteTransition.animateFloat(
+                        initialValue = 0f,
+                        targetValue = 2f * Math.PI.toFloat(),
+                        animationSpec = infiniteRepeatable(
+                            tween(2000 + i * 100, easing = LinearEasing),
+                            RepeatMode.Restart
+                        ),
+                        label = "title_wave_$i"
+                    )
+                    val yOffset = sin(wavePhase.value.toDouble()).toFloat() * 6f
+                    Text(
+                        text = char.toString(),
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = titleColors[i % titleColors.size],
+                        modifier = Modifier.graphicsLayer {
+                            translationY = yOffset.dp.toPx()
+                        }
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
