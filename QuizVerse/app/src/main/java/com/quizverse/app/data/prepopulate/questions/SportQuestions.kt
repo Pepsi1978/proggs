@@ -1318,5 +1318,817 @@ fun sportQuestions(): List<Question> = listOf(
         explanation = "Corinthians aus Brasilien gewann die erste FIFA Klub-Weltmeisterschaft im Jahr 2000 in Brasilien.",
         difficulty = 3,
         funFact = "Das Turnier 2000 war das erste seiner Art und wurde von der FIFA als offizieller Weltklub-Wettbewerb ausgerichtet."
+    ),
+
+    // --- ADDITIONAL EASY (difficulty = 1) ---
+
+    Question(
+        categoryId = 6,
+        questionText = "Welche Sportart wird mit einem gelben Filzball gespielt?",
+        answerA = "Squash",
+        answerB = "Badminton",
+        answerC = "Tennis",
+        answerD = "Tischtennis",
+        correctAnswer = 2,
+        explanation = "Tennis wird mit einem gelben Filzball gespielt, der einen Durchmesser von 6,35 bis 6,67 cm hat.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Wie viele Goldmedaillen gibt es bei den Olympischen Spielen pro Disziplin?",
+        answerA = "1",
+        answerB = "2",
+        answerC = "3",
+        answerD = "4",
+        correctAnswer = 0,
+        explanation = "Pro Disziplin wird genau eine Goldmedaille vergeben, außerdem gibt es je eine Silber- und Bronzemedaille.",
+        difficulty = 1,
+        funFact = "Bei Mannschaftssportarten erhalten alle Mitglieder des Siegerkaders eine Goldmedaille."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welche Zahl steht auf einem Standarddartboard in der Mitte?",
+        answerA = "20",
+        answerB = "Bull (kein Zahlenwert)",
+        answerC = "1",
+        answerD = "10",
+        correctAnswer = 1,
+        explanation = "Die Mitte eines Dartboards heißt 'Bull' oder 'Bullseye' und ist kein reguläres Zahlensegment, sondern ein eigener Treffbereich.",
+        difficulty = 1,
+        funFact = "Ein Treffer ins Bullseye zählt 50 Punkte, der äußere Ring (Single Bull) zählt 25 Punkte."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Was bedeutet beim Schwimmen die Abkürzung 'WR'?",
+        answerA = "Wettkampfrekord",
+        answerB = "Weltrekord",
+        answerC = "Wertungsrunde",
+        answerD = "Wiederholungsrennen",
+        correctAnswer = 1,
+        explanation = "WR steht für Weltrekord – die beste je erzielte Zeit auf einer bestimmten Strecke.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welche Farbe hat die Mittellinie auf einem Fußballfeld?",
+        answerA = "Gelb",
+        answerB = "Rot",
+        answerC = "Weiß",
+        answerD = "Blau",
+        correctAnswer = 2,
+        explanation = "Alle Linien auf einem Fußballfeld sind weiß und 12 cm breit.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Was ist ein 'Ass' beim Tennis?",
+        answerA = "Ein Fehler beim Aufschlag",
+        answerB = "Ein Aufschlag, den der Gegner nicht berührt",
+        answerC = "Ein Punkt nach einem Netzball",
+        answerD = "Ein Sieg nach einem Tiebreak",
+        correctAnswer = 1,
+        explanation = "Ein Ass (Ace) ist ein Aufschlag, der so gut platziert ist, dass der Gegner ihn nicht berühren kann – direkter Punktgewinn.",
+        difficulty = 1,
+        funFact = "Der Rekord für die meisten Asses in einer Saison hält John Isner mit über 1.300 Assen."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Wie nennt man den Startblock beim Schwimmen?",
+        answerA = "Sprungbrett",
+        answerB = "Startplattform",
+        answerC = "Startblock",
+        answerD = "Absprungblock",
+        correctAnswer = 2,
+        explanation = "Der erhöhte Block am Beckenrand, von dem Schwimmer ins Wasser springen, heißt Startblock.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welche Sportart wird bei den Olympischen Sommerspielen NICHT ausgetragen?",
+        answerA = "Boxen",
+        answerB = "Schach",
+        answerC = "Gewichtheben",
+        answerD = "Ringen",
+        correctAnswer = 1,
+        explanation = "Schach ist kein olympischer Sport. Es wird zwar vom IOC anerkannt, aber nicht im olympischen Programm geführt.",
+        difficulty = 1,
+        funFact = "Der Weltschachverband FIDE bewirbt sich seit Jahrzehnten um die olympische Aufnahme."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Was ist beim Fußball ein 'Freistoß'?",
+        answerA = "Ein Schuss ohne Torhüter",
+        answerB = "Ein Schuss nach einem Regelverstoß des Gegners",
+        answerC = "Ein Elfmeter von der Mittellinie",
+        answerD = "Ein Schuss aus dem Aus",
+        correctAnswer = 1,
+        explanation = "Ein Freistoß wird nach einem Foul oder einer Regelübertretung des Gegners ausgeführt und darf ohne Behinderung geschossen werden.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welches Land veranstaltete die Olympischen Sommerspiele 2016?",
+        answerA = "USA",
+        answerB = "Spanien",
+        answerC = "Brasilien",
+        answerD = "China",
+        correctAnswer = 2,
+        explanation = "Die Olympischen Sommerspiele 2016 fanden in Rio de Janeiro, Brasilien statt.",
+        difficulty = 1,
+        funFact = "Es war das erste Mal, dass Olympia in Südamerika ausgetragen wurde."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Was ist beim Leichtathletik ein 'Fehlstart'?",
+        answerA = "Ein Start ohne Startsignal",
+        answerB = "Ein Start nach dem Startsignal",
+        answerC = "Ein Sturz kurz nach dem Start",
+        answerD = "Ein Start mit falschem Schuh",
+        correctAnswer = 0,
+        explanation = "Ein Fehlstart liegt vor, wenn ein Athlet vor dem offiziellen Startsignal losläuft. Seit 2010 führt der erste Fehlstart zur Disqualifikation.",
+        difficulty = 1,
+        funFact = "Usain Bolt wurde 2011 bei den Weltmeisterschaften in Daegu wegen eines Fehlstarts im 100m-Finale disqualifiziert."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Wie lange dauert eine Halbzeit im Fußball?",
+        answerA = "30 Minuten",
+        answerB = "40 Minuten",
+        answerC = "45 Minuten",
+        answerD = "50 Minuten",
+        correctAnswer = 2,
+        explanation = "Eine Halbzeit dauert 45 Minuten, hinzu kommt eine vom Schiedsrichter festgelegte Nachspielzeit.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Was ist ein 'Sprint' in der Leichtathletik?",
+        answerA = "Ein Langlauf über 10 km",
+        answerB = "Ein Lauf über kurze Distanzen bei maximaler Geschwindigkeit",
+        answerC = "Ein Hindernislauf",
+        answerD = "Ein Staffellauf über 400 m",
+        correctAnswer = 1,
+        explanation = "Ein Sprint ist ein Lauf über kurze Distanzen (typischerweise 60m, 100m, 200m) bei maximaler Geschwindigkeit.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "In welcher Sportart gibt es den Begriff 'Schlagmann' (Batter)?",
+        answerA = "Softball/Baseball",
+        answerB = "Cricket",
+        answerC = "Baseball",
+        answerD = "Alle drei",
+        correctAnswer = 3,
+        explanation = "Den Begriff 'Batter' oder 'Schlagmann' gibt es in Baseball, Softball und Cricket.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welche Farbe hat das Trikot des Gesamtführenden beim Giro d'Italia?",
+        answerA = "Gelb",
+        answerB = "Rot",
+        answerC = "Rosa",
+        answerD = "Blau",
+        correctAnswer = 2,
+        explanation = "Der Führende beim Giro d'Italia trägt das Maglia Rosa – das Rosa Trikot.",
+        difficulty = 1,
+        funFact = "Die Farbe Rosa wurde gewählt, weil die organisierende Zeitung 'La Gazzetta dello Sport' auf rosa Papier gedruckt wurde."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Was ist beim Fußball ein 'Eckball'?",
+        answerA = "Ein Ball, der das Feld in der Ecke verlässt",
+        answerB = "Ein Einwurf von der Eckfahne",
+        answerC = "Ein Schuss aus der Ecke des Strafraums",
+        answerD = "Ein Freistoß aus der Torecke",
+        correctAnswer = 0,
+        explanation = "Ein Eckball wird ausgeführt, wenn der Ball die Torlinie überquert hat und zuletzt von einem Verteidiger berührt wurde.",
+        difficulty = 1,
+        funFact = "Ein direkt verwandelter Eckball heißt 'Olympiator' oder 'Tor direkt aus der Ecke'."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Wie nennt man die olympischen Spiele im Winter?",
+        answerA = "Winterolympiade",
+        answerB = "Kalte Spiele",
+        answerC = "Olympische Winterspiele",
+        answerD = "Schnee-Olympia",
+        correctAnswer = 2,
+        explanation = "Die Olympischen Winterspiele sind der offizielle Name der Multisportveranstaltung für Wintersportarten.",
+        difficulty = 1,
+        funFact = "Die Olympischen Winterspiele finden seit 1994 im Wechsel mit den Sommerspielen alle zwei Jahre statt."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welche Sportart wird in einem Pool mit Bahnen ausgeübt?",
+        answerA = "Wasserball",
+        answerB = "Synchronschwimmen",
+        answerC = "Schwimmen",
+        answerD = "Tauchen",
+        correctAnswer = 2,
+        explanation = "Wettkampfschwimmen findet in einem 50-Meter-Becken mit Bahnen statt, die durch Schwimmbahnen getrennt sind.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Was bedeutet beim Fußball ein 'Elfmeter'?",
+        answerA = "Ein Freistoß aus elf Metern Entfernung",
+        answerB = "Ein Schuss vom Elfmeterpunkt, der 11 Meter vor dem Tor liegt",
+        answerC = "Ein Tor, das aus elf Metern erzielt wurde",
+        answerD = "Ein Schuss nach einer Elfmeter-Prüfung",
+        correctAnswer = 1,
+        explanation = "Der Elfmeterpunkt liegt 11 Meter vor der Torlinie. Ein Elfmeter wird nach einem Foul im Strafraum verhängt.",
+        difficulty = 1,
+        funFact = "Bei einem Elfmeter liegt die Torschusswahrscheinlichkeit bei etwa 75-80 Prozent."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welchen Sport betreibt man, wenn man auf einem Surfbrett über Wellen gleitet?",
+        answerA = "Kitesurfen",
+        answerB = "Wellenreiten (Surfen)",
+        answerC = "Wasserski",
+        answerD = "Wakeboarden",
+        correctAnswer = 1,
+        explanation = "Wellenreiten oder Surfen ist der Sport, bei dem man auf einem Brett die Energie von Meereswellen nutzt.",
+        difficulty = 1,
+        funFact = "Surfen wurde 2020 erstmals bei den Olympischen Spielen in Tokio als olympischer Sport ausgetragen."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Was ist beim Tennis ein 'Doppel'?",
+        answerA = "Ein Spiel mit zwei Bällen",
+        answerB = "Ein Spiel mit zwei Spielern pro Seite",
+        answerC = "Ein Satz mit doppelter Länge",
+        answerD = "Ein Punkt nach zwei Netzberührungen",
+        correctAnswer = 1,
+        explanation = "Beim Tennis-Doppel spielen je zwei Spieler pro Seite. Es gibt Herrendoppel, Damendoppel und Mixed (gemischtes Doppel).",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welches Land hat die Formel 1 erfunden?",
+        answerA = "Deutschland",
+        answerB = "Frankreich",
+        answerC = "Großbritannien",
+        answerD = "Italien",
+        correctAnswer = 2,
+        explanation = "Die Formel 1 wurde maßgeblich in Großbritannien entwickelt. Die erste Formel-1-Weltmeisterschaft fand 1950 statt, mit dem ersten Rennen in Silverstone, England.",
+        difficulty = 1,
+        funFact = "Das erste Formel-1-Rennen der Weltmeisterschaft 1950 in Silverstone gewann Giuseppe Farina aus Italien."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Wie nennt man den Bereich über dem Torpfosten, in dem der Ball ins Netz muss?",
+        answerA = "Winkel",
+        answerB = "Kreuzeck",
+        answerC = "Torecke",
+        answerD = "Oberes Dreieck",
+        correctAnswer = 1,
+        explanation = "Das Kreuzeck ist der Bereich, wo Torpfosten und Querlatte sich treffen – ein Treffer dort ist besonders schwierig und spektakulär.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Wie viele Spieler stehen bei einem Rugbyspiel (Rugby League) auf dem Feld?",
+        answerA = "11",
+        answerB = "13",
+        answerC = "15",
+        answerD = "17",
+        correctAnswer = 1,
+        explanation = "Beim Rugby League stellt jede Mannschaft 13 Spieler auf dem Feld auf.",
+        difficulty = 1,
+        funFact = "Rugby League und Rugby Union sind zwei verschiedene Varianten des Rugbysports mit unterschiedlichen Regeln."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Was ist bei der Leichtathletik der Unterschied zwischen Kugelstoßen und Diskuswerfen?",
+        answerA = "Die Größe des Athleten",
+        answerB = "Das Gerät: Kugel (rund/schwer) vs. Diskus (flach/rund)",
+        answerC = "Die Wurfrichtung",
+        answerD = "Kein Unterschied",
+        correctAnswer = 1,
+        explanation = "Beim Kugelstoßen wird eine schwere Metallkugel (Männer: 7,26 kg) gestoßen, beim Diskuswerfen eine flache Scheibe (Männer: 2 kg) geworfen.",
+        difficulty = 1,
+        funFact = "Kugelstoßen gehört seit den ersten modernen Olympischen Spielen 1896 zum olympischen Programm."
+    ),
+
+    // --- ADDITIONAL MEDIUM (difficulty = 2) ---
+
+    Question(
+        categoryId = 6,
+        questionText = "Welche Nation hat die Fußball-EM (UEFA Europameisterschaft) am häufigsten gewonnen?",
+        answerA = "Frankreich",
+        answerB = "Deutschland",
+        answerC = "Spanien",
+        answerD = "Italien",
+        correctAnswer = 2,
+        explanation = "Spanien hat die UEFA Europameisterschaft dreimal gewonnen (1964, 2008, 2012) – mehr als jede andere Nation.",
+        difficulty = 2,
+        funFact = "Spaniens EM-Sieg 2008 war der Beginn einer Ära: Das Team gewann danach auch WM 2010 und EM 2012 – insgesamt drei Titel in Folge."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "In welchem Jahr fand die erste Formel-1-Weltmeisterschaft statt?",
+        answerA = "1948",
+        answerB = "1950",
+        answerC = "1952",
+        answerD = "1955",
+        correctAnswer = 1,
+        explanation = "Die erste Formel-1-Weltmeisterschaft fand 1950 statt. Giuseppe Farina wurde der erste F1-Weltmeister der Geschichte.",
+        difficulty = 2,
+        funFact = "Der erste F1-Weltmeister Giuseppe Farina war Italiener und fuhr für Alfa Romeo."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Schwimmer hält den Weltrekord über 100m Freistil der Männer (Stand 2024)?",
+        answerA = "Caeleb Dressel",
+        answerB = "Kyle Chalmers",
+        answerC = "David Popovici",
+        answerD = "Pan Zhanle",
+        correctAnswer = 3,
+        explanation = "Pan Zhanle (China) stellte 2024 in Paris bei den Olympischen Spielen mit 46,40 Sekunden den Weltrekord über 100m Freistil auf.",
+        difficulty = 2,
+        funFact = "Pan Zhanle verbesserte seinen eigenen Weltrekord im Olympia-Finale und war der erste Mensch unter 46,50 Sekunden."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Wie heißt das Fußball-Turnier, das alle vier Jahre zwischen europäischen Nationalmannschaften ausgetragen wird?",
+        answerA = "Euro Cup",
+        answerB = "UEFA Europameisterschaft",
+        answerC = "Nations League",
+        answerD = "Continental Cup",
+        correctAnswer = 1,
+        explanation = "Die UEFA Europameisterschaft (EURO) findet alle vier Jahre statt und ist das wichtigste Turnier für europäische Nationalmannschaften.",
+        difficulty = 2,
+        funFact = "Deutschland hat die Europameisterschaft dreimal gewonnen: 1972, 1980 und 1996."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Leichtathlet gewann bei den Olympischen Spielen 2024 in Paris Gold über 100m der Männer?",
+        answerA = "Marcell Jacobs",
+        answerB = "Noah Lyles",
+        answerC = "Fred Kerley",
+        answerD = "Christian Coleman",
+        correctAnswer = 1,
+        explanation = "Noah Lyles (USA) gewann bei den Olympischen Spielen 2024 in Paris die Goldmedaille über 100m der Männer mit 9,79 Sekunden.",
+        difficulty = 2,
+        funFact = "Lyles gewann mit einem Vorsprung von nur 5 Tausendstel Sekunden vor Kishane Thompson – einer der knappsten 100m-Olympiaentscheidungen der Geschichte."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Wer gewann die Formel-1-Weltmeisterschaft 2022?",
+        answerA = "Lewis Hamilton",
+        answerB = "Charles Leclerc",
+        answerC = "Max Verstappen",
+        answerD = "George Russell",
+        correctAnswer = 2,
+        explanation = "Max Verstappen gewann die Formel-1-Weltmeisterschaft 2022 und holte damit seinen zweiten Titel in Folge.",
+        difficulty = 2,
+        funFact = "Verstappen gewann 2022 insgesamt 15 von 22 Rennen – ein Rekord in einer einzigen Saison."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welches Land richtete die Olympischen Sommerspiele 2024 aus?",
+        answerA = "USA",
+        answerB = "Australien",
+        answerC = "Frankreich",
+        answerD = "Japan",
+        correctAnswer = 2,
+        explanation = "Die Olympischen Sommerspiele 2024 fanden in Paris, Frankreich statt.",
+        difficulty = 2,
+        funFact = "Paris richtete die Olympischen Spiele bereits 1900 und 1924 aus. 2024 war die dritte Austragung."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Wie viele Tore erzielte Ronaldo (Cristiano) bei der Fußball-WM 2022 in Katar?",
+        answerA = "0",
+        answerB = "1",
+        answerC = "2",
+        answerD = "3",
+        correctAnswer = 1,
+        explanation = "Cristiano Ronaldo erzielte bei der WM 2022 in Katar 1 Tor – einen Elfmeter gegen Ghana. Portugal schied im Viertelfinale aus.",
+        difficulty = 2,
+        funFact = "Ronaldo ist der einzige Spieler, der bei fünf verschiedenen Fußball-Weltmeisterschaften mindestens ein Tor erzielt hat."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welche Strecke gilt als 'der Klassiker' im Radsport und führt von Mailand nach Sanremo?",
+        answerA = "Paris–Roubaix",
+        answerB = "Mailand–Sanremo",
+        answerC = "Lüttich–Bastogne–Lüttich",
+        answerD = "Flandern-Rundfahrt",
+        correctAnswer = 1,
+        explanation = "Mailand–Sanremo ist das längste Eintagesrennen im Radsport (ca. 290 km) und einer der fünf 'Monuments' des Radsports.",
+        difficulty = 2,
+        funFact = "Mailand–Sanremo wird wegen seiner Länge und der Dominanz von Sprintern oft als 'La Classicissima' bezeichnet."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welche Disziplin beendet den Triathlon?",
+        answerA = "Schwimmen",
+        answerB = "Radfahren",
+        answerC = "Laufen",
+        answerD = "Sprinten",
+        correctAnswer = 2,
+        explanation = "Die Reihenfolge beim Triathlon ist immer: Schwimmen → Radfahren → Laufen. Gelaufen wird zuletzt.",
+        difficulty = 2,
+        funFact = "Beim olympischen Triathlon sind die Distanzen: 1,5 km Schwimmen, 40 km Radfahren, 10 km Laufen."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Bei welcher Fußball-WM spielte Deutschland erstmals unter dem Namen 'Deutschland' statt 'Westdeutschland'?",
+        answerA = "1990",
+        answerB = "1994",
+        answerC = "1998",
+        answerD = "2002",
+        correctAnswer = 1,
+        explanation = "Nach der Wiedervereinigung 1990 spielte Deutschland bei der WM 1994 erstmals als gesamtdeutsche Mannschaft unter dem Namen 'Deutschland'.",
+        difficulty = 2,
+        funFact = "Bei der WM 1990 gewann noch 'Westdeutschland' den Titel – kurz bevor die Wiedervereinigung vollzogen wurde."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Sprinter hält den Weltrekord über 200m der Männer?",
+        answerA = "Yohan Blake",
+        answerB = "Michael Johnson",
+        answerC = "Usain Bolt",
+        answerD = "Frank Fredericks",
+        correctAnswer = 2,
+        explanation = "Usain Bolt hält mit 19,19 Sekunden auch den Weltrekord über 200m, aufgestellt bei den WM 2009 in Berlin.",
+        difficulty = 2,
+        funFact = "Bolt stellte beide Weltrekorde (100m und 200m) bei denselben Weltmeisterschaften 2009 in Berlin auf."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "In welchem Jahr gewann Frankreich zum ersten Mal die Fußball-Weltmeisterschaft?",
+        answerA = "1990",
+        answerB = "1994",
+        answerC = "1998",
+        answerD = "2002",
+        correctAnswer = 2,
+        explanation = "Frankreich gewann die FIFA Weltmeisterschaft 1998 im eigenen Land durch ein 3:0 gegen Brasilien im Finale.",
+        difficulty = 2,
+        funFact = "Zinedine Zidane erzielte im WM-Finale 1998 zwei Kopfballtore und wurde zum Helden des Landes."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welches Land gewann die Fußball-EM 2024?",
+        answerA = "England",
+        answerB = "Deutschland",
+        answerC = "Frankreich",
+        answerD = "Spanien",
+        correctAnswer = 3,
+        explanation = "Spanien gewann die UEFA Europameisterschaft 2024 in Deutschland durch einen 2:1-Sieg gegen England im Finale.",
+        difficulty = 2,
+        funFact = "Spanien ist damit Rekordeuropameister mit vier EM-Titeln (1964, 2008, 2012, 2024)."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Schwimmer gewann bei den Olympischen Spielen 2024 in Paris die meisten Goldmedaillen?",
+        answerA = "Caeleb Dressel",
+        answerB = "Leon Marchand",
+        answerC = "Adam Peaty",
+        answerD = "Florent Manaudou",
+        correctAnswer = 1,
+        explanation = "Leon Marchand (Frankreich) gewann bei den Olympischen Spielen 2024 in Paris vier Einzelgoldmedaillen und wurde zum Star des Heimturniers.",
+        difficulty = 2,
+        funFact = "Marchand gewann Gold über 200m Schmetterling, 200m Brust, 400m Lagen und 200m Lagen – eine herausragende Leistung."
+    ),
+
+    // --- ADDITIONAL HARD (difficulty = 3) ---
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher F1-Fahrer gewann mit Ferrari zuletzt die Konstrukteurswertung vor der Mercedes-Dominanz?",
+        answerA = "Fernando Alonso",
+        answerB = "Kimi Räikkönen",
+        answerC = "Michael Schumacher",
+        answerD = "Felipe Massa",
+        correctAnswer = 0,
+        explanation = "Fernando Alonso und Ferrari gewannen zuletzt 2008 die Konstrukteurswertung, bevor Mercedes ab 2014 die Ära dominierte.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welches Land gewann bei den Olympischen Sommerspielen 2024 in Paris die Nationenwertung nach Goldmedaillen?",
+        answerA = "China",
+        answerB = "Australien",
+        answerC = "USA",
+        answerD = "Großbritannien",
+        correctAnswer = 0,
+        explanation = "China und die USA lagen nach Goldmedaillen bei den Olympischen Spielen 2024 in Paris gleichauf mit je 40 Goldmedaillen. Nach der ITF-Wertung führten die USA.",
+        difficulty = 3,
+        funFact = "Frankreich überraschte als Gastgeberland und landete in der Nationenwertung auf einem der vorderen Plätze."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Tennisspieler gewann 2024 die French Open?",
+        answerA = "Novak Djokovic",
+        answerB = "Carlos Alcaraz",
+        answerC = "Rafael Nadal",
+        answerD = "Jannik Sinner",
+        correctAnswer = 1,
+        explanation = "Carlos Alcaraz gewann 2024 die French Open durch einen Sieg gegen Alexander Zverev im Finale.",
+        difficulty = 3,
+        funFact = "Alcaraz ist einer der wenigen Spieler, der sowohl French Open als auch Wimbledon in aufeinanderfolgenden Jahren gewinnen konnte."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "In welchem Jahr fand die erste Schwimm-Weltmeisterschaft statt?",
+        answerA = "1969",
+        answerB = "1973",
+        answerC = "1978",
+        answerD = "1982",
+        correctAnswer = 1,
+        explanation = "Die ersten Schwimm-Weltmeisterschaften wurden 1973 in Belgrad, Jugoslawien ausgetragen.",
+        difficulty = 3,
+        funFact = "Deutschland gehörte bei den ersten Weltmeisterschaften zu den stärksten Nationen im Schwimmen."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Leichtathlet gewann bei den Olympischen Spielen 2021 in Tokio Gold im 400m-Hürdenlauf mit Weltrekord?",
+        answerA = "Karsten Warholm",
+        answerB = "Rai Benjamin",
+        answerC = "Alison dos Santos",
+        answerD = "Kevin Young",
+        correctAnswer = 0,
+        explanation = "Karsten Warholm (Norwegen) stellte 2021 in Tokio mit 45,94 Sekunden einen Weltrekord im 400m-Hürdenlauf auf und gewann Gold.",
+        difficulty = 3,
+        funFact = "Warholm verbesserte den damaligen Weltrekord um fast ganze Sekunde – eine Leistung, die als eine der größten in der Leichtathletikgeschichte gilt."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Formel-1-Fahrer gewann seinen ersten WM-Titel 2005 mit Renault?",
+        answerA = "Michael Schumacher",
+        answerB = "Jenson Button",
+        answerC = "Fernando Alonso",
+        answerD = "Kimi Räikkönen",
+        correctAnswer = 2,
+        explanation = "Fernando Alonso gewann 2005 mit Renault seinen ersten Formel-1-Weltmeistertitel und wurde der jüngste Weltmeister bis dahin.",
+        difficulty = 3,
+        funFact = "Alonso gewann 2005 und 2006 jeweils die Weltmeisterschaft – Max Verstappen brach später Alonsos Altersrekord."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welche Schwimmerin gewann bei den Olympischen Spielen 2024 in Paris die meisten Medaillen?",
+        answerA = "Katie Ledecky",
+        answerB = "Summer McIntosh",
+        answerC = "Kaylee McKeown",
+        answerD = "Sarah Sjöström",
+        correctAnswer = 0,
+        explanation = "Katie Ledecky (USA) gewann bei den Olympischen Spielen 2024 in Paris mehrere Medaillen und festigte ihren Status als größte Schwimmerin der Geschichte.",
+        difficulty = 3,
+        funFact = "Ledecky hat seit 2012 bei jedem Olympia mindestens eine Goldmedaille gewonnen."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Wann fand das berühmte 'Wembley-Tor' bei der WM 1966 statt, bei dem bis heute gestritten wird, ob der Ball hinter der Linie war?",
+        answerA = "Im Viertelfinale",
+        answerB = "Im Halbfinale",
+        answerC = "Im Finale",
+        answerD = "In der Gruppenphase",
+        correctAnswer = 2,
+        explanation = "Das 'Wembley-Tor' fiel im WM-Finale 1966 zwischen England und Deutschland. Geoff Hursts Schuss in der Verlängerung wurde als Tor gewertet – England gewann 4:2.",
+        difficulty = 3,
+        funFact = "Noch heute ist nicht endgültig geklärt, ob der Ball vollständig die Torlinie überquert hatte. Deutschland verlor das Finale mit 2:4."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Leichtathlet hält den Weltrekord im Dreisprung der Männer?",
+        answerA = "Christian Taylor",
+        answerB = "Jonathan Edwards",
+        answerC = "Pedro Pablo Pichardo",
+        answerD = "Hugues Fabrice Zango",
+        correctAnswer = 1,
+        explanation = "Jonathan Edwards (Großbritannien) hält mit 18,29 Metern seit dem 7. August 1995 den Weltrekord im Dreisprung.",
+        difficulty = 3,
+        funFact = "Edwards stellte den Weltrekord bei den Weltmeisterschaften 1995 in Göteborg auf und war der erste Mensch über der 18-Meter-Marke."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Tennisspieler hält den Rekord für die meisten Wimbledon-Herreneinzel-Titel?",
+        answerA = "Pete Sampras",
+        answerB = "Björn Borg",
+        answerC = "Roger Federer",
+        answerD = "Novak Djokovic",
+        correctAnswer = 2,
+        explanation = "Roger Federer gewann Wimbledon achtmal (2003–2012 mit einer Unterbrechung) und hält damit den Rekord bei den Herren.",
+        difficulty = 3,
+        funFact = "Federer gewann zwischen 2003 und 2007 fünf Wimbledon-Titel in Folge."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welche Nation gewann beim Formel-1-Konstrukteursweltmeisterschaft 2023?",
+        answerA = "Ferrari",
+        answerB = "Mercedes",
+        answerC = "Red Bull Racing",
+        answerD = "Aston Martin",
+        correctAnswer = 2,
+        explanation = "Red Bull Racing gewann 2023 die Konstrukteursweltmeisterschaft mit großem Abstand – Max Verstappen holte den Fahrertitel.",
+        difficulty = 3,
+        funFact = "Red Bull gewann 2023 alle außer einem Rennen – eine der dominantesten Saisons in der F1-Geschichte."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher deutsche Leichtathlet gewann 1996 in Atlanta olympisches Gold im Weitsprung?",
+        answerA = "Heike Drechsler",
+        answerB = "Lars Riedel",
+        answerC = "Dieter Baumann",
+        answerD = "Heike Drechsler gewann, aber im Frauenwettbewerb",
+        correctAnswer = 3,
+        explanation = "Heike Drechsler gewann 1996 in Atlanta die Goldmedaille im Weitsprung der Frauen. Im Männer-Weitsprung gewann Carl Lewis.",
+        difficulty = 3,
+        funFact = "Heike Drechsler gewann auch 1992 in Barcelona Olympia-Gold im Weitsprung und war die Dominanzsportlerin dieser Disziplin."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Tennisspieler gewann als erster Spieler in der Open Era alle vier Grand Slams auf unterschiedlichem Untergrund?",
+        answerA = "Andre Agassi",
+        answerB = "Rafael Nadal",
+        answerC = "Roger Federer",
+        answerD = "Novak Djokovic",
+        correctAnswer = 0,
+        explanation = "Andre Agassi gewann als erster Spieler alle vier Grand Slams (auf Hartplatz, Sand und Rasen) und vervollständigte den Karriere-Grand-Slam.",
+        difficulty = 3,
+        funFact = "Agassi gewann auch olympisches Gold 1996 in Atlanta und wurde damit der einzige Spieler mit einem 'Golden Slam' zu diesem Zeitpunkt."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Bei welchen Olympischen Spielen wurde Doping durch staatliches russisches System systematisch betrieben und enthüllt?",
+        answerA = "Peking 2008",
+        answerB = "London 2012",
+        answerC = "Sotschi 2014",
+        answerD = "Rio 2016",
+        correctAnswer = 2,
+        explanation = "Bei den Olympischen Winterspielen 2014 in Sotschi betrieb Russland nach späteren Ermittlungen ein staatliches Dopingprogramm, das durch den McLaren-Report enthüllt wurde.",
+        difficulty = 3,
+        funFact = "Als Konsequenz traten russische Athleten bei späteren Olympischen Spielen unter neutraler Flagge als 'ROC' oder 'AIN' an."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Sprinter lief 2019 als zweiter Mensch die 100m unter 9,60 Sekunden?",
+        answerA = "Tyson Gay",
+        answerB = "Christian Coleman",
+        answerC = "Yohan Blake",
+        answerD = "Kemar Bailey-Cole",
+        correctAnswer = 2,
+        explanation = "Yohan Blake lief 2012 in Lausanne 9,69 Sekunden und ist neben Usain Bolt der einzige Mensch, der die 100m je unter 9,70 Sekunden gelaufen ist.",
+        difficulty = 3,
+        funFact = "Blake trainierte jahrelang gemeinsam mit Usain Bolt und war sein schärfster Trainingspartner."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Formel-1-Fahrer verstarb bei einem Trainingsunfall in Hockenheim im Jahr 2014?",
+        answerA = "Jules Bianchi",
+        answerB = "Carlos Reutemann",
+        answerC = "Dan Wheldon",
+        answerD = "Maria de Villota",
+        correctAnswer = 0,
+        explanation = "Jules Bianchi verunglückte beim Großen Preis von Japan 2014 in Suzuka schwer und verstarb im Juli 2015 an seinen Verletzungen.",
+        difficulty = 3,
+        funFact = "Bianchi war der erste F1-Fahrer, der bei einem WM-Lauf seit Ayrton Senna 1994 tödlich verunglückte."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Hochspringer teilte sich 2021 bei den Olympischen Spielen in Tokio die Goldmedaille mit Mutaz Essa Barshim?",
+        answerA = "Maksim Nedasekau",
+        answerB = "Ilya Ivanyuk",
+        answerC = "Gianmarco Tamberi",
+        answerD = "Mikhail Akimenko",
+        correctAnswer = 2,
+        explanation = "Gianmarco Tamberi (Italien) und Mutaz Essa Barshim (Katar) teilten sich einvernehmlich die Goldmedaille im Hochsprung bei den Olympischen Spielen 2021 in Tokio.",
+        difficulty = 3,
+        funFact = "Die gemeinsame Goldmedaille war eine seltene Situation – beide hatten die gleiche Höhe übersprungen und keiner konnte die nächste Höhe bewältigen."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Tennisspieler gewann 2024 bei den Olympischen Spielen in Paris die Goldmedaille im Einzel?",
+        answerA = "Carlos Alcaraz",
+        answerB = "Novak Djokovic",
+        answerC = "Rafael Nadal",
+        answerD = "Jannik Sinner",
+        correctAnswer = 1,
+        explanation = "Novak Djokovic gewann 2024 in Paris olympisches Gold im Tennis-Einzel – der einzige fehlende Titel in seiner Karriere.",
+        difficulty = 3,
+        funFact = "Djokovic besiegte im Finale Carlos Alcaraz und holte sich damit den letzten großen Titel, der ihm in seiner Karriere noch gefehlt hatte."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Schwimmer stellte 2024 in Paris den Weltrekord über 200m Brust auf?",
+        answerA = "Adam Peaty",
+        answerB = "Qin Haiyang",
+        answerC = "Leon Marchand",
+        answerD = "Nicolo Martinenghi",
+        correctAnswer = 2,
+        explanation = "Leon Marchand stellte bei den Olympischen Spielen 2024 in Paris Weltrekorde auf und dominierte die Lagen- und Schmetterlingstrecken.",
+        difficulty = 3,
+        funFact = "Marchand wurde zum Gesicht der Olympischen Spiele 2024 in Paris und als Nachfolger Michael Phelps' gehandelt."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Leichtathlet hält den Weltrekord im 1500m-Lauf der Männer?",
+        answerA = "Hicham El Guerrouj",
+        answerB = "Yomif Kejelcha",
+        answerC = "Jakob Ingebrigtsen",
+        answerD = "Faith Kipyegon",
+        correctAnswer = 0,
+        explanation = "Hicham El Guerrouj (Marokko) hält seit 1998 mit 3:26,00 Minuten den Weltrekord über 1500m der Männer.",
+        difficulty = 3,
+        funFact = "El Guerrouj hält auch den Weltrekord über die Meile (3:43,13 min) und war einer der dominantesten Mittelstreckler der Geschichte."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welche Nation gewann bei der Fußball-WM 2010 in Südafrika den Titel?",
+        answerA = "Brasilien",
+        answerB = "Deutschland",
+        answerC = "Niederlande",
+        answerD = "Spanien",
+        correctAnswer = 3,
+        explanation = "Spanien gewann die Fußball-Weltmeisterschaft 2010 in Südafrika durch einen 1:0-Sieg nach Verlängerung gegen die Niederlande.",
+        difficulty = 3,
+        funFact = "Andrés Iniesta erzielte das entscheidende Tor in der Verlängerung des WM-Finals 2010."
+    ),
+
+    Question(
+        categoryId = 6,
+        questionText = "Welcher Tennisspieler gewann 2023 Wimbledon und beendete damit Carlos Alcaraz' kurze Herrschaft?",
+        answerA = "Carlos Alcaraz",
+        answerB = "Novak Djokovic",
+        answerC = "Holger Rune",
+        answerD = "Daniil Medvedev",
+        correctAnswer = 0,
+        explanation = "Carlos Alcaraz gewann Wimbledon 2023 gegen Novak Djokovic im Finale – es war sein zweiter Grand-Slam-Titel.",
+        difficulty = 3,
+        funFact = "Alcaraz war der erste Spieler seit Rafael Nadal, der Djokovic auf dem Wimbledon-Rasen besiegen konnte."
     )
 )
