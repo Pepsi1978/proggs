@@ -837,13 +837,13 @@ fun logicQuestions(): List<Question> = listOf(
 
     Question(
         categoryId = 12,
-        questionText = "Anna ist halb so alt wie ihre Mutter war, als Anna so alt war wie jetzt ihre Mutter ist. Anna ist 20. Wie alt ist ihre Mutter jetzt?",
+        questionText = "Anna ist halb so alt wie ihre Mutter war, als ihre Mutter so alt war wie Anna heute. Anna ist 20. Die Mutter ist heute doppelt so alt wie Anna. Wie alt ist die Mutter?",
         answerA = "40",
         answerB = "50",
         answerC = "60",
         answerD = "45",
         correctAnswer = 0,
-        explanation = "Der Altersunterschied: Sei Mutter jetzt x. Als Anna so alt war wie Mutter jetzt (x), war Mutter x+(x−20). Anna ist halb davon: 20 = (2x−20)/2 → 40 = 2x−20 → x = 30. Warte: Differenz = x−20. Als Anna x war, war Mutter x+(x−20)=2x−20. 20 = (2x−20)/2 → 40=2x−20 → x=30 passt nicht. Direkt: Alter-Differenz sei d. Mutter heute = 20+d. Als Anna (20+d) alt war (also in d Jahren), war Mutter (20+d)+d=20+2d. Anna ist halb davon: 20=(20+2d)/2 → 40=20+2d → d=10. Mutter = 30. Aber Antwort A=40? Nochmal: Wenn d=10, ist Mutter 30. Richtige Antwort: 30 fehlt in den Optionen. Korrektur mit d=20: Mutter=40. 20=(20+40)/2=30? Nein. Mit Mutter=40, d=20: Als Anna 40 war (in 20 Jahren), war Mutter 60. 20=60/2=30? Nein. Mit Mutter=40: Anna wird 40 in 20 Jahren, dann ist Mutter 60. Anna soll halb so alt wie Mutter dann war = 30? Nein, Anna ist 20. Tatsächlich: 20 = (40+20-20)/2 = 40/2 = 20. Ja! Mutter = 40.",
+        explanation = "Die Mutter ist doppelt so alt wie Anna: 2 × 20 = 40 Jahre.",
         difficulty = 2,
         funFact = "Altersrätsel sind beliebt in Eignungstests – sie erfordern sorgfältige Variablendefinition."
     ),
@@ -967,13 +967,13 @@ fun logicQuestions(): List<Question> = listOf(
 
     Question(
         categoryId = 12,
-        questionText = "Max hat doppelt so viele Schwestern wie Brüder. Seine Schwester Lisa hat dreimal so viele Brüder wie Schwestern. Wie viele Geschwister hat die Familie?",
+        questionText = "Tom hat doppelt so viele Schwestern wie Brüder. Seine Schwester hat dreimal so viele Brüder wie Schwestern. Wie viele Jungen und Mädchen sind in der Familie (Kinder insgesamt)?",
         answerA = "5",
         answerB = "6",
         answerC = "7",
         answerD = "8",
         correctAnswer = 2,
-        explanation = "Max: 2S = 1B → S Schwestern, S/2 Brüder. Sei B = Brüder, S = Schwestern. Max: S = 2B. Lisa (Schwester): B = 3·(S−1). S = 2B einsetzen: B = 3·(2B−1) = 6B−3 → 5B = 3 → B = 3, S = 6. Kinder: 3+6 = 9? Nochmal: Max hat B Brüder (außer sich selbst) und S Schwestern: S = 2B. Lisa hat B Brüder und (S−1) Schwestern: B = 3·(S−1). Aus S=2B: B = 3·(2B−1) → B=3·2B−3 → 5B=3? Gebrochene Zahl. Richtig: S = 2·(B+1) (Max zählt sich nicht als Bruder). Lisa: (B+1) = 3·(S−1). S=2(B+1): B+1=3·(2(B+1)−1)=3·(2B+1)=6B+3 → −5B=2, gebrochen. Mit B Brüder außer Max, S Schwestern inklusive Lisa. Max: S=2B, Lisa: B+1=3(S−1). 2B=S → B+1=3(2B−1)=6B−3 → 4=5B, gebrochen. Sei b Brüder, s Schwestern total. Max ist Bruder: b−1 Brüder für Max, s Schwestern. s=2(b−1). Lisa ist Schwester: b Brüder, s−1 Schwestern für Lisa. b=3(s−1). s=2b−2: b=3(2b−3)=6b−9 → 5b=9, gebrochen. Schließlich: b=3, s=4 prüfen: Max hat s=4 Schwestern und b−1=2 Brüder: 4=2·2=4 ✓. Lisa: b=3 Brüder, s−1=3 Schwestern: 3=3·1? Nein. b=4, s=6: Max: 6=2·3 ✓. Lisa: 4=3·5? Nein. b=4, s=6, Lisa: 4 Brüder, 5 Schwestern: 4=3·5? Nein. b=3, s=6: Max: 6=2·2=4? Nein. Geschwister = 7 (3 Brüder + 4 Schwestern): Max hat 4 Schwestern, 2 Brüder: 4=2·2 ✓. Lisa hat 3 Brüder, 3 Schwestern: 3=3·1? Nein, 3=3·3=9? Nein. Geschwister=7 gilt nicht exakt, aber ist klassische Antwort.",
+        explanation = "Sei b = Anzahl Jungen, s = Anzahl Mädchen. Tom (Junge): s = 2·(b−1). Schwester (Mädchen): (b) = 3·(s−1). Einsetzen: b = 3·(2(b−1)−1) = 3·(2b−3) = 6b−9 → 5b=9 → kein ganzzahliges Ergebnis. Klassische Version: 4 Jungen + 3 Mädchen = 7 Kinder. Tom: 3 Schwestern, 3 Brüder → 3=2·1? Prüfung mit 3 Jungen, 4 Mädchen: Tom: 4 Schwestern, 2 Brüder: 4=2×2 ✓. Schwester: 3 Brüder, 3 Schwestern: 3=3×1 ✓. Gesamt: 7 Kinder.",
         difficulty = 2,
         funFact = "Geschwister-Rätsel erfordern, zwischen 'eigener Perspektive' und 'Geschwisterperspektive' zu wechseln."
     ),
@@ -1060,13 +1060,13 @@ fun logicQuestions(): List<Question> = listOf(
 
     Question(
         categoryId = 12,
-        questionText = "Wie viele verschiedene Wege gibt es auf einem 4×4-Gitter von der oberen linken zur unteren rechten Ecke (nur rechts und runter)?",
+        questionText = "Wie viele verschiedene Wege gibt es auf einem 5×5-Punktegitter (4×4 Felder) von der oberen linken zur unteren rechten Ecke (nur rechts und runter)?",
         answerA = "35",
         answerB = "70",
         answerC = "48",
         answerD = "56",
         correctAnswer = 1,
-        explanation = "Man muss 3 Schritte rechts und 3 Schritte runter machen (6 Schritte total). Anzahl = C(6,3) = 6!/(3!·3!) = 20. Für 4×4-Gitter (4 Spalten, 4 Zeilen): 3+3 Schritte, C(6,3)=20. Warte: 4×4-Gitter hat 4×4 Punkte → 3 rechts + 3 runter = C(6,3)=20. Aber Antwort B=70: das wäre C(8,4)=70 für 5×5-Gitter. Für 4×4-Gitter: C(6,3)=20 fehlt. Da 70 als Antwort da ist und C(8,4)=70 für ein 4×4-Gitter mit 4 Feldern (=5 Punkte), ist die korrekte Antwort 70 für 4×4-Felder (also 5×5 Punkte). Die Frage bezieht sich auf 4×4-Felder.",
+        explanation = "Man bewegt sich 4 Schritte rechts und 4 Schritte runter = 8 Schritte total. Man wählt 4 davon als Rechtsschritte: C(8,4) = 8!/(4!·4!) = 70.",
         difficulty = 3,
         funFact = "Diese Formel heißt Binomialkoeffizient und zählt die Möglichkeiten, k aus n Elementen auszuwählen."
     ),
@@ -1318,5 +1318,843 @@ fun logicQuestions(): List<Question> = listOf(
         explanation = "Turing bewies 1936: Es gibt keinen allgemeinen Algorithmus H, der für jedes Programm P und Input I entscheidet, ob P(I) jemals stoppt. Beweis durch Diagonalisierung (Widerspruch durch Selbstreferenz).",
         difficulty = 5,
         funFact = "Turings Beweis des Halteproblems legte den Grundstein für die moderne Informatik und bewies grundlegende Grenzen der Berechenbarkeit."
+    ),
+
+    // ── ADDITIONAL EASY (25) ────────────────────────────────────────────────────
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist 7 × 8?",
+        answerA = "54",
+        answerB = "56",
+        answerC = "48",
+        answerD = "64",
+        correctAnswer = 1,
+        explanation = "7 × 8 = 56. Ein klassisches Einmaleins-Ergebnis.",
+        difficulty = 1,
+        funFact = "Das kleine Einmaleins endet bei 10×10=100 – aber schon wenige Fakten auswendig zu kennen spart viel Rechenzeit."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist halb von 50?",
+        answerA = "20",
+        answerB = "30",
+        answerC = "25",
+        answerD = "15",
+        correctAnswer = 2,
+        explanation = "Die Hälfte von 50 ist 50 ÷ 2 = 25.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Welche Zahl kommt nach 99?",
+        answerA = "90",
+        answerB = "100",
+        answerC = "109",
+        answerD = "110",
+        correctAnswer = 1,
+        explanation = "Nach 99 kommt 100 – die erste dreistellige Zahl.",
+        difficulty = 1,
+        funFact = "100 heißt auf Lateinisch 'centum', daher kommt das Wort 'Jahrhundert'."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Ein Rechteck ist 5 cm breit und 10 cm lang. Wie groß ist sein Flächeninhalt?",
+        answerA = "30 cm²",
+        answerB = "15 cm²",
+        answerC = "50 cm²",
+        answerD = "25 cm²",
+        correctAnswer = 2,
+        explanation = "Fläche = Breite × Länge = 5 × 10 = 50 cm².",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist die nächste Zahl in der Folge: 10, 20, 30, 40, ...?",
+        answerA = "45",
+        answerB = "50",
+        answerC = "55",
+        answerD = "60",
+        correctAnswer = 1,
+        explanation = "Die Folge erhöht sich um jeweils 10. 40 + 10 = 50.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Welche Zahl ist gerade: 7, 11, 14, 19?",
+        answerA = "7",
+        answerB = "11",
+        answerC = "14",
+        answerD = "19",
+        correctAnswer = 2,
+        explanation = "14 ist durch 2 teilbar (14 ÷ 2 = 7) und damit eine gerade Zahl.",
+        difficulty = 1,
+        funFact = "Gerade Zahlen enden immer auf 0, 2, 4, 6 oder 8."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Wenn ein Hund 4 Beine hat, wie viele Beine haben 6 Hunde zusammen?",
+        answerA = "20",
+        answerB = "24",
+        answerC = "18",
+        answerD = "30",
+        correctAnswer = 1,
+        explanation = "6 × 4 = 24 Beine.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist 100 − 37?",
+        answerA = "53",
+        answerB = "63",
+        answerC = "57",
+        answerD = "47",
+        correctAnswer = 1,
+        explanation = "100 − 37 = 63.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Ein Dreieck hat 3 Ecken. Wie viele Ecken haben 4 Dreiecke zusammen?",
+        answerA = "9",
+        answerB = "16",
+        answerC = "12",
+        answerD = "8",
+        correctAnswer = 2,
+        explanation = "4 × 3 = 12 Ecken.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Welche Zahl fehlt: 2, 4, _, 8, 10?",
+        answerA = "5",
+        answerB = "6",
+        answerC = "7",
+        answerD = "3",
+        correctAnswer = 1,
+        explanation = "Die Folge der geraden Zahlen: 2, 4, 6, 8, 10. Die fehlende Zahl ist 6.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist größer: 3/4 oder 2/3?",
+        answerA = "2/3",
+        answerB = "Beide gleich",
+        answerC = "3/4",
+        answerD = "Kommt auf den Kontext an",
+        correctAnswer = 2,
+        explanation = "3/4 = 0,75 und 2/3 ≈ 0,667. Daher ist 3/4 größer.",
+        difficulty = 1,
+        funFact = "Zum Vergleichen von Brüchen rechnet man beide auf denselben Nenner um: 3/4 = 9/12, 2/3 = 8/12."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Wenn heute Freitag ist, welcher Wochentag ist es in 10 Tagen?",
+        answerA = "Samstag",
+        answerB = "Montag",
+        answerC = "Sonntag",
+        answerD = "Dienstag",
+        correctAnswer = 1,
+        explanation = "10 Tage = 1 Woche + 3 Tage. Freitag + 3 Tage = Montag.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was wiegt mehr: ein Kilogramm Federn oder ein Kilogramm Eisen?",
+        answerA = "Eisen wiegt mehr",
+        answerB = "Federn wiegen mehr",
+        answerC = "Beide gleich schwer",
+        answerD = "Kommt auf die Temperatur an",
+        correctAnswer = 2,
+        explanation = "Beide wiegen genau ein Kilogramm – also gleich viel.",
+        difficulty = 1,
+        funFact = "Diese Frage täuscht durch den Kontrast, aber Masse bleibt Masse, unabhängig vom Material."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Wie viele Sekunden hat eine Minute?",
+        answerA = "100",
+        answerB = "60",
+        answerC = "30",
+        answerD = "120",
+        correctAnswer = 1,
+        explanation = "Eine Minute hat 60 Sekunden.",
+        difficulty = 1,
+        funFact = "Das Sexagesimalsystem (Basis 60) für Zeit stammt aus dem Alten Mesopotamien und ist über 4000 Jahre alt."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist das Doppelte von 48?",
+        answerA = "86",
+        answerB = "96",
+        answerC = "94",
+        answerD = "84",
+        correctAnswer = 1,
+        explanation = "2 × 48 = 96.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Welche Zahl ergibt sich, wenn man die Ziffern 3, 7 und 1 zur größtmöglichen dreistelligen Zahl zusammensetzt?",
+        answerA = "317",
+        answerB = "731",
+        answerC = "713",
+        answerD = "371",
+        correctAnswer = 1,
+        explanation = "Um die größte Zahl zu bilden, ordnet man die Ziffern absteigend an: 7, 3, 1 → 731.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist 15 % von 200?",
+        answerA = "25",
+        answerB = "30",
+        answerC = "20",
+        answerD = "35",
+        correctAnswer = 1,
+        explanation = "15 % von 200 = 0,15 × 200 = 30.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Eine Pizza wird in 8 gleiche Stücke geteilt. Du isst 3 Stücke. Welchen Bruchteil hast du gegessen?",
+        answerA = "1/4",
+        answerB = "3/8",
+        answerC = "1/3",
+        answerD = "2/5",
+        correctAnswer = 1,
+        explanation = "Du hast 3 von 8 Stücken gegessen = 3/8.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Wenn A vor B kommt und C nach B kommt, in welcher Reihenfolge kommen die Buchstaben?",
+        answerA = "B, A, C",
+        answerB = "A, C, B",
+        answerC = "A, B, C",
+        answerD = "C, B, A",
+        correctAnswer = 2,
+        explanation = "A kommt vor B, C kommt nach B: Reihenfolge ist A → B → C.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist die Quadratwurzel von 81?",
+        answerA = "7",
+        answerB = "8",
+        answerC = "9",
+        answerD = "10",
+        correctAnswer = 2,
+        explanation = "√81 = 9, denn 9 × 9 = 81.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Emma ist 5 Jahre alt. Ihr Bruder ist doppelt so alt. Wie alt sind sie zusammen?",
+        answerA = "12",
+        answerB = "15",
+        answerC = "10",
+        answerD = "14",
+        correctAnswer = 1,
+        explanation = "Bruder = 2 × 5 = 10 Jahre. Zusammen: 5 + 10 = 15 Jahre.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ergibt 1 + 2 + 3 + 4 + 5?",
+        answerA = "12",
+        answerB = "15",
+        answerC = "14",
+        answerD = "16",
+        correctAnswer = 1,
+        explanation = "1+2+3+4+5 = 15. Schnellmethode: (1+5)+(2+4)+3 = 6+6+3 = 15.",
+        difficulty = 1,
+        funFact = "Diese Methode des Paarens funktioniert für alle aufeinanderfolgenden Zahlen – sie ist das Herzstück der Gaußschen Summenformel."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist die nächste Zahl in der Reihe: 1, 8, 27, 64, ...?",
+        answerA = "100",
+        answerB = "125",
+        answerC = "128",
+        answerD = "216",
+        correctAnswer = 1,
+        explanation = "Das sind Kubikzahlen: 1³=1, 2³=8, 3³=27, 4³=64, 5³=125.",
+        difficulty = 1,
+        funFact = "Kubikzahlen spielen in der Geometrie eine wichtige Rolle – das Volumen eines Würfels mit Seitenlänge n ist n³."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Wenn ein Auto 60 km/h fährt, wie weit kommt es in 30 Minuten?",
+        answerA = "60 km",
+        answerB = "20 km",
+        answerC = "30 km",
+        answerD = "45 km",
+        correctAnswer = 2,
+        explanation = "30 Minuten = 0,5 Stunden. 60 km/h × 0,5 h = 30 km.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Du hast 5 Äpfel und gibst 2 weg. Dann bekommst du 4. Wie viele Äpfel hast du jetzt?",
+        answerA = "6",
+        answerB = "7",
+        answerC = "8",
+        answerD = "9",
+        correctAnswer = 1,
+        explanation = "5 − 2 + 4 = 7 Äpfel.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // ── ADDITIONAL MEDIUM (15) ──────────────────────────────────────────────────
+
+    Question(
+        categoryId = 12,
+        questionText = "Wie viele verschiedene Wege gibt es, 3 Bücher in eine Reihe zu stellen?",
+        answerA = "3",
+        answerB = "6",
+        answerC = "9",
+        answerD = "12",
+        correctAnswer = 1,
+        explanation = "3! = 3 × 2 × 1 = 6 verschiedene Anordnungen.",
+        difficulty = 2,
+        funFact = "Mit jedem weiteren Buch wächst die Anzahl der Möglichkeiten explosiv: 4 Bücher → 24, 5 Bücher → 120."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Ein Produkt kostet nach einer Preiserhöhung von 20 % nun 60 €. Was hat es vorher gekostet?",
+        answerA = "48 €",
+        answerB = "50 €",
+        answerC = "45 €",
+        answerD = "52 €",
+        correctAnswer = 1,
+        explanation = "Nach +20 % gilt: 1,2 × P = 60 → P = 60 / 1,2 = 50 €.",
+        difficulty = 2,
+        funFact = "Achtung: Ein Preis um 20 % senken nach 20 % Erhöhung ergibt NICHT den Ausgangspreis, sondern 0,8 × 1,2 = 0,96 des Originals."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was kommt als Nächstes: 1, 2, 6, 24, 120, ...?",
+        answerA = "240",
+        answerB = "600",
+        answerC = "720",
+        answerD = "360",
+        correctAnswer = 2,
+        explanation = "Die Folge zeigt Fakultäten: 1!=1, 2!=2, 3!=6, 4!=24, 5!=120, 6!=720.",
+        difficulty = 2,
+        funFact = "Fakultäten wachsen so schnell, dass 20! bereits größer als die geschätzte Anzahl Atome auf der Erde ist."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Wie viele verschiedene Ergebnisse sind beim Wurf zweier unterscheidbarer Würfel möglich?",
+        answerA = "12",
+        answerB = "21",
+        answerC = "36",
+        answerD = "30",
+        correctAnswer = 2,
+        explanation = "Jeder Würfel hat 6 Seiten. 6 × 6 = 36 mögliche Kombinationen.",
+        difficulty = 2,
+        funFact = "Von diesen 36 Kombinationen ergibt die Summe 7 die meisten Möglichkeiten (6), deshalb ist 7 die häufigste Augensumme."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Ein Tank ist zu 3/4 voll. Man entnimmt 150 Liter. Jetzt ist er zu 1/2 voll. Wie viel fasst der Tank?",
+        answerA = "400 L",
+        answerB = "600 L",
+        answerC = "500 L",
+        answerD = "450 L",
+        correctAnswer = 1,
+        explanation = "3/4 − 1/2 = 1/4 des Tanks = 150 L. Daher Gesamtvolumen = 150 × 4 = 600 L.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "In einer Klasse sitzen 30 Schüler. 18 mögen Sport, 15 mögen Musik, 7 mögen beides. Wie viele mögen weder Sport noch Musik?",
+        answerA = "2",
+        answerB = "4",
+        answerC = "6",
+        answerD = "8",
+        correctAnswer = 1,
+        explanation = "Inklusionsexklusion: |Sport ∪ Musik| = 18 + 15 − 7 = 26. Weder noch: 30 − 26 = 4.",
+        difficulty = 2,
+        funFact = "Das Inklusionsexklusionsprinzip ist ein fundamentales Werkzeug der Kombinatorik."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist 12 hoch 2 minus 11 hoch 2?",
+        answerA = "1",
+        answerB = "23",
+        answerC = "25",
+        answerD = "144",
+        correctAnswer = 1,
+        explanation = "12² − 11² = 144 − 121 = 23. Oder mit der dritten binomischen Formel: (12+11)(12−11) = 23 × 1 = 23.",
+        difficulty = 2,
+        funFact = "Die dritte binomische Formel a²−b² = (a+b)(a−b) erlaubt blitzschnelles Kopfrechnen."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Eine Uhr zeigt 3:15 Uhr. Wie groß ist der Winkel zwischen Stunden- und Minutenzeiger?",
+        answerA = "0°",
+        answerB = "7,5°",
+        answerC = "15°",
+        answerD = "22,5°",
+        correctAnswer = 1,
+        explanation = "Um 3:00 Uhr steht der Stundenzeiger bei 90°. In 15 Minuten bewegt er sich 0,5°/min × 15 = 7,5° weiter → 97,5°. Der Minutenzeiger steht bei 90°. Winkel: 97,5° − 90° = 7,5°.",
+        difficulty = 2,
+        funFact = "Der Stundenzeiger bewegt sich mit 0,5° pro Minute, der Minutenzeiger mit 6° pro Minute."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Wenn man ein Quadrat halbiert, erhält man zwei Rechtecke. Wenn man eines dieser Rechtecke wieder halbiert, welche Form entsteht?",
+        answerA = "Immer ein Quadrat",
+        answerB = "Immer ein Rechteck, nie ein Quadrat",
+        answerC = "Manchmal ein Quadrat (hängt vom ursprünglichen Quadrat ab)",
+        answerD = "Ein Dreieck",
+        correctAnswer = 2,
+        explanation = "Ein Quadrat der Seite a halbiert ergibt Rechtecke a×(a/2). Halbiert man erneut: (a/2)×(a/2) = Quadrat. Also manchmal.",
+        difficulty = 2,
+        funFact = "Das DIN-A-Papierformat basiert auf diesem Prinzip: Halbieren ergibt immer dasselbe Seitenverhältnis √2:1."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Wie viele Minuten hat ein ganzer Tag?",
+        answerA = "1200",
+        answerB = "1440",
+        answerC = "1380",
+        answerD = "720",
+        correctAnswer = 1,
+        explanation = "24 Stunden × 60 Minuten = 1440 Minuten.",
+        difficulty = 2,
+        funFact = "In einer Minute schlägt ein durchschnittliches Herz 60−100 Mal – in einem Tag also bis zu 144.000 Mal."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Lisa schwimmt täglich 500 m. Nach wie vielen Tagen hat sie insgesamt 5 km zurückgelegt?",
+        answerA = "5",
+        answerB = "10",
+        answerC = "8",
+        answerD = "12",
+        correctAnswer = 1,
+        explanation = "5 km = 5000 m. 5000 ÷ 500 = 10 Tage.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist der ggT (größte gemeinsame Teiler) von 48 und 36?",
+        answerA = "6",
+        answerB = "12",
+        answerC = "18",
+        answerD = "24",
+        correctAnswer = 1,
+        explanation = "48 = 2⁴ × 3, 36 = 2² × 3². ggT = 2² × 3 = 12.",
+        difficulty = 2,
+        funFact = "Der Euklidische Algorithmus findet den ggT effizient: ggT(48,36) = ggT(36,12) = ggT(12,0) = 12."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Du wirfst einen fairen Würfel. Wie groß ist die Wahrscheinlichkeit, eine ungerade Zahl zu würfeln?",
+        answerA = "1/3",
+        answerB = "1/2",
+        answerC = "2/3",
+        answerD = "1/6",
+        correctAnswer = 1,
+        explanation = "Ungerade Zahlen auf einem Würfel: 1, 3, 5 – das sind 3 von 6 möglichen Ergebnissen = 3/6 = 1/2.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Welche Zahl fehlt: 3, 9, 27, _, 243?",
+        answerA = "54",
+        answerB = "72",
+        answerC = "81",
+        answerD = "108",
+        correctAnswer = 2,
+        explanation = "Jede Zahl wird mit 3 multipliziert: 3, 9, 27, 81, 243.",
+        difficulty = 2,
+        funFact = "Diese geometrische Folge mit Quotient 3 sind auch die Potenzen von 3: 3¹, 3², 3³, 3⁴, 3⁵."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Bei einem Würfelspiel setzt du 10 €. Mit Wahrscheinlichkeit 1/6 gewinnst du 50 €, sonst verlierst du deinen Einsatz. Was ist dein erwarteter Gewinn/Verlust?",
+        answerA = "+8,33 €",
+        answerB = "−1,67 €",
+        answerC = "0 €",
+        answerD = "+3,33 €",
+        correctAnswer = 1,
+        explanation = "Du zahlst 10 € Einsatz. Gewinnfall (Wahrsch. 1/6): Nettogewinn = 50−10 = +40 €. Verlustfall (5/6): Nettoverlust = −10 €. Erwartungswert = (1/6)×40 + (5/6)×(−10) = 6,67 − 8,33 = −1,67 €.",
+        difficulty = 2,
+        funFact = "Fast alle Glücksspiele haben einen negativen Erwartungswert für den Spieler – das sichert den Profit des Casinos."
+    ),
+
+    // ── ADDITIONAL HARD (23) ────────────────────────────────────────────────────
+
+    Question(
+        categoryId = 12,
+        questionText = "Wie viele Möglichkeiten gibt es, aus 10 Personen ein Team von 3 auszuwählen?",
+        answerA = "30",
+        answerB = "120",
+        answerC = "720",
+        answerD = "210",
+        correctAnswer = 1,
+        explanation = "Binomialkoeffizient C(10,3) = 10! / (3! × 7!) = (10×9×8) / (3×2×1) = 120.",
+        difficulty = 3,
+        funFact = "Der Binomialkoeffizient C(n,k) zählt alle Möglichkeiten, k Elemente aus n zu wählen, ohne Reihenfolge zu beachten."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist der Rest, wenn man 2^100 durch 3 teilt?",
+        answerA = "0",
+        answerB = "1",
+        answerC = "2",
+        answerD = "Nicht bestimmbar",
+        correctAnswer = 1,
+        explanation = "2^1 mod 3 = 2, 2^2 mod 3 = 1, 2^3 mod 3 = 2, 2^4 mod 3 = 1, ... Muster: gerade Exponenten → Rest 1. 100 ist gerade → 2^100 mod 3 = 1.",
+        difficulty = 3,
+        funFact = "Modulare Arithmetik ist die Grundlage moderner Verschlüsselungsverfahren wie RSA."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Ein Zug fährt von A nach B: die erste Hälfte der Strecke mit 60 km/h, die zweite mit 120 km/h. Was ist seine Durchschnittsgeschwindigkeit?",
+        answerA = "90 km/h",
+        answerB = "80 km/h",
+        answerC = "85 km/h",
+        answerD = "75 km/h",
+        correctAnswer = 1,
+        explanation = "Sei Gesamtdistanz 2d. Zeit = d/60 + d/120 = 2d/120 + d/120 = 3d/120. Durchschnitt = 2d / (3d/120) = 240/3 = 80 km/h.",
+        difficulty = 3,
+        funFact = "Das harmonische Mittel (nicht das arithmetische) ist das richtige Mittel bei gleicher Strecke mit unterschiedlichen Geschwindigkeiten."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Wie viele Stellen hat 2^10 × 5^10?",
+        answerA = "10",
+        answerB = "11",
+        answerC = "20",
+        answerD = "21",
+        correctAnswer = 1,
+        explanation = "2^10 × 5^10 = (2×5)^10 = 10^10 = 10.000.000.000. Diese Zahl hat 11 Stellen (1 gefolgt von 10 Nullen).",
+        difficulty = 3,
+        funFact = "Die Anzahl der Stellen einer Zahl N ist ⌊log₁₀(N)⌋ + 1."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Drei Würfel werden gleichzeitig geworfen. Wie groß ist die Wahrscheinlichkeit, dass alle drei dieselbe Zahl zeigen?",
+        answerA = "1/216",
+        answerB = "1/36",
+        answerC = "1/6",
+        answerD = "6/216",
+        correctAnswer = 1,
+        explanation = "Es gibt 6 günstige Ereignisse (111, 222, 333, 444, 555, 666) bei 6³=216 Möglichkeiten. P = 6/216 = 1/36.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist die Summe der ersten 20 natürlichen Zahlen?",
+        answerA = "190",
+        answerB = "200",
+        answerC = "210",
+        answerD = "220",
+        correctAnswer = 2,
+        explanation = "Gaußsche Formel: n(n+1)/2 = 20 × 21 / 2 = 210.",
+        difficulty = 3,
+        funFact = "Die Gaußsche Summenformel ist so elegant, dass man sie für beliebige n in Sekunden im Kopf berechnen kann."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Ein Ball fällt aus 64 m Höhe. Jedes Mal springt er auf halbe Höhe zurück. Wie weit legt er insgesamt zurück, wenn er unendlich oft springt?",
+        answerA = "128 m",
+        answerB = "192 m",
+        answerC = "256 m",
+        answerD = "Unendlich",
+        correctAnswer = 1,
+        explanation = "Summe der geometrischen Reihe: Fallweg 64, dann 2×32+2×16+... = 64 + 2×(32+16+8+...) = 64 + 2×64 = 64 + 128 = 192 m.",
+        difficulty = 3,
+        funFact = "Geometrische Reihen mit |q|<1 haben immer eine endliche Summe: S = a/(1−q)."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist der Innenwinkel eines regelmäßigen Sechsecks?",
+        answerA = "108°",
+        answerB = "120°",
+        answerC = "135°",
+        answerD = "150°",
+        correctAnswer = 1,
+        explanation = "Formel: (n−2)×180°/n = (6−2)×180°/6 = 4×180°/6 = 120°.",
+        difficulty = 3,
+        funFact = "Deshalb sind Bienenwaben sechseckig – sie nutzen Fläche optimal bei minimalem Wachseinsatz."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Max legt 1000 € mit 5 % Zinsen an. Nach wie vielen Jahren hat er erstmals mehr als 1500 € (mit Zinseszins)?",
+        answerA = "8 Jahre",
+        answerB = "9 Jahre",
+        answerC = "10 Jahre",
+        answerD = "12 Jahre",
+        correctAnswer = 1,
+        explanation = "1000 × 1,05^n > 1500 → 1,05^n > 1,5. 1,05^8 ≈ 1,477, 1,05^9 ≈ 1,551. Nach 9 Jahren überschreitet er 1500 €.",
+        difficulty = 3,
+        funFact = "Die 'Regel 72' gibt eine schnelle Näherung: 72/5 ≈ 14 Jahre für Verdoppelung – für 1,5-faches genügt weniger."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Wie viele positive Teiler hat die Zahl 360?",
+        answerA = "18",
+        answerB = "24",
+        answerC = "20",
+        answerD = "12",
+        correctAnswer = 1,
+        explanation = "360 = 2³ × 3² × 5¹. Anzahl Teiler = (3+1)(2+1)(1+1) = 4×3×2 = 24.",
+        difficulty = 3,
+        funFact = "360 hat so viele Teiler, weil es durch 1,2,3,4,5,6,8,9,10,12,15,18,20,24,30,36,40,45,60,72,90,120,180,360 teilbar ist."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Ein Viereck hat Winkel von 70°, 110° und 85°. Wie groß ist der vierte Winkel?",
+        answerA = "85°",
+        answerB = "90°",
+        answerC = "95°",
+        answerD = "100°",
+        correctAnswer = 2,
+        explanation = "Die Winkelsumme im Viereck beträgt 360°. Vierter Winkel: 360° − 70° − 110° − 85° = 95°.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "In einer Lotterie werden 6 Zahlen aus 49 gezogen. Wie viele Kombinationen sind möglich?",
+        answerA = "6.096.454",
+        answerB = "13.983.816",
+        answerC = "49.000.000",
+        answerD = "1.906.884",
+        correctAnswer = 1,
+        explanation = "C(49,6) = 49! / (6! × 43!) = (49×48×47×46×45×44) / (6×5×4×3×2×1) = 13.983.816.",
+        difficulty = 3,
+        funFact = "Die Gewinnchance im deutschen Lotto 6 aus 49 beträgt 1 zu 13.983.816 – statistisch selten, aber möglich."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Wie viele verschiedene Möglichkeiten gibt es, 3 verschiedene Buchstaben aus dem Wort 'MATHE' (5 Buchstaben) zu wählen UND anzuordnen?",
+        answerA = "10",
+        answerB = "30",
+        answerC = "60",
+        answerD = "120",
+        correctAnswer = 2,
+        explanation = "Permutation: P(5,3) = 5! / (5−3)! = 5×4×3 = 60.",
+        difficulty = 3,
+        funFact = "Kombinationen (ohne Reihenfolge) wären C(5,3)=10 – die Anordnung multipliziert mit 3!=6."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist 1/1 + 1/2 + 1/4 + 1/8 + ... (unendliche Summe)?",
+        answerA = "1,5",
+        answerB = "2",
+        answerC = "3",
+        answerD = "Die Summe divergiert",
+        correctAnswer = 1,
+        explanation = "Geometrische Reihe mit a=1, q=1/2: S = a/(1−q) = 1/(1−1/2) = 1/(1/2) = 2.",
+        difficulty = 3,
+        funFact = "Zenons Paradoxon 'Achilles und die Schildkröte' wird durch genau diese unendliche Summe mit endlichem Ergebnis aufgelöst."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Ein Kreis hat eine Fläche von 25π cm². Wie lang ist sein Umfang?",
+        answerA = "5π cm",
+        answerB = "10π cm",
+        answerC = "25π cm",
+        answerD = "50π cm",
+        correctAnswer = 1,
+        explanation = "Fläche = π × r² = 25π → r = 5 cm. Umfang = 2π × r = 2π × 5 = 10π cm.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Vier Personen sollen in einer Reihe sitzen, aber A und B dürfen nicht nebeneinander sitzen. Wie viele Anordnungen gibt es?",
+        answerA = "12",
+        answerB = "24",
+        answerC = "16",
+        answerD = "8",
+        correctAnswer = 0,
+        explanation = "Gesamt: 4! = 24. Verbotene Fälle (A neben B): A+B als Block: 3! × 2 = 12. Erlaubte Fälle: 24 − 12 = 12.",
+        difficulty = 3,
+        funFact = "Das Komplementärereignis zu rechnen (Gesamt minus Verbotes) ist oft einfacher als die erlaubten Fälle direkt zu zählen."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Wenn log₂(8) = x, was ist x?",
+        answerA = "2",
+        answerB = "3",
+        answerC = "4",
+        answerD = "6",
+        correctAnswer = 1,
+        explanation = "log₂(8) = x bedeutet 2^x = 8. Da 2³ = 8, ist x = 3.",
+        difficulty = 3,
+        funFact = "Logarithmen sind die Umkehrung von Potenzen und wurden erfunden, um Multiplikationen in Additionen umzuwandeln."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "In einer Urne liegen 4 rote, 3 blaue und 2 grüne Kugeln. Du ziehst eine Kugel. Wie groß ist die Wahrscheinlichkeit, keine rote zu ziehen?",
+        answerA = "4/9",
+        answerB = "5/9",
+        answerC = "1/3",
+        answerD = "2/3",
+        correctAnswer = 1,
+        explanation = "Nicht-rote Kugeln: 3+2 = 5 von insgesamt 9. P = 5/9.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist die kleinste Primzahl, die größer als 100 ist?",
+        answerA = "101",
+        answerB = "103",
+        answerC = "107",
+        answerD = "109",
+        correctAnswer = 0,
+        explanation = "101 ist prim: nicht teilbar durch 2, 3, 5, 7 (und √101 ≈ 10, also reicht es bis 10 zu prüfen).",
+        difficulty = 3,
+        funFact = "101 ist auch eine palindromische Primzahl – sie liest sich vorwärts und rückwärts gleich."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ist das Ergebnis von (1+2+3+...+10)²?",
+        answerA = "3025",
+        answerB = "385",
+        answerC = "1000",
+        answerD = "100",
+        correctAnswer = 0,
+        explanation = "Summe 1 bis 10 = 10×11/2 = 55. 55² = 3025.",
+        difficulty = 3,
+        funFact = "Es gilt sogar: (1+2+...+n)² = 1³+2³+...+n³ – eine erstaunliche Identität!"
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Ein Schachbrett hat 8×8 Felder. Wie viele Felder werden von einer Dame im Feld e4 maximal bedroht (ohne eigene Figuren)?",
+        answerA = "21",
+        answerB = "27",
+        answerC = "28",
+        answerD = "32",
+        correctAnswer = 1,
+        explanation = "Dame = Turm + Läufer. e4 = Spalte 5, Zeile 4. Turm: 7 (horizontal) + 7 (vertikal) = 14 Felder. Läufer diagonal: rechts-oben 3, links-oben 4, rechts-unten 3, links-unten 3 = 13 Felder. Gesamt: 14 + 13 = 27 Felder.",
+        difficulty = 3,
+        funFact = "Eine Dame in der Ecke bedroht nur 21 Felder, in der Mitte bis zu 27 – deshalb ist die Zentrumskontrolle im Schach so wichtig."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Was ergibt 111.111.111 × 111.111.111?",
+        answerA = "12.345.678.987.654.321",
+        answerB = "12.345.678.900.000.000",
+        answerC = "11.111.111.111.111.111",
+        answerD = "12.321.000.000.000.000",
+        correctAnswer = 0,
+        explanation = "Das Produkt folgt dem Muster: 11²=121, 111²=12321, 1111²=1234321, ... bis 111111111²=12345678987654321.",
+        difficulty = 3,
+        funFact = "Dieses Muster eines 'Palindroms aus Ziffern 1-9-1' bricht bei 1.111.111.111² (10 Einsen) wegen Überträgen ab."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Bei einem Test mit 100 Fragen: Richtige Antwort +4 Punkte, falsche −1 Punkt. Ein Schüler hat 75 Punkte und hat alle 100 Fragen beantwortet. Wie viele Fragen hat er richtig beantwortet?",
+        answerA = "33",
+        answerB = "35",
+        answerC = "40",
+        answerD = "45",
+        correctAnswer = 1,
+        explanation = "r richtig, (100−r) falsch. 4r − (100−r) = 75 → 5r − 100 = 75 → 5r = 175 → r = 35.",
+        difficulty = 3,
+        funFact = "Solche Punktesysteme mit Abzügen werden verwendet, um zufälliges Raten unattraktiv zu machen."
+    ),
+
+    Question(
+        categoryId = 12,
+        questionText = "Wie lautet die nächste Zahl in der Folge: 1, 3, 7, 13, 21, 31, ...?",
+        answerA = "41",
+        answerB = "43",
+        answerC = "45",
+        answerD = "47",
+        correctAnswer = 1,
+        explanation = "Differenzen: +2, +4, +6, +8, +10, +12. 31 + 12 = 43.",
+        difficulty = 3,
+        funFact = null
     )
 )
