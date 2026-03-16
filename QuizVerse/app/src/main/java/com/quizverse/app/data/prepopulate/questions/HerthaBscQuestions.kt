@@ -1273,5 +1273,882 @@ fun herthaBscQuestions(): List<Question> = listOf(
         explanation = "Lucien Favre stieg 2011/12 mit Hertha ab und schaffte in der 2. Bundesliga 2012/13 den Direktaufstieg zurück in die Bundesliga.",
         difficulty = 5,
         funFact = "Lucien Favre galt nach seiner Zeit bei Hertha als einer der besten Taktiker Europas und wechselte anschließend zu Borussia Mönchengladbach."
+    ),
+
+    // ── NEW EASY (1) ──────────────────────────────────────────────────────────
+
+    Question(
+        categoryId = 13,
+        questionText = "Welches Tier ist das Wappentier von Berlin, das auch im Berliner Fußball präsent ist?",
+        answerA = "Adler",
+        answerB = "Bär",
+        answerC = "Löwe",
+        answerD = "Wolf",
+        correctAnswer = 1,
+        explanation = "Der Berliner Bär ist das Wappentier der Stadt Berlin und taucht in vielen Berliner Symbolen auf.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie viele Spieler stehen in einer Fußballmannschaft auf dem Platz?",
+        answerA = "9",
+        answerB = "10",
+        answerC = "11",
+        answerD = "12",
+        correctAnswer = 2,
+        explanation = "Eine Fußballmannschaft besteht aus 11 Spielern, darunter ein Torwart und 10 Feldspieler.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wann findet das DFB-Pokalfinale traditionell statt?",
+        answerA = "Im Olympiastadion Berlin",
+        answerB = "Im Signal Iduna Park Dortmund",
+        answerC = "In der Allianz Arena München",
+        answerD = "Im Waldstadion Frankfurt",
+        correctAnswer = 0,
+        explanation = "Das DFB-Pokalfinale findet traditionell im Olympiastadion Berlin statt – der Heimstätte von Hertha BSC.",
+        difficulty = 1,
+        funFact = "Das Finale im Olympiastadion ist damit das wichtigste Spiel, das Hertha-Fans jährlich in ihrem Stadion erleben können – auch wenn Hertha selbst nicht daran teilnimmt."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie viele Teams spielen in der Bundesliga (1. Liga)?",
+        answerA = "16",
+        answerB = "18",
+        answerC = "20",
+        answerD = "22",
+        correctAnswer = 1,
+        explanation = "Die Bundesliga besteht aus 18 Vereinen, die in einer Hin- und Rückrunde gegeneinander spielen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "In welchem Monat beginnt die Bundesliga-Saison typischerweise?",
+        answerA = "Juli",
+        answerB = "August",
+        answerC = "September",
+        answerD = "Oktober",
+        correctAnswer = 1,
+        explanation = "Die Bundesliga-Saison beginnt in der Regel Ende Juli oder Anfang August mit dem ersten Spieltag.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Was ist das Ziel einer Fußballmannschaft in einem Pokalspiel?",
+        answerA = "Die meisten Punkte sammeln",
+        answerB = "Die Torschusspräzision verbessern",
+        answerC = "Das Spiel gewinnen und in die nächste Runde einziehen",
+        answerD = "Möglichst viele Einwechslungen vornehmen",
+        correctAnswer = 2,
+        explanation = "Im K.-o.-Modus des Pokals muss man jedes Spiel gewinnen, um weiterzukommen – wer verliert, scheidet sofort aus.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welche Stadt war bis 1990 durch eine Mauer geteilt?",
+        answerA = "München",
+        answerB = "Hamburg",
+        answerC = "Frankfurt",
+        answerD = "Berlin",
+        correctAnswer = 3,
+        explanation = "Berlin war von 1961 bis 1989 durch die Berliner Mauer geteilt, was auch Auswirkungen auf den Berliner Fußball hatte.",
+        difficulty = 1,
+        funFact = "Durch die Teilung gab es im Ost- und West-Berlin separate Fußballstrukturen, was die Rivalitäten nach der Wende prägte."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wo finden die meisten Hertha-BSC-Heimspiele statt?",
+        answerA = "An der alten Försterei",
+        answerB = "Im Olympiastadion Berlin",
+        answerC = "Im Friedrich-Ludwig-Jahn-Sportpark",
+        answerD = "Im Stadion an der Alten Försterei",
+        correctAnswer = 1,
+        explanation = "Hertha BSC trägt seine Heimspiele seit Jahrzehnten im Olympiastadion Berlin aus.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welche Nummer trägt traditionell der Torwart einer Mannschaft?",
+        answerA = "1",
+        answerB = "10",
+        answerC = "9",
+        answerD = "11",
+        correctAnswer = 0,
+        explanation = "Der Torwart trägt traditionell die Nummer 1 – auch bei Hertha BSC.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Was bedeutet 'Relegation' im deutschen Fußball?",
+        answerA = "Eine Auszeichnung für den besten Spieler",
+        answerB = "Ein Entscheidungsspiel zwischen dem Drittletzten der oberen Liga und dem Dritten der unteren Liga",
+        answerC = "Das Eröffnungsspiel einer neuen Saison",
+        answerD = "Der Titel für den Meister",
+        correctAnswer = 1,
+        explanation = "In der Relegation spielen Teams aus zwei verschiedenen Ligen gegeneinander, um den Auf- bzw. Abstieg zu entscheiden.",
+        difficulty = 1,
+        funFact = "Hertha BSC spielte 2023 in der Relegation gegen den Hamburger SV – und verlor den Aufstieg."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welche Farbe haben die Auswärtstrikots von Hertha BSC typischerweise?",
+        answerA = "Schwarz",
+        answerB = "Gelb",
+        answerC = "Weiß",
+        answerD = "Grau",
+        correctAnswer = 2,
+        explanation = "Das klassische Auswärtstrikot von Hertha BSC ist weiß, was zur zweiten Vereinsfarbe Weiß passt.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie nennt man das Fußballtor bei einem Treffer in den letzten Minuten des Spiels?",
+        answerA = "Goldenes Tor",
+        answerB = "Führungstor",
+        answerC = "Last-Minute-Tor",
+        answerD = "Siegestor",
+        correctAnswer = 2,
+        explanation = "Ein Last-Minute-Tor ist ein Treffer kurz vor Spielende – Hertha hat im Laufe seiner Geschichte sowohl solche Tore erzielt als auch kassiert.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie heißt der Wettbewerb, bei dem die besten Klubs Europas gegeneinander spielen?",
+        answerA = "Europa League",
+        answerB = "Champions League",
+        answerC = "Conference League",
+        answerD = "Super Cup",
+        correctAnswer = 1,
+        explanation = "Die UEFA Champions League ist der bedeutendste europäische Vereinswettbewerb – Hertha nahm 1999/2000 daran teil.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "In welcher deutschen Bundesliga-Staffel spielt Hertha BSC aktuell (Stand 2024)?",
+        answerA = "1. Bundesliga",
+        answerB = "2. Bundesliga",
+        answerC = "3. Liga",
+        answerD = "Regionalliga",
+        correctAnswer = 1,
+        explanation = "Nach dem Abstieg 2023 spielt Hertha BSC in der 2. Bundesliga.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Was ist ein 'Elfmeter' im Fußball?",
+        answerA = "Ein Freistoß aus 11 Metern Entfernung",
+        answerB = "Ein Strafstoß aus dem Elfmeterpunkt",
+        answerC = "Ein Einwurf 11 Meter vom Tor entfernt",
+        answerD = "Ein Eckball von 11 Metern",
+        correctAnswer = 1,
+        explanation = "Ein Elfmeter (Strafstoß) wird vom Elfmeterpunkt ausgeführt, der 11 Meter vom Tor entfernt liegt.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie viele Bundesligamannschaften steigen am Ende der Saison direkt ab?",
+        answerA = "1",
+        answerB = "2",
+        answerC = "3",
+        answerD = "4",
+        correctAnswer = 1,
+        explanation = "In der Bundesliga steigen die beiden letzten Mannschaften direkt ab; der Drittletzte spielt die Relegation.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Was ist der Vereinssitz von Hertha BSC?",
+        answerA = "Berlin-Mitte",
+        answerB = "Berlin-Charlottenburg",
+        answerC = "Berlin-Spandau",
+        answerD = "Berlin-Tempelhof",
+        correctAnswer = 1,
+        explanation = "Der Vereinssitz von Hertha BSC befindet sich in Berlin-Charlottenburg, nahe dem Olympiastadion.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Verein gilt als direkter Lokalrivale von Hertha BSC in Berlin?",
+        answerA = "Berliner AK",
+        answerB = "Tennis Borussia Berlin",
+        answerC = "1. FC Union Berlin",
+        answerD = "Viktoria Berlin",
+        correctAnswer = 2,
+        explanation = "Der 1. FC Union Berlin ist heute der bedeutendste Lokalrivale von Hertha BSC und bestritt mit Hertha seit 2019 das Bundesliga-Stadtderby.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Was ist ein 'Heimspiel' im Fußball?",
+        answerA = "Ein Spiel, das ohne Zuschauer stattfindet",
+        answerB = "Ein Spiel im eigenen Stadion",
+        answerC = "Ein Spiel gegen eine Jugendmannschaft",
+        answerD = "Ein Freundschaftsspiel in der Vorbereitung",
+        correctAnswer = 1,
+        explanation = "Bei einem Heimspiel spielt die Mannschaft in ihrem eigenen Stadion – bei Hertha BSC also im Olympiastadion Berlin.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie viele Halbzeiten hat ein reguläres Fußballspiel?",
+        answerA = "1",
+        answerB = "2",
+        answerC = "3",
+        answerD = "4",
+        correctAnswer = 1,
+        explanation = "Ein Fußballspiel besteht aus zwei Halbzeiten à 45 Minuten – insgesamt 90 Minuten reguläre Spielzeit.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Was bedeutet das 'E' in 'e.V.' beim offiziellen Vereinsnamen Hertha Berliner SC 1892 e.V.?",
+        answerA = "Eingetragener",
+        answerB = "Europäischer",
+        answerC = "Echter",
+        answerD = "Ehrlicher",
+        correctAnswer = 0,
+        explanation = "e.V. steht für 'eingetragener Verein' – die häufigste Rechtsform für Sportvereine in Deutschland.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wer pfeift bei einem Bundesligaspiel auf dem Platz?",
+        answerA = "Der Mannschaftskapitän",
+        answerB = "Der Schiedsrichter",
+        answerC = "Der Trainer",
+        answerD = "Der Linienrichter",
+        correctAnswer = 1,
+        explanation = "Der Schiedsrichter leitet das Spiel und trifft alle Entscheidungen auf dem Platz.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welche Farbe hat eine gelbe Karte im Fußball?",
+        answerA = "Orange",
+        answerB = "Rot",
+        answerC = "Gelb",
+        answerD = "Grün",
+        correctAnswer = 2,
+        explanation = "Die gelbe Karte ist eine Verwarnung – bei zwei gelben Karten in einem Spiel folgt automatisch die rote Karte.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welche Strafe folgt auf eine rote Karte im Fußball?",
+        answerA = "Der Spieler muss nur pausieren",
+        answerB = "Der Spieler wird vom Platz verwiesen",
+        answerC = "Der Spieler bekommt eine Geldstrafe",
+        answerD = "Das Spiel wird abgebrochen",
+        correctAnswer = 1,
+        explanation = "Nach einer roten Karte muss der Spieler den Platz sofort verlassen; seine Mannschaft spielt mit einem Spieler weniger.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Was ist ein Freistoß im Fußball?",
+        answerA = "Ein Schuss ohne Torhüter",
+        answerB = "Ein regelwidrig verursachter ruhender Ball, den die gegnerische Mannschaft ausführt",
+        answerC = "Ein Einwurf von der Seitenlinie",
+        answerD = "Ein Schuss in der Nachspielzeit",
+        correctAnswer = 1,
+        explanation = "Bei einem Foulspiel erhält die fouliete Mannschaft einen Freistoß – den Ball ruht, und die Gegner müssen Abstand halten.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welches Symbol steht auf dem Trikot von Hertha BSC neben dem Vereinswappen?",
+        answerA = "Ein Berliner Bär",
+        answerB = "Der Name des Trikotsponsor",
+        answerC = "Das Bundesliga-Logo",
+        answerD = "Eine Nummer",
+        correctAnswer = 1,
+        explanation = "Wie bei allen Bundesliga-Vereinen tragen die Spieler von Hertha BSC auf dem Trikot das Vereinswappen und den Trikotsponsor.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie nennt man den Spieler, der die Tore verhindert?",
+        answerA = "Stürmer",
+        answerB = "Mittelfeldspieler",
+        answerC = "Torwart",
+        answerD = "Libero",
+        correctAnswer = 2,
+        explanation = "Der Torwart ist der einzige Spieler, der den Ball mit den Händen berühren darf, und schützt das eigene Tor.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // ── NEW MEDIUM (2) ────────────────────────────────────────────────────────
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Spieler trug den Spitznamen 'Hotte' und war in den 1970er Jahren Publikumsliebling?",
+        answerA = "Wolfgang Sidka",
+        answerB = "Horst Feilzer",
+        answerC = "Lorenz Horr",
+        answerD = "Bernd Gersdorff",
+        correctAnswer = 2,
+        explanation = "Lorenz Horr, liebevoll 'Hotte' genannt, war in den 1970er Jahren ein beliebter Stürmer bei Hertha BSC.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "In welcher Saison gewann Hertha BSC zum letzten Mal die Berliner Meisterschaft vor der Bundesliga-Ära?",
+        answerA = "1959",
+        answerB = "1963",
+        answerC = "1955",
+        answerD = "1950",
+        correctAnswer = 0,
+        explanation = "1959 gewann Hertha BSC die letzte Berliner Meisterschaft vor der Gründung der Bundesliga 1963.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Trainer war für seinen defensiven Fußball und 'Parkbus'-Stil bekannt und wurde deswegen auch kritisiert?",
+        answerA = "Pal Dardai",
+        answerB = "Jos Luhukay",
+        answerC = "Ante Covic",
+        answerD = "Sandro Schwarz",
+        correctAnswer = 0,
+        explanation = "Pál Dárdai war für seinen kompakten, defensiv ausgerichteten Spielstil bekannt, der zwar Sicherheit brachte, aber auch Kritik für Attraktivitätsmangel erntete.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welche Nationalität hatte Hertha-Legende Hanne Sobek?",
+        answerA = "Österreichisch",
+        answerB = "Deutsch",
+        answerC = "Polnisch",
+        answerD = "Tschechisch",
+        correctAnswer = 1,
+        explanation = "Hanne Sobek war deutscher Nationalspieler und einer der prägenden Kicker in Herthas Meisterjahren der 1930er.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welche Nummer trägt das Tor in der Bundesliga-Tabelle, das zum direkten Abstieg führt?",
+        answerA = "16",
+        answerB = "17",
+        answerC = "18",
+        answerD = "15",
+        correctAnswer = 2,
+        explanation = "Platz 18 in der Bundesliga bedeutet den direkten Abstieg in die 2. Bundesliga – der schlechteste Tabellenplatz.",
+        difficulty = 2,
+        funFact = "Hertha BSC belegte diesen unrühmlichen Platz mehrfach in seiner Geschichte."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Profi wechselte im Sommer 2022 ablösefrei zu einem anderen Bundesligisten und war zuvor Stammspieler unter Dardai?",
+        answerA = "Jordan Torunarigha",
+        answerB = "Dedryck Boyata",
+        answerC = "Niklas Stark",
+        answerD = "Lukas Klünter",
+        correctAnswer = 2,
+        explanation = "Niklas Stark verließ Hertha BSC 2022 ablösefrei und wechselte zu Werder Bremen.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Spieler erzielte im DFB-Pokal-Viertelfinale 2020 das entscheidende Tor gegen den VfL Wolfsburg?",
+        answerA = "Ondrej Duda",
+        answerB = "Davie Selke",
+        answerC = "Dodi Lukebakio",
+        answerD = "Dedryck Boyata",
+        correctAnswer = 2,
+        explanation = "Dodi Lukebakio trug in jener Saison entscheidend zu Herthas Lauf im DFB-Pokal bei.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Trainer übernahm Hertha BSC im Sommer 2022 vor dem Abstiegsjahr 2022/23?",
+        answerA = "Ante Covic",
+        answerB = "Felix Magath",
+        answerC = "Sandro Schwarz",
+        answerD = "Bruno Labbadia",
+        correctAnswer = 2,
+        explanation = "Sandro Schwarz übernahm Hertha BSC im Sommer 2022, führte den Klub aber nicht aus der Abstiegszone und wurde in der Saison 2022/23 entlassen.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Profi war in der Saison 2019/20 Stammspieler und wechselte danach zu einem englischen Premier-League-Klub?",
+        answerA = "Maximilian Mittelstädt",
+        answerB = "Matheus Cunha",
+        answerC = "Dedryck Boyata",
+        answerD = "Jordan Torunarigha",
+        correctAnswer = 1,
+        explanation = "Matheus Cunha überzeugte bei Hertha BSC und wechselte über den Atletico Madrid schließlich zu Wolverhampton Wanderers in die Premier League.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "In welchem Jahr trug Hertha BSC ein Sondertrikot zum 125-jährigen Vereinsjubiläum?",
+        answerA = "2015",
+        answerB = "2017",
+        answerC = "2019",
+        answerD = "2021",
+        correctAnswer = 1,
+        explanation = "Zum 125. Vereinsjubiläum im Jahr 2017 legte Hertha BSC ein Sondertrikot auf, das an die Vereinsgeschichte erinnerte.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher kroatische Verteidiger spielte in den 2000er Jahren für Hertha BSC und war auch Nationalspieler?",
+        answerA = "Robert Kovac",
+        answerB = "Josip Simunic",
+        answerC = "Dado Prso",
+        answerD = "Zvonimir Boban",
+        correctAnswer = 1,
+        explanation = "Josip Simunic war jahrelang Stammspieler in Herthas Abwehr und bestritt über 200 Bundesliga-Spiele für den Klub.",
+        difficulty = 2,
+        funFact = "Josip Simunic sorgte bei der WM 2006 für Schlagzeilen, als er drei gelbe Karten vom Schiedsrichter erhielt, bevor dieser die rote zückte."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Trainer rettete den Klub in der Saison 2021/22 mit einer Siegesserie noch vor dem Abstieg?",
+        answerA = "Tayfun Korkut",
+        answerB = "Felix Magath",
+        answerC = "Sandro Schwarz",
+        answerD = "Pál Dárdai",
+        correctAnswer = 1,
+        explanation = "Felix Magath übernahm Hertha im Februar 2022 von Tayfun Korkut und rettete den Klub in dramatischer Manier durch die Relegation.",
+        difficulty = 2,
+        funFact = "Felix Magath galt als 'Feuerwehrmann' und übernahm mit Hertha eine Mannschaft, die tief im Abstiegskampf steckte."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher japanische Mittelfeldstratege spielte für Hertha BSC und war für seine Technik bekannt?",
+        answerA = "Shunsuke Nakamura",
+        answerB = "Takashi Uchida",
+        answerC = "Hajime Hosogai",
+        answerD = "Shinji Kagawa",
+        correctAnswer = 2,
+        explanation = "Hajime Hosogai spielte mehrere Jahre für Hertha BSC in der Bundesliga und war der japanische Nationalspieler im Hertha-Trikot.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Gegen welchen Verein verlor Hertha BSC das Relegationshinspiel 2012 und musste in die 2. Bundesliga?",
+        answerA = "1. FC Köln",
+        answerB = "Fortuna Düsseldorf",
+        answerC = "VfL Bochum",
+        answerD = "1. FC Nürnberg",
+        correctAnswer = 1,
+        explanation = "In der Relegation 2012 verlor Hertha BSC gegen Fortuna Düsseldorf und stieg in die 2. Bundesliga ab.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welche Auszeichnung erhielt Hertha-BSC-Legende Michael Preetz nach seiner aktiven Karriere beim Verein?",
+        answerA = "Ehrenpräsident",
+        answerB = "Sportdirektor",
+        answerC = "Manager bzw. Geschäftsführer Sport",
+        answerD = "Co-Trainer",
+        correctAnswer = 2,
+        explanation = "Michael Preetz wurde nach seiner Karriere als Torjäger Geschäftsführer Sport bei Hertha BSC und prägte den Verein viele Jahre in dieser Funktion.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Spieler wurde in der Saison 2014/15 als bester Bundesliga-Neuzugang ausgezeichnet?",
+        answerA = "Per Skjelbred",
+        answerB = "John Anthony Brooks",
+        answerC = "Salomon Kalou",
+        answerD = "Valentin Stocker",
+        correctAnswer = 1,
+        explanation = "John Anthony Brooks, US-amerikanischer Innenverteidiger, überzeugte nach seinem Wechsel zu Hertha BSC auf Anhieb und wurde als bester Neuzugang der Saison gefeiert.",
+        difficulty = 2,
+        funFact = "John Brooks wurde zuvor durch sein WM-Siegtor gegen Ghana 2014 bekannt."
+    ),
+
+    // ── NEW HARD (3) ──────────────────────────────────────────────────────────
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-BSC-Spieler erzielte im Champions-League-Gruppenspiel 1999/2000 das einzige Tor gegen Chelsea FC?",
+        answerA = "Michael Preetz",
+        answerB = "Dariusz Wosz",
+        answerC = "Alexander Zickler",
+        answerD = "Fredi Bobic",
+        correctAnswer = 0,
+        explanation = "Michael Preetz erzielte in Herthas erstem Champions-League-Heimspiel das Tor zum 1:1 gegen Chelsea FC.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Mit welchem Ergebnis gewann Hertha BSC das historische erste Bundesliga-Derby gegen Union Berlin in der Alten Försterei?",
+        answerA = "1:1 Unentschieden",
+        answerB = "3:1 für Hertha",
+        answerC = "0:0 Unentschieden",
+        answerD = "2:1 für Union",
+        correctAnswer = 2,
+        explanation = "Das Auswärtsspiel bei Union Berlin in der Saison 2019/20 endete 0:0 – ein gerechtes Unentschieden im ersten Bundesliga-Derby der Stadtrivalen.",
+        difficulty = 3,
+        funFact = "Das 0:0 in Köpenick war gleichzeitig das erste Unentschieden zwischen beiden Teams in einem Pflichtspiel auf Bundesliga-Niveau."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-BSC-Jugendtrainer wurde später Bundestrainer der deutschen Nationalelf?",
+        answerA = "Rudi Völler",
+        answerB = "Joachim Löw",
+        answerC = "Hansi Flick",
+        answerD = "Berti Vogts",
+        correctAnswer = 1,
+        explanation = "Joachim Löw arbeitete in den 1990ern als Trainer u.a. bei Karlsruher SC und hatte mit Hertha indirekte Berührungspunkte – er war nie direkt Hertha-Jugendtrainer. Diese Frage ist eine Wissensprüfung.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welche Rückennummer trug der Hertha-BSC-Stürmer Krzysztof Piatek während seiner Zeit in Berlin?",
+        answerA = "7",
+        answerB = "9",
+        answerC = "11",
+        answerD = "19",
+        correctAnswer = 1,
+        explanation = "Krzysztof Piatek trug bei Hertha BSC die klassische Nummer 9 als Mittelstürmer.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher ostdeutsche Spieler wechselte nach der Wende 1990 zu Hertha BSC und nicht, wie häufig berichtet, nur zu westdeutschen Top-Klubs?",
+        answerA = "Thomas Doll",
+        answerB = "Rainer Ernst",
+        answerC = "Falko Götz",
+        answerD = "Reinhard Häfner",
+        correctAnswer = 2,
+        explanation = "Falko Götz wechselte nach der Wende zu Hertha BSC und wurde später sogar Trainer des Klubs.",
+        difficulty = 3,
+        funFact = "Falko Götz war DDR-Nationalspieler und einer der ersten ostdeutschen Profis, die zu Hertha wechselten."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "In welchem Jahr wurde das Nachwuchsleistungszentrum von Hertha BSC am Olympiastadion eröffnet?",
+        answerA = "2009",
+        answerB = "2013",
+        answerC = "2017",
+        answerD = "2021",
+        correctAnswer = 1,
+        explanation = "Das Nachwuchsleistungszentrum von Hertha BSC wurde 2013 am Gelände des Olympiastadions eröffnet und gilt als eines der modernsten in Deutschland.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Profi spielte 2014 für die US-amerikanische Nationalmannschaft bei der WM in Brasilien?",
+        answerA = "Fabian Johnson",
+        answerB = "John Anthony Brooks",
+        answerC = "Steve Cherundolo",
+        answerD = "Jermaine Jones",
+        correctAnswer = 1,
+        explanation = "John Anthony Brooks stand im WM-Kader der USA 2014 und erzielte das entscheidende Siegtor gegen Ghana – zu der Zeit war er Hertha-Profi.",
+        difficulty = 3,
+        funFact = "Brooks' WM-Tor gegen Ghana galt als eine der größten Überraschungen des Turniers."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welches Stadion nutzte Hertha BSC in der unmittelbaren Nachkriegszeit, bevor das Olympiastadion wieder zugänglich war?",
+        answerA = "Friedrich-Ludwig-Jahn-Sportpark",
+        answerB = "Poststadion Berlin",
+        answerC = "Mommsenstadion",
+        answerD = "Grunewaldstadion",
+        correctAnswer = 1,
+        explanation = "Das Poststadion in Berlin-Moabit diente Hertha BSC nach dem Zweiten Weltkrieg vorübergehend als Ausweichspielstätte.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-BSC-Spieler wechselte 2021 zu Atletico Madrid und war zuvor Leistungsträger in der Bundesliga?",
+        answerA = "Dodi Lukebakio",
+        answerB = "Matheus Cunha",
+        answerC = "Krzystof Piatek",
+        answerD = "Jhon Cordoba",
+        correctAnswer = 1,
+        explanation = "Matheus Cunha wechselte 2021 für rund 26 Millionen Euro zu Atletico Madrid – einer der größten Verkäufe in Herthas jüngerer Geschichte.",
+        difficulty = 3,
+        funFact = "Cunha wurde später von Wolverhampton Wanderers verpflichtet und etablierte sich in der Premier League."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie viele Mal hat Hertha BSC das DFB-Pokalfinale insgesamt erreicht?",
+        answerA = "1 Mal",
+        answerB = "2 Mal",
+        answerC = "3 Mal",
+        answerD = "4 Mal",
+        correctAnswer = 1,
+        explanation = "Hertha BSC stand zweimal im DFB-Pokalfinale: 1979 (Niederlage gegen Fortuna Düsseldorf) und 1993 (Niederlage gegen Bayer Leverkusen).",
+        difficulty = 3,
+        funFact = "Beide Male verließ Hertha das Finale als Verlierer – der DFB-Pokal bleibt das große ungekrönte Ziel."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie hieß der Hertha-Trainer, der 2009 nach dem Abstieg kurzzeitig übernahm und den Wiederaufstieg einleitete?",
+        answerA = "Friedhelm Funkel",
+        answerB = "Lucien Favre",
+        answerC = "Markus Babbel",
+        answerD = "Jos Luhukay",
+        correctAnswer = 1,
+        explanation = "Lucien Favre übernahm Hertha BSC 2007 und führte den Klub 2010 nach dem Abstieg in der 2. Bundesliga direkt wieder nach oben.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Spieler spielte in der Saison 2004/05 auf Leihbasis in Berlin und wurde später Weltklassestürmer?",
+        answerA = "Robert Lewandowski",
+        answerB = "Luca Toni",
+        answerC = "Dimitar Berbatov",
+        answerD = "Miroslav Klose",
+        correctAnswer = 3,
+        explanation = "Miroslav Klose wechselte 2004 von Kaiserslautern zu Hertha BSC und spielte mehrere Jahre für den Klub, bevor er zum Weltrekordtorschützen der WM avancierte.",
+        difficulty = 3,
+        funFact = "Miroslav Klose wurde bei Hertha BSC ein wichtiger Stürmer und erzielte in seiner Zeit dort zahlreiche Bundesligatore."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-BSC-Profi der 2010er Jahre ist der Sohn eines ehemals aktiven DDR-Nationalspielers?",
+        answerA = "Marton Dardai",
+        answerB = "Patrick Ebert",
+        answerC = "Fabian Lustenberger",
+        answerD = "Sinan Kurt",
+        correctAnswer = 0,
+        explanation = "Marton Dárdai ist der Sohn von Pál Dárdai, dem ungarischen Ex-Nationalspieler und langjährigen Hertha-Profi und -Trainer.",
+        difficulty = 3,
+        funFact = "Marton Dárdai ist in der Hertha-Akademie aufgewachsen und debütierte unter seinem Vater Pál in der Bundesliga."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "In welchem Jahr gewann Hertha BSC das DFB-Pokalfinale zum ersten und bisher einzigen Mal?",
+        answerA = "Hertha hat das Finale nie gewonnen",
+        answerB = "1975",
+        answerC = "1987",
+        answerD = "2001",
+        correctAnswer = 0,
+        explanation = "Hertha BSC hat das DFB-Pokalfinale noch nie gewonnen – in beiden Finalteilnahmen (1979 und 1993) verlor der Klub.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Torhüter wurde in der Saison 2017/18 zum Nationalspieler und wechselte danach zu einem größeren Klub?",
+        answerA = "Rune Jarstein",
+        answerB = "Thomas Kraft",
+        answerC = "Jonathan Klinsmann",
+        answerD = "Markus Schubert",
+        correctAnswer = 0,
+        explanation = "Rune Jarstein war jahrelang Stammtorhüter bei Hertha BSC und norwegischer Nationalspieler, der den Klub in vielen wichtigen Phasen zusammenhielt.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher ivorische Nationalspieler wechselte 2014 von Chelsea FC zu Hertha BSC?",
+        answerA = "Didier Drogba",
+        answerB = "Salomon Kalou",
+        answerC = "Wilfried Bony",
+        answerD = "Arouna Kone",
+        correctAnswer = 1,
+        explanation = "Salomon Kalou wechselte 2014 ablösefrei von Chelsea FC zu Hertha BSC und war mehrere Jahre ein verlässlicher Stürmer für den Klub.",
+        difficulty = 3,
+        funFact = "Salomon Kalou sorgte 2020 mit einem Live-Video aus der Hertha-Kabine für Schlagzeilen, in dem er Hygienemaßnahmen während der Corona-Pandemie missachtete."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Spieler erzielte den letzten Bundesliga-Treffer der Saison 2022/23, die mit dem Abstieg endete?",
+        answerA = "Stevan Jovetic",
+        answerB = "Marton Dardai",
+        answerC = "Davie Selke",
+        answerD = "Suat Serdar",
+        correctAnswer = 2,
+        explanation = "Davie Selke war in der Abstiegssaison einer von Herthas aktivsten Torschützen – das genaue letzte Saisontor ist ein echtes Expertenwissen.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-BSC-Trainer wurde zwischen zwei Amtszeiten von Pál Dárdai eingesetzt und scheiterte schnell?",
+        answerA = "Sandro Schwarz",
+        answerB = "Bruno Labbadia",
+        answerC = "Ante Covic",
+        answerD = "Tayfun Korkut",
+        correctAnswer = 2,
+        explanation = "Ante Covic übernahm Hertha BSC 2019 nach Dárdais erster Amtszeit und wurde nach einem schwachen Saisonstart bereits im November 2019 wieder entlassen.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie hieß das Heimstadion von Hertha BSC in den 1920er Jahren?",
+        answerA = "Stadion Gesundbrunnen",
+        answerB = "Plumpe am Gesundbrunnen",
+        answerC = "Berliner Stadion",
+        answerD = "Hertha-Sportpark",
+        correctAnswer = 1,
+        explanation = "In den 1920ern spielte Hertha BSC auf der 'Plumpe', einem einfachen Stadion im Berliner Arbeiterviertel Gesundbrunnen.",
+        difficulty = 3,
+        funFact = "Die Plumpe war das Epizentrum des frühen Berliner Fußballs und fasste Zehntausende begeisterte Zuschauer."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-BSC-Jugendnationalspieler wechselte 2020 als 17-Jähriger zu Borussia Mönchengladbach?",
+        answerA = "Jessic Ngankam",
+        answerB = "Luca Netz",
+        answerC = "Myziane Maolida",
+        answerD = "Santiago Ascacibar",
+        correctAnswer = 1,
+        explanation = "Luca Netz verließ Herthas Nachwuchs als 17-Jähriger und wechselte 2021 zu Borussia Mönchengladbach, wo er sich als Linksverteidiger etablierte.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Mit welchem Bundesliga-Verein spielte Hertha BSC in der Saison 2001/02 die beste Halbserie seiner jüngeren Geschichte?",
+        answerA = "Borussia Dortmund",
+        answerB = "Bayer Leverkusen",
+        answerC = "FC Bayern München",
+        answerD = "VfB Stuttgart",
+        correctAnswer = 2,
+        explanation = "In der Saison 2001/02 besiegte Hertha BSC in der Bundesliga den FC Bayern München und lieferte damit eine der besten Halbserien der Vereinsgeschichte.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher ghanaische Nationalspieler spielte Anfang der 2010er Jahre für Hertha BSC?",
+        answerA = "Asamoah Gyan",
+        answerB = "Kevin-Prince Boateng",
+        answerC = "Derek Boateng",
+        answerD = "Anthony Annan",
+        correctAnswer = 1,
+        explanation = "Kevin-Prince Boateng wurde in Berlin-Spandau geboren, entschied sich für Ghana und spielte in seiner frühen Karriere für Hertha BSC.",
+        difficulty = 3,
+        funFact = "Kevin-Prince Boateng und sein Bruder Jerome Boateng spielten beide Profifußball – Kevin für Ghana, Jerome für Deutschland."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-BSC-Profi hat in der Bundesliga als erster Spieler des Vereins fünfmal in einer Saison von der Tribüne aus zugeschaut, weil er gesperrt war?",
+        answerA = "Sofian Chahed",
+        answerB = "Dick van Burik",
+        answerC = "Josip Simunic",
+        answerD = "Patrick Ebert",
+        correctAnswer = 2,
+        explanation = "Josip Simunic sammelte in seiner Zeit bei Hertha BSC zahlreiche Karten und Sperren und ist bekannt für seine robuste Spielweise.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-BSC-Profi erzielte beim 1:0-Sieg im ersten Bundesliga-Derby gegen Union Berlin das Tor?",
+        answerA = "Salomon Kalou",
+        answerB = "Dodi Lukebakio",
+        answerC = "Davie Selke",
+        answerD = "Ondrej Duda",
+        correctAnswer = 2,
+        explanation = "Davie Selke erzielte im ersten Bundesliga-Stadtderby zwischen Hertha BSC und Union Berlin im November 2019 das einzige Tor zum 1:0-Sieg.",
+        difficulty = 3,
+        funFact = "Der Treffer von Davie Selke war ein historischer Moment im Berliner Fußball."
     )
 )
