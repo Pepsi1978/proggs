@@ -660,7 +660,7 @@ private fun AnimatedHomeCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .border(
-                    width = 1.5.dp,
+                    width = 3.dp,
                     brush = Brush.horizontalGradient(
                         colors = listOf(
                             Color.White.copy(alpha = 0.5f),
