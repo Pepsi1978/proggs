@@ -1318,5 +1318,817 @@ fun historyQuestions(): List<Question> = listOf(
         explanation = "Der Generalplan Ost war ein geheimer SS-Plan (1941–1942) zur Germanisierung Osteuropas durch Massenmord, Vertreibung und Versklavung von 30–50 Millionen Menschen.",
         difficulty = 3,
         funFact = "Der Plan sah vor, innerhalb von 25–30 Jahren 80 % der polnischen, 75 % der weißrussischen und 64 % der ukrainischen Bevölkerung zu vernichten oder zu vertreiben."
+    ),
+
+    // --- NEW EASY BATCH 2 (25 questions) ---
+
+    Question(
+        categoryId = 3,
+        questionText = "Wann wurde Deutschland nach dem Zweiten Weltkrieg wiedervereinigt?",
+        answerA = "9. November 1989",
+        answerB = "3. Oktober 1990",
+        answerC = "1. Januar 1991",
+        answerD = "12. September 1990",
+        correctAnswer = 1,
+        explanation = "Die deutsche Wiedervereinigung fand am 3. Oktober 1990 statt, als die fünf neuen Bundesländer der BRD beitraten.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Welcher US-Präsident wurde 1963 in Dallas erschossen?",
+        answerA = "Richard Nixon",
+        answerB = "Lyndon B. Johnson",
+        answerC = "John F. Kennedy",
+        answerD = "Dwight D. Eisenhower",
+        correctAnswer = 2,
+        explanation = "John F. Kennedy wurde am 22. November 1963 in Dallas, Texas, bei einem Attentat erschossen.",
+        difficulty = 1,
+        funFact = "Lee Harvey Oswald wurde als Attentäter verhaftet, aber zwei Tage später von Jack Ruby erschossen, bevor er vor Gericht kam."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "In welchem Land fand die Französische Revolution statt?",
+        answerA = "England",
+        answerB = "Deutschland",
+        answerC = "Italien",
+        answerD = "Frankreich",
+        correctAnswer = 3,
+        explanation = "Die Französische Revolution begann 1789 in Frankreich mit dem Sturm auf die Bastille und veränderte die politische Ordnung Europas grundlegend.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Wer war der erste Bundeskanzler der Bundesrepublik Deutschland?",
+        answerA = "Willy Brandt",
+        answerB = "Ludwig Erhard",
+        answerC = "Konrad Adenauer",
+        answerD = "Kurt Georg Kiesinger",
+        correctAnswer = 2,
+        explanation = "Konrad Adenauer war von 1949 bis 1963 der erste Bundeskanzler der Bundesrepublik Deutschland.",
+        difficulty = 1,
+        funFact = "Adenauer war bei seiner Amtseinführung 73 Jahre alt und regierte bis er 87 war — ein Rekord in der deutschen Geschichte."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Welches Weltereignis begann am 11. September 2001?",
+        answerA = "Der Irakkrieg",
+        answerB = "Die Terroranschläge auf die USA",
+        answerC = "Die Finanzkrise",
+        answerD = "Der Afghanistandkrieg",
+        correctAnswer = 1,
+        explanation = "Am 11. September 2001 entführten islamistische Terroristen vier Flugzeuge und griffen das World Trade Center in New York und das Pentagon an.",
+        difficulty = 1,
+        funFact = "Bei den Anschlägen starben fast 3.000 Menschen aus über 90 Ländern."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die Apartheid?",
+        answerA = "Eine Regierungsform in Nordkorea",
+        answerB = "Das System der Rassentrennung in Südafrika",
+        answerC = "Ein Kolonialregime in Algerien",
+        answerD = "Die Sklaverei in den USA",
+        correctAnswer = 1,
+        explanation = "Die Apartheid war das System der institutionalisierten Rassentrennung in Südafrika von 1948 bis 1994.",
+        difficulty = 1,
+        funFact = "Nelson Mandela, der die Apartheid bekämpfte, saß 27 Jahre im Gefängnis und wurde 1994 zum ersten schwarzen Präsidenten Südafrikas gewählt."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Welcher Fluss war für das antike Ägypten am wichtigsten?",
+        answerA = "Tigris",
+        answerB = "Euphrat",
+        answerC = "Jordan",
+        answerD = "Nil",
+        correctAnswer = 3,
+        explanation = "Der Nil war die Lebensader des antiken Ägyptens. Sein jährliches Hochwasser machte das Niltal zu einem fruchtbaren Ackerbaugebiet.",
+        difficulty = 1,
+        funFact = "Die Ägypter nannten ihr Land 'Kemet' (das Schwarze Land), wegen des fruchtbaren schwarzen Nilschlammbodens."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Wann begann der Zweite Weltkrieg?",
+        answerA = "1. September 1939",
+        answerB = "3. September 1939",
+        answerC = "1. September 1940",
+        answerD = "10. Mai 1940",
+        correctAnswer = 0,
+        explanation = "Der Zweite Weltkrieg begann am 1. September 1939 mit dem deutschen Überfall auf Polen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "In welchem Jahr landete der erste Mensch auf dem Mond?",
+        answerA = "1965",
+        answerB = "1967",
+        answerC = "1969",
+        answerD = "1971",
+        correctAnswer = 2,
+        explanation = "Am 20. Juli 1969 landeten Neil Armstrong und Buzz Aldrin im Rahmen der Apollo-11-Mission als erste Menschen auf dem Mond.",
+        difficulty = 1,
+        funFact = "Neil Armstrongs erste Worte auf dem Mond waren: 'Das ist ein kleiner Schritt für einen Menschen, aber ein riesiger Sprung für die Menschheit.'"
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Wer war Karl der Große?",
+        answerA = "Ein englischer König im Mittelalter",
+        answerB = "Der erste König von Frankreich",
+        answerC = "Ein fränkischer König, der weite Teile Westeuropas vereinigte",
+        answerD = "Der erste Kaiser des Heiligen Römischen Reiches",
+        correctAnswer = 2,
+        explanation = "Karl der Große (748–814) war König der Franken und vereinigte weite Teile Westeuropas. Er wurde 800 von Papst Leo III. zum Kaiser gekrönt.",
+        difficulty = 1,
+        funFact = "Karl der Große gilt als 'Vater Europas' und ist Namenspatron des Karlspreises, der jährlich in Aachen für europäische Verdienste vergeben wird."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "In welchem Jahr wurde Nelson Mandela freigelassen?",
+        answerA = "1985",
+        answerB = "1988",
+        answerC = "1990",
+        answerD = "1994",
+        correctAnswer = 2,
+        explanation = "Nelson Mandela wurde am 11. Februar 1990 nach 27 Jahren Gefangenschaft auf Robben Island freigelassen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Welches Land wurde 1776 unabhängig?",
+        answerA = "Kanada",
+        answerB = "Australien",
+        answerC = "Mexiko",
+        answerD = "Die Vereinigten Staaten von Amerika",
+        correctAnswer = 3,
+        explanation = "Die Vereinigten Staaten erklärten am 4. Juli 1776 ihre Unabhängigkeit von Großbritannien.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war das Römische Reich?",
+        answerA = "Ein Stadtstaatenbund in Griechenland",
+        answerB = "Ein antikes Reich mit Zentrum in Rom, das große Teile Europas und des Mittelmeerraums beherrschte",
+        answerC = "Ein Handelsnetz im Mittelalter",
+        answerD = "Eine Monarchie, die von Konstantinopel aus regiert wurde",
+        correctAnswer = 1,
+        explanation = "Das Römische Reich war ein antikes Großreich, das auf dem Höhepunkt seiner Macht große Teile Europas, Nordafrikas und des Nahen Ostens umfasste.",
+        difficulty = 1,
+        funFact = "Das Weströmische Reich fiel 476 n. Chr., das Oströmische (Byzantinische) Reich bestand bis 1453."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Welche Krankheit wütete im 14. Jahrhundert als 'Schwarzer Tod' in Europa?",
+        answerA = "Cholera",
+        answerB = "Pocken",
+        answerC = "Pest",
+        answerD = "Typhus",
+        correctAnswer = 2,
+        explanation = "Der Schwarze Tod war eine Pestepidemie, die zwischen 1347 und 1353 schätzungsweise ein Drittel der europäischen Bevölkerung tötete.",
+        difficulty = 1,
+        funFact = "Die Pest wurde durch Flöhe auf Ratten übertragen und breitete sich entlang der Handelsrouten aus."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Wer war Adolf Hitler?",
+        answerA = "Ein österreichischer Kaiser im Ersten Weltkrieg",
+        answerB = "Der Diktator des nationalsozialistischen Deutschlands von 1933 bis 1945",
+        answerC = "Ein deutsches Militärgeneral im Ersten Weltkrieg",
+        answerD = "Der erste Präsident der Weimarer Republik",
+        correctAnswer = 1,
+        explanation = "Adolf Hitler war der Führer der NSDAP, der 1933 Reichskanzler wurde und Deutschland in eine totalitäre Diktatur verwandelte, die zum Zweiten Weltkrieg führte.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "In welchem Jahr fiel die Sowjetunion auseinander?",
+        answerA = "1989",
+        answerB = "1990",
+        answerC = "1991",
+        answerD = "1993",
+        correctAnswer = 2,
+        explanation = "Die Sowjetunion löste sich am 25. Dezember 1991 auf, als Michail Gorbatschow als Präsident zurücktrat.",
+        difficulty = 1,
+        funFact = "Aus der Sowjetunion entstanden 15 unabhängige Staaten, darunter Russland, Ukraine und die baltischen Staaten."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was ist der Kalte Krieg hauptsächlich?",
+        answerA = "Ein Krieg, der im Winter 1944/45 stattfand",
+        answerB = "Ein Krieg zwischen Russland und Finnland",
+        answerC = "Ein geopolitischer Konflikt zwischen den USA und der Sowjetunion",
+        answerD = "Ein Wirtschaftskrieg zwischen Europa und Asien",
+        correctAnswer = 2,
+        explanation = "Der Kalte Krieg war der ideologische und geopolitische Konflikt zwischen dem westlichen und dem östlichen Block, der von ca. 1947 bis 1991 dauerte.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Welcher deutschen Stadt gaben die Nazis ihren Nürnberger Parteitagen ihren Namen?",
+        answerA = "München",
+        answerB = "Frankfurt",
+        answerC = "Nürnberg",
+        answerD = "Stuttgart",
+        correctAnswer = 2,
+        explanation = "Die NSDAP hielt von 1933 bis 1938 jährliche Reichsparteitage in Nürnberg ab. Dort wurden 1935 auch die antisemitischen Nürnberger Gesetze verkündet.",
+        difficulty = 1,
+        funFact = "Die Nürnberger Reichsparteitage waren riesige Propagandainszenierungen — Leni Riefenstahls Film 'Triumph des Willens' dokumentierte den Parteitag 1934."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Wer erfand den Buchdruck mit beweglichen Lettern in Europa?",
+        answerA = "Leonardo da Vinci",
+        answerB = "Johannes Gutenberg",
+        answerC = "Albrecht Dürer",
+        answerD = "Roger Bacon",
+        correctAnswer = 1,
+        explanation = "Johannes Gutenberg erfand um 1450 den Buchdruck mit beweglichen Metalllettern und druckte damit die erste Gutenberg-Bibel.",
+        difficulty = 1,
+        funFact = "Gutenbergs Erfindung gilt als eine der wichtigsten der Menschheitsgeschichte — sie ermöglichte die Massenverbreitung von Wissen."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Wie lautete der Spitzname der deutschen Hyperinflation von 1923?",
+        answerA = "Die Große Depression",
+        answerB = "Der Geldtod",
+        answerC = "Die Inflationskatastrophe",
+        answerD = "Das Geldchaos",
+        correctAnswer = 2,
+        explanation = "Die deutsche Hyperinflation von 1923 war eine extreme Geldentwertung, bei der ein Brot zeitweise Milliarden Mark kostete.",
+        difficulty = 1,
+        funFact = "Auf dem Höhepunkt der Inflation brauchte man eine Schubkarre voll Geldscheine, um ein Brot zu kaufen."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Wann begann die Industrielle Revolution?",
+        answerA = "Mitte des 16. Jahrhunderts in Italien",
+        answerB = "Mitte des 18. Jahrhunderts in England",
+        answerC = "Anfang des 19. Jahrhunderts in Deutschland",
+        answerD = "Ende des 17. Jahrhunderts in Frankreich",
+        correctAnswer = 1,
+        explanation = "Die Industrielle Revolution begann in der zweiten Hälfte des 18. Jahrhunderts in England mit der Dampfmaschine und mechanischen Webstühlen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Welches Ereignis markierte das Ende des Mittelalters?",
+        answerA = "Die Entdeckung Amerikas 1492",
+        answerB = "Die Erfindung des Buchdrucks 1450",
+        answerC = "Der Fall Konstantinopels 1453",
+        answerD = "Die Reformation 1517",
+        correctAnswer = 0,
+        explanation = "Als historische Grenze zwischen Mittelalter und Neuzeit gilt häufig die Entdeckung Amerikas durch Kolumbus im Jahr 1492.",
+        difficulty = 1,
+        funFact = "Je nach Historiker wird auch der Fall Konstantinopels 1453 oder die Reformation 1517 als Ende des Mittelalters gesehen."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "In welchem Land begann der Erste Weltkrieg mit der Kriegserklärung?",
+        answerA = "Deutschland",
+        answerB = "Russland",
+        answerC = "Österreich-Ungarn",
+        answerD = "Serbien",
+        correctAnswer = 2,
+        explanation = "Österreich-Ungarn erklärte Serbien am 28. Juli 1914 den Krieg — die erste offizielle Kriegserklärung des Ersten Weltkriegs.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Wer war Martin Luther King Jr.?",
+        answerA = "Ein US-Präsident in den 1960ern",
+        answerB = "Ein Bürgerrechtler, der für die Gleichberechtigung afroamerikanischer US-Bürger kämpfte",
+        answerC = "Der erste schwarze Senator der USA",
+        answerD = "Ein protestantischer Pfarrer in Deutschland",
+        correctAnswer = 1,
+        explanation = "Martin Luther King Jr. war ein baptistischer Pastor und führender Bürgerrechtsaktivist, der mit gewaltlosen Mitteln für die Gleichberechtigung der Afroamerikaner kämpfte.",
+        difficulty = 1,
+        funFact = "Seine bekannteste Rede 'I Have a Dream' hielt er am 28. August 1963 bei einem Marsch auf Washington vor 250.000 Menschen."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was bedeutet der Begriff 'Holocaust'?",
+        answerA = "Der deutsche Überfall auf Polen",
+        answerB = "Der systematische Massenmord an sechs Millionen Juden durch das NS-Regime",
+        answerC = "Die Bombardierung deutscher Städte im Zweiten Weltkrieg",
+        answerD = "Die Vertreibung der Deutschen nach 1945",
+        correctAnswer = 1,
+        explanation = "Der Holocaust bezeichnet den systematischen, staatlich organisierten Massenmord an rund sechs Millionen europäischen Juden durch das nationalsozialistische Deutschland.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // --- NEW MEDIUM BATCH 2 (15 questions) ---
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die 'Blitzkrieg'-Strategie im Zweiten Weltkrieg?",
+        answerA = "Eine neue Taktik der deutschen Luftwaffe zur Bombardierung von Städten",
+        answerB = "Eine schnelle Kombinierung von Panzer, Infanterie und Luftwaffe für rasante Durchbrüche",
+        answerC = "Der deutsche Plan für einen Zweifrontenkrieg",
+        answerD = "Eine Strategie der totalen Zermürbung des Feindes durch Belagerung",
+        correctAnswer = 1,
+        explanation = "Der Blitzkrieg war eine Taktik des schnellen Krieges, bei der Panzer, motorisierte Infanterie und Luftunterstützung koordiniert für rasche Durchbrüche eingesetzt wurden.",
+        difficulty = 2,
+        funFact = "Der Begriff 'Blitzkrieg' wurde weniger von deutschen Militärs selbst als von ausländischen Beobachtern und Journalisten geprägt."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Welcher deutsche Kaiser löste durch seine aggressive Außenpolitik die Entente Cordiale mit aus?",
+        answerA = "Friedrich III.",
+        answerB = "Wilhelm I.",
+        answerC = "Wilhelm II.",
+        answerD = "Karl I.",
+        correctAnswer = 2,
+        explanation = "Kaiser Wilhelm II. betrieb eine aggressive Weltpolitik und rüstete die Marine auf, was Großbritannien und Frankreich 1904 zur Entente Cordiale trieb.",
+        difficulty = 2,
+        funFact = "Wilhelm II. war ein Enkel der britischen Königin Victoria — ein Beispiel für die paradoxen dynastischen Verbindungen im Ersten Weltkrieg."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war der 'Lend-Lease Act' der USA im Zweiten Weltkrieg?",
+        answerA = "Ein Gesetz, das US-Bürger zum Kriegsdienst verpflichtete",
+        answerB = "Ein Programm zur Lieferung von Kriegsmaterial an die Alliierten ohne direkte Bezahlung",
+        answerC = "Ein Friedensangebot der USA an Japan nach Pearl Harbor",
+        answerD = "Ein Abkommen zur gemeinsamen Nutzung von Atom-Technologie",
+        correctAnswer = 1,
+        explanation = "Der Lend-Lease Act (1941) erlaubte den USA, Kriegsmaterial an die Alliierten zu liefern, ohne formell am Krieg beteiligt zu sein.",
+        difficulty = 2,
+        funFact = "Die USA lieferten über den Lend-Lease über 50 Milliarden Dollar an Kriegsmaterial, davon ein Großteil an Großbritannien und die Sowjetunion."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die 'Kolonialisierung Australiens' durch Großbritannien?",
+        answerA = "Die Entdeckung Australiens durch Captain Cook 1770",
+        answerB = "Die Einrichtung einer Strafkolonie in Botany Bay ab 1788",
+        answerC = "Die Annexion Australiens als britische Kronkolonie 1837",
+        answerD = "Die Besiedlung Australiens durch irische Einwanderer im 19. Jahrhundert",
+        correctAnswer = 1,
+        explanation = "Großbritannien gründete 1788 eine Strafkolonie in New South Wales, wohin zunächst vor allem Strafgefangene deportiert wurden.",
+        difficulty = 2,
+        funFact = "Bis 1868 wurden insgesamt rund 162.000 Strafgefangene nach Australien deportiert."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Welche Bedeutung hatte die Erfindung des Schießpulvers für die Geschichte?",
+        answerA = "Es beendete den Einsatz von Rittern und veränderte die Kriegsführung grundlegend",
+        answerB = "Es ermöglichte erstmals den Bergbau im großen Stil",
+        answerC = "Es führte zur Entdeckung Amerikas durch verbesserte Schiffstechnik",
+        answerD = "Es löste die erste Industrialisierungswelle in Europa aus",
+        correctAnswer = 0,
+        explanation = "Das Schießpulver, in Europa ab dem 13./14. Jahrhundert verbreitet, machte Rüstungen und Burgen wirkungslos und veränderte die mittelalterliche Kriegsführung grundlegend.",
+        difficulty = 2,
+        funFact = "Schießpulver wurde zuerst in China erfunden und gelangte über die arabische Welt nach Europa."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war der 'Herero-Aufstand' von 1904 in Deutsch-Südwestafrika?",
+        answerA = "Ein anti-britischer Aufstand, den Deutschland unterstützte",
+        answerB = "Ein Aufstand der Herero und Nama gegen die deutsche Kolonialherrschaft, der zum ersten Völkermord des 20. Jahrhunderts führte",
+        answerC = "Ein Grenzkonflikt zwischen deutschen und britischen Kolonialgebieten",
+        answerD = "Ein Bergarbeiteraufstand in den deutschen Diamantenminen",
+        correctAnswer = 1,
+        explanation = "Der Herero-Aufstand (1904–1908) gegen die deutsche Kolonialherrschaft wurde brutal niedergeschlagen; schätzungsweise 80 % der Herero und 50 % der Nama wurden getötet.",
+        difficulty = 2,
+        funFact = "Deutschland erkannte den Völkermord an den Herero und Nama erst 2021 offiziell an — mehr als 100 Jahre nach den Ereignissen."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war der 'Pakt des Stahls' von 1939?",
+        answerA = "Ein deutsch-japanisches Bündnis gegen die Sowjetunion",
+        answerB = "Ein militärischer Beistandspakt zwischen Deutschland und Italien",
+        answerC = "Deutschlands Bündnis mit der Sowjetunion vor dem Überfall auf Polen",
+        answerD = "Ein Rüstungsabkommen zwischen Deutschland, Italien und Japan",
+        correctAnswer = 1,
+        explanation = "Der Pakt des Stahls (Mai 1939) war ein militärisches Bündnis zwischen Deutschland und Italien, das gegenseitige Unterstützung im Kriegsfall vorsah.",
+        difficulty = 2,
+        funFact = "Mussolini selbst gab dem Pakt seinen Namen — er wollte damit die Unerschütterlichkeit der Achse Berlin-Rom symbolisieren."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was bedeutete der Begriff 'Dekolonisierung' nach 1945?",
+        answerA = "Die Gründung neuer Kolonien durch die USA in Asien und Afrika",
+        answerB = "Der schrittweise Rückzug europäischer Kolonialmächte aus ihren überseeischen Gebieten",
+        answerC = "Die wirtschaftliche Entflechtung von Kolonien und Mutterländern",
+        answerD = "Die Aufteilung der deutschen Kolonien unter den Siegermächten nach 1918",
+        correctAnswer = 1,
+        explanation = "Als Dekolonisierung bezeichnet man den Prozess, durch den die europäischen Kolonialmächte nach dem Zweiten Weltkrieg schrittweise ihre Kolonien in die Unabhängigkeit entließen.",
+        difficulty = 2,
+        funFact = "1960 gilt als das 'Jahr Afrikas' — 17 afrikanische Länder erlangten in diesem Jahr ihre Unabhängigkeit."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war der 'Warschauer Pakt'?",
+        answerA = "Ein Friedensvertrag zwischen Polen und Deutschland nach dem Zweiten Weltkrieg",
+        answerB = "Ein Militärbündnis der osteuropäischen Staaten unter Führung der Sowjetunion",
+        answerC = "Ein Wirtschaftsbündnis der sozialistischen Staaten des Ostblocks",
+        answerD = "Willy Brandts Vertrag zur Anerkennung der Oder-Neiße-Grenze",
+        correctAnswer = 1,
+        explanation = "Der Warschauer Pakt (1955–1991) war das Militärbündnis der sozialistischen Ostblockstaaten unter sowjetischer Führung, das Gegenstück zur westlichen NATO.",
+        difficulty = 2,
+        funFact = "Der Warschauer Pakt wurde als Reaktion auf den NATO-Beitritt Westdeutschlands 1955 gegründet."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Welchen Beinamen trug Friedrich II. von Preußen?",
+        answerA = "Der Starke",
+        answerB = "Der Große",
+        answerC = "Der Weise",
+        answerD = "Der Gerechte",
+        correctAnswer = 1,
+        explanation = "Friedrich II. von Preußen (1712–1786) wird als Friedrich der Große bezeichnet und gilt als bedeutendster Vertreter des aufgeklärten Absolutismus.",
+        difficulty = 2,
+        funFact = "Friedrich der Große war selbst Komponist und Flötenvirtuose und korrespondierte mit Voltaire — er verkörperte den philosophischen König."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die 'Münchener Konferenz' von 1938?",
+        answerA = "Eine Konferenz zur Gründung der NATO",
+        answerB = "Ein Treffen von Hitler, Mussolini, Chamberlain und Daladier, das die Abtretung des Sudetenlandes besiegelte",
+        answerC = "Die Konferenz, auf der der Zweite Weltkrieg offiziell erklärt wurde",
+        answerD = "Eine Friedenskonferenz nach dem Spanischen Bürgerkrieg",
+        correctAnswer = 1,
+        explanation = "Auf der Münchener Konferenz (September 1938) stimmten Großbritannien und Frankreich der Abtretung des tschechoslowakischen Sudetenlandes an Deutschland zu.",
+        difficulty = 2,
+        funFact = "Die Tschechoslowakei selbst war nicht zur Konferenz eingeladen — ihre Aufspaltung wurde über ihren Kopf hinweg beschlossen."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war der 'Schlieffen-Plan' im Ersten Weltkrieg?",
+        answerA = "Deutschlands Plan für den Einsatz von U-Booten im Atlantik",
+        answerB = "Der deutsche Operationsplan zum raschen Sieg über Frankreich durch Belgien, bevor Russland mobilisieren konnte",
+        answerC = "Ein Verteidigungsplan für die Westfront",
+        answerD = "Der österreichische Plan für die Invasion Serbiens",
+        correctAnswer = 1,
+        explanation = "Der Schlieffen-Plan sah vor, Frankreich schnell durch einen Schwenk durch Belgien zu besiegen, bevor Russland vollständig mobilisiert war, und dann nach Osten zu wechseln.",
+        difficulty = 2,
+        funFact = "Das Scheitern des Schlieffenplans führte zum langen Stellungskrieg an der Westfront, der vier Jahre dauerte."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die 'Konquistadoren'-Bewegung?",
+        answerA = "Spanische und portugiesische Entdecker und Soldaten, die Amerika im 16. Jahrhundert eroberten",
+        answerB = "Eine arabische Handelsbewegung entlang der afrikanischen Küste",
+        answerC = "Portugiesische Seefahrer, die den Seeweg nach Indien fanden",
+        answerD = "Christliche Kreuzfahrer, die das Heilige Land zurückerobern wollten",
+        correctAnswer = 0,
+        explanation = "Die Konquistadoren waren spanische und portugiesische Soldaten und Abenteurer, die im 16. Jahrhundert die Hochkulturen Lateinamerikas (Azteken, Inka) eroberten.",
+        difficulty = 2,
+        funFact = "Hernán Cortés besiegte mit nur rund 500 Soldaten das Aztekenreich — maßgeblich dank einheimischer Verbündeter und eingeschleppter Krankheiten."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Welche Bedeutung hatte der 'Atatürk'-Titel Mustafa Kemals?",
+        answerA = "Er bedeutete 'Vater aller Muslime'",
+        answerB = "Er bedeutete 'Vater der Türken' und symbolisierte die Gründung der modernen Türkei",
+        answerC = "Er war ein osmanischer Ehrentitel für militärische Helden",
+        answerD = "Er bedeutete 'Erster unter Gleichen' im türkischen Parlament",
+        correctAnswer = 1,
+        explanation = "Mustafa Kemal erhielt 1934 den Ehrentitel 'Atatürk' (Vater der Türken), da er die moderne Türkei nach dem Zerfall des Osmanischen Reiches gegründet hatte.",
+        difficulty = 2,
+        funFact = "Atatürk modernisierte die Türkei radikal: Er ersetzte die arabische Schrift durch das lateinische Alphabet und schaffte das Sultanat und das Kalifat ab."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was bezeichnete man als 'Wirtschaftswunder' in der BRD?",
+        answerA = "Die Ölentdeckungen in der Nordsee in den 1970ern",
+        answerB = "Das rasche Wirtschaftswachstum der Bundesrepublik Deutschland in den 1950er und 60er Jahren",
+        answerC = "Die erfolgreiche Währungsreform von 1948",
+        answerD = "Den wirtschaftlichen Boom nach der Wiedervereinigung",
+        correctAnswer = 1,
+        explanation = "Das Wirtschaftswunder beschreibt den rasanten wirtschaftlichen Wiederaufbau und Aufschwung Westdeutschlands in den 1950er und 1960er Jahren.",
+        difficulty = 2,
+        funFact = "Westdeutschland erreichte bereits Mitte der 1950er Jahre wieder das Vorkriegsniveau des Bruttoinlandsprodukts."
+    ),
+
+    // --- NEW HARD BATCH 2 (23 questions) ---
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die 'Kaiserliche Flotte' und welche politische Kontroverse löste ihr Bau aus?",
+        answerA = "Die österreichische Kriegsflotte im Ersten Weltkrieg",
+        answerB = "Das Flottenbauprogramm Kaiser Wilhelms II., das das deutsch-britische Verhältnis belastete und das Wettrüsten beschleunigte",
+        answerC = "Die Reichsmarine der Weimarer Republik",
+        answerD = "Bismarcks Handelsmarine zur Sicherung der deutschen Kolonialinteressen",
+        correctAnswer = 1,
+        explanation = "Das deutsche Flottenbauprogramm unter Admiral Tirpitz (ab 1898) sollte Deutschland zur Seemacht machen, bedrohte aber britische Hegemonialinteressen und trieb England in die Entente.",
+        difficulty = 3,
+        funFact = "Die deutschen Schlachtschiffe wurden fast nie eingesetzt — ihre bloße Existenz war die strategische Bedrohung, nicht ihr Einsatz."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die 'Nansen-Pass'-Initiative nach dem Ersten Weltkrieg?",
+        answerA = "Ein norwegisches Programm zur Aufnahme von Kriegsflüchtlingen",
+        answerB = "Ein internationaler Reisepass für Staatenlose und Flüchtlinge, eingeführt vom Völkerbund",
+        answerC = "Ein diplomatisches Abkommen Norwegens mit Russland",
+        answerD = "Ein Vertrag zur Öffnung der arktischen Handelsrouten",
+        correctAnswer = 1,
+        explanation = "Der Nansen-Pass war ein 1922 eingeführtes internationales Dokument für Staatenlose, benannt nach dem norwegischen Polarforscher und Flüchtlingshochkommissar Fridtjof Nansen.",
+        difficulty = 3,
+        funFact = "Fridtjof Nansen erhielt 1922 den Friedensnobelpreis für seine humanitären Bemühungen um Kriegsgefangene und Flüchtlinge."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war das 'Septemberprogramm' von 1914 in Deutschland?",
+        answerA = "Der deutsche Mobilmachungsplan für den Herbst 1914",
+        answerB = "Reichskanzler Bethmann Hollwegs Kriegszielprogramm mit weitreichenden Annexionsplänen in Europa und Afrika",
+        answerC = "Deutschlands erster Friedensvorschlag nach der Marneschlacht",
+        answerD = "Der Plan für die Winteroffensive an der Ostfront 1914",
+        correctAnswer = 1,
+        explanation = "Das Septemberprogramm (September 1914) enthielt weitreichende deutsche Kriegsziele: Annexionen in Frankreich, Belgien und Afrika sowie wirtschaftliche Dominanz in Europa.",
+        difficulty = 3,
+        funFact = "Das Programm zeigt, dass Deutschland im Ersten Weltkrieg imperialistische Expansionsziele verfolgte — ein wichtiges Argument in der Fischer-Kontroverse."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die 'Fischer-Kontroverse' in der deutschen Geschichtswissenschaft?",
+        answerA = "Ein Streit über die Ursachen der Weltwirtschaftskrise 1929 und Deutschlands Mitverantwortung",
+        answerB = "Fritz Fischers These, Deutschland trage die Hauptverantwortung für den Ausbruch des Ersten Weltkriegs durch aktives Anstreben",
+        answerC = "Eine Debatte über Deutschlands Verantwortung für den Zweiten Weltkrieg",
+        answerD = "Ein Historikerstreit über die Echtheit von Bismarcks Tagebüchern",
+        correctAnswer = 1,
+        explanation = "Fritz Fischer legte 1961 in 'Griff nach der Weltmacht' dar, Deutschland habe den Ersten Weltkrieg aktiv herbeigeführt und weitreichende Expansionsziele verfolgt — eine bis dahin tabuisierte These.",
+        difficulty = 3,
+        funFact = "Die Fischer-Kontroverse erschütterte das deutsche Geschichtsbild und führte zu einer fundamentalen Neubeurteilung der deutschen Kriegsschuld am Ersten Weltkrieg."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was bezeichnete man als 'Stunde Null' in Deutschland 1945?",
+        answerA = "Den Moment der deutschen Kapitulation um Mitternacht am 8. Mai 1945",
+        answerB = "Den symbolischen Neuanfang Deutschlands nach dem totalen Zusammenbruch des NS-Regimes",
+        answerC = "Die erste Sitzung des Parlamentarischen Rates 1948",
+        answerD = "Den Beginn der Währungsreform und der Deutschen Mark 1948",
+        correctAnswer = 1,
+        explanation = "Die 'Stunde Null' bezeichnet den Neuanfang Deutschlands nach der totalen Kapitulation 1945 — ein Begriff, der zugleich den Bruch mit der NS-Vergangenheit symbolisieren sollte.",
+        difficulty = 3,
+        funFact = "Historiker kritisieren den Begriff, weil er eine vollständige Erneuerung suggeriert, die tatsächlich nicht stattfand — viele NS-Täter lebten unbehelligt weiter."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war das 'Grundlagenvertrag' von 1972 zwischen BRD und DDR?",
+        answerA = "Ein Wirtschaftsvertrag über innerdeutschen Handel",
+        answerB = "Ein Abkommen, in dem sich BRD und DDR gegenseitig als Staaten anerkannten und normale Beziehungen aufnahmen",
+        answerC = "Der Vertrag über die Berlin-Frage und Transitrechte",
+        answerD = "Ein Abkommen über die Reisefreiheit für DDR-Bürger",
+        correctAnswer = 1,
+        explanation = "Der Grundlagenvertrag (Dezember 1972) normalisierte die Beziehungen zwischen BRD und DDR — ohne volle diplomatische Anerkennung — und war ein Kernelement der Ostpolitik.",
+        difficulty = 3,
+        funFact = "Beide Staaten wurden 1973 gleichzeitig in die UNO aufgenommen — ein Symbol der neuen politischen Normalität."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was verstand man unter 'Euthanasie' im Sprachgebrauch des NS-Regimes?",
+        answerA = "Den Tod im Kampf für das Vaterland",
+        answerB = "Das Programm zur Ermordung von Menschen mit körperlichen oder geistigen Behinderungen, verhüllend als 'Gnadentod' bezeichnet",
+        answerC = "Die freiwillige Sterbehilfe, die im Dritten Reich gefördert wurde",
+        answerD = "Die Vernichtung politischer Gegner durch das Regime",
+        correctAnswer = 1,
+        explanation = "Das NS-Regime bezeichnete die Ermordung von Menschen mit Behinderungen euphemistisch als 'Euthanasie' (griech.: schöner Tod), obwohl die Opfer keinerlei Zustimmung gaben.",
+        difficulty = 3,
+        funFact = "Kirchlicher Widerstand — u.a. von Bischof Clemens August Graf von Galen — zwang das Regime 1941, das Programm offiziell einzustellen."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die 'Bizone' und die 'Trizone' nach dem Zweiten Weltkrieg?",
+        answerA = "Die drei getrennt verwalteten Sektoren Berlins unter alliierter Kontrolle",
+        answerB = "Die schrittweise Zusammenlegung der westlichen Besatzungszonen Deutschlands, die letztlich zur BRD führte",
+        answerC = "Eine Unterteilung Ostdeutschlands in sowjetische Verwaltungsbezirke",
+        answerD = "Die drei Wirtschaftsregionen des Ruhrgebiets unter alliierter Kontrolle",
+        correctAnswer = 1,
+        explanation = "Die Bizone entstand 1947 durch Zusammenlegung der US-amerikanischen und britischen Zone, die Trizone 1948 durch Einbeziehung der französischen Zone — Vorstufe zur Bundesrepublik 1949.",
+        difficulty = 3,
+        funFact = "Die Zusammenlegung der Westzonen war ein direktes Signal an die Sowjetunion, die im Gegenzug die Berlin-Blockade (1948/49) verhängte."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war das 'Ermächtigungsgesetz' vom März 1933?",
+        answerA = "Das Gesetz, das die SA als staatliche Polizeitruppe legalisierte",
+        answerB = "Ein Gesetz, das dem Reichstag alle Macht enteignete und Hitler ermöglichte, ohne Parlament zu regieren",
+        answerC = "Hindenburgs Erlass, der die NSDAP zur einzigen legalen Partei machte",
+        answerD = "Das Gesetz, das die Verfassung der Weimarer Republik außer Kraft setzte",
+        correctAnswer = 1,
+        explanation = "Das Ermächtigungsgesetz (23. März 1933) übertrug der Reichsregierung die Gesetzgebungsgewalt und entzog dem Parlament seine Macht — die formale Grundlage der NS-Diktatur.",
+        difficulty = 3,
+        funFact = "Nur die SPD stimmte geschlossen gegen das Ermächtigungsgesetz. SPD-Fraktionschef Otto Wels hielt dabei eine mutige Rede — trotz SA-Männer im Saal."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war der 'Dreikaiserbund' (1873/1881) in der Bismarck-Ära?",
+        answerA = "Ein Militärbündnis zwischen Deutschland, Österreich-Ungarn und Russland gegen Frankreich",
+        answerB = "Ein Konsultationsbündnis zwischen Deutschland, Österreich-Ungarn und Russland zur Wahrung der konservativen Ordnung",
+        answerC = "Ein Verteidigungspakt der drei Kaiserreiche gegen britische Seemacht",
+        answerD = "Eine dynastische Allianz der Hohenzollern, Habsburger und Romanows durch Heiratspolitik",
+        correctAnswer = 1,
+        explanation = "Der Dreikaiserbund war Bismarcks diplomatisches Instrument, um Russland, Österreich und Deutschland zusammenzuhalten und Frankreich diplomatisch zu isolieren.",
+        difficulty = 3,
+        funFact = "Der Bund scheiterte letztlich am russisch-österreichischen Gegensatz auf dem Balkan — Bismarck musste dann auf den Rückversicherungsvertrag mit Russland allein ausweichen."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was waren die 'Nürnberger Rassengesetze' von 1935?",
+        answerA = "Gesetze zur eugenischen Sterilisation von 'Erbkranken'",
+        answerB = "Zwei Gesetze, die Juden die Staatsbürgerschaft entzogen und Ehen zwischen Juden und Nichtjuden verboten",
+        answerC = "Gesetze zur Regelung der Arbeit ausländischer Arbeitskräfte im Dritten Reich",
+        answerD = "Gesetze zum Schutz der deutschen Sprache und Kultur vor ausländischen Einflüssen",
+        correctAnswer = 1,
+        explanation = "Die Nürnberger Gesetze (1935) — Reichsbürgergesetz und Blutschutzgesetz — entzogen Juden die Staatsbürgerschaft und kriminalisierten Beziehungen zwischen Juden und Nichtjuden.",
+        difficulty = 3,
+        funFact = "Die Gesetze wurden auf dem Reichsparteitag in Nürnberg verkündet und bildeten die gesetzliche Grundlage für die systematische Ausgrenzung der jüdischen Bevölkerung."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die 'Hoare-Laval-Affäre' von 1935?",
+        answerA = "Ein britisch-französisches Geheimabkommen, das Mussolinis Abessinien-Invasion billigte und einen Skandal auslöste",
+        answerB = "Ein Wirtschaftsabkommen zwischen Großbritannien und Frankreich über Kolonialgebiete",
+        answerC = "Ein gescheiterter Versuch, Deutschland durch wirtschaftliche Zusammenarbeit zu besänftigen",
+        answerD = "Eine britisch-französische Initiative zur Gründung eines gemeinsamen Kommandos",
+        correctAnswer = 0,
+        explanation = "Der Hoare-Laval-Plan (1935) sah vor, Mussolinis Invasion in Abessinien durch territoriale Zugeständnisse zu belohnen. Der Skandal zwang beide Außenminister zum Rücktritt.",
+        difficulty = 3,
+        funFact = "Die Affäre zeigte die Grenzen der kollektiven Sicherheit durch den Völkerbund und stärkte letztlich Hitlers Verachtung für die westlichen Demokratien."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war der 'Mao-Sprung nach vorn' in China (1958–62)?",
+        answerA = "Maos militärische Kampagne zur Befreiung Taiwans",
+        answerB = "Ein chinesisches Raketenprogramm als Reaktion auf den Sputnik-Schock",
+        answerC = "Maos radikales Industrialisierungs- und Kollektivierungsprogramm, das eine verheerende Hungersnot verursachte",
+        answerD = "Eine kulturelle Reformbewegung zur Modernisierung der chinesischen Gesellschaft",
+        correctAnswer = 2,
+        explanation = "Der 'Große Sprung nach vorn' war Maos Versuch, China durch erzwungene Kollektivierung und Industrialisierung zu modernisieren. Er führte zur größten Hungersnot des 20. Jahrhunderts mit 15–55 Millionen Toten.",
+        difficulty = 3,
+        funFact = "Viele Bauern wurden gezwungen, ihre Kochtöpfe einzuschmelzen für Stahl — während die Ernte auf den Feldern verfaulte."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die 'Entscheidungsschlacht' bei Stalingrad und welche Wendung brachte sie?",
+        answerA = "Sie war die erste bedeutende deutsche Niederlage an der Ostfront und markierte die strategische Wende des Krieges",
+        answerB = "Sie entschied den gesamten Zweiten Weltkrieg zu Gunsten der Alliierten durch den Eintritt der USA",
+        answerC = "Sie war die größte Tankschlacht des Zweiten Weltkriegs und beendete den deutschen Vormarsch",
+        answerD = "Sie führte direkt zur bedingungslosen Kapitulation Deutschlands",
+        correctAnswer = 0,
+        explanation = "Die Kesselschlacht von Stalingrad (1942/43) endete mit der Vernichtung der deutschen 6. Armee und gilt als Wendepunkt des Zweiten Weltkriegs an der Ostfront.",
+        difficulty = 3,
+        funFact = "Von den rund 300.000 eingeschlossenen deutschen Soldaten überlebten nur etwa 6.000 die sowjetische Kriegsgefangenschaft."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die 'Konferenz von Jalta' 1945 und welche Auswirkungen hatte sie?",
+        answerA = "Sie bestimmte die Kriegsstrategie der Alliierten für die letzten Kriegsmonate und legte die Nachkriegsordnung in Europa fest",
+        answerB = "Sie beschloss die bedingungslose Kapitulation Deutschlands und die Einsetzung eines alliierten Kontrollrats",
+        answerC = "Sie verhandelte die Friedensbedingungen für Japan nach dem Krieg",
+        answerD = "Sie gründete die Vereinten Nationen und bestimmte deren Satzung",
+        correctAnswer = 0,
+        explanation = "Auf der Konferenz von Jalta (Februar 1945) einigten sich Roosevelt, Churchill und Stalin auf die Grundzüge der Nachkriegsordnung: Besatzungszonen, Reparationen und freie Wahlen in Osteuropa.",
+        difficulty = 3,
+        funFact = "Die Zusicherung freier Wahlen in Osteuropa wurde von Stalin niemals eingehalten — Jalta gilt für viele Osteuropäer als 'Verrat des Westens'."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die 'Dreyfus-Affäre' in Frankreich und welche gesellschaftliche Bedeutung hatte sie?",
+        answerA = "Eine politische Krise in Frankreich, ausgelöst durch die fälschliche Verurteilung eines jüdischen Offiziers wegen Spionage",
+        answerB = "Ein Skandal um ein britisches Spionagenetz in der französischen Armee",
+        answerC = "Ein Korruptionsskandal in der Dritten Französischen Republik",
+        answerD = "Eine republikanische Revolte gegen den Einfluss der katholischen Kirche auf die Justiz",
+        correctAnswer = 0,
+        explanation = "Alfred Dreyfus, ein jüdischer Hauptmann, wurde 1894 fälschlich des Hochverrats verurteilt. Die Affäre spaltete Frankreich und wurde zum Symbol des modernen Antisemitismus.",
+        difficulty = 3,
+        funFact = "Der Journalist Émile Zola schrieb den offenen Brief 'J'accuse!' (Ich klage an!) und prangerte damit die antisemitische Justizmanipulation öffentlich an."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die 'Zimmerwalder Bewegung' (1915)?",
+        answerA = "Eine Schweizer Initiative zur Vermittlung im Ersten Weltkrieg",
+        answerB = "Ein internationales Treffen sozialistischer Parteien, die den Krieg ablehnten und für Frieden eintraten",
+        answerC = "Eine pazifistische Bewegung in der Schweiz gegen die Waffenexporte",
+        answerD = "Eine Zusammenkunft europäischer Sozialisten zur Gründung der Komintern",
+        correctAnswer = 1,
+        explanation = "Die Zimmerwalder Konferenz (September 1915) versammelte internationale Sozialisten, die gegen den Krieg eintraten — im Gegensatz zur Mehrheit der sozialistischen Parteien, die ihre Regierungen unterstützten.",
+        difficulty = 3,
+        funFact = "Lenin formulierte auf der Konferenz die Parole 'Den imperialistischen Krieg in den Bürgerkrieg verwandeln' — ein Vorläufer der Russischen Revolution."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war der 'Juliusturm' im Deutschen Kaiserreich?",
+        answerA = "Bismarcks geheimes Archiv für diplomatische Korrespondenz in der Wilhelmstraße",
+        answerB = "Ein preußischer Kriegsschatz aus Reparationsgeldern von 1871, der als eiserne Reserve im Berliner Schloss aufbewahrt wurde",
+        answerC = "Das Finanzministerium des Deutschen Reiches unter Wilhelm II.",
+        answerD = "Ein geheimer Fonds zur Finanzierung der deutschen Flottenrüstung",
+        correctAnswer = 1,
+        explanation = "Der Juliusturm war ein Kriegsschatz von 120 Millionen Goldmark aus den französischen Kriegsentschädigungen von 1871, der im Berliner Juliusturm als Reserve für den nächsten Krieg gelagert wurde.",
+        difficulty = 3,
+        funFact = "Der Juliusturm wurde im Ersten Weltkrieg aufgebraucht — als Reserve hatte er nur 14 Tage Kriegskosten gedeckt."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was verstand man unter 'Volksdeutsche' im NS-Sprachgebrauch?",
+        answerA = "Deutsche Staatsbürger ohne jüdische Vorfahren, die als 'arisch' galten",
+        answerB = "Deutsch-ethnische Bevölkerungsgruppen im Ausland, die das NS-Regime als Teil des deutschen Volkes betrachtete",
+        answerC = "NSDAP-Mitglieder aus dem einfachen Volk im Gegensatz zur Parteielite",
+        answerD = "Deutschstämmige Einwanderer, die in der Weimarer Republik eingebürgert worden waren",
+        correctAnswer = 1,
+        explanation = "Als 'Volksdeutsche' bezeichnete das NS-Regime deutsch-ethnische Minderheiten in Osteuropa (Sudetenland, Polen, Baltikum etc.), die als Teil des deutschen 'Volkes' galten.",
+        difficulty = 3,
+        funFact = "Das Konzept der Volksdeutschen diente als Rechtfertigung für die Expansion ins östliche Europa und die Vertreibung anderer Bevölkerungsgruppen."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war die 'Bücherbücherverbrennung' vom Mai 1933 in Deutschland?",
+        answerA = "Eine spontane Aktion von SA-Männern gegen jüdische Verlage",
+        answerB = "Eine organisierte NS-Aktion, bei der Werke 'undeutscher' Autoren öffentlich verbrannt wurden",
+        answerC = "Eine Kampagne zur Zensur der deutschen Presse durch das Propagandaministerium",
+        answerD = "Die Schließung der Berliner Staatsbibliothek und Einzug 'entarteter' Bücher",
+        correctAnswer = 1,
+        explanation = "Am 10. Mai 1933 verbrannten NS-Studenten auf Universitätsplätzen in ganz Deutschland Bücher von als 'undeutsch' eingestuften Autoren, darunter Heine, Marx und Freud.",
+        difficulty = 3,
+        funFact = "Heinrich Heine schrieb bereits 1820 prophetisch: 'Dort wo man Bücher verbrennt, verbrennt man auch am Ende Menschen.'"
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war der 'Imperialismus' im historischen Sinne des 19. und frühen 20. Jahrhunderts?",
+        answerA = "Die Herrschaft des Kaisers über das deutsche Militär",
+        answerB = "Das Streben europäischer Großmächte nach globaler Ausdehnung durch Kolonisierung und wirtschaftliche Kontrolle",
+        answerC = "Die politische Bewegung zur Wiederherstellung der Monarchien nach Napoleon",
+        answerD = "Der Einfluss des Papsttums auf die europäische Politik im Mittelalter",
+        correctAnswer = 1,
+        explanation = "Imperialismus bezeichnet die Ausdehnung staatlicher Macht durch politische, militärische und wirtschaftliche Kontrolle über andere Völker und Territorien, die im 19. Jahrhundert ihren Höhepunkt erreichte.",
+        difficulty = 3,
+        funFact = "Auf dem Höhepunkt des Imperialismus um 1914 kontrollierten europäische Mächte rund 85 % der Erdoberfläche."
+    ),
+
+    Question(
+        categoryId = 3,
+        questionText = "Was war der '20. Juli 1944' in der deutschen Geschichte?",
+        answerA = "Der Tag der alliierten Befreiung von Paris",
+        answerB = "Das gescheiterte Attentat von Claus Schenk Graf von Stauffenberg auf Adolf Hitler",
+        answerC = "Die erste alliierte Offensive nach der Normandie-Landung",
+        answerD = "Die Unterzeichnung des Waffenstillstands in Rumänien",
+        correctAnswer = 1,
+        explanation = "Am 20. Juli 1944 detonierte eine von Stauffenberg platzierte Bombe im Führerhauptquartier Wolfsschanze, verfehlte Hitler jedoch schwer zu verletzen. Der Aufstand scheiterte.",
+        difficulty = 3,
+        funFact = "Über 200 Beteiligte und Verdächtige wurden hingerichtet — viele in besonders grausamer Weise. Das Attentat gilt heute als zentrales Symbol des deutschen Widerstands."
     )
 )
