@@ -65,6 +65,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.quizverse.app.QuizVerseApp
 import com.quizverse.app.data.repository.QuizRepository
+import com.quizverse.app.ui.components.CategoryBackground
 import com.quizverse.app.ui.navigation.Screen
 import com.quizverse.app.util.Constants
 import com.quizverse.app.viewmodel.QuizViewModel
@@ -212,6 +213,8 @@ fun QuizScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // Category-specific animated background
+            CategoryBackground(categoryId)
             when {
                 // ── Loading ──────────────────────────────────────────────────
                 uiState.isLoading -> LoadingContent()

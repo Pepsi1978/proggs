@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.quizverse.app.ui.components.CategoryBackground
 import com.quizverse.app.ui.navigation.Screen
 
 // Difficulty levels: value, German label, color indicator, emoji
@@ -117,86 +118,93 @@ fun DifficultyScreen(categoryId: Int, navController: NavHostController) {
             )
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp)
-                .verticalScroll(rememberScrollState())
-                .alpha(contentAlpha.value),
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Wähle deinen Schwierigkeitsgrad",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Je höher, desto kniffliger die Fragen",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Difficulty selection buttons with color indicator dots
-            difficultyLevels.forEach { level ->
-                DifficultyButton(
-                    level = level,
-                    isSelected = selectedDifficulty == level.value,
-                    onClick = { selectedDifficulty = level.value }
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                text = "Anzahl der Fragen",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Question count chips with animated selection
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Category-specific animated background
+            CategoryBackground(categoryId)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp)
+                    .verticalScroll(rememberScrollState())
+                    .alpha(contentAlpha.value),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                questionCounts.forEach { count ->
-                    QuestionCountChip(
-                        count = count,
-                        isSelected = selectedCount == count,
-                        onClick = { selectedCount = count }
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "Wähle deinen Schwierigkeitsgrad",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Je höher, desto kniffliger die Fragen",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Difficulty selection buttons with color indicator dots
+                difficultyLevels.forEach { level ->
+                    DifficultyButton(
+                        level = level,
+                        isSelected = selectedDifficulty == level.value,
+                        onClick = { selectedDifficulty = level.value }
                     )
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
-            }
 
-            Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
-            // Start button with gradient background and pulse animation
-            PulsingStartButton(
-                onClick = {
-                    navController.navigate(
-                        Screen.Quiz.createRoute(
-                            categoryId = categoryId,
-                            difficulty = selectedDifficulty,
-                            questionCount = selectedCount
+                Text(
+                    text = "Anzahl der Fragen",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Question count chips with animated selection
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    questionCounts.forEach { count ->
+                        QuestionCountChip(
+                            count = count,
+                            isSelected = selectedCount == count,
+                            onClick = { selectedCount = count }
                         )
-                    )
+                    }
                 }
-            )
 
-            Spacer(modifier = Modifier.height(32.dp))
-        }
+                Spacer(modifier = Modifier.height(48.dp))
+
+                // Start button with gradient background and pulse animation
+                PulsingStartButton(
+                    onClick = {
+                        navController.navigate(
+                            Screen.Quiz.createRoute(
+                                categoryId = categoryId,
+                                difficulty = selectedDifficulty,
+                                questionCount = selectedCount
+                            )
+                        )
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        } // end Box
     }
 }
 
