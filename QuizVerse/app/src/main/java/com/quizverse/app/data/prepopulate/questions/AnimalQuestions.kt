@@ -1318,5 +1318,856 @@ fun animalQuestions(): List<Question> = listOf(
         explanation = "Müller'sche Körper sind eiweißreiche Strukturen an bestimmten Pflanzen (z.B. Cecropia), die als Nahrung für Schutzameisen dienen. Die Ameisen verteidigen im Gegenzug die Pflanze vor Herbivoren.",
         difficulty = 3,
         funFact = "Diese Wechselbeziehung ist ein klassisches Beispiel für Mutualismus – beide Partner profitieren voneinander."
+    ),
+
+    // ── NEW MEDIUM BATCH 2 (difficulty = 2) ── 15 questions ──────────────────
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier schläft stehend und kann dabei tatsächlich einnicken?",
+        answerA = "Elefant",
+        answerB = "Pferd",
+        answerC = "Giraffe",
+        answerD = "Nilpferd",
+        correctAnswer = 1,
+        explanation = "Pferde können im Stehen dösen, weil ein spezielles Sehnen-Bänder-System (Schlafstellung) ihre Gelenke blockiert. Für den Tiefschlaf legen sie sich jedoch hin.",
+        difficulty = 2,
+        funFact = "Pferde liegen pro Tag nur etwa 2–3 Stunden – zu langes Liegen wäre für ihre Muskeln schädlich."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Wie nennt man das Phänomen, wenn Vögel in einer V-Formation fliegen?",
+        answerA = "Synchronflug",
+        answerB = "Aerodinamischer Gruppenflug",
+        answerC = "Windschatten-Formation",
+        answerD = "Aerodynamischer Auftriebseffekt (Formationsflug)",
+        correctAnswer = 3,
+        explanation = "In V-Formation nutzen Vögel den Auftriebswirbel des Vordervogels. Jeder nachfolgende Vogel spart so bis zu 20% Energie. Die Tiere wechseln regelmäßig die Spitzenposition.",
+        difficulty = 2,
+        funFact = "Zugvögel können in V-Formation Strecken zurücklegen, die ohne Formation physisch unmöglich wären."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier hat keine Stimmbänder und kommuniziert dennoch durch Lautgebung?",
+        answerA = "Giraffe",
+        answerB = "Krokodil",
+        answerC = "Schlange",
+        answerD = "Schildkröte",
+        correctAnswer = 2,
+        explanation = "Schlangen haben keine Stimmbänder, erzeugen aber durch Zischen Laute – indem sie Luft durch die Glottis (Stimmritze) pressen. Das Zischen dient der Abschreckung.",
+        difficulty = 2,
+        funFact = "Giraffen galten lange als stumm, kommunizieren aber tatsächlich durch Infraschall unter 20 Hz."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was fressen erwachsene Schmetterlinge hauptsächlich?",
+        answerA = "Blätter",
+        answerB = "Blütenstaub (Pollen)",
+        answerC = "Nektar",
+        answerD = "Insekten",
+        correctAnswer = 2,
+        explanation = "Erwachsene Schmetterlinge ernähren sich hauptsächlich von Nektar, den sie mit ihrem Saugrüssel (Proboscis) aus Blüten aufnehmen. Einige Arten trinken auch Baumsäfte oder fressen faulende Früchte.",
+        difficulty = 2,
+        funFact = "Schmetterlinge schmecken mit ihren Füßen – auf den Fußsohlen sitzen Geschmacksrezeptoren."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier hat ein natürliches Sonar, das so präzise ist, dass es Fische unter Sand aufspüren kann?",
+        answerA = "Delfin",
+        answerB = "Zitterrochen",
+        answerC = "Großer Weißer Hai",
+        answerD = "Tümmler",
+        correctAnswer = 0,
+        explanation = "Delfine nutzen ihr Echolokations-Sonar so präzise, dass sie vergrabene Beute im Meeresboden aufspüren können. Das Melonenorgan im Kopf bündelt die Ultraschallwellen.",
+        difficulty = 2,
+        funFact = "Die Echolokation von Delfinen kann sogar den Knochenaufbau von Fischen erkennen – ähnlich wie ein Ultraschallgerät."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier ist der einzige Wirbellose, dem Selbsterkennung im Spiegel nachgewiesen wurde?",
+        answerA = "Tintenfisch",
+        answerB = "Krake",
+        answerC = "Putzerlippfisch (Labroides dimidiatus)",
+        answerD = "Hornisse",
+        correctAnswer = 2,
+        explanation = "Der Putzerlippfisch bestand den Spiegeltest – er erkannte Markierungen an seinem eigenen Körper und versuchte, sie zu entfernen. Damit ist er der erste bekannte Fisch mit Selbstwahrnehmung.",
+        difficulty = 2,
+        funFact = "Der Spiegeltest gilt als Hinweis auf Selbstbewusstsein. Ihn bestehen sonst nur Schimpansen, Gorillas, Delfine, Elefanten und Elstern."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Wie lange kann ein Kamel ohne Wasser überleben?",
+        answerA = "3 Tage",
+        answerB = "1 Woche",
+        answerC = "Bis zu 2 Wochen",
+        answerD = "Bis zu einem Monat",
+        correctAnswer = 2,
+        explanation = "Kamele können je nach Bedingungen bis zu zwei Wochen ohne Wasser überleben. Sie speichern Fett (nicht Wasser) im Höcker und können ihren Wasserverlust extrem reduzieren.",
+        difficulty = 2,
+        funFact = "Ein dürstiges Kamel kann auf einmal bis zu 200 Liter Wasser trinken – innerhalb weniger Minuten."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welche Eigenschaft macht den Axolotl (Ambystoma mexicanum) biologisch besonders?",
+        answerA = "Er kann Farbe wechseln wie ein Chamäleon",
+        answerB = "Er bleibt zeitlebens im Larvenstadium (Neotenie)",
+        answerC = "Er ist das einzige Amphibium mit warmem Blut",
+        answerD = "Er lebt ausschließlich von Licht durch Photosynthese-Symbionten",
+        correctAnswer = 1,
+        explanation = "Der Axolotl zeigt Neotenie: Er behält zeitlebens Larvenmerkmale (äußere Kiemen, Flossensaum) und wird geschlechtsreif, ohne sich in eine adulte Form zu verwandeln.",
+        difficulty = 2,
+        funFact = "Axolotl können verlorene Gliedmaßen, Teile des Herzens und sogar Gehirngewebe vollständig regenerieren."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier hat das stärkste Gebiss im Verhältnis zur Körpergröße?",
+        answerA = "Krokodil",
+        answerB = "Hyäne",
+        answerC = "Flossenbär (Pterois)",
+        answerD = "Wüstenameise (Myrmecia)",
+        correctAnswer = 1,
+        explanation = "Die gefleckte Hyäne hat mit bis zu 11.000 Newton Beißkraft das stärkste Gebiss im Verhältnis zu ihrer Körpergröße unter den Säugetieren. Sie kann Knochen zermalmen, die für andere Raubtiere unzugänglich sind.",
+        difficulty = 2,
+        funFact = "Hyänen verdauen selbst Knochen vollständig – ihr Kot ist durch das Kalzium kreideweiss."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welcher Vogel ist für seinen außergewöhnlichen Schwanz bekannt, der bis zu 1 Meter lang sein kann?",
+        answerA = "Paradiesvogel",
+        answerB = "Pfau",
+        answerC = "Fasane",
+        answerD = "Quetzal",
+        correctAnswer = 1,
+        explanation = "Das Rad des Pfaus ist kein eigentlicher Schwanz, sondern verlängerte Oberschwanzdeckfedern. Diese können über 1,5 m lang werden und werden zur Balz aufgefächert.",
+        difficulty = 2,
+        funFact = "Nur männliche Pfauen haben das prächtige Rad. Das Weibchen (Pfauenhenne) ist unscheinbar braun gefärbt."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was ist das Besondere an den Augen der Tintenfische (Cephalopoden)?",
+        answerA = "Sie haben keine Augen und orientieren sich durch Echolokation",
+        answerB = "Ihre Augen haben keine blinde Stelle und entstand unabhängig vom Wirbeltierauge",
+        answerC = "Sie können nur Schwarzweiß sehen",
+        answerD = "Sie haben Facettenaugen wie Insekten",
+        correctAnswer = 1,
+        explanation = "Das Tintenfischauge ist ein Paradebeispiel für konvergente Evolution: Es ist dem Wirbelstierauge ähnlich aufgebaut, entstand aber unabhängig und hat im Gegensatz zu Wirbeltieraugen keinen blinden Fleck.",
+        difficulty = 2,
+        funFact = "Tintenfische sind farbenblind, nutzen aber die Polarisation des Lichts, um Farben indirekt wahrzunehmen."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier benutzt Steine als Werkzeug, um Muscheln zu öffnen?",
+        answerA = "Seeotter",
+        answerB = "Pinguin",
+        answerC = "Meeresschildkröte",
+        answerD = "Robbe",
+        correctAnswer = 0,
+        explanation = "Seeotter legen beim Schwimmen auf dem Rücken einen flachen Stein auf ihren Bauch und schlagen Muscheln und Seeigel daran auf. Sie tragen bevorzugte Werkzeugsteine in Hautfalten mit sich.",
+        difficulty = 2,
+        funFact = "Seeotter sind eines der wenigen Tiere, die Werkzeuge verwenden. Sie halten sich auch beim Schlafen mit anderen Ottern an den Pfoten fest, um nicht davonzutreiben."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welche Katzenart kann als einzige große Katze brüllen UND schnurren?",
+        answerA = "Leopard",
+        answerB = "Keine – Katzen können entweder brüllen oder schnurren, nicht beides",
+        answerC = "Schnee-Leopard",
+        answerD = "Puma",
+        correctAnswer = 2,
+        explanation = "Der Schneeleopard kann als einzige der Großkatzen weder brüllen noch schnurren wie Hauskatzen – er macht ein eigentümliches Puffgeräusch. Alle anderen Großkatzen (Löwe, Tiger, Leopard, Jaguar) brüllen, können aber nicht schnurren.",
+        difficulty = 2,
+        funFact = "Kleine Katzen wie Puma und Gepard können schnurren (beim Ein- und Ausatmen), aber nicht brüllen."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Wie orientieren sich Haie beim Jagen aus großer Entfernung?",
+        answerA = "Durch ihr hervorragendes Sehvermögen",
+        answerB = "Durch den Geruchssinn – sie riechen Blut auf Kilometerdistanz",
+        answerC = "Durch das Seitenlinienorgan, das Druckwellen im Wasser wahrnimmt",
+        answerD = "Durch elektrische Felder der Muskelaktivität von Beutetieren",
+        correctAnswer = 1,
+        explanation = "Aus großer Entfernung leitet primär der Geruchssinn Haie zur Beute – sie können geringste Blutspuren noch auf Hunderte Meter wahrnehmen. Auf kurze Distanz übernimmt das Ampullensystem elektrische Felder.",
+        difficulty = 2,
+        funFact = "Das Seitenlinienorgan des Hais registriert Druckwellen im Wasser und ermöglicht es ihm, Beute auch in totaler Dunkelheit zu orten."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier hat die längste bekannte Wanderung aller Tiere?",
+        answerA = "Grauer Wal",
+        answerB = "Kaiserpinguin",
+        answerC = "Küstenseeschwalbe (Sterna paradisaea)",
+        answerD = "Monarchfalter",
+        correctAnswer = 2,
+        explanation = "Die Küstenseeschwalbe legt jährlich bis zu 90.000 km zurück – von der Arktis in die Antarktis und zurück. Das ist die längste bekannte Tierwanderung.",
+        difficulty = 2,
+        funFact = "Eine Küstenseeschwalbe erlebt in ihrem Leben bis zu 1,5 Millionen Kilometer Wanderung – das entspricht etwa 3 Reisen zum Mond und zurück."
+    ),
+
+    // ── ADDITIONAL EASY (difficulty = 1) ── 25 new questions ─────────────────
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier ist das größte Tier der Welt?",
+        answerA = "Afrikanischer Elefant",
+        answerB = "Buckelwal",
+        answerC = "Blauwal",
+        answerD = "Weißer Hai",
+        correctAnswer = 2,
+        explanation = "Der Blauwal ist das größte Tier, das je auf der Erde gelebt hat. Er kann über 30 Meter lang werden und bis zu 180 Tonnen wiegen.",
+        difficulty = 1,
+        funFact = "Das Herz eines Blauwals ist so groß wie ein kleines Auto."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was fressen Eulen hauptsächlich?",
+        answerA = "Beeren und Früchte",
+        answerB = "Fische und Algen",
+        answerC = "Mäuse und andere kleine Tiere",
+        answerD = "Blätter und Insektenlarven",
+        correctAnswer = 2,
+        explanation = "Eulen sind Raubtiere und ernähren sich hauptsächlich von Kleinsäugern wie Mäusen, aber auch von Vögeln, Fröschen und Insekten.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Wie nennt man das Jungtier eines Hundes?",
+        answerA = "Kätzchen",
+        answerB = "Welpe",
+        answerC = "Ferkel",
+        answerD = "Küken",
+        correctAnswer = 1,
+        explanation = "Das Jungtier eines Hundes heißt Welpe. Welpen werden blind und taub geboren und öffnen ihre Augen erst nach etwa zwei Wochen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier stellt den größten Anteil aller Tierarten auf der Erde?",
+        answerA = "Fische",
+        answerB = "Vögel",
+        answerC = "Insekten",
+        answerD = "Säugetiere",
+        correctAnswer = 2,
+        explanation = "Insekten sind mit über einer Million beschriebener Arten die artenreichste Tiergruppe der Erde – mehr als alle anderen Tiergruppen zusammen.",
+        difficulty = 1,
+        funFact = "Auf jeden Menschen kommen schätzungsweise 1,4 Milliarden Insekten."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Wo leben Pinguine in der freien Natur?",
+        answerA = "In der Arktis (Nordpol)",
+        answerB = "In der Antarktis und auf der Südhalbkugel",
+        answerC = "In Nordeuropa",
+        answerD = "In Zentralafrika",
+        correctAnswer = 1,
+        explanation = "Alle Pinguinarten leben auf der Südhalbkugel – hauptsächlich in der Antarktis, aber auch in Südafrika, Südamerika, Neuseeland und auf den Galapagos-Inseln.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier ist ein reines Raubtier (kein Pflanzenfresser)?",
+        answerA = "Kuh",
+        answerB = "Pferd",
+        answerC = "Wolf",
+        answerD = "Schaf",
+        correctAnswer = 2,
+        explanation = "Der Wolf ist ein Fleischfresser und jagt Tiere wie Hirsche, Hasen und Mäuse. Kuh, Pferd und Schaf sind Pflanzenfresser.",
+        difficulty = 1,
+        funFact = "Wölfe können auf der Jagd bis zu 60 km/h erreichen."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was kennzeichnet ein Reptil?",
+        answerA = "Federn und Schnabel",
+        answerB = "Schuppen und Kaltblütigkeit",
+        answerC = "Kiemen und Wasserleben",
+        answerD = "Fell und Warmblütigkeit",
+        correctAnswer = 1,
+        explanation = "Reptilien sind kaltblütige Tiere mit Schuppen oder Schilden. Dazu gehören Schlangen, Eidechsen, Schildkröten und Krokodile.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Wie heißt die Tiergruppe, zu der Frösche und Kröten gehören?",
+        answerA = "Reptilien",
+        answerB = "Insekten",
+        answerC = "Amphibien",
+        answerD = "Säugetiere",
+        correctAnswer = 2,
+        explanation = "Frösche und Kröten gehören zu den Amphibien (Lurchen). Sie leben als Larven im Wasser und als Erwachsene an Land.",
+        difficulty = 1,
+        funFact = "Frösche trinken kein Wasser mit dem Mund – sie nehmen Feuchtigkeit durch ihre Haut auf."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier hat einen Rüssel?",
+        answerA = "Nashorn",
+        answerB = "Elefant",
+        answerC = "Nilpferd",
+        answerD = "Giraffe",
+        correctAnswer = 1,
+        explanation = "Elefanten haben einen langen, muskulösen Rüssel als verlängerter Nasen-Lippen-Komplex. Sie nutzen ihn zum Greifen, Trinken und zur Kommunikation.",
+        difficulty = 1,
+        funFact = "Im Rüssel eines Elefanten befinden sich über 40.000 Muskeln – aber kein einziger Knochen."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was ist eine Metamorphose?",
+        answerA = "Ein Winterschlaf",
+        answerB = "Eine grundlegende Körperveränderung während der Entwicklung",
+        answerC = "Die Häutung bei Schlangen",
+        answerD = "Ein Farbwechsel zur Tarnung",
+        correctAnswer = 1,
+        explanation = "Metamorphose ist die grundlegende Veränderung des Körperbaus während der Entwicklung – zum Beispiel von der Raupe zum Schmetterling.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier legt keine Eier?",
+        answerA = "Krokodil",
+        answerB = "Pinguin",
+        answerC = "Delfin",
+        answerD = "Ente",
+        correctAnswer = 2,
+        explanation = "Delfine sind Säugetiere und bringen lebende Junge zur Welt. Krokodile, Pinguine und Enten legen hingegen Eier.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was frisst eine Kuh hauptsächlich?",
+        answerA = "Fische",
+        answerB = "Insekten",
+        answerC = "Gras und Heu",
+        answerD = "Wurzeln und Pilze",
+        correctAnswer = 2,
+        explanation = "Kühe sind Pflanzenfresser und fressen hauptsächlich Gras und Heu. Ihr viergeteilter Magen ermöglicht eine effiziente Verdauung.",
+        difficulty = 1,
+        funFact = "Eine Kuh macht täglich bis zu 30.000 Kaubewegungen beim Wiederkäuen."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welcher Vogel ist ein Zugvogel, der im Winter aus Deutschland wegfliegt?",
+        answerA = "Spatz",
+        answerB = "Schwalbe",
+        answerC = "Taube",
+        answerD = "Amsel",
+        correctAnswer = 1,
+        explanation = "Schwalben sind Zugvögel und fliegen im Herbst nach Afrika. Im Frühjahr kehren sie zur Brut zurück.",
+        difficulty = 1,
+        funFact = "Schwalben legen auf ihrem Zug bis zu 10.000 km zurück – hin und zurück fast 20.000 km pro Jahr."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Wie nennt man ein weibliches Pferd?",
+        answerA = "Stute",
+        answerB = "Henne",
+        answerC = "Kuh",
+        answerD = "Ziege",
+        correctAnswer = 0,
+        explanation = "Das weibliche Pferd heißt Stute. Den männlichen Hengst nennt man Hengst, einen kastrierten Hengst Wallach.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welche Tiergruppe hat Federn?",
+        answerA = "Reptilien",
+        answerB = "Amphibien",
+        answerC = "Säugetiere",
+        answerD = "Vögel",
+        correctAnswer = 3,
+        explanation = "Federn sind ein einzigartiges Merkmal der Vögel. Alle Vögel haben Federn – auch flugunfähige wie Pinguine und Strauße.",
+        difficulty = 1,
+        funFact = "Federn bestehen aus Keratin – demselben Protein wie menschliche Haare und Fingernägel."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier baut sein Netz aus Seide?",
+        answerA = "Ameise",
+        answerB = "Spinne",
+        answerC = "Wespe",
+        answerD = "Tausendfüßer",
+        correctAnswer = 1,
+        explanation = "Spinnen bauen Netze aus Seide, die sie aus Spinndrüsen am Hinterleib produzieren. Das Netz dient zum Fangen von Insekten.",
+        difficulty = 1,
+        funFact = "Spinnenseide ist pro Gewicht stärker als Stahl – Forscher untersuchen sie für medizinische und technische Anwendungen."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welcher Laut ist typisch für eine Katze?",
+        answerA = "Bellen",
+        answerB = "Grunzen",
+        answerC = "Schnurren und Miauen",
+        answerD = "Zwitschern",
+        correctAnswer = 2,
+        explanation = "Katzen kommunizieren durch Miauen, Schnurren, Fauchen und Zischen. Das Schnurren entsteht durch rhythmische Stimmbandvibrationen.",
+        difficulty = 1,
+        funFact = "Katzen miauen fast ausschließlich gegenüber Menschen – untereinander kommunizieren sie kaum durch Miauen."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier gilt als Wappentier Deutschlands?",
+        answerA = "Löwe",
+        answerB = "Wolf",
+        answerC = "Adler",
+        answerD = "Bär",
+        correctAnswer = 2,
+        explanation = "Der Adler ist das Wappentier Deutschlands und steht im Bundeswappen als Symbol für Stärke, Mut und Freiheit.",
+        difficulty = 1,
+        funFact = "Der Weißkopfseeadler ist das Nationaltier der USA – Benjamin Franklin hätte lieber den Truthahn gewählt."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Wie nennt man ein Tier, das nur Pflanzen frisst?",
+        answerA = "Karnivore",
+        answerB = "Omnivore",
+        answerC = "Herbivore",
+        answerD = "Detritivore",
+        correctAnswer = 2,
+        explanation = "Herbivore sind Pflanzenfresser. Beispiele sind Kühe, Pferde, Schafe, Hasen und Elefanten.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier ist bekannt dafür, sich tot zu stellen?",
+        answerA = "Fuchs",
+        answerB = "Opossum",
+        answerC = "Waschbär",
+        answerD = "Stinktier",
+        correctAnswer = 1,
+        explanation = "Das Opossum ist berühmt dafür, sich bei Gefahr tot zu stellen. Es fällt in einen starren Zustand und kann Minuten bis Stunden reglos bleiben.",
+        difficulty = 1,
+        funFact = "Das Totstellen beim Opossum ist keine bewusste Entscheidung, sondern eine unwillkürliche Reaktion des Nervensystems."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Zu welcher Tiergruppe gehört der Hai?",
+        answerA = "Säugetiere",
+        answerB = "Amphibien",
+        answerC = "Fische",
+        answerD = "Reptilien",
+        correctAnswer = 2,
+        explanation = "Haie sind Fische – genauer gesagt Knorpelfische (Chondrichthyes). Sie atmen mit Kiemen und sind kaltblütig.",
+        difficulty = 1,
+        funFact = "Haie haben ihr Skelett aus Knorpel, nicht aus Knochen – das macht sie leichter und wendiger."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welche Tierart lebt in einem Bienenstock?",
+        answerA = "Wespen",
+        answerB = "Hummeln",
+        answerC = "Honigbienen",
+        answerD = "Hornissen",
+        correctAnswer = 2,
+        explanation = "Honigbienen leben in Völkern im Bienenstock. Ein Volk kann bis zu 80.000 Individuen umfassen und besteht aus einer Königin, Arbeiterinnen und Drohnen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Wo lebt ein Pinguin hauptsächlich – an Land oder im Wasser?",
+        answerA = "Nur an Land",
+        answerB = "Nur im Wasser",
+        answerC = "Hauptsächlich im Wasser, Brut an Land",
+        answerD = "In Bäumen nahe am Wasser",
+        correctAnswer = 2,
+        explanation = "Pinguine verbringen den Großteil ihres Lebens im Meer auf Nahrungssuche. An Land kommen sie nur zur Brut und Mauser.",
+        difficulty = 1,
+        funFact = "Pinguine können bis zu 27 km/h im Wasser schwimmen und bis zu 500 Meter tauchen."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Tier ist für seinen Bau von Dämmen in Flüssen bekannt?",
+        answerA = "Otter",
+        answerB = "Biber",
+        answerC = "Waschbär",
+        answerD = "Murmeltier",
+        correctAnswer = 1,
+        explanation = "Biber bauen Dämme aus Ästen, Stämmen und Schlamm, um Teiche zu schaffen. Diese Teiche schützen ihren Eingang zur Biberburg vor Fressfeinden.",
+        difficulty = 1,
+        funFact = "Biberdämme können bis zu 100 Meter lang werden und ganze Landschaften umgestalten."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was ist das Besondere an Vögeln als Tiergruppe?",
+        answerA = "Sie sind die einzigen Tiere, die Eier legen",
+        answerB = "Sie haben Flügel und Federn",
+        answerC = "Alle Vögel können fliegen",
+        answerD = "Sie haben keine Zähne und keine Knochen",
+        correctAnswer = 1,
+        explanation = "Vögel sind die einzige Tiergruppe, die Federn besitzt. Nicht alle Vögel können fliegen (z.B. Pinguine, Strauße), aber alle haben Federn und Flügel.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // ── ADDITIONAL HARD (difficulty = 3) ── 25 new questions ─────────────────
+
+    Question(
+        categoryId = 9,
+        questionText = "Was versteht man unter 'Trophobiose' in der Zoologie?",
+        answerA = "Eine parasitische Räuber-Beute-Beziehung",
+        answerB = "Eine Symbiose, bei der Ameisen Blattläuse für Honigtau bewirtschaften",
+        answerC = "Verhaltenslernen durch Beobachtung anderer Tiere",
+        answerD = "Territoriale Abgrenzung durch Nahrungsressourcen",
+        correctAnswer = 1,
+        explanation = "Trophobiose beschreibt eine Symbiose, bei der Ameisen Blattläuse vor Fressfeinden schützen und im Gegenzug zuckerhaltigen Honigtau erhalten.",
+        difficulty = 3,
+        funFact = "Manche Ameisenarten tragen Blattläuse in ihre Nester, wenn es kalt wird – sie halten sie wie Nutztiere."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was ist der 'suprachiasmatische Nucleus' (SCN)?",
+        answerA = "Das Gehirnareal für Geruchsverarbeitung bei Raubtieren",
+        answerB = "Die biologische Innenuhr im Hypothalamus",
+        answerC = "Ein Sinnesorgan zur Magnetfeldwahrnehmung",
+        answerD = "Das Zentrum für Schmerzverarbeitung im Hirnstamm",
+        correctAnswer = 1,
+        explanation = "Der suprachiasmatische Nucleus (SCN) ist ein kleines Areal im Hypothalamus, das als zentrale biologische Uhr fungiert und den circadianen 24-Stunden-Rhythmus steuert.",
+        difficulty = 3,
+        funFact = "Der SCN enthält nur etwa 20.000 Neuronen, kontrolliert aber nahezu alle tagesrhythmischen Körperfunktionen."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was beschreibt Hamiltons Konzept der Verwandtenselektion (Kin Selection)?",
+        answerA = "Bevorzugung der stärksten Nachkommen bei Ressourcenverteilung",
+        answerB = "Altruismus gegenüber Verwandten zur Maximierung der inklusiven Fitness",
+        answerC = "Aggressive Konkurrenz zwischen Geschwistern",
+        answerD = "Territoriales Verhalten zum Schutz verwandter Gruppen",
+        correctAnswer = 1,
+        explanation = "Hamiltons Kin-Selection-Theorie erklärt Altruismus durch gemeinsame Gene: Ein Tier hilft Verwandten, wenn r·B > C (Verwandtschaftsgrad × Nutzen > Kosten für den Helfer).",
+        difficulty = 3,
+        funFact = "J.B.S. Haldane formulierte es so: 'Ich würde mein Leben für zwei Geschwister oder acht Cousins opfern.'"
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was beschreibt das Konzept der ökologischen Nische nach Hutchinson?",
+        answerA = "Den physischen Lebensraum einer Art",
+        answerB = "Den n-dimensionalen Hyperraum aller Umweltbedingungen, unter denen eine Art existieren kann",
+        answerC = "Die Nahrungsquelle einer bestimmten Tierart",
+        answerD = "Den Aktionsradius eines Tieres",
+        correctAnswer = 1,
+        explanation = "G.E. Hutchinson definierte die ökologische Nische als n-dimensionalen Hyperraum aller abiotischen und biotischen Faktoren (Temperatur, Nahrung, Feinde), die das Überleben einer Art ermöglichen.",
+        difficulty = 3,
+        funFact = "Man unterscheidet fundamentale Nische (theoretisch möglich) und realisierte Nische (tatsächlich besetzt, eingeschränkt durch Konkurrenz)."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Organ nutzen Haie zur Wahrnehmung elektrischer Felder ihrer Beute?",
+        answerA = "Seitenlinienorgan",
+        answerB = "Lorenzini'sche Ampullen",
+        answerC = "Jacobsonsche Organe",
+        answerD = "Nares (Nasenöffnungen)",
+        correctAnswer = 1,
+        explanation = "Die Lorenzini'schen Ampullen sind Elektrorezeptoren in der Schnauze von Haien. Sie können elektrische Felder unter 5 Nanoampere wahrnehmen – erzeugt von Muskelkontraktionen der Beute.",
+        difficulty = 3,
+        funFact = "Haie spüren Beute, die komplett im Sand vergraben ist, allein durch ihr elektrisches Feld."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was ist Haplodiplodie und bei welchen Tieren kommt sie vor?",
+        answerA = "Fortpflanzung durch Zellteilung bei Einzellern",
+        answerB = "System, bei dem Weibchen diploid und Männchen haploid sind; bei Hymenoptera (Bienen, Ameisen, Wespen)",
+        answerC = "Doppelte Chromosomenzahl nach Befruchtung; bei Reptilien",
+        answerD = "Geschlechtsbestimmung durch Temperatur; bei Krokodilen",
+        correctAnswer = 1,
+        explanation = "Bei haplodiploiden Insekten entstehen Weibchen aus befruchteten (diploiden) und Männchen aus unbefruchteten (haploiden) Eiern, was ihre Sozialstruktur grundlegend beeinflusst.",
+        difficulty = 3,
+        funFact = "Durch Haplodiplodie teilen Schwestern 75% ihrer Gene – mehr als Mutter und Tochter. Das erklärt extreme Kooperation in Bienenvölkern."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was erklärt die Navigation von Meeresschildkröten zu ihrem genauen Geburtsstand?",
+        answerA = "Geruchsgedächtnis an den Heimatstrand",
+        answerB = "Magnetisches Imprinting auf das lokale Erdmagnetfeld beim Schlüpfen",
+        answerC = "Visuelle Wegmarkierungen im Gedächtnis",
+        answerD = "Soziale Orientierung durch ältere Tiere",
+        correctAnswer = 1,
+        explanation = "Meeresschildkröten prägen sich beim Schlüpfen die magnetische Signatur ihres Geburtsstandes ein und kehren Jahrzehnte später zu exakt diesen magnetischen Koordinaten zurück.",
+        difficulty = 3,
+        funFact = "Manche Meeresschildkröten legen bis zu 12.000 km zurück, um an ihren Geburtsstand zu gelangen."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was ist Cryptobiose und welches Tier ist dafür bekannt?",
+        answerA = "Tarnung durch Biolumineszenz; Tiefseefische",
+        answerB = "Metabolischer Ruhezustand mit Überlebensfähigkeit bei extremen Bedingungen; Bärtierchen (Tardigrada)",
+        answerC = "Einfrieren bei -20°C ohne Schäden; Polarfrösche",
+        answerD = "Vollständige Trockenresistenz durch Sporulation; Krebstiere",
+        correctAnswer = 1,
+        explanation = "Bärtierchen (Tardigrada) treten in Cryptobiose ein und überleben so Vakuum, extremen Druck, Strahlung und Temperaturen von -272°C bis +150°C.",
+        difficulty = 3,
+        funFact = "Bärtierchen wurden dem offenen Weltraum ausgesetzt und überlebten – sie sind die widerstandsfähigsten bekannten Tiere."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was ist sympatrische Artbildung?",
+        answerA = "Artbildung durch geografische Trennung",
+        answerB = "Artbildung innerhalb desselben Verbreitungsgebiets ohne geografische Barriere",
+        answerC = "Artbildung durch Klimaveränderungen",
+        answerD = "Artbildung durch Hybridisierung zweier Elternarten",
+        correctAnswer = 1,
+        explanation = "Sympatrische Artbildung entsteht, wenn sich neue Arten im selben Lebensraum ohne geografische Trennung entwickeln – oft durch ökologische Spezialisierung.",
+        difficulty = 3,
+        funFact = "Die Buntbarsche (Cichliden) im Victoriasee sind ein Paradebeispiel: Über 500 Arten entstanden in wenigen Millionen Jahren im gleichen See."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches neurobiologische Prinzip ermöglicht Zugvögeln die Wahrnehmung des Erdmagnetfeldes?",
+        answerA = "Magnetit-Kristalle im Schnabel reagieren mechanisch",
+        answerB = "Kryptochrom-Proteine im Auge reagieren durch quantenmechanischen Radikalpaar-Mechanismus",
+        answerC = "Elektrische Haarzellen im Innenohr detektieren Magnetfelder",
+        answerD = "Magnetosomen aus Darmbakterien ermöglichen die Orientierung",
+        correctAnswer = 1,
+        explanation = "Kryptochrom-Proteine in den Augen von Zugvögeln ermöglichen durch den Radikalpaar-Mechanismus die Magnetfeldwahrnehmung – die Vögel könnten das Magnetfeld buchstäblich sehen.",
+        difficulty = 3,
+        funFact = "Es gibt Hinweise, dass Kryptochrome auch bei Säugetieren vorkommen könnten."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was ist Viviparie im zoologischen Sinne?",
+        answerA = "Lebendgeburt mit Nährstoffversorgung über eine Placenta oder ähnliche Struktur",
+        answerB = "Eierlegung mit anschließender Bebrütung",
+        answerC = "Brutpflege im Maul des Elternteils",
+        answerD = "Entwicklung im Mutterleib ohne Placenta",
+        correctAnswer = 0,
+        explanation = "Viviparie bezeichnet echte Lebendgeburt, bei der der Embryo über eine Placenta oder ähnliche Struktur versorgt wird. Die meisten Säugetiere sind vivipar.",
+        difficulty = 3,
+        funFact = "Einige Hai-Arten sind ebenfalls vivipar – der Sandtigerhai zeigt sogar intrauterinen Kannibalismus."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was besagt das Gausesche Gesetz (Kompetitives Ausschlussprinzip)?",
+        answerA = "Zwei Arten können koexistieren, wenn sie um dieselbe Ressource konkurrieren",
+        answerB = "Zwei Arten, die dieselbe Nische vollständig besetzen, können nicht dauerhaft koexistieren",
+        answerC = "Invasive Arten verdrängen stets einheimische Arten",
+        answerD = "Räuber-Beute-Zyklen stabilisieren sich automatisch",
+        correctAnswer = 1,
+        explanation = "Das Gausesche Gesetz besagt, dass zwei Arten, die exakt dieselbe ökologische Nische besetzen, nicht dauerhaft koexistieren können – eine wird die andere verdrängen.",
+        difficulty = 3,
+        funFact = "In der Realität koexistieren ähnliche Arten durch subtile Nischendifferenzierung – das 'Planktonparadox' zeigt, wie dieses Gesetz in komplexen Systemen an Grenzen stößt."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was ist Neotenie in der Zoologie?",
+        answerA = "Das Auftreten von Alterungsmerkmalen in Jungtieren",
+        answerB = "Das Beibehalten larvaler oder juveniler Merkmale im geschlechtsreifen Erwachsenen",
+        answerC = "Beschleunigte Entwicklung durch Hormonstimulation",
+        answerD = "Rückbildung von Organen nach der Metamorphose",
+        correctAnswer = 1,
+        explanation = "Neotenie bezeichnet das Beibehalten von Larvenmerkmalen im geschlechtsreifen Adultstadium. Der Axolotl ist das prominenteste Beispiel – er bleibt zeitlebens mit externen Kiemen.",
+        difficulty = 3,
+        funFact = "Auch Menschen zeigen im Vergleich zu anderen Primaten neotenische Merkmale: großer Schädel, flaches Gesicht und langes Jugendalter."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was kodiert der Schwänzeltanz der Honigbiene nach Karl von Frisch?",
+        answerA = "Nur die Entfernung zur Nahrungsquelle",
+        answerB = "Sowohl Richtung (relativ zur Sonne) als auch Entfernung zur Nahrungsquelle",
+        answerC = "Warnhinweise auf Fressfeinde",
+        answerD = "Nur die Qualität der Nahrungsquelle durch Tanzgeschwindigkeit",
+        correctAnswer = 1,
+        explanation = "Der Schwänzeltanz kodiert die Richtung zur Nahrungsquelle (Winkel zur Senkrechten = Winkel zur Sonne) und die Entfernung (Tanzdauer). Für diese Entdeckung erhielt Karl von Frisch 1973 den Nobelpreis.",
+        difficulty = 3,
+        funFact = "Bienen korrigieren ihren Schwänzeltanz für den Sonnenlauf über den Tag – sie kennen die Uhrzeit und rechnen die Sonnenposition voraus."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was ist Aposematismus in der Zoologie?",
+        answerA = "Lauteinsatz zur Reviermarkierung",
+        answerB = "Auffällige Warntracht als Signal für Ungenießbarkeit oder Gefährlichkeit",
+        answerC = "Das Totstellen bei Bedrohung",
+        answerD = "Körperanpassung an die Umgebung (Tarnung)",
+        correctAnswer = 1,
+        explanation = "Aposematismus ist die Verwendung auffälliger Farben (gelb-schwarz, rot-schwarz) als Warnsignal für Fressfeinde. Giftige Tiere wie Pfeilgiftfrösche und Wespen nutzen ihn.",
+        difficulty = 3,
+        funFact = "Fressfeinde lernen Warnfarben sehr schnell zu meiden – ein einziges unangenehmes Erlebnis reicht oft für eine lebenslange Konditionierung."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Wie überlebt der Waldfrosch (Rana sylvatica) das Einfrieren ohne Zelltod?",
+        answerA = "Antifrierproteine verhindern Eiskristallbildung",
+        answerB = "Glucose als Kryoprotektivum verhindert intrazelluläre Eiskristalle",
+        answerC = "Ausschütten von Frostschutzmitteln aus Hautdrüsen",
+        answerD = "Vollständige Dehydratation aller Körperzellen",
+        correctAnswer = 1,
+        explanation = "Der Waldfrosch akkumuliert bei Kälte Glucose in seinen Zellen als Kryoprotektivum. Wasser gefriert im extrazellulären Raum, Glucose verhindert zerstörerische Kristalle in den Zellen.",
+        difficulty = 3,
+        funFact = "Bis zu 65% des Körperwassers des Waldfrosts können gefrieren. Sein Herz hört auf zu schlagen – im Frühjahr taut er auf und wird wieder aktiv."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was beschreibt reziproker Altruismus nach Robert Trivers?",
+        answerA = "Hilfe gegenüber Verwandten aufgrund geteilter Gene",
+        answerB = "Gegenseitige Hilfe zwischen nicht-verwandten Individuen auf Basis zukünftiger Gegenleistung",
+        answerC = "Aggressives Schutzverhalten für die eigene Gruppe",
+        answerD = "Kooperation nur bei sofortigem garantiertem Nutzen",
+        correctAnswer = 1,
+        explanation = "Reziproker Altruismus erklärt Hilfsverhalten zwischen Nicht-Verwandten: 'Ich helfe dir jetzt, du hilfst mir später.' Voraussetzung sind langfristiger Kontakt und die Fähigkeit, Betrüger zu erkennen.",
+        difficulty = 3,
+        funFact = "Vampirfledermäuse teilen Blut mit hungrigen Artgenossen – und merken sich genau, wer geteilt hat und wer nicht."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was beschreibt der Allee-Effekt in Tierpopulationen?",
+        answerA = "Überlebensvorteil bei sehr hoher Populationsdichte",
+        answerB = "Abnahme der individuellen Fitness bei sehr geringen Populationsdichten",
+        answerC = "Schnelles Populationswachstum nach einem genetischen Engpass",
+        answerD = "Bevorzugte Besiedelung von Randlebensräumen",
+        correctAnswer = 1,
+        explanation = "Der Allee-Effekt: Unterhalb einer kritischen Mindestpopulationsgröße sinkt die Fitness – durch erschwerte Partnerfindung, verminderte Kooperation und erhöhte Inzucht.",
+        difficulty = 3,
+        funFact = "Der Allee-Effekt ist ein Hauptgrund, warum kleine Restpopulationen gefährdeter Arten so schwer zu retten sind."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was ist ein Superorganismus in der Verhaltensbiologie?",
+        answerA = "Ein besonders dominantes Leitindividuum in einer Herde",
+        answerB = "Eine Kolonie eusocialer Insekten, die funktionell als eine Einheit agiert",
+        answerC = "Ein Symbiont aus mehreren Tierarten",
+        answerD = "Ein Tier mit besonders komplexem Nervensystem",
+        correctAnswer = 1,
+        explanation = "Ein Superorganismus ist eine Kolonie eusocialer Tiere (Bienen, Ameisen, Termiten), deren Individuen so spezialisiert kooperieren, dass die Kolonie wie ein einzelner Organismus funktioniert.",
+        difficulty = 3,
+        funFact = "Eine Blattschneiderameisen-Kolonie kann bis zu 8 Millionen Individuen umfassen und koordiniert sich ohne zentrale Steuerung."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was beschreibt Brutparasitismus beim Kuckuck aus evolutionärer Sicht?",
+        answerA = "Fürsorge für fremde Jungtiere als soziales Lernverhalten",
+        answerB = "Ein co-evolutionäres Wettrüsten zwischen parasitischer Art und Wirtsarten",
+        answerC = "Aufnahme verwaister Jungtiere zum Vorteil der Gruppe",
+        answerD = "Nahrungsdiebstahl zur Versorgung der eigenen Brut",
+        correctAnswer = 1,
+        explanation = "Brutparasitismus beim Kuckuck ist co-evolutionäres Wettrüsten: Wirtsvögel entwickeln bessere Eierkennung, Kuckucke bessere Ei-Mimikry – ein evolutionäres Katz-und-Maus-Spiel.",
+        difficulty = 3,
+        funFact = "Kuckucksweibchen sind auf bestimmte Wirtsarten spezialisiert und legen Eier, die perfekt zur Eifarbe dieser Wirtsart passen."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Welches Schutzprotein produzieren Bärtierchen (Tardigrada) gegen Strahlung?",
+        answerA = "Chaperon-Proteine mit Doppelmembran-Struktur",
+        answerB = "Damage suppressor Protein (Dsup), das DNA vor Strahlung abschirmt",
+        answerC = "Melanin-Einlagerungen in allen Körperzellen",
+        answerD = "Glycerol als Kryoprotektivum wie bei Insekten",
+        correctAnswer = 1,
+        explanation = "Tardigrada produzieren das Protein 'Damage suppressor' (Dsup), das sich um die DNA wickelt und ionisierende Strahlung sowie Radikale abschirmt.",
+        difficulty = 3,
+        funFact = "Forscher haben Dsup-Gene in menschliche Zellen eingebracht – diese zeigten daraufhin 40% weniger Strahlenschäden."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was ist Epigenetik im tierbiologischen Kontext?",
+        answerA = "Veränderungen der DNA-Sequenz durch Umwelteinflüsse",
+        answerB = "Vererbbare Veränderungen der Genexpression ohne Änderung der DNA-Sequenz",
+        answerC = "Horizontaler Gentransfer zwischen nicht verwandten Tierarten",
+        answerD = "Mutationen durch kosmische Strahlung über Generationen",
+        correctAnswer = 1,
+        explanation = "Epigenetik bezeichnet vererbbare Änderungen der Genexpression durch DNA-Methylierung oder Histonmodifikationen, ohne die DNA-Sequenz selbst zu verändern.",
+        difficulty = 3,
+        funFact = "Hunger- und Trauma-Erfahrungen der Eltern können epigenetisch an Nachkommen weitergegeben werden."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Wie erzeugt der Pistolenkrebse (Alpheid-Garnelen) seinen tödlichen Schlag?",
+        answerA = "Er schießt giftige Nadeln aus einer Scherenkammer",
+        answerB = "Er erzeugt durch schnelles Scherenklappen eine Kavitationsblase mit extremer Temperatur",
+        answerC = "Er produziert konzentrierte Säure in seiner Schere",
+        answerD = "Er erzeugt elektrische Entladungen ähnlich dem Zitteraal",
+        correctAnswer = 1,
+        explanation = "Der Pistolenkrebs schließt seine Schere mit bis zu 100 km/h. Die kollabierte Kavitationsblase erzeugt einen 218-Dezibel-Knall und kurzzeitig Temperaturen von ~8.000 Kelvin.",
+        difficulty = 3,
+        funFact = "Pistolenkrebs-Kolonien erzeugten so viel Lärm, dass U-Boot-Kommandanten im Pazifik ihre Boote in Pistolenkrebsfeldern versteckten."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was ist die Funktion des Seitenlinienorgans bei Fischen?",
+        answerA = "Elektrorezeption zur Beuteortung im Dunkeln",
+        answerB = "Wahrnehmung von Druckveränderungen und Strömungen im Wasser",
+        answerC = "Thermoregulation durch Wärmeaustausch",
+        answerD = "Chemische Geruchswahrnehmung",
+        correctAnswer = 1,
+        explanation = "Das Seitenlinienorgan besteht aus Haarzellen entlang der Körperflanke, die Druckveränderungen, Strömungen und Vibrationen im Wasser registrieren.",
+        difficulty = 3,
+        funFact = "Das Seitenlinienorgan ist evolutionär verwandt mit dem menschlichen Innenohr – beide stammen vom gleichen embryonalen Gewebe ab."
+    ),
+
+    Question(
+        categoryId = 9,
+        questionText = "Was bezeichnet sexuelle Selektion nach Darwin?",
+        answerA = "Natürliche Selektion, die auf Überlebensfähigkeit wirkt",
+        answerB = "Selektion durch Partnerwahl oder Konkurrenz um Fortpflanzungspartner",
+        answerC = "Genetische Drift in kleinen Populationen",
+        answerD = "Selektion durch Parasiten und Krankheitserreger",
+        correctAnswer = 1,
+        explanation = "Sexuelle Selektion erklärt Merkmale wie Pfauenrad oder Hirschgeweih: Sie erschweren das Überleben, steigern aber den Fortpflanzungserfolg durch intrasexuelle Konkurrenz oder Partnerwahl.",
+        difficulty = 3,
+        funFact = "Darwin erkannte, dass viele auffällige Tiermerkmale nicht durch natürliche Selektion erklärbar sind – und entwickelte daher das Konzept der sexuellen Selektion."
     )
 )
