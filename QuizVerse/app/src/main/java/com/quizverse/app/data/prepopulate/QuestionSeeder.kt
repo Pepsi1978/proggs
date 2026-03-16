@@ -49,7 +49,7 @@ object QuestionSeeder {
             Category(id = 8,  name = "Essen & Trinken",     iconName = "\uD83C\uDF73", gradientStartColor = 0xFFF59E0BL, gradientEndColor = 0xFFEF4444L, questionCount = 50, isLocked = false),
             Category(id = 9,  name = "Tierwelt",            iconName = "\uD83D\uDC3E", gradientStartColor = 0xFF14B8A6L, gradientEndColor = 0xFF06B6D4L, questionCount = 50, isLocked = false),
             Category(id = 10, name = "Sprache & Literatur", iconName = "\uD83D\uDCDA", gradientStartColor = 0xFF8B5CF6L, gradientEndColor = 0xFFEC4899L, questionCount = 50, isLocked = false),
-            Category(id = 11, name = "Bunt Gemischt",       iconName = "\uD83C\uDFB2", gradientStartColor = 0xFFF43F5EL, gradientEndColor = 0xFFF97316L, questionCount = 50, isLocked = false),
+            Category(id = 11, name = "Alle Kategorien",      iconName = "\uD83C\uDF1F", gradientStartColor = 0xFFF43F5EL, gradientEndColor = 0xFFF97316L, questionCount = 50, isLocked = false),
             Category(id = 12, name = "Logik & Denksport",   iconName = "\uD83E\uDDE0", gradientStartColor = 0xFF0EA5E9L, gradientEndColor = 0xFF6366F1L, questionCount = 50, isLocked = false),
             // ── Bundesliga-Vereine (Unterkategorien von Sport) ──────────
             Category(id = 13, name = "Hertha BSC",          iconName = "\u26BD",       gradientStartColor = 0xFF1A5276L, gradientEndColor = 0xFF2E86C1L, questionCount = 50, isLocked = false),
@@ -147,7 +147,7 @@ object QuestionSeeder {
             Achievement(id = "cat_food",         nameKey = "Feinschmecker",         descriptionKey = "Schließe 10 Essen & Trinken-Quizzes ab",         iconName = "\uD83C\uDF73", requiredValue = 10,  tier = 1),
             Achievement(id = "cat_animals",      nameKey = "Tierfreund",            descriptionKey = "Schließe 10 Tierwelt-Quizzes ab",                iconName = "\uD83D\uDC3E", requiredValue = 10,  tier = 1),
             Achievement(id = "cat_literature",   nameKey = "Bücherwurm",            descriptionKey = "Schließe 10 Literatur-Quizzes ab",               iconName = "\uD83D\uDCDA", requiredValue = 10,  tier = 1),
-            Achievement(id = "cat_mixed",        nameKey = "Allrounder",            descriptionKey = "Schließe 10 Bunt-Gemischt-Quizzes ab",           iconName = "\uD83C\uDFB2", requiredValue = 10,  tier = 1),
+            Achievement(id = "cat_mixed",        nameKey = "Allrounder",            descriptionKey = "Schließe 10 Alle-Kategorien-Quizzes ab",         iconName = "\uD83C\uDF1F", requiredValue = 10,  tier = 1),
             Achievement(id = "cat_logic",        nameKey = "Logiker",               descriptionKey = "Schließe 10 Logik-Quizzes ab",                   iconName = "\uD83E\uDDE0", requiredValue = 10,  tier = 1),
             Achievement(id = "all_cats",         nameKey = "Universalgelehrter",    descriptionKey = "Schließe jede Kategorie mindestens einmal ab",   iconName = "\uD83C\uDF10", requiredValue = 12,  tier = 3),
 

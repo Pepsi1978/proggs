@@ -97,6 +97,7 @@ private data class CategoryItem(
 
 // ── Main categories — IDs MUST match categoryId in Question entities ────────
 private val categories = listOf(
+    CategoryItem(11, "Alle Kategorien", "\uD83C\uDF1F", MixedStart, MixedEnd),
     CategoryItem(1, "Weltgeographie", "\uD83C\uDF0D", GeoStart, GeoEnd),
     CategoryItem(2, "Wissenschaft & Natur", "\uD83D\uDD2C", ScienceStart, ScienceEnd),
     CategoryItem(3, "Geschichte", "\uD83D\uDCDC", HistoryStart, HistoryEnd),
@@ -115,7 +116,6 @@ private val categories = listOf(
     CategoryItem(8, "Essen & Trinken", "\uD83C\uDF73", FoodStart, FoodEnd),
     CategoryItem(9, "Tierwelt", "\uD83D\uDC3E", AnimalsStart, AnimalsEnd),
     CategoryItem(10, "Sprache & Literatur", "\uD83D\uDCDA", LiteratureStart, LiteratureEnd),
-    CategoryItem(11, "Bunt Gemischt", "\uD83C\uDFB2", MixedStart, MixedEnd),
     CategoryItem(12, "Logik & Denksport", "\uD83E\uDDE0", LogicStart, LogicEnd),
 )
 

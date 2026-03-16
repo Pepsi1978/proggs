@@ -48,7 +48,7 @@ private fun categoryName(id: Int?): String = when (id) {
     8    -> "Essen"
     9    -> "Tierwelt"
     10   -> "Literatur"
-    11   -> "Gemischt"
+    11   -> "Alle Kategorien"
     12   -> "Logik"
     13   -> "Hertha BSC"
     14   -> "BVB"

@@ -24,6 +24,17 @@ interface QuestionDao {
     @Query("SELECT * FROM questions ORDER BY RANDOM() LIMIT :count")
     fun getRandomQuestions(count: Int): Flow<List<Question>>
 
+    /** Return a random sample from ALL categories filtered by difficulty. */
+    @Query(
+        "SELECT * FROM questions " +
+        "WHERE difficulty = :difficulty " +
+        "ORDER BY RANDOM() LIMIT :count"
+    )
+    suspend fun getRandomQuestionsAllCategories(
+        count: Int,
+        difficulty: Int
+    ): List<Question>
+
     /**
      * Return a reproducible random sample filtered by category and difficulty.
      * Used for classic quiz sessions where callers need a one-shot list.

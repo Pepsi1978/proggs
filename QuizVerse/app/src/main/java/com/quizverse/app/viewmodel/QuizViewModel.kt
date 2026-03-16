@@ -74,9 +74,9 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                questions = if (categoryId == -1) {
-                    // Mixed: fall back to category 1 for now — replace with mixed DAO query later
-                    repository.getDailyQuestions(count)
+                questions = if (categoryId == 11) {
+                    // "Alle Kategorien" — pull from the entire question pool
+                    repository.getRandomQuestionsAllCategories(count, difficulty)
                 } else {
                     repository.getRandomQuestions(categoryId, count, difficulty)
                 }

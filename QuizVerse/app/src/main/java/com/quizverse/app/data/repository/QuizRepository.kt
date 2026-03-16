@@ -36,6 +36,12 @@ class QuizRepository(private val database: QuizDatabase) {
         difficulty: Int
     ): List<Question> = questionDao.getRandomQuestionsForCategory(categoryId, count, difficulty)
 
+    /** Returns a random list of [count] questions from ALL categories at [difficulty]. */
+    suspend fun getRandomQuestionsAllCategories(
+        count: Int,
+        difficulty: Int
+    ): List<Question> = questionDao.getRandomQuestionsAllCategories(count, difficulty)
+
     /**
      * Returns the daily question set. Uses the current calendar day as seed so every
      * player worldwide sees the same questions on the same day.
