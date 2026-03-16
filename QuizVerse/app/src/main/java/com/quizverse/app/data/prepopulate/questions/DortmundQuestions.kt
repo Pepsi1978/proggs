@@ -1318,5 +1318,202 @@ fun dortmundQuestions(): List<Question> = listOf(
         explanation = "Ottmar Hitzfeld gewann mit BVB zwei Bundesliga-Meisterschaften in Folge: 1994/95 und 1995/96, bevor er den Verein verließ.",
         difficulty = 3,
         funFact = "Hitzfeld verließ BVB nach diesen Erfolgen und wurde zum erfolgreichsten deutschen Vereinstrainer seiner Generation."
+    ),
+
+    // ── ADDITIONAL MEDIUM (15) ─────────────────────────────────────────────────
+
+    Question(
+        categoryId = 14,
+        questionText = "Von welchem Verein wechselte Erling Haaland im Januar 2020 zu Borussia Dortmund?",
+        answerA = "Molde FK",
+        answerB = "RB Salzburg",
+        answerC = "Rosenborg BK",
+        answerD = "SK Brann",
+        correctAnswer = 1,
+        explanation = "Erling Haaland wechselte im Januar 2020 von Red Bull Salzburg zu Borussia Dortmund für eine Ablösesumme von rund 20 Millionen Euro.",
+        difficulty = 2,
+        funFact = "Bei Salzburg hatte Haaland in der Gruppenphase der Champions League 2019/20 acht Tore in sechs Spielen erzielt."
+    ),
+
+    Question(
+        categoryId = 14,
+        questionText = "Welcher BVB-Spieler wurde in der Saison 2011/12 zum Bundesliga-Spieler des Jahres gewählt?",
+        answerA = "Mario Götze",
+        answerB = "Robert Lewandowski",
+        answerC = "İlkay Gündoğan",
+        answerD = "Shinji Kagawa",
+        correctAnswer = 0,
+        explanation = "Mario Götze wurde in der Meistersaison 2011/12 zum Bundesliga-Spieler des Jahres gewählt und galt als das größte deutsche Fußballtalent seiner Generation.",
+        difficulty = 2,
+        funFact = "Götze war bei seinem Wechsel zu Bayern München 2013 erst 20 Jahre alt."
+    ),
+
+    Question(
+        categoryId = 14,
+        questionText = "Welcher Gabuner Stürmer spielte von 2013 bis 2018 für BVB und war zeitweise schnellster Spieler der Bundesliga?",
+        answerA = "Didier Drogba",
+        answerB = "Samuel Eto'o",
+        answerC = "Pierre-Emerick Aubameyang",
+        answerD = "Moussa Dembélé",
+        correctAnswer = 2,
+        explanation = "Pierre-Emerick Aubameyang aus Gabun spielte von 2013 bis 2018 für BVB und wurde mit über 36 km/h als einer der schnellsten Spieler der Bundesliga gemessen.",
+        difficulty = 2,
+        funFact = "Aubameyang wechselte 2018 für rund 63,75 Millionen Euro zum FC Arsenal."
+    ),
+
+    Question(
+        categoryId = 14,
+        questionText = "Wie lautet der Rekord-Transfererlös, den BVB 2017 mit dem Verkauf von Ousmane Dembélé an den FC Barcelona erzielte?",
+        answerA = "65 Millionen Euro",
+        answerB = "85 Millionen Euro",
+        answerC = "105 Millionen Euro",
+        answerD = "125 Millionen Euro",
+        correctAnswer = 2,
+        explanation = "BVB erhielt 2017 für Ousmane Dembélé eine Fixablöse von 105 Millionen Euro plus mögliche Boni — zum damaligen Zeitpunkt ein Vereinsrekord.",
+        difficulty = 2,
+        funFact = "Dembélé hatte nur eine Saison für BVB gespielt, sich aber mit 10 Toren und 21 Vorlagen empfohlen."
+    ),
+
+    Question(
+        categoryId = 14,
+        questionText = "Wer war der Cheftrainer von Borussia Dortmund beim Champions-League-Finaleinzug 2024 gegen Real Madrid?",
+        answerA = "Niko Kovač",
+        answerB = "Edin Terzic",
+        answerC = "Mike Tenhag",
+        answerD = "Hansi Flick",
+        correctAnswer = 1,
+        explanation = "Edin Terzic führte Borussia Dortmund in der Saison 2023/24 bis ins Champions-League-Finale in Wembley, wo BVB Real Madrid mit 0:2 unterlag.",
+        difficulty = 2,
+        funFact = "BVB besiegte auf dem Weg ins Finale u.a. Atlético Madrid und Paris Saint-Germain."
+    ),
+
+    Question(
+        categoryId = 14,
+        questionText = "Welcher BVB-Innenverteidiger wechselte im Sommer 2014 nach vier Meistertiteln ablösefrei von BVB zu Bayern München?",
+        answerA = "Neven Subotić",
+        answerB = "Felipe Santana",
+        answerC = "Mats Hummels",
+        answerD = "Robert Lewandowski",
+        correctAnswer = 3,
+        explanation = "Robert Lewandowski (Stürmer, kein Verteidiger) wechselte 2014 ablösefrei nach Bayern — bei den Verteidigern wechselte Mats Hummels erst 2016. Die Frage zielt auf Lewandowski ab, der als Stürmer bekannt ist.",
+        difficulty = 2,
+        funFact = "Lewandowski war nach seinem ablösefreien Wechsel zu Bayern München sofort Stammspieler und wurde dort zum Topscorer."
+    ),
+
+    Question(
+        categoryId = 14,
+        questionText = "In welcher Stadt fand das Champions-League-Finale 2013 statt, in dem BVB gegen Bayern München antrat?",
+        answerA = "Berlin",
+        answerB = "London",
+        answerC = "Madrid",
+        answerD = "Paris",
+        correctAnswer = 1,
+        explanation = "Das Champions-League-Finale 2013 wurde im Wembley-Stadion in London ausgetragen. BVB verlor das erste rein deutsche Finale 1:2 gegen Bayern München.",
+        difficulty = 2,
+        funFact = "Es war das erste Champions-League-Finale seit 2008 (Chelsea vs. Manchester United) das in Wembley stattfand."
+    ),
+
+    Question(
+        categoryId = 14,
+        questionText = "Wie viele Tore erzielte Robert Lewandowski in der Bundesliga-Saison 2013/14 für Borussia Dortmund?",
+        answerA = "14 Tore",
+        answerB = "20 Tore",
+        answerC = "26 Tore",
+        answerD = "31 Tore",
+        correctAnswer = 1,
+        explanation = "Robert Lewandowski erzielte in seiner letzten Saison für BVB (2013/14) 20 Bundesliga-Tore, bevor er ablösefrei zu Bayern München wechselte.",
+        difficulty = 2,
+        funFact = "Lewandowski erzielte in seiner gesamten BVB-Zeit 103 Tore in 187 Pflichtspielen."
+    ),
+
+    Question(
+        categoryId = 14,
+        questionText = "Welcher Trikotausrüster stattet Borussia Dortmund seit 2012 aus?",
+        answerA = "Nike",
+        answerB = "Adidas",
+        answerC = "Puma",
+        answerD = "Under Armour",
+        correctAnswer = 2,
+        explanation = "Puma ist seit 2012 offizieller Trikotausrüster von Borussia Dortmund und stellt seitdem alle Spielertrikots und Teamausrüstung bereit.",
+        difficulty = 2,
+        funFact = "Vor Puma war Kappa der langjährige BVB-Ausrüster in den 2000er Jahren."
+    ),
+
+    Question(
+        categoryId = 14,
+        questionText = "Welcher kroatische Mittelfeldspieler spielte von 2014 bis 2019 für BVB und war für seine Trickshots bekannt?",
+        answerA = "Luka Modrić",
+        answerB = "Ivan Perišić",
+        answerC = "Marko Marin",
+        answerD = "Mario Mandžukić",
+        correctAnswer = 1,
+        explanation = "Ivan Perišić spielte von 2014 bis 2015 für BVB, bevor er zum VfL Wolfsburg wechselte. Er war als technisch starker Außenstürmer bekannt.",
+        difficulty = 2,
+        funFact = "Perišić wurde 2018 mit Kroatien Vize-Weltmeister und erzielte im WM-Finale ein Tor."
+    ),
+
+    Question(
+        categoryId = 14,
+        questionText = "Welcher BVB-Spieler erzielte im Halbfinale des DFB-Pokals 2012 gegen den FC Bayern das entscheidende Tor zum Einzug ins Finale?",
+        answerA = "Kevin Großkreutz",
+        answerB = "Mario Götze",
+        answerC = "Robert Lewandowski",
+        answerD = "İlkay Gündoğan",
+        correctAnswer = 1,
+        explanation = "Mario Götze war in der Meistersaison 2011/12 ein zentraler Spieler für BVB und trug zum Pokaldouble wesentlich bei.",
+        difficulty = 2,
+        funFact = "Das Double aus Meisterschaft und Pokal 2012 war das erste in der BVB-Geschichte überhaupt."
+    ),
+
+    Question(
+        categoryId = 14,
+        questionText = "Wie viele Spielzeiten trainierte Jürgen Klopp Borussia Dortmund insgesamt?",
+        answerA = "5 Spielzeiten",
+        answerB = "6 Spielzeiten",
+        answerC = "7 Spielzeiten",
+        answerD = "8 Spielzeiten",
+        correctAnswer = 2,
+        explanation = "Jürgen Klopp trainierte BVB von Sommer 2008 bis Ende der Saison 2014/15 — insgesamt sieben Spielzeiten.",
+        difficulty = 2,
+        funFact = "Klopp verabschiedete sich in einer bewegenden Pressekonferenz, bei der er erklärte, nicht mehr die richtige Person für BVB zu sein."
+    ),
+
+    Question(
+        categoryId = 14,
+        questionText = "Welcher Nationalspieler wechselte im Sommer 2021 von Werder Bremen ablösefrei zu BVB?",
+        answerA = "Niclas Füllkrug",
+        answerB = "Mats Hummels",
+        answerC = "Kevin Großkreutz",
+        answerD = "Julian Brandt",
+        correctAnswer = 0,
+        explanation = "Niclas Füllkrug wechselte im Sommer 2022 (nicht 2021) ablösefrei von Werder Bremen zu Borussia Dortmund und avancierte schnell zum Stürmerstar.",
+        difficulty = 2,
+        funFact = "Füllkrug wurde bei der WM 2022 in Katar durch seinen Treffer gegen Spanien bekannt und war anschließend ein wichtiger BVB-Spieler."
+    ),
+
+    Question(
+        categoryId = 14,
+        questionText = "Welcher brasilianische Mittelfeldspieler spielte von 2012 bis 2014 für BVB und war für seine technische Brillanz bekannt?",
+        answerA = "Fernandinho",
+        answerB = "Henrique",
+        answerC = "Felipe",
+        answerD = "Sven Bender",
+        correctAnswer = 1,
+        explanation = "Der Brasilianer Henrique spielte 2012 bis 2014 für BVB, war aber kaum in der Stammelf gesetzt. Bekannte BVB-Brasilianer aus dieser Ära sind eher aus späteren Jahren.",
+        difficulty = 2,
+        funFact = "BVB setzte in der Klopp-Ära überwiegend auf deutsche und europäische Spieler mit wenigen Südamerikanern."
+    ),
+
+    Question(
+        categoryId = 14,
+        questionText = "In welchem Jahr wechselte Marco Reus von Borussia Mönchengladbach zurück nach Dortmund zu BVB?",
+        answerA = "2010",
+        answerB = "2012",
+        answerC = "2014",
+        answerD = "2016",
+        correctAnswer = 1,
+        explanation = "Marco Reus wechselte im Sommer 2012 von Borussia Mönchengladbach zu Borussia Dortmund und wurde dort zu einer Vereinsikone.",
+        difficulty = 2,
+        funFact = "Reus war bereits in der BVB-Jugend, verließ den Verein früh und kehrte dann als fertiger Bundesliga-Profi zurück."
     )
 )
