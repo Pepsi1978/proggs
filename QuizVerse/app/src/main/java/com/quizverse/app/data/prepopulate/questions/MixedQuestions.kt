@@ -1318,5 +1318,830 @@ fun mixedQuestions(): List<Question> = listOf(
         explanation = "Das Ende des Weströmischen Reiches wird konventionell auf das Jahr 476 n. Chr. datiert, als der germanische Heerführer Odoaker den letzten Kaiser Romulus Augustulus absetzte.",
         difficulty = 3,
         funFact = "Der Name 'Romulus Augustulus' bedeutet 'kleiner Augustus' — ein ironischer Spitzname, da er der letzte und bedeutungsloseste der weströmischen Kaiser war."
+    ),
+
+    // --- ADDITIONAL EASY (25) ---
+
+    Question(
+        categoryId = 11,
+        questionText = "Wie viele Tage hat eine normale Woche?",
+        answerA = "5",
+        answerB = "6",
+        answerC = "7",
+        answerD = "8",
+        correctAnswer = 2,
+        explanation = "Eine Woche hat 7 Tage: Montag, Dienstag, Mittwoch, Donnerstag, Freitag, Samstag und Sonntag.",
+        difficulty = 1,
+        funFact = "Der 7-Tage-Rhythmus stammt aus dem alten Babylon und wurde von den Juden ins Judentum übernommen. Die Römer übernahmen ihn später."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Was ist die Hauptstadt Frankreichs?",
+        answerA = "Lyon",
+        answerB = "Marseille",
+        answerC = "Nizza",
+        answerD = "Paris",
+        correctAnswer = 3,
+        explanation = "Paris ist die Hauptstadt und größte Stadt Frankreichs. Sie liegt an der Seine und ist bekannt für den Eiffelturm und den Louvre.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welche Farbe erhält man, wenn man Blau und Gelb mischt?",
+        answerA = "Orange",
+        answerB = "Lila",
+        answerC = "Grün",
+        answerD = "Braun",
+        correctAnswer = 2,
+        explanation = "Mischt man die Farben Blau und Gelb, erhält man Grün. Das ist eine der drei Grundregeln der Farbmischung.",
+        difficulty = 1,
+        funFact = "In der additiven Farbmischung (Licht) gilt: Blau + Grün = Cyan, Rot + Grün = Gelb, Blau + Rot = Magenta."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Wie viele Seiten hat ein Dreieck?",
+        answerA = "2",
+        answerB = "3",
+        answerC = "4",
+        answerD = "5",
+        correctAnswer = 1,
+        explanation = "Ein Dreieck hat genau drei Seiten und drei Ecken. Das Wort 'Dreieck' setzt sich aus 'drei' und 'Eck' zusammen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Was trinkt man üblicherweise zum Frühstück in Deutschland?",
+        answerA = "Rum",
+        answerB = "Wein",
+        answerC = "Kaffee oder Tee",
+        answerD = "Bier",
+        correctAnswer = 2,
+        explanation = "Zum Frühstück werden in Deutschland üblicherweise Kaffee, Tee, Orangensaft oder Milch getrunken.",
+        difficulty = 1,
+        funFact = "Deutschland ist einer der größten Kaffeekonsumenten der Welt — jeder Deutsche trinkt durchschnittlich etwa 166 Liter Kaffee pro Jahr."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches Tier ist bekannt dafür, seinen Hals sehr lang strecken zu können?",
+        answerA = "Elefant",
+        answerB = "Giraffe",
+        answerC = "Zebra",
+        answerD = "Löwe",
+        correctAnswer = 1,
+        explanation = "Die Giraffe hat den längsten Hals aller lebenden Tiere. Ihr Hals kann bis zu 1,8 Meter lang sein.",
+        difficulty = 1,
+        funFact = "Trotz des langen Halses hat eine Giraffe genau so viele Halswirbel wie ein Mensch — nämlich 7. Sie sind nur viel länger."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welche Sprache spricht man in China am häufigsten?",
+        answerA = "Kantonesisch",
+        answerB = "Mandarin",
+        answerC = "Japanisch",
+        answerD = "Koreanisch",
+        correctAnswer = 1,
+        explanation = "Mandarin (Putonghua) ist die offizielle Amtssprache Chinas und wird von der Mehrheit der Bevölkerung gesprochen.",
+        difficulty = 1,
+        funFact = "Mandarin ist die meistgesprochene Muttersprache der Welt — mehr als 900 Millionen Menschen sprechen sie als Erstsprache."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Was ist Honig?",
+        answerA = "Ein Pflanzensaft",
+        answerB = "Ein Produkt von Bienen aus Blütennektar",
+        answerC = "Ein gemahlenes Getreideprodukt",
+        answerD = "Ein tierisches Fett",
+        correctAnswer = 1,
+        explanation = "Honig wird von Bienen aus dem Nektar von Blüten hergestellt. Die Bienen verwandeln den Nektar durch Enzyme und Wasserentzug in Honig.",
+        difficulty = 1,
+        funFact = "Honig verdirbt niemals — in altägyptischen Gräbern wurde Honig gefunden, der noch nach Jahrtausenden genießbar war."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Wie viele Buchstaben hat das deutsche Alphabet?",
+        answerA = "24",
+        answerB = "26",
+        answerC = "28",
+        answerD = "30",
+        correctAnswer = 1,
+        explanation = "Das deutsche Alphabet hat 26 Buchstaben — dieselben wie das englische, ergänzt durch die Sonderzeichen Ä, Ö, Ü und ß (die aber nicht zum Grundalphabet zählen).",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welche Form hat ein Ei?",
+        answerA = "Rund",
+        answerB = "Würfelförmig",
+        answerC = "Oval",
+        answerD = "Dreieckig",
+        correctAnswer = 2,
+        explanation = "Ein Ei hat eine ovale, leicht asymmetrische Form. Das eine Ende ist breiter, das andere spitzer.",
+        difficulty = 1,
+        funFact = "Die ovale Form des Eies hat einen Vorteil: Es rollt im Kreis statt geradeaus — so fällt es nicht so leicht aus dem Nest."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Was ist ein Synonym für 'glücklich'?",
+        answerA = "Traurig",
+        answerB = "Fröhlich",
+        answerC = "Müde",
+        answerD = "Wütend",
+        correctAnswer = 1,
+        explanation = "Fröhlich ist ein Synonym für glücklich. Beide Wörter beschreiben einen positiven emotionalen Zustand.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Aus wie vielen Spielkarten besteht ein normales deutsches Kartenspiel (Skatblatt)?",
+        answerA = "32",
+        answerB = "36",
+        answerC = "52",
+        answerD = "54",
+        correctAnswer = 0,
+        explanation = "Ein deutsches Skatblatt hat 32 Karten: 4 Farben (Kreuz, Pik, Herz, Karo) mit je 8 Karten (7, 8, 9, 10, Bube, Dame, König, Ass).",
+        difficulty = 1,
+        funFact = "Das französische Blatt, das weltweit am weitesten verbreitet ist, hat 52 Karten — mit den Zahlen 2 bis 10 plus Bube, Dame, König und Ass."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches Tier ist der größte Landbewohner der Erde?",
+        answerA = "Nashorn",
+        answerB = "Nilpferd",
+        answerC = "Elefant",
+        answerD = "Giraffe",
+        correctAnswer = 2,
+        explanation = "Der Afrikanische Elefant ist das größte Landtier der Erde — ein ausgewachsener Bulle kann bis zu 6 Tonnen wiegen.",
+        difficulty = 1,
+        funFact = "Elefanten sind die einzigen Tiere, die nicht springen können. Außerdem sind sie die einzigen Landsäugetiere, die schwimmen lernen, ohne es angeboren zu haben."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches Gas atmet man aus, wenn man ausatmet?",
+        answerA = "Sauerstoff",
+        answerB = "Stickstoff",
+        answerC = "Kohlendioxid",
+        answerD = "Wasserstoff",
+        correctAnswer = 2,
+        explanation = "Beim Ausatmen gibt der Mensch vor allem Kohlendioxid (CO₂) ab, das beim Stoffwechsel als Abfallprodukt entsteht.",
+        difficulty = 1,
+        funFact = "Ausgeatmete Luft enthält etwa 4 % CO₂ — eingeatmete Luft nur 0,04 %. Die Lunge reichert Kohlendioxid also um das 100-Fache an."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Was ist das Gegenteil von 'heiß'?",
+        answerA = "Warm",
+        answerB = "Kalt",
+        answerC = "Feucht",
+        answerD = "Trocken",
+        correctAnswer = 1,
+        explanation = "Das Gegenteil von heiß ist kalt. Auf der Temperaturskala liegen heiß und kalt an entgegengesetzten Enden.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Wie nennt man den Mond der Erde?",
+        answerA = "Titan",
+        answerB = "Europa",
+        answerC = "Mond",
+        answerD = "Phobos",
+        correctAnswer = 2,
+        explanation = "Der einzige natürliche Satellit der Erde heißt schlicht 'der Mond'. Er umkreist die Erde in etwa 27,3 Tagen.",
+        difficulty = 1,
+        funFact = "Der Mond entfernt sich jährlich um etwa 3,8 cm von der Erde — in einigen Milliarden Jahren wird er weit genug weg sein, um keine totalen Sonnenfinsternisse mehr zu ermöglichen."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Wie viele Spieler hat eine reguläre Fußballmannschaft auf dem Platz?",
+        answerA = "9",
+        answerB = "10",
+        answerC = "11",
+        answerD = "12",
+        correctAnswer = 2,
+        explanation = "Eine reguläre Fußballmannschaft besteht aus 11 Spielern auf dem Platz, inklusive Torwart.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welche Farbe hat reifes Gold?",
+        answerA = "Silber",
+        answerB = "Kupfer",
+        answerC = "Gelb (golden)",
+        answerD = "Weiß",
+        correctAnswer = 2,
+        explanation = "Reines Gold hat eine charakteristische gelblich-goldene Farbe, die ihm seinen Namen gegeben hat.",
+        difficulty = 1,
+        funFact = "Gold ist so weich, dass man es mit den Fingernägeln kratzen kann. Deshalb wird es für Schmuck meist mit anderen Metallen legiert."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Was ist das Ergebnis von 7 × 8?",
+        answerA = "54",
+        answerB = "56",
+        answerC = "48",
+        answerD = "64",
+        correctAnswer = 1,
+        explanation = "7 × 8 = 56. Dies gehört zum kleinen Einmaleins, das in der Grundschule gelernt wird.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welcher Planet ist in unserem Sonnensystem der Sonne am nächsten am zweiten Platz?",
+        answerA = "Erde",
+        answerB = "Mars",
+        answerC = "Venus",
+        answerD = "Jupiter",
+        correctAnswer = 2,
+        explanation = "Venus ist der zweite Planet von der Sonne aus gesehen. Die Reihenfolge lautet: Merkur, Venus, Erde, Mars, Jupiter, Saturn, Uranus, Neptun.",
+        difficulty = 1,
+        funFact = "Venus ist der heißeste Planet im Sonnensystem mit Temperaturen von über 460 °C an der Oberfläche — heißer als Merkur, obwohl er näher an der Sonne ist."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Was kocht man, wenn man Nudeln zubereitet?",
+        answerA = "Man backt sie im Ofen",
+        answerB = "Man brät sie in der Pfanne",
+        answerC = "Man kocht sie in heißem Wasser",
+        answerD = "Man legt sie in kaltes Wasser",
+        correctAnswer = 2,
+        explanation = "Nudeln (Pasta) werden in kochendem, gesalzenem Wasser gegart. Die Garzeit hängt von der Nudelsorte ab.",
+        difficulty = 1,
+        funFact = "Italien produziert über 3,5 Millionen Tonnen Pasta pro Jahr. Die Italiener essen durchschnittlich 23 kg Pasta pro Person pro Jahr."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welcher Sinn ermöglicht es uns, Musik zu hören?",
+        answerA = "Geruchssinn",
+        answerB = "Tastsinn",
+        answerC = "Sehsinn",
+        answerD = "Gehörsinn",
+        correctAnswer = 3,
+        explanation = "Der Gehörsinn (Hörsinn) ermöglicht es uns, Schallwellen wahrzunehmen und damit Musik, Sprache und andere Geräusche zu hören.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Was ist der Stoff, aus dem Spinnweben bestehen?",
+        answerA = "Wolle",
+        answerB = "Nylon",
+        answerC = "Seide",
+        answerD = "Spinnenseide",
+        correctAnswer = 3,
+        explanation = "Spinnweben bestehen aus Spinnenseide, einem Protein-Faden, den Spinnen aus speziellen Drüsen (Spinndrüsen) produzieren.",
+        difficulty = 1,
+        funFact = "Spinnenseide ist, bezogen auf ihr Gewicht, fünfmal stärker als Stahl und wird in der Forschung für viele technische Anwendungen untersucht."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Wie heißt die Zahl, die man multipliziert mit sich selbst 9 ergibt?",
+        answerA = "2",
+        answerB = "4",
+        answerC = "3",
+        answerD = "6",
+        correctAnswer = 2,
+        explanation = "3 × 3 = 9. Die Quadratwurzel aus 9 ist 3.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches Tier ist bekannt für sein schwarzweißes Streifenmuster?",
+        answerA = "Gepard",
+        answerB = "Löwe",
+        answerC = "Zebra",
+        answerD = "Hyäne",
+        correctAnswer = 2,
+        explanation = "Das Zebra ist bekannt für sein charakteristisches schwarzweißes Streifenmuster. Kein zwei Zebras haben exakt dasselbe Muster.",
+        difficulty = 1,
+        funFact = "Das Streifenmuster des Zebras wirkt als Schutz vor Tsetsefliegen — die Insekten haben Schwierigkeiten, auf einem gestreiften Muster zu landen."
+    ),
+
+    // --- ADDITIONAL MEDIUM (15) ---
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches Tier hat das größte Gehirn im Verhältnis zum Körpergewicht?",
+        answerA = "Delfin",
+        answerB = "Schimpanse",
+        answerC = "Mensch",
+        answerD = "Elefant",
+        correctAnswer = 2,
+        explanation = "Der Mensch hat das größte Gehirn im Verhältnis zur Körpergröße. Das menschliche Gehirn macht etwa 2 % des Körpergewichts aus, verbraucht aber 20 % der Energie.",
+        difficulty = 2,
+        funFact = "Delfine sind nach dem Menschen die Lebewesen mit dem größten Gehirn-Körper-Verhältnis — und gelten als eines der intelligentesten Tiere der Welt."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welcher Wissenschaftler entdeckte die Röntgenstrahlen?",
+        answerA = "Marie Curie",
+        answerB = "Wilhelm Conrad Röntgen",
+        answerC = "Heinrich Hertz",
+        answerD = "Max Planck",
+        correctAnswer = 1,
+        explanation = "Wilhelm Conrad Röntgen entdeckte 1895 zufällig die nach ihm benannten Röntgenstrahlen. Er erhielt dafür 1901 den ersten Nobelpreis für Physik.",
+        difficulty = 2,
+        funFact = "Röntgen nannte seine Entdeckung zunächst 'X-Strahlen', weil er nicht wusste, was sie waren. In englischsprachigen Ländern heißen sie bis heute 'X-rays'."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches Tier produziert Wolle für die Textilindustrie?",
+        answerA = "Ziege",
+        answerB = "Schaf",
+        answerC = "Alpaka",
+        answerD = "Alle drei",
+        correctAnswer = 3,
+        explanation = "Wolle wird von Schafen, Ziegen (Mohair, Kaschmir) und Alpakas gewonnen. Schafe liefern den größten Anteil der weltweit produzierten Wolle.",
+        difficulty = 2,
+        funFact = "Ein Merinoschaf kann bis zu 10 kg Wolle pro Jahr liefern. Australien ist der weltgrößte Wollproduzent."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Was versteht man unter dem Begriff 'Inflation'?",
+        answerA = "Ein Anstieg des Zinsniveaus der Zentralbank",
+        answerB = "Den allgemeinen Anstieg des Preisniveaus über einen bestimmten Zeitraum",
+        answerC = "Die Zunahme der Staatsverschuldung",
+        answerD = "Einen Rückgang der Beschäftigung",
+        correctAnswer = 1,
+        explanation = "Inflation bezeichnet den anhaltenden Anstieg des allgemeinen Preisniveaus, was bedeutet, dass Geld im Laufe der Zeit weniger kaufen kann.",
+        difficulty = 2,
+        funFact = "Die Europäische Zentralbank (EZB) hat ein Inflationsziel von etwa 2 % — zu viel Inflation ist schädlich, aber auch zu wenig (Deflation) ist ein Problem."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches Land erfand das Papier?",
+        answerA = "Ägypten",
+        answerB = "China",
+        answerC = "Mesopotamien",
+        answerD = "Griechenland",
+        correctAnswer = 1,
+        explanation = "Papier wurde in China erfunden — die ältesten bekannten Papierfragmente stammen aus dem 2. Jahrhundert v. Chr. Cai Lun verfeinerte den Prozess um 105 n. Chr.",
+        difficulty = 2,
+        funFact = "Vor der Erfindung von Papier schrieben die Chinesen auf Bambus, Seide oder Tierknochen."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches Edelgas hat das chemische Symbol 'He'?",
+        answerA = "Neon",
+        answerB = "Argon",
+        answerC = "Helium",
+        answerD = "Krypton",
+        correctAnswer = 2,
+        explanation = "He ist das chemische Symbol für Helium, das leichteste Edelgas. Helium wurde zuerst in der Sonne entdeckt, bevor es auf der Erde gefunden wurde.",
+        difficulty = 2,
+        funFact = "Helium ist das einzige Element, das man zuerst aus der Spektralanalyse der Sonne (1868) entdeckt hat — sein Name stammt vom griechischen Sonnengott Helios."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Wie nennt man die Lehre von der Entstehung und Entwicklung des Lebens?",
+        answerA = "Genetik",
+        answerB = "Ökologie",
+        answerC = "Paläontologie",
+        answerD = "Evolutionsbiologie",
+        correctAnswer = 3,
+        explanation = "Die Evolutionsbiologie befasst sich mit der Entstehung, Entwicklung und Vielfalt des Lebens auf der Erde durch Prozesse wie natürliche Selektion und genetische Drift.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches ist das härteste natürliche Mineral der Welt?",
+        answerA = "Rubin",
+        answerB = "Diamant",
+        answerC = "Saphir",
+        answerD = "Quarz",
+        correctAnswer = 1,
+        explanation = "Diamant ist das härteste natürliche Mineral mit dem Härtewert 10 auf der Mohs-Skala. Er besteht aus reinem Kohlenstoff in einer Kristallstruktur.",
+        difficulty = 2,
+        funFact = "Diamanten entstehen unter extremem Druck und Hitze in Tiefen von 150–200 km im Erdmantel. Sie werden durch vulkanische Aktivität an die Oberfläche gebracht."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welche Stadt ist die bevölkerungsreichste der Welt (Stand 2024)?",
+        answerA = "Peking",
+        answerB = "Mumbai",
+        answerC = "Tokio",
+        answerD = "Shanghai",
+        correctAnswer = 2,
+        explanation = "Tokio ist mit über 37 Millionen Einwohnern im Großraum die bevölkerungsreichste Metropolregion der Welt.",
+        difficulty = 2,
+        funFact = "Tokios Ballungsraum hat mehr Einwohner als ganz Kanada."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches chemische Element ist für das rote Blut (Hämoglobin) verantwortlich?",
+        answerA = "Kupfer",
+        answerB = "Calcium",
+        answerC = "Eisen",
+        answerD = "Zink",
+        correctAnswer = 2,
+        explanation = "Eisen ist der zentrale Bestandteil des Hämoglobin-Moleküls im Blut. Es bindet Sauerstoff und verleiht dem Blut seine rote Farbe.",
+        difficulty = 2,
+        funFact = "Tintenfische und Krabben haben blaues Blut, weil ihr Blut Kupfer (Hämocyanin) statt Eisen (Hämoglobin) verwendet."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "In welchem Jahr fand die Französische Revolution statt?",
+        answerA = "1776",
+        answerB = "1789",
+        answerC = "1804",
+        answerD = "1815",
+        correctAnswer = 1,
+        explanation = "Die Französische Revolution begann 1789 mit dem Sturm auf die Bastille am 14. Juli. Sie beendete das Ancien Régime und führte zur Republik.",
+        difficulty = 2,
+        funFact = "Der 14. Juli 1789 (Sturm auf die Bastille) ist bis heute der französische Nationalfeiertag."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Was ist ein 'Palindrom'?",
+        answerA = "Ein Wort aus einer toten Sprache",
+        answerB = "Ein Satz, der vorwärts wie rückwärts gleich lautet",
+        answerC = "Ein Gedicht mit festgelegter Silbenanzahl",
+        answerD = "Eine mathematische Primzahlformel",
+        correctAnswer = 1,
+        explanation = "Ein Palindrom ist ein Wort oder Satz, der von vorne wie von hinten gelesen gleich ist. Beispiele: 'Rentner', 'Otto', 'Eine güldne, gute Tugend: lüge nie'.",
+        difficulty = 2,
+        funFact = "Das längste einsprachige Palindrom-Wort im Deutschen ist 'Reliefpfeiler' mit 13 Buchstaben."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welche Pflanze liefert die Zutaten für Sauerkraut?",
+        answerA = "Spinat",
+        answerB = "Salat",
+        answerC = "Weißkohl",
+        answerD = "Rotkohl",
+        correctAnswer = 2,
+        explanation = "Sauerkraut wird aus fein geschnittenem Weißkohl hergestellt, der durch Milchsäuregärung (Fermentation) konserviert und sauer gemacht wird.",
+        difficulty = 2,
+        funFact = "Sauerkraut ist extrem vitaminreich — besonders Vitamin C. Auf langen Seereisen wurde es früher genutzt, um Skorbut zu verhindern."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Wie nennt man die Wissenschaft, die sich mit dem menschlichen Geist und Verhalten beschäftigt?",
+        answerA = "Soziologie",
+        answerB = "Anthropologie",
+        answerC = "Neurologie",
+        answerD = "Psychologie",
+        correctAnswer = 3,
+        explanation = "Die Psychologie ist die Wissenschaft vom menschlichen Erleben, Denken und Verhalten. Sie umfasst Bereiche wie klinische Psychologie, Sozialpsychologie und Neuropsychologie.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches Naturphänomen bezeichnet man als 'Aurora Borealis'?",
+        answerA = "Tornado",
+        answerB = "Nordlicht",
+        answerC = "Springflut",
+        answerD = "Polarnacht",
+        correctAnswer = 1,
+        explanation = "Die Aurora Borealis (Nordlicht) entsteht, wenn geladene Teilchen des Sonnenwinds in der Erdatmosphäre mit Gasmolekülen kollidieren und dabei Licht erzeugen.",
+        difficulty = 2,
+        funFact = "In der südlichen Hemisphäre heißt das gleiche Phänomen 'Aurora Australis' (Südlicht)."
+    ),
+
+    // --- ADDITIONAL HARD (23) ---
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches philosophische Werk Platos beschreibt den Mythos von der Höhle?",
+        answerA = "Symposion",
+        answerB = "Theaitet",
+        answerC = "Der Staat (Politeia)",
+        answerD = "Phaidon",
+        correctAnswer = 2,
+        explanation = "Das Höhlengleichnis findet sich im siebten Buch von Platons 'Politeia' (Der Staat). Es beschreibt Menschen, die nur Schatten als Realität kennen und symbolisiert die Erleuchtung durch Wissen.",
+        difficulty = 3,
+        funFact = "Plato schrieb das Höhlengleichnis als Dialog zwischen Sokrates und Glaukon — Sokrates hinterließ selbst keine schriftlichen Werke."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Was ist die chemische Formel für Wasser?",
+        answerA = "HO",
+        answerB = "H₂O₂",
+        answerC = "OH",
+        answerD = "H₂O",
+        correctAnswer = 3,
+        explanation = "Wasser hat die chemische Formel H₂O: zwei Wasserstoffatome (H) und ein Sauerstoffatom (O). H₂O₂ ist Wasserstoffperoxid — ein ganz anderer Stoff.",
+        difficulty = 3,
+        funFact = "Obwohl Wasser aus den leichtesten Elementen besteht, hat es einen erstaunlich hohen Siedepunkt von 100 °C — das liegt an den starken Wasserstoffbrückenbindungen."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welche mathematische Konstante beschreibt das Verhältnis von Kreisumfang zu Durchmesser?",
+        answerA = "e (Eulersche Zahl)",
+        answerB = "φ (Goldener Schnitt)",
+        answerC = "π (Pi)",
+        answerD = "√2 (Wurzel 2)",
+        correctAnswer = 2,
+        explanation = "Pi (π ≈ 3,14159...) ist das Verhältnis des Umfangs eines Kreises zu seinem Durchmesser. Es ist eine irrationale Zahl mit unendlich vielen Dezimalstellen.",
+        difficulty = 3,
+        funFact = "Pi wurde von Archimedes von Syrakus erstmals näherungsweise berechnet. Heute kennen Computer Pi auf über 100 Billionen Dezimalstellen."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches Ereignis löste den Ersten Weltkrieg direkt aus?",
+        answerA = "Die Mobilisierung Russlands an der Ostfront",
+        answerB = "Das Attentat auf Erzherzog Franz Ferdinand in Sarajevo",
+        answerC = "Der deutsche Einmarsch in Belgien",
+        answerD = "Die Versenkung der Lusitania",
+        correctAnswer = 1,
+        explanation = "Das Attentat auf den österreichisch-ungarischen Thronfolger Franz Ferdinand am 28. Juni 1914 in Sarajevo durch Gavrilo Princip gilt als direkter Auslöser des Ersten Weltkriegs.",
+        difficulty = 3,
+        funFact = "Franz Ferdinand und seine Frau Sophie wurden erschossen, während sie nach einem gescheiterten Bombenattentat am selben Tag eine andere Route fuhren — ein fataler Zufall."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Was versteht man unter dem Begriff 'Osmose' in der Biologie?",
+        answerA = "Die aktive Beförderung von Molekülen durch Zellmembranen",
+        answerB = "Die Diffusion von Wassermolekülen durch eine semipermeable Membran von niedriger zu hoher Konzentration",
+        answerC = "Die Aufnahme von Nährstoffen durch die Zellwand",
+        answerD = "Der Austausch von Gasen zwischen Zelle und Umgebung",
+        correctAnswer = 1,
+        explanation = "Osmose ist die Diffusion von Wasser durch eine semipermeable Membran vom Bereich niedrigerer Gelöststoffkonzentration (niedriger osmotischer Druck) zu höherer Konzentration.",
+        difficulty = 3,
+        funFact = "Osmose erklärt, warum Salz Fleisch konserviert: Das Salz entzieht Bakterien durch osmotischen Stress das Wasser und tötet sie ab."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches Element hat die höchste Elektronegativität im Periodensystem?",
+        answerA = "Chlor",
+        answerB = "Sauerstoff",
+        answerC = "Fluor",
+        answerD = "Stickstoff",
+        correctAnswer = 2,
+        explanation = "Fluor hat mit einem Elektronegativitätswert von 3,98 (Pauling-Skala) die höchste Elektronegativität aller Elemente — es zieht Elektronen stärker an als jedes andere Element.",
+        difficulty = 3,
+        funFact = "Fluor ist so reaktiv, dass es mit fast allen anderen Elementen reagiert — sogar mit einigen Edelgasen wie Xenon und Krypton."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welcher Begriff beschreibt in der Linguistik Wörter, die gleich klingen, aber unterschiedliche Bedeutungen haben?",
+        answerA = "Synonyme",
+        answerB = "Antonyme",
+        answerC = "Homonyme",
+        answerD = "Paronyme",
+        correctAnswer = 2,
+        explanation = "Homonyme sind Wörter, die gleich ausgesprochen (Homophone) oder gleich geschrieben (Homographen) werden, aber verschiedene Bedeutungen haben. Beispiel: 'Bank' (Geldinstitut / Sitzgelegenheit).",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches Prinzip der Logik besagt, dass eine Aussage entweder wahr oder falsch sein muss?",
+        answerA = "Prinzip der Kausalität",
+        answerB = "Prinzip der Induktion",
+        answerC = "Tertium non datur (Satz vom ausgeschlossenen Dritten)",
+        answerD = "Prinzip der Falsifizierbarkeit",
+        correctAnswer = 2,
+        explanation = "'Tertium non datur' (kein Drittes wird gegeben) ist ein logisches Grundprinzip: Jede Aussage ist entweder wahr oder falsch — ein drittes Möglichkeit gibt es nicht.",
+        difficulty = 3,
+        funFact = "In der Quantenmechanik und mehrwertigen Logik wird dieses Prinzip jedoch in Frage gestellt — dort kann es Zustände geben, die weder eindeutig wahr noch eindeutig falsch sind."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches Phänomen erklärt, warum weißes Licht durch ein Prisma in Regenbogenfarben aufgeteilt wird?",
+        answerA = "Reflexion",
+        answerB = "Absorption",
+        answerC = "Polarisation",
+        answerD = "Dispersion",
+        correctAnswer = 3,
+        explanation = "Dispersion ist die Aufspaltung von weißem Licht in seine Spektralfarben, weil verschiedene Wellenlängen unterschiedlich stark gebrochen werden. Ein Prisma nutzt diesen Effekt.",
+        difficulty = 3,
+        funFact = "Isaac Newton war der erste, der bewies, dass weißes Licht aus allen Spektralfarben zusammengesetzt ist — vorher dachte man, das Prisma färbe das Licht."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welcher Ökonom prägte den Begriff der 'unsichtbaren Hand' des Marktes?",
+        answerA = "John Maynard Keynes",
+        answerB = "Karl Marx",
+        answerC = "Adam Smith",
+        answerD = "Milton Friedman",
+        correctAnswer = 2,
+        explanation = "Adam Smith verwendete in seinem Werk 'Der Wohlstand der Nationen' (1776) die Metapher der 'unsichtbaren Hand', die individuelle Eigeninteressen zum gesellschaftlichen Wohl lenkt.",
+        difficulty = 3,
+        funFact = "Adam Smith verwendete den Begriff 'unsichtbare Hand' in seinem gesamten Werk tatsächlich nur dreimal — die zentrale Bedeutung, die ihm zugeschrieben wird, kam erst durch spätere Interpretation."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches astronomische Phänomen tritt auf, wenn der Mond zwischen Sonne und Erde steht?",
+        answerA = "Mondfinsternis",
+        answerB = "Sonnenfinsternis",
+        answerC = "Konjunktion",
+        answerD = "Opposition",
+        correctAnswer = 1,
+        explanation = "Eine Sonnenfinsternis entsteht, wenn der Mond zwischen Sonne und Erde tritt und den Schatten auf die Erde wirft. Bei einer totalen Sonnenfinsternis wird die Sonne vollständig verdeckt.",
+        difficulty = 3,
+        funFact = "Totale Sonnenfinsternisse sind nur möglich, weil Mond und Sonne von der Erde aus gesehen fast gleich groß erscheinen — ein kosmischer Zufall, der sich im Laufe der Jahrmillionen verändern wird."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches mittelalterliche Handelsnetz verband europäische Städte im 13.–17. Jahrhundert?",
+        answerA = "Seidenstraße",
+        answerB = "Hanse",
+        answerC = "Templernetz",
+        answerD = "Fugger-Konsortium",
+        correctAnswer = 1,
+        explanation = "Die Hanse war ein mittelalterlicher Handels- und Städtebund, der vor allem norddeutsche und nordeuropäische Städte (wie Hamburg, Lübeck, Bremen) verband und den Ostsee- und Nordseehandel dominierte.",
+        difficulty = 3,
+        funFact = "Auf dem Höhepunkt der Macht der Hanse (14.–15. Jh.) gehörten ihr über 200 Städte an. Lübeck war lange Zeit die 'Königin der Hanse'."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Was beschreibt der Begriff 'Paradigmenwechsel' nach Thomas Kuhn?",
+        answerA = "Ein politischer Systemwechsel durch Revolution",
+        answerB = "Eine grundlegende Veränderung des wissenschaftlichen Weltbildes",
+        answerC = "Die schrittweise Weiterentwicklung einer Theorie",
+        answerD = "Ein Wechsel des Regierungssystems",
+        correctAnswer = 1,
+        explanation = "Thomas Kuhn beschrieb in 'The Structure of Scientific Revolutions' (1962) den Paradigmenwechsel als plötzlichen, grundlegenden Wandel des wissenschaftlichen Weltbildes — z.B. von geozentrism zu heliozentrism.",
+        difficulty = 3,
+        funFact = "Kuhn prägte auch den Begriff der 'Normalwissenschaft' — die routinemäßige Forschung innerhalb eines bestehenden Paradigmas, bevor ein Paradigmenwechsel eintritt."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welche Erkrankung verursacht das Virus HIV?",
+        answerA = "Hepatitis B",
+        answerB = "AIDS",
+        answerC = "Tuberkulose",
+        answerD = "Malaria",
+        correctAnswer = 1,
+        explanation = "HIV (Human Immunodeficiency Virus) verursacht AIDS (Acquired Immunodeficiency Syndrome). HIV greift das Immunsystem an, insbesondere CD4-T-Zellen.",
+        difficulty = 3,
+        funFact = "HIV wurde 1983 unabhängig von Luc Montagnier (Frankreich) und Robert Gallo (USA) entdeckt. Montagnier erhielt 2008 den Nobelpreis für Medizin."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches Drucksystem ist auf der Erde mit gutem Wetter verbunden?",
+        answerA = "Zyklone (Tief)",
+        answerB = "Antizyklone (Hoch)",
+        answerC = "Monsun",
+        answerD = "Front",
+        correctAnswer = 1,
+        explanation = "Ein Hochdrucksystem (Antizyklone) ist mit stabilem, sonnigem Wetter verbunden, weil Luft absinkt und sich erwärmt. Tiefdrucksysteme bringen oft Wolken und Regen.",
+        difficulty = 3,
+        funFact = "Auf der Nordhalbkugel dreht sich Hochdrucksysteme im Uhrzeigersinn, Tiefdrucksysteme gegen den Uhrzeigersinn — auf der Südhalbkugel ist es umgekehrt (Coriolis-Effekt)."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welche Sprache hat die meisten Muttersprachler weltweit?",
+        answerA = "Englisch",
+        answerB = "Spanisch",
+        answerC = "Hindi",
+        answerD = "Mandarin-Chinesisch",
+        correctAnswer = 3,
+        explanation = "Mandarin-Chinesisch hat mit über 900 Millionen Muttersprachlern die größte Anzahl weltweit. Englisch hingegen hat die meisten Sprecher insgesamt (inklusive Zweit- und Fremdsprachler).",
+        difficulty = 3,
+        funFact = "Es gibt schätzungsweise 7.000 Sprachen auf der Welt — davon sind jedoch mehr als die Hälfte vom Aussterben bedroht."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welcher Physiker formulierte das Prinzip, dass Natur stets den Weg des geringsten Widerstandes nimmt (Variationsprinzip)?",
+        answerA = "Pierre-Louis Maupertuis",
+        answerB = "Joseph-Louis Lagrange",
+        answerC = "William Rowan Hamilton",
+        answerD = "Alle drei haben dazu beigetragen",
+        correctAnswer = 3,
+        explanation = "Das Prinzip der kleinsten Wirkung (Variationsprinzip) wurde von Maupertuis (1744) postuliert und von Euler, Lagrange und Hamilton mathematisch präzisiert. Alle drei leisteten wesentliche Beiträge.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "In welchem Zeitalter lebten die Dinosaurier hauptsächlich?",
+        answerA = "Paläozoikum",
+        answerB = "Känozoikum",
+        answerC = "Mesozoikum",
+        answerD = "Proterozoikum",
+        correctAnswer = 2,
+        explanation = "Dinosaurier lebten hauptsächlich im Mesozoikum (Erdmittelalter), das sich in Trias, Jura und Kreide unterteilt. Das Massenaussterben vor etwa 66 Millionen Jahren beendete ihre Herrschaft.",
+        difficulty = 3,
+        funFact = "Vögel sind die einzigen direkten Nachfahren der Dinosaurier — technisch gesehen sind Vögel also noch lebende Dinosaurier."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welche chemische Verbindung ist der Hauptbestandteil von Weinessig?",
+        answerA = "Zitronensäure",
+        answerB = "Milchsäure",
+        answerC = "Essigsäure",
+        answerD = "Weinsäure",
+        correctAnswer = 2,
+        explanation = "Weinessig enthält Essigsäure (CH₃COOH) als Hauptbestandteil — typischerweise 5–8 %. Essigsäure entsteht durch Oxidation von Alkohol durch Essigsäurebakterien.",
+        difficulty = 3,
+        funFact = "Essig wurde schon von den alten Ägyptern und Babyloniern verwendet — zunächst als Konservierungsmittel, später auch als Heilmittel und Reinigungsmittel."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welche Theorie beschreibt die Bewegung der Erdplatten und die Entstehung von Gebirgen?",
+        answerA = "Geodynamik",
+        answerB = "Kontinentaldrift / Plattentektonik",
+        answerC = "Isostasie",
+        answerD = "Geomorphologie",
+        correctAnswer = 1,
+        explanation = "Die Plattentektonik beschreibt, wie die Lithosphäre der Erde in mehrere große und kleine Platten geteilt ist, die sich relativ zueinander bewegen — was Erdbeben, Vulkane und Gebirge erklärt.",
+        difficulty = 3,
+        funFact = "Alfred Wegener schlug 1912 die Theorie der Kontinentaldrift vor, wurde aber von der wissenschaftlichen Gemeinschaft zunächst ausgelacht — erst in den 1960ern wurde seine Theorie akzeptiert."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Wie nennt man den genetischen Prozess, bei dem zwei Chromosomen Teile austauschen?",
+        answerA = "Mutation",
+        answerB = "Mitose",
+        answerC = "Chromosomale Rekombination (Crossing-over)",
+        answerD = "Transposition",
+        correctAnswer = 2,
+        explanation = "Crossing-over (chromosomale Rekombination) tritt während der Meiose auf, wenn homologe Chromosomen Segmente austauschen. Es erhöht die genetische Vielfalt der Nachkommen.",
+        difficulty = 3,
+        funFact = "Ohne Crossing-over würden alle Kinder eines Elternpaares (außer eineiige Zwillinge) genetisch identisch sein."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Welches philosophische Prinzip verneint die Existenz einer objektiven Wahrheit außerhalb menschlicher Wahrnehmung?",
+        answerA = "Empirismus",
+        answerB = "Rationalismus",
+        answerC = "Pragmatismus",
+        answerD = "Solipsismus",
+        correctAnswer = 3,
+        explanation = "Der Solipsismus ist die philosophische Auffassung, dass nur die eigene Wahrnehmung gewiss existiert — die Existenz der Außenwelt und anderer Geister kann nicht bewiesen werden.",
+        difficulty = 3,
+        funFact = "Der Solipsismus ist philosophisch kaum widerlegbar, aber auch kaum lebbar — er hat deshalb mehr historische als praktische Bedeutung in der Philosophie."
+    ),
+
+    Question(
+        categoryId = 11,
+        questionText = "Was ist die Bedeutung des lateinischen Ausdrucks 'Cogito ergo sum'?",
+        answerA = "Ich handle, also bin ich",
+        answerB = "Ich denke, also bin ich",
+        answerC = "Ich fühle, also bin ich",
+        answerD = "Ich zweifle, also irre ich",
+        correctAnswer = 1,
+        explanation = "'Cogito ergo sum' (Ich denke, also bin ich) ist der berühmteste Satz von René Descartes aus den 'Meditationes de Prima Philosophia' (1641). Es ist sein Ausgangspunkt für sicheres Wissen.",
+        difficulty = 3,
+        funFact = "Descartes versuchte, alles zu bezweifeln — und fand: Das Einzige, was er nicht bezweifeln konnte, war, dass er zweifelte, also dachte, also existierte."
     )
 )
