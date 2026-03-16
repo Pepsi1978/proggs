@@ -1515,5 +1515,659 @@ fun filmQuestions(): List<Question> = listOf(
         explanation = "'The Walking Dead' (AMC, 2010–2022) basiert auf den Comics von Robert Kirkman und Frank Darabont und zeigt eine Gruppe von Überlebenden in einer von Zombies bevölkerten Welt.",
         difficulty = 2,
         funFact = null
+    ),
+
+    // ─── EXTRA EASY 50-PACK (25 questions, difficulty=1) ─────────────────────
+
+    Question(
+        categoryId = 4,
+        questionText = "In welchem Film spielt Tom Hanks einen Astronauten, der nach einer Explosion um seine Rückkehr zur Erde kämpft?",
+        answerA = "Gravity",
+        answerB = "Apollo 13",
+        answerC = "Interstellar",
+        answerD = "The Martian",
+        correctAnswer = 1,
+        explanation = "'Apollo 13' (1995) basiert auf der wahren Geschichte der havarierten NASA-Mondmission von 1970. Tom Hanks spielt Astronaut Jim Lovell.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Pixar-Film handelt von einem Spielzeug-Cowboy namens Woody?",
+        answerA = "A Bug's Life",
+        answerB = "Monsters, Inc.",
+        answerC = "Toy Story",
+        answerD = "Cars",
+        correctAnswer = 2,
+        explanation = "'Toy Story' (1995) war Pixars erster abendfüllender Film und erzählt von Spielzeugfiguren, die zum Leben erwachen, wenn Menschen den Raum verlassen.",
+        difficulty = 1,
+        funFact = "'Toy Story' war der erste vollständig computeranimierte Spielfilm der Geschichte."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Wie heißt der grüne Held aus den Marvel-Filmen, der stärker wird, je wütender er ist?",
+        answerA = "Thor",
+        answerB = "Hulk",
+        answerC = "Captain America",
+        answerD = "Black Panther",
+        correctAnswer = 1,
+        explanation = "Der Hulk (bürgerlich Dr. Bruce Banner) ist ein grüner Übermensch, dessen Stärke mit seiner Wut wächst. Er wird von Mark Ruffalo gespielt.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "In welchem Film spricht ein kleiner Droide namens R2-D2 nur in Pieptönen?",
+        answerA = "Star Trek",
+        answerB = "Wall-E",
+        answerC = "Star Wars",
+        answerD = "Transformers",
+        correctAnswer = 2,
+        explanation = "R2-D2 ist der ikonische Astromechdroide aus der Star-Wars-Saga, der sich ausschließlich durch Piep- und Quietschgeräusche mitteilt.",
+        difficulty = 1,
+        funFact = "R2-D2 erscheint in allen neun Episoden der Star-Wars-Hauptsaga."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Schauspieler spielt Wolverine in den X-Men-Filmen?",
+        answerA = "Ryan Reynolds",
+        answerB = "Hugh Jackman",
+        answerC = "Chris Pratt",
+        answerD = "Vin Diesel",
+        correctAnswer = 1,
+        explanation = "Hugh Jackman spielt Wolverine (Logan) in insgesamt zehn Filmen der X-Men-Filmreihe zwischen 2000 und 2024.",
+        difficulty = 1,
+        funFact = "Hugh Jackman hält den Guinness-Weltrekord für die längste Darstellung einer Superheldenfigur durch denselben Schauspieler."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "In welchem Film fährt ein Hoverboard, und der Hauptcharakter reist in die Zukunft des Jahres 2015?",
+        answerA = "Bill & Teds verrückte Reise durch die Zeit",
+        answerB = "Zurück in die Zukunft Teil II",
+        answerC = "Terminator",
+        answerD = "Zeitgeist",
+        correctAnswer = 1,
+        explanation = "In 'Zurück in die Zukunft Teil II' (1989) reist Marty McFly ins Jahr 2015 und fährt ein schwebendes Hoverboard.",
+        difficulty = 1,
+        funFact = "Das Hoverboard aus dem Film inspirierte Generationen von Erfindern – echte schwebende Boards sind inzwischen im Prototypenstadium."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welche Farbe hat die Tablette, die Neo in 'The Matrix' nimmt, um die Wahrheit zu sehen?",
+        answerA = "Blaue Tablette",
+        answerB = "Rote Tablette",
+        answerC = "Grüne Tablette",
+        answerD = "Gelbe Tablette",
+        correctAnswer = 1,
+        explanation = "Morpheus bietet Neo eine blaue und eine rote Tablette an. Neo wählt die rote, um die Wahrheit über die Matrix zu erfahren.",
+        difficulty = 1,
+        funFact = "Die 'Rote Pille vs. blaue Pille'-Metapher ist ein kulturelles Symbol für die Wahl zwischen Wahrheit und bequemer Illusion geworden."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Animationsfilm handelt von einer Ratte namens Remy, die in einem Pariser Restaurant als Koch tätig sein will?",
+        answerA = "Brot & Tulpen",
+        answerB = "Ratatouille",
+        answerC = "Chef",
+        answerD = "Bon Appétit",
+        correctAnswer = 1,
+        explanation = "Pixars 'Ratatouille' (2007) erzählt die Geschichte der Ratte Remy, die von einer Karriere als Chefkoch träumt.",
+        difficulty = 1,
+        funFact = "Der Film gewann 2008 den Oscar für den besten Animationsfilm."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "In welchem Disney-Film verwandelt sich ein Kürbis durch Magie in eine Kutsche?",
+        answerA = "Dornröschen",
+        answerB = "Rapunzel",
+        answerC = "Aschenputtel",
+        answerD = "Die Schöne und das Biest",
+        correctAnswer = 2,
+        explanation = "In Disneys 'Aschenputtel' (1950) verwandelt die Feenpatin einen Kürbis in eine goldene Kutsche, damit Cinderella zum Ball fahren kann.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Schauspieler spielt den Zauberer Dumbledore in den ersten beiden Harry-Potter-Filmen?",
+        answerA = "Michael Gambon",
+        answerB = "Ian McKellen",
+        answerC = "Richard Harris",
+        answerD = "Patrick Stewart",
+        correctAnswer = 2,
+        explanation = "Richard Harris spielte Albus Dumbledore in 'Der Stein der Weisen' und 'Die Kammer des Schreckens'. Nach seinem Tod 2002 übernahm Michael Gambon die Rolle.",
+        difficulty = 1,
+        funFact = "Richard Harris soll erst zugesagt haben, als seine Enkeltochter drohte, ihn nie wieder anzusprechen, falls er ablehnte."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Netflix-Hit handelt von Jugendlichen in einer Kleinstadt der 1980er-Jahre mit übernatürlichen Kräften?",
+        answerA = "Dark",
+        answerB = "Riverdale",
+        answerC = "The OA",
+        answerD = "Stranger Things",
+        correctAnswer = 3,
+        explanation = "'Stranger Things' (seit 2016) spielt in Hawkins, Indiana in den 1980ern und folgt einer Gruppe von Kindern, die übernatürliche Kräfte entdecken.",
+        difficulty = 1,
+        funFact = "Millie Bobby Brown wurde für ihre Rolle als Eleven in 'Stranger Things' für den Emmy nominiert – mit damals 13 Jahren."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Filmklassiker endet damit, dass das letzte Wort des Sterbenden 'Rosebud' lautet?",
+        answerA = "Sunset Boulevard",
+        answerB = "Casablanca",
+        answerC = "Citizen Kane",
+        answerD = "Rebecca",
+        correctAnswer = 2,
+        explanation = "In 'Citizen Kane' (1941) ist 'Rosebud' das letzte Wort des sterbenden Medienmagnaten Charles Foster Kane.",
+        difficulty = 1,
+        funFact = "Was 'Rosebud' bedeutet, wird erst am Ende des Films aufgelöst – es ist der Name seines Kindheitsschlittens."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "In welchem Film ruft ein Kind: 'Ich sehe tote Menschen!'?",
+        answerA = "Poltergeist",
+        answerB = "The Sixth Sense",
+        answerC = "The Others",
+        answerD = "Beetlejuice",
+        correctAnswer = 1,
+        explanation = "In M. Night Shyamalans 'The Sixth Sense' (1999) sagt der kleine Cole Sear (Haley Joel Osment): 'I see dead people.'",
+        difficulty = 1,
+        funFact = "Der überraschende Twist am Ende von 'The Sixth Sense' gilt als einer der besten Filmüberraschungen aller Zeiten."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Schauspieler spielt in 'Gladiator' den grausamen Kaiser Commodus?",
+        answerA = "Joaquin Phoenix",
+        answerB = "Oliver Reed",
+        answerC = "Richard Harris",
+        answerD = "Djimon Hounsou",
+        correctAnswer = 0,
+        explanation = "Joaquin Phoenix spielt den grausamen Kaiser Commodus in Ridley Scotts 'Gladiator' (2000).",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Schauspieler spielt den Hauptcharakter in der Actionfilmreihe 'John Wick'?",
+        answerA = "Tom Cruise",
+        answerB = "Keanu Reeves",
+        answerC = "Liam Neeson",
+        answerD = "Jason Statham",
+        correctAnswer = 1,
+        explanation = "Keanu Reeves spielt den ehemaligen Auftragskiller John Wick in der gleichnamigen Filmreihe (seit 2014).",
+        difficulty = 1,
+        funFact = "Für 'John Wick' absolvierte Keanu Reeves intensives Kampf- und Schießtraining und wurde dadurch zu einem echten Schützenexperten."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Blockbuster aus dem Jahr 2009 spielt auf dem Mond Pandora und zeigt blaue außerirdische Wesen namens Na'vi?",
+        answerA = "Oblivion",
+        answerB = "Avatar",
+        answerC = "Prometheus",
+        answerD = "After Earth",
+        correctAnswer = 1,
+        explanation = "James Camerons 'Avatar' (2009) spielt auf dem fiktiven Mond Pandora im Alpha-Centauri-System, wo die Na'vi heimisch sind.",
+        difficulty = 1,
+        funFact = "Cameron arbeitete mehr als zehn Jahre an 'Avatar' und entwickelte eigens neue Kamera- und 3D-Technologien für den Film."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Animationsfilm von DreamWorks zeigt den Kampf eines Pandas, der Kung-Fu lernen will?",
+        answerA = "Over the Hedge",
+        answerB = "Kung Fu Panda",
+        answerC = "Madagascar",
+        answerD = "Antz",
+        correctAnswer = 1,
+        explanation = "In 'Kung Fu Panda' (2008) träumt der tollpatschige Panda Po davon, ein Kung-Fu-Meister zu werden – und wird auserwählt, die Welt zu retten.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Film zeigt ein Mädchen namens Dorothy, das durch einen Wirbelsturm ins Land Oz gelangt?",
+        answerA = "Alice im Wunderland",
+        answerB = "Der Zauberer von Oz",
+        answerC = "Labyrinth",
+        answerD = "Fantasia",
+        correctAnswer = 1,
+        explanation = "In 'Der Zauberer von Oz' (1939) wird Dorothy durch einen Tornado ins magische Land Oz gewirbelt und muss den Weg nach Hause finden.",
+        difficulty = 1,
+        funFact = "Judy Garland war bei den Dreharbeiten erst 16 Jahre alt. Der Film wurde 1939 farbig gedreht, die Eröffnungsszenen in Kansas aber bewusst in Schwarzweiß gehalten."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Schauspieler spielt die Hauptrolle in den 'Mission: Impossible'-Filmen?",
+        answerA = "Bruce Willis",
+        answerB = "Vin Diesel",
+        answerC = "Tom Cruise",
+        answerD = "Dwayne Johnson",
+        correctAnswer = 2,
+        explanation = "Tom Cruise spielt Ethan Hunt in der 'Mission: Impossible'-Filmreihe (seit 1996) und ist bekannt dafür, seine gefährlichen Stunts selbst zu machen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Film mit Mel Gibson spielt im antiken Griechenland und zeigt den Kampf Spartas gegen das Persische Reich?",
+        answerA = "Gladiator",
+        answerB = "Troja",
+        answerC = "300",
+        answerD = "Alexander",
+        correctAnswer = 2,
+        explanation = "'300' (2007) von Zack Snyder basiert auf Frank Millers Graphic Novel und zeigt den historischen Kampf von 300 Spartanern gegen die Armee des Perserkönigs Xerxes.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Animationsfilm aus dem Jahr 2001 zeigt die Reise eines kleinen Mädchens namens Chihiro in eine Geisterwelt?",
+        answerA = "Mein Nachbar Totoro",
+        answerB = "Prinzessin Mononoke",
+        answerC = "Chihiros Reise ins Zauberland",
+        answerD = "Das Schloss im Himmel",
+        correctAnswer = 2,
+        explanation = "'Chihiros Reise ins Zauberland' (2001) von Hayao Miyazaki folgt dem Mädchen Chihiro, das in einer Geisterwelt für eine Hexe arbeiten muss.",
+        difficulty = 1,
+        funFact = "Der Film gewann 2003 den Oscar für den besten Animationsfilm."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "In welchem Disneyfilm sprechen sprechende Möbel wie eine Uhr, ein Leuchter und eine Teekanne?",
+        answerA = "Aladdin",
+        answerB = "Pocahontas",
+        answerC = "Die Schöne und das Biest",
+        answerD = "Mulan",
+        correctAnswer = 2,
+        explanation = "In 'Die Schöne und das Biest' (1991) wurden die Diener des Schlosses in lebende Möbel verwandelt: Cogsworth die Uhr, Lumière der Leuchter und Mrs. Potts die Teekanne.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Schauspieler spielt Bruce Wayne / Batman in Christophan Nolans Dark-Knight-Trilogie?",
+        answerA = "Ben Affleck",
+        answerB = "George Clooney",
+        answerC = "Val Kilmer",
+        answerD = "Christian Bale",
+        correctAnswer = 3,
+        explanation = "Christian Bale spielt Bruce Wayne alias Batman in Christopher Nolans Trilogie: 'Batman Begins' (2005), 'The Dark Knight' (2008) und 'The Dark Knight Rises' (2012).",
+        difficulty = 1,
+        funFact = "Christian Bale nahm für die Rolle enorm an Muskelmasse zu – nach seiner extremen Gewichtsabnahme für 'The Machinist' (2004) verwandelte er sich in nur sechs Monaten in Batman."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Film von Pixar aus dem Jahr 2009 beginnt damit, dass ein alter Mann sein Haus mit Luftballons in die Luft hebt?",
+        answerA = "Cars",
+        answerB = "Up",
+        answerC = "Brave",
+        answerD = "Onward",
+        correctAnswer = 1,
+        explanation = "In Pixars 'Up' (2009) befestigt der alte Carl Fredricksen Tausende von Ballons an seinem Haus und fliegt nach Südamerika – erfüllt er damit den Lebenstraum seiner verstorbenen Frau.",
+        difficulty = 1,
+        funFact = "Die ersten zehn Minuten von 'Up' gelten als eine der emotionalsten Sequenzen in der Animationsfilmgeschichte."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Marvel-Held ist ein Gott des Donners und trägt einen Hammer namens Mjölnir?",
+        answerA = "Captain America",
+        answerB = "Iron Man",
+        answerC = "Thor",
+        answerD = "Vision",
+        correctAnswer = 2,
+        explanation = "Thor, der nordische Donnergott, wird von Chris Hemsworth gespielt und schwingt seinen legendären Hammer Mjölnir.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // ─── EXTRA HARD 50-PACK (25 questions, difficulty=3) ─────────────────────
+
+    Question(
+        categoryId = 4,
+        questionText = "In welchem Jahr wurde die Filmzeitschrift 'Cahiers du Cinéma' gegründet, die die Nouvelle Vague entscheidend prägte?",
+        answerA = "1948",
+        answerB = "1951",
+        answerC = "1955",
+        answerD = "1959",
+        correctAnswer = 1,
+        explanation = "Die 'Cahiers du Cinéma' wurde 1951 von André Bazin und Jacques Doniol-Valcroze gegründet und wurde zum wichtigsten Sprachrohr der Nouvelle Vague.",
+        difficulty = 3,
+        funFact = "Regisseure wie Truffaut, Godard und Chabrol schrieben zunächst für die Cahiers, bevor sie selbst Filme drehten."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher deutsche Dokumentarfilmregisseur ist für den umstrittenen NS-Propagandafilm 'Triumph des Willens' (1935) bekannt?",
+        answerA = "G.W. Pabst",
+        answerB = "Fritz Lang",
+        answerC = "F.W. Murnau",
+        answerD = "Leni Riefenstahl",
+        correctAnswer = 3,
+        explanation = "'Triumph des Willens' (1935) von Leni Riefenstahl dokumentiert den Nürnberger Reichsparteitag 1934 und gilt filmtechnisch als wegweisend, ist jedoch wegen seiner NS-Propaganda zutiefst umstritten.",
+        difficulty = 3,
+        funFact = "Riefenstahl entwickelte für ihre Filme revolutionäre Kameratechniken wie bewegliche Schienen und Zeitlupenaufnahmen, die das Dokumentarfilmkino dauerhaft beeinflussten."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher US-Regisseur entwickelte den 'Dolly Zoom'-Effekt, der erstmals in 'Vertigo' (1958) eingesetzt wurde?",
+        answerA = "Billy Wilder",
+        answerB = "John Ford",
+        answerC = "Alfred Hitchcock",
+        answerD = "Howard Hawks",
+        correctAnswer = 2,
+        explanation = "Alfred Hitchcock und sein Kameramann Irmin Roberts entwickelten den Dolly Zoom für 'Vertigo' (1958), um Schwindel und Höhenangst visuell darzustellen.",
+        difficulty = 3,
+        funFact = "Der Dolly-Zoom-Effekt wird auch als 'Hitchcock-Zoom' oder 'Vertigo-Effekt' bezeichnet und wurde seither in unzähligen Filmen kopiert."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "In welchem iranischen Docufiction-Film von Abbas Kiarostami aus dem Jahr 1990 geht es um einen echten Hochstapler, der sich als Filmregisseur Mohsen Makhmalbaf ausgegeben hatte?",
+        answerA = "Taste of Cherry",
+        answerB = "The Wind Will Carry Us",
+        answerC = "Close-Up",
+        answerD = "Where Is the Friend's Home?",
+        correctAnswer = 2,
+        explanation = "'Close-Up' (1990) von Abbas Kiarostami ist ein Docufiction-Film über einen echten Hochstapler, der sich als Regisseur Mohsen Makhmalbaf ausgab.",
+        difficulty = 3,
+        funFact = "Kiarostami rekonstruierte im Film die echten Ereignisse mit denselben Personen, die in den realen Vorfall verwickelt waren."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Regisseur drehte 'Es war einmal in Amerika' (1984), ein episches Gangsterfilm-Meisterwerk mit Robert De Niro?",
+        answerA = "Martin Scorsese",
+        answerB = "Brian De Palma",
+        answerC = "Sergio Leone",
+        answerD = "Michael Cimino",
+        correctAnswer = 2,
+        explanation = "Sergio Leones 'Es war einmal in Amerika' (1984) mit Robert De Niro und James Woods gilt als sein Meisterwerk und einer der bedeutendsten Gangsterfilme.",
+        difficulty = 3,
+        funFact = "Die amerikanische Kinofassung war drastisch auf 139 Minuten gekürzt – die vollständige Version dauert über vier Stunden."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher dänische Regisseur co-gründete das Dogma-95-Manifest und schuf 'Breaking the Waves' (1996)?",
+        answerA = "Thomas Vinterberg",
+        answerB = "Lars von Trier",
+        answerC = "Søren Kragh-Jacobsen",
+        answerD = "Bille August",
+        correctAnswer = 1,
+        explanation = "Lars von Trier co-gründete mit Thomas Vinterberg das Dogma-95-Manifest. 'Breaking the Waves' war sein erster internationaler Durchbruch.",
+        difficulty = 3,
+        funFact = "Das Dogma-95-Manifest verbot u.a. Stativaufnahmen, künstliches Licht und Filmmusik, die nicht aus der Szene selbst stammt."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Film von Michael Cimino aus dem Jahr 1978 gewann fünf Oscars, darunter Bester Film, und zeigt amerikanische Stahlarbeiter im Vietnamkrieg?",
+        answerA = "Heaven's Gate",
+        answerB = "The Year of the Dragon",
+        answerC = "The Deer Hunter",
+        answerD = "Thunderbolt and Lightfoot",
+        correctAnswer = 2,
+        explanation = "'The Deer Hunter' (1978) mit Robert De Niro, Meryl Streep und Christopher Walken gewann fünf Oscars, darunter Bester Film und Beste Regie.",
+        difficulty = 3,
+        funFact = "Christopher Walken gewann für seine Nebenrolle seinen einzigen Oscar. Die Russisches-Roulette-Szenen sind unter den eindringlichsten der Filmgeschichte."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Regisseur gilt als einer der Begründer des Neorealismus im italienischen Kino und drehte 'Fahrraddiebe' (1948)?",
+        answerA = "Roberto Rossellini",
+        answerB = "Luchino Visconti",
+        answerC = "Vittorio De Sica",
+        answerD = "Federico Fellini",
+        correctAnswer = 2,
+        explanation = "Vittorio De Sica inszenierte 'Ladri di biciclette' (Fahrraddiebe, 1948), eines der Meisterwerke des italienischen Neorealismus.",
+        difficulty = 3,
+        funFact = "'Fahrraddiebe' gewann den Ehrenoscar als bester fremdsprachiger Film und wurde ohne professionelle Schauspieler gedreht."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welches Filmfestival wurde 1932 gegründet, ist damit das älteste der Welt und verleiht den 'Goldenen Löwen'?",
+        answerA = "Cannes",
+        answerB = "Sundance",
+        answerC = "Toronto",
+        answerD = "Venedig",
+        correctAnswer = 3,
+        explanation = "Die Internationalen Filmfestspiele Venedig wurden 1932 gegründet, sind das älteste Filmfestival der Welt und verleihen den 'Goldenen Löwen'.",
+        difficulty = 3,
+        funFact = "Venedig 1932 wurde auf Initiative von Benito Mussolini ins Leben gerufen, um italianischen Kultureinfluss zu stärken."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Regisseur schuf 'Rashomon' (1950), einen Film, der dieselbe Mordgeschichte aus vier widersprüchlichen Perspektiven erzählt?",
+        answerA = "Kenji Mizoguchi",
+        answerB = "Yasujiro Ozu",
+        answerC = "Akira Kurosawa",
+        answerD = "Mikio Naruse",
+        correctAnswer = 2,
+        explanation = "Akira Kurosawas 'Rashomon' (1950) erzählt einen Mord aus vier gegensätzlichen Perspektiven und prägte den Begriff 'Rashomon-Effekt' für subjektive Wahrnehmung.",
+        difficulty = 3,
+        funFact = "Der Film gewann den Goldenen Löwen in Venedig und machte japanisches Kino weltweit bekannt."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Wer war der Kameramann bei Stanley Kubricks 'Barry Lyndon' (1975), der für seine historischen Kerzenlichtaufnahmen den Oscar gewann?",
+        answerA = "Gordon Willis",
+        answerB = "John Alcott",
+        answerC = "Vilmos Zsigmond",
+        answerD = "Sven Nykvist",
+        correctAnswer = 1,
+        explanation = "John Alcott war der Kameramann bei 'Barry Lyndon' und gewann für seine revolutionären Kerzenlichtaufnahmen den Oscar für die beste Kamera.",
+        difficulty = 3,
+        funFact = "Kubrick ließ eigens NASA-Objektive adaptieren, um Szenen ausschließlich bei Kerzenlicht filmen zu können."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "In welchem Jean-Luc-Godard-Film erfand er den Jump Cut als bewusstes stilistisches Mittel?",
+        answerA = "Pierrot le Fou",
+        answerB = "Vivre sa vie",
+        answerC = "Außer Atem",
+        answerD = "Band à part",
+        correctAnswer = 2,
+        explanation = "Godard verwendete in 'Außer Atem' (À bout de souffle, 1960) den Jump Cut als bewusstes stilistisches Mittel – was damals als technischer Fehler galt, wurde zur ikonischen Technik.",
+        difficulty = 3,
+        funFact = "Angeblich entstand die Montage mit Jump Cuts, weil Godard den Film zu lang fand und einfach Teile herausschnitt."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher polnische Regisseur schuf die 'Drei-Farben'-Trilogie (Blau, Weiß, Rot) aus den frühen 1990ern?",
+        answerA = "Andrzej Wajda",
+        answerB = "Roman Polański",
+        answerC = "Krzysztof Kieślowski",
+        answerD = "Agnieszka Holland",
+        correctAnswer = 2,
+        explanation = "Krzysztof Kieślowski schuf die Trilogie 'Trois Couleurs: Bleu, Blanc, Rouge' (1993–1994), benannt nach den Farben der französischen Flagge.",
+        difficulty = 3,
+        funFact = "'Trois Couleurs: Rouge' gewann die Goldene Palme in Cannes. Kieślowski starb 1996, kurz nach Abschluss der Trilogie."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher ungarische Regisseur drehte 'Son of Saul' (2015), der im KZ Auschwitz spielt und 2016 den Oscar für den besten fremdsprachigen Film gewann?",
+        answerA = "Béla Tarr",
+        answerB = "László Nemes",
+        answerC = "István Szabó",
+        answerD = "Miklós Jancsó",
+        correctAnswer = 1,
+        explanation = "'Son of Saul' (2015) von László Nemes dreht sich um einen Sonderkommando-Häftling in Auschwitz und gewann den Oscar für den besten fremdsprachigen Film 2016.",
+        difficulty = 3,
+        funFact = "Nemes drehte fast den gesamten Film in Nahaufnahmen des Protagonisten, um den Schrecken nur im unscharfen Hintergrund sichtbar zu machen."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher französische Regisseur schuf 'La Grande Illusion' (1937), den ersten ausländischen Film, der für den Oscar als bester Film nominiert wurde?",
+        answerA = "Marcel Carné",
+        answerB = "Jean Renoir",
+        answerC = "René Clair",
+        answerD = "Jacques Prévert",
+        correctAnswer = 1,
+        explanation = "'La Grande Illusion' (1937) von Jean Renoir mit Jean Gabin gilt als eines der bedeutendsten Antikriegsfilme und war der erste ausländische Film, der für den Oscar als bester Film nominiert wurde.",
+        difficulty = 3,
+        funFact = "Joseph Goebbels soll den Film als 'kinematographischen Staatsfeind Nr. 1' bezeichnet haben."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Schauspieler und Regisseur spielte in Orson Welles' 'Touch of Evil' (1958) den korrupten Polizisten Hank Quinlan – und inszenierte den Film selbst?",
+        answerA = "James Cagney",
+        answerB = "Charlton Heston",
+        answerC = "Orson Welles",
+        answerD = "Henry Fonda",
+        correctAnswer = 2,
+        explanation = "Orson Welles spielte selbst den dicken, korrupten Polizisten Hank Quinlan in 'Im Zeichen des Bösen' (1958), einem klassischen Film Noir.",
+        difficulty = 3,
+        funFact = "Die Eröffnungseinstellung von 'Touch of Evil' gilt als eine der bekanntesten Plansequenzen der Filmgeschichte – eine 3,5 Minuten lange Kamerafahrt ohne Schnitt."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher südkoreanische Regisseur schuf 'Oldboy' (2003), den Hauptfilm seiner Vergeltungstrilogie, der in Cannes den Großen Preis der Jury gewann?",
+        answerA = "Bong Joon-ho",
+        answerB = "Kim Ki-duk",
+        answerC = "Park Chan-wook",
+        answerD = "Hong Sang-soo",
+        correctAnswer = 2,
+        explanation = "'Oldboy' (2003) von Park Chan-wook ist der bekannteste Teil der 'Vergeltungstrilogie' und gewann in Cannes den Großen Preis der Jury.",
+        difficulty = 3,
+        funFact = "Quentin Tarantino, Mitglied der Cannes-Jury 2004, setzte sich nachdrücklich für die Auszeichnung von 'Oldboy' ein."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Regisseur schuf den surrealistischen Thriller 'Blue Velvet' (1986) über die dunkle Seite der amerikanischen Vorstadt?",
+        answerA = "Jim Jarmusch",
+        answerB = "John Waters",
+        answerC = "Gus Van Sant",
+        answerD = "David Lynch",
+        correctAnswer = 3,
+        explanation = "'Blue Velvet' (1986) von David Lynch mit Kyle MacLachlan und Isabella Rossellini zeigt hinter der idyllischen Fassade einer Kleinstadt verborgene Gewalt und Perversion.",
+        difficulty = 3,
+        funFact = "Lynch wurde für 'Blue Velvet' für den Oscar als bester Regisseur nominiert – seine bisher einzige Regienominierung."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Film von Elia Kazan aus dem Jahr 1954 mit Marlon Brando enthält den berühmten Satz 'I coulda been a contender'?",
+        answerA = "A Streetcar Named Desire",
+        answerB = "East of Eden",
+        answerC = "On the Waterfront",
+        answerD = "Viva Zapata!",
+        correctAnswer = 2,
+        explanation = "In 'On the Waterfront' (Hafen der Sehnsucht, 1954) sagt Terry Malloy (Marlon Brando) diesen ikonischen Satz zu seinem Bruder Charlie.",
+        difficulty = 3,
+        funFact = "'On the Waterfront' gewann acht Oscars, darunter Bester Film, Beste Regie und Bester Hauptdarsteller für Marlon Brando."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher finnische Regisseur ist bekannt für seinen lakonischen Stil und für Filme wie 'Leningrad Cowboys Go America' (1989)?",
+        answerA = "Renny Harlin",
+        answerB = "Pirjo Honkasalo",
+        answerC = "Aki Kaurismäki",
+        answerD = "Markku Pölönen",
+        correctAnswer = 2,
+        explanation = "Aki Kaurismäki ist Finnlands international bekanntester Regisseur, bekannt für seinen trockenen Humor, kurze Dialoge und eine melancholische Grundstimmung.",
+        difficulty = 3,
+        funFact = "Kaurismäkis Filme zeigen oft die Arbeiterschicht und gesellschaftliche Außenseiter. Er ist auch für seinen humanitären Einsatz für Flüchtlinge bekannt."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Schauspieler spielte Charles Foster Kane in Orson Welles' 'Citizen Kane' (1941) und war damals erst 25 Jahre alt?",
+        answerA = "Joseph Cotten",
+        answerB = "Everett Sloane",
+        answerC = "Orson Welles",
+        answerD = "William Alland",
+        correctAnswer = 2,
+        explanation = "Orson Welles spielte selbst die Hauptrolle des Medienmagnaten Charles Foster Kane in dem Film, den er mit nur 25 Jahren inszenierte.",
+        difficulty = 3,
+        funFact = "'Citizen Kane' war Welles' Spielfilmdebüt – ein einzigartiger Fall in der Filmgeschichte."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher rumänische Film von Cristian Mungiu aus dem Jahr 2007 zeigt eine illegale Abtreibung in der Ceaușescu-Ära und gewann die Goldene Palme in Cannes?",
+        answerA = "Der Tod des Herrn Lăzărescu",
+        answerB = "4 Monate, 3 Wochen und 2 Tage",
+        answerC = "Bacalaureat",
+        answerD = "Beyond the Hills",
+        correctAnswer = 1,
+        explanation = "'4 Monate, 3 Wochen und 2 Tage' (2007) von Cristian Mungiu zeigt zwei Studentinnen, die 1987 in Rumänien eine illegale Abtreibung organisieren, und gewann die Goldene Palme in Cannes.",
+        difficulty = 3,
+        funFact = "Der Film ist Teil der 'Rumänischen Neuen Welle', einer Bewegung, die in den 2000er Jahren das internationale Kino bereicherte."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Film von Pier Paolo Pasolini aus dem Jahr 1975 wurde in vielen Ländern zensiert und ist bis heute wegen extremer Gewaltdarstellungen umstritten?",
+        answerA = "Teorema",
+        answerB = "Decameron",
+        answerC = "Salò oder die 120 Tage von Sodom",
+        answerD = "Medea",
+        correctAnswer = 2,
+        explanation = "'Salò oder die 120 Tage von Sodom' (1975) ist Pasolinis letzter Film, der Marquis de Sades Roman in das faschistische Italien verlegt und extreme Gewalt zeigt.",
+        difficulty = 3,
+        funFact = "Pasolini wurde kurz nach Fertigstellung des Films 1975 ermordet. Der genaue Hergang ist bis heute nicht vollständig aufgeklärt."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher Schauspieler spielte den Titelhelden in dem Biopic 'Chaplin' (1992) über den Stummfilmkünstler Charlie Chaplin?",
+        answerA = "Johnny Depp",
+        answerB = "Robert Downey Jr.",
+        answerC = "Tom Hanks",
+        answerD = "Jim Carrey",
+        correctAnswer = 1,
+        explanation = "Robert Downey Jr. spielte Charlie Chaplin in Richard Attenboroughs 'Chaplin' (1992) und wurde dafür für den Oscar als bester Hauptdarsteller nominiert.",
+        difficulty = 3,
+        funFact = "Robert Downey Jr. lernte für die Rolle das Pantomime-Spiel und erlangte die Genehmigung der Chaplin-Familie, was entscheidend für die Authentizität war."
+    ),
+
+    Question(
+        categoryId = 4,
+        questionText = "Welcher japanisch-amerikanische Regisseur drehte 'Lost in Translation' (2003) und ist die Tochter von Francis Ford Coppola?",
+        answerA = "Kathryn Bigelow",
+        answerB = "Sofia Coppola",
+        answerC = "Mira Nair",
+        answerD = "Julie Taymor",
+        correctAnswer = 1,
+        explanation = "Sofia Coppola inszenierte 'Lost in Translation' (2003) mit Bill Murray und Scarlett Johansson und gewann für das Drehbuch den Oscar.",
+        difficulty = 3,
+        funFact = "Sofia Coppola ist nach Lina Wertmüller erst die zweite Frau, die für die Regie für den Oscar nominiert wurde."
     )
 )
