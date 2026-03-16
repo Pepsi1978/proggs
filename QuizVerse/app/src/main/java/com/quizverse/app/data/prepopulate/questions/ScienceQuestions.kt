@@ -1318,5 +1318,830 @@ fun scienceQuestions(): List<Question> = listOf(
         explanation = "Das No-Cloning-Theorem (Wootters & Zurek, 1982) besagt, dass es physikalisch unmöglich ist, eine exakte Kopie eines beliebigen unbekannten Quantenzustands herzustellen.",
         difficulty = 5,
         funFact = "Dieses Theorem ist die physikalische Grundlage der Sicherheit von Quantenkryptographie – abgehörte Quanteninformationen hinterlassen immer Spuren."
+    ),
+
+    // ── ADDITIONAL EASY (difficulty = 1) — 25 questions ──────────────────────
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist die härteste natürliche Substanz auf der Erde?",
+        answerA = "Stahl",
+        answerB = "Diamant",
+        answerC = "Quarz",
+        answerD = "Korund",
+        correctAnswer = 1,
+        explanation = "Diamant ist die härteste natürlich vorkommende Substanz und erreicht die Höchstnote 10 auf der Mohs-Härteskala.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Welches Tier ist das schnellste Landtier der Welt?",
+        answerA = "Löwe",
+        answerB = "Gepard",
+        answerC = "Pronghorn-Antilope",
+        answerD = "Greyhound",
+        correctAnswer = 1,
+        explanation = "Der Gepard kann Geschwindigkeiten von bis zu 120 km/h erreichen und ist damit das schnellste Landtier der Welt.",
+        difficulty = 1,
+        funFact = "Der Gepard kann diese Höchstgeschwindigkeit jedoch nur für wenige Sekunden aufrechterhalten."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Welches Gas atmen Menschen hauptsächlich aus?",
+        answerA = "Sauerstoff",
+        answerB = "Stickstoff",
+        answerC = "Kohlendioxid",
+        answerD = "Wasserdampf",
+        correctAnswer = 2,
+        explanation = "Bei der Zellatmung wird Sauerstoff verbraucht und Kohlendioxid (CO₂) produziert, das dann ausgeatmet wird.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Aus wie vielen Atomen besteht ein Wassermolekül?",
+        answerA = "2",
+        answerB = "3",
+        answerC = "4",
+        answerD = "1",
+        correctAnswer = 1,
+        explanation = "Ein Wassermolekül (H₂O) besteht aus drei Atomen: zwei Wasserstoffatomen und einem Sauerstoffatom.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist der Gefrierpunkt von Wasser bei normalem Luftdruck?",
+        answerA = "-10 °C",
+        answerB = "10 °C",
+        answerC = "5 °C",
+        answerD = "0 °C",
+        correctAnswer = 3,
+        explanation = "Wasser gefriert bei 0 °C (273,15 K) unter Standardbedingungen von 1013 hPa.",
+        difficulty = 1,
+        funFact = "Reines Wasser kann unter bestimmten Bedingungen bis auf -40 °C unterkühlt werden, ohne zu gefrieren."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Welche Farbe hat das Licht mit der kürzesten Wellenlänge im sichtbaren Spektrum?",
+        answerA = "Rot",
+        answerB = "Grün",
+        answerC = "Violett",
+        answerD = "Gelb",
+        correctAnswer = 2,
+        explanation = "Violettes Licht hat mit etwa 380–420 nm die kürzeste Wellenlänge im sichtbaren Spektrum und damit die höchste Energie.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist der größte Knochen im menschlichen Körper?",
+        answerA = "Humerus (Oberarmknochen)",
+        answerB = "Tibia (Schienbein)",
+        answerC = "Femur (Oberschenkelknochen)",
+        answerD = "Radius (Speiche)",
+        correctAnswer = 2,
+        explanation = "Der Femur (Oberschenkelknochen) ist der größte und stärkste Knochen im menschlichen Körper.",
+        difficulty = 1,
+        funFact = "Der Femur kann das 30-fache des Körpergewichts tragen, bevor er bricht."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Welcher Planet ist für seine markanten Ringe bekannt?",
+        answerA = "Uranus",
+        answerB = "Jupiter",
+        answerC = "Neptun",
+        answerD = "Saturn",
+        correctAnswer = 3,
+        explanation = "Saturn ist für sein beeindruckendes Ringsystem aus Eis und Gestein bekannt, das mit bloßem Auge (mit einem Teleskop) sichtbar ist.",
+        difficulty = 1,
+        funFact = "Auch Uranus, Jupiter und Neptun haben Ringe, aber diese sind viel unauffälliger als Saturns."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Wie nennt man das Bindeglied zwischen zwei Knochen?",
+        answerA = "Sehne",
+        answerB = "Muskel",
+        answerC = "Knorpel",
+        answerD = "Band (Ligament)",
+        correctAnswer = 3,
+        explanation = "Bänder (Ligamente) sind festes Bindegewebe, das Knochen miteinander verbindet und Gelenke stabilisiert.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist die chemische Formel von Kohlendioxid?",
+        answerA = "CO",
+        answerB = "C₂O",
+        answerC = "CO₂",
+        answerD = "CO₃",
+        correctAnswer = 2,
+        explanation = "Kohlendioxid besteht aus einem Kohlenstoffatom und zwei Sauerstoffatomen: CO₂.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Welches Organ produziert die Galle?",
+        answerA = "Niere",
+        answerB = "Milz",
+        answerC = "Magen",
+        answerD = "Leber",
+        correctAnswer = 3,
+        explanation = "Die Leber produziert Galle, die in der Gallenblase gespeichert und bei der Verdauung von Fetten in den Dünndarm abgegeben wird.",
+        difficulty = 1,
+        funFact = "Die Leber ist das größte innere Organ des Menschen und hat über 500 verschiedene Funktionen."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist Magnetismus?",
+        answerA = "Eine Kraft, die durch elektrische Ladungen entsteht",
+        answerB = "Eine Kraft, die zwischen magnetischen Materialien und Magneten wirkt",
+        answerC = "Die Anziehung zwischen Atomen gleicher Art",
+        answerD = "Eine Wärmekraft in Metallen",
+        correctAnswer = 1,
+        explanation = "Magnetismus ist eine physikalische Kraft, die von Magneten ausgeübt wird und ferromagnetische Materialien wie Eisen, Nickel und Kobalt anzieht.",
+        difficulty = 1,
+        funFact = "Magnetismus und Elektrizität sind zwei Aspekte derselben fundamentalen Wechselwirkung — der Elektromagnetismus."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Welche Zellen führen die Photosynthese in Pflanzen durch?",
+        answerA = "Wurzelzellen",
+        answerB = "Stengelzellen",
+        answerC = "Rindenzellen",
+        answerD = "Mesophyllzellen",
+        correctAnswer = 3,
+        explanation = "In den Mesophyllzellen der Blätter liegen Chloroplasten, die das grüne Pigment Chlorophyll enthalten und die Photosynthese durchführen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist der Mond der Erde?",
+        answerA = "Ein Asteroid, der von der Erde eingefangen wurde",
+        answerB = "Ein natürlicher Satellit, der die Erde umkreist",
+        answerC = "Ein kleiner Planet im Sonnensystem",
+        answerD = "Ein Zwergplanet wie Pluto",
+        correctAnswer = 1,
+        explanation = "Der Mond ist der einzige natürliche Satellit der Erde und umkreist sie in etwa 27,3 Tagen.",
+        difficulty = 1,
+        funFact = "Der Mond entfernt sich jährlich um etwa 3,8 cm von der Erde."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist Elektrizität?",
+        answerA = "Die Bewegung von Atomen",
+        answerB = "Der Fluss von Wärme durch Metalle",
+        answerC = "Der Fluss von elektrischen Ladungen (meist Elektronen)",
+        answerD = "Die Ausstrahlung von Licht durch heiße Körper",
+        correctAnswer = 2,
+        explanation = "Elektrizität ist der gerichtete Fluss elektrischer Ladungsträger (meistens Elektronen) durch einen Leiter.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Welche Art von Energie hat ein rollender Ball?",
+        answerA = "Potenzielle Energie",
+        answerB = "Thermische Energie",
+        answerC = "Chemische Energie",
+        answerD = "Kinetische Energie",
+        correctAnswer = 3,
+        explanation = "Kinetische Energie ist Bewegungsenergie. Jeder bewegte Körper besitzt kinetische Energie: E_kin = ½ · m · v².",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist der Name des Prozesses, bei dem ein Feststoff direkt in Gas übergeht?",
+        answerA = "Kondensation",
+        answerB = "Sublimation",
+        answerC = "Verdampfung",
+        answerD = "Schmelzen",
+        correctAnswer = 1,
+        explanation = "Sublimation ist der direkte Phasenübergang vom festen in den gasförmigen Zustand, ohne flüssige Phase.",
+        difficulty = 1,
+        funFact = "Trockeneis (festes CO₂) sublimiert bei Raumtemperatur direkt zu CO₂-Gas — daher der Nebel-Effekt."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist DNS (DNA)?",
+        answerA = "Ein Hormon, das im Blut transportiert wird",
+        answerB = "Ein Enzym, das Proteine abbaut",
+        answerC = "Der genetische Träger der Erbinformation in lebenden Zellen",
+        answerD = "Ein Zellkernprotein ohne genetische Funktion",
+        correctAnswer = 2,
+        explanation = "DNA (Desoxyribonukleinsäure) ist das Molekül, das die genetische Information aller lebenden Organismen trägt und von Generation zu Generation weitergegeben wird.",
+        difficulty = 1,
+        funFact = "Würde man die DNA aller Zellen eines Menschen aneinanderlegen, ergäbe das eine Strecke von etwa 200 Milliarden Kilometern."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Wie nennt man einen Körper, der kein Licht reflektiert und theoretisch alle Strahlung absorbiert?",
+        answerA = "Spiegel",
+        answerB = "Schwarzer Körper (Schwarzer Strahler)",
+        answerC = "Weißer Körper",
+        answerD = "Opaker Körper",
+        correctAnswer = 1,
+        explanation = "Ein schwarzer Körper (Schwarzkörperstrahler) absorbiert vollständig alle auftreffende elektromagnetische Strahlung und ist ein ideales Modell in der Physik.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist der Unterschied zwischen einem Virus und einem Bakterium?",
+        answerA = "Viren sind größer als Bakterien",
+        answerB = "Viren haben keinen eigenen Stoffwechsel und benötigen Wirtszellen",
+        answerC = "Bakterien können keine Krankheiten verursachen",
+        answerD = "Viren sind Zellen, Bakterien sind keine",
+        correctAnswer = 1,
+        explanation = "Bakterien sind einzellige Lebewesen mit eigenem Stoffwechsel. Viren sind keine Zellen, haben keine eigene Energiegewinnung und können sich nur in Wirtszellen vermehren.",
+        difficulty = 1,
+        funFact = "Viren sind etwa 10-100 Mal kleiner als Bakterien."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist ein Atom?",
+        answerA = "Das kleinste Teilchen einer chemischen Verbindung",
+        answerB = "Die kleinste unteilbare Einheit der Materie (Grundbaustein eines Elements)",
+        answerC = "Ein Molekül aus zwei gleichen Elementen",
+        answerD = "Ein geladenes Teilchen im Atomkern",
+        correctAnswer = 1,
+        explanation = "Ein Atom ist die kleinste Einheit eines chemischen Elements, die noch dessen chemische Eigenschaften besitzt. Es besteht aus Kern (Protonen + Neutronen) und Elektronenhülle.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Welche Blutgefäße transportieren Blut direkt zum Herzen zurück?",
+        answerA = "Arterien",
+        answerB = "Kapillaren",
+        answerC = "Lymphgefäße",
+        answerD = "Venen",
+        correctAnswer = 3,
+        explanation = "Venen führen Blut aus dem Körpergewebe zurück zum Herzen. Sie haben dünnere Wände als Arterien und Venenklappen, die ein Zurückfließen des Blutes verhindern.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was misst ein Barometer?",
+        answerA = "Temperatur",
+        answerB = "Luftfeuchtigkeit",
+        answerC = "Luftdruck",
+        answerD = "Windgeschwindigkeit",
+        correctAnswer = 2,
+        explanation = "Ein Barometer misst den Luftdruck (atmosphärischen Druck), der in Hektopascal (hPa) oder Millibar (mbar) angegeben wird.",
+        difficulty = 1,
+        funFact = "Das erste Quecksilberbarometer wurde 1643 von Evangelista Torricelli erfunden."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Welche Farbe entsteht, wenn man rotes und blaues Licht mischt?",
+        answerA = "Grün",
+        answerB = "Orange",
+        answerC = "Gelb",
+        answerD = "Magenta",
+        correctAnswer = 3,
+        explanation = "Bei der additiven Farbmischung (Licht) ergibt Rot + Blau = Magenta (Pink).",
+        difficulty = 1,
+        funFact = "Bei der subtraktiven Farbmischung (Farben/Pigmente) ergibt Rot + Blau = Violett/Lila."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Wie heißt das Phänomen, wenn der Mond die Sonne vollständig bedeckt?",
+        answerA = "Mondfinsternis",
+        answerB = "Transit",
+        answerC = "Totale Sonnenfinsternis",
+        answerD = "Bedeckung",
+        correctAnswer = 2,
+        explanation = "Eine totale Sonnenfinsternis tritt auf, wenn der Mond genau zwischen Erde und Sonne steht und die Sonne vollständig verdeckt.",
+        difficulty = 1,
+        funFact = "Eine totale Sonnenfinsternis dauert an einem bestimmten Ort maximal etwa 7,5 Minuten."
+    ),
+
+    // ── ADDITIONAL MEDIUM (difficulty = 2) — 15 questions ────────────────────
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist der photoelektrische Effekt?",
+        answerA = "Die Lichtemission von erhitzten Metallen",
+        answerB = "Die Erzeugung elektrischen Stroms durch Licht in Solarzellen",
+        answerC = "Die Emission von Elektronen aus einer Metalloberfläche bei Bestrahlung mit Licht",
+        answerD = "Die Reflexion von Licht an Metalloberflächen",
+        correctAnswer = 2,
+        explanation = "Beim photoelektrischen Effekt löst Licht Elektronen aus Metalloberflächen. Einstein erklärte ihn 1905 mit Photonen und gewann dafür den Nobelpreis.",
+        difficulty = 2,
+        funFact = "Einstein erhielt den Nobelpreis nicht für die Relativitätstheorie, sondern für die Erklärung des photoelektrischen Effekts."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist eine Supernova?",
+        answerA = "Ein neu entstehender Stern in einem Nebel",
+        answerB = "Die explosionsartige Endphase eines massereichen Sterns",
+        answerC = "Ein besonders heller Pulsar",
+        answerD = "Eine Kollision zweier Neutronensterne",
+        correctAnswer = 1,
+        explanation = "Eine Supernova ist die explosionsartige Endphase eines massereichen Sterns (>8 Sonnenmassen). Dabei wird in Sekunden mehr Energie freigesetzt als unsere Sonne in ihrer gesamten Lebenszeit.",
+        difficulty = 2,
+        funFact = "Supernovae sind so hell, dass sie tagsüber sichtbar sein können — die letzte mit bloßem Auge sichtbare ereignete sich 1987 in der Großen Magellanschen Wolke."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was versteht man unter Elektronegatigvität nach Pauling?",
+        answerA = "Die Anzahl der Elektronen in der äußersten Schale",
+        answerB = "Das Maß, wie stark ein Atom Elektronen in einer Bindung anzieht",
+        answerC = "Die negative Ladung eines Ions",
+        answerD = "Die Bindungsenergie kovalenter Bindungen",
+        correctAnswer = 1,
+        explanation = "Die Pauling-Skala bewertet die relative Fähigkeit eines Atoms, Elektronen in einer kovalenten Bindung anzuziehen. Fluor hat den höchsten Wert (3,98), Cäsium den niedrigsten (0,79).",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Welche Struktur hat das Kollagen im menschlichen Körper?",
+        answerA = "Eine kugelige (globuläre) Proteinstruktur",
+        answerB = "Eine Triple-Helix-Struktur aus drei Polypeptidketten",
+        answerC = "Eine flächige Beta-Faltblatt-Struktur",
+        answerD = "Eine einfache Alpha-Helix",
+        correctAnswer = 1,
+        explanation = "Kollagen besteht aus drei Polypeptidketten, die sich zu einer charakteristischen Triple-Helix zusammenlagern. Es ist das häufigste Protein im menschlichen Körper.",
+        difficulty = 2,
+        funFact = "Kollagen macht etwa 30 % aller Körperproteine aus und bildet die Grundstruktur von Haut, Knochen, Sehnen und Knorpel."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist Biolumineszenz?",
+        answerA = "Die Fluoreszenz von Pflanzen unter UV-Licht",
+        answerB = "Die Fähigkeit von Lebewesen, Licht durch chemische Reaktionen selbst zu erzeugen",
+        answerC = "Die Reflektion von Mondlicht durch Tiefseeorganismen",
+        answerD = "Die Absorption von Sonnenlicht durch Algen",
+        correctAnswer = 1,
+        explanation = "Biolumineszenz ist die Lichterzeugung durch lebende Organismen mittels chemischer Reaktionen. Beispiele: Glühwürmchen, Tiefseefische, Leuchtbakterien.",
+        difficulty = 2,
+        funFact = "Über 90 % aller Tiefseeorganismen sind biolumineszent."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist ein Elektromagnet?",
+        answerA = "Ein permanent magnetisches Material wie Eisen",
+        answerB = "Ein Magnet, der durch elektrischen Strom erzeugt wird",
+        answerC = "Ein Gerät zur Messung von Magnetfeldern",
+        answerD = "Ein Material, das elektrische Ladungen speichert",
+        correctAnswer = 1,
+        explanation = "Ein Elektromagnet entsteht, wenn Strom durch eine Spule (Drahtwicklung) fließt. Das erzeugte Magnetfeld kann durch Änderung des Stroms reguliert oder abgeschaltet werden.",
+        difficulty = 2,
+        funFact = "MRT-Geräte nutzen supraleitende Elektromagnete, die Magnetfelder erzeugen, die bis zu 60.000 Mal stärker als das Erdmagnetfeld sind."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was beschreibt das Konzept der 'Biodiversität'?",
+        answerA = "Die Gesamtbiomasse aller Lebewesen auf der Erde",
+        answerB = "Die Vielfalt der Arten, Gene und Ökosysteme in einem Gebiet",
+        answerC = "Die Anzahl der Individuen einer Art in einer Region",
+        answerD = "Die Anpassungsfähigkeit von Organismen an neue Umgebungen",
+        correctAnswer = 1,
+        explanation = "Biodiversität beschreibt die Vielfalt auf drei Ebenen: genetische Vielfalt innerhalb einer Art, Artenvielfalt und Ökosystemvielfalt.",
+        difficulty = 2,
+        funFact = "Schätzungsweise existieren 8,7 Millionen Tier- und Pflanzenarten — davon sind bisher etwa 1,9 Millionen wissenschaftlich beschrieben."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Welche Wellenlänge haben Radiowellen im elektromagnetischen Spektrum?",
+        answerA = "Nanometer-Bereich (10⁻⁹ m)",
+        answerB = "Mikrometer-Bereich (10⁻⁶ m)",
+        answerC = "Millimeter-Bereich (10⁻³ m)",
+        answerD = "Meter bis Kilometer-Bereich (>10⁻¹ m)",
+        correctAnswer = 3,
+        explanation = "Radiowellen haben Wellenlängen von einigen Millimetern bis zu mehreren Kilometern — damit die längsten Wellenlängen im elektromagnetischen Spektrum.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist der Unterschied zwischen 'Masse' und 'Gewicht'?",
+        answerA = "Masse und Gewicht sind dasselbe, nur in verschiedenen Einheiten",
+        answerB = "Masse ist eine unveränderliche Eigenschaft der Materie, Gewicht ist die Gravitationskraft auf diese Masse",
+        answerC = "Gewicht ist die unveränderliche Eigenschaft, Masse hängt von der Schwerkraft ab",
+        answerD = "Masse gilt für Feststoffe, Gewicht für Flüssigkeiten",
+        correctAnswer = 1,
+        explanation = "Masse (kg) ist eine intrinsische Eigenschaft und überall gleich. Gewicht (N) ist die Kraft, mit der die Gravitation auf eine Masse wirkt: G = m × g. Auf dem Mond wiegt man weniger, hat aber dieselbe Masse.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist die Rolle der Leukozyten im Immunsystem?",
+        answerA = "Sie transportieren Sauerstoff zu den Geweben",
+        answerB = "Sie produzieren Hämoglobin für rote Blutkörperchen",
+        answerC = "Sie erkennen und bekämpfen Krankheitserreger sowie fremde Zellen",
+        answerD = "Sie regulieren den Blutdruck",
+        correctAnswer = 2,
+        explanation = "Leukozyten (weiße Blutkörperchen) sind die zentralen Zellen des Immunsystems. Verschiedene Subtypen (Neutrophile, Lymphozyten, Makrophagen) haben spezifische Abwehrfunktionen.",
+        difficulty = 2,
+        funFact = "Im gesunden Menschen zirkulieren etwa 5.000 bis 10.000 Leukozyten pro Mikroliter Blut."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was versteht man unter dem 'Doppler-Effekt'?",
+        answerA = "Die Brechung von Schall an Wänden",
+        answerB = "Die Änderung der wahrgenommenen Frequenz von Wellen, wenn Quelle oder Beobachter sich bewegen",
+        answerC = "Die Verstärkung von Schall in engen Räumen",
+        answerD = "Die Absorption von Schallwellen durch Luft",
+        correctAnswer = 1,
+        explanation = "Der Doppler-Effekt beschreibt, wie die wahrgenommene Frequenz einer Welle zunimmt, wenn sich Quelle und Beobachter annähern, und abnimmt, wenn sie sich entfernen.",
+        difficulty = 2,
+        funFact = "Astronomen nutzen den Doppler-Effekt bei Licht (Rotverschiebung), um die Bewegungsgeschwindigkeit und Entfernung von Galaxien zu messen."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist das Ohmsche Gesetz?",
+        answerA = "Spannung ist gleich Strom durch Widerstand: U = I / R",
+        answerB = "Widerstand ist gleich Strom mal Spannung: R = I × U",
+        answerC = "Spannung ist gleich Strom mal Widerstand: U = I × R",
+        answerD = "Strom ist gleich Spannung mal Widerstand: I = U × R",
+        correctAnswer = 2,
+        explanation = "Das Ohmsche Gesetz lautet U = I × R (Spannung = Strom × Widerstand). Es gilt für ohmsche Widerstände bei konstanter Temperatur.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist der Unterschied zwischen Konkav- und Konvexlinse?",
+        answerA = "Konkavlinsen bündeln Licht, Konvexlinsen streuen es",
+        answerB = "Konkavlinsen streuen Licht, Konvexlinsen bündeln es in einem Brennpunkt",
+        answerC = "Beide Linsenarten haben dieselbe optische Wirkung",
+        answerD = "Konvexlinsen beugen Licht, Konkavlinsen nicht",
+        correctAnswer = 1,
+        explanation = "Eine Konvexlinse (Sammellinse) bündelt parallele Lichtstrahlen in einem Brennpunkt. Eine Konkavlinse (Zerstreuungslinse) streut Licht, sodass es von einem virtuellen Brennpunkt wegzugehen scheint.",
+        difficulty = 2,
+        funFact = "Brillengläser für Kurzsichtige sind Konkavlinsen, für Weitsichtige Konvexlinsen."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist die Bedeutung des Begriffs 'Homöostase' in der Biologie?",
+        answerA = "Die Fähigkeit eines Organismus, konstante innere Bedingungen aufrechtzuerhalten",
+        answerB = "Die Anpassung eines Organismus an neue Umweltbedingungen",
+        answerC = "Das Gleichgewicht zwischen verschiedenen Tierarten in einem Ökosystem",
+        answerD = "Die gleiche genetische Ausstattung aller Zellen eines Organismus",
+        correctAnswer = 0,
+        explanation = "Homöostase ist das Regulationsprinzip, mit dem Lebewesen innere Zustände wie Körpertemperatur, pH-Wert oder Blutzucker in engen Grenzen konstant halten.",
+        difficulty = 2,
+        funFact = "Die Körpertemperatur des Menschen wird auf ±0,5 °C um 37 °C reguliert — schon 2 °C Abweichung kann lebensbedrohlich sein."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist ein chemisches Mol?",
+        answerA = "Eine Masse von genau 1 Gramm eines Elements",
+        answerB = "Eine Menge von 10²³ Teilchen",
+        answerC = "Eine Menge eines Stoffes, die 6,022 × 10²³ Teilchen enthält (Avogadro-Konstante)",
+        answerD = "Die kleinste messbare Menge einer Substanz",
+        correctAnswer = 2,
+        explanation = "Ein Mol ist die SI-Einheit der Stoffmenge und enthält exakt 6,022 × 10²³ Teilchen (Avogadro-Konstante). Ein Mol Wasser (18 g) enthält ebenso viele Moleküle wie ein Mol Eisen (56 g) Atome.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    // ── ADDITIONAL HARD (difficulty = 3) — 23 questions ──────────────────────
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist das Meißner-Ochsenfeld-Experiment?",
+        answerA = "Der Nachweis der Quantenstruktur von Elektronen",
+        answerB = "Die Beobachtung, dass Supraleiter Magnetfelder aus ihrem Inneren verdrängen",
+        answerC = "Die erste Messung des Photoelektrischen Effekts",
+        answerD = "Ein Experiment zur Bestimmung der Elektronenmasse",
+        correctAnswer = 1,
+        explanation = "Der Meißner-Ochsenfeld-Effekt (1933) zeigt, dass Supraleiter im supraleitenden Zustand Magnetfelder aus ihrem Inneren verdrängen (perfekter Diamagnetismus).",
+        difficulty = 3,
+        funFact = "Dieser Effekt ermöglicht die Levitation: supraleitende Magnetschwebebahnen nutzen dieses Prinzip."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist ein Quasar?",
+        answerA = "Ein super-massereicher Planet am Rand des Sonnensystems",
+        answerB = "Ein extrem leuchtkräftiger Kern einer aktiven Galaxie, angetrieben von einem supermassiven schwarzen Loch",
+        answerC = "Ein explodierender Riesenstern in der Milchstraße",
+        answerD = "Eine sehr dichte Ansammlung von Neutronensternen",
+        correctAnswer = 1,
+        explanation = "Quasare (Quasi-Stellar Objects) sind die leuchtkräftigsten Objekte im Universum. Sie sind aktive Galaxienkerne, in denen Materie von einem supermassiven schwarzen Loch akkretiert wird.",
+        difficulty = 3,
+        funFact = "Der leuchtkräftigste bekannte Quasar, J0529-4351, ist 500 Billionen Mal so hell wie unsere Sonne."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was beschreibt die 'Entropie' in der Thermodynamik?",
+        answerA = "Die Gesamtenergie eines Systems",
+        answerB = "Das Maß für die Unordnung oder die Anzahl der möglichen Mikrozustände eines Systems",
+        answerC = "Die Wärmekapazität eines Materials",
+        answerD = "Der Energieverlust bei thermischen Prozessen",
+        correctAnswer = 1,
+        explanation = "Entropie (S) ist ein Maß für die Unordnung oder die Anzahl der möglichen Mikrozustände eines Systems. Der zweite Hauptsatz der Thermodynamik besagt: Die Entropie eines abgeschlossenen Systems nimmt niemals ab.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist eine 'Transgene Pflanze'?",
+        answerA = "Eine Pflanze, die durch natürliche Kreuzung entstanden ist",
+        answerB = "Eine Pflanze, der Gene einer anderen Art eingebaut wurden",
+        answerC = "Eine Pflanze mit besonders vielen Chromosomen",
+        answerD = "Eine Pflanze, die ohne Bestäubung Früchte bildet",
+        correctAnswer = 1,
+        explanation = "Transgene Pflanzen enthalten Gene, die aus anderen Organismen (auch anderen Arten) eingebracht wurden, um bestimmte Eigenschaften zu verleihen (z. B. Herbizidresistenz, Schädlingsresistenz).",
+        difficulty = 3,
+        funFact = "Bt-Mais ist eine transgene Pflanze, die das Insektizidprotein aus Bacillus thuringiensis produziert."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist der 'Hall-Effekt' in der Physik?",
+        answerA = "Die Entstehung von Wirbelströmen in Metallen bei wechselnden Magnetfeldern",
+        answerB = "Die Erzeugung einer elektrischen Spannung quer zur Stromflussrichtung in einem Magnetfeld",
+        answerC = "Die Absorption von Licht durch freie Elektronen in Metallen",
+        answerD = "Die Veränderung des elektrischen Widerstands durch Dehnung",
+        correctAnswer = 1,
+        explanation = "Der Hall-Effekt (1879, Edwin Hall): In einem Leiter mit Stromfluss wird durch ein senkrechtes Magnetfeld eine Spannung quer zur Stromrichtung erzeugt. Er wird u. a. in Sensoren verwendet.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist 'alternatives Splicing' in der Molekularbiologie?",
+        answerA = "Die Spaltung der DNA durch Restriktionsenzyme",
+        answerB = "Der Prozess, bei dem aus einem Gen durch unterschiedliche mRNA-Prozessierung mehrere Proteine entstehen können",
+        answerC = "Die Fusion von zwei mRNA-Molekülen zu einer neuen mRNA",
+        answerD = "Der Export von mRNA aus dem Zellkern",
+        correctAnswer = 1,
+        explanation = "Beim alternativen Splicing werden Exons einer prä-mRNA in verschiedenen Kombinationen zusammengefügt. So können aus einem einzigen Gen viele verschiedene Protein-Isoformen entstehen.",
+        difficulty = 3,
+        funFact = "Das Dscam-Gen der Fruchtfliege kann durch alternatives Splicing theoretisch über 38.000 verschiedene Proteinisoformen produzieren."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist ein Tachyon?",
+        answerA = "Ein Elementarteilchen mit negativer Masse",
+        answerB = "Ein hypothetisches Teilchen, das sich immer schneller als Licht bewegt",
+        answerC = "Ein Antiteilchen des Neutrons",
+        answerD = "Ein schwach wechselwirkendes massives Teilchen (WIMP)",
+        correctAnswer = 1,
+        explanation = "Tachyonen sind hypothetische Teilchen, die sich immer schneller als Licht bewegen würden. Ihre Existenz würde die Kausalität verletzen — bisher wurden sie nie nachgewiesen.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was beschreibt das 'Fick'sche Diffusionsgesetz'?",
+        answerA = "Den osmotischen Druck in biologischen Membranen",
+        answerB = "Den Zusammenhang zwischen Diffusionsstrom, Konzentrationsgradient und Diffusionskoeffizient",
+        answerC = "Die Viskosität von Flüssigkeiten bei verschiedenen Temperaturen",
+        answerD = "Die Kapillarwirkung von Flüssigkeiten in engen Röhren",
+        correctAnswer = 1,
+        explanation = "Das erste Fick'sche Gesetz: J = -D · (dC/dx). Der Diffusionsfluss J ist proportional zum Konzentrationsgradient und dem Diffusionskoeffizienten D.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist 'Krebs als klonale Evolution'?",
+        answerA = "Krebs entsteht immer durch Viren, die Zellen infizieren",
+        answerB = "Tumorzellen entstehen durch akkumulierende Mutationen und selektieren sich nach darwinschen Prinzipien",
+        answerC = "Krebszellen klonen sich aus normalen Stammzellen ohne Mutationen",
+        answerD = "Krebserkrankungen werden immer von einer einzelnen Ursprungszelle gestartet, die identische Tochterzellen erzeugt",
+        correctAnswer = 1,
+        explanation = "Die klonale Evolution erklärt Krebsentstehung: Mutationen verleihen Zellen Wachstumsvorteile. Durch natürliche Selektion setzen sich Zellen mit weiteren Mutationen durch — bis invasives Verhalten entsteht.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist ein 'Schwarzes Loch vom Typ Kerr'?",
+        answerA = "Ein Schwarzes Loch, das aus reiner Energie besteht",
+        answerB = "Ein rotierendes Schwarzes Loch, das durch den Kerr-Metriktensor beschrieben wird",
+        answerC = "Ein Schwarzes Loch mit elektrischer Ladung",
+        answerD = "Ein Mikro-Schwarzes Loch, das durch Quanteneffekte entsteht",
+        correctAnswer = 1,
+        explanation = "Das Kerr-Schwarze-Loch ist eine exakte Lösung der Einsteinschen Feldgleichungen für rotierende Schwarze Löcher (Roy Kerr, 1963). Es besitzt einen Ergosphärenbereich.",
+        difficulty = 3,
+        funFact = "Die meisten astrophysikalischen Schwarzen Löcher rotieren und sind daher Kerr-Schwarze-Löcher."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist 'Proteomik'?",
+        answerA = "Die Erforschung der genetischen Ursachen von Proteinkrankheiten",
+        answerB = "Die umfassende Untersuchung aller Proteine (Proteom) einer Zelle, eines Gewebes oder Organismus",
+        answerC = "Die Synthese von Proteinen im Labor durch chemische Methoden",
+        answerD = "Die Erforschung von Proteinen ausgestorbener Organismen",
+        correctAnswer = 1,
+        explanation = "Die Proteomik analysiert das gesamte Proteom — alle Proteine, die in einer Zelle oder einem Organismus zu einem bestimmten Zeitpunkt exprimiert werden.",
+        difficulty = 3,
+        funFact = "Das menschliche Proteom umfasst schätzungsweise über 1 Million Proteinvarianten, obwohl das Genom nur etwa 20.000 Gene enthält."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist der 'Spin' eines Elementarteilchens?",
+        answerA = "Die Rotationsgeschwindigkeit des Teilchens um seine eigene Achse",
+        answerB = "Eine intrinsische quantenmechanische Eigenschaft, die analog zum Drehimpuls ist",
+        answerC = "Die Kreiselbewegung eines Teilchens im Magnetfeld",
+        answerD = "Die Eigenbewegung eines Teilchens durch den Raum",
+        correctAnswer = 1,
+        explanation = "Spin ist eine fundamentale quantenmechanische Eigenschaft ohne klassische Entsprechung. Er kann nur bestimmte diskrete Werte annehmen (z. B. ±1/2 für Elektronen).",
+        difficulty = 3,
+        funFact = "Der Spin des Elektrons bestimmt die magnetischen Eigenschaften von Atomen und ist die Grundlage der MRT-Diagnostik."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist das 'Endoplasmatische Retikulum' (ER)?",
+        answerA = "Ein Netzwerk aus Membranen im Zellkern für die DNA-Replikation",
+        answerB = "Ein ausgedehntes Membransystem im Zytoplasma, das an Proteinsynthese und Lipidstoffwechsel beteiligt ist",
+        answerC = "Die äußere Membran von Mitochondrien",
+        answerD = "Das Netzwerk der Mikrotubuli im Zytoskelett",
+        correctAnswer = 1,
+        explanation = "Das ER ist ein Membransystem im Zytoplasma. Das raue ER (mit Ribosomen) ist an der Proteinsynthese und -modifikation beteiligt; das glatte ER am Lipidstoffwechsel.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist der 'Compton-Effekt'?",
+        answerA = "Die Emission von Elektronen aus Metallen durch UV-Licht",
+        answerB = "Die Streuung von Röntgenphotonen an freien Elektronen, wobei die Wellenlänge zunimmt",
+        answerC = "Die Beugung von Licht an kleinen Teilchen",
+        answerD = "Die Absorption von Röntgenstrahlen durch schwere Atome",
+        correctAnswer = 1,
+        explanation = "Der Compton-Effekt (1923): Wenn Röntgenphotonen an (quasi-)freien Elektronen gestreut werden, übertragen sie Impuls auf die Elektronen und ihre Wellenlänge nimmt zu. Dies bewies die Teilchennatur des Lichts.",
+        difficulty = 3,
+        funFact = "Arthur Holly Compton erhielt dafür 1927 den Nobelpreis für Physik."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was versteht man unter 'epigenetischem Silencing'?",
+        answerA = "Die Entfernung von Genen aus dem Chromosom",
+        answerB = "Die dauerhafte Stummstellung eines Gens durch chemische Modifikation, ohne die DNA-Sequenz zu verändern",
+        answerC = "Die Hemmung der Transkription durch Antisense-RNA",
+        answerD = "Die Spaltung eines Gens durch Restriktionsenzyme",
+        correctAnswer = 1,
+        explanation = "Epigenetisches Silencing schaltet Gene ab durch DNA-Methylierung, Histonmodifikation oder andere Chromatin-Veränderungen — ohne die DNA-Sequenz zu verändern.",
+        difficulty = 3,
+        funFact = "Etwa die Hälfte aller menschlichen Gene kann epigenetisch reguliert werden."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist das 'Pairing-Problem' in der Kernphysik?",
+        answerA = "Die Schwierigkeit, Quarks in Protonen voneinander zu trennen",
+        answerB = "Das Phänomen, dass Nukleonen (Protonen, Neutronen) eine erhöhte Stabilität zeigen, wenn sie paarweise mit entgegengesetztem Spin vorliegen",
+        answerC = "Die Massendifferenz zwischen Proton und Neutron",
+        answerD = "Die Wechselwirkung zwischen Kernspin und externen Magnetfeldern",
+        correctAnswer = 1,
+        explanation = "Das Paarungseffekt-Konzept erklärt, warum Kerne mit gerader Anzahl von Protonen und Neutronen stabiler sind als Kerne mit ungerader Zahl — Nukleonen paaren sich bevorzugt mit entgegengesetztem Spin.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist 'Astrobiologie'?",
+        answerA = "Die Astronomie von biologischen Observatorien aus",
+        answerB = "Die Wissenschaft, die die Entstehung, Verteilung und Zukunft des Lebens im Universum erforscht",
+        answerC = "Die Biologie von Organismen unter Weltraumbedingungen an Bord der ISS",
+        answerD = "Die Erforschung kosmischer Einflüsse auf das Leben auf der Erde",
+        correctAnswer = 1,
+        explanation = "Astrobiologie ist ein interdisziplinäres Forschungsfeld, das untersucht, wie Leben im Universum entstand, wo es existieren könnte und wie es sich entwickelt.",
+        difficulty = 3,
+        funFact = "Der Mond des Jupiters, Europa, gilt als einer der vielversprechendsten Kandidaten für außerirdisches Leben wegen seines Ozeans unter der Eisdecke."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist ein 'Topoisomerase'?",
+        answerA = "Ein Protein, das die Chromosomen in der Zellkernmembran verankert",
+        answerB = "Ein Enzym, das Über- oder Unterwindungen in der DNA durch vorübergehendes Schneiden und Wieder-Verknüpfen beseitigt",
+        answerC = "Ein Protein, das die räumliche Struktur von Ribosomen stabilisiert",
+        answerD = "Ein Enzym, das DNA-Methylierungen hinzufügt oder entfernt",
+        correctAnswer = 1,
+        explanation = "Topoisomerasen lösen topologische Spannungen in der DNA-Doppelhelix, die bei Replikation und Transkription entstehen. Typ I schneidet einen Strang, Typ II schneidet beide Stränge.",
+        difficulty = 3,
+        funFact = "Viele Krebstherapeutika (z. B. Irinotecan, Etoposid) hemmen Topoisomerasen, um die DNA-Replikation von Tumorzellen zu blockieren."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was beschreibt die 'Virial-Theorem' in der Astrophysik?",
+        answerA = "Die Beziehung zwischen Masse und Leuchtkraft von Sternen",
+        answerB = "Das Gleichgewicht zwischen kinetischer und potentieller Energie in gravitationsgebundenen Systemen",
+        answerC = "Die maximale Rotationsgeschwindigkeit einer Galaxie",
+        answerD = "Die Beziehung zwischen Temperatur und Radius eines Sterns",
+        correctAnswer = 1,
+        explanation = "Das Virial-Theorem: In einem gebundenen System im Gleichgewicht gilt ⟨E_kin⟩ = -½ ⟨E_pot⟩. Es wird verwendet, um Massen von Galaxienhaufen aus deren kinetischen Energien zu schätzen.",
+        difficulty = 3,
+        funFact = "Über das Virial-Theorem wurde erstmals dunkle Materie postuliert, da Galaxienhaufen mehr Masse besitzen als durch sichtbare Materie erklärbar."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist ein 'Enzymkomplex' in der Biochemie?",
+        answerA = "Ein Enzym, das nur bei hohen pH-Werten aktiv ist",
+        answerB = "Eine Anordnung mehrerer Enzymuntereinheiten oder verschiedener Enzyme, die zusammen eine Reaktionsfolge katalysieren",
+        answerC = "Ein Enzym, das durch Metallionen aktiviert wird",
+        answerD = "Eine Mischung aus Enzymen und Cofaktoren in einer Lösung",
+        correctAnswer = 1,
+        explanation = "Enzymkomplexe (Multienzymkomplexe) sind Anordnungen mehrerer Enzyme, die hintereinander verbundene Reaktionen durchführen, z. B. der Pyruvat-Dehydrogenase-Komplex.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist das 'Pauli-Ausschlussprinzip' in Bezug auf chemische Bindungen?",
+        answerA = "Es erklärt, warum Atome nur bestimmte Elektronenkonfigurationen haben können",
+        answerB = "Es besagt, dass zwei Elektronen in einem Orbital entgegengesetzten Spin haben müssen",
+        answerC = "Es erklärt, warum Metalle elektrischen Strom leiten",
+        answerD = "Es begrenzt die maximale Bindungsordnung zwischen zwei Atomen",
+        correctAnswer = 1,
+        explanation = "Das Pauli-Prinzip erzwingt, dass zwei Elektronen in einem Orbital (gleiche Quantenzahlen n, l, m) entgegengesetzten Spin (±½) haben müssen. Dies bestimmt die Elektronenkonfiguration und Struktur des Periodensystems.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist 'SETI'?",
+        answerA = "Eine internationale Weltraumorganisation neben der NASA",
+        answerB = "Die wissenschaftliche Suche nach außerirdischer Intelligenz durch Analyse von Radiosignalen und anderen Emissionen",
+        answerC = "Ein Satellit zur Erforschung des äußeren Sonnensystems",
+        answerD = "Ein Forschungsprojekt zur Untersuchung von Meteoriten auf organische Verbindungen",
+        correctAnswer = 1,
+        explanation = "SETI (Search for Extraterrestrial Intelligence) ist ein Forschungsprogramm, das nach Anzeichen technologischer Zivilisationen im Universum sucht, hauptsächlich durch die Analyse von Radiosignalen.",
+        difficulty = 3,
+        funFact = "Seit 1999 können Privatpersonen über SETI@home Rechenkapazität zur Datenanalyse beitragen."
+    ),
+
+    Question(
+        categoryId = 2,
+        questionText = "Was ist das 'Elektronen-Spin-Resonanz' (ESR)?",
+        answerA = "Eine Methode zur Messung der Kernladungszahl von Atomen",
+        answerB = "Eine spektroskopische Methode, die paramagnetische Substanzen durch Wechselwirkung ihrer ungepaarten Elektronen mit Mikrowellenstrahlung in einem Magnetfeld analysiert",
+        answerC = "Eine Methode zur Messung von Elektronengeschwindigkeiten im elektrischen Feld",
+        answerD = "Eine Technik zur Bestimmung der Elektronenkonfiguration durch UV-Absorption",
+        correctAnswer = 1,
+        explanation = "ESR (oder EPR: Electron Paramagnetic Resonance) ist eine Spektroskopietechnik, die ungepaarte Elektronen in Molekülen nachweist. Sie wird u. a. in der Materialforschung und zur Altersbestimmung genutzt.",
+        difficulty = 3,
+        funFact = null
     )
 )
