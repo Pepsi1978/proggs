@@ -136,6 +136,188 @@ fun herthaBscQuestions(): List<Question> = listOf(
         funFact = null
     ),
 
+    Question(
+        categoryId = 13,
+        questionText = "In welchem Berliner Bezirk liegt das Olympiastadion?",
+        answerA = "Mitte",
+        answerB = "Charlottenburg",
+        answerC = "Spandau",
+        answerD = "Schöneberg",
+        correctAnswer = 1,
+        explanation = "Das Olympiastadion Berlin liegt im Bezirk Charlottenburg-Wilmersdorf, genauer im Ortsteil Westend.",
+        difficulty = 1,
+        funFact = "Das Olympiastadion ist über die S-Bahn-Station 'Olympiastadion' bequem erreichbar."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welches Symbol ziert das Wappen von Hertha BSC?",
+        answerA = "Ein Adler",
+        answerB = "Ein Löwe",
+        answerC = "Ein Bär",
+        answerD = "Ein Drache",
+        correctAnswer = 0,
+        explanation = "Das Hertha-BSC-Wappen zeigt einen blauen Adler mit ausgebreiteten Schwingen auf weißem Grund.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie heißt die offizielle Vereinshymne von Hertha BSC?",
+        answerA = "Blau-Weiß für immer",
+        answerB = "Nur nach Hause",
+        answerC = "Herthaner",
+        answerD = "Alte Dame Berlin",
+        correctAnswer = 2,
+        explanation = "Die bekannteste Vereinshymne von Hertha BSC trägt den Titel 'Herthaner' – ein Aufruf an alle Fans und Mitglieder.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Berliner Senat hat das Olympiastadion für die Olympischen Spiele 1936 bauen lassen?",
+        answerA = "Das Deutsche Reich unter Adolf Hitler",
+        answerB = "Die Weimarer Republik",
+        answerC = "Der Berliner Stadtrat",
+        answerD = "Das Königreich Preußen",
+        correctAnswer = 0,
+        explanation = "Das Olympiastadion Berlin wurde unter dem NS-Regime als Schauplatz der Olympischen Sommerspiele 1936 gebaut.",
+        difficulty = 1,
+        funFact = "Der Architekt Werner March entwarf das Stadion im neoklassizistischen Stil auf Wunsch von Albert Speer."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie wird der Eingangsbereich des Olympiastadions Berlin genannt?",
+        answerA = "Das Marathontor",
+        answerB = "Das Osttor",
+        answerC = "Das Berliner Tor",
+        answerD = "Das Olympisches Tor",
+        correctAnswer = 0,
+        explanation = "Das Marathontor ist das markante Osttor des Olympiastadions, durch das früher die Marathonläufer einzogen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wer ist der aktuelle Namensgeber-Sponsor des Olympiastadions Berlin (Stand 2024)?",
+        answerA = "Telekom",
+        answerB = "Mercedes-Benz",
+        answerC = "Das Stadion hat keinen Namenssponsor",
+        answerD = "Vodafone",
+        correctAnswer = 2,
+        explanation = "Das Olympiastadion Berlin trägt keinen Sponsornamen – es heißt offiziell weiterhin 'Olympiastadion Berlin'.",
+        difficulty = 1,
+        funFact = "Das Festhalten am historischen Namen ist ein bewusster Entscheid, um die Identität des UNESCO-Baudenkmals zu schützen."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welche Farbe hat das Auswärtstrikot von Hertha BSC traditionell?",
+        answerA = "Schwarz",
+        answerB = "Weiß",
+        answerC = "Grau",
+        answerD = "Gelb",
+        correctAnswer = 1,
+        explanation = "Das traditionelle Auswärtstrikot von Hertha BSC ist weiß – die zweite Vereinsfarbe neben Blau.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "In welcher deutschen Hauptstadt hat Hertha BSC seinen Sitz?",
+        answerA = "Bonn",
+        answerB = "Berlin",
+        answerC = "Hamburg",
+        answerD = "Frankfurt",
+        correctAnswer = 1,
+        explanation = "Hertha BSC ist der traditionsreichste Fußballverein Berlins, der deutschen Hauptstadt.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie viele Punkte erhält eine Mannschaft in der Bundesliga für einen Sieg?",
+        answerA = "2 Punkte",
+        answerB = "3 Punkte",
+        answerC = "1 Punkt",
+        answerD = "4 Punkte",
+        correctAnswer = 1,
+        explanation = "Seit 1995 gilt in der Bundesliga die Drei-Punkte-Regel: Sieg = 3 Punkte, Unentschieden = 1 Punkt, Niederlage = 0 Punkte.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie lautet der Vereinsschlachtruf der Hertha-BSC-Fans?",
+        answerA = "Blau-Weiß, wie lieb ich dich!",
+        answerB = "Ha-Ho-He, Hertha BSC!",
+        answerC = "Hertha, Hertha, Hertha!",
+        answerD = "Berlin, Berlin, wir fahren nach Berlin!",
+        correctAnswer = 1,
+        explanation = "Der Schlachtruf 'Ha-Ho-He, Hertha BSC!' ist der bekannteste Fangesang und Kampfruf der Hertha-Anhänger.",
+        difficulty = 1,
+        funFact = "Dieser Ruf erklingt seit Jahrzehnten in jedem Heimspiel und gilt als Erkennungszeichen der Hertha-Fangemeinde."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welche Zahl steht für das Gründungsjahr von Hertha BSC im offiziellen Vereinsnamen?",
+        answerA = "1888",
+        answerB = "1892",
+        answerC = "1900",
+        answerD = "1895",
+        correctAnswer = 1,
+        explanation = "Im offiziellen Vereinsnamen 'Hertha Berliner SC 1892 e.V.' steht die 1892 für das Gründungsjahr.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welche Art von Sportanlage ist das Olympiastadion Berlin in erster Linie?",
+        answerA = "Reine Fußballarena",
+        answerB = "Leichtathletik- und Fußballstadion",
+        answerC = "Baseball-Stadion",
+        answerD = "Motorsportstrecke",
+        correctAnswer = 1,
+        explanation = "Das Olympiastadion Berlin hat eine Leichtathletiklaufbahn und wird für Fußball und Leichtathletikveranstaltungen genutzt.",
+        difficulty = 1,
+        funFact = "Die Leichtathletiklaufbahn sorgt dafür, dass die Fans etwas weiter vom Spielfeld entfernt sitzen als in reinen Fußballarenen."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Pokal ist nach dem DFB-Pokal der wichtigste nationale Cup-Wettbewerb für Hertha BSC?",
+        answerA = "Der Berliner Pokal",
+        answerB = "Der DFL-Supercup",
+        answerC = "Der UEFA-Pokal",
+        answerD = "Der FDGB-Pokal",
+        correctAnswer = 0,
+        explanation = "Der Berliner Pokal ist der regionale Pokalwettbewerb für Berliner Vereine – ein wichtiger Wettbewerb für Hertha auf Landesebene.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "In welchem Turnier spielen die besten europäischen Vereinsmannschaften?",
+        answerA = "UEFA Nations League",
+        answerB = "UEFA Champions League",
+        answerC = "Copa del Rey",
+        answerD = "FA Cup",
+        correctAnswer = 1,
+        explanation = "Die UEFA Champions League ist das prestigeträchtigste europäische Vereinsturnier – Hertha BSC nahm 1999/2000 daran teil.",
+        difficulty = 1,
+        funFact = null
+    ),
+
     // ── MEDIUM (2) ────────────────────────────────────────────────────────────
 
     Question(
@@ -333,6 +515,253 @@ fun herthaBscQuestions(): List<Question> = listOf(
         funFact = "Gabor Kiraly wurde durch seine Jogginghose unter dem Torwartdress zu einem Kult-Torhüter – ein Markenzeichen, das er nie ablegte."
     ),
 
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Trainer führte den Verein in der Saison 2010/11 in die Bundesliga und wurde danach als Trainer gefeiert?",
+        answerA = "Jos Luhukay",
+        answerB = "Lucien Favre",
+        answerC = "Markus Babbel",
+        answerD = "Otto Rehhagel",
+        correctAnswer = 1,
+        explanation = "Lucien Favre übernahm Hertha BSC 2007 und stabilisierte den Verein, der anschließend mehrere Jahre solide in der Bundesliga spielte.",
+        difficulty = 2,
+        funFact = "Lucien Favre ist Schweizer und gilt als einer der taktisch versiertesten Trainer seiner Generation."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Spieler trägt den Spitznamen 'Dedi' und ist eine Legende der 1990er Jahre?",
+        answerA = "Dariusz Wosz",
+        answerB = "Andreas Thom",
+        answerC = "Axel Kruse",
+        answerD = "Hasso Aust",
+        correctAnswer = 0,
+        explanation = "Dariusz Wosz, polnischer Nationalspieler, wurde von Hertha-Fans liebevoll 'Dedi' genannt und prägte die Aufstiegsjahre Ende der 1990er.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-BSC-Spieler wurde in der Saison 2013/14 in der Bundesliga am häufigsten verwarnt?",
+        answerA = "Anis Ben-Hatira",
+        answerB = "Ronny",
+        answerC = "Peter Niemeyer",
+        answerD = "Hajime Hosogai",
+        correctAnswer = 2,
+        explanation = "Peter Niemeyer gehörte zu Herthas fleißigsten, aber auch gelbkartengefährdetsten Mittelfeldspielern jener Jahre.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "In welcher Saison stieg Hertha BSC zuletzt aus der Bundesliga ab (Stand 2024)?",
+        answerA = "2021/22",
+        answerB = "2022/23",
+        answerC = "2019/20",
+        answerD = "2020/21",
+        correctAnswer = 1,
+        explanation = "In der Saison 2022/23 stieg Hertha BSC nach einem dramatischen Relegationsspiel gegen den Hamburger SV aus der Bundesliga ab.",
+        difficulty = 2,
+        funFact = "Das Relegationshinspiel gegen den HSV endete 0:0, das Rückspiel verlor Hertha mit 0:2 und stieg ab."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-BSC-Stürmer wechselte im Sommer 2013 für eine damalige Rekordsumme zu Hertha?",
+        answerA = "Adrian Ramos",
+        answerB = "Schieber",
+        answerC = "Raffael",
+        answerD = "Änis Ben-Hatira",
+        correctAnswer = 0,
+        explanation = "Adrian Ramos wechselte 2013 zu Hertha BSC und überzeugte mit seiner Schnelligkeit und Torgefährlichkeit.",
+        difficulty = 2,
+        funFact = "Der kolumbianische Stürmer Adrian Ramos wechselte später zu Borussia Dortmund."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wer war Herthas erster Trainer nach dem Abstieg in die 2. Bundesliga 2023?",
+        answerA = "Pál Dárdai",
+        answerB = "Sandro Schwarz",
+        answerC = "Ante Covic",
+        answerD = "Pal Dardai Junior",
+        correctAnswer = 0,
+        explanation = "Nach dem Abstieg 2023 übernahm Pál Dárdai erneut das Traineramt bei Hertha BSC und führte den Verein in der 2. Bundesliga.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welches Ergebnis erzielte Hertha BSC im ersten Bundesliga-Derby gegen Union Berlin (2019/20)?",
+        answerA = "1:0 für Hertha",
+        answerB = "0:0 Unentschieden",
+        answerC = "1:1 Unentschieden",
+        answerD = "3:1 für Union",
+        correctAnswer = 0,
+        explanation = "Im ersten offiziellen Bundesliga-Derby zwischen Hertha und Union Berlin gewann Hertha BSC mit 1:0 durch ein Tor von Davie Selke.",
+        difficulty = 2,
+        funFact = "Das historische erste Bundesliga-Derby fand am 2. November 2019 im Olympiastadion statt."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Spieler wechselte als Jugendlicher von Hertha BSC zu Manchester City und später wieder zurück?",
+        answerA = "Jessic Ngankam",
+        answerB = "Luca Netz",
+        answerC = "Deyovaisio Zeefuik",
+        answerD = "Marton Dardai",
+        correctAnswer = 1,
+        explanation = "Luca Netz wurde in der Hertha-Jugend ausgebildet, wechselte zu Manchester City und später zu Borussia Mönchengladbach.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Präsident folgte auf Kay Bernstein nach dessen plötzlichem Tod 2023?",
+        answerA = "Werner Gegenbauer",
+        answerB = "Kay Bernstein hatte keinen direkten Nachfolger – es gab zunächst Kommissariatslösungen",
+        answerC = "Fabian Drescher",
+        answerD = "Bernd Schiphorst",
+        correctAnswer = 2,
+        explanation = "Nach dem Tod von Kay Bernstein übernahm Fabian Drescher kommissarisch Aufgaben, bevor ein regulärer Nachfolger bestimmt wurde.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie viele Zuschauer fasst das Olympiastadion bei ausverkauften Hertha-Spielen in der Regel?",
+        answerA = "Rund 50.000",
+        answerB = "Rund 60.000",
+        answerC = "Rund 74.000",
+        answerD = "Rund 80.000",
+        correctAnswer = 2,
+        explanation = "Das Olympiastadion Berlin fasst bei Fußballspielen rund 74.244 Zuschauer und gilt als eines der größten Stadien Europas.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Nationalspieler der 2000er Jahre spielte später für den FC Bayern München?",
+        answerA = "Arne Friedrich",
+        answerB = "Josip Simunic",
+        answerC = "Marcelinho",
+        answerD = "Sebastian Deisler",
+        correctAnswer = 3,
+        explanation = "Sebastian Deisler spielte bei Hertha BSC und wechselte dann zum FC Bayern München, bevor seine Karriere aufgrund psychischer Erkrankungen endete.",
+        difficulty = 2,
+        funFact = "Sebastian Deisler kämpfte als einer der ersten deutschen Profifußballer öffentlich gegen Depressionen und wurde so zu einem Vorbild für viele."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Investor versuchte 2022, Anteile von Lars Windhorst an Hertha BSC zu kaufen?",
+        answerA = "Roman Abramowitsch",
+        answerB = "777 Partners",
+        answerC = "Der Club der Fans",
+        answerD = "Red Bull GmbH",
+        correctAnswer = 1,
+        explanation = "Die amerikanische Investmentfirma 777 Partners versuchte 2022, die Windhorst-Anteile an Hertha BSC zu übernehmen.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welche beiden Söhne von Pál Dárdai spielten gleichzeitig für Herthas Bundesliga-Kader?",
+        answerA = "Marton und Bence Dárdai",
+        answerB = "Bence und Palko Dárdai",
+        answerC = "Marton und Palko Dárdai",
+        answerD = "Alle drei Söhne gleichzeitig",
+        correctAnswer = 0,
+        explanation = "Marton und Bence Dárdai spielten beide gleichzeitig für Hertha BSC in der Bundesliga und 2. Bundesliga.",
+        difficulty = 2,
+        funFact = "Palko Dárdai ist der dritte Sohn und spielte in der Jugend von Hertha BSC."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Spieler war in den 1990ern als 'Der Bomber von Charlottenburg' bekannt?",
+        answerA = "Axel Kruse",
+        answerB = "Hasso Aust",
+        answerC = "Uwe Rahn",
+        answerD = "Knut Reinhardt",
+        correctAnswer = 0,
+        explanation = "Axel Kruse war ein torgefährlicher Stürmer der Hertha-Aufstiegsjahre und wurde wegen seiner Stärke im Strafraum so bezeichnet.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welche Saison war die erste, in der Hertha BSC in der Geschichte der Bundesliga den dritten Platz belegte?",
+        answerA = "1970/71",
+        answerB = "1999/2000",
+        answerC = "2001/02",
+        answerD = "1994/95",
+        correctAnswer = 1,
+        explanation = "In der Saison 1999/2000, der ersten Champions-League-Saison, belegte Hertha BSC den dritten Tabellenplatz in der Bundesliga.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Manager wurde 2020 beurlaubt und durch Arne Friedrich ersetzt?",
+        answerA = "Michael Preetz",
+        answerB = "Fredi Bobic",
+        answerC = "Reiner Calmund",
+        answerD = "Klaus Allofs",
+        correctAnswer = 0,
+        explanation = "Michael Preetz wurde 2020 als Manager von Hertha BSC beurlaubt; Fredi Bobic übernahm 2021 als Geschäftsführer Sport.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Weltklasse-Torwart wurde 2020 von Hertha BSC verpflichtet und sorgte für Aufsehen?",
+        answerA = "Peter Gulacsi",
+        answerB = "Alexander Schwolow",
+        answerC = "Markus Schubert",
+        answerD = "Thomas Kraft",
+        correctAnswer = 1,
+        explanation = "Alexander Schwolow wechselte 2020 von Freiburg zu Hertha BSC und wurde als Stammtorhüter eingeplant.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Spieler trug die Rückennummer 10 und galt in der Saison 2020/21 als Herthas Schlüsselspieler?",
+        answerA = "Krzysztof Piatek",
+        answerB = "Odisseas Vlachodimos",
+        answerC = "Matteo Guendouzi",
+        answerD = "Nemanja Radonjic",
+        correctAnswer = 2,
+        explanation = "Matteo Guendouzi wurde 2020 als Leihspieler von Arsenal verpflichtet und sollte Herthas Mittelfeld beleben.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Stürmer wechselte im Winter 2020 für eine Rekordablöse nach Mailand?",
+        answerA = "Davie Selke",
+        answerB = "Krzysztof Piatek",
+        answerC = "Jhon Cordoba",
+        answerD = "Vedad Ibisevic",
+        correctAnswer = 1,
+        explanation = "Krzysztof Piatek wechselte im Januar 2020 für rund 27 Millionen Euro zum AC Mailand – zu dieser Zeit ein Vereinsrekord für Hertha.",
+        difficulty = 2,
+        funFact = "Der Pole Piatek war zuvor bei Genua CFC entdeckt worden, wo er in einer Saison über 20 Tore erzielte."
+    ),
+
     // ── HARD (3) ──────────────────────────────────────────────────────────────
 
     Question(
@@ -487,6 +916,188 @@ fun herthaBscQuestions(): List<Question> = listOf(
         answerD = "5. Platz",
         correctAnswer = 0,
         explanation = "In der Saison 2002/03 wurde Hertha BSC Bundesliga-Vizemeister – die bis dato beste Platzierung der Vereinsgeschichte in der Bundesliga.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Trainer führte Hertha BSC 2013 nach dem Abstieg in der Saison 2012/13 zurück in die Bundesliga?",
+        answerA = "Jürgen Röber",
+        answerB = "Jos Luhukay",
+        answerC = "Markus Babbel",
+        answerD = "Ante Covic",
+        correctAnswer = 1,
+        explanation = "Jos Luhukay übernahm Hertha nach dem Abstieg 2012 und schaffte in der Saison 2012/13 als Meister der 2. Bundesliga den direkten Wiederaufstieg.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wann spielte Hertha BSC erstmals im DFB-Pokalfinale und wie endete das Spiel?",
+        answerA = "1977 – Niederlage gegen SC Freiburg 0:2",
+        answerB = "1993 – Niederlage gegen Bayer Leverkusen 0:1",
+        answerC = "2001 – Niederlage gegen FC Schalke 04 0:2",
+        answerD = "1979 – Niederlage gegen Fortuna Düsseldorf 0:1",
+        correctAnswer = 3,
+        explanation = "Hertha BSC stand 1979 im DFB-Pokalfinale und verlor gegen Fortuna Düsseldorf mit 0:1 nach Verlängerung.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher DDR-Nationalspieler wurde nach der Wende besonders stark mit Hertha BSC in Verbindung gebracht, obwohl er nie für Hertha spielte?",
+        answerA = "Matthias Sammer",
+        answerB = "Jörg Stübner",
+        answerC = "Ulf Kirsten",
+        answerD = "Rainer Ernst",
+        correctAnswer = 0,
+        explanation = "Matthias Sammer wechselte nach der Wende zu Stuttgart, dann zu Borussia Dortmund – er wurde nie Hertha-Spieler, obwohl Gerüchte kursierten.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "In welchem Jahr verließ Hertha BSC erstmals die zweite Liga und spielte zeitweilig drittklassig?",
+        answerA = "1986",
+        answerB = "1990",
+        answerC = "1983",
+        answerD = "1994",
+        correctAnswer = 2,
+        explanation = "1983 stieg Hertha BSC in die damals drittklassige Amateuroberliga ab – der tiefste Punkt in der Vereinsgeschichte der Nachkriegszeit.",
+        difficulty = 3,
+        funFact = "Hertha spielte zwei Saisons drittklassig, bevor sie sich zurück in die zweite Liga kämpften."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie hieß der Hertha-BSC-Trainer, der 2019/20 nach mehreren Siegen in Folge als 'Wunderkind der Bundesliga' galt und dann entlassen wurde?",
+        answerA = "Alexander Nouri",
+        answerB = "Jürgen Klinsmann",
+        answerC = "Ante Covic",
+        answerD = "Bruno Labbadia",
+        correctAnswer = 1,
+        explanation = "Jürgen Klinsmann wurde im November 2019 überraschend als Trainer verpflichtet und gab im Februar 2020 über Facebook seinen Rücktritt bekannt.",
+        difficulty = 3,
+        funFact = "Klinsmanns Abgang via Facebook-Post war einer der ungewöhnlichsten Trainerrücktritte in der Bundesliga-Geschichte."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-BSC-Profi wurde in der Saison 2021/22 zu Herthas bestem Torschützen und erzielte dabei auch Tore für die Nationalmannschaft seines Landes?",
+        answerA = "Ishak Belfodil",
+        answerB = "Stevan Jovetic",
+        answerC = "Davie Selke",
+        answerD = "Dodi Lukebakio",
+        correctAnswer = 3,
+        explanation = "Dodi Lukebakio erzielte in der Saison 2021/22 wichtige Treffer für Hertha und traf auch im Nationalteam Belgiens.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Spieler wurde in der Saison 2001/02 zum Hertha-Spieler des Jahres gewählt, obwohl er kein Torjäger war?",
+        answerA = "Arne Friedrich",
+        answerB = "Dick van Burik",
+        answerC = "Gabor Kiraly",
+        answerD = "Josip Simunic",
+        correctAnswer = 0,
+        explanation = "Arne Friedrich, ein zuverlässiger Verteidiger, wurde in jener Saison von den Hertha-Fans zum besten Spieler des Jahres gekürt.",
+        difficulty = 3,
+        funFact = "Arne Friedrich spielte später auch für den VfL Wolfsburg, bevor er nach Hertha zurückkehrte."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Mit welchem Ergebnis gewann Hertha BSC 1931 die zweite Deutsche Meisterschaft in Folge?",
+        answerA = "3:2 gegen TSV 1860 München",
+        answerB = "4:2 gegen 1. FC Nürnberg",
+        answerC = "5:4 gegen VfB Leipzig",
+        answerD = "2:0 gegen Eintracht Frankfurt",
+        correctAnswer = 1,
+        explanation = "Im Finale der Deutschen Meisterschaft 1931 besiegte Hertha BSC den 1. FC Nürnberg mit 3:2 und verteidigte damit den Titel.",
+        difficulty = 3,
+        funFact = "Die beiden Meisterschaften 1930 und 1931 sind bis heute die einzigen nationalen Titel in der Geschichte von Hertha BSC."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wer war der Torwart in Herthas erster Champions-League-Saison 1999/2000?",
+        answerA = "Frank Rost",
+        answerB = "Gabor Kiraly",
+        answerC = "Sven Kmetsch",
+        answerD = "Bernd Dreher",
+        correctAnswer = 1,
+        explanation = "Gabor Kiraly stand auch in Herthas Champions-League-Spielen 1999/2000 zwischen den Pfosten und überzeugte auf europäischer Bühne.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Wie hieß der Hertha-Spieler, der als erster Berliner Fußballer eine Million Mark Ablöse kostete?",
+        answerA = "Hans-Jürgen Dörner",
+        answerB = "Artur Wichniarek",
+        answerC = "Wolfgang Sidka",
+        answerD = "Lorenz Horr",
+        correctAnswer = 2,
+        explanation = "Wolfgang Sidka war in den 1970ern der erste Berliner Profi, für den eine Ablöse von einer Million Deutsche Mark gezahlt wurde.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Trainer übernahm Hertha BSC unmittelbar nach Jürgen Klinsmanns Rücktritt im Februar 2020?",
+        answerA = "Pál Dárdai",
+        answerB = "Ante Covic",
+        answerC = "Alexander Nouri",
+        answerD = "Bruno Labbadia",
+        correctAnswer = 2,
+        explanation = "Alexander Nouri übernahm nach Klinsmanns überraschendem Rücktritt interimsweise das Traineramt bei Hertha BSC.",
+        difficulty = 3,
+        funFact = "Bruno Labbadia übernahm kurz darauf dauerhaft als Cheftrainer und führte Hertha sicher zum Klassenerhalt."
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "In welchem Jahr wurde Hertha BSC zum letzten Mal vor 2023 in die zweite Liga relegiert?",
+        answerA = "2010",
+        answerB = "2012",
+        answerC = "2017",
+        answerD = "2019",
+        correctAnswer = 0,
+        explanation = "In der Saison 2009/10 stieg Hertha BSC ab und spielte eine Saison in der 2. Bundesliga, bevor der sofortige Wiederaufstieg folgte.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welcher Hertha-Spieler aus den 2010er Jahren wurde für den iran-stämmigen Hintergrund seines Vaters bekannt und spielte für die iranische Nationalmannschaft?",
+        answerA = "Valentino Lazaro",
+        answerB = "Karim Rekik",
+        answerC = "Hajime Hosogai",
+        answerD = "Amir Abrashi",
+        correctAnswer = 1,
+        explanation = "Karim Rekik wurde in den Niederlanden geboren, hat marokkanisch-tunesische Wurzeln und spielte sowohl für die niederländische als auch für die tunesische Nationalmannschaft.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 13,
+        questionText = "Welches war Herthas schlechtestes Bundesliga-Ergebnis in einem Heimspiel (höchste Heimniederlage) in der Geschichte?",
+        answerA = "0:5 gegen Bayern München",
+        answerB = "1:6 gegen Borussia Dortmund",
+        answerC = "0:7 gegen Borussia Mönchengladbach",
+        answerD = "0:6 gegen Bayern München",
+        correctAnswer = 3,
+        explanation = "Hertha BSC erlitt im Olympiastadion gegen Bayern München eine 0:6-Niederlage – eine der schmerzhaftesten Heimpleiten der Vereinsgeschichte.",
         difficulty = 3,
         funFact = null
     ),
