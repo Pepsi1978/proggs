@@ -1310,5 +1310,827 @@ fun foodQuestions(): List<Question> = listOf(
         explanation = "Agar-Agar (E 406) ist ein Polysaccharid aus Rotalgen (v. a. Gelidium, Gracilaria). Es geliert stärker als Gelatine und ist bei Raumtemperatur stabil – ideal als vegane Alternative zu tierischer Gelatine.",
         difficulty = 3,
         funFact = "Agar-Agar wird auch in der Mikrobiologie als Nährboden für Bakterienkulturen verwendet."
+    ),
+
+    // ADDITIONAL EASY (25)
+    Question(
+        categoryId = 8,
+        questionText = "Was ist Schokolade hauptsächlich?",
+        answerA = "Ein Getreideprodukt",
+        answerB = "Ein Produkt aus Kakaofrüchten",
+        answerC = "Ein Milchprodukt",
+        answerD = "Ein Nussprodukt",
+        correctAnswer = 1,
+        explanation = "Schokolade wird aus den Samen der Kakaofrucht (Theobroma cacao) hergestellt. Die Bohnen werden fermentiert, getrocknet, geröstet und verarbeitet.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Welches Tier legt die Eier, die wir zum Frühstück essen?",
+        answerA = "Ente",
+        answerB = "Gans",
+        answerC = "Huhn",
+        answerD = "Wachtel",
+        correctAnswer = 2,
+        explanation = "Die meisten Frühstückseier stammen von Hühnern. Hühnereier sind weltweit das am häufigsten verzehrte Vogelei.",
+        difficulty = 1,
+        funFact = "Ein Huhn legt durchschnittlich 250–300 Eier pro Jahr."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Wie nennt man das Getränk aus heißem Wasser und getrockneten Teeblättern?",
+        answerA = "Kaffee",
+        answerB = "Kakao",
+        answerC = "Tee",
+        answerD = "Brühe",
+        correctAnswer = 2,
+        explanation = "Tee ist ein Aufgussgetränk aus den Blättern der Teepflanze (Camellia sinensis) oder anderen getrockneten Pflanzenteilen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist Marmelade?",
+        answerA = "Eingekochtes Gemüse",
+        answerB = "Eingekochtes Obst mit Zucker",
+        answerC = "Fruchtjoghurt",
+        answerD = "Frucht-Honig-Mischung",
+        correctAnswer = 1,
+        explanation = "Marmelade (oder Konfitüre) ist ein Aufstrich aus eingekochtem Obst mit Zucker, der durch Pektin geliert.",
+        difficulty = 1,
+        funFact = "Streng genommen darf im EU-Raum nur Zitrusfrüchteaufstrich 'Marmelade' heißen – der Rest heißt 'Konfitüre'."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Welche Farbe hat eine reife Banane?",
+        answerA = "Grün",
+        answerB = "Rot",
+        answerC = "Gelb",
+        answerD = "Orange",
+        correctAnswer = 2,
+        explanation = "Reife Bananen sind gelb. Das Chlorophyll in der Schale wird beim Reifen abgebaut und gibt die gelben Carotinoide frei.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Aus was wird Brot hauptsächlich hergestellt?",
+        answerA = "Kartoffeln",
+        answerB = "Mehl, Wasser und Hefe",
+        answerC = "Mais und Milch",
+        answerD = "Hafer und Honig",
+        correctAnswer = 1,
+        explanation = "Brot besteht im Kern aus Mehl, Wasser, Salz und einem Triebmittel wie Hefe oder Sauerteig.",
+        difficulty = 1,
+        funFact = "Die ältesten bekannten Brotfunde sind rund 14.000 Jahre alt und wurden in Jordanien entdeckt."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Welche Farbe hat rohes Rinderhackfleisch?",
+        answerA = "Weiß",
+        answerB = "Grau",
+        answerC = "Rot",
+        answerD = "Braun",
+        correctAnswer = 2,
+        explanation = "Frisches Rinderhackfleisch ist leuchtend rot, weil Myoglobin mit Sauerstoff reagiert (Oxymyoglobin). Braun wird es wenn kein Sauerstoff mehr vorhanden ist oder beim Erhitzen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist Olivenöl?",
+        answerA = "Ein Pflanzenöl aus gepressten Oliven",
+        answerB = "Ein tierisches Fett",
+        answerC = "Ein Öl aus Olivenkernen",
+        answerD = "Ein Butterersatz aus Margarine",
+        correctAnswer = 0,
+        explanation = "Olivenöl wird durch Pressen von reifen oder halbreifen Oliven gewonnen. Extra vergine (kaltgepresst) ist die höchste Qualitätsstufe.",
+        difficulty = 1,
+        funFact = "Olivenbäume können mehrere Hundert Jahre alt werden – einige in Griechenland sind über 2.000 Jahre alt."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Welche Flüssigkeit wird klassisch zum Zubereiten von Omelette verwendet?",
+        answerA = "Milch und Eier",
+        answerB = "Wasser und Mehl",
+        answerC = "Sahne und Hefe",
+        answerD = "Joghurt und Stärke",
+        correctAnswer = 0,
+        explanation = "Ein klassisches Omelette besteht aus verquirlten Eiern, oft mit etwas Milch oder Sahne, die in Butter in der Pfanne gegart werden.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Wie nennt man gebratene Kartoffelscheiben?",
+        answerA = "Pommes frites",
+        answerB = "Chips",
+        answerC = "Bratkartoffeln",
+        answerD = "Rösti",
+        correctAnswer = 2,
+        explanation = "Bratkartoffeln sind in Scheiben geschnittene Kartoffeln, die in der Pfanne in Fett gebraten werden. Sie sind ein klassisches deutsches Beilagengericht.",
+        difficulty = 1,
+        funFact = "Bratkartoffeln schmecken besonders gut aus vorgekochten Kartoffeln vom Vortag."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist Honig?",
+        answerA = "Ein von Bienen aus Blütennektar hergestelltes Lebensmittel",
+        answerB = "Ein Pflanzensaft aus Zuckerrüben",
+        answerC = "Ein Sirup aus Ahornbäumen",
+        answerD = "Eine kristallisierte Zuckerform",
+        correctAnswer = 0,
+        explanation = "Honig wird von Honigbienen aus dem Nektar von Blüten produziert. Die Bienen sammeln den Nektar, verarbeiten ihn enzymatisch und lagern ihn in Waben.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist Popcorn?",
+        answerA = "Gerästete Reiskörner",
+        answerB = "Aufgepoppte Maiskörner durch Hitze",
+        answerC = "Getrocknete Weizenkörner",
+        answerD = "Frittierte Kartoffelstückchen",
+        correctAnswer = 1,
+        explanation = "Popcorn entsteht wenn spezielle Maissorten (Zea mays var. everta) erhitzt werden. Die eingeschlossene Feuchtigkeit im Korn verdampft und lässt das Korn aufplatzen.",
+        difficulty = 1,
+        funFact = "Das älteste bekannte Popcorn ist etwa 5.000 Jahre alt und wurde in Peru gefunden."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist ein Smoothie?",
+        answerA = "Ein klarer Fruchtsaft ohne Fruchtfleisch",
+        answerB = "Ein püriertes Getränk aus frischen Früchten oder Gemüse",
+        answerC = "Ein Milchshake mit Eis",
+        answerD = "Ein fermentiertes Fruchtgetränk",
+        correctAnswer = 1,
+        explanation = "Ein Smoothie ist ein dickflüssiges Getränk, das durch Pürieren von frischen Früchten und/oder Gemüse (samt Fruchtfleisch) hergestellt wird.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Aus welchem Land stammt die Chorizo-Wurst ursprünglich?",
+        answerA = "Italien",
+        answerB = "Spanien / Portugal",
+        answerC = "Mexiko",
+        answerD = "Argentinien",
+        correctAnswer = 1,
+        explanation = "Chorizo ist eine gewürzte Wurst aus der Iberischen Halbinsel (Spanien und Portugal), die durch Paprika (Pimentón) ihre rote Farbe und ihr charakteristisches Aroma bekommt.",
+        difficulty = 1,
+        funFact = "Es gibt süße, halbscharfe und scharfe Chorizo – je nach Paprikasorte."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist ein Burger?",
+        answerA = "Ein deutsches Schnitzel-Sandwich",
+        answerB = "Ein belegtes Brötchen mit Fleischpattie",
+        answerC = "Ein mexikanischer Taco",
+        answerD = "Ein englisches Frühstücksgericht",
+        correctAnswer = 1,
+        explanation = "Ein Burger besteht typischerweise aus einem Brötchen (Bun), einem gegrillten oder gebratenen Fleischpattie und verschiedenen Beilagen wie Salat, Tomate und Sauce.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist Mineralwasser?",
+        answerA = "Destilliertes Wasser ohne Mineralstoffe",
+        answerB = "Leitungswasser mit künstlich zugesetzter Kohlensäure",
+        answerC = "Natürliches Quellwasser mit gelösten Mineralstoffen",
+        answerD = "Gefiltertes Meerwasser",
+        correctAnswer = 2,
+        explanation = "Mineralwasser ist natürliches Grundwasser, das Mineralstoffe wie Calcium, Magnesium und Natrium enthält und aus geschützten Quellen gewonnen wird.",
+        difficulty = 1,
+        funFact = "Deutschland hat über 500 anerkannte Mineralwasserquellen."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist Lasagne?",
+        answerA = "Ein griechisches Nudelgericht mit Joghurt",
+        answerB = "Ein italienisches Nudelgericht mit Schichten aus Teigplatten, Hackfleischsauce und Béchamel",
+        answerC = "Ein spanisches Reiskasserole",
+        answerD = "Ein deutsches Auflaufgericht ohne Nudeln",
+        correctAnswer = 1,
+        explanation = "Lasagne ist ein klassisches italienisches Gericht aus geschichteten Teigplatten, Ragù (Hackfleischsauce), Béchamelsauce und Käse, das im Ofen überbacken wird.",
+        difficulty = 1,
+        funFact = "Lasagne ist eines der ältesten Pasta-Gerichte und wurde bereits im 14. Jahrhundert in Italien erwähnt."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist ein Wrap?",
+        answerA = "Eine gefüllte Toastscheibe",
+        answerB = "Ein gefülltes, aufgerolltes Fladenbrot oder Tortilla",
+        answerC = "Ein gegrilltes Sandwich",
+        answerD = "Ein Bagel mit Füllung",
+        correctAnswer = 1,
+        explanation = "Ein Wrap ist eine in ein dünnes Fladenbrot oder eine Tortilla eingerollte Füllung aus Fleisch, Gemüse, Salat und Saucen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist Wasabi?",
+        answerA = "Eine japanische Soßenbasis aus fermentiertem Fisch",
+        answerB = "Eine sehr scharfe grüne Paste aus der Wasabipflanze",
+        answerC = "Ein japanisches Reisgericht",
+        answerD = "Eine süße Soße zu Sushi",
+        correctAnswer = 1,
+        explanation = "Wasabi ist eine scharfe, grüne Paste aus dem geriebenen Rhizom der Wasabipflanze (Eutrema japonicum), die zu Sushi und anderen japanischen Gerichten gereicht wird.",
+        difficulty = 1,
+        funFact = "Echter Wasabi ist sehr teuer – die meisten Sushi-Restaurants außerhalb Japans servieren gefärbten Meerrettich."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was bedeutet 'vegetarisch' bei einer Ernährungsweise?",
+        answerA = "Kein Fleisch und keine tierischen Produkte",
+        answerB = "Kein Fleisch, aber Milchprodukte und Eier sind erlaubt",
+        answerC = "Nur rohes Obst und Gemüse",
+        answerD = "Kein rotes Fleisch, aber Fisch erlaubt",
+        correctAnswer = 1,
+        explanation = "Vegetarier essen kein Fleisch und keinen Fisch, verzehren aber in der Regel Milchprodukte (Lakto-) und/oder Eier (Ovo-). Veganer hingegen verzichten auf alle tierischen Produkte.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Welcher Gewürz ist für die typische Schärfe von Ingwer verantwortlich?",
+        answerA = "Capsaicin",
+        answerB = "Piperin",
+        answerC = "Gingerol",
+        answerD = "Allicin",
+        correctAnswer = 2,
+        explanation = "Gingerol (und sein Abbauprodukt Shogaol in getrocknetem Ingwer) ist die scharf-würzige Verbindung im Ingwer.",
+        difficulty = 1,
+        funFact = "Ingwer wird seit über 3.000 Jahren als Gewürz und Heilmittel verwendet."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist Frischkäse?",
+        answerA = "Sehr langer gereifter Hartkäse",
+        answerB = "Ein nicht oder kaum gereifter Käse mit hohem Wassergehalt",
+        answerC = "Käse aus Frischmilch ohne Wärmebehandlung",
+        answerD = "Gelatinierter Quark",
+        correctAnswer = 1,
+        explanation = "Frischkäse ist eine Käsesorte, die nicht oder kaum gereift ist und einen hohen Wassergehalt hat. Dazu gehören Quark, Ricotta, Philadelphia und Mascarpone.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist Paella?",
+        answerA = "Ein italienisches Risotto-Gericht",
+        answerB = "Ein spanisches Reisgericht mit Meeresfrüchten, Fleisch und Gemüse",
+        answerC = "Ein portugiesisches Fischgericht",
+        answerD = "Ein mexikanisches Tortilla-Gericht",
+        correctAnswer = 1,
+        explanation = "Paella ist ein valencianisches Reisgericht aus Spanien, das im flachen Paella-Pan zubereitet wird und Zutaten wie Meeresfrüchte, Hähnchen, Gemüse und Safran enthalten kann.",
+        difficulty = 1,
+        funFact = "Die traditionelle Paella Valenciana enthält weder Meeresfrüchte noch Chorizo – sondern Kaninchen, Huhn und Bohnen."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist ein Brownie?",
+        answerA = "Ein amerikanisches schokoladiges Gebäck",
+        answerB = "Ein britischer Schokoladenkuchen mit Sahne",
+        answerC = "Ein belgisches Waffelgebäck",
+        answerD = "Ein französisches Törtchen aus Brandteig",
+        correctAnswer = 0,
+        explanation = "Brownies sind ein amerikanisches Schokodessert – dichte, feuchte Schokokuchen-Riegel, die zwischen Kuchen und Keks liegen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist Senf (als Lebensmittel)?",
+        answerA = "Eine Sauce aus pürierten Tomaten mit Essig",
+        answerB = "Eine Würzpaste aus gemahlenen Senfkörnern, Essig und Gewürzen",
+        answerC = "Eine Marinade aus Zitronensaft",
+        answerD = "Ein eingekochtes Chutney aus Zwiebeln",
+        correctAnswer = 1,
+        explanation = "Speisesenf wird aus gemahlenen Senfkörnern (weiß/gelb oder schwarz/braun), Essig, Wasser und Gewürzen hergestellt. Dijon-Senf, Bauernsenf und süßer Senf sind bekannte Varianten.",
+        difficulty = 1,
+        funFact = "Senf ist eines der ältesten Gewürze der Welt – Senfrezepte sind seit 3.000 v. Chr. belegt."
+    ),
+
+    // ADDITIONAL MEDIUM (15)
+    Question(
+        categoryId = 8,
+        questionText = "Was versteht man unter 'Terrinen' in der Küche?",
+        answerA = "Eine Pastete oder gepresste Fleisch-/Gemüsemasse, die in einer Kastenform gegart wird",
+        answerB = "Eine flüssige Fleischbrühe",
+        answerC = "Ein Dessert aus Fruchtgelee",
+        answerD = "Eine Art Fondue",
+        correctAnswer = 0,
+        explanation = "Eine Terrine ist eine in einer Kastenform zubereitete Masse aus Fleisch, Fisch, Gemüse oder Früchten. Sie wird heiß oder kalt serviert und ist eng mit der Pastete verwandt.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Paneer'?",
+        answerA = "Ein fermentierter indischer Joghurt",
+        answerB = "Ein frischer, ungereifter Käse aus der indischen Küche",
+        answerC = "Eine indische Hülsenfruchtpaste",
+        answerD = "Ein indisches Fladenbrot",
+        correctAnswer = 1,
+        explanation = "Paneer ist ein frischer, druckgepresster Käse aus Kuhmilch oder Büffelmilch, der in der süd- und südasiatischen Küche verbreitet ist. Er wird nicht zum Schmelzen gebracht und eignet sich zum Braten.",
+        difficulty = 2,
+        funFact = "Paneer ist eine der wichtigsten Proteinquellen in der vegetarischen indischen Küche."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist der Unterschied zwischen 'Roh-' und 'Brühwurst'?",
+        answerA = "Rohwurst wird erhitzt und dann geräuchert; Brühwurst wird nicht erhitzt",
+        answerB = "Rohwurst wird roh gereift (fermentiert/getrocknet); Brühwurst wird während der Herstellung gebrüht (erhitzt)",
+        answerC = "Brühwurst enthält nur rohes Fleisch ohne Gewürze",
+        answerD = "Beide sind identisch – der Name ist nur regional unterschiedlich",
+        correctAnswer = 1,
+        explanation = "Rohwürste (z. B. Salami, Mettwurst) werden nicht erhitzt, sondern durch Fermentation, Trocknung oder Räuchern haltbar gemacht. Brühwürste (Frankfurter, Mortadella, Leberkäse) werden im Herstellungsprozess erhitzt.",
+        difficulty = 2,
+        funFact = "Frankfurter Würstchen sind eine der bekanntesten Brühwürste der Welt und haben DOP-Schutz."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Stracciatella' in der Eiscreme-Welt?",
+        answerA = "Ein Pistazieneis aus Sizilien",
+        answerB = "Ein Vanilleeis mit eingearbeiteten Schokoladesplittern",
+        answerC = "Ein Erdbeereis mit Sahnestreifen",
+        answerD = "Ein Mandeleis aus Sardinien",
+        correctAnswer = 1,
+        explanation = "Stracciatella (von 'stracciare' = zerreißen) ist ein Vanilleeis, bei dem flüssige Schokolade eingearbeitet wird und beim Abkühlen zu unregelmäßigen Schokoladesplittern erstarrt.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Mise en Place' in der professionellen Küche?",
+        answerA = "Eine Kochtechnik für Saucen",
+        answerB = "Das Vorbereiten und Bereitstellen aller Zutaten und Werkzeuge vor dem Kochen",
+        answerC = "Eine Methode zum Anrichten von Tellern",
+        answerD = "Die Küchenordnung nach Dienstende",
+        correctAnswer = 1,
+        explanation = "'Mise en Place' (französisch: 'alles an seinen Platz') bezeichnet das vollständige Vorbereiten aller Zutaten, Geräte und Werkzeuge, bevor mit dem eigentlichen Kochen begonnen wird.",
+        difficulty = 2,
+        funFact = "Mise en Place ist ein Grundprinzip jeder professionellen Küche und gilt als Zeichen eines disziplinierten Kochs."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Ceviche'?",
+        answerA = "Ein mexikanisches Rindfleischgericht",
+        answerB = "Ein lateinamerikanisches Gericht aus rohem Fisch, der in Zitrussaft 'gegart' wird",
+        answerC = "Ein peruanisches Maisgebäck",
+        answerD = "Ein brasilianisches Kokos-Dessert",
+        correctAnswer = 1,
+        explanation = "Ceviche ist ein Gericht aus frischem rohem Fisch (oder Meeresfrüchten), der durch die Säure von Limetten- oder Zitronensaft denaturiert (chemisch 'gegart') wird.",
+        difficulty = 2,
+        funFact = "Peru gilt als Ursprungsland des Ceviche und feiert es als Nationalgericht."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist der Unterschied zwischen 'Röstzwiebeln' und 'karamellisierten Zwiebeln'?",
+        answerA = "Röstzwiebeln werden scharf und schnell gebraten bis sie knusprig sind; karamellisierte Zwiebeln werden bei mittlerer Hitze sehr lange geschmort bis sie süß-weich werden",
+        answerB = "Karamellisierte Zwiebeln werden zusätzlich mit Zucker bestreut",
+        answerC = "Beide Begriffe bezeichnen dasselbe",
+        answerD = "Röstzwiebeln sind immer aus dem Handel, karamellisierte werden selbst zubereitet",
+        correctAnswer = 0,
+        explanation = "Röstzwiebeln werden bei hoher Hitze schnell knusprig gebraten. Karamellisierte Zwiebeln brauchen 30–60 Minuten bei mittlerer Hitze – dabei werden natürliche Zucker freigesetzt und die Zwiebeln werden süß und dunkelbraun.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Bonito' in der japanischen Küche?",
+        answerA = "Eine Algenart für Sushi",
+        answerB = "Ein Thunfischverwandter (Skipjack-Thunfisch), dessen Flocken als Katsuobushi verwendet werden",
+        answerC = "Eine Sojasoßenvariation",
+        answerD = "Ein japanischer Reisessig",
+        correctAnswer = 1,
+        explanation = "Bonito (Katsuo) ist ein Fisch, der geräuchert, fermentiert und getrocknet zu Katsuobushi (getrocknete Bonitoflocken) verarbeitet wird. Diese sind eine der wichtigsten Umami-Quellen und Grundlage von Dashi.",
+        difficulty = 2,
+        funFact = "Katsuobushi ist mit etwa 15 % Wassergehalt eines der härtesten Lebensmittel der Welt."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Polenta'?",
+        answerA = "Ein italienisches Risotto aus Mais",
+        answerB = "Ein Brei oder Kuchen aus grobem Maisgrieß",
+        answerC = "Ein sizilianisches Weizengebäck",
+        answerD = "Ein norditaliensisches Nudelgericht",
+        correctAnswer = 1,
+        explanation = "Polenta ist ein Gericht aus grobem Maisgrieß (Bramata), der mit Wasser oder Brühe zu einem Brei gekocht wird. Es ist ein Grundnahrungsmittel der norditalienischen Küche.",
+        difficulty = 2,
+        funFact = "Feste Polenta kann nach dem Abkühlen geschnitten und gegrillt oder gebraten werden."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Pecorino Romano'?",
+        answerA = "Ein Kuhmilchkäse aus der Toskana",
+        answerB = "Ein harter, gereifter Schafsmilchkäse aus Latium und Sardinien",
+        answerC = "Ein Weichkäse aus dem Piemont",
+        answerD = "Ein Büffelmilchkäse aus Kampanien",
+        correctAnswer = 1,
+        explanation = "Pecorino Romano ist ein harter, salziger Schafsmilchkäse (Pecorino = Schaf) mit DOP-Schutz. Er wird in Latium, Sardinien und der Toskana hergestellt und ist unverzichtbar in Pasta-Gerichten wie Cacio e Pepe.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Pancake' und wie unterscheidet er sich vom deutschen Pfannkuchen?",
+        answerA = "Pancakes sind dicker und luftiger als deutsche Pfannkuchen, da der Teig mehr Backpulver enthält",
+        answerB = "Pancakes sind dünner als deutsche Pfannkuchen",
+        answerC = "Pancakes werden mit Hefe hergestellt, Pfannkuchen ohne",
+        answerD = "Beide sind identisch",
+        correctAnswer = 0,
+        explanation = "Amerikanische Pancakes sind deutlich dicker und fluffiger als deutsche Pfannkuchen, weil ihr Teig Backpulver oder Backnatron enthält, das CO₂-Blasen erzeugt. Deutsche Pfannkuchen sind dünner und werden oft aufgerollt.",
+        difficulty = 2,
+        funFact = "Pancakes mit Ahornsirup sind das klassische amerikanische Frühstück."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Antipasto'?",
+        answerA = "Eine italienische Hauptmahlzeit",
+        answerB = "Die Vorspeisen-Auswahl in der italienischen Küche",
+        answerC = "Ein Pasta-Gericht gegen den Hunger",
+        answerD = "Ein Dessert nach der Pasta",
+        correctAnswer = 1,
+        explanation = "'Antipasto' bedeutet wörtlich 'vor der Pasta' und bezeichnet den Vorspeisen-Gang der italienischen Mahlzeit, bestehend aus Aufschnitt, Käse, Oliven, Gemüse und anderen Häppchen.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Gravad Lax'?",
+        answerA = "Geräucherter skandinavischer Lachs",
+        answerB = "In Salz, Zucker und Dill gepökelter roher Lachs",
+        answerC = "Frittierter Lachs nach norwegischer Art",
+        answerD = "Eingelegter Hering in Dillsauce",
+        correctAnswer = 1,
+        explanation = "Gravad Lax (oder Gravlax) ist ein skandinavisches Gericht aus rohem Lachs, der in einer Mischung aus grobem Salz, Zucker und frischem Dill für mehrere Tage gebeizt wird.",
+        difficulty = 2,
+        funFact = "Der Name 'Gravad Lax' bedeutet wörtlich 'eingegrabener Lachs' – ursprünglich wurde der Fisch unter der Erde fermentiert."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Baba Ganoush'?",
+        answerA = "Eine libanesische Joghurt-Kräutersauce",
+        answerB = "Ein Aufstrich aus gerösteten Auberginen, Tahini, Zitrone und Knoblauch",
+        answerC = "Ein türkischer Linsenaufstrich",
+        answerD = "Ein ägyptisches Fladenbrot",
+        correctAnswer = 1,
+        explanation = "Baba Ganoush ist ein levantinischer Aufstrich aus über offener Flamme gerösteten Auberginen, die mit Tahini, Zitronensaft, Knoblauch und Gewürzen vermischt werden.",
+        difficulty = 2,
+        funFact = "Der Rauchgeschmack von Baba Ganoush entsteht durch das Rösten der Aubergine direkt auf der Flamme."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist der Unterschied zwischen weißem und braunem Zucker?",
+        answerA = "Brauner Zucker ist gesünder weil er aus anderen Pflanzen stammt",
+        answerB = "Brauner Zucker enthält noch Melasse-Reste, weißer Zucker ist vollständig raffiniert",
+        answerC = "Weißer Zucker hat mehr Kalorien als brauner",
+        answerD = "Brauner Zucker entsteht aus Rüben, weißer aus Zuckerrohr",
+        correctAnswer = 1,
+        explanation = "Brauner Zucker enthält noch Melasse (den dunklen Nebenprodukt der Zuckerherstellung), die ihm Farbe, Aroma und minimale Spurenmineralien gibt. Weißer Zucker ist vollständig raffiniert.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    // ADDITIONAL HARD (23)
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Retronasal Olfaction' beim Schmecken?",
+        answerA = "Das Riechen durch die Nase von außen beim Essen",
+        answerB = "Das Wahrnehmen von Aromen durch den Rachenraum rückwärts zur Riechschleimhaut beim Kauen",
+        answerC = "Die Empfindlichkeit der Geschmacksknospen nach Krankheit",
+        answerD = "Eine Technik der Weinverkostung",
+        correctAnswer = 1,
+        explanation = "Retronasal Olfaction beschreibt das Wahrnehmen flüchtiger Aromastoffe über den Nasen-Rachen-Raum von innen während des Kauens. Dies ist der Hauptbeitrag zu dem, was wir als 'Geschmack' eines Lebensmittels erleben – die Zunge nimmt nur 5 Grundqualitäten wahr.",
+        difficulty = 3,
+        funFact = "Bis zu 80 % des empfundenen 'Geschmacks' ist eigentlich Geruch über den Retronasalweg."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Pektinierung' bei der Marmeladen- und Geleeherstellung?",
+        answerA = "Das Hinzufügen von Konservierungsstoffen zur Fruchtzubereitung",
+        answerB = "Das Gelieren durch Pektin, das bei hohem Zuckergehalt und niedrigem pH-Wert ein Netzwerk bildet",
+        answerC = "Das Sterilisieren von Gläsern für die Aufbewahrung",
+        answerD = "Das Karamellisieren von Fruchtzucker beim Einkochen",
+        correctAnswer = 1,
+        explanation = "Pektin ist ein Polysaccharid in Zellwänden vieler Früchte. Bei ausreichend Zucker (>55 %) und niedrigem pH (<3,5) bilden Pektinmoleküle Wasserstoffbrücken und ionische Netzwerke, die das Gel entstehen lassen.",
+        difficulty = 3,
+        funFact = "Äpfel und Quitten haben besonders viel natürliches Pektin – daher gelierten Quittenpüree und Apfelgelee so gut."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Cold Brew Coffee' und wie unterscheidet er sich chemisch von heißem Kaffee?",
+        answerA = "Cold Brew ist gefrorener Kaffee – chemisch identisch mit heißem Kaffee",
+        answerB = "Cold Brew wird mit kaltem Wasser extrahiert, wodurch weniger Säure und andere hitzeempfindliche Verbindungen entstehen",
+        answerC = "Cold Brew enthält doppelt so viel Koffein wie heißer Kaffee",
+        answerD = "Cold Brew wird mit Stickstoff versetzt und ist deshalb milder",
+        correctAnswer = 1,
+        explanation = "Cold Brew wird 12–24 Stunden mit kaltem Wasser extrahiert. Da keine Hitze verwendet wird, entstehen weniger Chlorogensäure-Abbauprodukte und andere Säuren – das Ergebnis ist ein milderer, weniger bitterer Kaffee mit anderem Aromaprofil.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Acrylamid' in Lebensmitteln und wann entsteht es?",
+        answerA = "Ein natürlicher Süßungsmittel in reifen Früchten",
+        answerB = "Eine potenziell krebserregende Verbindung, die bei der Maillard-Reaktion über 120 °C aus Asparagin und Zuckern entsteht",
+        answerC = "Ein Konservierungsstoff in Tiefkühlprodukten",
+        answerD = "Ein Fermentationsprodukt in Sauerkraut",
+        correctAnswer = 1,
+        explanation = "Acrylamid entsteht bei der Maillard-Reaktion aus der Aminosäure Asparagin und reduzierenden Zuckern bei Temperaturen über 120 °C (Backen, Frittieren, Rösten). Es gilt als potenziell krebserregend für Menschen.",
+        difficulty = 3,
+        funFact = "Pommes frites, Chips und dunkel gerösteter Kaffee enthalten besonders hohe Acrylamid-Mengen."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Isomaltulose' und warum wird sie als Alternative zu Haushaltszucker vermarktet?",
+        answerA = "Ein synthetischer Süßstoff ohne Kalorien",
+        answerB = "Ein natürliches Disaccharid aus Honig mit niedrigerem glykämischen Index als Saccharose",
+        answerC = "Ein Zuckeralkohol aus Maiskleie",
+        answerD = "Ein Fruktooligosaccharid aus Chicorée",
+        correctAnswer = 1,
+        explanation = "Isomaltulose (Palatinose) ist ein natürliches Disaccharid aus Honig und Zuckerrohr, bestehend aus Glukose und Fruktose. Es wird langsamer verdaut als Saccharose und hat einen niedrigeren glykämischen Index (GI 32 vs. 65).",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist das Besondere an 'Neapoletanischer Pizza' (Vera Pizza Napoletana) gemäß den AVPN-Regeln?",
+        answerA = "Sie muss tiefgekühlt und dann aufgebacken werden",
+        answerB = "Teig aus Typ-00-Mehl, Meersalz, Hefe und Wasser, mindestens 8 Stunden Gehzeit, Holzofengare bei 485 °C für 60–90 Sekunden",
+        answerC = "Sie wird ohne Tomaten zubereitet",
+        answerD = "Der Teig enthält Olivenöl und Oregano",
+        correctAnswer = 1,
+        explanation = "Die Associazione Verace Pizza Napoletana (AVPN) schreibt exakt vor: Typ-00-Mehl, frische Hefe, Meersalz, Wasser, mindestens 8 h Gehzeit, handgeformte Basis, San-Marzano-Tomaten, Fior-di-Latte-Mozzarella, Backen im Holzofen bei 485 °C für 60–90 Sek.",
+        difficulty = 3,
+        funFact = "Pizza Napoletana hat seit 2017 den Status des immateriellen UNESCO-Kulturerbes."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Pasteurisierung bei ESL-Milch' (Extended Shelf Life)?",
+        answerA = "Eine schwache Pasteurisierung bei 63 °C",
+        answerB = "Eine Kurzzeiterhitzung auf 125–130 °C für wenige Sekunden, die mehr Keime als normale Pasteurisierung abtötet",
+        answerC = "Eine Sterilisierung bei 150 °C wie bei H-Milch",
+        answerD = "Eine UV-Bestrahlung ohne Wärme",
+        correctAnswer = 1,
+        explanation = "ESL-Milch wird bei 125–130 °C für 2–4 Sekunden ultrahocherhitzt (UHT-ähnlich), was deutlich mehr Keime als normale Pasteurisierung (72 °C/15 s) vernichtet. Die Haltbarkeit beträgt ungekühlt bis zu 3 Wochen.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Scobby' bei der Kombucha-Herstellung?",
+        answerA = "Eine Heferasse für die primäre Fermentation",
+        answerB = "Ein symbiotischer Komplex aus Essigsäurebakterien und Hefen in einer Zellulose-Matrix (SCOBY = Symbiotic Culture Of Bacteria and Yeast)",
+        answerC = "Ein Enzym, das Koffein aus dem Tee abbaut",
+        answerD = "Eine Mineralstoffzugabe zur Regulierung des pH-Werts",
+        correctAnswer = 1,
+        explanation = "SCOBY (Symbiotic Culture of Bacteria and Yeast) ist die geleeartige Zooglea-Matte aus Essigsäurebakterien und Hefen, die auf dem Kombucha schwimmt. Die Hefen produzieren Alkohol, die Bakterien wandeln ihn in Essigsäure um.",
+        difficulty = 3,
+        funFact = "Ein SCOBY kann weitergegeben werden – manche 'Starter' sind Jahrzehnte alt."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was beschreibt 'Proteolysis' bei der Käsereifung?",
+        answerA = "Das Schmelzen von Käsefett beim Erwärmen",
+        answerB = "Der enzymatische Abbau von Kasein-Proteinen durch Enzyme des Milchgerinnsels und Reifungsorganismen",
+        answerC = "Das Wachstum von Edelschimmel auf der Käserinde",
+        answerD = "Das Einlegen von Käse in Salzlake",
+        correctAnswer = 1,
+        explanation = "Proteolysis ist der enzymatische Abbau von Kasein (Milchprotein) durch Lab-Enzyme, Bakterienenzyme und Pilzenzyme während der Käsereifung. Dabei entstehen Peptide und Aminosäuren, die für Aroma, Textur und Umami-Tiefe verantwortlich sind.",
+        difficulty = 3,
+        funFact = "Je länger ein Käse reift, desto mehr Proteolysis findet statt – deshalb sind alte Hartkäse so intensiv aromatisch."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Weck' oder 'Einwecken' als Konservierungsmethode?",
+        answerA = "Eine Methode zum Trocknen von Lebensmitteln mit Heißluft",
+        answerB = "Das Einkochen von Lebensmitteln in luftdicht verschlossenen Gläsern bei 75–100 °C zum Abtöten von Keimen und Erzeugen von Vakuum",
+        answerC = "Eine Fermentationsmethode für Gemüse",
+        answerD = "Das Einfrieren von Lebensmitteln in Schutzgasatmosphäre",
+        correctAnswer = 1,
+        explanation = "Das Einwecken (nach Johann Carl Weck, der das Verfahren 1900 patentierte) konserviert Lebensmittel durch Erhitzen in verschlossenen Gläsern. Das Erhitzen tötet Mikroorganismen ab, und beim Abkühlen entsteht ein Vakuum, das den Deckel versiegelt.",
+        difficulty = 3,
+        funFact = "Johann Weck gründete 1900 die Firma 'Weck', deren Glasnamen zum Gattungsbegriff wurde."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Pommes Soufflées' und was ist das physikalische Prinzip dahinter?",
+        answerA = "Pommes frites mit Kräutern überbacken",
+        answerB = "Aufgeblähte hohle Kartoffelscheiben, die durch zweifaches Frittieren entstehen: erst bei niedriger, dann bei sehr hoher Temperatur",
+        answerC = "Kartoffeln die in Milch aufgekocht werden",
+        answerD = "Pommes frites mit Soufflé-Masse gefüllt",
+        correctAnswer = 1,
+        explanation = "Pommes Soufflées entstehen durch zweistufiges Frittieren: Zuerst bei ~160 °C, dann bei ~190 °C. Der zweite Schritt erhitzt die eingeschlossene Restfeuchte explosionsartig, was die Kartoffelscheibe aufbläht wie einen Ballon.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Butter Poaching' (Butterpochieren) als Garmethode?",
+        answerA = "Gemüse in Butter dünsten",
+        answerB = "Lebensmittel in teilweise emulgierter Butter bei 55–85 °C schonend garen",
+        answerC = "Butter in der Pfanne braun werden lassen um Nussbutter herzustellen",
+        answerD = "Fleisch in heißer Butter mit Kräutern begießen",
+        correctAnswer = 1,
+        explanation = "Beim Butter Poaching wird eine mit Wasser emulgierte Butter (Beurre Monté) als Garmédium auf 55–85 °C gehalten. Zartes Fleisch oder Fisch gart darin extrem schonend, wird dabei vollständig mit Butter aromatisiert und bleibt saftig.",
+        difficulty = 3,
+        funFact = "Beurre Monté ist der Schlüssel: Erst wenn etwas Wasser in die Butter emulgiert wird, bleibt sie flüssig ohne zu brennen."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Reactive Oxygen Species (ROS)' im Kontext von Fettoxidation in Lebensmitteln?",
+        answerA = "Vitamine, die Fette schützen",
+        answerB = "Hochreaktive sauerstoffhaltige Verbindungen (Radikale), die Kettenlreaktionen in ungesättigten Fettsäuren auslösen und Ranzigkeit verursachen",
+        answerC = "Enzyme die Fettsäuren spalten",
+        answerD = "Konservierungsstoffe gegen Oxidation",
+        correctAnswer = 1,
+        explanation = "ROS wie Hydroxyl-Radikale (·OH) und Superoxid (O₂·⁻) starten Kettenreaktionen an ungesättigten Fettsäuren (Lipidperoxidation). Dabei entstehen Aldehyde und Ketone, die Ranzigkeit verursachen. Antioxidantien (Vitamin E, BHA) unterbrechen diese Ketten.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist der Unterschied zwischen 'Osmotischem Einlegen' und 'Fermentativem Einlegen' bei Pickles?",
+        answerA = "Beide Methoden sind identisch – nur der Zeitraum unterscheidet sich",
+        answerB = "Osmotisches Einlegen nutzt Essiglake (direkte Ansäuerung, keine Fermentation); fermentatives Einlegen nutzt Salz, wodurch Milchsäurebakterien Lactat produzieren",
+        answerC = "Fermentatives Einlegen braucht immer Essig, osmotisches nicht",
+        answerD = "Nur fermentatives Einlegen macht Produkte haltbar",
+        correctAnswer = 1,
+        explanation = "Essiggurken aus dem Supermarkt sind meist osmotisch eingelegt (mit Essig-Salz-Lake direkt angesäuert). Echte fermentierte Pickles (z. B. Salzgurken) werden nur mit Salzlake eingelegt und von natürlichen Milchsäurebakterien fermentiert.",
+        difficulty = 3,
+        funFact = "Fermentierte Pickles enthalten lebende Probiotika – Essig-Pickles nicht."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was beschreibt das Konzept 'Flavor Pairing' (Aroma-Pairing) in der modernen Küche?",
+        answerA = "Das Kombinieren von Lebensmitteln mit ähnlicher Farbe",
+        answerB = "Die Hypothese, dass Lebensmittel mit gemeinsamen Schlüsselaromamolekülen gut harmonieren",
+        answerC = "Das Paaren von Wein mit Fleischgerichten nach Region",
+        answerD = "Die Kombination von Süß und Sauer für Balance",
+        correctAnswer = 1,
+        explanation = "Flavor Pairing ist ein Konzept, das Lebensmittel mit überlappenden flüchtigen Aromamolekülen als potenziell gut harmonierend beschreibt. Beispiel: Schokolade und Kaviar teilen bestimmte Aromastoffe. Das Konzept ist wissenschaftlich umstritten.",
+        difficulty = 3,
+        funFact = "Das Flavor Pairing wurde vom Heston Blumenthal popularisiert, der Schokolade und Kaviar als Paarung vorschlug."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Lipolysis' bei der Reifung von Käse und Schinken?",
+        answerA = "Der Abbau von Proteinen durch proteolytische Enzyme",
+        answerB = "Der enzymatische Abbau von Fetten zu freien Fettsäuren, die wichtige Aromastoffe sind",
+        answerC = "Das Wachstum von Edelschimmel auf der Oberfläche",
+        answerD = "Die Reduzierung des Wassergehalts durch Trocknung",
+        correctAnswer = 1,
+        explanation = "Lipolysis ist der enzymatische Abbau von Triglyceriden (Fetten) zu freien Fettsäuren und Glycerin durch Lipasen. Die entstehenden freien Fettsäuren und deren Derivate (Methyl-Ketone, Ester) sind wichtige Aromavorläufer in gereiftem Käse und Schinken.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Maltodextrin' und wie wird es in der modernen Küche genutzt?",
+        answerA = "Ein Süßungsmittel aus Malz mit intensiver Süßkraft",
+        answerB = "Ein Stärkehydrolysepartialprodukt, das in der Molekularküche verwendet wird um Fette in ein Pulver umzuwandeln",
+        answerC = "Ein Emulgator aus Milcheiweiß",
+        answerD = "Ein Ballaststoff aus Weizenkleie",
+        correctAnswer = 1,
+        explanation = "Maltodextrin (E 1400) ist ein partielles Hydrolyseprodukt von Stärke. Da es hydrophil ist und eine sehr große Oberfläche hat, kann es Fette (z. B. Olivenöl, Kakaobutter) absorbieren und in ein trockenes Pulver umwandeln – eine Technik der Molekularküche.",
+        difficulty = 3,
+        funFact = "Mit Maltodextrin lässt sich zum Beispiel Olivenölpulver herstellen, das sich auf der Zunge schmilzt."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Umami-Synergismus' bei Glutamat und Inosinat?",
+        answerA = "Glutamat und Inosinat zusammen schmecken nicht anders als einzeln",
+        answerB = "Die Kombination von Glutamat (MSG) und Inosinat (IMP) oder Guanylat (GMP) verstärkt den Umami-Geschmack synergistisch um ein Vielfaches",
+        answerC = "Umami wird nur durch Glutamat ausgelöst, Inosinat hat keine Wirkung",
+        answerD = "Inosinat neutralisiert den Umami-Effekt von Glutamat",
+        correctAnswer = 1,
+        explanation = "Glutaminsäure und die Ribonukleotide Inosinat (IMP aus Fleisch) und Guanylat (GMP aus Pilzen) wirken synergetisch: Die Kombination erzeugt bis zu 8-fach stärkere Umami-Empfindung als jede Substanz allein. Deshalb schmeckt Dashi (Kombu + Katsuobushi) so intensiv.",
+        difficulty = 3,
+        funFact = "Dieser Synergismus ist der Grund, warum Fleisch mit getrockneten Pilzen so intensiv schmeckt."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Balut'?",
+        answerA = "Eine philippinische Delikatesse – ein befruchtetes, bebrütetes Entenei, das gekocht wird",
+        answerB = "Ein balinesisches Reisgericht mit Kokosmilch",
+        answerC = "Eine indonesische Bananenspezialität",
+        answerD = "Ein vietnamesisches Nudelgericht",
+        correctAnswer = 0,
+        explanation = "Balut ist eine philippinische Straßennahrung: ein befruchtetes Entenei, das 14–21 Tage bebrütet wird, bis ein Küken sichtbar ist, und dann hartgekocht und direkt aus der Schale gegessen wird.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist der 'Rangoon-Test' bei Bienenhonig?",
+        answerA = "Ein Test zur Messung des Wassergehalts durch Refraktometrie",
+        answerB = "Ein Verfahren zur Erkennung von Verunreinigungen durch Hydroxymethylfurfural (HMF)",
+        answerC = "Ein sensorischer Test zur Bestimmung der Honigreife am Bienenvolk",
+        answerD = "Ein genetischer Test zur Bestimmung der Bienenrasse",
+        correctAnswer = 2,
+        explanation = "Im Honighandel ist der 'Schleuderhonig-Reife-Test' nach Rangoon ein sensorischer Test: Wenn man einen offenen Honigrahmen horizontal hält und schwenkt, soll reifer Honig (Wassergehalt <18 %) nicht herausfließen. Unausreichend gereifter Honig fließt heraus.",
+        difficulty = 3,
+        funFact = "Honig mit über 20 % Wassergehalt kann fermentieren und gärt dann zu einer Art Met."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Dry Hopping' beim Bierbrauen?",
+        answerA = "Das Darren von Hopfen vor der Verwendung",
+        answerB = "Das Hinzufügen von frischem Hopfen nach der Gärung, ohne Hitze, um Aroma ohne Bitterkeit zu extrahieren",
+        answerC = "Eine Trocknungsmethode für Malz",
+        answerD = "Das Kochen des Bieres ohne Hopfen",
+        correctAnswer = 1,
+        explanation = "Beim Dry Hopping (Kalthopfung) wird frischer oder pelletierter Hopfen nach der Gärung bei Raumtemperatur oder Kühltemperatur zugegeben. Da keine Hitze beteiligt ist, lösen sich nur die flüchtigen Aromaöle (kein Alpha-Säure-Iso-Umwandlung) – das Bier wird aromatischer ohne bitterer zu werden.",
+        difficulty = 3,
+        funFact = "Dry Hopping ist besonders bei American IPAs beliebt und erzeugt typische tropisch-zitrische Hopfenprofile."
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Koji-Fermentation' in der westlichen Küche (Non-Traditional Use)?",
+        answerA = "Koji wird nur für Sake und Miso eingesetzt, nie in der westlichen Küche",
+        answerB = "Westliche Köche verwenden Koji-Sporen (Aspergillus oryzae) zum schnellen Reifen von Fleisch und Umami-Anreicherung in Proteinen innerhalb von Tagen statt Monaten",
+        answerC = "Koji dient als Ersatz für Backpulver",
+        answerD = "Koji-Fermentation ist nur für fermentierte Getränke geeignet",
+        correctAnswer = 1,
+        explanation = "In der modernen westlichen Küche (z. B. Noma) werden Koji-Sporen auf Fleisch, Hülsenfrüchte oder Getreide angewendet, um durch die Proteasen und Amalysen des Pilzes schnell Amino-Säuren (Umami) freizusetzen und die Textur zu verändern – in Tagen statt Monaten.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 8,
+        questionText = "Was ist 'Pralinage' bei der Schokoladenherstellung?",
+        answerA = "Das Verfahren des Temperierens von Kuvertüre",
+        answerB = "Eine Paste aus karamellisierten Nüssen oder Mandeln, die gemahlen werden bis eine glatte Fettmasse entsteht",
+        answerC = "Das Überziehen von Früchten mit Schokolade",
+        answerD = "Das Conchieren von Kakaomasse über 24 Stunden",
+        correctAnswer = 1,
+        explanation = "Praliné (Praliné-Masse) ist eine glatte, fettreiche Paste aus karamellisierten Nüssen (Haselnüsse, Mandeln), die so fein gemahlen werden, dass das Nussfett austritt und eine cremige Paste entsteht. Sie ist die Grundlage für Pralinenfüllungen.",
+        difficulty = 3,
+        funFact = "Das Wort 'Praline' leitet sich vom Marshal du Plessis-Praslin ab, dessen Koch die Süßigkeit erfunden haben soll."
     )
 )
