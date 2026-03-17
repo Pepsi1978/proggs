@@ -2038,5 +2038,671 @@ fun geoQuestionsHard(): List<Question> = listOf(
         funFact = "Nach dem katastrophalen Ausbruch 1883 kollabierte Krakatau teilweise. 1927 entstand in der Caldera der Nachfolgevulkan 'Anak Krakatau' (Kind des Krakatau), der noch heute aktiv ist."
     ),
 
+    // ── HARD (difficulty = 3) ── 50 additional questions (batch 4) ───────────
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie tief ist der Eurasische Becken, der tiefste Punkt des Arktischen Ozeans?",
+        answerA = "3.850 m",
+        answerB = "4.665 m",
+        answerC = "5.450 m",
+        answerD = "2.980 m",
+        correctAnswer = 1,
+        explanation = "Das Eurasische Becken im Arktischen Ozean erreicht eine Tiefe von etwa 4.665 m am Punkt Litke Deep. Es ist der tiefste Teil des Arktischen Ozeans und liegt nördlich von Sibirien zwischen dem Lomonossow-Rücken und der eurasischen Küste.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Flussdelta in Südostasien gilt als einer der fruchtbarsten Reisanbaugebiete der Welt und wird vom Mekong gebildet?",
+        answerA = "Irrawaddy-Delta (Myanmar)",
+        answerB = "Chao-Phraya-Delta (Thailand)",
+        answerC = "Mekong-Delta (Vietnam)",
+        answerD = "Red-River-Delta (Vietnam)",
+        correctAnswer = 2,
+        explanation = "Das Mekong-Delta im Süden Vietnams (Đồng bằng sông Cửu Long) ist eines der fruchtbarsten Flussdeltas der Welt. Es produziert etwa die Hälfte des vietnamesischen Reises und ein Drittel aller Agrarerzeugnisse des Landes.",
+        difficulty = 3,
+        funFact = "Das Mekong-Delta liegt nur knapp über dem Meeresspiegel und ist durch den Klimawandel, Meeresspiegelanstieg und Dammbauten am Oberlauf erheblich bedroht."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie heißt der Gebirgszug in den Rocky Mountains, der die nordamerikanische Kontinentalwasserscheide bildet?",
+        answerA = "Sierra Nevada",
+        answerB = "Cascade Range",
+        answerC = "Continental Divide (Great Divide)",
+        answerD = "Wasatch Range",
+        correctAnswer = 2,
+        explanation = "Die Continental Divide (Große Kontinentalscheide) verläuft entlang der Rocky Mountains von Alaska bis New Mexico. Wasser westlich dieser Linie fließt in den Pazifik, östlich davon in den Atlantik oder den Golf von Mexiko.",
+        difficulty = 3,
+        funFact = "Im Glacier National Park (Montana) gibt es einen See namens Triple Divide Peak, von dem Wasser in drei verschiedene Ozeane fließt: Pazifik, Atlantik und Arktischer Ozean."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Caldera in den USA gilt als eine der größten Supervulkan-Calderas der Welt und ist noch tektonisch aktiv?",
+        answerA = "Crater Lake Caldera (Oregon)",
+        answerB = "Yellowstone Caldera (Wyoming)",
+        answerC = "Long Valley Caldera (Kalifornien)",
+        answerD = "Valles Caldera (New Mexico)",
+        correctAnswer = 1,
+        explanation = "Die Yellowstone Caldera in Wyoming misst etwa 72 × 55 km und ist eine der größten aktiven Supervulkan-Calderas der Welt. Der letzte Supervulkan-Ausbruch erfolgte vor etwa 640.000 Jahren.",
+        difficulty = 3,
+        funFact = "Der Yellowstone-Hotspot hat sich in den letzten 17 Millionen Jahren westwärts (relativ zur Nordamerikanischen Platte) bewegt und dabei eine Spur erloschener Calderas hinterlassen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Subduktionszone erzeugte das stärkste je aufgezeichnete Erdbeben der Erde (Valdivia-Beben 1960)?",
+        answerA = "Cascadia-Subduktionszone (Nordamerika)",
+        answerB = "Peru-Chile-Subduktionszone (Südamerika)",
+        answerC = "Izu-Bonin-Subduktionszone (Westpazifik)",
+        answerD = "Sunda-Subduktionszone (Indonesien)",
+        correctAnswer = 1,
+        explanation = "Die Peru-Chile-Subduktionszone (auch Atacama-Graben) entstand durch das Untertauchen der Nazca-Platte unter die Südamerikanische Platte. Das Valdivia-Beben 1960 erreichte Magnitude 9,5 – das stärkste je gemessene Erdbeben.",
+        difficulty = 3,
+        funFact = "Das Valdivia-Beben löste einen Tsunami aus, der Hawaii, Japan und sogar die Philippinen erreichte. Die Todeswelle traf Hawaii mit über 10 m Höhe."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Grabenbruch in Ostafrika gilt als Wiege der Menschheit und teilt den Kontinent in Ost und West?",
+        answerA = "Westafrikanischer Rift",
+        answerB = "Ostafrikanisches Rift-System (EARS)",
+        answerC = "Zentralafrikanischer Graben",
+        answerD = "Kongobecken-Rift",
+        correctAnswer = 1,
+        explanation = "Das Ostafrikanische Rift-System (East African Rift System, EARS) ist ein aktiver Kontinentalrift, der sich von Äthiopien bis Mosambik erstreckt. Es beherbergt zahlreiche tiefe Seen (Tanganjika, Malawi) und ist geologisch die Wiege früher Hominiden.",
+        difficulty = 3,
+        funFact = "In ca. 10 Millionen Jahren wird Ostafrika entlang des Rifts vom Kontinent abspalten und einen neuen Ozean bilden – Somalia und Teile Kenias werden zur Insel."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie breit ist die Straße von Hormuz an ihrer engsten Stelle, durch die etwa 20 % des weltweiten Erdöls transportiert wird?",
+        answerA = "54 km",
+        answerB = "38 km",
+        answerC = "21 km",
+        answerD = "96 km",
+        correctAnswer = 1,
+        explanation = "Die Straße von Hormuz zwischen dem Iran und Oman/den VAE ist an ihrer schmalsten Stelle etwa 38 km breit. Sie verbindet den Persischen Golf mit dem Golf von Oman und ist eine der strategisch wichtigsten Meerengen der Welt.",
+        difficulty = 3,
+        funFact = "Täglich passieren rund 17–20 Millionen Barrel Öl die Straße von Hormuz, verteilt auf zwei 3 km breite Schifffahrtskorridore. Eine Blockade würde die Weltwirtschaft massiv erschüttern."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Archipel im Indischen Ozean besteht aus 115 Granitinseln und ist kein Teil des pazifischen Feuerrings?",
+        answerA = "Malediven",
+        answerB = "Seychellen",
+        answerC = "Komoren",
+        answerD = "Lakkadiven",
+        correctAnswer = 1,
+        explanation = "Die Seychellen bestehen aus 115 Inseln, von denen die inneren Inseln (Mahé, Praslin, La Digue) einzigartig sind: Sie sind die einzigen ozeanischen Granitinseln der Welt. Die äußeren Inseln sind Korallenatollen.",
+        difficulty = 3,
+        funFact = "Die Granitinseln der Seychellen sind Reste eines alten Mikrokontinents (Zealandia des Indischen Ozeans), der sich vor ca. 75 Millionen Jahren von Indien abspaltete."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Gebirgspass verbindet Afghanistan mit Pakistan und war historisch die wichtigste Handels- und Invasionsroute zwischen Zentralasien und dem indischen Subkontinent?",
+        answerA = "Wakhan-Korridor",
+        answerB = "Khyber-Pass",
+        answerC = "Bolan-Pass",
+        answerD = "Lowari-Pass",
+        correctAnswer = 1,
+        explanation = "Der Khyber-Pass (Chaibar-Pass) im Hindukusch liegt auf 1.070 m Höhe und war seit der Antike die bedeutendste Verbindungsroute zwischen Zentralasien und dem indischen Subkontinent. Alexander der Große, die Moguln und später die Briten nutzten ihn.",
+        difficulty = 3,
+        funFact = "Der Khyber-Pass ist nur etwa 3–5 km breit an seiner engsten Stelle. Heute verläuft dort auch eine Eisenbahnstrecke, die als technisches Meisterwerk gilt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher geomorphologische Prozess beschreibt die seitliche Erosion eines Flusses, der ein breites Tal mit mäandrierenden Schleifen schafft?",
+        answerA = "Tiefenerosion",
+        answerB = "Lateralerosion (Seitenerosion)",
+        answerC = "Rückwärtserosion (Rückschreitende Erosion)",
+        answerD = "Akkumulation",
+        correctAnswer = 1,
+        explanation = "Lateralerosion (Seitenerosion) tritt auf, wenn ein Fluss in flachem Gelände nicht mehr tief erodiert, sondern seitlich mäandert. Dabei entsteht am Prallhang Erosion, am Gleithang Ablagerung – so entstehen die typischen Mäander-Schleifen.",
+        difficulty = 3,
+        funFact = "Wenn ein Mäander zu stark gebogen wird, kann der Fluss den Hals des Mäanders durchschneiden und eine abgetrennte ovale Rinne hinterlassen – den sogenannten Altwasser (Oxbow Lake)."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das tiefste Gebiet des Mittelmeers?",
+        answerA = "Adriatisches Meer – 1.230 m",
+        answerB = "Tyrrhenisches Becken – 3.785 m",
+        answerC = "Calypso-Tiefe (Ionisches Meer) – 5.267 m",
+        answerD = "Levantinisches Becken – 4.580 m",
+        correctAnswer = 2,
+        explanation = "Die Calypso-Tiefe im Ionischen Meer ist mit 5.267 m der tiefste bekannte Punkt des Mittelmeeres. Sie liegt im Hellenischen Graben südlich Griechenlands, wo die Afrikanische Platte unter die Eurasische subduziert.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Amazonas-Delta-Gebiet beherbergt das Mündungsgebiet des größten Flusssystems der Erde mit der charakteristischen Ilha de Marajó?",
+        answerA = "Orinoco-Delta (Venezuela)",
+        answerB = "Amazonas-Ästuar (Brasilien)",
+        answerC = "Rio de la Plata-Mündung (Argentinien)",
+        answerD = "São Francisco-Delta (Brasilien)",
+        correctAnswer = 1,
+        explanation = "Das Amazonas-Ästuar in Nordbrasilien bildet mit der Insel Marajó (42.000 km² – so groß wie die Schweiz) eines der markantesten Flussmündungsgebiete der Erde. Der Amazonas mündet mit über 200 km Breite in den Atlantik.",
+        difficulty = 3,
+        funFact = "Das Phänomen 'Pororoca' tritt im Amazonas-Ästuar auf: Eine Gezeitenwelle (Bore Tide) läuft als riesige Welle bis zu 800 km flussaufwärts – Surfer nutzen sie für Weltrekord-Wellenritte."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Subduktionszone im westlichen Pazifik hat die tiefste Subduktionsrate der Welt mit bis zu 24 cm pro Jahr?",
+        answerA = "Izu-Bonin-Subduktionszone",
+        answerB = "Tonga-Subduktionszone",
+        answerC = "Mariana-Subduktionszone",
+        answerD = "Japan-Subduktionszone",
+        correctAnswer = 1,
+        explanation = "Die Tonga-Subduktionszone, wo die Pazifische Platte unter die Australische (Tonga-)Platte taucht, weist mit ca. 24 cm pro Jahr die schnellste Subduktionsrate der Erde auf. Sie ist auch für extrem häufige Erdbeben bekannt.",
+        difficulty = 3,
+        funFact = "Die Tonga-Subduktionszone erzeugte im Januar 2022 den Ausbruch des Unterwasservulkans Hunga Tonga-Hunga Ha'apai – die stärkste Explosion in jüngster Zeit, die eine Druckwelle rund um die Erde sandte."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Grabenbruchsystem liegt in Nordamerika und hat den Boden des Rio Grande geformt?",
+        answerA = "Basin and Range Province",
+        answerB = "Rio Grande Rift",
+        answerC = "Colorado Plateau",
+        answerD = "Wasatch Fault Zone",
+        correctAnswer = 1,
+        explanation = "Der Rio Grande Rift ist ein kontinentaler Grabenbruch, der sich von Mexiko durch New Mexico bis nach Colorado erstreckt. Entlang dieses aktiven Rifts liegt das Tal des Rio Grande; die Kruste dehnt sich hier aktiv aus.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Meerenge trennt die afrikanische Insel Madagaskar vom Festland Mosambiks und wie breit ist sie an ihrer schmalsten Stelle?",
+        answerA = "Mozambique-Kanal – ca. 420 km",
+        answerB = "Madagaskar-Straße – ca. 80 km",
+        answerC = "Komoren-Passage – ca. 300 km",
+        answerD = "Mozambique-Kanal – ca. 120 km",
+        correctAnswer = 0,
+        explanation = "Der Mozambique-Kanal zwischen Madagaskar und dem mosambikanischen Festland ist an seiner schmalsten Stelle etwa 420 km breit und etwa 1.700 km lang. Er ist für seinen starken Agulhas-Strom bekannt.",
+        difficulty = 3,
+        funFact = "Der Mozambique-Kanal war eine wichtige Handelsroute der arabischen Seefahrt und gilt als Teil der alten 'Gewürzroute' zwischen dem Indischen Ozean und dem südlichen Afrika."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Archipel im nördlichen Atlantik umfasst 18 Inseln vulkanischen Ursprungs und gehört zu Portugal?",
+        answerA = "Kapverden",
+        answerB = "Azoren",
+        answerC = "Madeira",
+        answerD = "Kanaren",
+        correctAnswer = 1,
+        explanation = "Die Azoren bestehen aus 9 Hauptinseln (nicht 18) und liegen auf dem Mittelatlantischen Rücken, wo drei tektonische Platten (Nordamerikanisch, Eurasisch, Afrikanisch) zusammentreffen. Sie gehören zu Portugal.",
+        difficulty = 3,
+        funFact = "Die Azoren sind tektonisch aktiv und liegen auf dem Azoren-Dreieck-Treffen dreier Platten – weltweit einzigartig. Surtsey-ähnliche Vulkane können jederzeit neue Inseln entstehen lassen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie heißt der Alpenpas, der die niedrigste Überquerungsmöglichkeit der Alpen auf der Schweizer-Italienischen Grenze bietet und seit der Römerzeit genutzt wird?",
+        answerA = "Großer Sankt Bernhard (2.469 m)",
+        answerB = "Gotthard-Pass (2.091 m)",
+        answerC = "Simplon-Pass (2.005 m)",
+        answerD = "Maloja-Pass (1.815 m)",
+        correctAnswer = 3,
+        explanation = "Der Maloja-Pass (1.815 m ü.NN) im Kanton Graubünden ist mit 1.815 m der niedrigste große Alpenpass und verbindet das Engadin in der Schweiz mit dem Bergell und der Lombardei. Allerdings ist der Brennerpass (1.374 m, Österreich-Italien) der niedrigste aller Alpenpässe.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher geomorphologische Prozess erklärt das wellenförmige Sanddünenfeld in Wüsten und wie entstehen Barchane?",
+        answerA = "Fluviale Akkumulation durch saisonale Überschwemmungen",
+        answerB = "Äolische (windbedingte) Sedimenttransport und Akkumulation",
+        answerC = "Glaziale Ablagerung durch schmelzende Eisdecken",
+        answerD = "Marine Abrasion durch Wellenbewegungen",
+        correctAnswer = 1,
+        explanation = "Barchane sind sichelförmige Wanderdünen, die durch äolischen (windbedingten) Sedimenttransport entstehen. Sand wird auf der Luvseite abgetragen und auf der Leeseite abgelagert – die Hörner der Sichel zeigen in Windrichtung.",
+        difficulty = 3,
+        funFact = "Barchane wandern mit dem Wind: In der Sahara können sie sich mehrere Meter pro Jahr bewegen und ganze Oasen verschütten. Auf dem Mars wurden ähnliche Dünenstrukturen entdeckt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie tief ist die Philippine Sea-Tiefe (Emden Deep), der tiefste Teil des Philippinengrabens?",
+        answerA = "9.373 m",
+        answerB = "10.540 m",
+        answerC = "8.890 m",
+        answerD = "11.034 m",
+        correctAnswer = 1,
+        explanation = "Der Philippinengraben erreicht am Emden Deep (Philippine Trench) eine Tiefe von ca. 10.540 m und ist damit der dritttiefste Meeresgraben der Welt nach dem Challenger Deep (Marianengraben) und dem Horizon Deep (Tongagraben).",
+        difficulty = 3,
+        funFact = "Der Philippinengraben verläuft entlang der Ostküste der Philippinen über mehr als 1.320 km Länge. An ihm sinkt die Philippinische Platte unter die Eurasische Platte."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das größte aktive Caldera-System Europas, das sich im Tyrrhenischen Meer vor Neapel befindet?",
+        answerA = "Vesuv-Caldera",
+        answerB = "Phlegräische Felder (Campi Flegrei)",
+        answerC = "Ischia-Caldera",
+        answerD = "Stromboli-Krater",
+        correctAnswer = 1,
+        explanation = "Die Phlegräischen Felder (Campi Flegrei) westlich von Neapel sind ein riesiges aktives Caldera-System von ca. 12 km Durchmesser. Sie sind für die 'bradyseismische' Bodenhebung und -senkung bekannt und gelten als eines der gefährlichsten Vulkansysteme Europas.",
+        difficulty = 3,
+        funFact = "Der gesamte Boden der Phlegräischen Felder hebt und senkt sich periodisch um Meter – ein Prozess namens Bradyseismismus. Teile der historischen Römerstadt Pozzuoli stehen dadurch seit Jahrhunderten unter und über Wasser."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Fluss bildet das Ganges-Brahmaputra-Delta, das größte Flussdelta der Welt, gemeinsam mit dem Ganges?",
+        answerA = "Indus",
+        answerB = "Irrawaddy",
+        answerC = "Brahmaputra",
+        answerD = "Jamuna",
+        correctAnswer = 2,
+        explanation = "Das Ganges-Brahmaputra-Delta (Sundarbans) in Bangladesch und Indien entsteht durch die Vereinigung von Ganges und Brahmaputra. Mit über 100.000 km² Fläche ist es das größte Flussdelta der Welt.",
+        difficulty = 3,
+        funFact = "Der Brahmaputra entspringt in Tibet als Yarlung Tsangpo, fließt durch eine der tiefsten Schluchten der Erde (Yarlung Tsangpo Grand Canyon) und ändert in Bangladesch seinen Namen zu Jamuna."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie tief ist der Japan-Graben, der östlich der japanischen Hauptinsel verläuft und durch Subduktion der Pazifischen Platte entstand?",
+        answerA = "7.025 m",
+        answerB = "8.412 m",
+        answerC = "9.504 m",
+        answerD = "6.780 m",
+        correctAnswer = 1,
+        explanation = "Der Japan-Graben verläuft östlich der japanischen Hauptinseln und erreicht eine maximale Tiefe von etwa 8.412 m. Hier taucht die Pazifische Platte unter die Nordamerikanische (und Eurasische) Platte – diese Subduktion verursachte das Tōhoku-Erdbeben 2011.",
+        difficulty = 3,
+        funFact = "Das Tōhoku-Erdbeben 2011 (Magnitude 9,1) verursachte den Fukushima-Tsunami. Es bewegte die japanische Hauptinsel Honshū um fast 2,4 Meter ostwärts und verschob die Erdachse um mehrere Zentimeter."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Grabenbruch-System liegt unter dem Roten Meer und erklärt dessen Entstehung als junger Ozean?",
+        answerA = "Ostafrikanischer Rift",
+        answerB = "Afar-Spreizungszone (Afar Triple Junction)",
+        answerC = "Arabisch-Afrikanischer Kontinentalrift",
+        answerD = "Levantiner Grabenbruch",
+        correctAnswer = 1,
+        explanation = "Das Afar-Dreieck in Äthiopien/Eritrea/Dschibuti ist eine der seltenen Stellen, wo ein Mittelozeanischer Rücken auf dem Festland liegt. Das Rote Meer und der Golf von Aden entstanden durch Spreizung – das Rote Meer ist geologisch ein junger Ozean in der Entstehung.",
+        difficulty = 3,
+        funFact = "Am Afar-Dreieck treffen drei tektonische Platten zusammen: Afrikanische, Arabische und Somalische Platte. Hier lässt sich die Entstehung eines Ozeans in Echtzeit beobachten."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie breit ist die Straße von Malakka an ihrer engsten Stelle, durch die täglich Tausende von Handelsschiffen fahren?",
+        answerA = "65 km",
+        answerB = "40 km",
+        answerC = "2,8 km",
+        answerD = "15 km",
+        correctAnswer = 1,
+        explanation = "Die Straße von Malakka zwischen der malaiischen Halbinsel und Sumatra ist an ihrer schmalsten Stelle (nahe dem Phillips Channel) etwa 2,8 km breit – aber die nutzbare Fahrrinne misst etwa 40 km in der Breite an anderen Stellen. Die Engstelle liegt bei ca. 2,8 km.",
+        difficulty = 3,
+        funFact = "Die Straße von Malakka ist mit täglich über 80.000 Schiffen eine der verkehrsreichsten Schifffahrtsrouten der Welt. Etwa 25 % des weltweiten Handels und 50 % des Ölhandels passieren sie."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Archipel im südwestlichen Pazifik besteht aus über 333 Inseln und ist bekannt für seine aktiven Vulkane und Tamu-Massif-ähnliche Unterwassergeologie?",
+        answerA = "Tonga",
+        answerB = "Vanuatu",
+        answerC = "Fidschi",
+        answerD = "Salomonen",
+        correctAnswer = 1,
+        explanation = "Vanuatu besteht aus 83 bewohnten Inseln (und rund 250 insgesamt) im südwestlichen Pazifik und liegt im Bereich der Subduktion der Australischen unter die Pazifische Platte. Das Land hat einige der aktivsten Vulkane der Welt, darunter den Yasur auf Tanna.",
+        difficulty = 3,
+        funFact = "Der Ambae-Vulkan in Vanuatu gilt als einer der größten aktiven Schildvulkane des Pazifiks. 2017 und 2018 musste die gesamte Inselbevölkerung mehrfach evakuiert werden."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher alpine Gebirgspass auf der Schweizer-Österreichischen Grenze war die wichtigste Römerstraße ('Via Claudia Augusta') über die Alpen?",
+        answerA = "Reschen-Pass (1.507 m)",
+        answerB = "Brenner-Pass (1.374 m)",
+        answerC = "Arlberg-Pass (1.793 m)",
+        answerD = "Fernpass (1.210 m)",
+        correctAnswer = 1,
+        explanation = "Der Brenner-Pass (1.374 m) an der Grenze zwischen Österreich (Tirol) und Italien ist nicht nur der niedrigste Alpenpass auf der Hauptalpenkette, sondern war auch die wichtigste Römerstraße. Die Via Claudia Augusta verlief durch ihn von Altinum (nahe Venedig) bis zur Donau.",
+        difficulty = 3,
+        funFact = "Heute führt durch den Brennerpass die meistbefahrene Alpentransversale Europas. Der Brennerbasistunnel (derzeit im Bau) wird mit 64 km der längste Eisenbahntunnel der Welt werden."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Prozess der Geomorphologie beschreibt das Aufschmelzen von Permafrost und die dadurch entstehenden Thermokarst-Landschaften?",
+        answerA = "Periglaziale Prozesse mit Solifluktion",
+        answerB = "Thermokarst-Bildung durch Permafrost-Degradation",
+        answerC = "Äolische Erosion in Tundraregionen",
+        answerD = "Fluviale Zerschneidung durch Schneeschmelze",
+        correctAnswer = 1,
+        explanation = "Thermokarst entsteht, wenn Permafrost auftaut und das Bodenmaterial kollabiert. Es entstehen Senken, Seen (Thermokarstseeen), Hügel (Pingo) und unregelmäßige Geländeformen. Durch den Klimawandel breitet sich dieses Phänomen in Sibirien, Alaska und Kanada rapide aus.",
+        difficulty = 3,
+        funFact = "Beim Auftauen von Permafrost wird das darin gespeicherte organische Material zu CO₂ und Methan abgebaut – ein weiterer Klimarückkopplungseffekt, der die Erderwärmung verstärkt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Meer hat den höchsten Salzgehalt der Welt unter den randlichen Meeren mit natürlichem Zu- und Abfluss?",
+        answerA = "Rotes Meer (42–43 ‰)",
+        answerB = "Persischer Golf (38–40 ‰)",
+        answerC = "Arabisches Meer (36–37 ‰)",
+        answerD = "Mittelmeeer (37–39 ‰)",
+        correctAnswer = 0,
+        explanation = "Das Rote Meer hat mit einem Salzgehalt von etwa 40–43 ‰ den höchsten Salzgehalt aller Randmeere mit Ozean-Verbindung. Dies liegt an hoher Verdunstung und geringem Süßwasserzufluss in der trockenen Klimazone.",
+        difficulty = 3,
+        funFact = "Das Rote Meer hat keinen nennenswerten Fluss-Zufluss. Der gesamte Wasserhaushalt hängt vom Austausch mit dem Golf von Aden über den Bab al-Mandab ab."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Flussdelta im Nigerdelta (Nigeria) ist bekannt als größtes Mündungsgebiet Afrikas und wichtigstes Ölfördergebiet?",
+        answerA = "Kongodelta (DR Kongo)",
+        answerB = "Nigerdelta (Nigeria)",
+        answerC = "Zambezi-Delta (Mosambik)",
+        answerD = "Nil-Delta (Ägypten)",
+        correctAnswer = 1,
+        explanation = "Das Nigerdelta im Süden Nigerias ist das größte Flussdelta Afrikas und bedeckt ca. 70.000 km². Es enthält riesige Ölreserven und ist eines der wichtigsten Erdölfördergebiete Afrikas, leidet aber unter massiver Umweltverschmutzung.",
+        difficulty = 3,
+        funFact = "Das Nigerdelta ist eines der artenreichsten Mangrovengebiete der Welt. Gleichzeitig ist es durch Jahrzehnte der Ölförderung eine der am stärksten verschmutzten Regionen der Erde."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie heißt der tektonische Graben, der sich vom Libanon durch Syrien, Israel/Palästina und Jordanien bis zum Roten Meer erstreckt?",
+        answerA = "Anatolische Störungszone",
+        answerB = "Totes Meer-Transformverwerfung (Dead Sea Transform)",
+        answerC = "Euphrat-Graben",
+        answerD = "Mesopotamischer Graben",
+        correctAnswer = 1,
+        explanation = "Die Dead Sea Transform (Totes Meer-Verwerfung) ist eine Transformstörung, die sich vom Afar-Dreieck durch das Rote Meer, den Golf von Akaba, das Tote Meer, den Jordan und weiter bis in den Libanon erstreckt. An ihr gleiten die Arabische und Afrikanische Platte aneinander vorbei.",
+        difficulty = 3,
+        funFact = "Die Totes Meer-Transformverwerfung bewegt sich mit ca. 6 mm pro Jahr. Der tiefste Punkt der Erde auf dem Festland (Totes Meer, −430 m) liegt direkt an dieser tektonischen Grenze."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Caldera im Pazifischen Feuerring auf Sumatra entstand durch den Superausbruch des Toba-Vulkans vor ca. 74.000 Jahren?",
+        answerA = "Krakatau-Caldera",
+        answerB = "Toba-Caldera (Danau Toba)",
+        answerC = "Tambora-Caldera",
+        answerD = "Rinjani-Caldera",
+        correctAnswer = 1,
+        explanation = "Der Danau Toba auf Sumatra, Indonesien, ist der größte vulkanische See der Welt (100 × 30 km) und entstand durch den Supervulkan-Ausbruch des Toba vor ca. 74.000 Jahren. Dieser Ausbruch war so massiv, dass er möglicherweise die Weltbevölkerung auf wenige tausend Menschen reduzierte.",
+        difficulty = 3,
+        funFact = "Der Toba-Ausbruch ist die stärkste bekannte Vulkaneruption der letzten 25 Millionen Jahre. Er stieß schätzungsweise 2.800 km³ Material aus – das 100-fache des Tambora-Ausbruchs 1815."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Archipel besteht aus über 17.000 Inseln und gilt als der größte Inselstaat der Welt nach Anzahl der Inseln?",
+        answerA = "Philippinen",
+        answerB = "Indonesien",
+        answerC = "Japan",
+        answerD = "Malediven",
+        correctAnswer = 1,
+        explanation = "Indonesien besteht aus über 17.000 Inseln (offiziell 17.508 vermessen), von denen ca. 6.000 bewohnt sind. Als Inselstaat nach Anzahl der Inseln ist es der größte der Welt und erstreckt sich über mehr als 5.100 km von Ost nach West.",
+        difficulty = 3,
+        funFact = "Indonesien liegt auf dem Pazifischen Feuerring und hat über 130 aktive Vulkane – mehr als jedes andere Land der Welt. Etwa 10 % aller aktiven Vulkane der Erde befinden sich dort."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Gebirgspass in den Himalaya (5.416 m) ist der höchste befahrbare Pass der Welt, der ganzjährig geöffnet ist?",
+        answerA = "Khardung La (5.359 m, Indien)",
+        answerB = "Semo La (5.565 m, Tibet)",
+        answerC = "Mana-Pass (5.610 m, Indien)",
+        answerD = "Chang La (5.360 m, Indien)",
+        correctAnswer = 0,
+        explanation = "Der Khardung La in Ladakh, Indien, mit 5.359 m gilt als einer der höchstgelegenen befahrbaren Motorstraßenpässe der Welt. Er verbindet Leh mit dem Nubra-Tal und ist bei Motorradfahrern und Jeep-Reisenden berühmt.",
+        difficulty = 3,
+        funFact = "Früher wurde der Khardung La fälschlicherweise mit 5.602 m angegeben – GPS-Messungen ergaben jedoch eine Höhe von ca. 5.359 m. Einige noch höhere Pässe in Tibet sind aber schwerer zugänglich."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Geomorphologieprozess formt Inselberglandschaften (Inselberge) wie den Uluru in Australien und entblößt harte Gesteinskerne?",
+        answerA = "Fluviale Tiefenerosion",
+        answerB = "Differenzielle Verwitterung (bevorzugte Abtragung weicherer Gesteine)",
+        answerC = "Glaziale Überformung",
+        answerD = "Tektonische Hebung isolierter Blöcke",
+        correctAnswer = 1,
+        explanation = "Inselberge wie der Uluru entstehen durch differentielle Verwitterung: Weiches Gestein wird über Jahrmillionen abgetragen, während härterer Gesteinskern (hier Arkose-Sandstein) stehen bleibt und als isolierter Felsrücken in der Ebene herausragt.",
+        difficulty = 3,
+        funFact = "Der Uluru (Ayers Rock) ist der sichtbare Gipfel eines viel größeren unterirdischen Gesteinsblocks. Nach Schätzungen reicht er noch ca. 5–6 km tief in den Boden hinein."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Meeresstraße zwischen Russland und den USA hat an ihrer engsten Stelle ca. 85 km Breite und zwei Inseln in ihrer Mitte?",
+        answerA = "Beringsstraße mit den Diomede-Inseln",
+        answerB = "Beringsstraße ohne Inseln",
+        answerC = "Alëuten-Passage",
+        answerD = "Sea of Okhotsk Passage",
+        correctAnswer = 0,
+        explanation = "Die Beringsstraße ist an ihrer engsten Stelle ca. 85 km breit und beherbergt in ihrer Mitte die Diomede-Inseln: Große Diomede (Russland) und Kleine Diomede (USA) – die nur 3,8 km voneinander entfernt sind und die internationale Datumsgrenze liegt zwischen ihnen.",
+        difficulty = 3,
+        funFact = "Zwischen Großer Diomede (Russland, wo es morgen ist) und Kleiner Diomede (USA, wo es noch gestern ist) liegen nur 3,8 km – und ein Zeitunterschied von 21 Stunden wegen der Datumsgrenze."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist die größte Caldera in Europa nach Fläche, die heute von einem See gefüllt wird?",
+        answerA = "Laacher See (Deutschland, 3,3 km²)",
+        answerB = "Bolsena-See (Italien, 113 km²)",
+        answerC = "Bracciano-See (Italien, 57 km²)",
+        answerD = "Vulsini-Caldera mit dem Bolsena-See",
+        correctAnswer = 3,
+        explanation = "Der Bolsena-See in der Toskana, Italien, liegt in der Caldera des erloschenen Vulsini-Vulkans und ist mit 113 km² die größte Caldera Europas, die von einem See gefüllt wird. Die Vulsini-Caldera entstand durch mehrere Kollapsereignisse vor 600.000–150.000 Jahren.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Grabenbruch in Sibirien ist der tiefste kontinentale Grabenbruch der Welt und beherbergt den Baikalsee?",
+        answerA = "Baikal-Rift-Zone",
+        answerB = "West-Sibirisches Rift",
+        answerC = "Ob-Graben",
+        answerD = "Jenissei-Rift",
+        correctAnswer = 0,
+        explanation = "Die Baikal-Rift-Zone ist ein aktiver kontinentaler Grabenbruch, der sich über ca. 1.500 km erstreckt. Der Baikalsee, der darin liegt, ist 1.637 m tief und enthält etwa 20 % des weltweiten flüssigen Süßwassers. Der Boden des Sees liegt über 8 km unter dem umliegenden Hochland (Sedimentfüllung eingerechnet).",
+        difficulty = 3,
+        funFact = "Die Baikal-Rift-Zone ist 25–30 Millionen Jahre alt – damit einer der ältesten aktiven Kontinentalrifts der Welt. Der Rift dehnt sich jährlich um ca. 2 cm aus."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Schlucht in den USA gilt als tiefstes Flussdurchbruchstal der Welt, das durch fluviale Tiefen- und Rückwärtserosion entstand?",
+        answerA = "Grand Canyon (Arizona)",
+        answerB = "Hells Canyon (Idaho/Oregon)",
+        answerC = "Snake River Canyon",
+        answerD = "Bryce Canyon",
+        correctAnswer = 1,
+        explanation = "Hells Canyon entlang des Snake River an der Grenze von Idaho und Oregon ist mit bis zu 2.436 m Tiefe die tiefste Schlucht Nordamerikas und eine der tiefsten der Welt – noch tiefer als der Grand Canyon (1.829 m). Sie entstand durch intensive fluviale Tiefenerosion.",
+        difficulty = 3,
+        funFact = "Der Grand Canyon ist zwar weltberühmter, aber Hells Canyon ist tiefer. Beide entstanden durch Kombination von tektonischer Hebung des Gebirges und gleichzeitiger Tiefenerosion durch Flüsse."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Archipel im Norden Kanadas gilt als größte Inselgruppe der Welt nach Gesamtfläche?",
+        answerA = "Neusibirische Inseln (Russland)",
+        answerB = "Kanadischer Arktischer Archipel",
+        answerC = "Svalbard-Archipel (Norwegen)",
+        answerD = "Inselgruppe der Großen Antillen",
+        correctAnswer = 1,
+        explanation = "Der Kanadische Arktische Archipel umfasst über 36.000 Inseln mit einer Gesamtfläche von ca. 1,4 Millionen km² – damit ist er die größte Inselgruppe der Welt. Dazu gehören Baffin Island (fünftgrößte Insel der Welt), Ellesmere Island und Victoria Island.",
+        difficulty = 3,
+        funFact = "Der Kanadische Arktische Archipel war bis ins 20. Jahrhundert weitgehend unerforscht. Im Sommer ist die Nordwestpassage durch ihn schiffbar – durch die Klimaerwärmung wird sie zunehmend eisfrei."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie heißt der geomorphologische Prozess, bei dem ein Gletscher durch sein Eigengewicht und Temperaturunterschiede am Boden entlangfließt und dabei Felsmaterial trägt?",
+        answerA = "Nivation",
+        answerB = "Glaziale Exaration (Abrasion und Erosion)",
+        answerC = "Periglaziale Solifluktion",
+        answerD = "Fluvioglaziale Akkumulation",
+        correctAnswer = 1,
+        explanation = "Glaziale Exaration (Gletschererosion) umfasst die Abrasion (Schmirgeln des Untergrunds durch mitgeführte Gesteinsbruchstücke) und die Detraktion (Herausreißen von Gesteinsblöcken). Diese Prozesse schaffen U-Täler, Kare und die charakteristischen Gletscherschliffe.",
+        difficulty = 3,
+        funFact = "Gletscherschliffe und Rundhöcker (polierte Felsköpfe) im Alpenvorland zeigen noch heute die Fließrichtung der eiszeitlichen Gletscher an – geologische 'Wegweiser' in der Landschaft."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Subduktionszone verursacht die regelmäßigen Erdbeben und Vulkane Japans durch Untertauchen der Pazifischen Platte?",
+        answerA = "Izu-Bonin-Subduktionszone und Japan-Subduktionszone",
+        answerB = "Nur die Japan-Subduktionszone",
+        answerC = "Philippinische Platte-Subduktionszone",
+        answerD = "Sagami-Subduktionszone allein",
+        correctAnswer = 0,
+        explanation = "Japan liegt im Überlappungsbereich mehrerer Subduktionszonen: Im Osten taucht die Pazifische Platte unter Japan-Graben und Izu-Bonin-Graben, im Süden schiebt sich die Philippinische Platte unter die Eurasische. Zusammen machen sie Japan zu einem der seismisch aktivsten Gebiete der Erde.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Ästuar gilt als das breiteste der Welt und liegt an der Mündung des Río de la Plata in Argentinien/Uruguay?",
+        answerA = "Amazonas-Ästuar (Brasilien) – 330 km",
+        answerB = "Río de la Plata-Ästuar – 220 km",
+        answerC = "Ob-Ästuar (Russland) – 80 km",
+        answerD = "Severn-Ästuar (UK) – 15 km",
+        correctAnswer = 1,
+        explanation = "Der Río de la Plata (Silberfluss) bildet an seiner Mündung in den Atlantik ein Ästuar von ca. 220 km Breite und 290 km Länge – das breiteste Flussästuar der Welt. Auf seinen Ufern liegen Buenos Aires (Argentinien) und Montevideo (Uruguay).",
+        difficulty = 3,
+        funFact = "Obwohl der Río de la Plata wie ein Meer wirkt, ist er kein Meer, sondern ein Ästuar: Ein halbgeschlossenes Gewässer, in dem Süß- und Salzwasser sich vermischen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Hochgebirgspass in den Pyrenäen war der wichtigste mittelalterliche Jakobsweg-Übergang nach Spanien?",
+        answerA = "Col d'Aubisque (1.709 m)",
+        answerB = "Port de Somport (1.632 m)",
+        answerC = "Port de la Bonaigua (2.072 m)",
+        answerD = "Puerto de Roncesvalles / Col de Roncevaux (1.057 m)",
+        correctAnswer = 3,
+        explanation = "Der Roncesvalles-Pass (Roncevaux, Ibañeta-Pass) auf 1.057 m Höhe war der klassische Jakobsweg-Übergang über die Pyrenäen auf dem Camino Francés. Hier starteten Pilger aus Frankreich ihre Reise nach Santiago de Compostela.",
+        difficulty = 3,
+        funFact = "Das Rolandslied (Chanson de Roland) handelt von der Niederlage von Rolands Nachhut im Tal von Roncesvalles 778 n. Chr. – einem der berühmtesten Ereignisse des frühen Mittelalters in den Pyrenäen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Prozess beschreibt die Bildung von Löss-Ablagerungen als feinkörniges Windablagerungsprodukt, das fruchtbare Böden der Lösszonen Chinas bildet?",
+        answerA = "Fluviale Schwemmlehm-Ablagerung",
+        answerB = "Äolische Löss-Akkumulation",
+        answerC = "Glaziale Grundmoränen-Ablagerung",
+        answerD = "Marines Sediment-Aufstieg durch Meeresspiegelabfall",
+        correctAnswer = 1,
+        explanation = "Löss entsteht durch äolischen (windbedingten) Transport und Ablagerung von Schluffpartikeln (Korngröße 0,002–0,063 mm). Das chinesische Lösshochland (Huangtu Gaoyuan) ist das größte Löss-Vorkommen der Welt und wurde durch Winde aus der Gobi-Wüste aufgebaut.",
+        difficulty = 3,
+        funFact = "Das Lösshochland in China ist bis zu 200 m tief von Löss bedeckt. Es enthält die Terrakotta-Armee des Kaisers Qin Shihuangdi – in Lössboden eingegraben und dadurch perfekt konserviert."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Meerenge zwischen Grönland und Norwegen ist für ihre Eisbergproduktion bekannt und bildet den Zugang zum Nordatlantik?",
+        answerA = "Dänemark-Straße (70 km breit)",
+        answerB = "Framstraße (500 km breit)",
+        answerC = "Barents-Öffnung",
+        answerD = "Jan-Mayen-Fracture-Zone",
+        correctAnswer = 1,
+        explanation = "Die Framstraße zwischen Grönland und Svalbard (Spitzbergen) ist mit ca. 500 km Breite das tiefste und breiteste Tor zwischen Arktischem Ozean und Atlantik. Durch sie fließt der Kalte Arktische Ausstrom nach Süden – und Eisberge treiben hindurch in den Atlantik.",
+        difficulty = 3,
+        funFact = "Der Titanic-Eisberg stammt wahrscheinlich aus einem grönländischen Gletscher und trieb durch die Framstraße in den Nordatlantik. Die meisten Atlantik-Eisberge haben diesen Ursprung."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Inselbogen-System im westlichen Pazifik entstand durch die Subduktion der Pazifischen Platte unter die Philippinische Platte?",
+        answerA = "Bonin-Inseln (Ogasawara-Inseln, Japan)",
+        answerB = "Marianen-Inseln",
+        answerC = "Palau-Inseln",
+        answerD = "Marshall-Inseln",
+        correctAnswer = 1,
+        explanation = "Die Marianen-Inseln bilden einen klassischen Inselbogen, der durch Subduktion der Pazifischen Platte unter die Philippinische Platte entstanden ist. Der Marianengraben liegt direkt östlich des Bogens und ist Ergebnis dieser Subduktion.",
+        difficulty = 3,
+        funFact = "Die nördlichste Marianenalter hat aktiven Vulkanismus – darunter der Pagan-Vulkan und der Farallon de Pajaros (Uracas). Die südlichste Insel, Guam, ist das bevölkerungsreichste US-Territorium im Pazifik."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie heißt der geomorphologische Prozess, bei dem Wellen Kliffs rückschreitend erodieren und Plattformen (Abrasionsplattformen) zurücklassen?",
+        answerA = "Marine Abrasion (Strandwall-Bildung)",
+        answerB = "Marine Regression",
+        answerC = "Ufererosion durch Brandung (Klifferosion und Wellenschliff)",
+        answerD = "Eustasie-bedingte Küstentransformation",
+        correctAnswer = 2,
+        explanation = "Klifferosion durch Brandung (marine Abrasion) ist der Prozess, bei dem Wellen das Kliff an seiner Basis unterhöhlen, bis es kollabiert. Zurück bleibt eine flache Abrasionsplattform. Dieser Prozess formt klassische Kliffküsten wie die Kreideküste der Normandie oder die Weißen Klippen von Dover.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Tiefseeregion des Indischen Ozeans hat mit dem Java-Graben (Sundagraben) eine Tiefe von etwa 7.258 m und liegt südlich welcher Insel?",
+        answerA = "Südlich von Sumatra",
+        answerB = "Südlich von Java",
+        answerC = "Südlich von Bali",
+        answerD = "Südlich der Banda-Inseln",
+        correctAnswer = 1,
+        explanation = "Der Sundagraben (Java-Graben) verläuft in einem Bogen südlich von Sumatra und Java und erreicht südlich von Java seine größte Tiefe von ca. 7.258 m (Argo Abyssal Plain). Er ist der tiefste Punkt des Indischen Ozeans.",
+        difficulty = 3,
+        funFact = "Der Sundagraben ist seismisch und geologisch für den Tsunami 2004 verantwortlich (Sumatra-Andaman-Beben, M 9,1–9,3), der über 230.000 Menschen tötete – eine der verheerendsten Naturkatastrophen der Geschichte."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Alpenpas auf der deutsch-österreichischen Grenze (Zugspitzmassiv) ist durch eine Seilbahn erschlossen und hat die Zugspitze als höchsten deutschen Gipfel?",
+        answerA = "Zugspitzplatt (2.600 m)",
+        answerB = "Scharnitz-Pass (964 m)",
+        answerC = "Fernpass (1.209 m)",
+        answerD = "Reutte-Pass",
+        correctAnswer = 0,
+        explanation = "Das Zugspitzplatt ist die Gletscherhochfläche am Fuß der Zugspitze (2.962 m), die per Zahnradbahn und Seilbahn erschlossen wird. Die Zugspitze an der deutsch-österreichischen Grenze ist der höchste Berg Deutschlands.",
+        difficulty = 3,
+        funFact = "Die Zugspitze hat drei Gipfelseilbahnen: von Ehrwald (Österreich), von Garmisch-Partenkirchen (Zugspitzbahn), und eine Gondel über den Grat. Auf dem Gipfel stehen sowohl deutsches als auch österreichisches Hoheitszeichen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher geomorphologische Typ von Küste entsteht, wenn ein ehemaliges Gebirgstal durch Meeresspiegelanstieg überflutet wird und eine trichterförmige Meeresbuch bildet?",
+        answerA = "Haff-Küste",
+        answerB = "Ria-Küste",
+        answerC = "Mangroven-Küste",
+        answerD = "Ausgleichsküste",
+        correctAnswer = 1,
+        explanation = "Eine Ria (Ría) ist eine trichterförmige Meeresbucht, die entsteht, wenn ein Flussmündungstal (im Küstenbereich) durch Meerespiegelanstieg oder tektonische Absenkung überflutet wird. Klassische Ria-Küsten finden sich in Galicien (Spanien) und in Irland.",
+        difficulty = 3,
+        funFact = "Die berühmten 'Rías Altas' und 'Rías Bajas' in Galicien, Spanien, sind eine der schönsten Ria-Küstenlandschaften der Welt. Sie entstanden am Ende der letzten Eiszeit durch den globalen Meeresspiegelanstieg."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Archipel im Südpazifik hat die höchste Konzentration aktiver Unterwasservulkane und liegt nördlich von Neuseeland?",
+        answerA = "Kermadec-Inseln (Neuseeland)",
+        answerB = "Tonga-Inseln",
+        answerC = "Samoa-Inseln",
+        answerD = "Cookinseln",
+        correctAnswer = 0,
+        explanation = "Die Kermadec-Inseln nördlich von Neuseeland liegen auf der Kermadec-Subduktionszone und haben eine außergewöhnliche Konzentration aktiver Unterwasservulkane. Der Kermadec-Graben erreicht bis zu 10.047 m Tiefe.",
+        difficulty = 3,
+        funFact = null
+    ),
+
 )
+
 
