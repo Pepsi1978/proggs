@@ -29,7 +29,7 @@ private extension NSColor {
     }
 }
 
-// MARK: - RoundButton
+// MARK: - RoundButton (3D)
 class RoundButton: NSView {
     let diameter: CGFloat = 40
     var buttonColor: NSColor = .btnIdle { didSet { needsDisplay = true } }
@@ -40,12 +40,17 @@ class RoundButton: NSView {
     var onClick: (() -> Void)?
     var onMouseDown: (() -> Void)?
     var onMouseUp: (() -> Void)?
+    private var isPressed: Bool = false
 
     init(label: String, color: NSColor) {
         self.label = label
         self.buttonColor = color
         super.init(frame: NSRect(x: 0, y: 0, width: diameter, height: diameter))
         wantsLayer = true
+        layer?.shadowColor = NSColor.black.cgColor
+        layer?.shadowOpacity = 0.5
+        layer?.shadowOffset = CGSize(width: 0, height: -2)
+        layer?.shadowRadius = 3
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -57,18 +62,87 @@ class RoundButton: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        let inset = bounds.insetBy(dx: 1, dy: 1)
-        let path = useSquareShape
-            ? NSBezierPath(roundedRect: inset, xRadius: 6, yRadius: 6)
-            : NSBezierPath(ovalIn: inset)
-        buttonColor.setFill()
-        path.fill()
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+        let inset = bounds.insetBy(dx: 2, dy: 2)
 
+        // Build clipping path (circle or rounded rect)
+        let cgPath: CGPath
+        if useSquareShape {
+            cgPath = CGPath(roundedRect: inset, cornerWidth: 8, cornerHeight: 8, transform: nil)
+        } else {
+            cgPath = CGPath(ellipseIn: inset, transform: nil)
+        }
+
+        ctx.saveGState()
+        ctx.addPath(cgPath)
+        ctx.clip()
+
+        // Extract RGB components for gradient
+        let base = buttonColor.usingColorSpace(.sRGB) ?? buttonColor
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        base.getRed(&r, green: &g, blue: &b, alpha: &a)
+
+        // 3D gradient: light top → dark bottom (inverted when pressed)
+        let lighten: CGFloat = isPressed ? -0.08 : 0.25
+        let darken: CGFloat = isPressed ? 0.15 : -0.15
+        let topR = min(1, max(0, r + lighten))
+        let topG = min(1, max(0, g + lighten))
+        let topB = min(1, max(0, b + lighten))
+        let botR = min(1, max(0, r + darken))
+        let botG = min(1, max(0, g + darken))
+        let botB = min(1, max(0, b + darken))
+
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let colors = [
+            CGColor(colorSpace: colorSpace, components: [topR, topG, topB, 1.0])!,
+            CGColor(colorSpace: colorSpace, components: [r, g, b, 1.0])!,
+            CGColor(colorSpace: colorSpace, components: [botR, botG, botB, 1.0])!
+        ] as CFArray
+        let locations: [CGFloat] = [0.0, 0.5, 1.0]
+
+        if let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: locations) {
+            let startPt = CGPoint(x: inset.midX, y: inset.maxY)
+            let endPt = CGPoint(x: inset.midX, y: inset.minY)
+            ctx.drawLinearGradient(gradient, start: startPt, end: endPt, options: [])
+        }
+
+        // Specular highlight — translucent white arc at top
+        if !isPressed {
+            let highlightRect = NSRect(
+                x: inset.origin.x + inset.width * 0.15,
+                y: inset.origin.y + inset.height * 0.52,
+                width: inset.width * 0.7,
+                height: inset.height * 0.44
+            )
+            let highlightPath = useSquareShape
+                ? CGPath(roundedRect: highlightRect, cornerWidth: 6, cornerHeight: 6, transform: nil)
+                : CGPath(ellipseIn: highlightRect, transform: nil)
+            ctx.addPath(highlightPath)
+            ctx.setFillColor(CGColor(colorSpace: colorSpace, components: [1, 1, 1, 0.18])!)
+            ctx.fillPath()
+        }
+
+        // Subtle inner rim — light edge at top, dark edge at bottom
+        let rimPath: CGPath
+        if useSquareShape {
+            rimPath = CGPath(roundedRect: inset.insetBy(dx: 0.5, dy: 0.5), cornerWidth: 7.5, cornerHeight: 7.5, transform: nil)
+        } else {
+            rimPath = CGPath(ellipseIn: inset.insetBy(dx: 0.5, dy: 0.5), transform: nil)
+        }
+        ctx.addPath(rimPath)
+        ctx.setStrokeColor(CGColor(colorSpace: colorSpace, components: [1, 1, 1, isPressed ? 0.05 : 0.2])!)
+        ctx.setLineWidth(1.0)
+        ctx.strokePath()
+
+        ctx.restoreGState()
+
+        // Draw icon or label on top
         if let img = symbolImage {
             let imgSize = CGSize(width: bounds.width * 0.5, height: bounds.height * 0.5)
+            let yOff: CGFloat = isPressed ? -0.5 : 0.5
             let imgRect = NSRect(
                 x: (bounds.width - imgSize.width) / 2,
-                y: (bounds.height - imgSize.height) / 2,
+                y: (bounds.height - imgSize.height) / 2 + yOff,
                 width: imgSize.width, height: imgSize.height
             )
             let tinted = img.copy() as! NSImage
@@ -78,18 +152,29 @@ class RoundButton: NSView {
             tinted.unlockFocus()
             tinted.draw(in: imgRect, from: .zero, operation: .sourceOver, fraction: 1.0)
         } else {
+            // Drop shadow on text for depth
+            let shadow = NSShadow()
+            shadow.shadowColor = NSColor(white: 0, alpha: 0.5)
+            shadow.shadowOffset = NSSize(width: 0, height: -1)
+            shadow.shadowBlurRadius = 1
+            let yOff: CGFloat = isPressed ? -0.5 : 0.5
             let attrs: [NSAttributedString.Key: Any] = [
                 .foregroundColor: NSColor.white,
-                .font: labelFont
+                .font: labelFont,
+                .shadow: shadow
             ]
             let str = NSAttributedString(string: label, attributes: attrs)
             let size = str.size()
-            let point = NSPoint(x: (bounds.width - size.width) / 2, y: (bounds.height - size.height) / 2)
+            let point = NSPoint(x: (bounds.width - size.width) / 2, y: (bounds.height - size.height) / 2 + yOff)
             str.draw(at: point)
         }
     }
 
     override func mouseDown(with event: NSEvent) {
+        isPressed = true
+        layer?.shadowOffset = CGSize(width: 0, height: -1)
+        layer?.shadowOpacity = 0.3
+        needsDisplay = true
         if onMouseDown != nil {
             onMouseDown?()
         } else {
@@ -98,6 +183,10 @@ class RoundButton: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        isPressed = false
+        layer?.shadowOffset = CGSize(width: 0, height: -2)
+        layer?.shadowOpacity = 0.5
+        needsDisplay = true
         onMouseUp?()
     }
 
