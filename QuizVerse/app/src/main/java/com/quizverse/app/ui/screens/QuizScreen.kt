@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -348,16 +349,21 @@ private fun ActiveQuizContent(
         // ── Question card ─────────────────────────────────────────────────
         QuestionCard(questionText = question.questionText)
 
-        // ── Answer buttons ────────────────────────────────────────────────
+        // ── Answer buttons (shuffled order per question) ─────────────────
+        // Build a stable shuffled mapping for this question so answers appear
+        // in a random order each time, but stay consistent while answering.
+        val shuffledIndices = remember(question.id) {
+            listOf(0, 1, 2, 3).shuffled()
+        }
         val answers = listOf(question.answerA, question.answerB, question.answerC, question.answerD)
-        answers.forEachIndexed { index, answerText ->
+        shuffledIndices.forEachIndexed { displayPos, originalIndex ->
             AnswerButton(
-                label          = ANSWER_LABELS[index],
-                text           = answerText,
+                label          = ANSWER_LABELS[displayPos],
+                text           = answers[originalIndex],
                 isAnswered     = uiState.isAnswered,
-                isSelected     = uiState.selectedAnswer == index,
-                isCorrect      = question.correctAnswer == index,
-                onClick        = { onAnswerSelected(index) }
+                isSelected     = uiState.selectedAnswer == originalIndex,
+                isCorrect      = question.correctAnswer == originalIndex,
+                onClick        = { onAnswerSelected(originalIndex) }
             )
         }
 

@@ -8,6 +8,11 @@ import com.quizverse.app.data.prepopulate.questions.animalQuestions
 import com.quizverse.app.data.prepopulate.questions.filmQuestions
 import com.quizverse.app.data.prepopulate.questions.foodQuestions
 import com.quizverse.app.data.prepopulate.questions.geoQuestions
+import com.quizverse.app.data.prepopulate.questions.geoQuestionsEasy
+import com.quizverse.app.data.prepopulate.questions.geoQuestionsMedium
+import com.quizverse.app.data.prepopulate.questions.geoQuestionsHard
+import com.quizverse.app.data.prepopulate.questions.geoQuestionsExpert
+import com.quizverse.app.data.prepopulate.questions.geoQuestionsMaster
 import com.quizverse.app.data.prepopulate.questions.historyQuestions
 import com.quizverse.app.data.prepopulate.questions.literatureQuestions
 import com.quizverse.app.data.prepopulate.questions.logicQuestions
@@ -39,7 +44,7 @@ object QuestionSeeder {
     private suspend fun insertCategories(database: QuizDatabase) {
         // Build list of all 12 categories; questionCount reflects seeded data (50 each).
         val categories = listOf(
-            Category(id = 1,  name = "Weltgeographie",      iconName = "\uD83C\uDF0D", gradientStartColor = 0xFF4FACFEL, gradientEndColor = 0xFF00F2FEL, questionCount = 50, isLocked = false),
+            Category(id = 1,  name = "Weltgeographie",      iconName = "\uD83C\uDF0D", gradientStartColor = 0xFF4FACFEL, gradientEndColor = 0xFF00F2FEL, questionCount = 1424, isLocked = false),
             Category(id = 2,  name = "Wissenschaft & Natur",iconName = "\uD83D\uDD2C", gradientStartColor = 0xFF6C63FFL, gradientEndColor = 0xFFA855F7L, questionCount = 50, isLocked = false),
             Category(id = 3,  name = "Geschichte",          iconName = "\uD83D\uDCDC", gradientStartColor = 0xFFF97316L, gradientEndColor = 0xFFFBBF24L, questionCount = 50, isLocked = false),
             Category(id = 4,  name = "Film & Fernsehen",    iconName = "\uD83C\uDFAC", gradientStartColor = 0xFFEC4899L, gradientEndColor = 0xFFF43F5EL, questionCount = 50, isLocked = false),
@@ -74,6 +79,11 @@ object QuestionSeeder {
     private suspend fun insertQuestions(database: QuizDatabase) {
         val dao = database.questionDao()
         val all = geoQuestions() +
+            geoQuestionsEasy() +
+            geoQuestionsMedium() +
+            geoQuestionsHard() +
+            geoQuestionsExpert() +
+            geoQuestionsMaster() +
             scienceQuestions() +
             historyQuestions() +
             filmQuestions() +
