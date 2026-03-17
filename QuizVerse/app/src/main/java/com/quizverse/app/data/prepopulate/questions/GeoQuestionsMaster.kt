@@ -2092,5 +2092,696 @@ fun geoQuestionsMaster(): List<Question> = listOf(
         funFact = "George Everest (der Surveyor General of India) wusste gar nicht, welcher Gipfel nach ihm benannt wurde – er starb 1866, bevor die erste Besteigung versucht wurde. Er selbst sprach seinen Namen 'Eve-rest' aus, nicht 'Ever-est', wie es heute allgemein üblich ist."
     ),
 
+    // ── MASTER (difficulty = 5) ── questions 164–213 (coastal erosion, tidal ranges, shelves, tephra, seismicity, MPAs, glaciers, pressure records, thermohaline, demographics) ──
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Küstenerosionsrate wurde an der Holderness-Küste (Yorkshire, England) als höchste in Europa gemessen?",
+        answerA = "ca. 0,8 m/Jahr",
+        answerB = "ca. 1,2 m/Jahr",
+        answerC = "ca. 2,0 m/Jahr",
+        answerD = "ca. 3,5 m/Jahr",
+        correctAnswer = 1,
+        explanation = "Die Holderness-Küste in East Yorkshire gilt mit einer durchschnittlichen Erosionsrate von etwa 1,2–2,0 m/Jahr als die am schnellsten erodierte Küste Europas. Die weichen Geschiebemergel-Kliffen aus der letzten Eiszeit werden durch Nordseewellen ohne natürlichen Schutz abgetragen. Langzeitdaten des British Geological Survey bestätigen den Mittelwert von ~1,2 m/Jahr.",
+        difficulty = 5,
+        funFact = "Seit der Römerzeit sind an der Holderness-Küste über 30 Dörfer im Meer versunken. Das letzte bewohnte Dorf, das vollständig verloren ging, war Kilnsea – dessen Kirche Anfang des 20. Jahrhunderts ins Meer fiel."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Ort verzeichnet den weltweit größten Tidenhub und wie hoch ist er?",
+        answerA = "Severn-Mündung, Großbritannien – bis zu 14,8 m",
+        answerB = "Bay of Fundy, Kanada – bis zu 16,3 m",
+        answerC = "Gulf of Khambhat, Indien – bis zu 12,1 m",
+        answerD = "Cook Inlet, Alaska, USA – bis zu 10,9 m",
+        correctAnswer = 1,
+        explanation = "Die Bay of Fundy in Kanada (zwischen Nova Scotia und New Brunswick) verzeichnet den weltweit höchsten Tidenhub mit einem Maximalwert von ca. 16,3 m (gemessen in Burntcoat Head, NS). Die resonante Eigenfrequenz des Meeresbeckens stimmt nahezu exakt mit dem Gezeitenrhythmus überein.",
+        difficulty = 5,
+        funFact = "Pro Gezeitenzyklus (ca. 12,4 Stunden) bewegen sich in der Bay of Fundy etwa 115 Milliarden Tonnen Wasser – mehr als der kombinierte tägliche Abfluss aller Süßwasserflüsse der Erde."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie breit ist der Kontinentalsockel (bis 200 m Tiefe) vor der Küste Argentiniens (Patagonien) im Bereich der breitesten Ausdehnung?",
+        answerA = "ca. 350 km",
+        answerB = "ca. 550 km",
+        answerC = "ca. 800 km",
+        answerD = "ca. 1.100 km",
+        correctAnswer = 1,
+        explanation = "Der patagonische Kontinentalsockel vor Argentinien ist mit einer Breite von bis zu ~550 km einer der breitesten der Welt. Er erstreckt sich von der Küste bis weit in den Südatlantik und bildet die Grundlage für den argentinischen Anspruch auf einen erweiterten Festlandsockel gemäß UNCLOS-Artikel 76.",
+        difficulty = 5,
+        funFact = "Argentinien reichte 2009 beim UN-Ausschuss für die Grenzen des Festlandsockels einen Antrag auf Erweiterung seiner ausschließlichen Wirtschaftszone ein, der auf dem breiten patagonischen Schelf basiert – eine der größten Schelfflächenansprüche der Welt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Tephra-Volumen (Dense Rock Equivalent, DRE) eruptierte der Pinatubo (Philippinen) beim Ausbruch von 1991?",
+        answerA = "ca. 2,5 km³ DRE",
+        answerB = "ca. 5 km³ DRE",
+        answerC = "ca. 10 km³ DRE",
+        answerD = "ca. 15 km³ DRE",
+        correctAnswer = 2,
+        explanation = "Der Ausbruch des Pinatubo am 15. Juni 1991 injizierte ca. 10 km³ DRE (Dense Rock Equivalent) Material – davon rund 5 km³ als pyroplastische Ströme und weitere Mengen als Tephra-Fall und SO₂-Aerosol in die Stratosphäre. Es war der zweitstärkste Ausbruch des 20. Jahrhunderts nach dem Novarupta 1912.",
+        difficulty = 5,
+        funFact = "Die Schwefeldioxid-Injektion des Pinatubo (ca. 20 Millionen Tonnen SO₂) kühlte den globalen Durchschnitt um rund 0,5°C für zwei Jahre. Dieser natürliche 'Geoengineering'-Effekt dient heute als Referenzpunkt für Solar-Radiation-Management-Studien."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie lang ist das durchschnittliche Wiederkehrintervall für Mw-≥9,0-Erdbeben entlang der Cascadia-Subduktionszone (US-Westküste/Kanada)?",
+        answerA = "ca. 100–200 Jahre",
+        answerB = "ca. 300–500 Jahre",
+        answerC = "ca. 700–1.000 Jahre",
+        answerD = "ca. 2.000–5.000 Jahre",
+        correctAnswer = 1,
+        explanation = "Paläoseismologische Studien (Turbidite-Stratigraphie, Küstensedimente) belegen für die Cascadia-Subduktionszone Wiederkehrintervalle von ca. 300–500 Jahren für vollständige Rupturen (Mw ~9). Das letzte solche Beben ereignete sich am 26. Januar 1700 – durch japanische historische Aufzeichnungen des resultierenden Tsunamis genau datiert.",
+        difficulty = 5,
+        funFact = "Das Cascadia-Erdbeben von 1700 wurde auf Mw 9,0 rekonstruiert. Da Japan den Tsunami dokumentierte (aber kein entsprechendes lokales Beben kannte), konnten Wissenschaftler das genaue Datum rückwirkend 300 Jahre später bestimmen – ein einmaliger Beweis für transozeanen Tsunamivortransport."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das flächenmäßig größte marine Schutzgebiet (MPA) der Welt?",
+        answerA = "Great Barrier Reef Marine Park, Australien – ca. 344.400 km²",
+        answerB = "Ross Sea Region Marine Protected Area, Antarktis – ca. 1.550.000 km²",
+        answerC = "Papahānaumokuākea Marine National Monument, USA – ca. 1.510.000 km²",
+        answerD = "Marae Moana Marine Park, Cookinseln – ca. 1.900.000 km²",
+        correctAnswer = 1,
+        explanation = "Das Ross Sea Region MPA, 2016 durch die CCAMLR (Kommission zur Erhaltung der antarktischen Meereslebewesen) eingerichtet, umfasst ca. 1.550.000 km² und ist damit das größte Meeresschutzgebiet der Welt. Es liegt in der Antarktis südlich von Neuseeland.",
+        difficulty = 5,
+        funFact = "Das Ross Sea MPA ist jedoch nur befristet – die Schutzzone läuft 2052 aus, wenn es nicht erneuert wird. Russland und China blockierten jahrelang seine Einrichtung, bevor ein Kompromiss mit zeitlicher Befristung erzielt wurde."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Mit welcher Rate zog sich der Athabasca-Gletscher in Kanada (Columbia Icefield) zwischen 1990 und 2020 durchschnittlich zurück?",
+        answerA = "ca. 5 m/Jahr",
+        answerB = "ca. 10 m/Jahr",
+        answerC = "ca. 15 m/Jahr",
+        answerD = "ca. 25 m/Jahr",
+        correctAnswer = 2,
+        explanation = "Der Athabasca-Gletscher (Alberta, Kanada) ist seit 1890 um insgesamt über 1,5 km zurückgewichen und verliert jährlich durchschnittlich ca. 15–16 m an Länge (aktuelle Periode). Die Rückzugsrate hat sich in den letzten Jahrzehnten beschleunigt – in den 1990er bis 2010er Jahren waren es etwa 15 m/Jahr.",
+        difficulty = 5,
+        funFact = "Der Athabasca-Gletscher ist einer der wenigen arktischen Gletscher, den man mit dem Auto nahezu erreichen kann. Er ist Teil des Columbia Icefields und speist drei verschiedene Ozean-Einzugsgebiete: Arktis, Pazifik und Atlantik (über den Mackenzie, Columbia und North Saskatchewan River)."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher niedrigste Luftdruck wurde jemals auf Meereshöhe gemessen und wo?",
+        answerA = "870 hPa, Taifun Tip (Pazifik), 12. Oktober 1979",
+        answerB = "882 hPa, Taifun Nora (Pazifik), 1973",
+        answerC = "890 hPa, Hurrikan Wilma (Atlantik), 2005",
+        answerD = "858 hPa, Taifun Violet (Pazifik), 1982",
+        correctAnswer = 0,
+        explanation = "Der niedrigste je auf Meereshöhe gemessene Luftdruck betrug 870 hPa, gemessen im Auge von Taifun Tip am 12. Oktober 1979 im westlichen Nordpazifik (17°N, 138°E). Dieser Wert gilt als absoluter Rekord für den Atmosphärendruck auf Meereshöhe weltweit.",
+        difficulty = 5,
+        funFact = "Taifun Tip war auch der flächenmäßig größte tropische Wirbelsturm aller Zeiten – sein Durchmesser von Windfeld zu Windfeld betrug rund 2.220 km, also etwa so breit wie der halbe Kontinent der USA."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Schichttiefe markiert die typische Thermoklinen-Untergrenze im tropischen Atlantik nach ARGO-Floatdaten (mittlere Temperatur ≤4°C)?",
+        answerA = "ca. 500 m",
+        answerB = "ca. 700–800 m",
+        answerC = "ca. 1.200–1.500 m",
+        answerD = "ca. 2.000–2.500 m",
+        correctAnswer = 2,
+        explanation = "Im tropischen Atlantik sinkt die Temperatur unterhalb der saisonalen Thermoklinen (50–200 m) zunächst auf ca. 4–8°C in 500–800 m Tiefe und erreicht dauerhaft unter 4°C erst in ca. 1.200–1.500 m Tiefe (Permanent Thermocline). ARGO-Float-Daten bestätigen diese Schichtungstiefe als Untergrenze der permanenten Thermoklinen.",
+        difficulty = 5,
+        funFact = "Das ARGO-Programm betreibt ca. 4.000 autonome Floats weltweit, die alle 10 Tage bis 2.000 m Tiefe tauchen und Temperatur/Salzgehalt messen. Sie haben unser Verständnis der Ozeanzirkulation revolutioniert – pro Float und Jahr werden Daten gesammelt, die früher eine Forschungsreise erfordert hätten."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land trat laut UN-Demographic-Transition-Modell zuletzt in Phase 3 (sinkende Geburtenrate) ein – also das letzte Land, das den Übergang von hoher zu niedrigerer Fertilität vollzog?",
+        answerA = "Niger",
+        answerB = "Mali",
+        answerC = "Somalia",
+        answerD = "DRC (Kongo)",
+        correctAnswer = 0,
+        explanation = "Niger hat mit einer TFR (Total Fertility Rate) von ca. 6,9 (UN 2022) die weltweit höchste Geburtenrate und befindet sich noch weitgehend in Phase 2 des demografischen Übergangsmodells (hohe Geburten, sinkende Sterblichkeit). Es ist das letzte größere Land, das die Phase-3-Transition (spürbar sinkende TFR) noch nicht vollzogen hat.",
+        difficulty = 5,
+        funFact = "Bei der aktuellen TFR von Niger würde sich die Bevölkerung innerhalb von 23 Jahren verdoppeln. Niger hat die jüngste Bevölkerung der Welt: Der Altersmedian liegt bei etwa 15 Jahren – mehr als die Hälfte aller Einwohner ist unter 15 Jahre alt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie breit ist der Kontinentalsockel (bis 200 m Wassertiefe) nördlich von Sibirien im Bereich der Laptewsee an seiner breitesten Stelle?",
+        answerA = "ca. 200 km",
+        answerB = "ca. 500 km",
+        answerC = "ca. 900 km",
+        answerD = "ca. 1.300 km",
+        correctAnswer = 2,
+        explanation = "Die Laptewsee nördlich Sibiriens sitzt auf einem der breitesten Kontinentalschelfe der Welt – rund 900 km breit bei einer mittleren Tiefe von nur 50 m. Der Schelf ist so flach, dass er während der letzten Eiszeit (LGM) vollständig trockenfiel und Teil der Bering-Landbrücke war.",
+        difficulty = 5,
+        funFact = "Unter dem sibirischen Kontinentalsockel in der Laptewsee lagern riesige Mengen Methanhydrate im Permafrost. Klimawissenschaftler beobachten mit Sorge, dass das Auftauen dieses submarinen Permafrostes Methankrater erzeugen könnte – mit potenziell starken Rückkopplungseffekten auf das Klima."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Rate des Küstenrückgangs (sea-cliff retreat) wurde in der Studie von EUROSION (2004) für die Küste der Normandie in Frankreich als repräsentativer Mittelwert angegeben?",
+        answerA = "ca. 0,1 m/Jahr",
+        answerB = "ca. 0,3 m/Jahr",
+        answerC = "ca. 0,5 m/Jahr",
+        answerD = "ca. 1,0 m/Jahr",
+        correctAnswer = 1,
+        explanation = "Der EUROSION-Bericht (2004) dokumentierte für die Kreidefelsen der Normandie (besonders zwischen Le Havre und Étretat) mittlere Erosionsraten von ca. 0,3 m/Jahr. Diese Kreideküsten werden durch Wellenerosion und Kliffstürze abgetragen, wobei einzelne Episoden deutlich höhere Raten erzeugen können.",
+        difficulty = 5,
+        funFact = "Die berühmten Kreidebögen von Étretat (durch Maupassant und Monet weltberühmt) schrumpfen messbar. Geowissenschaftler modellieren, wann der nächste Bogen kollabieren wird – bereits 2021 brach ein beträchtlicher Kreideblock in den Strand."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Tephra-Volumen (DRE) eruptierte der Krakatau (Indonesien) beim Ausbruch von 1883?",
+        answerA = "ca. 4 km³ DRE",
+        answerB = "ca. 6 km³ DRE",
+        answerC = "ca. 10 km³ DRE",
+        answerD = "ca. 18 km³ DRE",
+        correctAnswer = 3,
+        explanation = "Der Ausbruch des Krakatau am 26.–27. August 1883 eruptierte schätzungsweise 18–21 km³ DRE – was den höchsten Punkt der Insel (440 m) zerstörte und eine Caldera hinterließ. Der Ausbruch erzeugte einen Tsunami von bis zu 37 m Höhe, der rund 36.000 Menschen tötete.",
+        difficulty = 5,
+        funFact = "Der Knall des Krakatau-Ausbruchs war an mindestens 50 verschiedenen Orten rund um die Welt zu hören – auf der australischen Insel Rodrigues (4.800 km entfernt) hielten Menschen das Geräusch für Kanonenfeuer. Er gilt bis heute als lautestes natürliches Ereignis in der Menschheitsgeschichte."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Geschwindigkeit des antarktischen Eisschild-Fließens (ice stream velocity) hat der Thwaites-Gletscher (Westantarktis) an seiner Gletscherzunge laut NASA-Messungen 2020 erreicht?",
+        answerA = "ca. 200 m/Jahr",
+        answerB = "ca. 600 m/Jahr",
+        answerC = "ca. 1.200 m/Jahr",
+        answerD = "ca. 2.000 m/Jahr",
+        correctAnswer = 2,
+        explanation = "Der Thwaites-Gletscher fließt an seiner Gletscherzunge mit ca. 1.200–1.400 m/Jahr (ca. 3–4 m pro Tag) zum Meer hin. Diese Geschwindigkeit hat sich in den letzten Jahrzehnten erhöht und wird durch das Unterschmelzen der schwimmenden Gletscherzunge (Grounding Line Retreat) verursacht.",
+        difficulty = 5,
+        funFact = "Der Thwaites-Gletscher wird als 'Doomsday Glacier' bezeichnet – würde er vollständig abschmelzen, stiege der globale Meeresspiegel um 65 cm. Er hält zudem weitere Eismassen der Westantarktis zurück, die zusammen den Meeresspiegel um bis zu 3 m erhöhen könnten."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Tidalbereich-Klassifikation entspricht dem Gezeitenbereich der Deutschen Bucht (Nordsee) mit mittlerem Tidenhub von ~3,5 m?",
+        answerA = "Mikrotidal (< 2 m)",
+        answerB = "Mesotidal (2–4 m)",
+        answerC = "Makrotidal (> 4 m)",
+        answerD = "Hypertidal (> 6 m)",
+        correctAnswer = 1,
+        explanation = "Nach der Klassifikation von Davies (1964) gilt ein Tidenhub von 2–4 m als mesotidal. Der mittlere Tidenhub in der Deutschen Bucht beträgt je nach Ort 2,5–3,8 m (Cuxhaven: ~3,5 m) und liegt damit im mesotidalen Bereich. Das Wattenmeer ist ein typisches Produkt mesotidaler Verhältnisse.",
+        difficulty = 5,
+        funFact = "Das Wattenmeer des deutschen Nordseeküste ist das weltweit größte zusammenhängende Wattengebiet und seit 2009 UNESCO-Weltnaturerbe. Bei Niedrigwasser fallen bis zu 10.000 km² trockene Wattfläche frei – eine einmalige Landschaft, die zweimal täglich zwischen Meer und Land wechselt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Wiederkehrintervall haben Mw-≥8,0-Erdbeben entlang der subduktionszonenartig aktiven Nankai-Trogzone (Japan) nach historischen Aufzeichnungen?",
+        answerA = "ca. 50–100 Jahre",
+        answerB = "ca. 100–200 Jahre",
+        answerC = "ca. 300–500 Jahre",
+        answerD = "ca. 600–800 Jahre",
+        correctAnswer = 1,
+        explanation = "Historische und instrumentelle Aufzeichnungen zeigen für den Nankai-Trog (Südküste Japans) Wiederkehrintervalle für Mw-≥8-Erdbeben von ca. 100–200 Jahren. Die letzten großen Tonankai/Nankai-Erdbeben traten 1944 und 1946 auf. Japanische Behörden schätzen eine 70–80 % Wahrscheinlichkeit für ein solches Beben bis 2053.",
+        difficulty = 5,
+        funFact = "Japan investiert Milliarden in die Vorbereitung auf das nächste Nankai-Megabeben. Unter dem Meeresboden ist ein 6.000-Sensor-Überwachungsnetz (DONET) installiert – das größte Unterwasser-Erdbebenfrühwarnsystem der Welt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist die Fläche des Meeres-Nationalparks 'Phoenix Islands Protected Area' (PIPA) im Pazifik (Kiribati)?",
+        answerA = "ca. 150.000 km²",
+        answerB = "ca. 408.000 km²",
+        answerC = "ca. 650.000 km²",
+        answerD = "ca. 1.100.000 km²",
+        correctAnswer = 1,
+        explanation = "Das Phoenix Islands Protected Area (PIPA) in der Republik Kiribati umfasst ca. 408.250 km² und ist eines der größten marinen Schutzgebiete der Erde. Es wurde 2008 eingerichtet und 2010 zum UNESCO-Weltnaturerbe ernannt. Seit 2014 ist Fischerei im gesamten PIPA verboten.",
+        difficulty = 5,
+        funFact = "Das PIPA enthält acht tropische Atolle und zwei Unterwasservulkane. Da es kaum Bevölkerung gibt und Fischerei verboten ist, gilt es als eines der unberührtesten marinen Ökosysteme – mit Haipopulationen, die 10-mal dichter sind als in typischen tropischen Riffen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher höchste Luftdruck auf Meereshöhe wurde jemals gemessen und wo?",
+        answerA = "1.085 hPa, in Tosontsengel, Mongolei, Dezember 2001",
+        answerB = "1.083,8 hPa, in Agata, Sibirien, Dezember 1968",
+        answerC = "1.079 hPa, in Ulaanbaatar, Mongolei, Januar 1970",
+        answerD = "1.088 hPa, in Oymyakon, Sibirien, Januar 1974",
+        correctAnswer = 0,
+        explanation = "Der höchste je gemessene Luftdruck auf Meereshöhe betrug 1.084,8 hPa in Tosontsengel (Mongolei) am 19. Dezember 2001 (WMO-zertifiziert). Ältere Aufzeichnungen (z.B. Agata 1968 mit 1.083,8 hPa) werden auch genannt, aber der Tosontsengel-Wert ist die aktuell anerkannte WMO-Bestmarke.",
+        difficulty = 5,
+        funFact = "Solche Extremwerte entstehen in sibirischen Hochdruckgebieten (Sibirisches Hoch) – einem der stabilsten und stärksten Druckgebilde der Erde. Im Winter übernimmt dieses Hoch die Wetterlage für fast ganz Asien und ist für die extremen kontinentalen Kältepole Sibiriens und der Mongolei mitverantwortlich."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Rückzugsrate hat der Mer de Glace (Mont Blanc, Frankreich), der größte Gletscher der Alpen, im Zeitraum 2000–2020 durchschnittlich gezeigt?",
+        answerA = "ca. 10–15 m/Jahr",
+        answerB = "ca. 20–25 m/Jahr",
+        answerC = "ca. 40–50 m/Jahr",
+        answerD = "ca. 70–90 m/Jahr",
+        correctAnswer = 2,
+        explanation = "Der Mer de Glace hat sich seit 2000 mit ca. 30–50 m/Jahr zurückgezogen (Länge) und jährlich ca. 3–5 m an Dicke verloren. Der glaciologische Beobachtungsdienst von Chamonix dokumentiert diesen Trend kontinuierlich. Seit 1850 hat der Gletscher etwa 3 km Länge und über 200 m Dicke verloren.",
+        difficulty = 5,
+        funFact = "Am Mer de Glace existiert eine Eishöhle, die jedes Jahr neu in den Gletscher gesprengt werden muss, weil sie durch die Gletscherbewegung zerstört wird. Tafeln zeigen Besuchern, wie weit der Gletscher noch in den 1990ern, 2000ern und 2010ern reichte – ein lebendiges Klimadenkmal."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Salzgehalt-Messreihe des RAPID-Arrays bei 26,5°N ergab den niedrigsten mittleren Salzgehalt im Nordatlantik-Tiefenwasser (NADW) für den Zeitraum 2004–2020?",
+        answerA = "ca. 34,9 PSU",
+        answerB = "ca. 35,1 PSU",
+        answerC = "ca. 34,6 PSU",
+        answerD = "ca. 35,5 PSU",
+        correctAnswer = 2,
+        explanation = "Das Nordatlantische Tiefenwasser (NADW) weist im RAPID-Transekt bei 26,5°N typisch Salzgehalte zwischen 34,6–34,9 PSU auf. Der Kern des NADW liegt zwischen 1.000–3.000 m Tiefe und hat einen charakteristischen Salzgehalt von ca. 34,6 PSU – leicht frischer als das darüberliegende Mittelmeer-Ausfluss-Wasser.",
+        difficulty = 5,
+        funFact = "Das RAPID-Array hat seit 2004 eine beunruhigende Schwächung des AMOC (Atlantic Meridional Overturning Circulation) dokumentiert – bis 2017 verlor der Strom etwa 15 % seiner Transportkapazität. Eine vollständige Unterbrechung würde die europäischen Temperaturen um mehrere Grad senken."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher demografische Übergangsindex (TFR) markiert nach dem UN Population Division-Modell die Grenze zwischen Phase 3 und Phase 4 (stabile Niedrigfertilität)?",
+        answerA = "TFR = 3,0",
+        answerB = "TFR = 2,1",
+        answerC = "TFR = 1,5",
+        answerD = "TFR = 4,0",
+        correctAnswer = 1,
+        explanation = "Das Bestandserhaltungsniveau (replacement fertility rate) von TFR = 2,1 markiert die Grenze zwischen Phase 3 (weiterhin sinkende Fertilität) und Phase 4 (Fertilität unter Bestandserhaltung) des demografischen Übergangsmodells. Länder unterhalb von 2,1 haben langfristig ohne Einwanderung eine schrumpfende Bevölkerung.",
+        difficulty = 5,
+        funFact = "Heute liegt die weltweite durchschnittliche TFR bei ca. 2,3 (UN 2022) – und nähert sich damit dem Bestandserhaltungsniveau. Für 2050 prognostiziert die UN eine globale TFR von ca. 2,1 – das würde bedeuten, dass das weltweite Bevölkerungswachstum nahezu zum Stillstand kommt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Küste Australiens weist nach Commonwealth Scientific and Industrial Research Organisation (CSIRO)-Daten die höchsten Erosionsraten auf?",
+        answerA = "Gold Coast (Queensland) – ca. 1–2 m/Jahr",
+        answerB = "Ninety Mile Beach (Victoria) – ca. 0,5–1 m/Jahr",
+        answerC = "Gippsland Lakes (Victoria) – ca. 3–4 m/Jahr",
+        answerD = "Shark Bay (Westaustralien) – ca. 0,2–0,5 m/Jahr",
+        correctAnswer = 0,
+        explanation = "Die Gold Coast in Queensland gilt als eine der erosionsgefährdetsten Küsten Australiens, mit Erosionsraten von ca. 1–2 m/Jahr an bestimmten Strandabschnitten (besonders Surfers Paradise). Intensive Tourismus-Infrastruktur, gestörte Sedimentdynamik und Meeresspiegel-anstieg verstärken die Erosion.",
+        difficulty = 5,
+        funFact = "Die Gold Coast betreibt das weltgrößte Strandsand-Recycling-Programm: Jährlich werden Millionen Kubikmeter Sand vom Meeresboden auf die Strände gepumpt (beach nourishment), um die Erosion auszugleichen. Ohne diese Maßnahmen würden die ikonischen Strände innerhalb weniger Jahrzehnte verschwinden."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Tiefe erreicht die Sauerstoffminimumzone (OMZ) im östlichen Arabischen Meer typischerweise nach ihrem oberen Rand?",
+        answerA = "ca. 50–100 m",
+        answerB = "ca. 100–150 m",
+        answerC = "ca. 150–300 m",
+        answerD = "ca. 400–600 m",
+        correctAnswer = 1,
+        explanation = "Im östlichen Arabischen Meer beginnt die Sauerstoffminimumzone (OMZ) bereits in ca. 100–150 m Tiefe und erstreckt sich bis ca. 1.000–1.200 m. Sie ist eine der intensivsten OMZs der Weltmeere mit Sauerstoffwerten nahe 0. Diese extreme Sauerstoffarmut beeinflusst den gesamten Stickstoffkreislauf.",
+        difficulty = 5,
+        funFact = "In der OMZ des Arabischen Meeres leben anaerobe Mikroorganismen, die Stickstoff-Denitrifikation betreiben. Dies macht das Arabische Meer zu einem der wichtigsten natürlichen Stickstoff-Sinks der Erde und hat direkte Auswirkungen auf den globalen Ozean-Nährstoffkreislauf."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Nation hatte laut UN World Population Prospects 2022 den höchsten demografischen Altenquotienten (old-age dependency ratio: Bevölkerung 65+ / Bevölkerung 15–64)?",
+        answerA = "Deutschland (ca. 33 %)",
+        answerB = "Japan (ca. 50 %)",
+        answerC = "Italien (ca. 38 %)",
+        answerD = "Südkorea (ca. 25 %)",
+        correctAnswer = 1,
+        explanation = "Japan hatte 2022 laut UN den weltweit höchsten Altenquotienten von ca. 50 % – das heißt, auf jede Person im erwerbsfähigen Alter (15–64) kommen ca. 0,5 Personen im Rentenalter (65+). Deutschland lag bei ca. 33 %, Italien bei ca. 38 %.",
+        difficulty = 5,
+        funFact = "Japans Altenquotient wird bis 2050 laut UN-Projektion auf etwa 73 % steigen. Das bedeutet: Fast drei Rentner auf vier Arbeitnehmer. Kein anderes Land der Welt steht vor einer demographischen Herausforderung dieser Dimension."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen maximalen Tidenhub verzeichnet die Severn-Mündung (Bristol Channel, UK) und welcher Rang ist ihr damit unter den weltweiten Gezeitenbereichen zuzuordnen?",
+        answerA = "bis zu 14,8 m – Platz 2 weltweit",
+        answerB = "bis zu 12,2 m – Platz 3 weltweit",
+        answerC = "bis zu 10,5 m – Platz 4 weltweit",
+        answerD = "bis zu 16,8 m – Platz 1 weltweit",
+        correctAnswer = 0,
+        explanation = "Die Severn-Mündung (Bristol Channel) verzeichnet Tidenraten von bis zu 14,8 m bei Springtide und rangiert damit weltweit auf Platz 2 hinter der Bay of Fundy (Kanada, bis zu 16,3 m). Der Bristol Channel wirkt als Trichterform, die die Gezeiten verstärkt.",
+        difficulty = 5,
+        funFact = "Das extreme Gezeitengefälle der Severn-Mündung war seit Jahrzehnten Gegenstand von Plänen für ein Gezeitenkraftwerk. Ein solches Projekt ('Severn Barrage') könnte bis zu 5 % des britischen Strombedarfs decken – wurde bisher aber wegen ökologischer und wirtschaftlicher Bedenken nicht realisiert."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche historische Tephra-Ablagerung des Tambora-Ausbruchs (Indonesien, 1815) gilt als das größte vulkanische Ereignis in der modernen Menschheitsgeschichte nach DRE-Volumen?",
+        answerA = "ca. 30–33 km³ DRE",
+        answerB = "ca. 50–60 km³ DRE",
+        answerC = "ca. 100–120 km³ DRE",
+        answerD = "ca. 150–180 km³ DRE",
+        correctAnswer = 1,
+        explanation = "Der Tambora-Ausbruch (April 1815) emittierte ca. 50–60 km³ DRE – der Volcanic Explosivity Index (VEI) war 7. Er injizierte riesige Mengen Schwefeldioxid in die Stratosphäre und verursachte das 'Jahr ohne Sommer' 1816, mit verheerenden Ernteausfällen in Europa und Nordamerika.",
+        difficulty = 5,
+        funFact = "Durch den Tambora-Ausbruch starben direkt ca. 71.000 Menschen, durch die Folgehungersnöte weltweit schätzungsweise 200.000 weitere. Das Jahr 1816 ('Year Without a Summer') führte in Europa zu Hungeraufständen und war unter anderem die Inspiration für Mary Shelleys Roman 'Frankenstein', der in jenem düsteren Jahr entstand."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche durchschnittliche Rückzugsrate (in m/Jahr Länge) zeigten die Gletscher des Hindukusch-Karakorum-Himalaya-Massivs (HKH) im Zeitraum 2000–2016 nach ICIMOD-Daten?",
+        answerA = "ca. 5–10 m/Jahr",
+        answerB = "ca. 20–30 m/Jahr",
+        answerC = "ca. 50–60 m/Jahr",
+        answerD = "ca. 100 m/Jahr",
+        correctAnswer = 1,
+        explanation = "ICIMOD (International Centre for Integrated Mountain Development)-Studien zeigen für den HKH-Bereich mittlere Rückzugsraten von ca. 15–30 m/Jahr. Karakorum-Gletscher zeigen ein gemischtes Bild (einige 'surgen'), während Himalaya-Gletscher im Trend stark zurückgehen.",
+        difficulty = 5,
+        funFact = "Das Hindukusch-Karakorum-Himalaya-System beherbergt mehr Eis als jede Region außerhalb der Pole – man nennt es den 'Dritten Pol'. Es ist Süßwasserspeicher für rund 200 Millionen Menschen, die von den Gletscherschmelzwässern der großen asiatischen Flüsse (Indus, Ganges, Brahmaputra) abhängen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Tidalbereichs-Klassifikation trifft auf das Gebiet der Straße von Malakka im südlichen Teil (Singapur) zu?",
+        answerA = "Mesotidal (2–4 m)",
+        answerB = "Mikrotidal (< 2 m)",
+        answerC = "Makrotidal (> 4 m)",
+        answerD = "Atidal (< 0,5 m)",
+        correctAnswer = 1,
+        explanation = "Im Bereich Singapur/südliche Straße von Malakka beträgt der mittlere Tidenhub weniger als 2 m (ca. 1,7–1,8 m), was dem mikrotidalen Bereich entspricht. Im nördlichen Teil der Straße sind die Gezeiten etwas stärker, aber insgesamt bleibt die Region im mikrotidalen Bereich.",
+        difficulty = 5,
+        funFact = "Trotz des geringen Tidenhubs ist Singapur einer der meistbefahrenen Häfen der Welt – über 1.000 Schiffe passieren täglich die Meerenge. Die geringe Gezeitenvariabilität ist dabei vorteilhaft für präzisen Hafenbetrieb und Tiefgangplanung großer Containerschiffe."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Wiederkehrintervall schätzt die USGS für Mw-≥8,0-Erdbeben am Wasatch Fault (Utah, USA)?",
+        answerA = "ca. 300–400 Jahre",
+        answerB = "ca. 600–800 Jahre",
+        answerC = "ca. 1.200–1.800 Jahre",
+        answerD = "ca. 3.000–5.000 Jahre",
+        correctAnswer = 2,
+        explanation = "Paläoseismologische Studien am Wasatch Fault (Salt Lake City, Utah) ergeben ein Wiederkehrintervall von ca. 1.200–1.800 Jahren für starke Beben (M ~7.0 bis 7.5). Das letzte große Ereignis ereignete sich vor ca. 350–400 Jahren. Ein Mw-≥8,0-Beben wäre aufgrund der Fault-Geometrie unwahrscheinlich, aber M 7,0–7,5 ist realistisch.",
+        difficulty = 5,
+        funFact = "Salt Lake City mit seinen 200.000 Einwohnern liegt direkt am Wasatch Fault. Seismologen schätzen die Wahrscheinlichkeit eines M-6,75+-Bebens in den nächsten 50 Jahren auf über 57 % – und die Stadt hat nur begrenzte Erdbebenvorbereitung im Vergleich zu Tokio oder San Francisco."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Fläche hat die Chagos Marine Protected Area (BIOT, Britischer Indischer Ozean) und warum ist sie umstritten?",
+        answerA = "ca. 250.000 km² – Fischerei-Moratorium umstritten",
+        answerB = "ca. 544.000 km² – Unabhängigkeitsansprüche der Mauritius-Regierung umstritten",
+        answerC = "ca. 800.000 km² – Souveränitätsstreit zwischen UK und Mauritius",
+        answerD = "ca. 1.100.000 km² – Schutzzweck nicht anerkannt von Mauritius",
+        correctAnswer = 1,
+        explanation = "Die Chagos Marine Protected Area (MPA) umfasst ca. 544.000 km² und wurde 2010 vom Vereinigten Königreich eingerichtet. Sie ist umstritten, da Mauritius die Souveränität über den Archipel beansprucht; der IGH urteilte 2019, dass UK das BIOT-Gebiet unrechtmäßig hält. 2024 einigten sich UK und Mauritius auf eine Übertragung.",
+        difficulty = 5,
+        funFact = "Das Chagos-Archipel beherbergt den Diego Garcia-Stützpunkt, einer der wichtigsten US-Militärstützpunkte des Indischen Ozeans. Die ehemaligen Bewohner (Chagossianer) wurden 1971 zwangsweise umgesiedelt und kämpfen seit Jahrzehnten vergeblich um das Rückkehrrecht."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie viel Prozent der Weltbevölkerung lebten laut UN World Urbanization Prospects 2022 in Städten?",
+        answerA = "ca. 50 %",
+        answerB = "ca. 56 %",
+        answerC = "ca. 63 %",
+        answerD = "ca. 70 %",
+        correctAnswer = 1,
+        explanation = "Laut UN World Urbanization Prospects 2022 lebten 56 % der Weltbevölkerung (ca. 4,5 Mrd. Menschen) in Städten. Die UN prognostizieren, dass bis 2050 rund 68 % der Weltbevölkerung urban sein werden.",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Breite hat der Kontinentalsockel vor der Westküste Indiens (Arabisches Meer) am breitesten Punkt, typischerweise vor Mumbai?",
+        answerA = "ca. 50 km",
+        answerB = "ca. 100 km",
+        answerC = "ca. 200 km",
+        answerD = "ca. 350 km",
+        correctAnswer = 2,
+        explanation = "Der Kontinentalsockel vor der Westküste Indiens (Arabisches Meer) ist vor Mumbai besonders breit und misst etwa 180–220 km bis zur 200-m-Tiefenlinie. Er gehört damit zu den breiteren Schelfen Asiens und ist ökonomisch bedeutsam (Fischerei, Kohlenwasserstoffexploration).",
+        difficulty = 5,
+        funFact = "Auf dem indischen Westschelf wurden bedeutende Öl- und Gasfelder entdeckt, darunter das Bombay-High-Feld, das für Jahrzehnte die größte Ölquelle Indiens war. Die Mumbai High-Plattform (Bombay High) liegt ca. 160 km nordwestlich von Mumbai mitten auf dem Schelf."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Tephra-Volumen (DRE) wird dem Yellowstone-Supervulkan-Ausbruch der Huckleberry-Ridge-Eruption vor ca. 2,1 Millionen Jahren zugeordnet?",
+        answerA = "ca. 500 km³ DRE",
+        answerB = "ca. 1.000 km³ DRE",
+        answerC = "ca. 2.450 km³ DRE",
+        answerD = "ca. 6.000 km³ DRE",
+        correctAnswer = 2,
+        explanation = "Die Huckleberry-Ridge-Eruption (Yellowstone, vor ca. 2,1 Mio. Jahren) gilt mit einem Volumen von ca. 2.450 km³ DRE als die größte der drei Yellowstone-Supervulkan-Eruptionen. Zum Vergleich: Der Tambora 1815 eruptierte ca. 50 km³, der Pinatubo 1991 ca. 10 km³.",
+        difficulty = 5,
+        funFact = "Die Asche der Huckleberry-Ridge-Eruption bedeckte rund die Hälfte Nordamerikas mit einer Schicht von mehreren Zentimetern. Geologen finden diese charakteristische Tuffschicht ('Huckleberry Ridge Tuff') bis nach Kansas und Nebraska – über 2.000 km vom Yellowstone entfernt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Rate des isostatischen Postglazialaufstiegs (glacial isostatic adjustment, GIA) zeigt Skandinavien aktuell in der Region des ehemaligen Eisschildzentrums (Bottnischer Meerbusen)?",
+        answerA = "ca. 1–2 mm/Jahr",
+        answerB = "ca. 5–8 mm/Jahr",
+        answerC = "ca. 10–12 mm/Jahr",
+        answerD = "ca. 20–25 mm/Jahr",
+        correctAnswer = 1,
+        explanation = "Im Zentrum des skandinavischen isostatischen Aufschwungs (Bottnischer Meerbusen, nördliches Schweden/Finnland) beträgt die aktuelle GIA-Rate etwa 8–10 mm/Jahr (präzis: ~8,5 mm/Jahr bei Skellefteå/Luleå). Dies ist eine der höchsten postglazial bedingten Hebungsraten weltweit.",
+        difficulty = 5,
+        funFact = "Die schwedische Stadt Örnsköldsvik liegt heute ca. 8 m höher als zur Zeit der Wikinger. Alte Häfen und Anlegestellen liegen heute weit im Landesinneren. Der Bottnische Meerbusen verliert jährlich durch Landhebung mehrere Quadratkilometer Wasserfläche."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen mittleren Salzgehalt (Salinität) hat das Mittelmeer nach MEDATLAS-Daten an seiner Oberfläche?",
+        answerA = "ca. 35,5 PSU",
+        answerB = "ca. 37,5 PSU",
+        answerC = "ca. 38,5 PSU",
+        answerD = "ca. 40,5 PSU",
+        correctAnswer = 2,
+        explanation = "Das Mittelmeer hat mit einem mittleren Oberflächensalzgehalt von ca. 38–39 PSU eine deutlich höhere Salinität als der offene Atlantik (~35,4 PSU). Im östlichen Mittelmeer (Levantinisches Becken) sind Werte bis 39,5 PSU möglich. MEDATLAS-Daten (Mediterranean Oceanic Data Base) bestätigen ~38,5 PSU als Mittelwert.",
+        difficulty = 5,
+        funFact = "Das salzreiche Mittelmeerwasser fließt durch die Straße von Gibraltar am Boden in den Atlantik aus und bildet dort eine eigene, identifizierbare Wassermasse ('Mediterranean Outflow Water') – nachweisbar bis in den Nordatlantik und vor die Küste der USA."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Nation weist gemäß UNDESA 2022 die höchste Migrationsrate (Netto-Emigrationsrate pro 1.000 Einwohner) auf?",
+        answerA = "Syrien (Kriegs-bedingt)",
+        answerB = "Venezuela",
+        answerC = "Eritrea",
+        answerD = "El Salvador",
+        correctAnswer = 1,
+        explanation = "Venezuela hatte im Zeitraum 2015–2022 mit geschätzten 7,1 Millionen Auswanderern (ca. 24 % der Bevölkerung) die weltweit größte Migrations- und Flüchtlingskrise außerhalb eines Kriegsgebietes. Die UNDESA-Netto-Emigrationsrate überstieg zeitweise 30‰ pro Jahr.",
+        difficulty = 5,
+        funFact = "Die venezolanische Migrationskrise ist die größte Zwangsmigration in der Geschichte Lateinamerikas. Über 70 % der venezolanischen Emigranten blieben in Lateinamerika (vor allem Kolumbien, Peru, Chile) – eine einzigartige regionale Binnenmigration mit tiefgreifenden demographischen Folgen für die Gastländer."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen minimalen Luftdruck-Gradienten (in hPa/100 km) definiert die WMO für ein tropisches Sturmgebiet, das zur Intensitätszunahme fähig ist?",
+        answerA = "0,5 hPa/100 km",
+        answerB = "1,0 hPa/100 km",
+        answerC = "2,0 hPa/100 km",
+        answerD = "Es gibt keine solche WMO-Schwellendefinition",
+        correctAnswer = 3,
+        explanation = "Die WMO definiert keine spezifische Mindest-Druckgradient-Schwelle für Intensivierungspotenzial tropischer Systeme. Stattdessen verwenden Meteorologen Schwellenwerte für Meerestemperatur (≥26°C bis 60 m Tiefe), vertikale Windscherung und andere Parameter. Dies ist eine Fangfrage zu WMO-Definitionen.",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Rückzugsrate dokumentieren Satellitenmessungen (Landsat) für den Jacobshavn-Gletscher (Sermeq Kujalleq, Grönland) im Zeitraum 2010–2020?",
+        answerA = "ca. 20–30 m/Tag",
+        answerB = "ca. 40–46 m/Tag",
+        answerC = "ca. 60–70 m/Tag",
+        answerD = "ca. 100–120 m/Tag",
+        correctAnswer = 1,
+        explanation = "Der Jacobshavn-Gletscher (Sermeq Kujalleq) fließt mit Geschwindigkeiten von ca. 40–46 m/Tag (14–17 km/Jahr) und ist damit einer der schnellsten Gletscher der Welt. Landsat-Daten zeigen, dass sich die Kalbungsfront seit 1990 um ca. 50 km zurückgezogen hat.",
+        difficulty = 5,
+        funFact = "Der Jacobshavn-Gletscher produziert rund 10 % aller grönländischen Eisberge, darunter jenen, der vermutlich mit der Titanic kollidierte. Der Eisberg, der die Titanic versenkender war, hatte nach Berechnungen eine Masse von etwa 150.000 Tonnen und war bereits jahrelang zuvor von Jacobshavn gekalbt worden."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie breit ist der Kontinentalsockel (0–200 m Tiefe) im Bereich des Sundbankens (Nordsee) zwischen Dänemark und Norwegen im Durchschnitt?",
+        answerA = "ca. 100 km",
+        answerB = "ca. 200 km",
+        answerC = "ca. 350 km",
+        answerD = "ca. 500 km",
+        correctAnswer = 2,
+        explanation = "Die Nordsee selbst ist ein Epikontinentalmeer, das nahezu vollständig auf dem Kontinentalsockel liegt. Im Bereich zwischen Dänemark und Norwegen hat der Schelf eine durchschnittliche Breite von ca. 300–400 km. Die gesamte Nordsee (außer dem Norwegischen Tief) ist flacher als 200 m.",
+        difficulty = 5,
+        funFact = "Vor etwa 8.000 Jahren war die heutige Nordsee Festland – 'Doggerland' war eine fruchtbare Landschaft, die durch den steigenden Meeresspiegel nach der letzten Eiszeit überflutet wurde. Fischerboote ziehen noch heute fossile Knochen von Wollmammuts und Steinzeitwerkzeuge aus dem Meeresboden."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das WMO-zertifizierte tiefste Temperaturrekord auf der Erde außerhalb der Antarktis?",
+        answerA = "−67,8°C, Oymyakon, Russland (1933)",
+        answerB = "−71,2°C, Verkhoyansk, Russland (1892)",
+        answerC = "−67,7°C, Verkhoyansk, Russland (1885)",
+        answerD = "−69,6°C, Snag, Yukon, Kanada (1947)",
+        correctAnswer = 0,
+        explanation = "WMO-zertifiziert ist −67,8°C (−90°F) gemessen in Oymyakon, Jakutien (Russland), am 6. Februar 1933 als tiefstes Temperaturrekord auf der nördlichen Hemisphäre außerhalb der Antarktis. Verkhoyansk (−67,7°C, 1892) und Snag (−63,0°C, 1947) sind ebenfalls Rekordhalter ihrer Regionen.",
+        difficulty = 5,
+        funFact = "In Oymyakon beträgt die Jahresdurchschnittstemperatur −15°C und die Temperatur-spanne zwischen Sommer und Winter über 100°C (von +37°C im Juli bis −68°C im Winter). Trotz dieser Extreme leben ca. 500 Menschen dauerhaft dort – Autos bleiben bei −50°C oder kälter in beheizten Garagen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Stickstoff-Isotopen-Datensatz (δ¹⁵N) verwendet die Paläoozeanografie als Proxy für die Intensität der Sauerstoffminimumzone in vergangenen Klimaperioden?",
+        answerA = "δ¹⁵N von Sediment-Foraminifera",
+        answerB = "δ¹⁵N von Bulksediment-Organik (BSO)",
+        answerC = "δ¹⁵N von arktischem Meereis-Algen",
+        answerD = "δ¹⁵N von Korallenskeletten",
+        correctAnswer = 1,
+        explanation = "Die Stickstoff-Isotopenzusammensetzung (δ¹⁵N) von Bulksediment-organischem Material (BSO) wird als Proxy für die Stärke der Denitrifikation in Sauerstoffminimumzonen verwendet. Bei intensiver Denitrifikation (stärkere OMZ) wird ¹⁴N bevorzugt verbraucht, was zu höheren δ¹⁵N-Werten im Sediment führt.",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist der exakte Tidenhub-Rekord der Bay of Fundy, gemessen in Burntcoat Head (Nova Scotia, Kanada)?",
+        answerA = "15,1 m",
+        answerB = "16,3 m",
+        answerC = "17,0 m",
+        answerD = "14,7 m",
+        correctAnswer = 1,
+        explanation = "In Burntcoat Head (Nova Scotia) wurde ein maximaler Tidenhub von 16,3 m gemessen – dieser Wert gilt als weltweiter Rekord. Burntcoat Head liegt im Minas Basin, dem innersten Teil der Bay of Fundy, wo die Trichterwirkung die Gezeiten maximal verstärkt.",
+        difficulty = 5,
+        funFact = "Die Eigenperiode der Bay of Fundy beträgt ca. 12,4 Stunden – fast exakt halb so lang wie ein Gezeitenzyklus (~12,42 Stunden). Diese Resonanz mit den Gezeiten ist der Grund für die extremen Tidenhübe; ohne sie hätten die Gezeiten hier nur ca. 1–2 m Hub."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Meeresschutzfläche haben alle marinen Schutzgebiete weltweit zusammen nach UNEP-WCMC (2023) als Anteil der Ozeanfläche?",
+        answerA = "ca. 5 %",
+        answerB = "ca. 8 %",
+        answerC = "ca. 12 %",
+        answerD = "ca. 18 %",
+        correctAnswer = 2,
+        explanation = "Nach UNEP-WCMC-Daten (2023) sind ca. 8–8,5 % der Weltmeeresfläche durch marine Schutzgebiete (MPAs) abgedeckt. Damit liegt die Welt noch weit hinter dem Ziel des Kunming-Montreal Global Biodiversity Framework (2022), bis 2030 mindestens 30 % der Meere zu schützen ('30×30'-Ziel).",
+        difficulty = 5,
+        funFact = "Trotz der nominell geschützten 8 % sind viele MPAs nur 'paper parks' – sie haben keine wirksame Durchsetzung, erlauben Fischerei und zeigen kaum Unterschied zur unkontrollierten Umgebung. Effektiv und vollständig geschützte MPAs (No-Take-Zonen) umfassen nur rund 2,7 % der Ozeanfläche."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Rate des Meeresspiegel-bedingten Küstenrückgangs wurde an der Niederländischen Küste (ohne Deichschutz) für 2050–2100 projiziert?",
+        answerA = "ca. 0,3–0,5 m Meeresspiegelanstieg → kaum Erosion bei bestehenden Deichen",
+        answerB = "ca. 1–2 m Meeresspiegelanstieg → Verlust von 5–10 % der heutigen Küstenlinie",
+        answerC = "ca. 3–4 m Meeresspiegelanstieg → mehr als 50 % des Landes unter Wasser",
+        answerD = "Ohne Deichschutz wäre rund 26 % der Niederlande schon heute überflutet",
+        correctAnswer = 3,
+        explanation = "Der letzte Antwortsatz ist die korrekte Tatsache: Rund 26 % der Niederlande liegt bereits heute unter dem Meeresspiegel (bis zu −7 m bei Zuidplas, der tiefste Punkt). Ohne das umfangreiche Deich- und Poldersystem (Deltawerke) wären diese Gebiete permanent überflutet.",
+        difficulty = 5,
+        funFact = "Die Niederlande haben mit dem Deltaplan (nach der Nordseeflut 1953 mit 1.836 Todesopfern) eines der beeindruckendsten Wasserbauprogramme der Geschichte realisiert. Der Maeslantkering ist ein schwimmendes Sperrwerk so groß wie zwei Eiffel-Türme – es schließt automatisch, wenn eine Sturmflut erwartet wird."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche tektonische Wiederkehrrate (mittlere Zwischenzeit) für Mw-≥7,5-Beben wurde am Nordanatolischen Störungssystem (NAF) in der Türkei paläoseismologisch bestimmt?",
+        answerA = "ca. 50–100 Jahre",
+        answerB = "ca. 200–300 Jahre",
+        answerC = "ca. 400–600 Jahre",
+        answerD = "ca. 1.000–2.000 Jahre",
+        correctAnswer = 2,
+        explanation = "Paläoseismologische Studien am Nordanatolischen Störungssystem (North Anatolian Fault, NAF) zeigen Wiederkehrintervalle von ca. 300–600 Jahren für starke Beben (M > 7,5) an einzelnen Segmenten. Die Ruptursequenz des 20. Jahrhunderts (von 1939 bis 1999 westlich migrierend) ist historisch einmalig.",
+        difficulty = 5,
+        funFact = "Die Normanatolische Verwerfung zeigt eine faszinierende Migrationsmuster: Von 1939 bis 1999 rückten große Erdbeben (M≥7) schrittweise von Ost nach West entlang der Verwerfung vor – jedes Beben aktivierte das nächstwestliche Segment. Das 1999er Gölcük-Beben (Mw 7,6) war wahrscheinlich das westlichste dieser Serie, aber ein Marmara-Beben nahe Istanbul wird noch erwartet."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Temperatur-Salzgehalts-Charakteristik definiert das Antarktische Bodenwasser (AABW) nach Fofonoff-Definitionen?",
+        answerA = "T < 2°C, S > 34,65 PSU",
+        answerB = "T < 0°C, S > 34,72 PSU",
+        answerC = "T < 4°C, S > 34,5 PSU",
+        answerD = "T < −0,5°C, S > 34,9 PSU",
+        correctAnswer = 1,
+        explanation = "Antarktisches Bodenwasser (AABW) wird klassischerweise durch Temperaturen unter 0°C und Salzgehalte über 34,72 PSU definiert. Es entsteht primär im Weddell- und Rossmeer durch Abkühlung und Salzanreicherung unter Meereis und sinkt als dichtestes Meerwasser auf den Tiefseeboden.",
+        difficulty = 5,
+        funFact = "AABW ist das dichteste und kälteste frei zirkulierende Wassermasse der Erde. Es bedeckt ca. 40 % des gesamten Tiefseebodens (unterhalb 4.000 m) und 'kriecht' entlang des Bodens nach Norden in alle Ozeane – der Weg eines einzigen Wasserpaketes von seiner Bildung bis zu seiner Oberflächen-Rückkehr dauert ca. 500–2.000 Jahre."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Erdbeben-Wiederkehrintervall wurde für Mw-≥8,5-Ereignisse am Sunda-Megathrust (Sumatra-Subduktionszone) aus Korallen-Paläoseismologie ermittelt?",
+        answerA = "ca. 100–150 Jahre",
+        answerB = "ca. 200–250 Jahre",
+        answerC = "ca. 400–600 Jahre",
+        answerD = "ca. 800–1.000 Jahre",
+        correctAnswer = 2,
+        explanation = "Korallen-Paläoseismologie an Mentawai-Inseln (Sumatra) zeigt Wiederkehrintervalle für Mw-≥8,5-Ereignisse am Sunda-Megathrust von ca. 400–600 Jahren (Natawidjaja et al., 2006, Science). Das Sumatrabeben 2004 (Mw 9,1–9,3) brach ein Segment, das seit ca. 230 Jahren gesperrt war.",
+        difficulty = 5,
+        funFact = "Korallenriffe bieten einzigartige paläoseismologische Archive: Korallen, die durch tektonisches Heben ins Trockene gehoben werden, sterben ab – ihr Sterbedatum (radiometrisch datierbar) gibt das exakte Jahr vergangener Erdbeben an. Umgekehrt senken Küstensenkungen Korallen unter die Brandungszone und stimulieren ihr Wachstum."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche demografische Kennzahl beschreibt den Zeitpunkt, an dem ein Land seinen 'demografischen Bonus' (Dividend) maximal ausschöpft – den Moment, in dem der Anteil der Erwerbsbevölkerung am höchsten ist?",
+        answerA = "Wenn die TFR das Bestandserhaltungsniveau (2,1) unterschreitet",
+        answerB = "Wenn der Altenquotient unter 15 % fällt und der Jugendquotient unter 30 %",
+        answerC = "Wenn der Anteil der 15–64-Jährigen seinen maximalen Wert erreicht (Peak Working-Age Share)",
+        answerD = "Wenn die Lebenserwartung 75 Jahre überschreitet",
+        correctAnswer = 2,
+        explanation = "Der 'demografische Dividend' oder 'demografischer Bonus' wird maximal ausgeschöpft, wenn der Anteil der 15–64-jährigen Bevölkerung seinen Höhepunkt erreicht – also die Phase, in der viele Arbeitnehmer vergleichsweise wenige Kinder und Rentner versorgen müssen. Viele asiatische Länder (China, Südkorea, Thailand) haben diesen Peak bereits überschritten.",
+        difficulty = 5,
+        funFact = "Ökonomen schätzen, dass der demografische Dividend Ostasiens (1960–2000) für rund 25–40 % des 'Wirtschaftswunders' der Region verantwortlich war. Sub-Sahara-Afrika steht noch vor seinem demografischen Dividend – hat aber auch am längsten Zeit, davon zu profitieren."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Erosionsrate verzeichnete die Küste Louisianas (USA, Mississippi-Delta) nach NASA-Satellitendaten zwischen 1932 und 2016?",
+        answerA = "ca. 20 km² Landverlust pro Jahr",
+        answerB = "ca. 43 km² Landverlust pro Jahr",
+        answerC = "ca. 80 km² Landverlust pro Jahr",
+        answerD = "ca. 120 km² Landverlust pro Jahr",
+        correctAnswer = 1,
+        explanation = "Louisiana verlor zwischen 1932 und 2016 gemäß USGS/NASA ca. 4.833 km² Küstenland – im Schnitt ca. 57 km²/Jahr (in einzelnen Jahrzehnten bis zu 100 km²/Jahr). Aktuellere Schätzungen für 2000–2020 liegen bei ca. 43 km²/Jahr durch verbesserte Deltamanagement-Maßnahmen.",
+        difficulty = 5,
+        funFact = "Louisianas Küstenland verschwindet, weil der Mississippi durch Deiche eingedämmt wurde: Früher baute er jährlich neue Sedimentflächen im Delta auf. Heute wird das Sediment durch die kanalisierten Deiche direkt ins tiefe Golfwasser gespült – das Delta 'verhungert' damit buchstäblich und sinkt ab."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie groß ist das Pelagos-Schutzgebiet im Mittelmeer (zwischen Frankreich, Italien und Monaco), dem ersten Hochsee-Meeresschutzgebiet im Mittelmeer?",
+        answerA = "ca. 43.000 km²",
+        answerB = "ca. 87.000 km²",
+        answerC = "ca. 130.000 km²",
+        answerD = "ca. 200.000 km²",
+        correctAnswer = 1,
+        explanation = "Das Pelagos-Schutzgebiet (Pelagos Sanctuary for Mediterranean Marine Mammals), 1999 zwischen Frankreich, Italien und Monaco vereinbart, umfasst ca. 87.500 km² und ist das erste internationale Hochsee-MPA im Mittelmeer. Es schützt kritische Lebensräume für Finnwale, Delfine und Kegelrobben.",
+        difficulty = 5,
+        funFact = "Das Pelagos-Schutzgebiet hat besonders tiefe submarine Canyons (Var-Canyon, bis 2.700 m tief), die als 'Highways' für Nährstoffe und marine Organismen funktionieren. Finnwale (bis 27 m lang) kommen hier im Sommer zur Nahrungsaufnahme – das Pelagos beherbergt eine der größten Finnwal-Populationen der Welt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Abnahme der durchschnittlichen Schelfeis-Fläche in der Antarktis dokumentierten NASA NSIDC-Daten für den Zeitraum 1979–2023?",
+        answerA = "keine signifikante Änderung",
+        answerB = "ca. 2 % Rückgang",
+        answerC = "ca. 15 % Rückgang",
+        answerD = "ca. 40 % Rückgang in bestimmten Regionen",
+        correctAnswer = 3,
+        explanation = "In der Westantarktis und auf der Antarktischen Halbinsel zeigen einige Schelfeise drastische Rückgänge von 40 % und mehr (z.B. Larsen-B: 3.250 km² Kollaps 2002; Pine-Island-Schelfeis). Global gesehen ist der Rückgang heterogen – die ostantarktischen Schelfeise sind stabiler.",
+        difficulty = 5,
+        funFact = "Das Larsen-B-Schelfeis kollabierte im Jahr 2002 innerhalb von nur 35 Tagen – ein Schelf, der seit mindestens 12.000 Jahren existiert hatte. Innerhalb weniger Wochen verschwand eine Eismasse so groß wie Rheinland-Pfalz. Seismometer und Satelliten zeichneten das Ereignis in Echtzeit auf."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Salzgehalt (PSU) hat der Nordpazifische Zwischenwasser-Kern (NPIW – North Pacific Intermediate Water) nach WOCE-Daten?",
+        answerA = "ca. 33,8–34,0 PSU",
+        answerB = "ca. 34,5–34,7 PSU",
+        answerC = "ca. 35,0–35,2 PSU",
+        answerD = "ca. 34,2–34,4 PSU",
+        correctAnswer = 0,
+        explanation = "Das North Pacific Intermediate Water (NPIW) bildet sich in der Okhotskischen See und dem nördlichen Nordpazifik und zeichnet sich durch ein markantes Salzgehaltsminimum von ca. 33,8–34,0 PSU in ca. 200–800 m Tiefe aus. Die WOCE (World Ocean Circulation Experiment)-Daten bestätigen diesen Kennwert.",
+        difficulty = 5,
+        funFact = "Der Nordpazifik hat keine tiefe Konvektionszone wie der Nordatlantik, weil das Oberflächenwasser zu frisch (niedrig-salzig) ist, um schwer genug zu werden und abzusinken. Das erklärt, warum der Nordpazifik keine Tiefenwasser-Produktion zeigt und seinen Tiefenbereich viel langsamer erneuert als der Atlantik."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land hat laut UNDESA 2022 den höchsten Anteil an urbanisierten Küstenbewohnern (Bevölkerung in niedrig gelegenen Küstenzonen, LECZ <10 m ü. NN) im Verhältnis zur Gesamtbevölkerung?",
+        answerA = "Bangladesch",
+        answerB = "Niederlande",
+        answerC = "Vietnam",
+        answerD = "Malediven",
+        correctAnswer = 3,
+        explanation = "Die Malediven haben ca. 100 % ihrer Bevölkerung in Low Elevation Coastal Zones (LECZ, <10 m ü. NN), da nahezu das gesamte Staatsgebiet unter dieser Höhenschwelle liegt. Mit einem mittleren Geländeniveau von ca. 1,5 m ü. NN sind die Malediven der am stärksten durch Meeresspiegelanstieg gefährdete Staat der Erde.",
+        difficulty = 5,
+        funFact = "Die Malediven hielten 2009 eine Kabinettssitzung unter Wasser ab – Regierungsmitglieder tauchten in Taucherausrüstung und unterzeichneten einen Aufruf an andere Nationen, den Klimawandel zu bekämpfen. Die damalige Regierung erkundete auch den Kauf von neuem Land in Sri Lanka oder Indien als 'Sicherheitsnetz'."
+    ),
+
 )
 
