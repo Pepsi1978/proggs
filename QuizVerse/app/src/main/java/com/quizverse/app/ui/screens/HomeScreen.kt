@@ -6,13 +6,13 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,9 +27,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,9 +64,15 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.delay
 import kotlin.math.sin
@@ -130,7 +133,6 @@ private val homeCards = listOf(
 
 // Daily quotes are in DailyQuotes.kt (365 quotes, one per day of year)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavHostController) {
     val app = LocalContext.current.applicationContext as QuizVerseApp
@@ -585,29 +587,66 @@ private fun createStarPath(center: Offset, outerRadius: Float, innerRadius: Floa
     return path
 }
 
-// Single navigation card with slide-up + fade entrance animation
-@OptIn(ExperimentalMaterial3Api::class)
+// Single navigation card with neumorphic 3D effect — raised when idle, pushed-in when pressed
 @Composable
 private fun AnimatedHomeCard(
     card: HomeCard,
     delayMillis: Int,
     onClick: () -> Unit
 ) {
-    val offsetY = remember { Animatable(40f) }
     val alpha = remember { Animatable(0f) }
+    val offsetY = remember { Animatable(30f) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
 
-    // Continuous breathing scale animation
+    // ── Neumorphic press animations ─────────────────────────────────────
+    // When pressed: card sinks down, scale shrinks slightly
+    val pressTranslateY by animateFloatAsState(
+        targetValue = if (isPressed) 5f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessHigh),
+        label = "neu_translateY"
+    )
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.975f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessHigh),
+        label = "neu_scale"
+    )
+    // Outer shadow: visible when raised, gone when pressed
+    val outerShadowAlpha by animateFloatAsState(
+        targetValue = if (isPressed) 0f else 1f,
+        animationSpec = tween(100),
+        label = "neu_outerShadow"
+    )
+    // Inner shadow: invisible when raised, appears when pressed (inset look)
+    val innerShadowAlpha by animateFloatAsState(
+        targetValue = if (isPressed) 0.6f else 0f,
+        animationSpec = tween(100),
+        label = "neu_innerShadow"
+    )
+    // Top-left highlight edge intensity
+    val highlightAlpha by animateFloatAsState(
+        targetValue = if (isPressed) 0.08f else 0.5f,
+        animationSpec = tween(100),
+        label = "neu_highlight"
+    )
+    // Bottom-right shadow edge intensity
+    val edgeShadowAlpha by animateFloatAsState(
+        targetValue = if (isPressed) 0.5f else 0.25f,
+        animationSpec = tween(100),
+        label = "neu_edgeShadow"
+    )
+
+    // ── Continuous animations ───────────────────────────────────────────
     val cardTransition = rememberInfiniteTransition(label = "card_${card.title}")
     val breathScale = cardTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 1.02f,
+        targetValue = 1.015f,
         animationSpec = infiniteRepeatable(
             tween(2500 + delayMillis % 500, easing = FastOutSlowInEasing),
             RepeatMode.Reverse
         ),
         label = "card_breath_${card.title}"
     )
-    // Shimmer gradient offset
     val shimmer = cardTransition.animateFloat(
         initialValue = -0.3f,
         targetValue = 1.3f,
@@ -617,7 +656,6 @@ private fun AnimatedHomeCard(
         ),
         label = "card_shimmer_${card.title}"
     )
-    // Subtle emoji bounce
     val emojiBounce = cardTransition.animateFloat(
         initialValue = 0f,
         targetValue = -6f,
@@ -628,111 +666,231 @@ private fun AnimatedHomeCard(
         label = "card_emoji_${card.title}"
     )
 
+    // ── Entrance animation ──────────────────────────────────────────────
     LaunchedEffect(Unit) {
         delay(delayMillis.toLong())
-        offsetY.animateTo(
-            targetValue = 0f,
-            animationSpec = tween(400, easing = FastOutSlowInEasing)
-        )
+        offsetY.animateTo(0f, animationSpec = tween(400, easing = FastOutSlowInEasing))
     }
     LaunchedEffect(Unit) {
         delay(delayMillis.toLong())
         alpha.animateTo(1f, animationSpec = tween(400))
     }
 
-    Card(
-        onClick = onClick,
+    val shape = RoundedCornerShape(20.dp)
+    val cornerPx = 20f // dp value for shadow rendering
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .alpha(alpha.value)
             .graphicsLayer {
-                scaleX = breathScale.value
-                scaleY = breathScale.value
-            },
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 4.dp,
-            pressedElevation = 8.dp
-        ),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(
-                    width = 3.dp,
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.5f),
-                            card.gradientEnd.copy(alpha = 0.7f)
-                        )
-                    ),
-                    shape = RoundedCornerShape(16.dp)
+                scaleX = breathScale.value * pressScale
+                scaleY = breathScale.value * pressScale
+                translationY = (offsetY.value + pressTranslateY).dp.toPx()
+                this.shape = RoundedCornerShape(20.dp)
+                clip = false
+                // Neumorphic outer shadow (dark, bottom-right) — only when raised
+                shadowElevation = 12.dp.toPx() * outerShadowAlpha
+                ambientShadowColor = Color.Black.copy(alpha = 0.3f * outerShadowAlpha)
+                spotShadowColor = Color.Black.copy(alpha = 0.4f * outerShadowAlpha)
+            }
+            .clip(shape)
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(card.gradientStart, card.gradientEnd)
                 )
-                .clip(RoundedCornerShape(16.dp))
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(card.gradientStart, card.gradientEnd)
-                    )
-                )
-                .background(
-                    Brush.horizontalGradient(
+            )
+            // ── Neumorphic 3D edges ─────────────────────────────────────
+            .drawWithContent {
+                drawContent()
+
+                val w = size.width
+                val h = size.height
+                val cr = CornerRadius(20.dp.toPx(), 20.dp.toPx())
+
+                // Top highlight edge — bright white strip (light from top-left)
+                drawRoundRect(
+                    brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.15f),
+                            Color.White.copy(alpha = highlightAlpha),
                             Color.Transparent
                         ),
-                        startX = shimmer.value * 1000f - 300f,
-                        endX = shimmer.value * 1000f + 100f
-                    )
+                        startY = 0f,
+                        endY = 6.dp.toPx()
+                    ),
+                    size = Size(w, 6.dp.toPx()),
+                    cornerRadius = cr
                 )
-                .padding(horizontal = 20.dp, vertical = 18.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Category emoji in a semi-transparent circle with bounce
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Color.White.copy(alpha = 0.2f))
-                        .graphicsLayer {
-                            translationY = emojiBounce.value.dp.toPx()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = card.emoji,
-                        fontSize = 26.sp
+                // Left highlight edge
+                drawRoundRect(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = highlightAlpha * 0.7f),
+                            Color.Transparent
+                        ),
+                        startX = 0f,
+                        endX = 5.dp.toPx()
+                    ),
+                    size = Size(5.dp.toPx(), h),
+                    cornerRadius = cr
+                )
+
+                // Bottom shadow edge — dark strip
+                drawRoundRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = edgeShadowAlpha)
+                        ),
+                        startY = h - 6.dp.toPx(),
+                        endY = h
+                    ),
+                    topLeft = Offset(0f, h - 6.dp.toPx()),
+                    size = Size(w, 6.dp.toPx()),
+                    cornerRadius = cr
+                )
+                // Right shadow edge
+                drawRoundRect(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = edgeShadowAlpha * 0.6f)
+                        ),
+                        startX = w - 5.dp.toPx(),
+                        endX = w
+                    ),
+                    topLeft = Offset(w - 5.dp.toPx(), 0f),
+                    size = Size(5.dp.toPx(), h),
+                    cornerRadius = cr
+                )
+
+                // Inner shadow overlay when pressed (inset neumorphic effect)
+                if (innerShadowAlpha > 0.01f) {
+                    // Top-left inner shadow (dark = pushed in)
+                    drawRoundRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = innerShadowAlpha * 0.5f),
+                                Color.Transparent
+                            ),
+                            start = Offset(0f, 0f),
+                            end = Offset(w * 0.3f, h * 0.3f)
+                        ),
+                        size = size,
+                        cornerRadius = cr
+                    )
+                    // Bottom-right inner highlight (light = floor of pressed area)
+                    drawRoundRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.White.copy(alpha = innerShadowAlpha * 0.2f)
+                            ),
+                            start = Offset(w * 0.7f, h * 0.7f),
+                            end = Offset(w, h)
+                        ),
+                        size = size,
+                        cornerRadius = cr
                     )
                 }
 
-                // Title and description
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = card.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = card.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.85f)
-                    )
-                }
-
-                // Arrow indicator
-                Text(
-                    text = "›",
-                    fontSize = 24.sp,
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontWeight = FontWeight.Light
+                // Thin highlight border around the entire card
+                drawRoundRect(
+                    color = Color.White.copy(alpha = highlightAlpha * 0.4f),
+                    size = size,
+                    cornerRadius = cr,
+                    style = Stroke(width = 1.5.dp.toPx())
                 )
             }
+            // Shimmer sweep
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        Color.White.copy(alpha = 0.12f),
+                        Color.Transparent
+                    ),
+                    startX = shimmer.value * 1000f - 300f,
+                    endX = shimmer.value * 1000f + 100f
+                )
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null, // We handle the visual feedback ourselves
+                onClick = onClick
+            )
+            .padding(horizontal = 20.dp, vertical = 18.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Emoji icon in a neumorphic-style inset circle
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color.White.copy(alpha = 0.15f))
+                    .drawWithContent {
+                        drawContent()
+                        // Inner subtle shadow on emoji container
+                        drawRoundRect(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.15f),
+                                    Color.Transparent
+                                ),
+                                start = Offset(0f, 0f),
+                                end = Offset(size.width * 0.5f, size.height * 0.5f)
+                            ),
+                            cornerRadius = CornerRadius(14.dp.toPx())
+                        )
+                        drawRoundRect(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(alpha = 0.2f)
+                                ),
+                                start = Offset(size.width * 0.5f, size.height * 0.5f),
+                                end = Offset(size.width, size.height)
+                            ),
+                            cornerRadius = CornerRadius(14.dp.toPx())
+                        )
+                    }
+                    .graphicsLayer {
+                        translationY = emojiBounce.value.dp.toPx()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = card.emoji,
+                    fontSize = 26.sp
+                )
+            }
+
+            // Title and description
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = card.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = card.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+            }
+
+            // Arrow indicator
+            Text(
+                text = "›",
+                fontSize = 24.sp,
+                color = Color.White.copy(alpha = 0.8f),
+                fontWeight = FontWeight.Light
+            )
         }
     }
 }
