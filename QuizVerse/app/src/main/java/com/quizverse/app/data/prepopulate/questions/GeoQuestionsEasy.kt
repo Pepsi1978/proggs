@@ -1403,4 +1403,704 @@ fun geoQuestionsEasy(): List<Question> = listOf(
         difficulty = 1,
         funFact = null
     ),
+
+    // Question 101
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Marokko?",
+        answerA = "Casablanca",
+        answerB = "Marrakesch",
+        answerC = "Rabat",
+        answerD = "Fès",
+        correctAnswer = 2, // C
+        explanation = "Rabat ist die Hauptstadt Marokkos, obwohl Casablanca die größte und wirtschaftlich bedeutendste Stadt des Landes ist.",
+        difficulty = 1,
+        funFact = "Viele Menschen verwechseln Casablanca mit der Hauptstadt Marokkos – tatsächlich ist Rabat seit 1912 die Hauptstadt."
+    ),
+
+    // Question 102
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Kanal verbindet den Atlantischen Ozean mit dem Pazifischen Ozean?",
+        answerA = "Suezkanal",
+        answerB = "Panamakanal",
+        answerC = "Kielkanal",
+        answerD = "Corinthkanal",
+        correctAnswer = 1, // B
+        explanation = "Der Panamakanal in Mittelamerika verbindet den Atlantischen mit dem Pazifischen Ozean. Er wurde 1914 eröffnet und ist eine der wichtigsten Schifffahrtsrouten der Welt.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 103
+    Question(
+        categoryId = 1,
+        questionText = "Auf welchem Kontinent liegt Kenia?",
+        answerA = "Asien",
+        answerB = "Südamerika",
+        answerC = "Australien",
+        answerD = "Afrika",
+        correctAnswer = 3, // D
+        explanation = "Kenia liegt in Ostafrika direkt am Äquator. Das Land ist bekannt für seine Nationalparks, Savannen und die Massai-Mara.",
+        difficulty = 1,
+        funFact = "In Kenia findet jedes Jahr die \"Große Wanderung\" statt, bei der Millionen von Gnus und Zebras durch das Land ziehen."
+    ),
+
+    // Question 104
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Peru?",
+        answerA = "Buenos Aires",
+        answerB = "Lima",
+        answerC = "Santiago",
+        answerD = "Bogotá",
+        correctAnswer = 1, // B
+        explanation = "Lima ist die Hauptstadt und größte Stadt Perus und liegt direkt am Pazifik. Über 10 Millionen Menschen leben in der Metropolregion.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 105
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist die größte Insel der Welt?",
+        answerA = "Madagaskar",
+        answerB = "Grönland",
+        answerC = "Borneo",
+        answerD = "Neuguinea",
+        correctAnswer = 1, // B
+        explanation = "Grönland ist mit über 2,1 Millionen km² die größte Insel der Welt und gehört zum dänischen Königreich.",
+        difficulty = 1,
+        funFact = "Obwohl Grönland \"Grünland\" bedeutet, ist 80 % der Insel von einem Eisschild bedeckt. Der Name war eine Art Marketingstrategie von Erik dem Roten."
+    ),
+
+    // Question 106
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Land liegt der Iguazú-Wasserfall?",
+        answerA = "Brasilien und Argentinien",
+        answerB = "Chile und Peru",
+        answerC = "Venezuela und Kolumbien",
+        answerD = "Bolivien und Paraguay",
+        correctAnswer = 0, // A
+        explanation = "Die Iguazú-Wasserfälle liegen an der Grenze zwischen Brasilien und Argentinien. Sie sind breiter als die Niagarafälle und eines der beeindruckendsten Naturschauspiele der Welt.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 107
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Kuba?",
+        answerA = "Havanna",
+        answerB = "Santiago de Cuba",
+        answerC = "Varadero",
+        answerD = "Trinidad",
+        correctAnswer = 0, // A
+        explanation = "Havanna ist die Hauptstadt Kubas und liegt an der Nordküste der Insel. Die Altstadt Havannas ist UNESCO-Weltkulturerbe.",
+        difficulty = 1,
+        funFact = "Havanna ist bekannt für seine bunten Oldtimer aus den 1950er Jahren, die noch heute als Taxis genutzt werden."
+    ),
+
+    // Question 108
+    Question(
+        categoryId = 1,
+        questionText = "In welcher Hemisphäre liegt Australien?",
+        answerA = "Nördliche Hemisphäre",
+        answerB = "Östliche Hemisphäre",
+        answerC = "Südliche Hemisphäre",
+        answerD = "Westliche Hemisphäre",
+        correctAnswer = 2, // C
+        explanation = "Australien liegt vollständig auf der südlichen Hemisphäre, also südlich des Äquators. Dort sind die Jahreszeiten im Vergleich zur Nordhalbkugel umgekehrt.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 109
+    Question(
+        categoryId = 1,
+        questionText = "Welche Farben hat die Flagge Italiens?",
+        answerA = "Blau, Weiß, Rot",
+        answerB = "Grün, Weiß, Rot",
+        answerC = "Rot, Gelb, Grün",
+        answerD = "Blau, Weiß, Gelb",
+        correctAnswer = 1, // B
+        explanation = "Die italienische Flagge besteht aus drei gleich breiten senkrechten Streifen in Grün, Weiß und Rot. Sie wurde von der französischen Trikolore inspiriert.",
+        difficulty = 1,
+        funFact = "Die Farben der italienischen Flagge symbolisieren Hoffnung (Grün), Glauben (Weiß) und Nächstenliebe (Rot)."
+    ),
+
+    // Question 110
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Kolumbien?",
+        answerA = "Medellín",
+        answerB = "Cartagena",
+        answerC = "Cali",
+        answerD = "Bogotá",
+        correctAnswer = 3, // D
+        explanation = "Bogotá ist die Hauptstadt und größte Stadt Kolumbiens. Die Stadt liegt auf einem Hochplateau in den Anden auf etwa 2.600 Metern Höhe.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 111
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Ozean liegt östlich von Afrika?",
+        answerA = "Atlantischer Ozean",
+        answerB = "Arktischer Ozean",
+        answerC = "Indischer Ozean",
+        answerD = "Pazifischer Ozean",
+        correctAnswer = 2, // C
+        explanation = "Östlich von Afrika liegt der Indische Ozean. Er ist der drittgrößte Ozean der Welt und grenzt an Afrika, Asien, Australien und die Antarktis.",
+        difficulty = 1,
+        funFact = "Der Indische Ozean ist der wärmste Ozean der Welt und trägt den Namen des Subkontinents Indien."
+    ),
+
+    // Question 112
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Land liegt der Serengeti-Nationalpark?",
+        answerA = "Kenia",
+        answerB = "Tansania",
+        answerC = "Uganda",
+        answerD = "Südafrika",
+        correctAnswer = 1, // B
+        explanation = "Der Serengeti-Nationalpark liegt in Tansania und ist eines der bekanntesten Wildschutzgebiete der Welt. Er ist berühmt für seine Tierwanderungen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 113
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist der größte Regenwald der Welt?",
+        answerA = "Kongobecken",
+        answerB = "Daintree Regenwald",
+        answerC = "Amazonas-Regenwald",
+        answerD = "Borneo Regenwald",
+        correctAnswer = 2, // C
+        explanation = "Der Amazonas-Regenwald in Südamerika ist der größte tropische Regenwald der Welt und bedeckt über 5,5 Millionen km².",
+        difficulty = 1,
+        funFact = "Der Amazonas-Regenwald produziert etwa 20 % des weltweiten Sauerstoffs und beherbergt 10 % aller Tier- und Pflanzenarten der Erde."
+    ),
+
+    // Question 114
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Algerien?",
+        answerA = "Oran",
+        answerB = "Algier",
+        answerC = "Constantine",
+        answerD = "Annaba",
+        correctAnswer = 1, // B
+        explanation = "Algier ist die Hauptstadt und größte Stadt Algeriens. Das Land ist das flächenmäßig größte in Afrika.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 115
+    Question(
+        categoryId = 1,
+        questionText = "Welche Nationalflagge zeigt einen Ahornblatt?",
+        answerA = "Australien",
+        answerB = "Neuseeland",
+        answerC = "Kanada",
+        answerD = "Japan",
+        correctAnswer = 2, // C
+        explanation = "Die kanadische Flagge zeigt ein rotes Ahornblatt auf weißem Hintergrund mit zwei roten Seitenstreifen. Das Ahornblatt ist das Symbol Kanadas.",
+        difficulty = 1,
+        funFact = "Kanada hat die meisten Ahornsyrup-Produzenten der Welt und liefert rund 70 % der weltweiten Ahornsyrup-Produktion."
+    ),
+
+    // Question 116
+    Question(
+        categoryId = 1,
+        questionText = "In welcher Zeitzone liegt London (Normalzeit)?",
+        answerA = "UTC+1",
+        answerB = "UTC-1",
+        answerC = "UTC+0",
+        answerD = "UTC+2",
+        correctAnswer = 2, // C
+        explanation = "London liegt in der Zeitzone UTC+0 (Greenwich Mean Time). Der Nullmeridian verläuft durch den Stadtteil Greenwich in London.",
+        difficulty = 1,
+        funFact = "Der Nullmeridian (0° Längengrad) verläuft durch das Königliche Observatorium in Greenwich und dient als Referenz für alle Zeitzonen der Welt."
+    ),
+
+    // Question 117
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Fluss ist der längste in Europa?",
+        answerA = "Rhein",
+        answerB = "Donau",
+        answerC = "Wolga",
+        answerD = "Loire",
+        correctAnswer = 2, // C
+        explanation = "Die Wolga in Russland ist mit etwa 3.530 km der längste Fluss Europas. Sie fließt in das Kaspische Meer.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 118
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Vietnam?",
+        answerA = "Ho-Chi-Minh-Stadt",
+        answerB = "Hanoi",
+        answerC = "Da Nang",
+        answerD = "Hue",
+        correctAnswer = 1, // B
+        explanation = "Hanoi ist die Hauptstadt Vietnams und liegt im Norden des Landes. Ho-Chi-Minh-Stadt (ehemals Saigon) ist zwar größer, aber nicht die Hauptstadt.",
+        difficulty = 1,
+        funFact = "Viele Menschen denken, Ho-Chi-Minh-Stadt sei die Hauptstadt Vietnams, weil es die größte Stadt ist. Die eigentliche Hauptstadt ist jedoch Hanoi."
+    ),
+
+    // Question 119
+    Question(
+        categoryId = 1,
+        questionText = "Auf welchem Kontinent liegt Ägypten zum größten Teil?",
+        answerA = "Asien",
+        answerB = "Europa",
+        answerC = "Afrika",
+        answerD = "Naher Osten",
+        correctAnswer = 2, // C
+        explanation = "Ägypten liegt hauptsächlich in Nordafrika, obwohl der Sinai-Halbinsel-Teil des Landes geographisch zu Asien gehört. Die überwiegende Fläche ist Afrika.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 120
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt der Ukraine?",
+        answerA = "Lemberg",
+        answerB = "Charkiw",
+        answerC = "Kiew",
+        answerD = "Odessa",
+        correctAnswer = 2, // C
+        explanation = "Kiew (ukrainisch: Kyiv) ist die Hauptstadt und größte Stadt der Ukraine. Die Stadt liegt am Fluss Dnjepr und hat eine über 1.500-jährige Geschichte.",
+        difficulty = 1,
+        funFact = "Kiew gilt als die \"Mutter aller russischen Städte\" und war das Zentrum des mittelalterlichen Kiewer Rus."
+    ),
+
+    // Question 121
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land hat die Form eines langen, schmalen Streifens entlang der Westküste Südamerikas?",
+        answerA = "Peru",
+        answerB = "Ecuador",
+        answerC = "Chile",
+        answerD = "Bolivien",
+        correctAnswer = 2, // C
+        explanation = "Chile ist das längste und schmalste Land der Welt. Es erstreckt sich über 4.300 km von Nord nach Süd, ist aber im Durchschnitt nur 175 km breit.",
+        difficulty = 1,
+        funFact = "Chile ist so lang, dass es vom Äquator bis fast zur Antarktis reicht – das entspricht der Entfernung von Nordafrika bis nach Norwegen."
+    ),
+
+    // Question 122
+    Question(
+        categoryId = 1,
+        questionText = "Welches Meer liegt nördlich von Russland?",
+        answerA = "Ostsee",
+        answerB = "Arktischer Ozean",
+        answerC = "Schwarzes Meer",
+        answerD = "Kaspisches Meer",
+        correctAnswer = 1, // B
+        explanation = "Nördlich von Russland liegt der Arktische Ozean. Russland hat die längste Arktis-Küstenlinie aller Länder.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 123
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Land befindet sich der Galápagos-Archipel?",
+        answerA = "Peru",
+        answerB = "Kolumbien",
+        answerC = "Ecuador",
+        answerD = "Venezuela",
+        correctAnswer = 2, // C
+        explanation = "Die Galápagos-Inseln gehören zu Ecuador und liegen im Pazifischen Ozean, etwa 1.000 km von der Küste entfernt. Charles Darwin besuchte sie 1835.",
+        difficulty = 1,
+        funFact = "Auf den Galápagos-Inseln leben Tiere, die sonst nirgendwo auf der Welt vorkommen – wie Riesenschildkröten, Meerechsen und Blaufußtölpel."
+    ),
+
+    // Question 124
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Pakistan?",
+        answerA = "Karachi",
+        answerB = "Lahore",
+        answerC = "Islamabad",
+        answerD = "Peshawar",
+        correctAnswer = 2, // C
+        explanation = "Islamabad ist die Hauptstadt Pakistans, obwohl Karachi die größte Stadt ist. Islamabad wurde in den 1960er Jahren als neue Hauptstadt geplant und gebaut.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 125
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land liegt auf der Insel Borneo nicht?",
+        answerA = "Malaysia",
+        answerB = "Brunei",
+        answerC = "Indonesien",
+        answerD = "Philippinen",
+        correctAnswer = 3, // D
+        explanation = "Borneo ist zwischen drei Ländern aufgeteilt: Indonesien (größter Teil), Malaysia und Brunei. Die Philippinen liegen auf eigenen Inseln nördlich von Borneo.",
+        difficulty = 1,
+        funFact = "Borneo ist die drittgrößte Insel der Welt und Heimat von Orang-Utans, Zwergelefanten und dem fleischfressenden Rafflesiae-Blütenbaum."
+    ),
+
+    // Question 126
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Fluss fließt durch den Grand Canyon?",
+        answerA = "Mississippi",
+        answerB = "Missouri",
+        answerC = "Colorado",
+        answerD = "Rio Grande",
+        correctAnswer = 2, // C
+        explanation = "Der Colorado River hat über Millionen von Jahren den Grand Canyon in Arizona, USA ausgegraben. Der Canyon ist über 1.600 Meter tief.",
+        difficulty = 1,
+        funFact = "Der Grand Canyon ist nicht der tiefste oder längste Canyon der Welt, aber er ist der bekannteste aufgrund seiner farbenfrohen Gesteinsschichten."
+    ),
+
+    // Question 127
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Kamerun?",
+        answerA = "Douala",
+        answerB = "Yaoundé",
+        answerC = "Bamenda",
+        answerD = "Garoua",
+        correctAnswer = 1, // B
+        explanation = "Yaoundé ist die Hauptstadt Kameruns, obwohl Douala die größte und wirtschaftlich bedeutendste Stadt des Landes ist.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 128
+    Question(
+        categoryId = 1,
+        questionText = "Auf welchem Kontinent liegt Indonesien?",
+        answerA = "Australien",
+        answerB = "Asien",
+        answerC = "Afrika",
+        answerD = "Ozeanien",
+        correctAnswer = 1, // B
+        explanation = "Indonesien gehört geographisch zu Südostasien. Das Land besteht aus über 17.000 Inseln und ist das größte Inselstaat der Welt.",
+        difficulty = 1,
+        funFact = "Indonesien hat die viertgrößte Bevölkerung der Welt und liegt auf dem sogenannten Pazifischen Feuerring, was es sehr erdbeben- und vulkanaktiv macht."
+    ),
+
+    // Question 129
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land ist der größte Kaffeeproduzent der Welt?",
+        answerA = "Kolumbien",
+        answerB = "Äthiopien",
+        answerC = "Vietnam",
+        answerD = "Brasilien",
+        correctAnswer = 3, // D
+        explanation = "Brasilien ist mit Abstand der größte Kaffeeproduzent der Welt und produziert etwa ein Drittel des gesamten Weltjahresvorrats an Kaffee.",
+        difficulty = 1,
+        funFact = "Kaffee stammt ursprünglich aus Äthiopien, wurde aber hauptsächlich durch Brasilien zur weltweiten Massenware."
+    ),
+
+    // Question 130
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Rumänien?",
+        answerA = "Cluj-Napoca",
+        answerB = "Timișoara",
+        answerC = "Bukarest",
+        answerD = "Brașov",
+        correctAnswer = 2, // C
+        explanation = "Bukarest ist die Hauptstadt und größte Stadt Rumäniens. Sie liegt im Süden des Landes und wird manchmal als \"kleines Paris\" des Ostens bezeichnet.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 131
+    Question(
+        categoryId = 1,
+        questionText = "Welches Meer liegt zwischen Griechenland und der Türkei?",
+        answerA = "Adriatisches Meer",
+        answerB = "Ägäisches Meer",
+        answerC = "Schwarzes Meer",
+        answerD = "Ionisches Meer",
+        correctAnswer = 1, // B
+        explanation = "Das Ägäische Meer liegt zwischen Griechenland und der Türkei. Es ist ein Teil des Mittelmeers und enthält Tausende griechischer Inseln.",
+        difficulty = 1,
+        funFact = "Das Ägäische Meer hat seinen Namen vermutlich vom mythologischen König Ägeus, dem Vater des Helden Theseus aus der griechischen Mythologie."
+    ),
+
+    // Question 132
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Land liegt der Mount Everest?",
+        answerA = "China",
+        answerB = "Indien",
+        answerC = "Nepal und China",
+        answerD = "Tibet",
+        correctAnswer = 2, // C
+        explanation = "Der Mount Everest liegt auf der Grenze zwischen Nepal und China (Tibet). Die Südseite gehört zu Nepal, die Nordseite zu China.",
+        difficulty = 1,
+        funFact = "Der Mount Everest wächst jedes Jahr um etwa 4 mm durch tektonische Kräfte, schrumpft aber auch leicht durch Erosion."
+    ),
+
+    // Question 133
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Irland?",
+        answerA = "Cork",
+        answerB = "Galway",
+        answerC = "Limerick",
+        answerD = "Dublin",
+        correctAnswer = 3, // D
+        explanation = "Dublin ist die Hauptstadt und größte Stadt der Republik Irland. Sie liegt an der Ostküste der Insel an der Mündung des Flusses Liffey.",
+        difficulty = 1,
+        funFact = "Der Name Dublin kommt vom irischen \"Dubh Linn\", was \"schwarzer Teich\" bedeutet."
+    ),
+
+    // Question 134
+    Question(
+        categoryId = 1,
+        questionText = "Welche Insel ist die größte des Pazifischen Ozeans (außer Australien)?",
+        answerA = "Borneo",
+        answerB = "Neuguinea",
+        answerC = "Sumatra",
+        answerD = "Hokkaido",
+        correctAnswer = 1, // B
+        explanation = "Neuguinea ist die größte Insel im Pazifik und die zweitgrößte der Welt. Sie ist zwischen Papua-Neuguinea und Indonesien aufgeteilt.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 135
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land hat die meisten Pyramiden der Welt?",
+        answerA = "Ägypten",
+        answerB = "Mexiko",
+        answerC = "Sudan",
+        answerD = "Peru",
+        correctAnswer = 2, // C
+        explanation = "Überraschenderweise hat der Sudan mehr Pyramiden als Ägypten – über 200 Pyramiden aus der Zeit des antiken Königreichs Kusch und Meroe.",
+        difficulty = 1,
+        funFact = "Die sudanesischen Pyramiden sind schmaler und spitzer als die ägyptischen, aber es gibt viel mehr davon."
+    ),
+
+    // Question 136
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Malaysia?",
+        answerA = "Penang",
+        answerB = "Johor Bahru",
+        answerC = "Kuala Lumpur",
+        answerD = "Ipoh",
+        correctAnswer = 2, // C
+        explanation = "Kuala Lumpur ist die Hauptstadt Malaysias und bekannt für die Petronas Twin Towers, die lange Zeit die höchsten Gebäude der Welt waren.",
+        difficulty = 1,
+        funFact = "\"Kuala Lumpur\" bedeutet auf Malaysisch \"schlammiger Zusammenfluss\" und bezieht sich auf die Stelle, wo zwei schlammige Flüsse zusammentreffen."
+    ),
+
+    // Question 137
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Land liegt der Yellowstone-Nationalpark?",
+        answerA = "Kanada",
+        answerB = "USA",
+        answerC = "Mexiko",
+        answerD = "Australien",
+        correctAnswer = 1, // B
+        explanation = "Der Yellowstone-Nationalpark liegt in den USA, hauptsächlich im Bundesstaat Wyoming. Er war 1872 der erste Nationalpark der Welt.",
+        difficulty = 1,
+        funFact = "Unter dem Yellowstone-Nationalpark liegt ein riesiger Supervulkan, der zuletzt vor etwa 640.000 Jahren ausbrach."
+    ),
+
+    // Question 138
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land liegt zwischen Frankreich und Spanien in den Pyrenäen?",
+        answerA = "Monaco",
+        answerB = "San Marino",
+        answerC = "Liechtenstein",
+        answerD = "Andorra",
+        correctAnswer = 3, // D
+        explanation = "Das Fürstentum Andorra liegt in den Pyrenäen zwischen Frankreich und Spanien. Es ist eines der kleinsten Länder Europas.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 139
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Kontinent hat die meisten Länder?",
+        answerA = "Asien",
+        answerB = "Afrika",
+        answerC = "Europa",
+        answerD = "Südamerika",
+        correctAnswer = 1, // B
+        explanation = "Afrika hat mit 54 anerkannten Ländern die meisten Staaten aller Kontinente. Asien folgt mit 48 Ländern.",
+        difficulty = 1,
+        funFact = "Trotz seiner großen Anzahl an Ländern ist Afrika in der Weltpolitik oft unterrepräsentiert."
+    ),
+
+    // Question 140
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Kroatien?",
+        answerA = "Split",
+        answerB = "Dubrovnik",
+        answerC = "Zagreb",
+        answerD = "Zadar",
+        correctAnswer = 2, // C
+        explanation = "Zagreb ist die Hauptstadt und größte Stadt Kroatiens. Sie liegt im Norden des Landes und ist ein wichtiges kulturelles und wirtschaftliches Zentrum.",
+        difficulty = 1,
+        funFact = "Dubrovnik, bekannt als \"Perle der Adria\", ist zwar touristisch bekannter als Zagreb, aber eben nicht die Hauptstadt Kroatiens."
+    ),
+
+    // Question 141
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land grenzt im Norden an Brasilien?",
+        answerA = "Peru",
+        answerB = "Venezuela",
+        answerC = "Bolivien",
+        answerD = "Chile",
+        correctAnswer = 1, // B
+        explanation = "Venezuela grenzt im Norden an Brasilien. Weitere Länder, die an Brasilien grenzen, sind Kolumbien, Peru, Bolivien, Paraguay, Argentinien, Uruguay, Guyana, Suriname und Französisch-Guayana.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 142
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das kleinste Land Afrikas?",
+        answerA = "Gambia",
+        answerB = "Dschibuti",
+        answerC = "Seychellen",
+        answerD = "Kap Verde",
+        correctAnswer = 2, // C
+        explanation = "Die Seychellen sind ein Inselstaat im Indischen Ozean und das kleinste Land Afrikas. Das Land besteht aus 115 Inseln.",
+        difficulty = 1,
+        funFact = "Die Seychellen sind auch der bevölkerungsärmste Staat Afrikas – nur etwa 98.000 Menschen leben dort."
+    ),
+
+    // Question 143
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Land liegt der Kilimandscharo-Nationalpark?",
+        answerA = "Kenia",
+        answerB = "Ruanda",
+        answerC = "Tansania",
+        answerD = "Uganda",
+        correctAnswer = 2, // C
+        explanation = "Der Kilimandscharo liegt in Tansania, Ostafrika, und ist mit 5.895 Metern der höchste Berg Afrikas. Er ist ein Stratovulkan.",
+        difficulty = 1,
+        funFact = "Obwohl der Kilimandscharo nahe dem Äquator liegt, ist sein Gipfel ganzjährig mit Schnee und Eis bedeckt – aber die Eiskappe schmilzt aufgrund des Klimawandels."
+    ),
+
+    // Question 144
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Ecuador?",
+        answerA = "Guayaquil",
+        answerB = "Cuenca",
+        answerC = "Quito",
+        answerD = "Manta",
+        correctAnswer = 2, // C
+        explanation = "Quito ist die Hauptstadt Ecuadors und liegt in den Anden auf etwa 2.850 Metern Höhe. Der Name Ecuador kommt vom spanischen Wort für Äquator.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 145
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land hat die Flagge mit dem Davidstern?",
+        answerA = "Saudi-Arabien",
+        answerB = "Jordanien",
+        answerC = "Israel",
+        answerD = "Libanon",
+        correctAnswer = 2, // C
+        explanation = "Die israelische Flagge zeigt den blauen Davidstern (Magen David) auf weißem Hintergrund mit zwei blauen Streifen – ein Symbol des jüdischen Volkes.",
+        difficulty = 1,
+        funFact = "Der Davidstern hat sechs Zacken und ist seit dem Mittelalter ein Symbol des Judentums. Er wurde 1948 ins Zentrum der israelischen Flagge aufgenommen."
+    ),
+
+    // Question 146
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das bevölkerungsreichste Land Südamerikas?",
+        answerA = "Kolumbien",
+        answerB = "Argentinien",
+        answerC = "Venezuela",
+        answerD = "Brasilien",
+        correctAnswer = 3, // D
+        explanation = "Brasilien ist mit über 215 Millionen Einwohnern das bevölkerungsreichste Land Südamerikas und das fünftbevölkerungsreichste Land der Welt.",
+        difficulty = 1,
+        funFact = "Etwa die Hälfte aller Südamerikaner sind Brasilianer, und Brasiliens Fläche macht fast die Hälfte des gesamten südamerikanischen Kontinents aus."
+    ),
+
+    // Question 147
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Irland?",
+        answerA = "Belfast",
+        answerB = "Limerick",
+        answerC = "Dublin",
+        answerD = "Cork",
+        correctAnswer = 2, // C
+        explanation = "Dublin ist die Hauptstadt der Republik Irland. Belfast hingegen ist die Hauptstadt von Nordirland, das zum Vereinigten Königreich gehört.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 148
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land liegt vollständig auf der nördlichen Hemisphäre?",
+        answerA = "Brasilien",
+        answerB = "Kenia",
+        answerC = "Norwegen",
+        answerD = "Ecuador",
+        correctAnswer = 2, // C
+        explanation = "Norwegen liegt vollständig auf der nördlichen Hemisphäre, weit nördlich des Äquators. Länder wie Brasilien, Kenia und Ecuador werden vom Äquator geschnitten.",
+        difficulty = 1,
+        funFact = "Norwegen liegt so weit im Norden, dass in Teilen des Landes im Sommer die Sonne nicht untergeht – ein Phänomen namens Mitternachtssonne."
+    ),
+
+    // Question 149
+    Question(
+        categoryId = 1,
+        questionText = "Welches Meer liegt zwischen Italien und der Balkanhalbinsel?",
+        answerA = "Tyrrhenisches Meer",
+        answerB = "Ligurisches Meer",
+        answerC = "Adriatisches Meer",
+        answerD = "Ionisches Meer",
+        correctAnswer = 2, // C
+        explanation = "Das Adriatische Meer liegt zwischen der italienischen Halbinsel und der Balkanhalbinsel. Es ist ein Teil des Mittelmeers.",
+        difficulty = 1,
+        funFact = "Venedig liegt am nördlichsten Ende des Adriatischen Meers und ist bekannt für seine Kanäle, die als Straßen dienen."
+    ),
+
+    // Question 150
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Hauptstadt von Slowenien?",
+        answerA = "Maribor",
+        answerB = "Koper",
+        answerC = "Celje",
+        answerD = "Ljubljana",
+        correctAnswer = 3, // D
+        explanation = "Ljubljana ist die Hauptstadt und größte Stadt Sloweniens. Das Land grenzt an Österreich, Italien, Ungarn und Kroatien.",
+        difficulty = 1,
+        funFact = null
+    )
 )
