@@ -447,89 +447,14 @@ fun HomeScreen(navController: NavHostController) {
                             shape = RoundedCornerShape(50)
                         )
                 )
-                // 3D neumorphic container for the brain emoji
-                Box(
-                    contentAlignment = Alignment.Center,
+                // Brain emoji — pulses and floats
+                Text(
+                    text = "🧠",
+                    fontSize = 96.sp,
                     modifier = Modifier
-                        .size(100.dp)
                         .scale(logoScale.value * brainScale.value)
                         .alpha(logoAlpha.value)
-                        .graphicsLayer {
-                            // Outer drop-shadow for 3D lift effect
-                            shadowElevation = 16.dp.toPx()
-                            shape = androidx.compose.foundation.shape.CircleShape
-                            clip = true
-                        }
-                        .background(
-                            // Gradient base: Primary → Purple, giving depth
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Primary.copy(alpha = 0.85f),
-                                    Color(0xFFA855F7).copy(alpha = 0.85f)
-                                ),
-                                start = Offset(0f, 0f),
-                                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-                            ),
-                            shape = androidx.compose.foundation.shape.CircleShape
-                        )
-                        .drawWithContent {
-                            drawContent()
-                            val w = size.width
-                            val h = size.height
-                            val radius = w / 2f
-
-                            // Dark shadow arc — bottom-right, simulates depth
-                            drawCircle(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        Color.Black.copy(alpha = 0.35f)
-                                    ),
-                                    center = Offset(w * 0.75f, h * 0.75f),
-                                    radius = radius * 1.1f
-                                ),
-                                radius = radius
-                            )
-
-                            // Highlight arc — top-left white sheen for neumorphic look
-                            drawCircle(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = 0.30f),
-                                        Color.Transparent
-                                    ),
-                                    center = Offset(w * 0.28f, h * 0.28f),
-                                    radius = radius * 0.85f
-                                ),
-                                radius = radius
-                            )
-
-                            // Thin white border stroke for crisp 3D edge
-                            drawCircle(
-                                color = Color.White.copy(alpha = 0.45f),
-                                radius = radius - 1.5f,
-                                style = Stroke(width = 2.5f)
-                            )
-
-                            // Small glossy specular highlight — top-center glass reflection
-                            drawCircle(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = 0.25f),
-                                        Color.Transparent
-                                    ),
-                                    center = Offset(w * 0.5f, h * 0.22f),
-                                    radius = radius * 0.35f
-                                ),
-                                radius = radius
-                            )
-                        }
-                ) {
-                    Text(
-                        text = "🧠",
-                        fontSize = 52.sp
-                    )
-                }
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
