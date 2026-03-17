@@ -2802,5 +2802,705 @@ fun geoQuestionsEasy(): List<Question> = listOf(
         explanation = "Ägypten ist mit über 100 Millionen Einwohnern das bevölkerungsreichste Land Nordafrikas und das zweitbevölkerungsreichste auf dem gesamten afrikanischen Kontinent.",
         difficulty = 1,
         funFact = null
+    ),
+
+    // Question 201
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das zweitkleinste Land der Welt (nach der Vatikanstadt)?",
+        answerA = "Liechtenstein",
+        answerB = "San Marino",
+        answerC = "Monaco",
+        answerD = "Nauru",
+        correctAnswer = 2, // C
+        explanation = "Monaco ist mit rund 2,02 km² das zweitkleinste Land der Welt. Es liegt an der französischen Riviera und ist bekannt für seine Casinos und den Formel-1-Grand-Prix.",
+        difficulty = 1,
+        funFact = "Monaco ist das bevölkerungsdichteste Land der Welt – auf einem Quadratkilometer leben dort mehr als 19.000 Menschen."
+    ),
+
+    // Question 202
+    Question(
+        categoryId = 1,
+        questionText = "Welches winzige Land liegt vollständig innerhalb von Italien?",
+        answerA = "Vatikanstadt",
+        answerB = "Monaco",
+        answerC = "Liechtenstein",
+        answerD = "San Marino",
+        correctAnswer = 3, // D
+        explanation = "San Marino ist ein kleiner Staat, der vollständig von Italien umgeben ist. Es ist die älteste Republik der Welt und liegt auf dem Berg Titano.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 203
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Wasserfall gilt als der höchste der Welt?",
+        answerA = "Iguazú-Fälle",
+        answerB = "Niagarafälle",
+        answerC = "Victoria-Fälle",
+        answerD = "Angel-Fall",
+        correctAnswer = 3, // D
+        explanation = "Der Angel-Fall (Salto Ángel) in Venezuela ist mit einer Fallhöhe von 979 Metern der höchste Wasserfall der Welt. Er wurde 1933 vom Piloten Jimmy Angel entdeckt.",
+        difficulty = 1,
+        funFact = "Der Angel-Fall ist so hoch, dass das Wasser beim Fallen zu Nebel und Dunst zerstäubt, bevor es den Boden erreicht."
+    ),
+
+    // Question 204
+    Question(
+        categoryId = 1,
+        questionText = "An welcher Grenze liegen die berühmten Victoriafälle?",
+        answerA = "Südafrika und Mosambik",
+        answerB = "Sambia und Simbabwe",
+        answerC = "Kenia und Tansania",
+        answerD = "Namibia und Botswana",
+        correctAnswer = 1, // B
+        explanation = "Die Victoriafälle liegen an der Grenze zwischen Sambia und Simbabwe am Sambesi-Fluss. Sie sind einer der größten Wasserfälle der Welt nach Breite.",
+        difficulty = 1,
+        funFact = "Der Name der Victoriafälle in der einheimischen Sprache Tonga lautet \"Mosi-oa-Tunya\", was \"Rauch, der donnert\" bedeutet – gut erkennbar am aufsteigenden Nebel."
+    ),
+
+    // Question 205
+    Question(
+        categoryId = 1,
+        questionText = "Welche Stadt ist die heilige Stadt des Islam?",
+        answerA = "Medina",
+        answerB = "Jerusalem",
+        answerC = "Mekka",
+        answerD = "Riad",
+        correctAnswer = 2, // C
+        explanation = "Mekka in Saudi-Arabien ist die heiligste Stadt des Islams. Hier wurde der Prophet Mohammed geboren, und hier steht die Große Moschee mit der Kaaba – dem Ziel aller Pilger.",
+        difficulty = 1,
+        funFact = "Jedes Jahr pilgern bis zu 2,5 Millionen Muslime nach Mekka – die Hadsch ist eine der fünf Säulen des Islams."
+    ),
+
+    // Question 206
+    Question(
+        categoryId = 1,
+        questionText = "Welche Stadt gilt als heilige Stadt für Judentum, Christentum und Islam?",
+        answerA = "Rom",
+        answerB = "Mekka",
+        answerC = "Medina",
+        answerD = "Jerusalem",
+        correctAnswer = 3, // D
+        explanation = "Jerusalem ist für alle drei abrahamitischen Religionen heilig: für Juden (Tempelberg), Christen (Grabeskirche) und Muslime (Al-Aqsa-Moschee und Felsendom).",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 207
+    Question(
+        categoryId = 1,
+        questionText = "Welche Stadt ist die heilige Stadt des Hinduismus am Ganges?",
+        answerA = "Mumbai",
+        answerB = "Varanasi",
+        answerC = "Delhi",
+        answerD = "Kolkata",
+        correctAnswer = 1, // B
+        explanation = "Varanasi (auch Benares oder Kashi genannt) ist eine der heiligsten Städte des Hinduismus. Hindus glauben, dass wer dort stirbt, vom Kreislauf der Wiedergeburt befreit wird.",
+        difficulty = 1,
+        funFact = "Varanasi ist eine der ältesten dauerhaft bewohnten Städte der Welt – sie soll seit über 3.000 Jahren kontinuierlich besiedelt sein."
+    ),
+
+    // Question 208
+    Question(
+        categoryId = 1,
+        questionText = "Wie hieß Mumbais früherer englischer Name?",
+        answerA = "Calcutta",
+        answerB = "Madras",
+        answerC = "Bombay",
+        answerD = "Cochin",
+        correctAnswer = 2, // C
+        explanation = "Mumbai hieß bis 1995 offiziell Bombay. Der Name wurde in Mumbai geändert, um den historischen Marathi-Namen der Stadt wiederherzustellen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 209
+    Question(
+        categoryId = 1,
+        questionText = "Wie hieß die heutige Stadt Ho-Chi-Minh-Stadt früher?",
+        answerA = "Hanoi",
+        answerB = "Pnom Penh",
+        answerC = "Saigon",
+        answerD = "Da Nang",
+        correctAnswer = 2, // C
+        explanation = "Ho-Chi-Minh-Stadt hieß bis 1975 Saigon und war die Hauptstadt Südvietnams. Nach dem Ende des Vietnamkriegs wurde sie nach Ho Chi Minh, dem Gründer Nordvietnams, umbenannt.",
+        difficulty = 1,
+        funFact = "Obwohl die Stadt offiziell Ho-Chi-Minh-Stadt heißt, nennen viele Einheimische sie noch immer Saigon."
+    ),
+
+    // Question 210
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Flughafen gilt als einer der verkehrsreichsten der Welt?",
+        answerA = "Heathrow (London)",
+        answerB = "Charles de Gaulle (Paris)",
+        answerC = "Frankfurt",
+        answerD = "Hartsfield-Jackson (Atlanta)",
+        correctAnswer = 3, // D
+        explanation = "Der Hartsfield-Jackson Atlanta International Airport in Georgia, USA, ist regelmäßig der passagierstärkste Flughafen der Welt mit über 100 Millionen Passagieren pro Jahr.",
+        difficulty = 1,
+        funFact = "Atlanta ist zwar nicht die bekannteste US-Stadt, aber sein Flughafen ist so zentral in den USA gelegen, dass er als perfekter Umsteigeknoten gilt – daher die enorm hohe Passagierzahl."
+    ),
+
+    // Question 211
+    Question(
+        categoryId = 1,
+        questionText = "In welcher Stadt befindet sich der Flughafen Heathrow?",
+        answerA = "Manchester",
+        answerB = "Edinburgh",
+        answerC = "London",
+        answerD = "Birmingham",
+        correctAnswer = 2, // C
+        explanation = "Heathrow liegt im Westen Londons und ist der verkehrsreichste Flughafen Europas sowie einer der meistgenutzten der Welt. Er hat fünf Terminals.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 212
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Hafen gilt als einer der wichtigsten Containerhäfen der Welt?",
+        answerA = "Hafen von Rotterdam",
+        answerB = "Hafen von Hamburg",
+        answerC = "Hafen von New York",
+        answerD = "Hafen von Shanghai",
+        correctAnswer = 3, // D
+        explanation = "Der Hafen von Shanghai ist seit 2010 der größte Containerhafen der Welt. Er schlägt jährlich über 47 Millionen Standardcontainer (TEU) um.",
+        difficulty = 1,
+        funFact = "Im Hafen von Shanghai werden pro Stunde mehr Container umgeschlagen als manche Häfen in einem ganzen Monat."
+    ),
+
+    // Question 213
+    Question(
+        categoryId = 1,
+        questionText = "Welcher europäische Hafen ist der größte in Europa?",
+        answerA = "Hamburg",
+        answerB = "Antwerpen",
+        answerC = "Rotterdam",
+        answerD = "Barcelona",
+        correctAnswer = 2, // C
+        explanation = "Der Hafen von Rotterdam in den Niederlanden ist der größte Hafen Europas. Er liegt am Rheinmündungsgebiet und ist ein wichtiges Tor für den europäischen Handel.",
+        difficulty = 1,
+        funFact = "Rotterdam ist die Homebase für rund 400 Schifffahrtslinien und verbindet Europa mit über 1.000 Häfen weltweit."
+    ),
+
+    // Question 214
+    Question(
+        categoryId = 1,
+        questionText = "Wie viele Ozeane gibt es auf der Erde?",
+        answerA = "Drei",
+        answerB = "Vier",
+        answerC = "Fünf",
+        answerD = "Sieben",
+        correctAnswer = 2, // C
+        explanation = "Die Erde hat offiziell fünf Ozeane: den Pazifischen, den Atlantischen, den Indischen, den Arktischen und den Südlichen (Antarktischen) Ozean. Der Südliche Ozean wurde 2000 offiziell anerkannt.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 215
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Ozean ist der kleinste der Erde?",
+        answerA = "Indischer Ozean",
+        answerB = "Südlicher Ozean",
+        answerC = "Pazifischer Ozean",
+        answerD = "Arktischer Ozean",
+        correctAnswer = 3, // D
+        explanation = "Der Arktische Ozean (Nordpolarmeer) ist der kleinste Ozean der Erde mit einer Fläche von rund 14,06 Millionen km². Er liegt am Nordpol und ist zeitweise von Eis bedeckt.",
+        difficulty = 1,
+        funFact = "Im Sommer schmilzt etwa die Hälfte des arktischen Meereises – seit 1980 hat die Eisfläche im Sommer um fast 40 % abgenommen."
+    ),
+
+    // Question 216
+    Question(
+        categoryId = 1,
+        questionText = "Welches Salzwasser ist salziger als normale Meere – das Tote Meer oder das Rote Meer?",
+        answerA = "Rotes Meer",
+        answerB = "Beide gleich salzig",
+        answerC = "Totes Meer",
+        answerD = "Weder noch – beide sind Süßwasser",
+        correctAnswer = 2, // C
+        explanation = "Das Tote Meer hat einen Salzgehalt von rund 34 %, während normale Ozeane etwa 3,5 % haben. Es ist damit rund zehn Mal salziger als normales Meerwasser.",
+        difficulty = 1,
+        funFact = "Im Toten Meer kann man nicht sinken – der hohe Salzgehalt macht das Wasser so dicht, dass Menschen mühelos an der Oberfläche treiben."
+    ),
+
+    // Question 217
+    Question(
+        categoryId = 1,
+        questionText = "Auf welchem Breitengrad liegt der Äquator?",
+        answerA = "23,5° Nord",
+        answerB = "0°",
+        answerC = "90° Nord",
+        answerD = "45° Süd",
+        correctAnswer = 1, // B
+        explanation = "Der Äquator liegt auf dem Breitengrad 0° und teilt die Erde in die nördliche und südliche Hemisphäre. Er hat eine Länge von rund 40.075 km.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 218
+    Question(
+        categoryId = 1,
+        questionText = "Was verläuft bei 0° Längengrad durch London?",
+        answerA = "Wendekreis des Krebses",
+        answerB = "Äquator",
+        answerC = "Nullmeridian",
+        answerD = "Polarkreis",
+        correctAnswer = 2, // C
+        explanation = "Der Nullmeridian (0° Längengrad) verläuft durch das Königliche Observatorium in Greenwich, London. Er wurde 1884 als internationale Referenz festgelegt.",
+        difficulty = 1,
+        funFact = "Am Nullmeridian in Greenwich kann man buchstäblich mit einem Fuß auf der westlichen und mit dem anderen auf der östlichen Hemisphäre stehen."
+    ),
+
+    // Question 219
+    Question(
+        categoryId = 1,
+        questionText = "Welche UNESCO-Welterbestadt liegt in der Türkei?",
+        answerA = "Ephesos",
+        answerB = "Pompeji",
+        answerC = "Petra",
+        answerD = "Angkor Wat",
+        correctAnswer = 0, // A
+        explanation = "Ephesos ist eine antike Stadt in der heutigen Türkei und UNESCO-Weltkulturerbe. Es war einst eine der größten Städte der antiken Welt und beherbergt den Tempel der Artemis.",
+        difficulty = 1,
+        funFact = "Die Bibliothek des Celsus in Ephesos gehört zu den am besten erhaltenen Fassaden der Antike und ist bis heute gut erkennbar."
+    ),
+
+    // Question 220
+    Question(
+        categoryId = 1,
+        questionText = "Welche Stadt ist UNESCO-Welterbe und liegt in der Altstadt von Dubrovnik?",
+        answerA = "Zagreb",
+        answerB = "Split",
+        answerC = "Dubrovnik",
+        answerD = "Zadar",
+        correctAnswer = 2, // C
+        explanation = "Die Altstadt von Dubrovnik in Kroatien ist seit 1979 UNESCO-Weltkulturerbe. Die mittelalterlichen Stadtmauern und Gassen sind weltberühmt – Dubrovnik dient auch als Drehort für Game of Thrones.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 221
+    Question(
+        categoryId = 1,
+        questionText = "Welches winzige Fürstentum liegt zwischen der Schweiz und Österreich?",
+        answerA = "Monaco",
+        answerB = "San Marino",
+        answerC = "Liechtenstein",
+        answerD = "Andorra",
+        correctAnswer = 2, // C
+        explanation = "Liechtenstein liegt zwischen der Schweiz und Österreich. Es ist eines der kleinsten Länder der Welt und ist doppelt eingeschlossen – keines seiner Nachbarländer hat Meeresküste.",
+        difficulty = 1,
+        funFact = "Liechtenstein und Usbekistan sind die einzigen zwei Länder der Welt, die von ausschließlich anderen Binnenstaaten umgeben sind – beide haben keinen Meereszugang auf direktem Weg."
+    ),
+
+    // Question 222
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das kleinste Land auf dem amerikanischen Kontinent?",
+        answerA = "El Salvador",
+        answerB = "Belize",
+        answerC = "St. Kitts und Nevis",
+        answerD = "Barbados",
+        correctAnswer = 2, // C
+        explanation = "St. Kitts und Nevis ist mit einer Fläche von nur 261 km² das kleinste Land in Amerika (Nord- und Südamerika). Es ist ein Inselstaat in der Karibik.",
+        difficulty = 1,
+        funFact = "St. Kitts und Nevis hat eine sehr kleine Bevölkerung von rund 55.000 Menschen und ist einer der kleinsten Staaten der Welt nach Bevölkerung."
+    ),
+
+    // Question 223
+    Question(
+        categoryId = 1,
+        questionText = "Was ist der tiefste Punkt auf dem Festland (Landmasse)?",
+        answerA = "Totes Meer",
+        answerB = "Kaspisches Meer",
+        answerC = "Marianengraben",
+        answerD = "Assal-See",
+        correctAnswer = 0, // A
+        explanation = "Das Tote Meer an der Grenze von Israel und Jordanien ist der tiefste Punkt auf der Erdoberfläche, der nicht von Ozean bedeckt ist. Es liegt rund 430 Meter unter dem Meeresspiegel.",
+        difficulty = 1,
+        funFact = "Das Tote Meer schrumpft jedes Jahr um etwa einen Meter – der Jordan-Fluss, der es speist, wird zu stark für Landwirtschaft und Industrie abgezweigt."
+    ),
+
+    // Question 224
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Flughafen in Asien ist für sein ausgezeichnetes Design und seinen Service bekannt?",
+        answerA = "Incheon (Seoul)",
+        answerB = "Narita (Tokio)",
+        answerC = "Changi (Singapur)",
+        answerD = "Suvarnabhumi (Bangkok)",
+        correctAnswer = 2, // C
+        explanation = "Der Changi Airport in Singapur wurde wiederholt zum besten Flughafen der Welt gewählt. Er bietet einen Swimming Pool, Gärten und sogar ein Schmetterlingsgarten für Passagiere.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 225
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Land liegt der berühmte Hafen von Sydney?",
+        answerA = "Neuseeland",
+        answerB = "Australien",
+        answerC = "Papua-Neuguinea",
+        answerD = "Fidschi",
+        correctAnswer = 1, // B
+        explanation = "Der Hafen von Sydney in Australien ist einer der schönsten Naturhäfen der Welt. Am Ufer stehen das Sydney Opera House und die Sydney Harbour Bridge.",
+        difficulty = 1,
+        funFact = "Der Hafen von Sydney ist einer der tiefsten Naturhäfen der Welt und kann gleichzeitig Hunderte von großen Schiffen aufnehmen."
+    ),
+
+    // Question 226
+    Question(
+        categoryId = 1,
+        questionText = "Welche Stadt wird als \"Tor zur Seidenstraße\" bezeichnet?",
+        answerA = "Teheran",
+        answerB = "Kabul",
+        answerC = "Samarkand",
+        answerD = "Taschkent",
+        correctAnswer = 2, // C
+        explanation = "Samarkand in Usbekistan war einer der wichtigsten Knotenpunkte der antiken Seidenstraße. Die Stadt mit ihren blauen Kuppeln und Moscheen ist heute UNESCO-Weltkulturerbe.",
+        difficulty = 1,
+        funFact = "Samarkand war einmal die Hauptstadt des Timuridenreichs unter Timur (Tamerlan) und galt als eine der prächtigsten Städte der Welt."
+    ),
+
+    // Question 227
+    Question(
+        categoryId = 1,
+        questionText = "Auf welchem Breitengrad liegt der nördliche Polarkreis?",
+        answerA = "60° Nord",
+        answerB = "66,5° Nord",
+        answerC = "90° Nord",
+        answerD = "45° Nord",
+        correctAnswer = 1, // B
+        explanation = "Der nördliche Polarkreis liegt bei 66,5° nördlicher Breite. Nördlich davon gibt es Tage im Jahr, an denen die Sonne nicht auf- oder untergeht (Polartag und Polarnacht).",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 228
+    Question(
+        categoryId = 1,
+        questionText = "Welche Stadt in Kanada ist für ihren weltberühmten Hafen und die schöne Bergkulisse bekannt?",
+        answerA = "Toronto",
+        answerB = "Montreal",
+        answerC = "Vancouver",
+        answerD = "Calgary",
+        correctAnswer = 2, // C
+        explanation = "Vancouver liegt an der Westküste Kanadas und ist für seinen Hafen und die Kulisse aus Meer und schneebedeckten Bergen bekannt. Es ist eine der schönsten Städte der Welt.",
+        difficulty = 1,
+        funFact = "Vancouver wurde mehrfach zur lebenswertesten Stadt der Welt gewählt und ist beliebt für Outdoor-Aktivitäten wie Skifahren und Segeln – beides im selben Tag möglich."
+    ),
+
+    // Question 229
+    Question(
+        categoryId = 1,
+        questionText = "Was ist der Unterschied zwischen Breiten- und Längengraden auf einer Weltkarte?",
+        answerA = "Breitengrade verlaufen von Osten nach Westen, Längengrade von Norden nach Süden",
+        answerB = "Beide verlaufen von Norden nach Süden",
+        answerC = "Beide verlaufen von Osten nach Westen",
+        answerD = "Es gibt keinen Unterschied",
+        correctAnswer = 0, // A
+        explanation = "Breitengrade (Parallelen) verlaufen horizontal, also von Osten nach Westen, und messen den Abstand vom Äquator. Längengrade (Meridiane) verlaufen vertikal, von Norden nach Süden, und messen den Abstand vom Nullmeridian.",
+        difficulty = 1,
+        funFact = "Breitengrad = Latitude (von lat. latus = breit), Längengrad = Longitude (von lat. longus = lang) – eine gute Gedächtnisstütze ist: Latitude = Leiter (horizontal)."
+    ),
+
+    // Question 230
+    Question(
+        categoryId = 1,
+        questionText = "Welche historische Stadt in Marokko ist UNESCO-Weltkulturerbe und für ihre engen Gassen bekannt?",
+        answerA = "Casablanca",
+        answerB = "Marrakesch",
+        answerC = "Fès",
+        answerD = "Rabat",
+        correctAnswer = 2, // C
+        explanation = "Die Medina von Fès ist UNESCO-Weltkulturerbe und gilt als eine der am besten erhaltenen mittelalterlichen Städte der islamischen Welt. Ihre Gassen sind so eng, dass nur Esel durchpassen.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 231
+    Question(
+        categoryId = 1,
+        questionText = "Welche Stadt in Peru ist UNESCO-Weltkulturerbe und war einst die Hauptstadt des Inka-Reichs?",
+        answerA = "Lima",
+        answerB = "Arequipa",
+        answerC = "Cusco",
+        answerD = "Trujillo",
+        correctAnswer = 2, // C
+        explanation = "Cusco (auch Cuzco) war die Hauptstadt des Inka-Reichs und ist heute UNESCO-Weltkulturerbe. Die Stadt liegt in den Anden auf rund 3.400 Metern Höhe.",
+        difficulty = 1,
+        funFact = "Die Inka bauten ihre Steinmauern so präzise, dass zwischen den Blöcken kein Messer passt – auch ohne Mörtel stehen sie nach über 500 Jahren noch."
+    ),
+
+    // Question 232
+    Question(
+        categoryId = 1,
+        questionText = "Welches Inselland im Pazifik ist so klein, dass es das drittkleinste Land der Welt ist?",
+        answerA = "Tonga",
+        answerB = "Nauru",
+        answerC = "Tuvalu",
+        answerD = "Samoa",
+        correctAnswer = 1, // B
+        explanation = "Nauru ist mit einer Fläche von nur 21 km² das drittkleinste Land der Welt (nach Vatikanstadt und Monaco). Es liegt im Pazifischen Ozean und ist ein unabhängiger Inselstaat.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 233
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Wasserfall an der Grenze zwischen USA und Kanada ist weltberühmt?",
+        answerA = "Victoria-Fälle",
+        answerB = "Angel-Fall",
+        answerC = "Iguazú-Fälle",
+        answerD = "Niagarafälle",
+        correctAnswer = 3, // D
+        explanation = "Die Niagarafälle liegen an der Grenze zwischen dem US-Bundesstaat New York und der kanadischen Provinz Ontario. Sie sind zwar nicht die höchsten, aber volumenmäßig zu den stärksten Wasserfällen der Welt.",
+        difficulty = 1,
+        funFact = "Die Niagarafälle wandern jedes Jahr um etwa 30 cm durch Erosion zurück – in den letzten 12.000 Jahren sind sie schon rund 11 km in den Fels eingefressen."
+    ),
+
+    // Question 234
+    Question(
+        categoryId = 1,
+        questionText = "Wie lautet der frühere Name von Peking (Hauptstadt Chinas)?",
+        answerA = "Shanghai",
+        answerB = "Nanjing",
+        answerC = "Kanton",
+        answerD = "Nanking",
+        correctAnswer = 1, // B
+        explanation = "Peking (Běijīng) bedeutet auf Chinesisch 'Nördliche Hauptstadt'. Nanjing (Nanjīng, 'Südliche Hauptstadt') war früher die Hauptstadt Chinas. Zwischen 1912 und 1949 war Nanjing Hauptstadt der Republik China.",
+        difficulty = 1,
+        funFact = "Peking war unter dem Namen \"Dadu\" die Hauptstadt des Mongolischen Reiches unter Kublai Khan im 13. Jahrhundert."
+    ),
+
+    // Question 235
+    Question(
+        categoryId = 1,
+        questionText = "Welche Stadt in Kasachstan wurde 2019 umbenannt und heißt nun Nur-Sultan?",
+        answerA = "Almaty",
+        answerB = "Karaganda",
+        answerC = "Astana",
+        answerD = "Shymkent",
+        correctAnswer = 2, // C
+        explanation = "Die kasachische Hauptstadt hieß Astana und wurde 2019 zu Ehren des langjährigen Präsidenten Nursultan Nasarbajew in Nur-Sultan umbenannt. 2022 wurde der Name wieder auf Astana zurückgeändert.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 236
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die tiefste Stelle des Atlantischen Ozeans?",
+        answerA = "Puerto-Rico-Graben",
+        answerB = "Marianengraben",
+        answerC = "Romanchegraben",
+        answerD = "Java-Graben",
+        correctAnswer = 0, // A
+        explanation = "Der Puerto-Rico-Graben ist die tiefste Stelle des Atlantischen Ozeans mit rund 8.380 Metern. Er liegt nördlich von Puerto Rico an der Grenze zwischen der Karibischen und der Nordamerikanischen Platte.",
+        difficulty = 1,
+        funFact = "Der Puerto-Rico-Graben ist auch seismisch aktiv – die Region ist erdbebengefährdet, was Auswirkungen auf Karibikinseln haben kann."
+    ),
+
+    // Question 237
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Land liegt die Altstadt von Bern, die UNESCO-Weltkulturerbe ist?",
+        answerA = "Österreich",
+        answerB = "Deutschland",
+        answerC = "Schweiz",
+        answerD = "Liechtenstein",
+        correctAnswer = 2, // C
+        explanation = "Die Altstadt von Bern, der Schweizer Bundesstadt, ist seit 1983 UNESCO-Weltkulturerbe. Sie ist bekannt für ihre mittelalterlichen Laubengänge und den Zytglogge-Turm.",
+        difficulty = 1,
+        funFact = "In Bern gibt es über 6 km überdachte Laubengänge (Arcaden) – das ist das größte zusammenhängende Laubengangsystem der Welt."
+    ),
+
+    // Question 238
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Wendekreis liegt nördlich des Äquators?",
+        answerA = "Wendekreis des Steinbocks",
+        answerB = "Südlicher Polarkreis",
+        answerC = "Wendekreis des Krebses",
+        answerD = "Nördlicher Polarkreis",
+        correctAnswer = 2, // C
+        explanation = "Der Wendekreis des Krebses (Tropic of Cancer) liegt bei 23,5° nördlicher Breite. Südlich des Äquators liegt der Wendekreis des Steinbocks bei 23,5° südlicher Breite.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 239
+    Question(
+        categoryId = 1,
+        questionText = "Welches kleine karibische Inselland ist das zweijüngste Land der Welt (Unabhängigkeit 2010)?",
+        answerA = "Trinidad und Tobago",
+        answerB = "Barbados",
+        answerC = "St. Lucia",
+        answerD = "Haiti",
+        correctAnswer = 3, // D
+        explanation = "Haiti wurde 1804 als erstes schwarzes Freiland der Welt unabhängig – es war die zweite Unabhängigkeitserklärung auf dem amerikanischen Kontinent nach den USA. Das Erdbeben 2010 war verheerend.",
+        difficulty = 1,
+        funFact = "Haiti war die erste Sklavenrepublik der Welt, die ihre Unabhängigkeit durch eine erfolgreiche Sklavenrevolution erkämpfte – ein einzigartiges Ereignis in der Weltgeschichte."
+    ),
+
+    // Question 240
+    Question(
+        categoryId = 1,
+        questionText = "Welche Stadt gilt als heilige Stadt für Buddhisten und war lange Residenz des Dalai Lama?",
+        answerA = "Kathmandu",
+        answerB = "Lhasa",
+        answerC = "Thimphu",
+        answerD = "Bangkok",
+        correctAnswer = 1, // B
+        explanation = "Lhasa in Tibet (China) gilt als heilige Stadt des tibetischen Buddhismus. Der Potala-Palast war jahrhundertelang die Residenz des Dalai Lama und ist heute UNESCO-Welterbe.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 241
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land hat die meisten UNESCO-Welterbestätten?",
+        answerA = "Frankreich",
+        answerB = "USA",
+        answerC = "China",
+        answerD = "Italien",
+        correctAnswer = 3, // D
+        explanation = "Italien hat die meisten UNESCO-Welterbestätten der Welt mit über 58 eingetragenen Stätten (Stand 2023). Dazu zählen der Vatikan, das Kolosseum, Pompeji und viele historische Stadtzentren.",
+        difficulty = 1,
+        funFact = "Italien hat pro Fläche mehr Welterbestätten als jedes andere große Land der Welt – das spiegelt den enormen historischen Reichtum der Halbinsel wider."
+    ),
+
+    // Question 242
+    Question(
+        categoryId = 1,
+        questionText = "Welches Meer ist bekannt für sein glasklares Wasser und liegt zwischen Australien und Neuguinea?",
+        answerA = "Korallenmeer",
+        answerB = "Timorsee",
+        answerC = "Arafurasee",
+        answerD = "Salomonsee",
+        correctAnswer = 0, // A
+        explanation = "Das Korallenmeer liegt nordöstlich von Australien zwischen dem australischen Festland, Papua-Neuguinea und den Salomonen. Das Great Barrier Reef liegt in diesem Meeresgebiet.",
+        difficulty = 1,
+        funFact = "Im Korallenmeer fand im Mai 1942 eine der entscheidenden Seeschlachten des Zweiten Weltkriegs statt – die erste Seeschlacht der Geschichte, bei der sich die Schiffe nie direkt sahen."
+    ),
+
+    // Question 243
+    Question(
+        categoryId = 1,
+        questionText = "Welche europäische Hauptstadt trägt den Spitznamen \"Stadt der Wasser\" und ist berühmt für ihre Kanäle?",
+        answerA = "Amsterdam",
+        answerB = "Venedig",
+        answerC = "Brügge",
+        answerD = "Stockholm",
+        correctAnswer = 1, // B
+        explanation = "Venedig in Italien ist weltberühmt für seine Kanäle, die als Straßen dienen, und für seine Gondelfahrten. Die historische Stadt liegt auf 118 kleinen Inseln in einer Lagune.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 244
+    Question(
+        categoryId = 1,
+        questionText = "Was bezeichnet der Begriff \"Antipode\"?",
+        answerA = "Den höchsten Punkt der Erde",
+        answerB = "Den tiefsten Punkt des Ozeans",
+        answerC = "Den gegenüberliegenden Punkt auf der Erde",
+        answerD = "Die Mitte des Äquators",
+        correctAnswer = 2, // C
+        explanation = "Als Antipode bezeichnet man den Punkt, der dem eigenen Standort auf der Erdkugel genau gegenüberliegt. Wenn man durch die Erde stechen würde, käme man am Antipoden heraus.",
+        difficulty = 1,
+        funFact = "Die Antipode von Deutschland liegt mitten im Pazifischen Ozean – würde man durch die Erde graben, landete man im Wasser."
+    ),
+
+    // Question 245
+    Question(
+        categoryId = 1,
+        questionText = "Welcher berühmte Hafen liegt in der griechischen Hauptstadt Athen?",
+        answerA = "Korinth",
+        answerB = "Piräus",
+        answerC = "Thessaloniki",
+        answerD = "Patras",
+        correctAnswer = 1, // B
+        explanation = "Piräus ist der Hafen von Athen und der größte Hafen Griechenlands. Er ist auch einer der größten Passagierhäfen der Welt und dient als Ausgangspunkt für Fähren zu den griechischen Inseln.",
+        difficulty = 1,
+        funFact = "Piräus war in der Antike der wichtigste Hafen des Mittelmeers und der Schlüssel zur Seemacht Athens."
+    ),
+
+    // Question 246
+    Question(
+        categoryId = 1,
+        questionText = "Welche alte Handelsstadt in Jordanien ist UNESCO-Weltkulturerbe und in Fels gehauen?",
+        answerA = "Jerash",
+        answerB = "Aqaba",
+        answerC = "Amman",
+        answerD = "Petra",
+        correctAnswer = 3, // D
+        explanation = "Petra in Jordanien ist eine antike Stadt der Nabatäer, die vollständig in den roten Sandstein gehauen wurde. Sie ist seit 1985 UNESCO-Weltkulturerbe und eines der Neuen Weltwunder.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 247
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land hat eine Hauptstadt, die nach seiner Unabhängigkeit von Portugal 1975 gegründet wurde und früher \"Lourenço Marques\" hieß?",
+        answerA = "Angola",
+        answerB = "Mosambik",
+        answerC = "Kap Verde",
+        answerD = "Guinea-Bissau",
+        correctAnswer = 1, // B
+        explanation = "Maputo, die Hauptstadt Mosambiks, hieß zur Kolonialzeit Lourenço Marques. Nach der Unabhängigkeit von Portugal 1975 wurde sie in Maputo umbenannt.",
+        difficulty = 1,
+        funFact = "Mosambik hat eine der längsten Küstenlinien Afrikas – über 2.700 km Küste am Indischen Ozean – und ist bekannt für seine wunderschönen Strände."
+    ),
+
+    // Question 248
+    Question(
+        categoryId = 1,
+        questionText = "Welche Stadt in Kolumbien ist als UNESCO-Weltkulturerbe bekannt und liegt an der Karibikküste?",
+        answerA = "Medellín",
+        answerB = "Barranquilla",
+        answerC = "Cartagena",
+        answerD = "Cali",
+        correctAnswer = 2, // C
+        explanation = "Cartagena de Indias an der kolumbianischen Karibikküste ist UNESCO-Weltkulturerbe. Die gut erhaltene Kolonialstadt mit ihren bunten Häusern und starken Befestigungsmauern gilt als eine der schönsten Städte Lateinamerikas.",
+        difficulty = 1,
+        funFact = "Die Stadtmauern von Cartagena sind über 11 km lang und wurden im 16. und 17. Jahrhundert zum Schutz vor Piraten gebaut."
+    ),
+
+    // Question 249
+    Question(
+        categoryId = 1,
+        questionText = "Welcher asiatische Inselstaat ist flächenmäßig einer der kleinsten der Welt, aber wirtschaftlich sehr wohlhabend?",
+        answerA = "Malediven",
+        answerB = "Singapur",
+        answerC = "Brunei",
+        answerD = "Bahrain",
+        correctAnswer = 1, // B
+        explanation = "Singapur ist ein Stadtstaat in Südostasien mit einer Fläche von nur rund 725 km². Trotz seiner geringen Größe ist es einer der wohlhabendsten Staaten der Welt und ein wichtiges Finanzzentrum.",
+        difficulty = 1,
+        funFact = null
+    ),
+
+    // Question 250
+    Question(
+        categoryId = 1,
+        questionText = "Welche Wüste liegt im südlichen Afrika und ist eine der ältesten der Welt?",
+        answerA = "Sahara",
+        answerB = "Kalahari",
+        answerC = "Namib",
+        answerD = "Karoo",
+        correctAnswer = 2, // C
+        explanation = "Die Namib in Namibia ist eine der ältesten Wüsten der Welt – sie soll seit mindestens 55 Millionen Jahren existieren. Ihre riesigen orangeroten Sanddünen sind weltberühmt.",
+        difficulty = 1,
+        funFact = "Die Dünen der Namib sind die höchsten der Welt – die Düne \"Big Daddy\" nahe Sossusvlei erreicht etwa 325 Meter Höhe."
     )
 )
