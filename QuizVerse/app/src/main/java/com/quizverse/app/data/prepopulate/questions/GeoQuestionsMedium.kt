@@ -2647,6 +2647,640 @@ fun geoQuestionsMedium(): List<Question> = listOf(
         funFact = "Die Victoriafälle erzeugen eine Wasserwolke, die bei ruhigem Wetter bis zu 30 km weit zu sehen ist – daher der Name 'Mosi-oa-Tunya' auf Kololo: 'Rauch, der donnert'."
     ),
 
+    // ── MEDIUM (difficulty = 2) ── questions 206–255 (world trade & transport geography) ─────
+
+    // --- Suez Canal ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie lang ist der Suezkanal ungefähr?",
+        answerA = "80 km",
+        answerB = "193 km",
+        answerC = "320 km",
+        answerD = "450 km",
+        correctAnswer = 1, // B
+        explanation = "Der Suezkanal ist etwa 193 km lang und verbindet das Mittelmeer (Port Said) mit dem Roten Meer (Suez). Er wurde 1869 eröffnet und ist eine der wichtigsten Schifffahrtsrouten der Welt.",
+        difficulty = 2,
+        funFact = "Der Suezkanal wird täglich von durchschnittlich 50 Schiffen durchquert und verkürzt den Seeweg von Europa nach Asien um bis zu 7.000 km."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie tief ist der Suezkanal (Fahrwassertiefe nach aktueller Erweiterung)?",
+        answerA = "12 Meter",
+        answerB = "20 Meter",
+        answerC = "24 Meter",
+        answerD = "30 Meter",
+        correctAnswer = 2, // C
+        explanation = "Nach den Erweiterungsarbeiten (zuletzt 2015) hat der Suezkanal eine Fahrwassertiefe von etwa 24 Metern und eine Breite von bis zu 215 Metern. Er hat keine Schleusen, da der Meeresspiegel auf beiden Seiten nahezu gleich ist.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Ereignis blockierte den Suezkanal im März 2021 für fast eine Woche?",
+        answerA = "Ein schwerer Sturm zerstörte das Kanalufer",
+        answerB = "Das Containerschiff Ever Given lief quer",
+        answerC = "Ein Erdbeben beschädigte die Kanalwände",
+        answerD = "Militärische Übungen sperrten den Kanal",
+        correctAnswer = 1, // B
+        explanation = "Im März 2021 blockierte das Containerschiff Ever Given (399 m lang) den Suezkanal, nachdem es sich quergestellt hatte. Die Blockade dauerte sechs Tage und kostete den Welthandel schätzungsweise 9 Milliarden Dollar täglich.",
+        difficulty = 2,
+        funFact = "Das Schiff war so groß, dass es fast jeden Zentimeter des Kanals ausfüllte – Rettungsschlepper benötigten Tage, um es zu befreien."
+    ),
+
+    // --- Panama Canal ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie viele Schleusenstufen hat der Panamakanal auf jeder Seite?",
+        answerA = "Zwei Schleusenstufen",
+        answerB = "Drei Schleusenstufen",
+        answerC = "Vier Schleusenstufen",
+        answerD = "Keine – er hat keine Schleusen",
+        correctAnswer = 1, // B
+        explanation = "Der Panamakanal hebt und senkt Schiffe über drei Schleusenstufen auf jeder Seite: auf der Atlantikseite die Gatún-Schleusen (+26 m), auf der Pazifikseite die Pedro-Miguel- und Miraflores-Schleusen.",
+        difficulty = 2,
+        funFact = "Der Panamakanal wurde 2016 um einen dritten Schleusenkanal erweitert, der auch Post-Panamax-Schiffe aufnehmen kann."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Warum benötigt der Panamakanal Schleusen, der Suezkanal aber nicht?",
+        answerA = "Weil der Pazifik tiefer ist als das Mittelmeer",
+        answerB = "Weil das Gelände Panamas hügelig ist und der Kanal Seen auf 26 m Höhe überquert",
+        answerC = "Weil der Atlantik und der Pazifik unterschiedliche Wasserhöhen haben",
+        answerD = "Aus historischen Gründen der ursprünglichen Planung",
+        correctAnswer = 1, // B
+        explanation = "Der Panamakanal führt durch Mittelamerika, dessen Gelände deutlich höher als der Meeresspiegel liegt. Der Gatún-See liegt auf 26 Metern Höhe. Schiffe müssen durch Schleusen auf dieses Niveau angehoben und wieder abgesenkt werden.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    // --- Major shipping lanes ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Meerenge ist die meistbefahrene der Welt nach Schiffszahlen?",
+        answerA = "Straße von Gibraltar",
+        answerB = "Straße von Malakka",
+        answerC = "Straße von Hormus",
+        answerD = "Kanal von Dover",
+        correctAnswer = 3, // D
+        explanation = "Der Kanal von Dover (zwischen England und Frankreich) gilt als eine der meistbefahrenen Wasserstraßen der Welt – täglich passieren ihn etwa 500 Schiffe. Die Straße von Malakka ist jedoch für den Frachttonnenkilometer bedeutender.",
+        difficulty = 2,
+        funFact = "Die Straße von Malakka ist für den globalen Handel entscheidend: Rund 40 % des Welthandels und ein Drittel des weltweiten Öls passieren sie täglich."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Schifffahrtsroute verbindet Europa direkt mit Ostasien um das Kap der Guten Hoffnung?",
+        answerA = "Die Nordostpassage",
+        answerB = "Die Kap-Route (Cape Route)",
+        answerC = "Die Suezroute",
+        answerD = "Die Drakepassage-Route",
+        correctAnswer = 1, // B
+        explanation = "Die Kap-Route führt von Europa um das Kap der Guten Hoffnung (Südafrika) nach Asien. Vor dem Bau des Suezkanals 1869 war dies die einzige Seeroute zwischen Europa und dem Indischen Ozean.",
+        difficulty = 2,
+        funFact = "Die Kap-Route ist zwar länger als der Suezkanal, wird aber von Supertankern genutzt, die für den Kanal zu groß sind."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Durch welche Meerenge fließt etwa 40 % des weltweit verschifften Erdöls?",
+        answerA = "Straße von Gibraltar",
+        answerB = "Bab el-Mandeb",
+        answerC = "Straße von Malakka",
+        answerD = "Straße von Hormus",
+        correctAnswer = 3, // D
+        explanation = "Die Straße von Hormus zwischen dem Iran und der Arabischen Halbinsel ist das wichtigste Nadelöhr für den weltweiten Öltransport. Rund 20 Millionen Barrel Öl passieren sie täglich.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    // --- World's longest tunnels ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist der längste Eisenbahntunnel der Welt (Stand 2024)?",
+        answerA = "Eurotunnel (Ärmelkanal)",
+        answerB = "Gotthard-Basistunnel (Schweiz)",
+        answerC = "Seikan-Tunnel (Japan)",
+        answerD = "Lötschberg-Basistunnel (Schweiz)",
+        correctAnswer = 1, // B
+        explanation = "Der Gotthard-Basistunnel in der Schweiz ist mit 57,1 km der längste Eisenbahntunnel der Welt. Er wurde 2016 eröffnet und unterquert die Alpen auf einer Höhe von 550 m über dem Meeresspiegel.",
+        difficulty = 2,
+        funFact = "Der Bau des Gotthard-Basistunnels dauerte 17 Jahre. Er ermöglicht es, die Alpen in nur 20 Minuten zu unterqueren."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land betreibt den Seikan-Tunnel – den längsten Unterwassertunnel der Welt?",
+        answerA = "China",
+        answerB = "Südkorea",
+        answerC = "Japan",
+        answerD = "Norwegen",
+        correctAnswer = 2, // C
+        explanation = "Der Seikan-Tunnel in Japan ist 53,9 km lang und verbindet die Inseln Honshu und Hokkaido unter der Tsugaru-Meerenge. Er ist der längste Eisenbahntunnel unter Wasser.",
+        difficulty = 2,
+        funFact = "Der Seikan-Tunnel hat zwei Stationen unter dem Meeresspiegel, die als Notfallunterkünfte dienen – ein einzigartiges Merkmal weltweit."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Unter welchem Meeresarm verläuft der Eurotunnel (Channel Tunnel)?",
+        answerA = "Irische See",
+        answerB = "Nordsee",
+        answerC = "Ärmelkanal",
+        answerD = "Biskayabucht",
+        correctAnswer = 2, // C
+        explanation = "Der Eurotunnel (Channel Tunnel) verbindet Folkestone (England) mit Coquelles bei Calais (Frankreich) unter dem Ärmelkanal. Er besteht aus drei Tunneln: zwei Eisenbahntunnel und ein Servicetunnel.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    // --- Famous railway routes ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Eisenbahnstrecke gilt als die längste der Welt auf einer einzigen Linie?",
+        answerA = "Trans-Kanada-Bahn",
+        answerB = "Transsibirische Eisenbahn",
+        answerC = "Indian Pacific (Australien)",
+        answerD = "Orient-Express",
+        correctAnswer = 1, // B
+        explanation = "Die Transsibirische Eisenbahn verbindet Moskau mit Wladiwostok über 9.289 km. Die Fahrt dauert etwa 7 Tage und die Strecke durchquert 8 Zeitzonen.",
+        difficulty = 2,
+        funFact = "Die Transsibirische Eisenbahn wurde zwischen 1891 und 1916 gebaut und ist bis heute eine wichtige Fracht- und Passagierroute durch Sibirien."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Bahnstrecke in den USA verbindet die Ost- mit der Westküste und hat historische Bedeutung?",
+        answerA = "Amtrak Sunset Limited",
+        answerB = "First Transcontinental Railroad",
+        answerC = "California Zephyr",
+        answerD = "Empire Builder",
+        correctAnswer = 1, // B
+        explanation = "Die First Transcontinental Railroad (1869) war die erste Eisenbahnstrecke, die die USA von der Ostküste bis zur Westküste (Sacramento, Kalifornien) verband. Sie revolutionierte die Erschließung des amerikanischen Westens.",
+        difficulty = 2,
+        funFact = "Beim Bau arbeiteten vorwiegend Einwanderer: irische im Osten, chinesische im Westen – über 10.000 chinesische Arbeiter legten die gefährlichsten Abschnitte der Sierra Nevada.",
+        ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Hochgebirgs-Eisenbahnstrecke überquert die Andenpässe in Peru und gilt als eine der spektakulärsten der Welt?",
+        answerA = "Cusco–Puno-Bahn",
+        answerB = "Ferrocarril Central Andino (Lima–Huancayo)",
+        answerC = "Tren a las Nubes (Argentinien)",
+        answerD = "Machu-Picchu-Bahn",
+        correctAnswer = 1, // B
+        explanation = "Der Ferrocarril Central Andino (Lima–Huancayo) erreicht auf 4.829 m über dem Meeresspiegel eine der höchsten Eisenbahnstrecken der Welt. Die Strecke überwindet einen Höhenunterschied von 4.780 m auf 335 km.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    // --- Trans-continental highways ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Fernstraße verbindet Alaska (USA) mit dem südlichsten Zipfel Südamerikas?",
+        answerA = "Route 66",
+        answerB = "Pan-American Highway",
+        answerC = "Carretera Austral",
+        answerD = "Trans-Amazonian Highway",
+        correctAnswer = 1, // B
+        explanation = "Der Pan-American Highway erstreckt sich von Prudhoe Bay (Alaska) bis Ushuaia (Argentinien) über rund 30.000 km. Er verbindet 17 Länder – mit einer Unterbrechung im Darién-Gap zwischen Panama und Kolumbien.",
+        difficulty = 2,
+        funFact = "Das Darién-Gap (ca. 87 km) ist das einzige fehlende Stück des Pan-American Highways – unwegsamer Dschungel und politische Unstimmigkeiten verhindern den Bau."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche transkontinentale Straße verbindet Portugal mit dem russischen Fernen Osten?",
+        answerA = "E40 (Europäische Fernstraße 40)",
+        answerB = "Seidenstraßen-Autobahn",
+        answerC = "Trans-Sibirische Autostraße",
+        answerD = "Asiatische Fernstraße AH1",
+        correctAnswer = 0, // A
+        explanation = "Die E40 ist mit etwa 8.500 km eine der längsten Fernstraßen Europas und Teilen Asiens. Sie beginnt in Calais (Frankreich) und reicht bis nach Ridder (Kasachstan), verläuft also von West- nach Zentralasien.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    // --- Urbanization and megacities ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Ab wie vielen Einwohnern wird eine Stadt offiziell als 'Megastadt' definiert?",
+        answerA = "1 Million",
+        answerB = "5 Millionen",
+        answerC = "10 Millionen",
+        answerD = "20 Millionen",
+        correctAnswer = 2, // C
+        explanation = "Eine Megastadt (Megacity) ist per UN-Definition eine städtische Agglomeration mit mehr als 10 Millionen Einwohnern. Weltweit gibt es etwa 35 solcher Städte (Stand 2024).",
+        difficulty = 2,
+        funFact = "1950 gab es weltweit nur zwei Megastädte: New York und Tokio. Heute dominieren Asien und Lateinamerika die Liste."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Stadt ist aktuell die bevölkerungsreichste Megastadt der Welt?",
+        answerA = "Delhi",
+        answerB = "Shanghai",
+        answerC = "Tokyo",
+        answerD = "São Paulo",
+        correctAnswer = 2, // C
+        explanation = "Tokio (Tokyo) ist mit der Metropolregion von über 37 Millionen Einwohnern nach wie vor die bevölkerungsreichste Megastadt der Welt, gefolgt von Delhi mit rund 33 Millionen.",
+        difficulty = 2,
+        funFact = "Delhi wächst so schnell, dass es laut UN-Prognosen Tokio bis 2028 als weltgrößte Stadt überholen könnte."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Kontinent hat die höchste Urbanisierungsrate (Anteil der Stadtbevölkerung)?",
+        answerA = "Nordamerika",
+        answerB = "Europa",
+        answerC = "Lateinamerika",
+        answerD = "Ozeanien",
+        correctAnswer = 3, // D
+        explanation = "Ozeanien (vor allem Australien und Neuseeland) hat mit über 85 % die höchste Urbanisierungsrate aller Kontinente. Nordamerika und Lateinamerika folgen mit etwa 82 % bzw. 81 %.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Kontinent erlebt aktuell die schnellste Urbanisierung weltweit?",
+        answerA = "Asien",
+        answerB = "Südamerika",
+        answerC = "Afrika",
+        answerD = "Europa",
+        correctAnswer = 2, // C
+        explanation = "Afrika erlebt die schnellste Urbanisierungsdynamik weltweit. Der Anteil der Stadtbevölkerung wächst schneller als in jedem anderen Kontinent – bis 2050 wird mehr als die Hälfte der Afrikaner in Städten leben.",
+        difficulty = 2,
+        funFact = "Lagos in Nigeria wächst täglich um Tausende Menschen und könnte bis 2100 zur größten Stadt der Welt werden."
+    ),
+
+    // --- World trade routes ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Was war die historische Bedeutung der Seidenstraße als Handelsnetz?",
+        answerA = "Eine Schifffahrtsroute zwischen China und Europa",
+        answerB = "Ein Netz von Landrouten, das China mit dem Mittelmeerraum verband",
+        answerC = "Eine Eisenbahnlinie durch Zentralasien",
+        answerD = "Eine Handelsroute ausschließlich für Seide und Gewürze",
+        correctAnswer = 1, // B
+        explanation = "Die Seidenstraße war ein Netz von Karawanenrouten, das seit dem 2. Jahrhundert v. Chr. China über Zentralasien, Persien und den Nahen Osten mit dem Mittelmeerraum verband. Neben Seide wurden Gewürze, Porzellan, Gold und Ideen ausgetauscht.",
+        difficulty = 2,
+        funFact = "Der Begriff 'Seidenstraße' wurde erst 1877 vom deutschen Geographen Ferdinand von Richthofen geprägt – die Händler selbst kannten diesen Namen nicht."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Programm Chinas soll die Handelswege der alten Seidenstraße im 21. Jahrhundert erneuern?",
+        answerA = "Trans-Asian Railway Network",
+        answerB = "Belt and Road Initiative (BRI)",
+        answerC = "Asian Infrastructure Investment Bank",
+        answerD = "Shanghai Cooperation Organisation",
+        correctAnswer = 1, // B
+        explanation = "Die Belt and Road Initiative (BRI, auch 'Neue Seidenstraße') wurde 2013 von China initiiert und umfasst Infrastrukturprojekte in über 140 Ländern: Häfen, Eisenbahnen, Straßen und Energie-Pipelines.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Hafen ist nach Containerumschlag der größte der Welt?",
+        answerA = "Rotterdam",
+        answerB = "Singapur",
+        answerC = "Shanghai",
+        answerD = "Hongkong",
+        correctAnswer = 2, // C
+        explanation = "Shanghai ist seit 2010 der größte Containerhafen der Welt und verarbeitete 2023 über 49 Millionen TEU (Standardcontainereinheiten). Er liegt am Yangtze-Delta und ist ein zentraler Knotenpunkt des globalen Handels.",
+        difficulty = 2,
+        funFact = "Der Hafen Shanghai ist so groß, dass seine Terminals eine Gesamtlänge von über 20 km umfassen."
+    ),
+
+    // --- International airports geography ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das flächenmäßig größte Flughafengelände der Welt?",
+        answerA = "Dubai International Airport",
+        answerB = "King Fahd International Airport (Saudi-Arabien)",
+        answerC = "Denver International Airport",
+        answerD = "Dallas/Fort Worth International Airport",
+        correctAnswer = 1, // B
+        explanation = "Der King Fahd International Airport in Dammam (Saudi-Arabien) ist mit einer Fläche von 776 km² das flächenmäßig größte Flughafengelände der Welt – größer als das Stadtgebiet von Bahrain.",
+        difficulty = 2,
+        funFact = "Trotz seiner riesigen Fläche zählt der King Fahd Airport nicht zu den verkehrsreichsten Flughäfen – Dubai und Heathrow haben weitaus mehr Passagiere."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher internationale Flughafen ist der verkehrsreichste der Welt nach Passagierzahlen (Stand 2023)?",
+        answerA = "London Heathrow",
+        answerB = "Hartsfield–Jackson Atlanta",
+        answerC = "Dubai International",
+        answerD = "Beijing Capital",
+        correctAnswer = 2, // C
+        explanation = "Der Dubai International Airport überholte 2022/23 den Hartsfield-Jackson Atlanta Airport als meistfrequentierten Flughafen der Welt (nach internationalen Passagieren) und verzeichnete über 86 Millionen Passagiere.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Flughafen hat die längste Start- und Landebahn der Welt?",
+        answerA = "Qamdo Bamda Airport (Tibet, China)",
+        answerB = "Hartsfield-Jackson Atlanta",
+        answerC = "Riyad King Khalid International",
+        answerD = "Denver International Airport",
+        correctAnswer = 0, // A
+        explanation = "Der Qamdo Bamda Airport in Tibet, China, hat mit einer Startbahn von 5.500 Metern die längste Landebahn der Welt. Die extreme Höhe (4.334 m ü. NN) erfordert eine sehr lange Bahn zum Starten und Landen.",
+        difficulty = 2,
+        funFact = "Auf dieser Höhe ist die Luft so dünn, dass Flugzeuge eine viel höhere Geschwindigkeit beim Start benötigen als auf Meereshöhe."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Auf welcher Inselgruppe liegt der Flughafen Adolfo Suárez Madrid-Barajas nicht, obwohl er zu Spanien gehört?",
+        answerA = "Diese Frage ist falsch – Barajas liegt auf dem spanischen Festland",
+        answerB = "Auf den Balearen",
+        answerC = "Auf den Kanarischen Inseln",
+        answerD = "Auf den Kanarischen Inseln und Balearen",
+        correctAnswer = 0, // A
+        explanation = "Madrid-Barajas liegt auf dem spanischen Festland in der Hauptstadt Madrid. Spaniens größte Inselflughäfen sind Gran Canaria und Mallorca – beide ebenfalls stark frequentiert.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    // --- Canal systems additional ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Kanalsystem in den Niederlanden gilt als Weltkulturerbe und prägte das Land grundlegend?",
+        answerA = "Rhein-Schelde-Kanal",
+        answerB = "Amsterdamer Grachtengürtel",
+        answerC = "Noord-Hollands Kanaal",
+        answerD = "Markermeer-Poldersystem",
+        correctAnswer = 1, // B
+        explanation = "Der Amsterdamer Grachtengürtel aus dem 17. Jahrhundert ist UNESCO-Weltkulturerbe. Die Grachten wurden für Handel, Transport und Entwässerung gebaut und prägten die Stadtentwicklung grundlegend.",
+        difficulty = 2,
+        funFact = "Amsterdam hat über 100 km Grachten, mehr als 1.500 Brücken und rund 2.500 Hausboote – mehr als jede andere Stadt der Welt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Kanal verbindet die Nordsee mit der Ostsee durch Schleswig-Holstein?",
+        answerA = "Rhein-Herne-Kanal",
+        answerB = "Mittellandkanal",
+        answerC = "Nord-Ostsee-Kanal (Kiel-Kanal)",
+        answerD = "Elbe-Lübeck-Kanal",
+        correctAnswer = 2, // C
+        explanation = "Der Nord-Ostsee-Kanal (Kiel-Kanal) ist 98 km lang und verbindet Brunsbüttel an der Elbe mit Kiel an der Ostsee. Er ist nach Passagierzahlen eine der meistbefahrenen Wasserstraßen der Welt.",
+        difficulty = 2,
+        funFact = "Der Kiel-Kanal wurde 1895 eröffnet und spart Schiffen die gefährliche Umfahrung der Jütländischen Halbinsel um bis zu 900 km."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Land liegt der Canal du Midi, der Atlantik und Mittelmeer verbindet?",
+        answerA = "Spanien",
+        answerB = "Italien",
+        answerC = "Frankreich",
+        answerD = "Portugal",
+        correctAnswer = 2, // C
+        explanation = "Der Canal du Midi in Südfrankreich verbindet Toulouse mit dem Mittelmeer und ist damit Teil der Wasserstraße zwischen Atlantik (via Garonne) und Mittelmeer. Er wurde 1681 fertiggestellt und ist UNESCO-Welterbe.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    // --- World's longest tunnels (road) ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist der längste Straßentunnel der Welt?",
+        answerA = "Eurotunnel (England–Frankreich)",
+        answerB = "Laerdal-Tunnel (Norwegen)",
+        answerC = "Gotthard-Straßentunnel (Schweiz)",
+        answerD = "Zhongnanshan-Tunnel (China)",
+        correctAnswer = 1, // B
+        explanation = "Der Laerdal-Tunnel in Norwegen ist mit 24,5 km der längste Straßentunnel der Welt. Er verbindet Laerdal und Aurland und wurde 2000 eröffnet. Innen leuchtet er in drei Beleuchtungszonen, um Fahrern das Gefühl langer Strecken zu mildern.",
+        difficulty = 2,
+        funFact = "Im Laerdal-Tunnel gibt es drei spezielle Beleuchtungsinseln mit warmem Licht, die Autofahrern helfen, die monotone 20-minütige Fahrt zu überstehen."
+    ),
+
+    // --- More megacities and urbanization ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land hat die meisten Megastädte (Städte mit über 10 Mio. Einwohnern)?",
+        answerA = "USA",
+        answerB = "Brasilien",
+        answerC = "China",
+        answerD = "Indien",
+        correctAnswer = 2, // C
+        explanation = "China hat die meisten Megastädte weltweit: Shanghai, Beijing, Chongqing, Guangzhou und weitere überschreiten die 10-Millionen-Grenze in ihrer Agglomeration. Indien holt aber schnell auf.",
+        difficulty = 2,
+        funFact = "Chongqing im Inneren Chinas ist möglicherweise die bevölkerungsreichste Verwaltungseinheit der Welt mit über 32 Millionen Einwohnern im Verwaltungsbezirk."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die 'Verstädterungsrate' und welches afrikanische Land hat sie am höchsten?",
+        answerA = "Die Wachstumsrate der Stadtbevölkerung; Niger führt Afrika",
+        answerB = "Der Anteil der Stadtbevölkerung an der Gesamtbevölkerung; Gabun führt Afrika",
+        answerC = "Die Bevölkerungsdichte in Städten; Lagos führt",
+        answerD = "Die Anzahl der Großstädte pro km²; Ruanda führt",
+        correctAnswer = 1, // B
+        explanation = "Die Verstädterungsrate bezeichnet den Anteil der in Städten lebenden Bevölkerung. In Afrika hat Gabun mit über 90 % eine der höchsten Urbanisierungsraten – hauptsächlich wegen der Ölwirtschaft, die Bevölkerung in die Städte zieht.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    // --- Additional trade & transport ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Meeresgebiet ist für den Welthandel ein strategisches Nadelöhr zwischen Afrika und Asien?",
+        answerA = "Golf von Bengalen",
+        answerB = "Arabisches Meer",
+        answerC = "Golf von Aden und Bab el-Mandeb",
+        answerD = "Straße von Mosambik",
+        correctAnswer = 2, // C
+        explanation = "Der Golf von Aden und die Meerenge Bab el-Mandeb sind das Nadelöhr zwischen dem Roten Meer und dem Indischen Ozean. Jährlich passieren hier über 20.000 Schiffe, darunter ein Drittel aller europäisch-asiatischen Containerfrachter.",
+        difficulty = 2,
+        funFact = "Somalische Piraten machten den Golf von Aden um 2008–2012 zu einer der gefährlichsten Schifffahrtsrouten der Welt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Insel ist ein wichtiger Umschlaghafen und liegt an der Kreuzung der Schifffahrtsrouten zwischen Indischem und Pazifischem Ozean?",
+        answerA = "Sri Lanka",
+        answerB = "Madagaskar",
+        answerC = "Singapur",
+        answerD = "Borneo",
+        correctAnswer = 2, // C
+        explanation = "Singapur liegt an der Straße von Malakka, dem wichtigsten Schifffahrtskorridor zwischen dem Indischen Ozean und dem Südchinesischen Meer/Pazifik. Der Stadtstaat ist der zweitbeschäftigtste Containerhafen der Welt.",
+        difficulty = 2,
+        funFact = "Singapurs Hafen verarbeitete 2023 über 38 Millionen TEU. Ohne den Suezkanal würden alle Schiffe um Kap der Guten Hoffnung umgeleitet."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Gebirge erschwert den Bau einer durchgehenden Verbindungsstraße zwischen Nord- und Südamerika im Darién-Gap?",
+        answerA = "Die zentralamerikanische Kordillere",
+        answerB = "Der Darién-Regenwald und das Atrato-Sumpfgebiet",
+        answerC = "Das kolumbianische Hochland",
+        answerD = "Die Sierras de Baudó",
+        correctAnswer = 1, // B
+        explanation = "Das Darién-Gap (87 km) zwischen Panama und Kolumbien ist kein Gebirge, sondern ein Dschungel- und Sumpfgebiet. Die Kombination aus dichtem Regenwald, Sumpfland und fehlender Infrastruktur macht einen Straßenbau extrem schwierig.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    // --- Railway routes ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche australische Transkontinentalbahn verbindet Adelaide mit Darwin von Süd nach Nord?",
+        answerA = "Indian Pacific",
+        answerB = "The Ghan",
+        answerC = "XPT New South Wales",
+        answerD = "Overland Melbourne–Adelaide",
+        correctAnswer = 1, // B
+        explanation = "The Ghan verbindet Adelaide (Südaustralien) mit Darwin (Northern Territory) über 2.979 km. Der Name erinnert an die afghánischen Kamelführer des 19. Jahrhunderts, die das Innere Australiens erschlossen.",
+        difficulty = 2,
+        funFact = "The Ghan fährt durch das Herz Australiens – durch Wüsten, Salzseen und Buschland, weitgehend von jeder Zivilisation abgeschnitten."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Gebirgspass in der Schweiz wurde durch den Gotthard-Basistunnel für den Schienenverkehr überflüssig?",
+        answerA = "Simplonpass",
+        answerB = "Berninapass",
+        answerC = "Gotthardpass",
+        answerD = "Sustenpass",
+        correctAnswer = 2, // C
+        explanation = "Der Gotthard-Basistunnel (2016) ersetzte den alten Gotthard-Bahntunnel (1882) und die direkte Alpenüberquerung über den Gotthardpass für den Hochgeschwindigkeitsverkehr. Der alte Tunnel wird weiterhin für Regionalzüge genutzt.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    // --- More airport geography ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Flughafen liegt am höchsten über dem Meeresspiegel und ist für regulären Linienverkehr zugänglich?",
+        answerA = "La Paz El Alto (Bolivien)",
+        answerB = "Lhasa Gonggar (Tibet)",
+        answerC = "Qamdo Bamda (Tibet, China)",
+        answerD = "Cusco Alejandro Velasco Astete (Peru)",
+        correctAnswer = 2, // C
+        explanation = "Der Qamdo Bamda Airport in Tibet liegt auf 4.334 m über dem Meeresspiegel und ist damit der höchstgelegene zivile Flughafen mit regulärem Linienverkehr. La Paz El Alto liegt auf 4.061 m.",
+        difficulty = 2,
+        funFact = "In diesen Höhen benötigen Flugzeuge sehr viel längere Startbahnen, da die dünne Luft weniger Auftrieb erzeugt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher europäische Flughafen ist nach Passagieren der meistfrequentierte (Stand 2023)?",
+        answerA = "Frankfurt am Main",
+        answerB = "Amsterdam Schiphol",
+        answerC = "Paris Charles de Gaulle",
+        answerD = "London Heathrow",
+        correctAnswer = 3, // D
+        explanation = "London Heathrow ist mit über 79 Millionen Passagieren im Jahr 2023 der meistfrequentierte Flughafen Europas und einer der wichtigsten Luftverkehrsknotenpunkte weltweit.",
+        difficulty = 2,
+        funFact = "Heathrow ist der einzige der größten europäischen Flughäfen, der nur zwei Start- und Landebahnen hat – ein Kapazitätsproblem, das seit Jahrzehnten politisch umstritten ist."
+    ),
+
+    // --- World trade routes additional ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Meergebiet bildet den Hauptkorridor des Handels zwischen Europa, Nordafrika und Asien?",
+        answerA = "Schwarzes Meer",
+        answerB = "Rotes Meer",
+        answerC = "Mittelmeer",
+        answerD = "Golf von Bengalen",
+        correctAnswer = 2, // C
+        explanation = "Das Mittelmeer ist seit der Antike der Haupthandelsweg zwischen Europa, Nordafrika und Asien. Heute verbindet es den Atlantik (via Gibraltar) mit dem Suezkanal und dem Indischen Ozean.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Schifffahrtsroute durch die Arktis könnte durch den Klimawandel immer wichtiger werden?",
+        answerA = "Nordwestpassage (Kanada)",
+        answerB = "Nordostpassage (Russland)",
+        answerC = "Beide arktischen Routen gleichzeitig",
+        answerD = "Polarer Direktweg über den Nordpol",
+        correctAnswer = 1, // B
+        explanation = "Die Nordostpassage entlang der russischen Arktisküste wird durch das Abschmelzen des Meereises zunehmend schiffbar. Sie würde die Route zwischen Europa und Ostasien um etwa 40 % gegenüber dem Suezkanal verkürzen.",
+        difficulty = 2,
+        funFact = "Russland verlangt Gebühren und Pilotdienste für Schiffe, die die Nordostpassage (Nördliche Seeroute) nutzen – ein geopolitisch umstrittenes Thema."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Ozean befindet sich der 'Garbage Patch', ein riesiges Müllgebiet, das durch Meeresströmungen entstand?",
+        answerA = "Atlantischer Ozean",
+        answerB = "Indischer Ozean",
+        answerC = "Pazifischer Ozean",
+        answerD = "Arktischer Ozean",
+        correctAnswer = 2, // C
+        explanation = "Der Great Pacific Garbage Patch (Großer Pazifischer Müllfleck) ist eine riesige Ansammlung von Plastikmüll im Nordpazifik, gehalten von dem nordpazifischen Strömungswirbel (Gyre). Er ist etwa 1,6 Millionen km² groß.",
+        difficulty = 2,
+        funFact = "Das Great Pacific Garbage Patch ist kein fester Teppich, sondern eine unsichtbare Suppe aus Mikroplastik – kaum zu fotografieren, aber verheerend für Meerestiere."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Welthandelsorganisation (WTO) hat ihren Sitz in welcher Stadt?",
+        answerA = "New York",
+        answerB = "Brüssel",
+        answerC = "Wien",
+        answerD = "Genf",
+        correctAnswer = 3, // D
+        explanation = "Die Welthandelsorganisation (WTO) hat ihren Hauptsitz in Genf, Schweiz. Sie wurde 1995 gegründet und hat 164 Mitgliedsstaaten, die zusammen über 98 % des weltweiten Handels ausmachen.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    // --- Canal systems additional ---
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Kanal verbindet in China den Yangtze mit dem Huang He (Gelber Fluss) und gilt als ältester langer Kanal der Welt?",
+        answerA = "Jinghang-Kanal (Großer Kanal)",
+        answerB = "Ling-Kanal",
+        answerC = "Li-Bai-Kanal",
+        answerD = "Guangzhou-Schifffahrtskanal",
+        correctAnswer = 0, // A
+        explanation = "Der Große Kanal Chinas (Jinghang-Kanal) ist mit etwa 1.776 km der längste künstliche Kanal der Welt und verbindet Peking mit Hangzhou. Begonnen im 5. Jahrhundert v. Chr., war er jahrhundertelang Chinas wichtigste Handelsader.",
+        difficulty = 2,
+        funFact = "Der Große Kanal Chinas ist UNESCO-Welterbe und war neben der Seidenstraße die zweite große Handelsachse des chinesischen Reiches."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Kanal in Kanada verbindet den Sankt-Lorenz-Strom mit dem Ontariosee und ermöglicht Seeschiffen das Binnenland zu erreichen?",
+        answerA = "Rideau-Kanal",
+        answerB = "Welland-Kanal",
+        answerC = "Trent-Severn-Wasserstraße",
+        answerD = "Lachine-Kanal",
+        correctAnswer = 1, // B
+        explanation = "Der Welland-Kanal (45 km) umgeht die Niagarafälle und verbindet den Eriesee mit dem Ontariosee. Er ist Teil des St.-Lorenz-Seewegs, der Hochseeschiffen ermöglicht, bis in das Herz Nordamerikas zu fahren.",
+        difficulty = 2,
+        funFact = "Ohne den Welland-Kanal würden die Niagarafälle den gesamten Schiffsverkehr zwischen den Großen Seen und dem Atlantik blockieren."
+    ),
+
 )
 
 
