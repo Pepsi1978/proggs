@@ -5,10 +5,13 @@
 # Provides:
 #   hook_log "message"       — log info message
 #   hook_log_error "message" — log error with details
-#   EXIT trap                — auto-logs on non-zero exit
 #
 # Logs to: ~/.claude/logs/hooks/YYYY-MM-DD.log
 # Log rotation: files older than 14 days are auto-deleted
+#
+# DESIGN: NO exit trap. Previous versions used an EXIT trap that caused
+# phantom "hook error" messages when intermediate commands had non-zero
+# exit codes. Each hook handles its own errors explicitly.
 
 _HOOK_LOG_DIR="$HOME/.claude/logs/hooks"
 _HOOK_LOG_NAME="${HOOK_NAME:-$(basename "${BASH_SOURCE[1]:-$0}" .sh)}"
@@ -16,8 +19,8 @@ _HOOK_LOG_FILE="$_HOOK_LOG_DIR/$(date +%Y-%m-%d).log"
 
 mkdir -p "$_HOOK_LOG_DIR" 2>/dev/null
 
-# Clean up log files older than 14 days (quick, runs every time)
-find "$_HOOK_LOG_DIR" -name "*.log" -mtime +14 -delete 2>/dev/null
+# Clean up log files older than 14 days
+find "$_HOOK_LOG_DIR" -name "*.log" -mtime +14 -delete 2>/dev/null || true
 
 hook_log() {
     echo "[$(date '+%H:%M:%S')] $_HOOK_LOG_NAME: $*" >> "$_HOOK_LOG_FILE" 2>/dev/null
@@ -27,23 +30,5 @@ hook_log_error() {
     echo "[$(date '+%H:%M:%S')] ERROR $_HOOK_LOG_NAME: $*" >> "$_HOOK_LOG_FILE" 2>/dev/null
 }
 
-# Expected exit codes (hooks can register intentional non-zero exits)
-_HOOK_EXPECTED_EXITS=()
-hook_expect_exit() {
-    _HOOK_EXPECTED_EXITS+=("$1")
-}
-
-# Auto-log on non-zero exit (catches unexpected failures, skips expected ones)
-_hook_exit_trap() {
-    local rc=$?
-    if [ $rc -ne 0 ]; then
-        for expected in "${_HOOK_EXPECTED_EXITS[@]}"; do
-            if [ "$rc" -eq "$expected" ]; then
-                hook_log "intentional exit $rc (blocked/rejected)"
-                return
-            fi
-        done
-        hook_log_error "unexpected exit code $rc"
-    fi
-}
-trap _hook_exit_trap EXIT
+# Kept for API compatibility but does nothing — no exit trap anymore
+hook_expect_exit() { :; }

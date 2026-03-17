@@ -1,11 +1,20 @@
 #!/bin/bash
-# Safety Gate: Block dangerous commands before execution (macOS/Linux version)
-HOOK_NAME="safety-gate" source "$HOME/.claude/hooks/hook-log.sh" 2>/dev/null
-hook_expect_exit 2  # exit 2 = intentional block of dangerous command
+# Safety Gate: Block dangerous commands before execution
+# Works on: macOS, Linux, Termux
+HOOK_NAME="safety-gate" source "$HOME/.claude/hooks/hook-log.sh" 2>/dev/null || true
+
 INPUT=$(cat)
 
-TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tool_name',''))" 2>/dev/null)
-COMMAND=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tool_input',{}).get('command',''))" 2>/dev/null)
+# Parse tool name and command — try python3 first, then jq
+if command -v python3 &>/dev/null; then
+    TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tool_name',''))" 2>/dev/null || echo "")
+    COMMAND=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tool_input',{}).get('command',''))" 2>/dev/null || echo "")
+elif command -v jq &>/dev/null; then
+    TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || echo "")
+    COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || echo "")
+else
+    exit 0
+fi
 
 # Only check Bash commands
 [[ "$TOOL_NAME" != "Bash" ]] && exit 0
@@ -21,7 +30,7 @@ PATTERNS=(
 )
 
 for pattern in "${PATTERNS[@]}"; do
-    if echo "$COMMAND" | grep -qE "$pattern"; then
+    if echo "$COMMAND" | grep -qE "$pattern" 2>/dev/null; then
         echo "{\"error\":\"BLOCKED: Dangerous command detected — $pattern\"}"
         exit 2
     fi

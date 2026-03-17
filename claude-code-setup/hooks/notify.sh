@@ -1,26 +1,18 @@
-#!/data/data/com.termux/files/usr/bin/bash
-# Termux notification hook for Claude Code
-# Uses jq instead of python3 for faster JSON parsing (~5ms vs ~200ms)
+#!/bin/bash
+# Notification hook for Claude Code — macOS only
+HOOK_NAME="notify" source "$HOME/.claude/hooks/hook-log.sh" 2>/dev/null || true
 
 INPUT=$(cat)
-MESSAGE=$(echo "$INPUT" | jq -r '.message // empty' 2>/dev/null)
 
-if [ -z "$MESSAGE" ]; then
-  MESSAGE="Claude Code braucht deine Aufmerksamkeit"
+# Parse message
+MESSAGE=""
+if command -v python3 &>/dev/null; then
+    MESSAGE=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('message',''))" 2>/dev/null || echo "")
 fi
+[ -z "$MESSAGE" ] && MESSAGE="Claude Code braucht deine Aufmerksamkeit"
 
-# Truncate very long messages for notification readability
-if [ ${#MESSAGE} -gt 200 ]; then
-  MESSAGE="${MESSAGE:0:197}..."
-fi
+# Truncate
+[ ${#MESSAGE} -gt 200 ] && MESSAGE="${MESSAGE:0:197}..."
 
-termux-notification \
-  --title "Claude Code" \
-  --content "$MESSAGE" \
-  --priority high \
-  --vibrate 200 \
-  --id claude-notify \
-  --button1 "OK" \
-  --button1-action "termux-notification-remove claude-notify" 2>/dev/null
-
-termux-vibrate -d 200 2>/dev/null
+osascript -e "display notification \"$MESSAGE\" with title \"Claude Code\"" 2>/dev/null || true
+exit 0
