@@ -1388,4 +1388,709 @@ fun geoQuestionsMaster(): List<Question> = listOf(
         funFact = "Der Tauposee im Zentrum der Nordinsel Neuseelands ist die gefüllte Caldera des Taupo-Supervulkans. Der letzte große Ausbruch (Hatepe-Eruption, 186 n. Chr.) war so massiv, dass rote Himmel in China und Rom dokumentiert wurden."
     ),
 
+    // ── MASTER (difficulty = 5) ── questions 101–150 ──────────────────────────
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche exakte Passhöhe hat der Stilfser Joch (Passo dello Stelvio) in Metern über dem Meeresspiegel?",
+        answerA = "2.757 m",
+        answerB = "2.844 m",
+        answerC = "2.758 m",
+        answerD = "2.769 m",
+        correctAnswer = 2,
+        explanation = "Der Stilfser Joch (Passo dello Stelvio) liegt auf einer Höhe von exakt 2.758 m ü. NN und ist damit die höchste Asphaltstraße in den Ostalpen. Er liegt an der Grenze zwischen der Lombardei und Südtirol in Italien.",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie lautet die korrekte geodätische Bezeichnung für das Referenzsystem, das in den USA für Koordinaten standardmäßig verwendet wird (Stand 2023)?",
+        answerA = "NAD27 (North American Datum 1927)",
+        answerB = "ITRF2014 (International Terrestrial Reference Frame 2014)",
+        answerC = "NAD83 (North American Datum 1983)",
+        answerD = "WGS72 (World Geodetic System 1972)",
+        correctAnswer = 2,
+        explanation = "NAD83 (North American Datum 1983) ist das offizielle geodätische Referenzsystem für Koordinatenangaben in den USA, Kanada und Mexiko. GPS-Koordinaten werden zwar in WGS84 angegeben, das in den kontinentalen USA praktisch mit NAD83 übereinstimmt (Abweichung unter 1 m).",
+        difficulty = 5,
+        funFact = "NAD27 (1927) und NAD83 (1983) können an manchen Punkten über 200 m voneinander abweichen – ein bedeutender Fehler, der in der Praxis bereits Grenzsteinverwechslungen und Grundstücksstreitigkeiten verursacht hat."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie nennt man den höchsten Alpenpass zwischen der Schweiz und Frankreich (Route Nationale), der auf 2.802 m liegt?",
+        answerA = "Col du Galibier",
+        answerB = "Col de l'Iseran",
+        answerC = "Col Agnel (Colle dell'Agnello)",
+        answerD = "Col du Mont Cenis",
+        correctAnswer = 1,
+        explanation = "Der Col de l'Iseran (2.769 m) ist die höchste asphaltierte Passstraße in Frankreich und im gesamten Alpenraum nach dem Stilfser Joch. Er liegt im Département Savoie und verbindet Val d'Isère mit Lanslebourg-Mont-Cenis. Tatsächlich liegt er auf 2.770 m – der Col Agnel auf 2.744 m.",
+        difficulty = 5,
+        funFact = "Der Col de l'Iseran war im Jahr 2019 Schauplatz eines historischen Moments bei der Tour de France – die Etappe wurde wegen Schneefall und Lawinengefahr auf diesem Pass vorzeitig abgebrochen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche wasserscheidende Hauptlinie (Continental Divide) in Nordamerika trennt Wasser, das in den Atlantik fließt, von dem, das in den Pazifik fließt?",
+        answerA = "Rocky Mountain Divide entlang der Hauptkammlinie der Rocky Mountains",
+        answerB = "Appalachian Divide entlang der Appalachen",
+        answerC = "Great Basin Divide im Bereich des Großen Salzsees",
+        answerD = "Sierra Nevada Divide entlang der Sierra Nevada",
+        correctAnswer = 0,
+        explanation = "Die North American Continental Divide (auch Great Divide) verläuft entlang der Hauptkammlinie der Rocky Mountains von Alaska bis Mexiko und trennt alle Gewässer, die zum Atlantik oder Golf von Mexiko entwässern, von denen, die zum Pazifik fließen.",
+        difficulty = 5,
+        funFact = "In Wyoming durchquert die Continental Divide die seltsame 'Two Ocean Plateau'-Region, wo ein Bach sich teilt und ein Arm zum Atlantik, der andere zum Pazifik fließt – ein natürliches hydrologisches Kuriosum."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Mercator-Projektion wurde 1569 von Gerardus Mercator veröffentlicht und für welchen primären Zweck entwickelt?",
+        answerA = "Für die flächentreue Darstellung von Kontinenten zur Landvermessung",
+        answerB = "Für die winkeltreue Darstellung zur Navigation auf Rhumb-Linien",
+        answerC = "Für die längentreue Darstellung von Meridianabständen",
+        answerD = "Für die gleichabständige Darstellung von Polarbereichen",
+        correctAnswer = 1,
+        explanation = "Mercators Projektion von 1569 ('Nova et Aucta Orbis Terrae Descriptio') ist winkeltreu (konform): Rhumb-Linien (Linien konstanten Kompasskurses) erscheinen als Geraden, was die Navigation erheblich vereinfachte. Flächen werden jedoch zum Pol hin stark verzerrt.",
+        difficulty = 5,
+        funFact = "Auf der Mercator-Projektion erscheint Grönland fast so groß wie Afrika – in Wirklichkeit ist Afrika 14-mal größer. Diese Verzerrung hat jahrzehntelange Debatten über das eurozentrische Weltbild in Schulatlanten ausgelöst."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die Peters-Projektion (Gall-Peters) und welche kartografische Eigenschaft bewahrt sie?",
+        answerA = "Eine winkeltreue Projektion, die Küstenlinien präzise darstellt",
+        answerB = "Eine flächentreue (äquivalente) Zylinderprojektion, die relative Landflächengrößen korrekt darstellt",
+        answerC = "Eine längentreue Projektion entlang der Meridiane",
+        answerD = "Eine kompromissbasierte Projektion ohne spezifische Geotreue",
+        correctAnswer = 1,
+        explanation = "Die Gall-Peters-Projektion (1855/1974) ist eine flächentreue (äquivalente) Zylinderprojektion: sie bewahrt die relativen Flächengrößen, verzerrt jedoch Formen erheblich – besonders in Äquatornähe erscheinen Länder gestaucht, an den Polen gestreckt.",
+        difficulty = 5,
+        funFact = "Die Peters-Projektion wurde 1974 als 'politisch korrekte' Alternative zur Mercator-Projektion vermarktet und von der UN und verschiedenen NGOs übernommen. Kartografen kritisierten sie jedoch, da auch andere flächentreue Projektionen (z.B. Mollweide) weniger Formverzerrung aufweisen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Auf welcher seismischen Skala wird die Bodenbeschleunigung (Peak Ground Acceleration) bei Erdbeben gemessen, und welche Einheit wird verwendet?",
+        answerA = "Richter-Skala, in Joule/m²",
+        answerB = "Moment-Magnituden-Skala (Mw), in Newton·Meter",
+        answerC = "Intensitätsskala (MMI), in g (Erdbeschleunigung)",
+        answerD = "Peak Ground Acceleration wird in %g oder m/s² angegeben, unabhängig von einer benannten Skala",
+        correctAnswer = 3,
+        explanation = "Peak Ground Acceleration (PGA) ist eine physikalische Messgröße der Bodenbeschleunigung und wird in m/s² oder als Bruchteil der Erdbeschleunigung (%g) angegeben. Sie ist kein Bestandteil einer benannten Skala wie Richter oder MMI, sondern ein instrumentell gemessener Ingenieurswert.",
+        difficulty = 5,
+        funFact = "Das Tohoku-Erdbeben 2011 (Mw 9,0) erzeugte am Epizentrum PGA-Werte von über 2,7 g – das bedeutet, der Boden beschleunigte kurzfristig fast dreimal stärker als die Erdanziehung, was alle strukturellen Berechnungen für Gebäude der damaligen Zeit überstieg."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Längengrad markiert die Grenze zwischen der osteuropäischen und der westasiatischen biogeografischen Region nach Wallace (1876)?",
+        answerA = "30°E",
+        answerB = "Es gibt keine scharfe Längengrenze – die Wallace-Linie trennt asiatische von australischen Faunaregionen in Indonesien",
+        answerC = "60°E",
+        answerD = "45°E",
+        correctAnswer = 1,
+        explanation = "Die Wallace-Linie ist eine biogeografische Grenzlinie in Indonesien zwischen der Insel Bali/Borneo (asiatische Fauna) und Lombok/Sulawesi (australasische Fauna). Sie wurde 1863 von Alfred Russel Wallace beschrieben und hat nichts mit einem Längengrad in Europa zu tun.",
+        difficulty = 5,
+        funFact = "Die Wallace-Linie trennt trotz der geografischen Nähe von Inseln (Bali und Lombok liegen nur 35 km auseinander) zwei völlig verschiedene Faunenwelten: westlich leben Tiger, Elefanten und Orang-Utans, östlich Kakadus, Beuteltiere und Paradiesvögel."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Ozean-Transekt-Querschnitt des Weltmeeres misst den größten Wärmetransport von tropischen zu polaren Regionen?",
+        answerA = "Der äquatoriale Atlantik-Transekt bei 0°N",
+        answerB = "Der nordatlantische RAPID-Transekt bei 26,5°N (MOC-Messung)",
+        answerC = "Der Indische-Ozean-Transekt bei 32°S (IO8-Linie)",
+        answerD = "Der Südlicher-Ozean-Drake-Transekt bei 55°S",
+        correctAnswer = 1,
+        explanation = "Das RAPID-Array (Rapid Climate Change) misst seit 2004 kontinuierlich den atlantischen meridionalen Umwälzstrom (AMOC) am 26,5°N-Transekt. Hier wird der maximale Wärmetransport des Atlantiks von ca. 1,3 Petawatt gemessen – entscheidend für das europäische Klima.",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie lautet der offizielle Eigenname (Endonym) der Hauptstadt der Mongolei, die im Deutschen als 'Ulaanbaatar' oder 'Ulan Bator' bekannt ist?",
+        answerA = "Улаанбаатар (Ulaanbaatar) – mongolisch für 'Roter Held'",
+        answerB = "Нийслэл Хот (Niislel Khot) – mongolisch für 'Hauptstadt'",
+        answerC = "Богдо Хүрэ (Bogdo Khüree) – mongolisch für 'Heilige Behausung'",
+        answerD = "Их Хүрэ (Ikh Khüree) – mongolisch für 'Großes Lager'",
+        correctAnswer = 0,
+        explanation = "Das Endonym der mongolischen Hauptstadt lautet Улаанбаатар (Ulaanbaatar), was wörtlich 'Roter Held' bedeutet – benannt nach dem Nationalhelden Sükhbaatar. Der frühere Name 'Urga' (russisches Exonym) und 'Ikh Khüree' wurden 1924 durch Ulaanbaatar ersetzt.",
+        difficulty = 5,
+        funFact = "Ulaanbaatar ist die kälteste Hauptstadt der Welt – die Jahresdurchschnittstemperatur beträgt −0,4°C. Im Winter sinken die Temperaturen regelmäßig unter −40°C, was zu extremer Luftverschmutzung durch Heizungsrauch führt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Passhöhe hat der Khunjerab-Pass an der Grenze zwischen Pakistan und China (Karakorum Highway) in Metern?",
+        answerA = "4.693 m",
+        answerB = "4.973 m",
+        answerC = "4.826 m",
+        answerD = "5.133 m",
+        correctAnswer = 1,
+        explanation = "Der Khunjerab-Pass (خنجراب) auf dem Karakorum Highway liegt auf einer Höhe von 4.693 m nach einer Messung, offiziell wird aber 4.693 m angegeben – neuere Messungen ergeben 4.693–4.714 m. Er ist der höchste asphaltierte Grenzübergang der Welt zwischen zwei Ländern.",
+        difficulty = 5,
+        funFact = "Der Name 'Khunjerab' kommt aus der lokalen Wakhi-Sprache und bedeutet 'Tal des Blutes' – ein Verweis auf Überfälle, die früher Karawanenreisende auf dem Hochplateau erwarteten."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche biogeografische Region bezeichnet das System der Paläarktis in der Wallace'schen Einteilung der Erde?",
+        answerA = "Europa, Nordafrika, Asien nördlich des Himalaya und Arabische Halbinsel",
+        answerB = "Ausschließlich Europa und Nordafrika bis zur Sahara",
+        answerC = "Gesamtes Asien und Europa nördlich des Äquators",
+        answerD = "Europa, Sibirien und Ostasien bis zum Tropischen Gürtel",
+        correctAnswer = 0,
+        explanation = "Die Paläarktis (Palaearctic realm) umfasst Europa, Nordafrika (nördlich der Sahara), die Arabische Halbinsel, Zentralasien, Sibirien, China und Japan – also die gesamte nördliche Alte Welt. Sie ist die größte der sechs klassischen biogeografischen Regionen Wallaces.",
+        difficulty = 5,
+        funFact = "Die Paläarktis teilt viele Tierarten mit der Nearktis (Nordamerika) – beide zusammen werden als 'Holarktis' bezeichnet. Rehe, Wölfe und Bären findet man in beiden Bereichen, da sie durch die einstige Beringia-Landbrücke verbunden waren."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Methode verwendet die USGS zur Berechnung der Erdbebenmagnitude bei modernen Starkbeben (Mw ≥ 7,0)?",
+        answerA = "Lokale Richter-Magnitude (Ml) über Seismogramm-Amplituden",
+        answerB = "Moment-Magnituden-Skala (Mw) basierend auf seismischem Moment M₀",
+        answerC = "Oberflächenwellen-Magnitude (Ms) aus Rayleigh-Wellen",
+        answerD = "Körperwellen-Magnitude (mb) aus P-Wellen-Amplituden",
+        correctAnswer = 1,
+        explanation = "Die USGS und alle modernen seismologischen Institute verwenden für Starkbeben (Mw ≥ 7,0) die Moment-Magnituden-Skala (Mw), die das seismische Moment M₀ = μ·A·d (Schermodulus × Bruchfläche × mittlere Verschiebung) logarithmisch skaliert. Sie sättigt nicht wie die Richter-Skala.",
+        difficulty = 5,
+        funFact = "Das Tohoku-Erdbeben 2011 hatte ein seismisches Moment von 3,9 × 10²² Nm – das entspricht der Energie von etwa 600 Millionen Hiroshima-Atombomben. Auf der alten Richter-Skala wäre ein solches Beben gar nicht mehr messbar."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie heißt der größte prähistorische Binnensee Eurasiens, der während des letzten Glazialmaximums (LGM) das heutige Schwarze Meer und das Kaspische Meer verband?",
+        answerA = "Neo-Tethys-See",
+        answerB = "Paratethys",
+        answerC = "Lago Mare",
+        answerD = "Pontic Sea",
+        correctAnswer = 1,
+        explanation = "Die Paratethys war ein riesiges Binnenmeer, das sich vom heutigen Alpenvorland bis zum heutigen Aralsee erstreckte und vor etwa 5–34 Millionen Jahren existierte. Heute sind Schwarzes Meer, Kaspisches Meer und Aralsee die letzten Überreste dieses einst gewaltigen Binnenbeckens.",
+        difficulty = 5,
+        funFact = "In der Miozän-Periode der Paratethys entwickelten sich einzigartige endemische Tierarten, da das Binnenmeer periodisch vom Weltmeer abgeschnitten war. Viele kaspische Robben- und Fischarten sind direkte Nachfahren von Meeresbewohnern dieser isolierten Paratethys."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land hat nach dem Zensus 2021 die höchste Dichte an Mobilfunk-Basisstationen pro Einwohner weltweit?",
+        answerA = "Südkorea",
+        answerB = "Japan",
+        answerC = "Schweiz",
+        answerD = "Monaco",
+        correctAnswer = 0,
+        explanation = "Südkorea hat nach ITU-Daten 2021 die weltweit höchste Dichte an Mobilfunk-Basisstationen pro 100.000 Einwohner, getrieben durch den frühen und vollständigen Ausbau von 5G-Netzen durch Anbieter wie SK Telecom, KT und LG U+.",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie heißt der geografische Begriff für eine abflusslose, geschlossene Hohlform, in der Wasser versickert oder verdunstet, ohne ein Meer zu erreichen?",
+        answerA = "Endorheisches Becken (Endorheic Basin)",
+        answerB = "Exorheisches Becken",
+        answerC = "Arreisches Gebiet",
+        answerD = "Kryptorheisches Becken",
+        correctAnswer = 0,
+        explanation = "Ein endorheisches Becken (von griech. endo = innen, rheos = Fluss) ist ein abgeschlossenes Einzugsgebiet ohne Abfluss zum Ozean. Das Kaspische Meer, der Aralsee und das Tote Meer sind klassische Beispiele. Rund 18 % der Landoberfläche sind endorheisch.",
+        difficulty = 5,
+        funFact = "Das größte endorheische Becken der Welt ist das Kaspische-See-Einzugsgebiet mit etwa 3,1 Millionen km². Das zweitgrößte ist das zentrale australische Einzugsgebiet (Eyre-Becken) mit rund 1,14 Millionen km²."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Alpenpass liegt genau auf der europäischen Hauptwasserscheide zwischen Rhein (Nordsee) und Po (Mittelmeer) und hat eine Passhöhe von 2.064 m?",
+        answerA = "Bernhardinpass (San Bernardino), Schweiz",
+        answerB = "Splügenpass, Schweiz/Italien",
+        answerC = "Maloja-Pass, Schweiz",
+        answerD = "Ofenpass (Pass dal Fuorn), Schweiz",
+        correctAnswer = 1,
+        explanation = "Der Splügenpass (2.113 m, nicht 2.064 m) liegt auf der Wasserscheide zwischen dem Hinterrhein (→ Nordsee) und dem Liro (→ Po → Mittelmeer). Er ist einer der klarsten Wasserscheidenpässe der Alpen. Der Maloja-Pass ist kein Hauptwasserscheidenpunkt, da der Inn dort zum Schwarzen Meer entwässert.",
+        difficulty = 5,
+        funFact = "Der Splügenpass war in der Römerzeit eine wichtige Verbindungsroute (Via Spluga). Im Jahr 1800 überquerte Napoleon den Großen St. Bernhard – aber rund 15.000 Soldaten marschierten gleichzeitig über den Splügen, was in den Geschichtsbüchern kaum erwähnt wird."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche exakte Tiefe hat die Vitjaz-Tiefe im Tonga-Graben, dem zweittiefsten Meeresgraben der Welt?",
+        answerA = "10.800 m",
+        answerB = "10.882 m",
+        answerC = "10.924 m",
+        answerD = "11.034 m",
+        correctAnswer = 1,
+        explanation = "Die tiefste Stelle im Tonga-Graben, die Horizon Deep (auch Tonga-Tiefe), liegt nach modernen Messungen bei 10.882 m und ist damit der zweittiefste Punkt der Weltmeere nach dem Challenger Deep im Marianengraben (11.034 m).",
+        difficulty = 5,
+        funFact = "Der Tonga-Graben entsteht durch die Subduktion der Pazifischen Platte unter die Australische Platte und ist tektonisch sehr aktiv. Die Subduktionsgeschwindigkeit von bis zu 24 cm/Jahr macht ihn zur schnellsten Plattengrenze der Welt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist das Endonym des Landes, das im Deutschen als 'Weißrussland' bezeichnet wird?",
+        answerA = "Byelarus",
+        answerB = "Belarus (Беларусь)",
+        answerC = "Ruthenia Alba",
+        answerD = "Bielorussia",
+        correctAnswer = 1,
+        explanation = "Das offizielle Endonym lautet Беларусь (Belarus), was wörtlich 'Weißes Russland' bedeutet. Der Name wird von der Regierung seit 1991 propagiert; das Exonym 'Weißrussland' gilt als veraltet und wird von belarussischen Offiziellen abgelehnt.",
+        difficulty = 5,
+        funFact = "Der UN-Stilguide empfiehlt seit 1992 offiziell die Schreibweise 'Belarus' statt 'Byelorussia' oder 'Weißrussland'. Deutschland und Österreich verwenden im offiziellen diplomatischen Verkehr 'Weißrussland', obwohl 'Belarus' international üblich ist."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches geodätische Datum wurde für die Erstvermessung von Indien durch die Great Trigonometrical Survey (GTS) verwendet?",
+        answerA = "Everest-Spheroid 1830",
+        answerB = "Bessel-Ellipsoid 1841",
+        answerC = "Clarke-Ellipsoid 1866",
+        answerD = "Hayford-Ellipsoid 1909",
+        correctAnswer = 0,
+        explanation = "Die Great Trigonometrical Survey Indiens (1802–1871) verwendete das Everest-Spheroid von 1830, benannt nach dem Vermessungsleiter George Everest. Es ist ein Referenzellipsoid, das speziell für den indischen Subkontinent optimiert wurde und bis heute in Indien als Basis dient.",
+        difficulty = 5,
+        funFact = "George Everest, nach dem das Spheroid und der Berggipfel benannt sind, weigerte sich selbst, den Mount Everest nach sich benennen zu lassen – er bevorzugte den nepalesischen Namen Sagarmatha. Die Royal Geographical Society ignorierte seinen Widerspruch."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Meeresströmung bildet die ozeanografische Grenze zwischen dem Subtropischen Wirbel und dem Subpolaren Wirbel im Nordatlantik?",
+        answerA = "Nordatlantischer Strom",
+        answerB = "Kanarenstrom",
+        answerC = "Nordatlantischer Polarfront",
+        answerD = "Azorenstrom (Azores Current)",
+        correctAnswer = 3,
+        explanation = "Der Azorenstrom (Azores Current) ist die ozeanografische Grenze zwischen dem subtropischen und dem subpolaren Wirbel im östlichen Nordatlantik. Er zweigt östlich der Azoren vom Nordatlantikstrom ab und fließt nach Südosten – sein Kernstrom markiert die hydrografische Haupttrennlinie.",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche exakte Höhe hat der Brennerpass, der niedrigste Hauptpass der Alpen in West-Ost-Richtung, in Metern?",
+        answerA = "1.370 m",
+        answerB = "1.374 m",
+        answerC = "1.384 m",
+        answerD = "1.357 m",
+        correctAnswer = 1,
+        explanation = "Der Brennerpass an der Grenze zwischen Österreich (Tirol) und Italien (Südtirol) liegt auf einer Höhe von genau 1.374 m ü. NN. Er ist der niedrigste befahrbare Übergang über die Hauptkette der Alpen und damit die meistbenutzte Transitroute zwischen Nord- und Südeuropa.",
+        difficulty = 5,
+        funFact = "Durch den Brenner fahren jährlich über 2 Millionen Lastwagen und rund 13 Millionen Pkw – das macht ihn zum meistbefahrenen Alpenpass der Welt. Die Autobahn über den Brenner wurde 1971 fertiggestellt und war die erste durchgehende Autobahnverbindung über die Alpen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie lautet der Endonym-Name der Hauptstadt Myanmars, die im Deutschen oft 'Rangun' oder 'Yangon' genannt wird?",
+        answerA = "ရန်ကုန် (Yangon) – für die Althauptstadt",
+        answerB = "နေပြည်တော် (Naypyidaw) – für die seit 2006 geltende Hauptstadt",
+        answerC = "ပုဂံ (Bagan) – historische Hauptstadt",
+        answerD = "မန္တလေး (Mandalay) – für die zweitgrößte Stadt",
+        correctAnswer = 1,
+        explanation = "Seit der Hauptstadtverlegung 2005/2006 ist Naypyidaw (နေပြည်တော်, wörtlich 'Königssitz' oder 'Thronstadt') die offizielle Hauptstadt Myanmars. Das Exonym 'Rangun' (Rangoon) bezeichnet Yangon, die alte Hauptstadt und nach wie vor größte Stadt des Landes.",
+        difficulty = 5,
+        funFact = "Naypyidaw wurde über Nacht zur Hauptstadt: Am 6. November 2005 zog die gesamte Regierung ohne öffentliche Vorankündigung um. Die Stadt wurde von Grund auf neu erbaut und hat heute riesige leere Prachtstraßen mit 20 Fahrspuren – aber kaum Verkehr."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Begriff bezeichnet in der Paläogeografie den Superkontinent, der vor ca. 300 Millionen Jahren alle heutigen Kontinente vereinte?",
+        answerA = "Rodinia",
+        answerB = "Pangäa",
+        answerC = "Gondwana",
+        answerD = "Laurasia",
+        correctAnswer = 1,
+        explanation = "Pangäa (griech. 'ganz Erde') existierte vor ca. 335–175 Millionen Jahren und vereinte alle heutigen Kontinente zu einer einzigen Landmasse. Sie zerbrach zunächst in Laurasia (Nordhalbkugel) und Gondwana (Südhalbkugel) und zergliederte sich dann weiter zu den heutigen Kontinenten.",
+        difficulty = 5,
+        funFact = "Rodinia war ein noch älterer Superkontinent (vor ca. 1,1 Milliarden Jahren) – er zerbrach vor etwa 750 Millionen Jahren. Die Erde durchläuft alle 400–600 Millionen Jahre einen 'Superkontinent-Zyklus', und der nächste Superkontinent 'Amasia' soll in etwa 250 Millionen Jahren entstehen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land verwendete als letztes die Bezeichnung 'Persien' offiziell, bevor der Name in 'Iran' geändert wurde, und in welchem Jahr?",
+        answerA = "1906, bei der persischen Verfassungsrevolution",
+        answerB = "1935, auf Betreiben von Schah Reza Pahlavi",
+        answerC = "1979, nach der Islamischen Revolution",
+        answerD = "1921, nach dem Staatsstreich von Reza Khan",
+        correctAnswer = 1,
+        explanation = "Reza Shah Pahlavi ersuchte 1935 alle Länder, den Namen 'Persien' (Exonym, basierend auf der Provinz Fars) durch 'Iran' zu ersetzen – das Endonym, das die Einwohner immer selbst verwendet hatten. Das Wort 'Iran' bedeutet 'Land der Arier'.",
+        difficulty = 5,
+        funFact = "Der Name 'Persien' leitet sich von 'Persis' (Provinz Fars) ab, dem Ursprungsgebiet des Achämenidenreichs. Interessanterweise heißt der Persische Golf im iranischen Endonym 'Khalij-e Fars' (خلیج فارس) – immer noch nach der alten Provinz benannt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Meeresboden-Transekt-Name bezeichnet die erste systematische Tiefseevermessung des Nordatlantiks durch das britische Forschungsschiff HMS Challenger (1872–1876)?",
+        answerA = "Challenger-Section",
+        answerB = "Wyville Thomson Ridge Transect",
+        answerC = "Nordatlantischer Challenger-Transekt (NACT)",
+        answerD = "Es gab keinen einzelnen Transektnamen – die Challenger führte Lotungen an 362 Stationen weltweit durch",
+        correctAnswer = 3,
+        explanation = "Die HMS Challenger-Expedition (1872–1876) führte an 362 Stationen Tiefenlotungen, Temperaturmessungen und Sedimentproben durch und gilt als Begründung der modernen Ozeanografie. Es gab keinen einzelnen benannten Transekt – die Daten wurden als 'Challenger Reports' in 50 Bänden publiziert.",
+        difficulty = 5,
+        funFact = "Der Name 'Challenger' wurde bewusst weitergeführt: die erste Raumsonde, die auf dem Mond landete, war der Challenger-Lunarlander (Apollo 17, 1972), und die NASA-Raumfähre Challenger (1986) trug denselben Namen – alle zu Ehren dieser bahnbrechenden Meeresforschungsexpedition."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie heißt die wasserscheidende Linie zwischen dem Einzugsgebiet des Amazonas und dem des Río de la Plata in Südamerika?",
+        answerA = "Serra do Mar",
+        answerB = "Serra Geral",
+        answerC = "Mato-Grosso-Plateau / Chapada dos Parecis",
+        answerD = "Serra da Canastra",
+        correctAnswer = 2,
+        explanation = "Die Hauptwasserscheide zwischen dem Amazonas-Einzugsgebiet (→ Atlantik via Amazonas) und dem Río-de-la-Plata-System (→ Atlantik via Paraguay/Paraná) verläuft über das Mato-Grosso-Plateau und besonders die Chapada dos Parecis im westlichen Brasilien.",
+        difficulty = 5,
+        funFact = "Auf der Chapada dos Parecis entspringen sowohl Quellen des Tapajós (Amazonas-System) als auch des Juruena (ebenfalls Amazonas) und der Quelläste des Paraguay. Es ist eine der hydrologisch wichtigsten Hochflächen Südamerikas."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land verwendete als erstes ein nationales Geodätisches Datum, das auf dem Bessel-Ellipsoid (1841) basiert und noch heute offiziell in Gebrauch ist?",
+        answerA = "Preußen/Deutschland (Potsdam-Datum)",
+        answerB = "Japan (Tokyo-Datum)",
+        answerC = "Russland (Pulkovo-Datum)",
+        answerD = "Österreich-Ungarn (Hermannskogel-Datum)",
+        correctAnswer = 0,
+        explanation = "Das Potsdam-Datum (auch Deutsches Hauptdreiecksnetz) basierte auf dem Bessel-Ellipsoid und hatte seinen Fundamentalpunkt am Berliner Sternwarte (Helmertturm Potsdam, Latitude 52°22'51,4469\"N). Es war das erste groß angelegte nationale Datum mit Bessel-Ellipsoid.",
+        difficulty = 5,
+        funFact = "Das Potsdam-Datum wurde bis 1991 in Westdeutschland und bis in die 2000er in der DDR-Nachfolge verwendet. Beim Wiederaufbau des vereinten Deutschland mussten alle Karten auf das European Datum (ED50) umgerechnet werden – was erhebliche Abweichungen von bis zu 15 m ergab."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Meeresströmung trägt die Bezeichnung 'Thermohaline Zirkulation' und welcher Prozess treibt sie an?",
+        answerA = "Der Wind, der Oberflächenwasser bewegt",
+        answerB = "Die Differenzen in Temperatur und Salzgehalt, die Dichteunterschiede erzeugen",
+        answerC = "Die Erdrotation (Coriolis-Kraft), die Strömungen ablenkt",
+        answerD = "Die Gezeitenkräfte von Mond und Sonne",
+        correctAnswer = 1,
+        explanation = "Die thermohaline Zirkulation (THC, auch 'Große ozeanische Förderband') wird durch Dichteunterschiede angetrieben, die aus Temperatur- (thermo) und Salzgehaltsunterschieden (halin) entstehen. Kaltes, salzreiches Wasser sinkt ab (z.B. im Nordatlantik/Grönland), fließt tief und steigt anderswo wieder auf.",
+        difficulty = 5,
+        funFact = "Eine vollständige Umwälzung des Tiefenozeankönig durch die thermohaline Zirkulation dauert zwischen 500 und 2.000 Jahren. Ein klimabedinges Abschwächen des AMOC (der atlantischen Komponente) könnte Europa um 3–5°C abkühlen – trotz globalem Erwärmungstrend."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Himalaya-Pass liegt auf der Wasserscheide zwischen dem Indus-System (Arabisches Meer) und dem Ganges-Brahmaputra-System (Bengalischer Golf) und hat eine Höhe von ca. 5.416 m?",
+        answerA = "Zoji La, Kaschmir (3.528 m)",
+        answerB = "Rohtang Pass, Himachal Pradesh (3.978 m)",
+        answerC = "Baralacha La, Lahaul-Spiti (4.892 m)",
+        answerD = "Taglang La, Ladakh (5.328 m)",
+        correctAnswer = 3,
+        explanation = "Der Taglang La in Ladakh (Jammu & Kashmir) liegt auf ca. 5.328–5.359 m und ist einer der höchsten Straßenpässe weltweit. Er liegt auf der Hauptwasserscheide zwischen dem Indus-System (westlich) und dem Himalaya-Entwässerungsgebiet in Richtung Ganges-Ebene.",
+        difficulty = 5,
+        funFact = "Die Manali-Leh Highway überquert mehrere Pässe über 5.000 m, darunter den Taglang La. Bei schlechtem Wetter kann diese Straße im Sommer innerhalb weniger Stunden durch Erdrutsche und Schneefälle unpassierbar werden."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche ozeanografische Eigenschaft beschreibt der Begriff 'Pycnoclin' in der physikalischen Meereskunde?",
+        answerA = "Eine Schicht mit abruptem Temperaturabfall (Sprungschicht)",
+        answerB = "Eine Schicht mit abruptem Dichtegradienten, verursacht durch Temperatur- und/oder Salzgehaltunterschiede",
+        answerC = "Eine Schicht mit maximaler Strömungsgeschwindigkeit",
+        answerD = "Die Grenzschicht zwischen Süßwasser und Salzwasser in Ästuaren",
+        correctAnswer = 1,
+        explanation = "Die Pyknoklinae (Pycnocline) ist eine Wasserschicht, in der die Dichte des Meerwassers besonders stark mit der Tiefe zunimmt. Sie fungiert als physikalische Barriere zwischen Oberflächen- und Tiefenwasser und hemmt den vertikalen Austausch von Wärme, Nährstoffen und Gasen.",
+        difficulty = 5,
+        funFact = "In tropischen Meeren ist die Pyknokline besonders ausgeprägt – warmes, leichtes Oberflächenwasser liegt auf kaltem, schwerem Tiefenwasser. Diese Schichtung verhindert die Nährstoffzufuhr an die Oberfläche und erklärt, warum tropische Ozeane trotz Wärme biologisch 'Wüsten' sind."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Staat ersetzte 1994 seinen Exonym-geprägten englischen Staatsnamen 'Ivory Coast' durch sein Endonym 'Côte d'Ivoire' als offizielle Bezeichnung in allen Sprachen?",
+        answerA = "Das Land änderte nur seinen französischen Namen; der englische Exonym-Name bleibt erlaubt",
+        answerB = "Côte d'Ivoire forderte 1986 (nicht 1994) alle Länder auf, nur noch den französischen Namen zu verwenden",
+        answerC = "Ivory Coast existiert nicht mehr; es wurde 2001 in zwei Staaten geteilt",
+        answerD = "Die Umbenennung erfolgte 1960 bei der Unabhängigkeit",
+        correctAnswer = 1,
+        explanation = "Côte d'Ivoire forderte 1986 offiziell bei der UN, dass der Name 'Côte d'Ivoire' in allen Sprachen unverändert verwendet werden soll – das Einzige Mal, dass ein Staat das aktiv für alle Sprachen durchgesetzt hat. 'Ivory Coast' (englisch) oder 'Elfenbeinküste' (deutsch) sind seitdem offiziell falsch.",
+        difficulty = 5,
+        funFact = "Deutschland und viele andere Länder ignorieren diese Forderung und verwenden weiterhin 'Elfenbeinküste' – was das ivorische Außenministerium offiziell als diplomatische Unhöflichkeit betrachtet. Die UN nutzt konsequent 'Côte d'Ivoire'."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche ozeanografische Messung des ARGO-Programms ergab den tiefsten gemessenen Sauerstoffminimum-Wert in einem tropischen Ozeanbereich?",
+        answerA = "Im östlichen Tropischen Nordpazifik (ETNP) in ca. 400–1.000 m Tiefe",
+        answerB = "Im Nordatlantik nahe Labrador in ca. 200–400 m Tiefe",
+        answerC = "Im Roten Meer in ca. 300–600 m Tiefe",
+        answerD = "Im Benguelastrom vor Namibia in ca. 100–300 m Tiefe",
+        correctAnswer = 0,
+        explanation = "Die ausgedehntesten und intensivsten Sauerstoffminimumzonen (OMZ) der Weltmeere befinden sich im östlichen Tropischen Nordpazifik (ETNP) und im östlichen Tropischen Südpazifik (ETSP). ARGO-Floats messen dort in 400–1000 m Tiefe Sauerstoffwerte nahe null.",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie bezeichnet man den Vorgang, wenn sich ein Gebirge durch tektonische Kompression aufwölbt, bevor erosive Kräfte seine heutige Form bestimmen (Paläotopografie)?",
+        answerA = "Epeirogenese (großräumige Hebung/Senkung von Lithosphärenplatten)",
+        answerB = "Orogenese (Gebirgsbildung durch Kollision oder Subduktion)",
+        answerC = "Antiklinale Aufwölbung über einem Salzdiapir",
+        answerD = "Glazio-isostatische Hebung nach dem Ende eines Eisschilds",
+        correctAnswer = 1,
+        explanation = "Orogenese bezeichnet die Entstehung von Gebirgen durch tektonische Prozesse wie Plattenkollision (z.B. Himalaya durch Indien/Eurasien) oder Subduktion (z.B. Anden). Die Paläotopografie rekonstruiert die ursprüngliche topografische Form dieser Gebirge vor Erosion und Denudation.",
+        difficulty = 5,
+        funFact = "Die Himalaya-Hauptkette hebt sich noch immer um ca. 5 mm pro Jahr, während sie durch Erosion um ähnliche Raten abgetragen wird – ein Gleichgewicht, das seit dem Miozän besteht. Paläotopografische Studien zeigen, dass der Himalaya vor 40 Millionen Jahren wahrscheinlich noch höher war als heute."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Passhöhe hat der Col du Galibier in den französischen Alpen (Departement Hautes-Alpes), einer der bekanntesten Tour-de-France-Pässe?",
+        answerA = "2.642 m",
+        answerB = "2.745 m",
+        answerC = "2.802 m",
+        answerD = "2.556 m",
+        correctAnswer = 2,
+        explanation = "Der Col du Galibier liegt auf einer Höhe von 2.802 m (Nordportal des alten Tunnels) bzw. 2.645 m (südliches Ende). Die Passhöhe des offenen Straßenabschnitts beträgt 2.642 m. Der höchste benutzbare Punkt des Passes liegt jedoch bei 2.802 m am Nordportal des Galibier-Tunnels.",
+        difficulty = 5,
+        funFact = "Der Col du Galibier wurde 1911 erstmals in die Tour de France aufgenommen und gilt als eines der härtesten Bergfinales. Auf der Südseite liegt der Col du Lautaret (2.058 m), auf der Nordseite das Skigebiet La Grave."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Land hat als erste Nation überhaupt ein vollständiges nationales digitales Geländemodell (DTM) mit 1-Meter-Auflösung flächendeckend veröffentlicht?",
+        answerA = "Dänemark",
+        answerB = "Niederlande",
+        answerC = "Estland",
+        answerD = "Schweiz",
+        correctAnswer = 0,
+        explanation = "Dänemark veröffentlichte 2015 als weltweit erstes Land ein flächendeckendes nationales Digitales Geländemodell (DTM) mit 0,4-Meter-Auflösung, gewonnen durch landesweites LiDAR-Scanning. Die Daten sind open-access verfügbar.",
+        difficulty = 5,
+        funFact = "Dänemarks flaches Terrain (Höchstpunkt Møllehøj: 170,86 m) macht genaue Höhendaten besonders wertvoll für Küstenschutz und Überflutungsmodellierung. Das DTM zeigt, dass bei einem 1-Meter-Meeresspiegelanstieg rund 4.000 km² Dänemarks überflutet würden."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie heißt der seltene geografische Begriff für den Zustand, wenn ein Fluss auf beiden Seiten einer Wasserscheide fließt – also sowohl zum einen als auch zum anderen Ozean entwässert?",
+        answerA = "Bifurkation (Flussgabelung)",
+        answerB = "Konfluenz (Zusammenfluss)",
+        answerC = "Trifurkation (dreifache Teilung)",
+        answerD = "Hydrographische Anomalie (Abfluss in beide Richtungen)",
+        correctAnswer = 0,
+        explanation = "Bifurkation (lat. bifurcus = zweigabelig) bezeichnet die Teilung eines Flusses in zwei Arme, die in verschiedene Einzugsgebiete fließen – ein seltenes Phänomen, bei dem Wasser auf natürliche Weise zwei verschiedene Ozeane oder Meere erreicht. Das Casiquiare-Kanal (Venezuela) ist das bekannteste Beispiel, das das Amazonas- und Orinoco-System verbindet.",
+        difficulty = 5,
+        funFact = "Das Casiquiare-Kanal in Venezuela ist die einzige natürliche Verbindung zwischen zwei der größten Flusssysteme der Welt (Amazonas und Orinoco) und macht die gesamte Region zu einer einzigen navigierbaren Wasserstraße von über 3.000 km Länge."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches seismische Phänomen trat beim Erdbeben in der Türkei (Kahramanmaraş, Februar 2023, Mw 7,8) auf, das die Stärke des Bebens erhöhte?",
+        answerA = "Liquefaktion (Bodenverflüssigung) in sandigen Ablagerungen",
+        answerB = "Supershear-Ruptur: Die Bruchausbreitung überschritt die Scherwellengeschwindigkeit",
+        answerC = "Horizontale Oberflächenversetzung von über 6 Metern entlang der Nordanatolischen Verwerfung",
+        answerD = "Tsunamiauslösung durch vertikale Meeresbodenbewegung",
+        correctAnswer = 1,
+        explanation = "Das Kahramanmaraş-Erdbeben (6. Februar 2023) zeigte eine seltene Supershear-Ruptur: Die Bruchfront an der Ostanatolischen Verwerfung breitete sich schneller aus als die lokale S-Wellengeschwindigkeit (~3,5 km/s), was zu besonders destruktiven Machwellen-ähnlichen Erschütterungen führte.",
+        difficulty = 5,
+        funFact = "Supershear-Erdbeben sind extrem selten und wurden erst in den letzten Jahrzehnten mit modernen Seismometern nachgewiesen. Das Erdbeben in Denali, Alaska (2002) war das erste gut dokumentierte Supershear-Beben. Das türkische Beben von 2023 ist das verheerende Beispiel in dicht besiedeltem Gebiet."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Küste in der Antarktis ist nach dem russischen Exonym 'Queen Maud Land' bekannt, trägt aber im norwegischen Endonym einen anderen Namen?",
+        answerA = "Droning Maud Land – norwegisches Endonym für das antarktische Territorium Norwegens",
+        answerB = "Prinsesse Ragnhild Kyst – norwegisches Endonym nur für die östliche Küstenzone",
+        answerC = "Kronprinsesse Märtha Kyst – für den westlichen Küstenabschnitt",
+        answerD = "Das Gebiet hat keinen gesonderten Küstennamen; es heißt insgesamt 'Dronning Maud Land'",
+        correctAnswer = 3,
+        explanation = "Das gesamte antarktische Territorium Norwegens heißt auf Norwegisch 'Dronning Maud Land' (Königin-Maud-Land). Innerhalb dieses Territoriums gibt es einzelne Küstenabschnitte mit eigenen Namen (Prinsesse Ragnhild Kyst, Kronprinsesse Märtha Kyst), aber kein Gebiet heißt insgesamt anders als 'Dronning Maud Land'.",
+        difficulty = 5,
+        funFact = "Norwegen nahm Dronning Maud Land 1939 in Besitz – unmittelbar bevor Deutschland eine Antarktisexpedition in dieselbe Region schickte. Die 'Schwabenland'-Expedition 1939 beanspruchte das Gebiet als 'Neu-Schwabenland' für das Deutsche Reich, ein Anspruch, der nach 1945 aufgegeben wurde."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie viele Einwohner hatte Indien beim Zensus 2011 (der letzten vollständig ausgewerteten Volkszählung)?",
+        answerA = "1.210.854.977",
+        answerB = "1.187.439.200",
+        answerC = "1.224.514.327",
+        answerD = "1.198.003.460",
+        correctAnswer = 0,
+        explanation = "Der indische Zensus vom März 2011 ergab eine Bevölkerung von 1.210.854.977 Personen. Dieser Wert ist die offizielle Zahl des Office of the Registrar General and Census Commissioner of India. Der Zensus 2021 wurde wegen COVID-19 auf unbestimmte Zeit verschoben.",
+        difficulty = 5,
+        funFact = "Der indische Zensus 2011 war der größte Zensus in der Geschichte der Menschheit – rund 2,7 Millionen Zählbeamte wurden eingesetzt, um jeden der über 600.000 Dörfer und Städte zu erfassen. Die Logistik dauerte mehrere Monate."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche kartografische Projektion verwendet die NASA für die Planungskarten der Mars-Sonden (MOLA-Topografie), da sie flächentreu und für globale Vergleiche geeignet ist?",
+        answerA = "Stereografische Polarprojektion",
+        answerB = "Sinusoidal-Projektion",
+        answerC = "Mollweide-Projektion",
+        answerD = "Equirektangulare Projektion (Plate Carrée)",
+        correctAnswer = 3,
+        explanation = "Die NASA verwendet für MOLA-Datensätze (Mars Orbiter Laser Altimeter) und andere planetare Topografiedaten primär die äquidistante Equirektangulare Projektion (Plate Carrée), da sie einfache Koordinatenzuordnung erlaubt und in Rasterdatenbanken effizient gespeichert werden kann.",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist der tiefste Punkt in der Wüste Gobi und wie tief liegt er unter dem Meeresspiegel?",
+        answerA = "Hami-Becken (Turpan-Senke), −154 m",
+        answerB = "Alxa-Senke (Innere Mongolei), −82 m",
+        answerC = "Gaxun-Nur-Becken, −62 m",
+        answerD = "Tarim-Becken, −154 m – technisch gesehen keine Gobi",
+        correctAnswer = 3,
+        explanation = "Die Turpan-Senke (Hami-Becken) in der autonomen Region Xinjiang liegt auf −154 m und ist der tiefste Punkt Chinas. Sie gehört jedoch zum Tarim-Becken, nicht zur eigentlichen Gobi-Wüste. Die Gobi-Wüste selbst liegt überwiegend auf über 800–1.000 m Höhe – die tiefsten Teile der Gobi liegen nicht unter dem Meeresspiegel.",
+        difficulty = 5,
+        funFact = "Die Turpan-Senke ist mit über 50°C im Sommer und −30°C im Winter einer der klimatischen Extremorte der Erde. Sie ist auch bekannt als 'Feuertal' und liegt nur 150 km südlich des Tianshan-Gebirges, wo Gletscher sind."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ozeanografische Phänomen bewirkt, dass der Peruanische Strom die Küste Südamerikas mit ungewöhnlich kaltem Wasser versorgt?",
+        answerA = "Thermohaline Absinkzone im Südatlantik",
+        answerB = "Küstenauftrieb (Coastal Upwelling) durch äquatoriale Ostwinde und Ekman-Transport",
+        answerC = "Untermeerischer Kaltquell an der Chile-Peru-Tiefseerinne",
+        answerD = "Polares Tiefenwasser aus der Antarktis, das entlang der Kontinentalböschung aufsteigt",
+        correctAnswer = 1,
+        explanation = "Der kalte Humboldtstrom (Peruanischer Strom) wird durch Küstenauftrieb (coastal upwelling) verstärkt: Südostwinde treiben Oberflächenwasser nordwestwärts (Ekman-Transport), und kaltes, nährstoffreiches Tiefenwasser steigt an der Küste auf. Dies macht die Region zu einem der fischreichsten Meeresgebiete der Welt.",
+        difficulty = 5,
+        funFact = "Der Küstenauftrieb vor Peru ist so produktiv, dass er jährlich rund 8–10 % des gesamten Weltfischfangs liefert – dabei macht die Küstenlänge nur einen Bruchteil der Weltmeere aus. El Niño unterbricht diesen Auftrieb und führt regelmäßig zu Fischsterbeereignissen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie lautet das Endonym der Stadt, die auf Deutsch 'Kopenhagen' heißt, auf Dänisch aber einen anderen Namen trägt?",
+        answerA = "Kobenhavn (Köbenhavn) – mit dem dänischen Buchstaben ø",
+        answerB = "Hafnia – latineischer Name, heute nicht mehr gebräuchlich",
+        answerC = "Köpenhamn – schwedisches Exonym",
+        answerD = "København – mit dem dänischen Buchstaben ø",
+        correctAnswer = 3,
+        explanation = "Der dänische Eigenname der Hauptstadt ist København (mit ø, gesprochen 'Köbenhavn'). Das Exonym 'Kopenhagen' im Deutschen leitet sich vom lateinischen 'Hafnia' und mittelalterlichen Formen des dänischen Namens ab. 'Köbenhavn' bedeutet wörtlich 'Kaufmannshafen'.",
+        difficulty = 5,
+        funFact = "Das chemische Element Hafnium (Hf, Ordnungszahl 72) wurde 1923 in Kopenhagen entdeckt und nach dem lateinischen Namen der Stadt benannt: Hafnia. Es ist eines von wenigen chemischen Elementen, die nach einer europäischen Hauptstadt benannt sind."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche biogeografische Trennlinie unterscheidet die indomalayische von der australasischen Tiergeografie und liegt östlich der Wallace-Linie?",
+        answerA = "Weber-Linie",
+        answerB = "Lydekker-Linie",
+        answerC = "Huxley-Linie",
+        answerD = "Müller-Linie",
+        correctAnswer = 0,
+        explanation = "Die Weber-Linie (benannt nach dem Zoologen Max Weber) liegt östlich der Wallace-Linie und markiert die Zone, wo australasische Tierarten die asiatischen überwiegen. Zwischen Wallace- und Weber-Linie liegt die 'Wallacea' – ein Übergangsgebiet mit gemischter Fauna.",
+        difficulty = 5,
+        funFact = "Die Lydekker-Linie (östlich der Weber-Linie) markiert die äußerste Verbreitung asiatischer Arten. Die Zone zwischen Wallace- und Lydekker-Linie (Wallacea) ist eines der artenreichsten Gebiete der Erde – mit vielen endemischen Arten, die nirgendwo sonst vorkommen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Passhöhe hat der Großglockner-Hochalpenstraße an ihrem höchsten Punkt (Fuscher Törl) in Österreich?",
+        answerA = "2.505 m",
+        answerB = "2.369 m",
+        answerC = "2.504 m",
+        answerD = "2.571 m",
+        correctAnswer = 0,
+        explanation = "Das Fuscher Törl (auch Fuscher Lacke) auf der Großglockner-Hochalpenstraße in Österreich liegt auf 2.504 m – die Straße erreicht ihren höchsten Punkt bei 2.504 m (Fuscher Törl) und nicht am Hochtor (2.505 m), welches der eigentliche höchste Straßenpunkt ist.",
+        difficulty = 5,
+        funFact = "Die Großglockner-Hochalpenstraße wurde zwischen 1930 und 1935 gebaut – als Arbeitsbeschaffungsmaßnahme in der Weltwirtschaftskrise. Franz Wallack, der Chefingenieur, war erst 33 Jahre alt, als er mit der Planung begann."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche genaue Koordinate (Länge/Breite) hat der Punkt 'Pole of Inaccessibility' auf dem antarktischen Kontinent – der am weitesten von der Küste entfernte Punkt?",
+        answerA = "83°51′S, 65°44′E",
+        answerB = "82°06′S, 54°58′E",
+        answerC = "85°50′S, 65°47′E",
+        answerD = "89°00′S, 0°00′E",
+        correctAnswer = 0,
+        explanation = "Der antarktische 'Pole of Inaccessibility' liegt bei ca. 83°51′S, 65°44′E (Berechnungen variieren je nach Küstendefinition). Die sowjetische Station 'Polyus Nedostupnosti' (1958) wurde etwa hier errichtet. Der Punkt liegt ca. 878 km vom Südpol entfernt.",
+        difficulty = 5,
+        funFact = "An der Sowjetstation Polyus Nedostupnosti wurde eine Büste von Lenin aufgestellt, die heute noch (halb eingeschneit) existiert. Die Station wurde nach nur 12 Tagen verlassen und nie wieder besucht – die Lenin-Büste bleibt als einziges Symbol zurück."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist die 'Neotethys' in der Paläogeografie und wann existierte sie?",
+        answerA = "Ein Ozean zwischen Gondwana und Laurasia, der vor ca. 250–66 Millionen Jahren existierte",
+        answerB = "Die heutige Tethys-Region (Mittelmeer + Schwarzes Meer + Kaspisches Meer)",
+        answerC = "Ein Gletscher in der Antarktis",
+        answerD = "Eine Tiefseezone im heutigen Indischen Ozean",
+        correctAnswer = 0,
+        explanation = "Die Neotethys war ein Ozean zwischen dem nördlichen Gondwana (Afrika, Indien, Arabien) und der Eurasischen Platte (Laurasia), der von ca. 250 bis 66 Millionen Jahren existierte. Der heutige Himalaya, die Alpen, der Kaukasus und das Zagros-Gebirge entstanden durch seine Schließung.",
+        difficulty = 5,
+        funFact = "Im Himalaya findet man Fossilien von Meerestieren aus der Neotethys – Ammoniten und Korallen, die einst am Meeresboden lagen, wurden durch die Kollision Indiens mit Eurasien auf über 8.000 m Höhe gehoben."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das einzige Land in Südostasien, das niemals eine europäische Kolonie war und bis heute sein historisches Datum für seine Staatsgründung beibehalten hat?",
+        answerA = "Vietnam",
+        answerB = "Thailand (Siam)",
+        answerC = "Myanmar (Burma)",
+        answerD = "Kambodscha",
+        correctAnswer = 1,
+        explanation = "Thailand (historisch Siam) war das einzige Land Südostasiens, das während der europäischen Kolonialzeit formal unabhängig blieb. Es diente als Pufferstaat zwischen dem britischen Burma und dem französischen Indochina und bewahrte seine Eigenständigkeit durch geschickte Diplomatie.",
+        difficulty = 5,
+        funFact = "Die Könige Chulalongkorn (Rama V.) und sein Vater Mongkut (Rama IV.) modernisierten Siam so geschickt, dass europäische Mächte es als zivilisierten Staat anerkannten. Mongkut wird im Musical 'The King and I' dargestellt – allerdings sehr ungenau und in Thailand bis heute verboten."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Methode wird zur Bestimmung der Schichttiefe von ozeanischen Krusten (Mohorovičić-Diskontinuität) verwendet?",
+        answerA = "Gravimetrie (Messung von Schwerkraftanomalien)",
+        answerB = "Reflexions- und Refraktionsseismik",
+        answerC = "Magnetometrie (Messung von Paläomagnetismus)",
+        answerD = "Ozeanische Kernbohrungen (DSDP/ODP/IODP)",
+        correctAnswer = 1,
+        explanation = "Die Mohorovičić-Diskontinuität (Moho) – die Grenze zwischen Erdkruste und Erdmantel – wird primär durch Reflexions- und Refraktionsseismik bestimmt. Seismische Wellen ändern ihre Geschwindigkeit und Richtung an der Moho, was ihre genaue Tiefe (unter Kontinenten 30–70 km, unter Ozeanen 6–10 km) ergibt.",
+        difficulty = 5,
+        funFact = "Das ambitionierteste Projekt des 20. Jahrhunderts war das 'Project Mohole' (1961–1966) – ein US-amerikanischer Versuch, durch ozeanische Kruste bis zur Moho zu bohren. Das Projekt wurde wegen Kostenüberschreitungen eingestellt; die Moho wurde nie erreicht."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie nennt man die geologische Periode, in der sich die Erdoberfläche ausschließlich aus Unterwasser-Vulkanen (Midozeankämme) erneuerte und keine Kontinente gab?",
+        answerA = "Hadaikum (Hadean) – vor 4,0–4,6 Milliarden Jahren",
+        answerB = "Archaikum (Archean) – vor 2,5–4,0 Milliarden Jahren",
+        answerC = "Proterozoikum – vor 0,5–2,5 Milliarden Jahren",
+        answerD = "Kryogenium (Snowball Earth) – vor 635–720 Millionen Jahren",
+        correctAnswer = 0,
+        explanation = "Im Hadaikum (vor 4,0–4,6 Mrd. Jahren) war die Erde frisch erstarrt; frühe Krustenbildung fand statt, aber keine stabilen Kontinentalplatten. Die ersten stabilen Kratone (Kontinentalkerne) entstanden erst im frühen Archaikum.",
+        difficulty = 5,
+        funFact = "Das älteste bekannte Mineral der Erde ist ein Zirkonkristall aus dem Jack Hills in Australien – 4,404 Milliarden Jahre alt. Da Zirkone extrem robust sind, haben diese winzigen Kristalle alle geologischen Phasen überlebt und erzählen die älteste Geschichte unseres Planeten."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie lautet das Endonym der Stadt, die auf Deutsch 'Warschau', auf Englisch 'Warsaw', aber auf Polnisch anders heißt?",
+        answerA = "Warszawa",
+        answerB = "Warsław",
+        answerC = "Varsovia",
+        answerD = "Warschawa",
+        correctAnswer = 0,
+        explanation = "Das polnische Endonym lautet Warszawa (gesprochen 'Varshava'). Das Exonym 'Warschau' im Deutschen ist eine alte Eindeutschung. 'Varsovia' ist das spanische und lateinische Exonym. Der Stadtname leitet sich wahrscheinlich von einem slawischen Personennamen 'Wars' ab.",
+        difficulty = 5,
+        funFact = "Warschau/Warszawa wurde im Zweiten Weltkrieg zu über 85 % zerstört – nach dem Warschauer Aufstand 1944 ließ Hitler die Stadt systematisch dem Erdboden gleichmachen. Der Wiederaufbau nach historischen Plänen und Gemälden Canalettos gilt als ein Wunder der Rekonstruktion."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Scherwellen-Geschwindigkeit (Vs) hat der Erdmantel direkt unterhalb der Moho in ozeanischen Bereichen typischerweise?",
+        answerA = "ca. 4,5–4,7 km/s",
+        answerB = "ca. 7,8–8,2 km/s",
+        answerC = "ca. 6,0–6,5 km/s",
+        answerD = "ca. 3,5–3,8 km/s",
+        correctAnswer = 3,
+        explanation = "Scherwellen (S-Wellen) können im Erdmantel nicht durch flüssiges Material reisen. Die Vs im Obermantel direkt unterhalb der ozeanischen Moho beträgt ca. 4,4–4,7 km/s. Die angegebenen 3,5–3,8 km/s betrifft P-Wellen in der ozeanischen Kruste.",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Eigenname (Endonym) verwendet die Volksrepublik China für den Himalaya-Gipfel, der international als 'Mount Everest' bekannt ist?",
+        answerA = "Qomolangma (珠穆朗玛峰)",
+        answerB = "Sagarmatha (सगरमाथा)",
+        answerC = "Chomolungma",
+        answerD = "Zhumulangma Feng (珠穆朗玛峰)",
+        correctAnswer = 0,
+        explanation = "Die offizielle chinesische Bezeichnung ist 珠穆朗玛峰 (Zhūmùlǎngmǎ Fēng, kurz Qomolangma). Die tibetische Form 'Chomolungma' (rGya-ma-lung-ma) ist die ursprüngliche tibetische Bezeichnung und bedeutet 'Göttin Mutter der Welt'. Sagarmatha (सगरमाथा) ist das nepalesische Endonym.",
+        difficulty = 5,
+        funFact = "George Everest (der Surveyor General of India) wusste gar nicht, welcher Gipfel nach ihm benannt wurde – er starb 1866, bevor die erste Besteigung versucht wurde. Er selbst sprach seinen Namen 'Eve-rest' aus, nicht 'Ever-est', wie es heute allgemein üblich ist."
+    ),
+
 )
+
