@@ -39,7 +39,9 @@ import com.quizverse.app.data.prepopulate.questions.geoQuestionsEasy
 import com.quizverse.app.data.prepopulate.questions.geoQuestionsMedium
 import com.quizverse.app.data.prepopulate.questions.geoQuestionsHard
 import com.quizverse.app.data.prepopulate.questions.geoQuestionsExpert
+import com.quizverse.app.data.prepopulate.questions.geoQuestionsExpert2
 import com.quizverse.app.data.prepopulate.questions.geoQuestionsMaster
+import com.quizverse.app.data.prepopulate.questions.geoQuestionsMaster2
 import com.quizverse.app.data.prepopulate.questions.historyQuestions
 import com.quizverse.app.data.prepopulate.questions.historyQuestionsEasy
 import com.quizverse.app.data.prepopulate.questions.historyQuestionsEasy2
@@ -169,7 +171,9 @@ object QuestionSeeder {
             geoQuestionsMedium() +
             geoQuestionsHard() +
             geoQuestionsExpert() +
+            geoQuestionsExpert2() +
             geoQuestionsMaster() +
+            geoQuestionsMaster2() +
             scienceQuestions() +
             scienceQuestionsEasy() +
             scienceQuestionsEasy2() +
