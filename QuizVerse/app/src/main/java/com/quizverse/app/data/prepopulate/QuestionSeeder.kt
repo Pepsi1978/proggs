@@ -6,6 +6,8 @@ import com.quizverse.app.data.database.entities.Category
 import com.quizverse.app.data.database.entities.UserProgress
 import com.quizverse.app.data.prepopulate.questions.animalQuestions
 import com.quizverse.app.data.prepopulate.questions.filmQuestions
+import com.quizverse.app.data.prepopulate.questions.filmQuestionsMedium4
+import com.quizverse.app.data.prepopulate.questions.filmQuestionsMedium5
 import com.quizverse.app.data.prepopulate.questions.foodQuestions
 import com.quizverse.app.data.prepopulate.questions.geoQuestions
 import com.quizverse.app.data.prepopulate.questions.geoQuestionsEasy
@@ -101,7 +103,7 @@ object QuestionSeeder {
             Category(id = 1,  name = "Weltgeographie",      iconName = "\uD83C\uDF0D", gradientStartColor = 0xFF4FACFEL, gradientEndColor = 0xFF00F2FEL, questionCount = 1424, isLocked = false),
             Category(id = 2,  name = "Wissenschaft & Natur",iconName = "\uD83D\uDD2C", gradientStartColor = 0xFF6C63FFL, gradientEndColor = 0xFFA855F7L, questionCount = 1500, isLocked = false),
             Category(id = 3,  name = "Geschichte",          iconName = "\uD83D\uDCDC", gradientStartColor = 0xFFF97316L, gradientEndColor = 0xFFFBBF24L, questionCount = 1500, isLocked = false),
-            Category(id = 4,  name = "Film & Fernsehen",    iconName = "\uD83C\uDFAC", gradientStartColor = 0xFFEC4899L, gradientEndColor = 0xFFF43F5EL, questionCount = 50, isLocked = false),
+            Category(id = 4,  name = "Film & Fernsehen",    iconName = "\uD83C\uDFAC", gradientStartColor = 0xFFEC4899L, gradientEndColor = 0xFFF43F5EL, questionCount = 215, isLocked = false),
             Category(id = 5,  name = "Musik",               iconName = "\uD83C\uDFB5", gradientStartColor = 0xFF8B5CF6L, gradientEndColor = 0xFFC084FCL, questionCount = 50, isLocked = false),
             Category(id = 6,  name = "Sport",               iconName = "\uD83C\uDFC5", gradientStartColor = 0xFF22C55EL, gradientEndColor = 0xFF10B981L, questionCount = 50, isLocked = false),
             Category(id = 7,  name = "Technologie",         iconName = "\uD83D\uDCBB", gradientStartColor = 0xFF3B82F6L, gradientEndColor = 0xFF6366F1L, questionCount = 50, isLocked = false),
@@ -199,6 +201,8 @@ object QuestionSeeder {
             historyQuestionsMaster5() +
             historyQuestionsMaster6() +
             filmQuestions() +
+            filmQuestionsMedium4() +
+            filmQuestionsMedium5() +
             musicQuestions() +
             sportQuestions() +
             techQuestions() +
