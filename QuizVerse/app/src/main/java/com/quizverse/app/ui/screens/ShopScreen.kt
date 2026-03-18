@@ -2,8 +2,14 @@ package com.quizverse.app.ui.screens
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,12 +31,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,26 +54,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.quizverse.app.ui.theme.Accent
+import com.quizverse.app.ui.theme.GlassBorder
+import com.quizverse.app.ui.theme.GlassWhite
+import com.quizverse.app.ui.theme.Gold
+import com.quizverse.app.ui.theme.GoldDark
+import com.quizverse.app.ui.theme.GoldLight
+import com.quizverse.app.ui.theme.Primary
+import com.quizverse.app.ui.theme.Secondary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-// Brand colors
-private val PrimaryPurple = Color(0xFF6C63FF)
-private val AccentPurple = Color(0xFFA855F7)
-private val CardBackground = Color(0xFF1E1B2E)
-private val SurfaceBackground = Color(0xFF13111E)
-private val TextSecondary = Color(0xFF9E9AB8)
 
 private data class ShopItemPreview(
     val emoji: String,
     val title: String,
-    val description: String
+    val description: String,
+    val glowColor: Color
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShopScreen(navController: NavHostController) {
-    // --- Animatable values ---
     val bagScale = remember { Animatable(0f) }
 
     val headingAlpha = remember { Animatable(0f) }
@@ -73,7 +82,6 @@ fun ShopScreen(navController: NavHostController) {
 
     val descAlpha = remember { Animatable(0f) }
 
-    // Each card gets its own alpha + vertical offset for staggered entrance
     val card1Alpha = remember { Animatable(0f) }
     val card2Alpha = remember { Animatable(0f) }
     val card3Alpha = remember { Animatable(0f) }
@@ -83,8 +91,19 @@ fun ShopScreen(navController: NavHostController) {
 
     val noteAlpha = remember { Animatable(0f) }
 
+    // Animated glow for the banner
+    val infiniteTransition = rememberInfiniteTransition(label = "shopGlow")
+    val bannerGlow by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "bannerGlow"
+    )
+
     LaunchedEffect(Unit) {
-        // 1. Bag pops in
         launch {
             bagScale.animateTo(
                 targetValue = 1f,
@@ -93,56 +112,32 @@ fun ShopScreen(navController: NavHostController) {
         }
         delay(220)
 
-        // 2. Heading slides up + fades in
-        launch {
-            headingAlpha.animateTo(1f, animationSpec = tween(380))
-        }
-        launch {
-            headingOffsetY.animateTo(0f, animationSpec = tween(380, easing = FastOutSlowInEasing))
-        }
+        launch { headingAlpha.animateTo(1f, animationSpec = tween(380)) }
+        launch { headingOffsetY.animateTo(0f, animationSpec = tween(380, easing = FastOutSlowInEasing)) }
         delay(160)
 
-        // 3. Description fades in
-        launch {
-            descAlpha.animateTo(1f, animationSpec = tween(380))
-        }
+        launch { descAlpha.animateTo(1f, animationSpec = tween(380)) }
         delay(200)
 
-        // 4. Cards staggered (120 ms apart)
-        launch {
-            card1Alpha.animateTo(1f, animationSpec = tween(340))
-        }
-        launch {
-            card1OffsetY.animateTo(0f, animationSpec = tween(340, easing = FastOutSlowInEasing))
-        }
+        launch { card1Alpha.animateTo(1f, animationSpec = tween(340)) }
+        launch { card1OffsetY.animateTo(0f, animationSpec = tween(340, easing = FastOutSlowInEasing)) }
         delay(120)
 
-        launch {
-            card2Alpha.animateTo(1f, animationSpec = tween(340))
-        }
-        launch {
-            card2OffsetY.animateTo(0f, animationSpec = tween(340, easing = FastOutSlowInEasing))
-        }
+        launch { card2Alpha.animateTo(1f, animationSpec = tween(340)) }
+        launch { card2OffsetY.animateTo(0f, animationSpec = tween(340, easing = FastOutSlowInEasing)) }
         delay(120)
 
-        launch {
-            card3Alpha.animateTo(1f, animationSpec = tween(340))
-        }
-        launch {
-            card3OffsetY.animateTo(0f, animationSpec = tween(340, easing = FastOutSlowInEasing))
-        }
+        launch { card3Alpha.animateTo(1f, animationSpec = tween(340)) }
+        launch { card3OffsetY.animateTo(0f, animationSpec = tween(340, easing = FastOutSlowInEasing)) }
         delay(200)
 
-        // 5. Bottom note
-        launch {
-            noteAlpha.animateTo(1f, animationSpec = tween(400))
-        }
+        launch { noteAlpha.animateTo(1f, animationSpec = tween(400)) }
     }
 
     val shopItems = listOf(
-        ShopItemPreview("💡", "Extra-Hinweis", "Erhalte einen zusätzlichen Hinweis pro Frage"),
-        ShopItemPreview("⏱️", "Zeitbonus", "30 Sekunden extra Zeit pro Quiz"),
-        ShopItemPreview("🎯", "50:50 Joker", "Eliminiere zwei falsche Antworten")
+        ShopItemPreview("💡", "Extra-Hinweis", "Erhalte einen zusätzlichen Hinweis pro Frage", Primary),
+        ShopItemPreview("⏱️", "Zeitbonus", "30 Sekunden extra Zeit pro Quiz", Accent),
+        ShopItemPreview("🎯", "50:50 Joker", "Eliminiere zwei falsche Antworten", Gold)
     )
 
     val cardAlphas = listOf(card1Alpha, card2Alpha, card3Alpha)
@@ -156,7 +151,7 @@ fun ShopScreen(navController: NavHostController) {
                         text = "Shop",
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 navigationIcon = {
@@ -164,31 +159,39 @@ fun ShopScreen(navController: NavHostController) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Zurück",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = SurfaceBackground
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             )
         },
-        containerColor = SurfaceBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            SurfaceBackground,
-                            Color(0xFF1A1530),
-                            SurfaceBackground
-                        )
-                    )
-                )
+                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
+            // Subtle premium gradient overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Gold.copy(alpha = 0.05f),
+                                Primary.copy(alpha = 0.04f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -198,34 +201,87 @@ fun ShopScreen(navController: NavHostController) {
             ) {
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Large shopping bag with scale-in animation
-                Text(
-                    text = "🛍️",
-                    fontSize = 88.sp,
-                    modifier = Modifier.scale(bagScale.value)
-                )
+                // Large shopping bag with scale-in + glow ring
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(120.dp)
+                        .scale(bagScale.value)
+                ) {
+                    // Glow ring behind bag
+                    Box(
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    colors = listOf(
+                                        Gold.copy(alpha = bannerGlow * 0.2f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                    )
+                    Text(text = "🛍️", fontSize = 88.sp)
+                }
 
                 Spacer(modifier = Modifier.height(28.dp))
 
-                // Heading: "Demnächst verfügbar!"
+                // Animated "Demnächst verfügbar!" banner with Gold glow
+                Box(
+                    modifier = Modifier
+                        .alpha(headingAlpha.value)
+                        .offset(y = headingOffsetY.value.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    GoldDark.copy(alpha = 0.2f * bannerGlow),
+                                    Gold.copy(alpha = 0.15f * bannerGlow),
+                                    GoldLight.copy(alpha = 0.2f * bannerGlow)
+                                )
+                            )
+                        )
+                        .border(
+                            1.dp,
+                            Brush.horizontalGradient(
+                                listOf(
+                                    GoldDark.copy(alpha = 0.5f * bannerGlow),
+                                    GoldLight.copy(alpha = 0.4f * bannerGlow)
+                                )
+                            ),
+                            RoundedCornerShape(50)
+                        )
+                        .padding(horizontal = 20.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "✨ Bald verfügbar!",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Gold,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
                 Text(
                     text = "Demnächst verfügbar!",
-                    fontSize = 27.sp,
+                    fontSize = 28.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .alpha(headingAlpha.value)
                         .offset(y = headingOffsetY.value.dp)
                 )
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Description
                 Text(
                     text = "Hier kannst du bald Joker, Hinweise und Extras freischalten",
                     fontSize = 15.sp,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     lineHeight = 23.sp,
                     modifier = Modifier
@@ -235,7 +291,7 @@ fun ShopScreen(navController: NavHostController) {
 
                 Spacer(modifier = Modifier.height(36.dp))
 
-                // Gradient divider
+                // Premium gradient divider
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(0.82f)
@@ -244,8 +300,8 @@ fun ShopScreen(navController: NavHostController) {
                             brush = Brush.horizontalGradient(
                                 colors = listOf(
                                     Color.Transparent,
-                                    PrimaryPurple.copy(alpha = 0.55f),
-                                    AccentPurple.copy(alpha = 0.55f),
+                                    Gold.copy(alpha = 0.4f),
+                                    Primary.copy(alpha = 0.4f),
                                     Color.Transparent
                                 )
                             )
@@ -254,7 +310,7 @@ fun ShopScreen(navController: NavHostController) {
 
                 Spacer(modifier = Modifier.height(30.dp))
 
-                // Staggered preview cards
+                // Staggered preview cards with per-item glow colors
                 shopItems.forEachIndexed { index, item ->
                     ShopPreviewCard(
                         item = item,
@@ -269,11 +325,10 @@ fun ShopScreen(navController: NavHostController) {
 
                 Spacer(modifier = Modifier.height(36.dp))
 
-                // Bottom note
                 Text(
                     text = "Wir arbeiten hart daran, dir tolle Inhalte zu bringen 💜",
                     fontSize = 13.sp,
-                    color = TextSecondary.copy(alpha = 0.65f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.alpha(noteAlpha.value)
                 )
@@ -296,13 +351,40 @@ private fun ShopPreviewCard(
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        CardBackground,
-                        Color(0xFF231F38)
+                        GlassWhite,
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
                     )
                 )
             )
+            .border(
+                1.dp,
+                Brush.linearGradient(
+                    colors = listOf(
+                        item.glowColor.copy(alpha = 0.35f),
+                        GlassBorder
+                    )
+                ),
+                RoundedCornerShape(16.dp)
+            )
     ) {
-        // Left accent stripe with gradient
+        // Top glow streak for premium feel
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            item.glowColor.copy(alpha = 0.5f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+
+        // Left accent stripe with per-item gradient color
         Box(
             modifier = Modifier
                 .width(3.dp)
@@ -310,7 +392,7 @@ private fun ShopPreviewCard(
                 .align(Alignment.CenterStart)
                 .background(
                     brush = Brush.verticalGradient(
-                        colors = listOf(PrimaryPurple, AccentPurple)
+                        colors = listOf(item.glowColor, item.glowColor.copy(alpha = 0.5f))
                     )
                 )
         )
@@ -322,30 +404,27 @@ private fun ShopPreviewCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Emoji + text block
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // Emoji container with subtle radial gradient
+                // 3D icon container with radial glow
                 Box(
                     modifier = Modifier
-                        .size(50.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(14.dp))
                         .background(
                             brush = Brush.radialGradient(
                                 colors = listOf(
-                                    PrimaryPurple.copy(alpha = 0.28f),
-                                    AccentPurple.copy(alpha = 0.10f)
+                                    item.glowColor.copy(alpha = 0.25f),
+                                    item.glowColor.copy(alpha = 0.08f)
                                 )
                             )
-                        ),
+                        )
+                        .border(1.dp, item.glowColor.copy(alpha = 0.3f), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = item.emoji,
-                        fontSize = 24.sp
-                    )
+                    Text(text = item.emoji, fontSize = 26.sp)
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))
@@ -355,13 +434,13 @@ private fun ShopPreviewCard(
                         text = item.title,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = item.description,
                         fontSize = 13.sp,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 18.sp
                     )
                 }
@@ -369,11 +448,12 @@ private fun ShopPreviewCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Greyed-out "Bald!" badge
+            // "Bald!" badge with item-color glow
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF2E2A45))
+                    .background(item.glowColor.copy(alpha = 0.12f))
+                    .border(1.dp, item.glowColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -381,7 +461,7 @@ private fun ShopPreviewCard(
                     text = "Bald!",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextSecondary
+                    color = item.glowColor
                 )
             }
         }

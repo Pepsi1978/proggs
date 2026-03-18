@@ -12,6 +12,7 @@ coroutines = "1.9.0"
 playServicesAds = "23.6.0"
 billing = "7.1.1"
 gson = "2.11.0"
+coil = "2.7.0"
 
 [libraries]
 # Compose BOM
@@ -48,6 +49,10 @@ billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", versi
 
 # JSON
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+
+# Image loading (SVG support)
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+coil-svg = { group = "io.coil-kt", name = "coil-svg", version.ref = "coil" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

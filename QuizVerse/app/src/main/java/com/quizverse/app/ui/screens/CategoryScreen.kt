@@ -78,6 +78,8 @@ import com.quizverse.app.ui.theme.FoodEnd
 import com.quizverse.app.ui.theme.FoodStart
 import com.quizverse.app.ui.theme.GeoEnd
 import com.quizverse.app.ui.theme.GeoStart
+import com.quizverse.app.ui.theme.Gold
+import com.quizverse.app.ui.theme.GoldLight
 import com.quizverse.app.ui.theme.HerthaEnd
 import com.quizverse.app.ui.theme.HerthaStart
 import com.quizverse.app.ui.theme.HistoryEnd
@@ -105,31 +107,33 @@ private data class CategoryItem(
     val emoji: String,
     val gradientStart: Color,
     val gradientEnd: Color,
+    val glowColor: Color = Color.Transparent,
     val subcategories: List<CategoryItem> = emptyList()
 )
 
 // ── Main categories — IDs MUST match categoryId in Question entities ────────
 private val categories = listOf(
-    CategoryItem(11, "Alle Kategorien", "\uD83C\uDF1F", MixedStart, MixedEnd),
-    CategoryItem(1, "Weltgeographie", "\uD83C\uDF0D", GeoStart, GeoEnd),
-    CategoryItem(2, "Wissenschaft & Natur", "\uD83D\uDD2C", ScienceStart, ScienceEnd),
-    CategoryItem(3, "Geschichte", "\uD83D\uDCDC", HistoryStart, HistoryEnd),
-    CategoryItem(4, "Film & Fernsehen", "\uD83C\uDFAC", FilmStart, FilmEnd),
-    CategoryItem(5, "Musik", "\uD83C\uDFB5", MusicStart, MusicEnd),
+    CategoryItem(11, "Alle Kategorien", "\uD83C\uDF1F", MixedStart, MixedEnd, MixedStart),
+    CategoryItem(1, "Weltgeographie", "\uD83C\uDF0D", GeoStart, GeoEnd, GeoStart),
+    CategoryItem(2, "Wissenschaft & Natur", "\uD83D\uDD2C", ScienceStart, ScienceEnd, ScienceStart),
+    CategoryItem(3, "Geschichte", "\uD83D\uDCDC", HistoryStart, HistoryEnd, HistoryStart),
+    CategoryItem(4, "Film & Fernsehen", "\uD83C\uDFAC", FilmStart, FilmEnd, FilmStart),
+    CategoryItem(5, "Musik", "\uD83C\uDFB5", MusicStart, MusicEnd, MusicStart),
     // Sport has Bundesliga subcategories
     CategoryItem(
         id = 6, name = "Sport", emoji = "\u26BD",
         gradientStart = SportStart, gradientEnd = SportEnd,
+        glowColor = SportStart,
         subcategories = listOf(
-            CategoryItem(13, "Hertha BSC", "\uD83D\uDC99", HerthaStart, HerthaEnd),
-            CategoryItem(14, "Borussia Dortmund", "\uD83D\uDC9B", DortmundStart, DortmundEnd),
+            CategoryItem(13, "Hertha BSC", "\uD83D\uDC99", HerthaStart, HerthaEnd, HerthaStart),
+            CategoryItem(14, "Borussia Dortmund", "\uD83D\uDC9B", DortmundStart, DortmundEnd, DortmundStart),
         )
     ),
-    CategoryItem(7, "Technologie", "\uD83D\uDCBB", TechStart, TechEnd),
-    CategoryItem(8, "Essen & Trinken", "\uD83C\uDF73", FoodStart, FoodEnd),
-    CategoryItem(9, "Tierwelt", "\uD83D\uDC3E", AnimalsStart, AnimalsEnd),
-    CategoryItem(10, "Sprache & Literatur", "\uD83D\uDCDA", LiteratureStart, LiteratureEnd),
-    CategoryItem(12, "Logik & Denksport", "\uD83E\uDDE0", LogicStart, LogicEnd),
+    CategoryItem(7, "Technologie", "\uD83D\uDCBB", TechStart, TechEnd, TechStart),
+    CategoryItem(8, "Essen & Trinken", "\uD83C\uDF73", FoodStart, FoodEnd, FoodStart),
+    CategoryItem(9, "Tierwelt", "\uD83D\uDC3E", AnimalsStart, AnimalsEnd, AnimalsStart),
+    CategoryItem(10, "Sprache & Literatur", "\uD83D\uDCDA", LiteratureStart, LiteratureEnd, LiteratureStart),
+    CategoryItem(12, "Logik & Denksport", "\uD83E\uDDE0", LogicStart, LogicEnd, LogicStart),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -163,7 +167,7 @@ fun CategoryScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
@@ -171,7 +175,7 @@ fun CategoryScreen(navController: NavHostController) {
                 CategoryRow(
                     category = category,
                     cardIndex = index,
-                    animationDelayMillis = index * 50,
+                    animationDelayMillis = index * 55,
                     onCategoryClick = { id ->
                         navController.navigate(Screen.Difficulty.createRoute(id))
                     }
@@ -183,7 +187,7 @@ fun CategoryScreen(navController: NavHostController) {
     }
 }
 
-// ── Full-width category row with neumorphic 3D style and floating animation ──
+// ── Full-width category row with glassmorphism + colored glow shadow ─────────
 @Composable
 private fun CategoryRow(
     category: CategoryItem,
@@ -192,23 +196,26 @@ private fun CategoryRow(
     onCategoryClick: (Int) -> Unit
 ) {
     val alpha = remember { Animatable(0f) }
+    val offsetY = remember { Animatable(24f) }
     var expanded by remember { mutableStateOf(false) }
     val hasSubcategories = category.subcategories.isNotEmpty()
 
-    // Entrance fade-in with stagger delay
+    // Entrance stagger: slide up + fade in
     LaunchedEffect(Unit) {
         delay(animationDelayMillis.toLong())
-        alpha.animateTo(1f, animationSpec = tween(350, easing = FastOutSlowInEasing))
+        alpha.animateTo(1f, animationSpec = tween(380, easing = FastOutSlowInEasing))
+    }
+    LaunchedEffect(Unit) {
+        delay(animationDelayMillis.toLong())
+        offsetY.animateTo(0f, animationSpec = tween(380, easing = FastOutSlowInEasing))
     }
 
     // ── Continuous floating animation — each card gets unique timing ─────────
-    // Base duration varies per card index to stagger the floating rhythm
     val floatDurationY = 2800 + cardIndex * 230
     val floatDurationX = 3600 + cardIndex * 180
 
     val floatTransition = rememberInfiniteTransition(label = "float_${category.id}")
 
-    // Vertical bob: ±3.5dp, subtle and gentle
     val floatY = floatTransition.animateFloat(
         initialValue = -3.5f,
         targetValue = 3.5f,
@@ -219,7 +226,6 @@ private fun CategoryRow(
         label = "float_y_${category.id}"
     )
 
-    // Horizontal sway: ±2dp, even subtler
     val floatX = floatTransition.animateFloat(
         initialValue = -2f,
         targetValue = 2f,
@@ -230,11 +236,32 @@ private fun CategoryRow(
         label = "float_x_${category.id}"
     )
 
+    // Glow pulse for the colored shadow
+    val glowPulse = floatTransition.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 0.55f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(floatDurationY, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow_${category.id}"
+    )
+
+    // Shimmer sweep
+    val shimmer = floatTransition.animateFloat(
+        initialValue = -0.4f,
+        targetValue = 1.4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3200 + cardIndex * 130, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer_${category.id}"
+    )
+
     // ── Press interaction ────────────────────────────────────────────────────
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
-    // Card sinks down when pressed
     val pressTranslateY by animateFloatAsState(
         targetValue = if (isPressed) 5f else 0f,
         animationSpec = spring(stiffness = Spring.StiffnessHigh),
@@ -245,66 +272,108 @@ private fun CategoryRow(
         animationSpec = spring(stiffness = Spring.StiffnessHigh),
         label = "neu_scale_${category.id}"
     )
-    // Outer shadow: visible when raised, disappears when pressed
     val outerShadowAlpha by animateFloatAsState(
         targetValue = if (isPressed) 0f else 1f,
         animationSpec = tween(100),
         label = "neu_outerShadow_${category.id}"
     )
-    // Inner shadow: appears when pressed (inset neumorphic look)
     val innerShadowAlpha by animateFloatAsState(
         targetValue = if (isPressed) 0.6f else 0f,
         animationSpec = tween(100),
         label = "neu_innerShadow_${category.id}"
     )
-    // Top-left highlight edge intensity
     val highlightAlpha by animateFloatAsState(
         targetValue = if (isPressed) 0.08f else 0.5f,
         animationSpec = tween(100),
         label = "neu_highlight_${category.id}"
     )
-    // Bottom-right shadow edge intensity
     val edgeShadowAlpha by animateFloatAsState(
         targetValue = if (isPressed) 0.5f else 0.25f,
         animationSpec = tween(100),
         label = "neu_edgeShadow_${category.id}"
     )
 
-    val shape = RoundedCornerShape(16.dp)
-    val cr = CornerRadius(16.dp.value, 16.dp.value)
+    val shape = RoundedCornerShape(20.dp)
+    val cr = CornerRadius(20.dp.value, 20.dp.value)
 
-    Column(modifier = Modifier.alpha(alpha.value)) {
-        // Main category card — raw Box with neumorphic 3D style (no Card/CardDefaults)
+    Column(
+        modifier = Modifier
+            .alpha(alpha.value)
+            .graphicsLayer { translationY = offsetY.value.dp.toPx() }
+    ) {
+        // Colored glow shadow under card (drawn via outer Box with background)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp)
+                .height(8.dp)
+                .alpha(glowPulse.value * outerShadowAlpha)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            category.glowColor.copy(alpha = 0.6f),
+                            category.gradientEnd.copy(alpha = 0.4f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(50)
+                )
+        )
+
+        // Main category card — gradient + glassmorphism border + 3D edges
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .graphicsLayer {
                     scaleX = pressScale
                     scaleY = pressScale
-                    // Combine float offset with press sink
                     translationY = (floatY.value + pressTranslateY).dp.toPx()
                     translationX = floatX.value.dp.toPx()
                     this.shape = shape
                     clip = false
-                    // Neumorphic outer shadow — only visible when raised
-                    shadowElevation = 10.dp.toPx() * outerShadowAlpha
-                    ambientShadowColor = Color.Black.copy(alpha = 0.3f * outerShadowAlpha)
-                    spotShadowColor = Color.Black.copy(alpha = 0.4f * outerShadowAlpha)
+                    shadowElevation = 14.dp.toPx() * outerShadowAlpha
+                    ambientShadowColor = category.glowColor.copy(alpha = 0.35f * outerShadowAlpha)
+                    spotShadowColor = category.glowColor.copy(alpha = 0.45f * outerShadowAlpha)
                 }
                 .clip(shape)
                 .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(category.gradientStart, category.gradientEnd)
+                    Brush.linearGradient(
+                        colors = listOf(
+                            category.gradientStart,
+                            category.gradientEnd,
+                            category.gradientEnd.copy(alpha = 0.85f)
+                        )
                     )
                 )
-                // ── Neumorphic 3D edges drawn over the gradient background ────
+                // Glassmorphism + shimmer + 3D neumorphic edges
                 .drawWithContent {
                     drawContent()
 
                     val w = size.width
                     val h = size.height
 
-                    // Top highlight edge — bright white strip (light from top-left)
+                    // Subtle glass fill overlay
+                    drawRoundRect(
+                        color = Color.White.copy(alpha = 0.05f),
+                        size = size,
+                        cornerRadius = cr
+                    )
+
+                    // Shimmer sweep
+                    drawRoundRect(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.White.copy(alpha = 0.13f),
+                                Color.Transparent
+                            ),
+                            startX = shimmer.value * w * 1.4f - w * 0.2f,
+                            endX = shimmer.value * w * 1.4f + w * 0.15f
+                        ),
+                        size = size,
+                        cornerRadius = cr
+                    )
+
+                    // Top highlight edge — bright white strip
                     drawRoundRect(
                         brush = Brush.verticalGradient(
                             colors = listOf(
@@ -312,9 +381,9 @@ private fun CategoryRow(
                                 Color.Transparent
                             ),
                             startY = 0f,
-                            endY = 6.dp.toPx()
+                            endY = 7.dp.toPx()
                         ),
-                        size = Size(w, 6.dp.toPx()),
+                        size = Size(w, 7.dp.toPx()),
                         cornerRadius = cr
                     )
                     // Left highlight edge
@@ -331,18 +400,18 @@ private fun CategoryRow(
                         cornerRadius = cr
                     )
 
-                    // Bottom shadow edge — dark strip
+                    // Bottom shadow edge
                     drawRoundRect(
                         brush = Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
                                 Color.Black.copy(alpha = edgeShadowAlpha)
                             ),
-                            startY = h - 6.dp.toPx(),
+                            startY = h - 7.dp.toPx(),
                             endY = h
                         ),
-                        topLeft = Offset(0f, h - 6.dp.toPx()),
-                        size = Size(w, 6.dp.toPx()),
+                        topLeft = Offset(0f, h - 7.dp.toPx()),
+                        size = Size(w, 7.dp.toPx()),
                         cornerRadius = cr
                     )
                     // Right shadow edge
@@ -360,9 +429,8 @@ private fun CategoryRow(
                         cornerRadius = cr
                     )
 
-                    // Inner shadow overlay when pressed (inset neumorphic effect)
+                    // Inner shadow overlay when pressed
                     if (innerShadowAlpha > 0.01f) {
-                        // Top-left inner shadow (dark = pushed in)
                         drawRoundRect(
                             brush = Brush.linearGradient(
                                 colors = listOf(
@@ -375,7 +443,6 @@ private fun CategoryRow(
                             size = size,
                             cornerRadius = cr
                         )
-                        // Bottom-right inner highlight (floor of pressed area)
                         drawRoundRect(
                             brush = Brush.linearGradient(
                                 colors = listOf(
@@ -390,9 +457,9 @@ private fun CategoryRow(
                         )
                     }
 
-                    // Thin white border stroke around the entire card
+                    // Glassmorphism border — dual-layer for depth
                     drawRoundRect(
-                        color = Color.White.copy(alpha = highlightAlpha * 0.4f),
+                        color = Color.White.copy(alpha = highlightAlpha * 0.55f),
                         size = size,
                         cornerRadius = cr,
                         style = Stroke(width = 1.5.dp.toPx())
@@ -400,7 +467,7 @@ private fun CategoryRow(
                 }
                 .clickable(
                     interactionSource = interactionSource,
-                    indication = null // Visual feedback handled via neumorphic animations above
+                    indication = null
                 ) {
                     if (hasSubcategories) {
                         expanded = !expanded
@@ -408,21 +475,47 @@ private fun CategoryRow(
                         onCategoryClick(category.id)
                     }
                 }
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = 20.dp, vertical = 18.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Emoji in semi-transparent circle
+                // Larger emoji in glass circle with gold accent ring for "Alle Kategorien"
+                val isAllCategories = category.id == 11
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Color.White.copy(alpha = 0.2f)),
+                        .size(58.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.White.copy(alpha = 0.18f))
+                        .drawWithContent {
+                            drawContent()
+                            // Inner glass gradient on icon container
+                            drawRoundRect(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.25f),
+                                        Color.Transparent
+                                    ),
+                                    startY = 0f,
+                                    endY = size.height * 0.5f
+                                ),
+                                cornerRadius = CornerRadius(16.dp.toPx())
+                            )
+                            // Gold border for premium "Alle Kategorien" card
+                            if (isAllCategories) {
+                                drawRoundRect(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(GoldLight, Gold)
+                                    ),
+                                    cornerRadius = CornerRadius(16.dp.toPx()),
+                                    style = Stroke(width = 2.dp.toPx())
+                                )
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = category.emoji, fontSize = 24.sp)
+                    Text(text = category.emoji, fontSize = 28.sp)
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))
@@ -438,8 +531,27 @@ private fun CategoryRow(
                         Text(
                             text = "${category.subcategories.size} Vereine",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.8f)
+                            color = Color.White.copy(alpha = 0.75f)
                         )
+                    }
+                    // Gold "Premium" badge for "Alle Kategorien"
+                    if (isAllCategories) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    Brush.horizontalGradient(listOf(Gold.copy(alpha = 0.3f), GoldLight.copy(alpha = 0.2f)))
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "★ Alle Kategorien",
+                                fontSize = 10.sp,
+                                color = GoldLight,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 
@@ -449,12 +561,12 @@ private fun CategoryRow(
                         else Icons.Default.KeyboardArrowDown,
                         contentDescription = if (expanded) "Einklappen" else "Ausklappen",
                         tint = Color.White,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(30.dp)
                     )
                 } else {
                     Text(
                         text = "\u203A",
-                        fontSize = 24.sp,
+                        fontSize = 26.sp,
                         color = Color.White.copy(alpha = 0.8f),
                         fontWeight = FontWeight.Light
                     )
@@ -466,8 +578,8 @@ private fun CategoryRow(
         if (hasSubcategories) {
             AnimatedVisibility(
                 visible = expanded,
-                enter = expandVertically(animationSpec = tween(250)),
-                exit = shrinkVertically(animationSpec = tween(200))
+                enter = expandVertically(animationSpec = tween(260)),
+                exit = shrinkVertically(animationSpec = tween(210))
             ) {
                 Column(
                     modifier = Modifier.padding(start = 24.dp, top = 8.dp),
@@ -498,7 +610,7 @@ private fun CategoryRow(
     }
 }
 
-// ── Subcategory card with neumorphic 3D style (indented, slightly smaller) ───
+// ── Subcategory card with glassmorphism style ─────────────────────────────────
 @Composable
 private fun SubcategoryCard(
     emoji: String,
@@ -510,7 +622,6 @@ private fun SubcategoryCard(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
-    // Press animations — same neumorphic pattern as the main card
     val pressTranslateY by animateFloatAsState(
         targetValue = if (isPressed) 5f else 0f,
         animationSpec = spring(stiffness = Spring.StiffnessHigh),
@@ -542,8 +653,8 @@ private fun SubcategoryCard(
         label = "sub_edgeShadow"
     )
 
-    val shape = RoundedCornerShape(12.dp)
-    val cr = CornerRadius(12.dp.value, 12.dp.value)
+    val shape = RoundedCornerShape(14.dp)
+    val cr = CornerRadius(14.dp.value, 14.dp.value)
 
     Box(
         modifier = Modifier
@@ -564,110 +675,70 @@ private fun SubcategoryCard(
                     colors = listOf(gradientStart, gradientEnd)
                 )
             )
-            // ── Neumorphic 3D edges for subcategory card ──────────────────
             .drawWithContent {
                 drawContent()
 
                 val w = size.width
                 val h = size.height
 
-                // Top highlight edge
+                // Glass overlay
+                drawRoundRect(color = Color.White.copy(alpha = 0.05f), size = size, cornerRadius = cr)
+
+                // Top highlight
                 drawRoundRect(
                     brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = highlightAlpha),
-                            Color.Transparent
-                        ),
-                        startY = 0f,
-                        endY = 5.dp.toPx()
+                        colors = listOf(Color.White.copy(alpha = highlightAlpha), Color.Transparent),
+                        startY = 0f, endY = 5.dp.toPx()
                     ),
-                    size = Size(w, 5.dp.toPx()),
-                    cornerRadius = cr
+                    size = Size(w, 5.dp.toPx()), cornerRadius = cr
                 )
-                // Left highlight edge
+                // Left highlight
                 drawRoundRect(
                     brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = highlightAlpha * 0.7f),
-                            Color.Transparent
-                        ),
-                        startX = 0f,
-                        endX = 4.dp.toPx()
+                        colors = listOf(Color.White.copy(alpha = highlightAlpha * 0.7f), Color.Transparent),
+                        startX = 0f, endX = 4.dp.toPx()
                     ),
-                    size = Size(4.dp.toPx(), h),
-                    cornerRadius = cr
+                    size = Size(4.dp.toPx(), h), cornerRadius = cr
                 )
-
-                // Bottom shadow edge
+                // Bottom shadow
                 drawRoundRect(
                     brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = edgeShadowAlpha)
-                        ),
-                        startY = h - 5.dp.toPx(),
-                        endY = h
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = edgeShadowAlpha)),
+                        startY = h - 5.dp.toPx(), endY = h
                     ),
-                    topLeft = Offset(0f, h - 5.dp.toPx()),
-                    size = Size(w, 5.dp.toPx()),
-                    cornerRadius = cr
+                    topLeft = Offset(0f, h - 5.dp.toPx()), size = Size(w, 5.dp.toPx()), cornerRadius = cr
                 )
-                // Right shadow edge
+                // Right shadow
                 drawRoundRect(
                     brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = edgeShadowAlpha * 0.6f)
-                        ),
-                        startX = w - 4.dp.toPx(),
-                        endX = w
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = edgeShadowAlpha * 0.6f)),
+                        startX = w - 4.dp.toPx(), endX = w
                     ),
-                    topLeft = Offset(w - 4.dp.toPx(), 0f),
-                    size = Size(4.dp.toPx(), h),
-                    cornerRadius = cr
+                    topLeft = Offset(w - 4.dp.toPx(), 0f), size = Size(4.dp.toPx(), h), cornerRadius = cr
                 )
 
-                // Inner shadow when pressed
+                // Inner press shadow
                 if (innerShadowAlpha > 0.01f) {
                     drawRoundRect(
                         brush = Brush.linearGradient(
-                            colors = listOf(
-                                Color.Black.copy(alpha = innerShadowAlpha * 0.5f),
-                                Color.Transparent
-                            ),
-                            start = Offset(0f, 0f),
-                            end = Offset(w * 0.3f, h * 0.3f)
+                            colors = listOf(Color.Black.copy(alpha = innerShadowAlpha * 0.5f), Color.Transparent),
+                            start = Offset(0f, 0f), end = Offset(w * 0.3f, h * 0.3f)
                         ),
-                        size = size,
-                        cornerRadius = cr
-                    )
-                    drawRoundRect(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.White.copy(alpha = innerShadowAlpha * 0.2f)
-                            ),
-                            start = Offset(w * 0.7f, h * 0.7f),
-                            end = Offset(w, h)
-                        ),
-                        size = size,
-                        cornerRadius = cr
+                        size = size, cornerRadius = cr
                     )
                 }
 
-                // Thin white border stroke
+                // Glass border
                 drawRoundRect(
                     color = Color.White.copy(alpha = highlightAlpha * 0.4f),
-                    size = size,
-                    cornerRadius = cr,
-                    style = Stroke(width = 1.5.dp.toPx())
+                    size = size, cornerRadius = cr, style = Stroke(width = 1.5.dp.toPx())
                 )
             }
             .clickable(
                 interactionSource = interactionSource,
-                indication = null // Visual feedback handled via neumorphic animations above
+                indication = null
             ) { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 13.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -675,12 +746,12 @@ private fun SubcategoryCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(11.dp))
                     .background(Color.White.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = emoji, fontSize = 18.sp)
+                Text(text = emoji, fontSize = 20.sp)
             }
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -695,7 +766,7 @@ private fun SubcategoryCard(
 
             Text(
                 text = "\u203A",
-                fontSize = 20.sp,
+                fontSize = 22.sp,
                 color = Color.White.copy(alpha = 0.7f)
             )
         }

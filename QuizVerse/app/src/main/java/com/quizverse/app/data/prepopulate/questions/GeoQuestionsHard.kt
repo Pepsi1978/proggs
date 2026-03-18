@@ -2703,6 +2703,685 @@ fun geoQuestionsHard(): List<Question> = listOf(
         funFact = null
     ),
 
+    // ── HARD (difficulty = 3) ── 50 additional questions (batch 5) ───────────
+
+    Question(
+        categoryId = 1,
+        questionText = "Auf welcher Höhe liegt die alpine Baumgrenze (Waldgrenze) in den Zentralalpen der Schweiz typischerweise?",
+        answerA = "ca. 1.200–1.400 m ü.NN",
+        answerB = "ca. 1.600–1.800 m ü.NN",
+        answerC = "ca. 2.000–2.300 m ü.NN",
+        answerD = "ca. 2.500–2.800 m ü.NN",
+        correctAnswer = 2,
+        explanation = "In den Zentralalpen (Schweizer Alpen, Innsbruck-Region) liegt die klimatisch bedingte Baumgrenze bei etwa 2.000–2.300 m ü.NN. In Nordlagen und nach Norden hin sinkt sie, in Südlagen kann sie bis 2.400 m reichen.",
+        difficulty = 3,
+        funFact = "Die Baumgrenze ist keine feste Linie, sondern eine Zone: Unterhalb steht geschlossener Wald, darüber verstreute Einzelbäume ('Kampfzone'), noch höher nur Gebüsch und Matten."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Auf welcher Höhe liegt die Baumgrenze am Kilimandscharo in Tansania?",
+        answerA = "ca. 1.800 m",
+        answerB = "ca. 2.800 m",
+        answerC = "ca. 3.500 m",
+        answerD = "ca. 4.200 m",
+        correctAnswer = 1,
+        explanation = "Am Kilimandscharo liegt die Baumgrenze bei etwa 2.800 m, wo der montane Regenwald in Heideland übergeht. Darunter befindet sich ein Gürtel aus Bergnebelwald, darüber folgt die Heide- und Moorzone.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wo liegt die Baumgrenze in den tropischen Anden Perus im Vergleich zu den Alpen?",
+        answerA = "Niedriger: ca. 1.500–2.000 m",
+        answerB = "Ähnlich: ca. 2.000–2.200 m",
+        answerC = "Höher: ca. 3.500–4.000 m",
+        answerD = "Wesentlich höher: ca. 4.800–5.200 m",
+        correctAnswer = 2,
+        explanation = "In den tropischen Anden Perus und Boliviens liegt die Baumgrenze bei etwa 3.500–4.000 m – deutlich höher als in den Alpen (2.000–2.300 m). Der Grund ist die ganzjährig hohe Sonneneinstrahlung in Äquatornähe.",
+        difficulty = 3,
+        funFact = "Die Polylepis-Bäume (Queñua) wachsen in den Anden bis auf 5.200 m Höhe und sind damit die höchstgelegenen Bäume der Welt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Bodentyp dominiert die borealen Nadelwälder (Taiga) Sibiriens und Kanadas und ist durch starke Auswaschung (Podsolierung) gekennzeichnet?",
+        answerA = "Chernozem",
+        answerB = "Laterit",
+        answerC = "Podsol",
+        answerD = "Andosol",
+        correctAnswer = 2,
+        explanation = "Podsole sind die typischen Böden der borealen Taiga-Zone. Durch saure Nadelstreu und hohe Niederschläge werden Nährstoffe und Eisenoxide aus dem Oberboden ausgewaschen (Eluviation) und im Unterboden angereichert (Illuviation).",
+        difficulty = 3,
+        funFact = "Der Name 'Podsol' kommt aus dem Russischen und bedeutet 'aschgrauer Boden' – der ausgewaschene Oberhorizont sieht tatsächlich wie Asche aus."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Bodentyp bildet die fruchtbarsten Schwarzerdeböden der osteuropäischen und nord-amerikanischen Steppen?",
+        answerA = "Ferralsol",
+        answerB = "Chernozem (Schwarzerde)",
+        answerC = "Kastanozem",
+        answerD = "Vertisol",
+        correctAnswer = 1,
+        explanation = "Chernozem (Schwarzerde) ist der fruchtbarste Bodentyp der Welt, geprägt durch dicke, humusreiche Oberschichten. Er dominiert die ukrainischen und russischen Steppen sowie die nordamerikanischen Prärien (Great Plains) und bildet die Grundlage der bedeutendsten Getreidekammern der Welt.",
+        difficulty = 3,
+        funFact = "Die Ukraine mit ihren Chernozem-Böden produziert etwa 10 % des Weltweizens. Der Begriff 'Schwarzerde' bezeichnet buchstäblich die schwarze Farbe des humusreichen Bodens."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Bodentyp dominiert die tropischen Regenwälder und ist durch starke Lateritisierung (Ferralsol) extrem nährstoffarm?",
+        answerA = "Andosol",
+        answerB = "Gleysol",
+        answerC = "Ferralsol (Latosol/Laterit)",
+        answerD = "Rendzina",
+        correctAnswer = 2,
+        explanation = "Ferralsole (Laterit-Böden) dominieren tropische Regenwälder. Intensive chemische Verwitterung unter hoher Wärme und Feuchtigkeit löst Silizium und Nährstoffe aus dem Boden, zurück bleiben Eisen- und Aluminiumoxide – ein paradoxes Phänomen: üppige Vegetation auf nährstoffarmen Böden.",
+        difficulty = 3,
+        funFact = "Wenn tropischer Regenwald abgeholzt wird, verliert der Ferralsol seinen Schutz. Nach wenigen Jahren wird er durch Austrocknung zu hartem Lateritstein, auf dem kaum noch Landwirtschaft möglich ist."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher biogeografische Übergang markiert die Grenze zwischen der tropischen und subtropischen Savanne und der Wüstenzone in Afrika?",
+        answerA = "Der 15. Breitengrad nördlicher Breite",
+        answerB = "Die isohyete 250 mm Jahresniederschlag",
+        answerC = "Der Sahel (zwischen Savanne und Sahara)",
+        answerD = "Der Tschadsee-Meridian",
+        correctAnswer = 1,
+        explanation = "Die Isohyete von 250 mm Jahresniederschlag markiert in Afrika annähernd die Grenze zwischen Sahel/Savanne und Wüste. Unterhalb dieser Niederschlagsmenge kann sich kein dauerhafter Pflanzenwuchs mehr etablieren.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Monat setzt der Südwest-Monsun typischerweise über Kerala, der Südwestküste Indiens, ein?",
+        answerA = "April",
+        answerB = "Juni (ca. 1. Juni)",
+        answerC = "Juli",
+        answerD = "August",
+        correctAnswer = 1,
+        explanation = "Der Südwest-Monsun trifft traditionell um den 1. Juni an der Südwestküste Indiens (Kerala) ein. Dies gilt als offizieller Monsunbeginn für den indischen Subkontinent; das Datum variiert jährlich um wenige Tage.",
+        difficulty = 3,
+        funFact = "Der indische Wetterdienst (IMD) gibt den 'normalen' Monsunbeginn für Kerala als 1. Juni an. Für Delhi im Norden wartet man bis Ende Juni – der Monsun braucht ca. 45 Tage, um ganz Indien zu überqueren."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Monat setzt der Ostasiatische Monsun (Meiyu/Baiu) typischerweise im Jangtse-Becken Chinas ein?",
+        answerA = "März",
+        answerB = "Mai",
+        answerC = "Juni (Mitte Juni)",
+        answerD = "September",
+        correctAnswer = 2,
+        explanation = "Der Meiyu-Monsun (chinesisch: Pflaumenregen) setzt im Jangtse-Becken Chinas typischerweise Mitte Juni ein und hält bis Mitte Juli an. Er ist das asiatische Äquivalent des japanischen 'Baiu' (Tsuyu) und bringt lang anhaltende Niederschläge.",
+        difficulty = 3,
+        funFact = "Der Name 'Meiyu' (Pflaumenregen) kommt davon, dass die Regen zur Pflaumenreifezeit einsetzt. In Japan heißt diese Regenperiode 'Tsuyu' und ist für Pilze, Schimmel und dramatische Überschwemmungen bekannt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Ophiolith-Komplex in Oman gilt als bestes erhaltenes Beispiel ozeanischer Kruste auf dem Festland?",
+        answerA = "Troodos-Ophiolith (Zypern)",
+        answerB = "Semail-Ophiolith (Oman)",
+        answerC = "Bay-of-Islands-Ophiolith (Kanada)",
+        answerD = "Vourinos-Ophiolith (Griechenland)",
+        correctAnswer = 1,
+        explanation = "Der Semail-Ophiolith in Oman und den VAE ist der größte und am besten erhaltene Ophiolith-Komplex der Welt. Er erstreckt sich über ca. 600 km und zeigt das vollständige Profil ozeanischer Kruste: Peridotit (Mantel), Gabbro, Pillow-Laven und ozeanische Sedimente.",
+        difficulty = 3,
+        funFact = "Ophiolithe sind Fragmente ozeanischer Kruste, die durch tektonische Obduktion auf Kontinente aufgeschoben wurden, anstatt in einer Subduktionszone zu versinken – ein seltenes und wichtiges geologisches Ereignis."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was sind Ophiolithe und welche Gesteinsabfolge ist für sie typisch?",
+        answerA = "Erstarrungsgesteine aus Kontinentalkollisionen; Granit–Gneis–Marmor",
+        answerB = "Fragmente ozeanischer Kruste auf Kontinenten; Peridotit–Gabbro–Basalt–Sediment",
+        answerC = "Metamorphe Gesteine aus Subduktionszonen; Blauschiefer–Eklogit",
+        answerD = "Vulkanische Inselbögen; Andesit–Ryolith–Ignimbrit",
+        correctAnswer = 1,
+        explanation = "Ophiolithe sind tektonisch auf Festland aufgeschobene Stücke ozeanischer Kruste. Die klassische Abfolge von unten nach oben: Harzburgit/Peridotit (Erdmantel) → Gabbro (untere Ozeankruste) → Sheeted Dike Complex → Pillow-Basalt (MORB) → ozeanische Sedimente.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Land befindet sich der Troodos-Ophiolith, ein vollständiges Musterbeispiel mesozoischer Ozeankruste?",
+        answerA = "Griechenland",
+        answerB = "Türkei",
+        answerC = "Zypern",
+        answerD = "Libanon",
+        correctAnswer = 2,
+        explanation = "Der Troodos-Ophiolith auf Zypern ist ein klassischer Ophiolith-Komplex aus dem Mesozoikum (ca. 90 Ma alt). Er zeigt die vollständige Abfolge ozeanischer Kruste und ist eines der meistuntersuchten geologischen Objekte weltweit.",
+        difficulty = 3,
+        funFact = "Zypern verdankt seinen Namen möglicherweise dem griechischen Wort 'Kupfer' (Kypros) – die Insel war in der Antike die wichtigste Kupferquelle der Mittelmeerregion, geliefert von den Gabbro-Gesteinen des Ophioliths."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Korallenriffsystem ist das größte der Welt nach Ausdehnung?",
+        answerA = "Mesoamerikanisches Barriereriff (Karibik)",
+        answerB = "New-Caledonia-Barriereriff (Pazifik)",
+        answerC = "Great Barrier Reef (Australien)",
+        answerD = "Rotes Meer-Korallenriff",
+        correctAnswer = 2,
+        explanation = "Das Great Barrier Reef vor der Nordostküste Australiens ist mit über 2.300 km Länge und einer Fläche von ca. 344.400 km² das größte Korallenriffsystem der Welt. Es ist das einzige lebende Gebilde, das vom Weltraum aus sichtbar ist.",
+        difficulty = 3,
+        funFact = "Das Great Barrier Reef besteht aus etwa 2.900 einzelnen Riffs und 900 Inseln. Es beherbergt über 1.500 Fischarten, 4.000 Weichtierarten und 240 Vogelarten."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Korallenriffsystem in der Karibik ist das größte der westlichen Hemisphäre und das zweitgrößte der Welt?",
+        answerA = "Mesoamerikanisches Barriereriff (Belize, Mexiko, Honduras, Guatemala)",
+        answerB = "Florida Keys-Riff (USA)",
+        answerC = "Bahamas-Riffsystem",
+        answerD = "Kubanisches Korallenriff",
+        correctAnswer = 0,
+        explanation = "Das Mesoamerikanische Barriereriff (auch Maya Reef oder Great Mayan Reef) erstreckt sich über ca. 1.000 km entlang der Küsten von Mexiko (Yucatán), Belize, Honduras und Guatemala. Es ist das größte Barriereriff in der westlichen Hemisphäre.",
+        difficulty = 3,
+        funFact = "Das Belize-Barriereriff, Teil des Mesoamerikanischen Systems, war Charles Darwins erstes beschriebenes Barriereriff. Er bezeichnete es als 'das prächtigste Riff in Westindien'."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Korallen-Dreieck (Coral Triangle) wird als die global artenreichste Meeresregion der Welt bezeichnet?",
+        answerA = "Karibisches Dreieck (Kuba–Puerto Rico–Florida)",
+        answerB = "Indisches Dreieck (Malediven–Sri Lanka–Andamanen)",
+        answerC = "Coral Triangle (Indonesien–Malaysia–Papua-Neuguinea–Philippinen–Salomonen–Timor-Leste)",
+        answerD = "Rotes Meer-Dreieck",
+        correctAnswer = 2,
+        explanation = "Das Coral Triangle im südwestlichen Pazifik umfasst sechs Länder (Indonesien, Malaysia, Papua-Neuguinea, Philippinen, Salomonen, Timor-Leste) und gilt als Epizentrum der marinen Artenvielfalt: 76 % aller Korallenarten und 37 % aller Rifffische kommen dort vor.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Rotes-Meer-Korallenriff gilt als eines der nördlichsten tropischen Korallenriffe der Welt?",
+        answerA = "Aqaba-Riff (Golf von Aqaba, ca. 29°N)",
+        answerB = "Suez-Riff (ca. 30°N)",
+        answerC = "Dahlak-Archipel-Riff (Eritrea, ca. 16°N)",
+        answerD = "Farasan-Inseln-Riff (Saudi-Arabien, ca. 17°N)",
+        correctAnswer = 0,
+        explanation = "Das Korallenriff im Golf von Aqaba (ca. 29°N) zählt zu den nördlichsten tropischen Korallenriffen der Welt. Trotz seiner hohen Breite gedeihen dort artenreiche Riffe, begünstigt durch die warmen, klaren Gewässer des Roten Meeres.",
+        difficulty = 3,
+        funFact = "Das Riff von Eilat/Aqaba ist für seine außerordentliche Widerstandsfähigkeit bekannt: Trotz steigender Meerestemperaturen bleiben diese Riffe weitgehend bleichungsfrei, weil sie an hitzetolerante Algen-Symbionten angepasst sind."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Mangrovenregion gilt als der größte zusammenhängende Mangrovenwald der Welt?",
+        answerA = "Mangroven der Florida Everglades (USA)",
+        answerB = "Sundarbans (Bangladesch/Indien)",
+        answerC = "Mangroven des Niger-Deltas (Nigeria)",
+        answerD = "Mangroven der Guianen (Südamerika)",
+        correctAnswer = 1,
+        explanation = "Die Sundarbans im Ganges-Brahmaputra-Delta (Bangladesch/Indien) bilden mit ca. 10.000 km² den größten zusammenhängenden Mangrovenwald der Welt. Sie sind UNESCO-Weltnaturerbe und Heimat der größten wilden Bengaltigerpopulation.",
+        difficulty = 3,
+        funFact = "In den Sundarbans wurden die Bengalischen Tiger zu berüchtigten 'Menschenfressern' – bis heute werden dort mehr Menschen von Tigern getötet als irgendwo sonst auf der Welt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Kontinent hat prozentual den größten Anteil seiner Küstenlänge mit Mangroven bedeckt?",
+        answerA = "Südamerika",
+        answerB = "Asien",
+        answerC = "Afrika",
+        answerD = "Australien/Ozeanien",
+        correctAnswer = 0,
+        explanation = "Südamerika (insbesondere Brasilien) hat den größten nationalen Mangrovenbestand der Welt. Brasilien allein besitzt ca. 26 % der globalen Mangrovenfläche. Südamerika dominiert damit den prozentualen Anteil an Küstenabschnitten mit Mangroven.",
+        difficulty = 3,
+        funFact = "Mangroven wachsen nur zwischen 25°N und 25°S (tropisch/subtropisch) und sind auf über 118 Länder verteilt. Sie schützen Küsten vor Tsunamis und Stürmen, binden CO₂ und sind Kinderstube für Fische."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das längste Höhlensystem der Welt nach erkundeter Ganglänge?",
+        answerA = "Optimistychna-Höhle (Ukraine, ca. 261 km)",
+        answerB = "Sistema Sac Actun (Mexiko, ca. 368 km)",
+        answerC = "Mammoth Cave (USA, ca. 676 km)",
+        answerD = "Lechuguilla Cave (USA, ca. 235 km)",
+        correctAnswer = 2,
+        explanation = "Das Mammoth-Cave-System in Kentucky, USA, ist mit über 676 km erkundeten Gängen das längste bekannte Höhlensystem der Welt. Es liegt in einer Kalksteinformation und wächst jedes Jahr durch neue Entdeckungen.",
+        difficulty = 3,
+        funFact = "Das Mammoth Cave System ist so groß, dass es noch immer neue Gänge gibt, die noch nicht kartiert wurden. Der Name kommt von der enormen Größe, nicht vom Mammut-Tier."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das zweitlängste Höhlensystem der Welt und liegt in Mexiko als Unterwasserhöhlensystem?",
+        answerA = "Sistema Ox Bel Ha (Mexiko, ca. 270 km)",
+        answerB = "Sistema Sac Actun (Mexiko, ca. 368 km)",
+        answerC = "Jewel Cave (USA, ca. 330 km)",
+        answerD = "Wind Cave (USA, ca. 248 km)",
+        correctAnswer = 1,
+        explanation = "Das Sistema Sac Actun auf der Yucatán-Halbinsel in Mexiko ist mit ca. 368 km das längste Unterwasserhöhlensystem (Cenote-System) der Welt und das zweitlängste Höhlensystem insgesamt. 2018 wurden Sac Actun und Dos Ojos als verbundenes System bestätigt.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Höhle in Vietnam ist als größte Einzelhöhlenkammer der Welt bekannt?",
+        answerA = "Phong Nha-Höhle",
+        answerB = "Son Doong (Hang Sơn Đoòng)",
+        answerC = "Thiên Đường-Höhle",
+        answerD = "Tú Làn-Höhle",
+        correctAnswer = 1,
+        explanation = "Hang Sơn Đoòng in Vietnam (Phong Nha-Ke Bang Nationalpark) ist die größte Einzelhöhlenkammer der Welt: 5 km lang, bis zu 200 m hoch und 150 m breit. In ihr passen zwei Boeing 747 nebeneinander. Sie wurde 2009 erstmals erkundet.",
+        difficulty = 3,
+        funFact = "In Hang Sơn Đoòng gibt es ein eigenes Ökosystem mit Dschungel und Fluss im Inneren, da zwei 'Doline' (Einsturzöffnungen) Licht und Samen hereinlassen. Wolken bilden sich im Inneren der Höhle."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Kontinent-Kontinent-Kollisionszone gilt als die aktivste und jüngste der Erde und wird durch die Arabia-Eurasien-Kollision gebildet?",
+        answerA = "Indien–Eurasien-Kollisionszone (Himalaya)",
+        answerB = "Afrika–Eurasien-Kollisionszone (Alpen/Atlas)",
+        answerC = "Arabien–Eurasien-Kollisionszone (Zagros/Alborz)",
+        answerD = "Nazca–Südamerika-Kollisionszone (Anden)",
+        correctAnswer = 2,
+        explanation = "Die Arabien-Eurasien-Kollisionszone ist geologisch sehr aktiv und jünger als die Himalaya-Zone. Die arabische Platte schiebt sich nordwärts unter die eurasische und faltete die Zagros-Berge (Iran) und den Alborz (Nordiran). Die Kollisionsrate beträgt ca. 2–3 cm/Jahr.",
+        difficulty = 3,
+        funFact = "Die Zagros-Gebirgsfalten sind besonders erdölreich: Über 60 % der weltweiten konventionellen Ölreserven liegen in Faltenstrukturen entlang dieser Kollisionszone – darunter die Ölfälder Saudi-Arabiens, Irans und Iraks."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Kollisionszone zwischen der Afrikanischen und der Eurasischen Platte hat die Alpen und den Atlas geformt?",
+        answerA = "Die Tethys-Subduktionszone (Mesozoikum bis Tertiär)",
+        answerB = "Die aktive Adria-Eurasien-Spreizungszone",
+        answerC = "Die Transformverwerfung Afrikas im westlichen Mittelmeer",
+        answerD = "Die Subduktion der Afrikanischen Platte unter Sizilien",
+        correctAnswer = 0,
+        explanation = "Die Alpen und der Atlas entstanden durch Subduktion und schließliche Kollision der Afrikanischen mit der Eurasischen Platte, als der Tethys-Ozean im Tertiär (vor 30–10 Ma) geschlossen wurde. Diese Kollision faltete die alpinen Deckensysteme.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "In welcher Höhe beginnt typischerweise die subalpine Baumgrenze in den Rocky Mountains der USA (Colorado, ca. 40°N)?",
+        answerA = "ca. 2.000 m",
+        answerB = "ca. 2.800–3.000 m",
+        answerC = "ca. 3.400–3.600 m",
+        answerD = "ca. 4.000 m",
+        correctAnswer = 2,
+        explanation = "In den Rocky Mountains Colorados (ca. 40°N) liegt die Baumgrenze bei etwa 3.400–3.600 m ü.NN – deutlich höher als in den Alpen (2.000–2.300 m) bei ähnlichem Breitengrad. Die kontinentale Lage mit trockeneren, wärmeren Sommern erlaubt dies.",
+        difficulty = 3,
+        funFact = "An der Baumgrenze der Rocky Mountains wächst die Bristlecone Pine (Pinus aristata), die mit über 4.700 Jahren zu den ältesten lebenden Organismen der Erde gehört."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche spezifische Biom-Grenze trennt den südamerikanischen tropischen Regenwald (Amazonas) von der Cerrado-Savanne?",
+        answerA = "Die 1.500 mm Jahresniederschlags-Isohyete",
+        answerB = "Der 10. Breitengrad südlicher Breite",
+        answerC = "Das São-Francisco-Flusssystem",
+        answerD = "Die Caatinga-Übergangszone (gradueller Übergang, keine scharfe Grenze)",
+        correctAnswer = 3,
+        explanation = "Die Grenze zwischen Amazonas-Regenwald und Cerrado (brasilianische Savanne) ist keine scharfe Linie, sondern ein gradueller Übergang über die Caatinga- und Cerradão-Übergangszone. Klimatisch entscheidend ist die Länge der Trockenzeit.",
+        difficulty = 3,
+        funFact = "Der Cerrado ist das artenreichste Savannensystem der Welt mit ca. 12.000 Pflanzenarten. Seit 1970 wurden über 50 % des ursprünglichen Cerrado durch Landwirtschaft (vor allem Soja) zerstört."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Bodentyp ist für den landwirtschaftlichen Anbau von Reis in den Überschwemmungsebenen Asiens am charakteristischsten?",
+        answerA = "Andosol",
+        answerB = "Anthrosol (Paddy-Boden)",
+        answerC = "Histosol",
+        answerD = "Gleysol",
+        correctAnswer = 1,
+        explanation = "Anthrosole (speziell Paddy-Böden oder Hydragric Anthrosols) entstehen durch jahrhunderte- bis jahrtausendelange Nassreis-Kultivierung. Sie haben eine verdichtete Pflugsohle (Plinthite), die Wasser hält, und anaerobe Bedingungen, die für Nassreis ideal sind.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Monat setzt der Westafrikamonsun (WAM) typischerweise in der Guineasone Westafrikas ein?",
+        answerA = "März",
+        answerB = "Mai",
+        answerC = "Juli",
+        answerD = "Oktober",
+        correctAnswer = 1,
+        explanation = "Der Westafrikanische Monsun (WAM) setzt typischerweise im Mai in der Guineasone (Küstenregion Westafrikas) ein, wenn der ITCZ (Innertropische Konvergenzzone) nach Norden wandert. Im Juli erreicht er seinen nördlichsten Punkt im Sahel.",
+        difficulty = 3,
+        funFact = "Der WAM bestimmt Leben und Tod in der Sahel-Zone: Ein schwaches Monsunjahr wie 1972–1973 verursachte die Sahel-Hungersnot, bei der Hunderttausende Menschen starben."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das längste Höhlensystem Europas?",
+        answerA = "Hölloch (Schweiz, ca. 200 km)",
+        answerB = "Optimistychna-Höhle (Ukraine, ca. 261 km)",
+        answerC = "Eisriesenwelt (Österreich, ca. 42 km)",
+        answerD = "Sistema del Trave (Spanien, ca. 74 km)",
+        correctAnswer = 1,
+        explanation = "Die Optimistychna-Höhle in der Ukraine ist mit ca. 261 km erkundeten Gängen das längste Höhlensystem Europas und das viertlängste der Welt. Sie liegt in Gipshorizonten im westlichen Podolien.",
+        difficulty = 3,
+        funFact = "Gips-Höhlen wie die Optimistychna entstehen anders als Kalk-Höhlen: Gips (Calciumsulfat) löst sich in Wasser schneller als Kalkstein, weshalb diese Höhlen oft labyrinthisch-weitverzweigte Grundrisse haben."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Kalksteinformation in Südostasien beherbergt das Phong-Nha-Ke-Bang-Höhlensystem und liegt in welchem Land?",
+        answerA = "Karsthochland von Guilin (China)",
+        answerB = "Zentralvietnam (Provinz Quảng Bình, Vietnam)",
+        answerC = "Karstplateau von Vang Vieng (Laos)",
+        answerD = "Kambodscha (Kampot-Kalkstein)",
+        correctAnswer = 1,
+        explanation = "Das Phong-Nha-Ke-Bang-Höhlensystem liegt in der Provinz Quảng Bình in Zentralvietnam in einer der ältesten Kalksteinformationen Asiens (400–450 Millionen Jahre alt). Hier befindet sich auch die größte Höhlenkammer der Welt, Hang Sơn Đoòng.",
+        difficulty = 3,
+        funFact = "Im Phong Nha-Ke Bang Nationalpark wurden bisher über 300 Höhlen entdeckt; die meisten sind noch nicht vollständig erkundet. Das Gebiet gilt als eine der bedeutendsten Karstlandschaften der Welt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche biogeografische Grenze trennt die orientalische von der australasischen Tiergeografieregion und verläuft durch Indonesien?",
+        answerA = "Lydekker-Linie",
+        answerB = "Weber-Linie",
+        answerC = "Wallace-Linie",
+        answerD = "Huxley-Linie",
+        correctAnswer = 2,
+        explanation = "Die Wallace-Linie verläuft durch Indonesien zwischen Borneo und Sulawesi sowie zwischen Bali und Lombok. Westlich davon dominieren asiatische Faunaelemente (Elefanten, Tiger), östlich australasische (Beuteltiere, Paradiesvögel).",
+        difficulty = 3,
+        funFact = "Alfred Russel Wallace entdeckte diese biogeografische Trennlinie, als er bemerkte, dass die Fauna zweier benachbarter Inseln (Bali und Lombok, nur 35 km voneinander entfernt) vollständig verschieden war. Diese Beobachtung trug zur Evolutionstheorie bei."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Bodentyp dominiert mediterrane Klimaregionen (z.B. Mittelmeer, Kalifornien) und zeichnet sich durch dunkelroten Farbton und hohen Eisengehalt aus?",
+        answerA = "Kastanozem",
+        answerB = "Vertisol",
+        answerC = "Terra Rossa (Chromic Luvisol)",
+        answerD = "Regosol",
+        correctAnswer = 2,
+        explanation = "Terra Rossa ist ein charakteristischer Rotboden mediterraner Karstlandschaften. Er entsteht durch chemische Verwitterung von Kalkgestein unter mediterranem Klima; die rote Farbe kommt von Eisenoxid (Hämatit). Er ist typisch für die Adriaküste, Sizilien und Israel.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Kontinentalkollisionszone zwischen Indien und Eurasien hebt noch immer mit einer Rate von ca. 5 mm pro Jahr an?",
+        answerA = "Die Zagros-Faltenzone (Iran)",
+        answerB = "Der Himalaya (Indien–Eurasien-Kollision)",
+        answerC = "Der Karakorum (Kollision Indischer Mikrokontinent)",
+        answerD = "Das Tibetische Plateau (Randzone des Himalaya)",
+        correctAnswer = 1,
+        explanation = "Der Himalaya hebt sich noch immer um ca. 5 mm pro Jahr durch die fortgesetzte Kollision der Indischen mit der Eurasischen Platte. Gleichzeitig erodieren Wind und Wetter ca. 2–3 mm ab, sodass der Nettoanstieg geringer ist.",
+        difficulty = 3,
+        funFact = "Die Indische Platte bewegt sich mit ca. 5 cm/Jahr nordwärts – eine der schnellsten Plattengeschwindigkeiten weltweit. Seit der Kollision vor 50 Mio. Jahren hat sie den Himalaya um über 3.000 m angehoben."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Monat setzt der ostasiatische Sommermonsun typischerweise in Tokio, Japan ('Tsuyu') ein?",
+        answerA = "April",
+        answerB = "Mai",
+        answerC = "Juni",
+        answerD = "August",
+        correctAnswer = 2,
+        explanation = "Der japanische Tsuyu (Regenzeit) beginnt in Tokio typischerweise Anfang bis Mitte Juni. Die Regenfront (Baiu-Front) wandert von Süden nach Norden und erreicht Tokio nach Okinawa und Kyushu.",
+        difficulty = 3,
+        funFact = "Das Wort 'Tsuyu' (梅雨) bedeutet 'Pflaumenregen', weil die Pflaumenernte in dieser Niederschlagsperiode stattfindet. Das Ende der Tsuyu-Zeit, der Beginn des Hochsommers, wird vom japanischen Wetterdienst offiziell ausgerufen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Korallenriff im Pazifik ist das tiefste Atoll der Erde, das durch Subsidenz eines Vulkankegels entstand (Darwinsche Atollentstehung)?",
+        answerA = "Bikini-Atoll (Marshallinseln)",
+        answerB = "Eniwetok-Atoll (Marshallinseln)",
+        answerC = "Ningaloo Reef (Australien)",
+        answerD = "Cocos-Keeling-Atoll (Australien)",
+        correctAnswer = 3,
+        explanation = "Das Cocos (Keeling)-Atoll ist ein klassisches Darwin-Atoll: Ein ursprünglicher Vulkankegel sank ab (Subsidenz), der Korallensaum wuchs weiter aufwärts und bildete das heutige Atoll. Darwin formulierte hier 1836 seine Atollentstehungstheorie.",
+        difficulty = 3,
+        funFact = "Charles Darwin besuchte die Cocos-Keeling-Inseln 1836 während seiner Beagle-Reise. Seine Beobachtungen dort bildeten die Grundlage für seine Theorie zur Entstehung von Atollen durch Absenkung und Korallenwachstum."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Mangrovenart ist die am weitesten verbreitete der Welt und reicht bis nach Japan und Neuseeland?",
+        answerA = "Rhizophora apiculata (Stelzenwurzel-Mangrove)",
+        answerB = "Avicennia marina (Weiße Mangrove)",
+        answerC = "Bruguiera gymnorrhiza (Knierohr-Mangrove)",
+        answerD = "Sonneratia caseolaris (Käsebaum-Mangrove)",
+        correctAnswer = 1,
+        explanation = "Avicennia marina (Weiße Mangrove) hat die größte geografische Verbreitung aller Mangrovenarten und kann Temperaturen bis 0°C tolerieren. Sie wächst von Ostafrika bis Japan und Neuseeland und ist damit die kältetolerante Mangrovenart.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches geologische Phänomen erklärt, warum Ophiolithe auf Kontinenten zu finden sind, obwohl ozeanische Kruste normalerweise subduziert wird?",
+        answerA = "Hotspot-Magmatismus schiebt ozeanische Kruste über Subduktionszonen hinaus",
+        answerB = "Obduktion: ozeanische Kruste wird auf Kontinentkruste aufgeschoben statt subduziert",
+        answerC = "Transformation: ozeanische Kruste metamorphosiert zu kontinentaler Kruste",
+        answerD = "Spreizungspause: Meeresboden bleibt ohne Subduktion zurück",
+        correctAnswer = 1,
+        explanation = "Obduktion ist der Prozess, bei dem ozeanische Kruste statt zu subduzieren auf benachbarte Kontinentränder aufgeschoben wird. Dies geschieht bei Kontinent-Kontinent-Kollisionen, wenn die ozeanische Kruste zwischen zwei Kontinenten eingeklemmt wird.",
+        difficulty = 3,
+        funFact = "Obduktion ist das genaue Gegenteil von Subduktion. Sie ist selten und erklärt, warum Ophiolithe so wertvoll sind: Sie sind fenster in den sonst unzugänglichen Ozeanboden der Vergangenheit."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das tiefste Höhlensystem der Welt nach vertikaler Ausdehnung (Tiefe)?",
+        answerA = "Höhle von Arabika (Georgien, ca. −2.080 m)",
+        answerB = "Veryovkina-Höhle (Georgien, ca. −2.212 m)",
+        answerC = "Krubera-Höhle (Georgien, ca. −2.197 m)",
+        answerD = "Lamprechtsofen (Österreich, ca. −1.632 m)",
+        correctAnswer = 1,
+        explanation = "Die Veryovkina-Höhle im Arabika-Massiv (Westkaukasus, Georgien) ist mit einer Tiefe von ca. 2.212 m die tiefste bekannte Höhle der Welt. Sie übertraf die benachbarte Krubera-Höhle (2.197 m), die zuvor Weltrekordhalter war.",
+        difficulty = 3,
+        funFact = "Das Arabika-Massiv im Westkaukasus (Abchasien/Georgien) ist das tiefste Karstmassiv der Erde. Es enthält mehrere der tiefsten Höhlen weltweit. Die extreme Tiefe liegt an der hohen Reliefenergie des Kaukasus."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Biom bildet den Übergang zwischen tropischem Regenwald und tropischer Savanne und ist durch Laubbäume mit Trockenzeit-Anpassung geprägt?",
+        answerA = "Tropische Bergnebelwälder",
+        answerB = "Tropischer Trocken-Laubwald (Monsunwald)",
+        answerC = "Galeriewälder",
+        answerD = "Saisonale Feuchtgebiete",
+        correctAnswer = 1,
+        explanation = "Tropische Trocken-Laubwälder (Monsunwälder) sind das Übergangsbiom zwischen Regenwald und Savanne. Die Bäume werfen in der Trockenzeit ihr Laub ab. Sie bedecken Teile Indiens, Mittelamerikas und Brasiliens (Caatinga-ähnliche Übergänge).",
+        difficulty = 3,
+        funFact = "Tropische Trockenwälder (Dry Tropical Forests) gelten als eines der am stärksten bedrohten Biome der Erde: Weniger als 1 % sind noch in ursprünglichem Zustand – wegen ihrer fruchtbaren Böden wurden sie fast vollständig gerodet."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Korallenriffsystem ist das weltgrößte im Indischen Ozean und liegt auf dem Tiefseeplateau um die Malediven und Lakkadiven?",
+        answerA = "Chagos-Atoll-System (Britisches Territorium im Indischen Ozean)",
+        answerB = "Lakkadiven–Malediven–Chagos-Riffkette",
+        answerC = "Mascarene-Plateau-Riffsystem",
+        answerD = "Andamanen-Nicobar-Riff",
+        correctAnswer = 1,
+        explanation = "Die Lakkadiven–Malediven–Chagos-Riffkette bildet zusammen das ausgedehnteste Korallenriffsystem des Indischen Ozeans. Es erstreckt sich über ca. 2.000 km von den Lakkadiven im Norden bis zu den Chagos-Inseln im Süden.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Land liegt der Škocjan-Canyon (Škocjanske jame), ein UNESCO-Weltnaturerbe mit einer der eindrucksvollsten unterirdischen Schluchten der Welt?",
+        answerA = "Kroatien",
+        answerB = "Österreich",
+        answerC = "Slowenien",
+        answerD = "Bosnien-Herzegowina",
+        correctAnswer = 2,
+        explanation = "Die Škocjan-Höhlen (Škocjanske jame) liegen im Karst-Hochplateau Sloweniens und sind seit 1986 UNESCO-Weltnaturerbe. Sie enthalten eine der größten unterirdischen Schluchten der Welt, durch die der Fluss Reka strömt.",
+        difficulty = 3,
+        funFact = "Im Škocjan-System erreicht die unterirdische Schlucht eine Höhe von über 150 m. Der Fluss Reka verschwindet in den Höhlen und taucht erst ca. 40 km entfernt bei Lipica wieder auf."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Monsun bringt im November–Januar Niederschlag an die Ostküste Indiens (Coromandel-Küste) und ist dem regulären Sommermonsun entgegengesetzt?",
+        answerA = "Nordost-Monsun (Wintermonsun)",
+        answerB = "Südwest-Monsun (verlängerter Rückzug)",
+        answerC = "Äquatorialer Gegenstrom-Monsun",
+        answerD = "Zyklonaler Bengala-Bucht-Monsun",
+        correctAnswer = 0,
+        explanation = "Der Nordost-Monsun (Wintermonsun) trifft von Oktober bis Dezember auf die Coromandel-Küste Südindiens und Sri Lanka. Er bringt Regen von der Bengala-Bucht – während ganz Indien während der Trockensaison ist, hat dieser Küstenstreifen seine Hauptregenzeit.",
+        difficulty = 3,
+        funFact = "Chennai (früher Madras) liegt an der Coromandel-Küste und hat seinen Monsun-Hauptniederschlag im Oktober–Dezember, also zur Zeit, wenn der Rest Indiens trocken ist. 2015 verursachte ein außergewöhnlich starker Nordost-Monsun eine der schlimmsten Überschwemmungen in Chennai's Geschichte."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Höhlensystem in Kentucky, USA, hat einen eigenständigen ökologischen Lebensraum mit blinden, pigmentfreien Höhlenfischen entwickelt?",
+        answerA = "Carlsbad Caverns (New Mexico)",
+        answerB = "Mammoth Cave (Kentucky)",
+        answerC = "Luray Caverns (Virginia)",
+        answerD = "Ruby Falls (Tennessee)",
+        correctAnswer = 1,
+        explanation = "Das Mammoth Cave System in Kentucky hat über Jahrmillionen ein eigenständiges Höhlen-Ökosystem entwickelt. Der Southern Cavefish (Typhlichthys subterraneus) ist ein blinder, pigmentloser Fisch, der ausschließlich in den Gewässern dieses Höhlensystems lebt.",
+        difficulty = 3,
+        funFact = "Das Mammoth Cave National Park (UNESCO-Welterbe) war im 19. Jahrhundert Ort einer frühen Tourismusindustrie – und auch für die Gewinnung von Kaliumnitrat (Salpeter) für Schießpulver im Krieg von 1812."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Biom-Grenze zwischen Tundra und borealer Taiga wird durch die July 10°C Isotherm definiert?",
+        answerA = "Die Waldgrenze (Baumgrenze) der nördlichen Hemisphäre",
+        answerB = "Die ITCZ-Wanderungsgrenze",
+        answerC = "Die Permafrost-Südgrenze",
+        answerD = "Die Schneegrenze der Arktis",
+        correctAnswer = 0,
+        explanation = "Die nördliche Baumgrenze (polares Waldgrenzland) zwischen Tundra und Taiga folgt annähernd der July 10°C Isotherm – der Linie, wo der wärmste Monat (Juli) im Durchschnitt maximal 10°C erreicht. Unterhalb dieser Temperatur können Bäume nicht mehr ausreichend Photosynthese betreiben.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Korallenriffsystem in Neukaledonien ist das größte kohärente Lagune-Riff-System der Welt?",
+        answerA = "Lord Howe Island Marine Park",
+        answerB = "Neu-Kaledonien-Barriereriff (Grand Lagon Sud und Nord)",
+        answerC = "Coral Sea Islands Reef",
+        answerD = "Rowley Shoals (Australien)",
+        correctAnswer = 1,
+        explanation = "Das Barriereriff Neukaledoniens (Französisch Polynesien) ist das zweitlängste Barriereriff der Welt (1.600 km) und umschließt die größte geschlossene Lagune der Welt (ca. 24.000 km²). Es wurde 2008 UNESCO-Weltnaturerbe.",
+        difficulty = 3,
+        funFact = "Die Lagune Neukaledoniens gilt als ozeanische Biodiversitäts-Hotspot und enthält zahlreiche endemische Meeresarten, darunter den Dugong (Seekuh) in bedrohter Population."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche biogeografische Subregion definiert die 'Sonoran-Wüste' als ein eigenständiges Biom und in welchen Ländern liegt sie?",
+        answerA = "Nur in Mexiko (Baja California und Sonora-Bundesstaat)",
+        answerB = "In den USA (Arizona, Südkalifornien) und Mexiko (Sonora, Baja California)",
+        answerC = "Nur in den USA (Arizona, Nevada)",
+        answerD = "Im Südwesten der USA und Nordmexiko bis Guatemala",
+        correctAnswer = 1,
+        explanation = "Die Sonoran-Wüste erstreckt sich über Teile der US-Bundesstaaten Arizona und Südkalifornien sowie die mexikanischen Bundesstaaten Sonora und Baja California. Sie ist die heißeste Wüste Nordamerikas und zeichnet sich durch den Saguaro-Kaktus als Leitart aus.",
+        difficulty = 3,
+        funFact = "Die Sonoran-Wüste ist ungewöhnlich reich an Biodiversität für eine Wüste: Sie beherbergt über 2.000 Pflanzenarten, darunter den berühmten Saguaro-Kaktus, der bis 15 m hoch werden und 150 Jahre alt werden kann."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das größte Höhlensystem Asiens?",
+        answerA = "Hang Sơn Đoòng (Vietnam, als Einzelhöhle größte Kammer)",
+        answerB = "Naktong-Höhle (Südkorea)",
+        answerC = "Lechuguilla Cave (Mexiko)",
+        answerD = "Shuanghedong-Höhlensystem (China, ca. 257 km)",
+        correctAnswer = 3,
+        explanation = "Das Shuanghedong-Höhlensystem in der Provinz Guizhou, China, ist mit ca. 257 km erkundeten Gängen das längste Höhlensystem Asiens. Es liegt in einem der weltweit größten Karstgebiete, dem Guizhou-Plateau.",
+        difficulty = 3,
+        funFact = "Das Guizhou-Plateau in Südchina ist eine der größten und tiefsten Karstlandschaften der Welt mit tausenden unterirdischen Flüssen, riesigen Dolinen ('Tiankengs') und weitreichenden Höhlensystemen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Bodentyp entsteht durch intensive Bewässerung in ariden Regionen und kann durch Versalzung zur Degradierung führen?",
+        answerA = "Solonchak (Salzboden)",
+        answerB = "Kastanozem",
+        answerC = "Arenosol",
+        answerD = "Fluvisol",
+        correctAnswer = 0,
+        explanation = "Solonchake sind Salz-Böden, die in ariden und semiariden Regionen entstehen, wo Verdunstung die Niederschläge weit übersteigt. Bei intensiver Bewässerung werden Salze kapillar an die Oberfläche transportiert und akkumulieren zu unfruchtbaren Salzböden.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Kollisionszone im östlichen Mittelmeer beschreibt die Subduktion der Afrikanischen Platte unter die Ägäische Platte und erzeugt Erdbeben in Griechenland und der Türkei?",
+        answerA = "Levantinische Transformzone",
+        answerB = "Hellenischer Bogen (Hellenische Subduktionszone)",
+        answerC = "Nordanatolische Verwerfung",
+        answerD = "Anatolische Kollisionszone",
+        correctAnswer = 1,
+        explanation = "Der Hellenische Bogen ist eine Subduktionszone, wo die Afrikanische Platte unter die Ägäische Mikro-Platte (Griechenland) taucht. Diese Zone erzeugt regelmäßig starke Erdbeben in der Region (Kreta, Ionisches Meer) und erzeugte 365 n. Chr. ein katastrophales Erdbeben.",
+        difficulty = 3,
+        funFact = "Der Hellenische Bogen ist eine der aktivsten seismischen Zonen Europas. Der Santorin-Ausbruch (ca. 1600 v. Chr.) – möglicherweise Ursprung des Atlantis-Mythos – ereignete sich an einem durch diese Tektonik verursachten Supervulkan."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das wichtigste Mangrovengebiet der Pazifikküste Südamerikas?",
+        answerA = "Mangroven von Ecuador und Kolumbien (Guayaquil-Golf bis Tumbes)",
+        answerB = "Mangroven von Chile (Atacama-Küste)",
+        answerC = "Mangroven von Peru (Paracas-Halbinsel)",
+        answerD = "Mangroven von Brasilien (Rio Grande do Norte)",
+        correctAnswer = 0,
+        explanation = "Die Mangroven des Guayaquil-Golfs in Ecuador und die angrenzende Küste Kolumbiens und Nordperus (Tumbes) bilden das wichtigste Mangrovengebiet der Pazifikküste Südamerikas. Ecuador hat prozentual über 50 % seiner Mangroven durch Garnelenzucht verloren.",
+        difficulty = 3,
+        funFact = "Ecuador war einst das Land mit der höchsten Mangrovenentwaldungsrate der Welt – für Garnelenfarmen. Heute versucht das Land, Mangroven wiederherzustellen, da ihr Ökosystemwert erkannt wurde."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist die längste Höhle in Deutschland, und in welchem Mittelgebirge liegt sie?",
+        answerA = "Hermannshöhle im Kyffhäuser (Thüringen)",
+        answerB = "Falkensteiner Höhle (Schwäbische Alb, Baden-Württemberg)",
+        answerC = "Laichinger Tiefenhöhle (Schwäbische Alb)",
+        answerD = "Hüttenbläserschacht (Schwäbische Alb)",
+        correctAnswer = 1,
+        explanation = "Das Höhlensystem um die Falkensteiner Höhle auf der Schwäbischen Alb in Baden-Württemberg ist Teil eines weitverzweigten unterirdischen Flusssystems, das Teile der Alb entwässert. Die Schwäbische Alb hat die bedeutendsten Karsthöhlen Deutschlands.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche spezifische Grenze zwischen Wüste und Savanne in Australien folgt der 250 mm Jahresniederschlags-Isohyete?",
+        answerA = "Die Mulga-Spinifex-Grenze (Übergang von Akazienbüschen zu Hartgras)",
+        answerB = "Die Outback-Grenze (rein administrativ)",
+        answerC = "Die Einflussgrenze des indischen Ozean Dipols",
+        answerD = "Die Torres-Strait-Klimagrenze",
+        correctAnswer = 0,
+        explanation = "In Australien markiert die ca. 250 mm Jahresniederschlags-Isohyete annähernd den Übergang zwischen der Mulga-Acacia-Buschzone (arider Übergang) und dem zentralen Spinifex-Grasland (Wüste). Diese Grenze variiert stark mit dem ENSO-Klimazyklus.",
+        difficulty = 3,
+        funFact = "Australiens 'Outback' ist klimatisch keine einheitliche Wüste, sondern ein Mosaik aus ariden Busch- und Grasslandschaften, die alle durch die 250 mm-Isohyete verbunden sind."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Höhlensystem in der Schweiz gilt als bemerkenswertestes aktives Karstgewässer-System der Alpen?",
+        answerA = "Bätselberghöhle (Uri)",
+        answerB = "Siebenhengste-Höhlensystem (Berner Oberland, ca. 170 km)",
+        answerC = "Märchenhöhle (Solothurn)",
+        answerD = "Kristallhöhle (Wallis)",
+        correctAnswer = 1,
+        explanation = "Das Siebenhengste-Hohgant-Höhlensystem im Berner Oberland ist mit über 170 km Gesamtlänge das längste Höhlensystem der Schweiz und eines der längsten Europas. Es liegt im Karst des Berner Oberländer Kalkgebirges.",
+        difficulty = 3,
+        funFact = "Das Siebenhengste-System liegt auf bis zu 2.000 m ü.NN und reicht bis unter das Thunersee-Niveau. Teile des Systems sind mit Eis gefüllt – eine Mischung aus Eishöhle und klassischer Karsthöhle."
+    ),
+
 )
+
 
 

@@ -1,5 +1,7 @@
 package com.quizverse.app.ui.screens
 
+import android.content.Context
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -11,8 +13,17 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +35,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -31,18 +43,28 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -51,35 +73,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import coil.ImageLoader
+import coil.compose.rememberAsyncImagePainter
+import coil.decode.SvgDecoder
+import coil.request.ImageRequest
 import com.quizverse.app.QuizVerseApp
 import com.quizverse.app.ui.navigation.Screen
 import com.quizverse.app.ui.theme.Accent
 import com.quizverse.app.ui.theme.Primary
 import com.quizverse.app.ui.theme.Secondary
 import com.quizverse.app.util.DailyQuotes
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.delay
 import kotlin.math.sin
 
-// Data model for a home screen navigation card
+// Data model for a home screen navigation card — now with SVG asset path
 private data class HomeCard(
-    val emoji: String,
+    val iconAsset: String,
     val title: String,
     val description: String,
     val gradientStart: Color,
@@ -87,10 +96,10 @@ private data class HomeCard(
     val route: String
 )
 
-// Navigation cards displayed on the home screen
+// Navigation cards with Fluent Emoji 3D SVG icons
 private val homeCards = listOf(
     HomeCard(
-        emoji = "🎯",
+        iconAsset = "icons/quiz_bullseye.svg",
         title = "Quiz starten",
         description = "Wähle eine Kategorie und teste dein Wissen",
         gradientStart = Primary,
@@ -98,7 +107,7 @@ private val homeCards = listOf(
         route = Screen.Category.route
     ),
     HomeCard(
-        emoji = "⚡",
+        iconAsset = "icons/challenge_lightning.svg",
         title = "Tägliche Herausforderung",
         description = "Neues Quiz jeden Tag – bleib am Ball!",
         gradientStart = Secondary,
@@ -106,7 +115,7 @@ private val homeCards = listOf(
         route = Screen.DailyChallenge.route
     ),
     HomeCard(
-        emoji = "🏆",
+        iconAsset = "icons/leaderboard_medal.svg",
         title = "Bestenliste",
         description = "Sieh wie du gegen andere abschneidest",
         gradientStart = Color(0xFFF59E0B),
@@ -114,7 +123,7 @@ private val homeCards = listOf(
         route = Screen.Leaderboard.route
     ),
     HomeCard(
-        emoji = "👤",
+        iconAsset = "icons/profile_nerd.svg",
         title = "Profil",
         description = "Deine Statistiken und Erfolge im Überblick",
         gradientStart = Accent,
@@ -122,7 +131,7 @@ private val homeCards = listOf(
         route = Screen.Profile.route
     ),
     HomeCard(
-        emoji = "⚙️",
+        iconAsset = "icons/settings_gear.svg",
         title = "Einstellungen",
         description = "App nach deinen Wünschen anpassen",
         gradientStart = Color(0xFF6366F1),
@@ -131,11 +140,21 @@ private val homeCards = listOf(
     )
 )
 
-// Daily quotes are in DailyQuotes.kt (365 quotes, one per day of year)
+// Shared SVG-capable ImageLoader (created once per context)
+@Composable
+private fun rememberSvgImageLoader(context: Context): ImageLoader {
+    return remember(context) {
+        ImageLoader.Builder(context)
+            .components { add(SvgDecoder.Factory()) }
+            .build()
+    }
+}
 
 @Composable
 fun HomeScreen(navController: NavHostController) {
     val app = LocalContext.current.applicationContext as QuizVerseApp
+    val context = LocalContext.current
+    val svgLoader = rememberSvgImageLoader(context)
 
     // Entrance animation for the logo/title
     val logoScale = remember { Animatable(0.6f) }
@@ -146,91 +165,58 @@ fun HomeScreen(navController: NavHostController) {
     // Pulsing glow + brain scale animation
     val infiniteTransition = rememberInfiniteTransition(label = "brain_pulse")
     val brainGlow = infiniteTransition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = 1.4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
+        initialValue = 0.6f, targetValue = 1.4f,
+        animationSpec = infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "brain_glow_scale"
     )
     val glowAlpha = infiniteTransition.animateFloat(
-        initialValue = 0.1f,
-        targetValue = 0.55f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
+        initialValue = 0.1f, targetValue = 0.55f,
+        animationSpec = infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "glow_alpha"
     )
-    // Brain emoji itself pulses slightly
     val brainScale = infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 1.12f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
+        initialValue = 1.0f, targetValue = 1.12f,
+        animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "brain_scale"
     )
-    // Subtle vertical float for the brain
     val brainFloat = infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = -8f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
+        initialValue = 0f, targetValue = -8f,
+        animationSpec = infiniteRepeatable(tween(2200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "brain_float"
     )
 
-    // Floating shapes animation
-    // Vertical float offsets — stronger movement
+    // Floating shapes
     val floatOffset1 = infiniteTransition.animateFloat(
         initialValue = -25f, targetValue = 25f,
-        animationSpec = infiniteRepeatable(tween(4000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "float1"
+        animationSpec = infiniteRepeatable(tween(4000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "float1"
     )
     val floatOffset2 = infiniteTransition.animateFloat(
         initialValue = 20f, targetValue = -20f,
-        animationSpec = infiniteRepeatable(tween(3500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "float2"
+        animationSpec = infiniteRepeatable(tween(3500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "float2"
     )
     val floatOffset3 = infiniteTransition.animateFloat(
         initialValue = -18f, targetValue = 18f,
-        animationSpec = infiniteRepeatable(tween(5000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "float3"
+        animationSpec = infiniteRepeatable(tween(5000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "float3"
     )
-    // Horizontal drift offsets
     val driftX1 = infiniteTransition.animateFloat(
         initialValue = -15f, targetValue = 15f,
-        animationSpec = infiniteRepeatable(tween(5500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "driftX1"
+        animationSpec = infiniteRepeatable(tween(5500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "driftX1"
     )
     val driftX2 = infiniteTransition.animateFloat(
         initialValue = 12f, targetValue = -12f,
-        animationSpec = infiniteRepeatable(tween(4200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "driftX2"
+        animationSpec = infiniteRepeatable(tween(4200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "driftX2"
     )
     val driftX3 = infiniteTransition.animateFloat(
         initialValue = -10f, targetValue = 10f,
-        animationSpec = infiniteRepeatable(tween(6000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "driftX3"
+        animationSpec = infiniteRepeatable(tween(6000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "driftX3"
     )
     val starRotation = infiniteTransition.animateFloat(
         initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Restart),
-        label = "star_rotation"
+        animationSpec = infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Restart), label = "star_rotation"
     )
 
     LaunchedEffect(Unit) {
-        logoScale.animateTo(
-            targetValue = 1f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow
-            )
-        )
+        logoScale.animateTo(1f, animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow))
     }
     LaunchedEffect(Unit) {
         logoAlpha.animateTo(1f, animationSpec = tween(500))
@@ -240,7 +226,6 @@ fun HomeScreen(navController: NavHostController) {
         quoteAlpha.animateTo(1f, animationSpec = tween(800))
     }
 
-    // Random quote — changes on tap, never repeats the same one twice in a row
     var currentQuote by remember { mutableStateOf(DailyQuotes.randomQuote()) }
 
     Box(
@@ -248,155 +233,40 @@ fun HomeScreen(navController: NavHostController) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Background gradient — richer than before
+        // Background gradient
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(
-                            Primary.copy(alpha = 0.10f),
-                            Color(0xFFA855F7).copy(alpha = 0.05f),
-                            Color.Transparent,
-                            Secondary.copy(alpha = 0.03f)
-                        )
+                        listOf(Primary.copy(alpha = 0.10f), Color(0xFFA855F7).copy(alpha = 0.05f),
+                            Color.Transparent, Secondary.copy(alpha = 0.03f))
                     )
                 )
         )
 
         // Floating decorative shapes
-        Canvas(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            val w = size.width
-            val h = size.height
-            val d1x = driftX1.value.dp.toPx()
-            val d2x = driftX2.value.dp.toPx()
-            val d3x = driftX3.value.dp.toPx()
-            val f1y = floatOffset1.value.dp.toPx()
-            val f2y = floatOffset2.value.dp.toPx()
-            val f3y = floatOffset3.value.dp.toPx()
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width; val h = size.height
+            val d1x = driftX1.value.dp.toPx(); val d2x = driftX2.value.dp.toPx(); val d3x = driftX3.value.dp.toPx()
+            val f1y = floatOffset1.value.dp.toPx(); val f2y = floatOffset2.value.dp.toPx(); val f3y = floatOffset3.value.dp.toPx()
 
-            // Circle 1 — top right, large
-            drawCircle(
-                color = Primary.copy(alpha = 0.08f),
-                radius = 90.dp.toPx(),
-                center = Offset(w * 0.85f + d1x, 80.dp.toPx() + f1y)
-            )
+            drawCircle(Primary.copy(alpha = 0.08f), 90.dp.toPx(), Offset(w * 0.85f + d1x, 80.dp.toPx() + f1y))
+            drawCircle(Secondary.copy(alpha = 0.07f), 55.dp.toPx(), Offset(w * 0.08f + d2x, h * 0.35f + f2y))
+            drawCircle(Accent.copy(alpha = 0.09f), 40.dp.toPx(), Offset(w * 0.9f + d3x, h * 0.65f + f3y))
+            drawCircle(Color(0xFFF59E0B).copy(alpha = 0.07f), 25.dp.toPx(), Offset(w * 0.15f + d1x, h * 0.7f + f1y))
 
-            // Circle 2 — left side, medium
-            drawCircle(
-                color = Secondary.copy(alpha = 0.07f),
-                radius = 55.dp.toPx(),
-                center = Offset(w * 0.08f + d2x, h * 0.35f + f2y)
-            )
-
-            // Circle 3 — bottom right
-            drawCircle(
-                color = Accent.copy(alpha = 0.09f),
-                radius = 40.dp.toPx(),
-                center = Offset(w * 0.9f + d3x, h * 0.65f + f3y)
-            )
-
-            // Circle 4 — center-left
-            drawCircle(
-                color = Color(0xFFF59E0B).copy(alpha = 0.07f),
-                radius = 25.dp.toPx(),
-                center = Offset(w * 0.15f + d1x, h * 0.7f + f1y)
-            )
-
-            // Circle 5 — top center
-            drawCircle(
-                color = Color(0xFFA855F7).copy(alpha = 0.06f),
-                radius = 30.dp.toPx(),
-                center = Offset(w * 0.55f + d2x, h * 0.12f + f3y)
-            )
-
-            // Star 1 — top left
             val s1 = Offset(w * 0.18f + d2x, 160.dp.toPx() + f2y)
             rotate(starRotation.value, pivot = s1) {
                 drawPath(createStarPath(s1, 14.dp.toPx(), 7.dp.toPx(), 4), color = Color(0xFFF59E0B).copy(alpha = 0.15f))
             }
-
-            // Star 2 — right side
             val s2 = Offset(w * 0.88f + d3x, h * 0.45f + f3y)
             rotate(-starRotation.value * 0.7f, pivot = s2) {
                 drawPath(createStarPath(s2, 12.dp.toPx(), 6.dp.toPx(), 5), color = Primary.copy(alpha = 0.12f))
             }
 
-            // Star 3 — bottom left
-            val s3 = Offset(w * 0.22f + d1x, h * 0.85f + f1y)
-            rotate(starRotation.value * 0.5f, pivot = s3) {
-                drawPath(createStarPath(s3, 10.dp.toPx(), 5.dp.toPx(), 6), color = Accent.copy(alpha = 0.12f))
-            }
-
-            // Star 4 — top center-right
-            val s4 = Offset(w * 0.72f + d2x, h * 0.18f + f2y)
-            rotate(starRotation.value * 0.8f, pivot = s4) {
-                drawPath(createStarPath(s4, 9.dp.toPx(), 4.dp.toPx(), 4), color = Secondary.copy(alpha = 0.13f))
-            }
-
-            // Star 5 — center left
-            val s5 = Offset(w * 0.05f + d3x, h * 0.52f + f3y)
-            rotate(-starRotation.value * 0.6f, pivot = s5) {
-                drawPath(createStarPath(s5, 8.dp.toPx(), 4.dp.toPx(), 5), color = Color(0xFFF59E0B).copy(alpha = 0.10f))
-            }
-
-            // Star 6 — bottom right
-            val s6 = Offset(w * 0.82f + d1x, h * 0.78f + f1y)
-            rotate(starRotation.value * 0.4f, pivot = s6) {
-                drawPath(createStarPath(s6, 7.dp.toPx(), 3.dp.toPx(), 4), color = Color(0xFFA855F7).copy(alpha = 0.11f))
-            }
-
-            // Star 7 — mid-center
-            val s7 = Offset(w * 0.45f + d2x, h * 0.42f + f2y)
-            rotate(-starRotation.value * 0.3f, pivot = s7) {
-                drawPath(createStarPath(s7, 6.dp.toPx(), 3.dp.toPx(), 6), color = Primary.copy(alpha = 0.08f))
-            }
-
-            // Star 8 — top far-left
-            val s8 = Offset(w * 0.08f + d3x, h * 0.08f + f3y)
-            rotate(starRotation.value * 0.9f, pivot = s8) {
-                drawPath(createStarPath(s8, 11.dp.toPx(), 5.dp.toPx(), 5), color = Color(0xFFA855F7).copy(alpha = 0.14f))
-            }
-
-            // Star 9 — right mid-upper
-            val s9 = Offset(w * 0.95f + d1x, h * 0.28f + f1y)
-            rotate(-starRotation.value * 0.55f, pivot = s9) {
-                drawPath(createStarPath(s9, 8.dp.toPx(), 4.dp.toPx(), 4), color = Accent.copy(alpha = 0.13f))
-            }
-
-            // Star 10 — bottom center
-            val s10 = Offset(w * 0.55f + d2x, h * 0.92f + f2y)
-            rotate(starRotation.value * 0.65f, pivot = s10) {
-                drawPath(createStarPath(s10, 13.dp.toPx(), 6.dp.toPx(), 5), color = Color(0xFFF59E0B).copy(alpha = 0.12f))
-            }
-
-            // Star 11 — left mid-lower
-            val s11 = Offset(w * 0.12f + d3x, h * 0.58f + f3y)
-            rotate(-starRotation.value * 0.45f, pivot = s11) {
-                drawPath(createStarPath(s11, 7.dp.toPx(), 3.dp.toPx(), 6), color = Secondary.copy(alpha = 0.11f))
-            }
-
-            // Star 12 — center upper
-            val s12 = Offset(w * 0.38f + d1x, h * 0.25f + f1y)
-            rotate(starRotation.value * 0.35f, pivot = s12) {
-                drawPath(createStarPath(s12, 10.dp.toPx(), 5.dp.toPx(), 4), color = Primary.copy(alpha = 0.10f))
-            }
-
-            // Floating dots
-            drawCircle(color = Primary.copy(alpha = 0.12f), radius = 4.dp.toPx(),
-                center = Offset(w * 0.4f + d3x, 120.dp.toPx() + f3y))
-            drawCircle(color = Secondary.copy(alpha = 0.12f), radius = 5.dp.toPx(),
-                center = Offset(w * 0.7f + d1x, h * 0.3f + f1y))
-            drawCircle(color = Color(0xFFA855F7).copy(alpha = 0.10f), radius = 3.5f.dp.toPx(),
-                center = Offset(w * 0.5f + d2x, h * 0.55f + f2y))
-            drawCircle(color = Accent.copy(alpha = 0.12f), radius = 3.dp.toPx(),
-                center = Offset(w * 0.75f + d3x, h * 0.8f + f3y))
-            drawCircle(color = Color(0xFFF59E0B).copy(alpha = 0.10f), radius = 3.dp.toPx(),
-                center = Offset(w * 0.3f + d1x, h * 0.22f + f1y))
-            drawCircle(color = Secondary.copy(alpha = 0.08f), radius = 2.5f.dp.toPx(),
-                center = Offset(w * 0.92f + d2x, h * 0.55f + f2y))
+            drawCircle(Primary.copy(alpha = 0.12f), 4.dp.toPx(), Offset(w * 0.4f + d3x, 120.dp.toPx() + f3y))
+            drawCircle(Secondary.copy(alpha = 0.12f), 5.dp.toPx(), Offset(w * 0.7f + d1x, h * 0.3f + f1y))
         }
 
         Column(
@@ -409,90 +279,46 @@ fun HomeScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.height(56.dp))
 
             // Animated brain emoji with pulsing glow
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.offset(y = brainFloat.value.dp)
-            ) {
-                // Outer glow ring — large, soft
-                Box(
-                    modifier = Modifier
-                        .size(140.dp)
-                        .scale(brainGlow.value)
-                        .alpha(glowAlpha.value * 0.5f)
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(
-                                    Primary.copy(alpha = 0.3f),
-                                    Color(0xFFA855F7).copy(alpha = 0.15f),
-                                    Color.Transparent
-                                )
-                            ),
-                            shape = RoundedCornerShape(50)
-                        )
-                )
-                // Inner glow — brighter, tighter
-                Box(
-                    modifier = Modifier
-                        .size(100.dp)
-                        .scale(brainGlow.value * 0.85f)
-                        .alpha(glowAlpha.value)
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(
-                                    Primary.copy(alpha = 0.5f),
-                                    Color(0xFFA855F7).copy(alpha = 0.3f),
-                                    Color.Transparent
-                                )
-                            ),
-                            shape = RoundedCornerShape(50)
-                        )
-                )
-                // Brain emoji — pulses and floats
-                Text(
-                    text = "🧠",
-                    fontSize = 96.sp,
-                    modifier = Modifier
-                        .scale(logoScale.value * brainScale.value)
-                        .alpha(logoAlpha.value)
-                )
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.offset(y = brainFloat.value.dp)) {
+                Box(modifier = Modifier.size(140.dp).scale(brainGlow.value).alpha(glowAlpha.value * 0.5f)
+                    .background(Brush.radialGradient(listOf(Primary.copy(alpha = 0.3f), Color(0xFFA855F7).copy(alpha = 0.15f), Color.Transparent)), RoundedCornerShape(50)))
+                Box(modifier = Modifier.size(100.dp).scale(brainGlow.value * 0.85f).alpha(glowAlpha.value)
+                    .background(Brush.radialGradient(listOf(Primary.copy(alpha = 0.5f), Color(0xFFA855F7).copy(alpha = 0.3f), Color.Transparent)), RoundedCornerShape(50)))
+                Text("🧠", fontSize = 96.sp, modifier = Modifier.scale(logoScale.value * brainScale.value).alpha(logoAlpha.value))
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // App title — animated wave with color gradient per letter
+            // ── 3D Title "QuizVerse" with shadow depth ──────────────────────
             Row(
-                modifier = Modifier
-                    .scale(logoScale.value)
-                    .alpha(logoAlpha.value),
+                modifier = Modifier.scale(logoScale.value).alpha(logoAlpha.value),
                 horizontalArrangement = Arrangement.Center
             ) {
                 val titleColors = listOf(
-                    Primary,
-                    Color(0xFF6366F1),
-                    Secondary,
-                    Color(0xFFA855F7),
-                    Accent,
-                    Color(0xFFF59E0B),
-                    Primary,
-                    Color(0xFF6366F1),
-                    Secondary
+                    Primary, Color(0xFF6366F1), Secondary, Color(0xFFA855F7),
+                    Accent, Color(0xFFF59E0B), Primary, Color(0xFF6366F1), Secondary
                 )
                 "QuizVerse".forEachIndexed { i, char ->
                     val wavePhase = infiniteTransition.animateFloat(
-                        initialValue = 0f,
-                        targetValue = 2f * Math.PI.toFloat(),
-                        animationSpec = infiniteRepeatable(
-                            tween(2000 + i * 100, easing = LinearEasing),
-                            RepeatMode.Restart
-                        ),
+                        initialValue = 0f, targetValue = 2f * Math.PI.toFloat(),
+                        animationSpec = infiniteRepeatable(tween(2000 + i * 100, easing = LinearEasing), RepeatMode.Restart),
                         label = "title_wave_$i"
                     )
                     val yOffset = sin(wavePhase.value.toDouble()).toFloat() * 6f
+                    val baseColor = titleColors[i % titleColors.size]
+                    // 3D text: dark shadow behind + bright color on top
                     Text(
                         text = char.toString(),
-                        style = MaterialTheme.typography.displayMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = titleColors[i % titleColors.size],
+                        style = TextStyle(
+                            fontSize = 38.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = baseColor,
+                            shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.5f),
+                                offset = Offset(2f, 4f),
+                                blurRadius = 6f
+                            )
+                        ),
                         modifier = Modifier.graphicsLayer {
                             translationY = yOffset.dp.toPx()
                         }
@@ -502,7 +328,6 @@ fun HomeScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Subtitle with fade-in
             Text(
                 text = "Wissen ist Abenteuer",
                 style = MaterialTheme.typography.titleMedium,
@@ -513,11 +338,12 @@ fun HomeScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Navigation cards with staggered entrance animations
+            // ── Navigation cards (vertical list, 3D style, SVG icons) ────
             homeCards.forEachIndexed { index, card ->
-                AnimatedHomeCard(
+                Animated3DCard(
                     card = card,
                     delayMillis = 300 + index * 80,
+                    svgLoader = svgLoader,
                     onClick = {
                         if (card.route == Screen.Category.route) {
                             app.soundManager.playCheerStart()
@@ -530,29 +356,17 @@ fun HomeScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Random motivational quote — tap for animated transition to a new one
+            // Random motivational quote
             AnimatedContent(
                 targetState = currentQuote,
                 transitionSpec = {
-                    (scaleIn(
-                        initialScale = 0.85f,
-                        animationSpec = tween(400, easing = FastOutSlowInEasing)
-                    ) + fadeIn(
-                        animationSpec = tween(400)
-                    )).togetherWith(
-                        scaleOut(
-                            targetScale = 1.1f,
-                            animationSpec = tween(300, easing = FastOutSlowInEasing)
-                        ) + fadeOut(
-                            animationSpec = tween(300)
-                        )
-                    )
+                    (scaleIn(initialScale = 0.85f, animationSpec = tween(400, easing = FastOutSlowInEasing))
+                        + fadeIn(animationSpec = tween(400)))
+                        .togetherWith(scaleOut(targetScale = 1.1f, animationSpec = tween(300, easing = FastOutSlowInEasing))
+                            + fadeOut(animationSpec = tween(300)))
                 },
                 label = "quote_transition",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .alpha(quoteAlpha.value)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).alpha(quoteAlpha.value)
                     .clip(RoundedCornerShape(16.dp))
                     .clickable { currentQuote = DailyQuotes.randomQuote(exclude = currentQuote) }
                     .padding(vertical = 12.dp, horizontal = 8.dp)
@@ -572,7 +386,7 @@ fun HomeScreen(navController: NavHostController) {
     }
 }
 
-// Creates a star-shaped path with the given number of points
+// Creates a star-shaped path
 private fun createStarPath(center: Offset, outerRadius: Float, innerRadius: Float, points: Int): Path {
     val path = Path()
     val angleStep = Math.PI / points
@@ -587,245 +401,92 @@ private fun createStarPath(center: Offset, outerRadius: Float, innerRadius: Floa
     return path
 }
 
-// Single navigation card with neumorphic 3D effect — raised when idle, pushed-in when pressed
+// ── 3D Card with SVG icon, neumorphic press effect, shimmer ──────────────────
 @Composable
-private fun AnimatedHomeCard(
+private fun Animated3DCard(
     card: HomeCard,
     delayMillis: Int,
+    svgLoader: ImageLoader,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     val alpha = remember { Animatable(0f) }
     val offsetY = remember { Animatable(30f) }
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
-    // ── Neumorphic press animations ─────────────────────────────────────
-    // When pressed: card sinks down, scale shrinks slightly
-    val pressTranslateY by animateFloatAsState(
-        targetValue = if (isPressed) 5f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessHigh),
-        label = "neu_translateY"
-    )
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.975f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessHigh),
-        label = "neu_scale"
-    )
-    // Outer shadow: visible when raised, gone when pressed
-    val outerShadowAlpha by animateFloatAsState(
-        targetValue = if (isPressed) 0f else 1f,
-        animationSpec = tween(100),
-        label = "neu_outerShadow"
-    )
-    // Inner shadow: invisible when raised, appears when pressed (inset look)
-    val innerShadowAlpha by animateFloatAsState(
-        targetValue = if (isPressed) 0.6f else 0f,
-        animationSpec = tween(100),
-        label = "neu_innerShadow"
-    )
-    // Top-left highlight edge intensity
-    val highlightAlpha by animateFloatAsState(
-        targetValue = if (isPressed) 0.08f else 0.5f,
-        animationSpec = tween(100),
-        label = "neu_highlight"
-    )
-    // Bottom-right shadow edge intensity
-    val edgeShadowAlpha by animateFloatAsState(
-        targetValue = if (isPressed) 0.5f else 0.25f,
-        animationSpec = tween(100),
-        label = "neu_edgeShadow"
-    )
+    // Press animations
+    val pressTranslateY by animateFloatAsState(if (isPressed) 5f else 0f, spring(stiffness = Spring.StiffnessHigh), label = "neu_ty")
+    val pressScale by animateFloatAsState(if (isPressed) 0.975f else 1f, spring(stiffness = Spring.StiffnessHigh), label = "neu_sc")
+    val outerShadowAlpha by animateFloatAsState(if (isPressed) 0f else 1f, tween(100), label = "neu_os")
+    val highlightAlpha by animateFloatAsState(if (isPressed) 0.08f else 0.5f, tween(100), label = "neu_hl")
+    val edgeShadowAlpha by animateFloatAsState(if (isPressed) 0.5f else 0.25f, tween(100), label = "neu_es")
+    val innerShadowAlpha by animateFloatAsState(if (isPressed) 0.6f else 0f, tween(100), label = "neu_is")
 
-    // ── Continuous animations ───────────────────────────────────────────
-    val cardTransition = rememberInfiniteTransition(label = "card_${card.title}")
-    val breathScale = cardTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.015f,
-        animationSpec = infiniteRepeatable(
-            tween(2500 + delayMillis % 500, easing = FastOutSlowInEasing),
-            RepeatMode.Reverse
-        ),
-        label = "card_breath_${card.title}"
-    )
-    val shimmer = cardTransition.animateFloat(
-        initialValue = -0.3f,
-        targetValue = 1.3f,
-        animationSpec = infiniteRepeatable(
-            tween(3000 + delayMillis % 700, easing = LinearEasing),
-            RepeatMode.Restart
-        ),
-        label = "card_shimmer_${card.title}"
-    )
-    val emojiBounce = cardTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = -6f,
-        animationSpec = infiniteRepeatable(
-            tween(1200 + delayMillis % 400, easing = FastOutSlowInEasing),
-            RepeatMode.Reverse
-        ),
-        label = "card_emoji_${card.title}"
-    )
+    // Continuous animations
+    val ct = rememberInfiniteTransition(label = "card_${card.title}")
+    val breathScale = ct.animateFloat(1f, 1.015f,
+        infiniteRepeatable(tween(2500 + delayMillis % 500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "breath_${card.title}")
+    val shimmer = ct.animateFloat(-0.3f, 1.3f,
+        infiniteRepeatable(tween(3000 + delayMillis % 700, easing = LinearEasing), RepeatMode.Restart), label = "shimmer_${card.title}")
+    val iconFloat = ct.animateFloat(0f, -4f,
+        infiniteRepeatable(tween(1200 + delayMillis % 400, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "ifl_${card.title}")
 
-    // ── Entrance animation ──────────────────────────────────────────────
-    LaunchedEffect(Unit) {
-        delay(delayMillis.toLong())
-        offsetY.animateTo(0f, animationSpec = tween(400, easing = FastOutSlowInEasing))
-    }
-    LaunchedEffect(Unit) {
-        delay(delayMillis.toLong())
-        alpha.animateTo(1f, animationSpec = tween(400))
-    }
+    // Entrance animation
+    LaunchedEffect(Unit) { delay(delayMillis.toLong()); offsetY.animateTo(0f, tween(400, easing = FastOutSlowInEasing)) }
+    LaunchedEffect(Unit) { delay(delayMillis.toLong()); alpha.animateTo(1f, tween(400)) }
 
     val shape = RoundedCornerShape(20.dp)
-    val cornerPx = 20f // dp value for shadow rendering
+
+    // SVG icon painter
+    val iconPainter = rememberAsyncImagePainter(
+        model = ImageRequest.Builder(context).data("file:///android_asset/${card.iconAsset}").build(),
+        imageLoader = svgLoader
+    )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .alpha(alpha.value)
             .graphicsLayer {
-                scaleX = breathScale.value * pressScale
-                scaleY = breathScale.value * pressScale
+                scaleX = breathScale.value * pressScale; scaleY = breathScale.value * pressScale
                 translationY = (offsetY.value + pressTranslateY).dp.toPx()
-                this.shape = RoundedCornerShape(20.dp)
-                clip = false
-                // Neumorphic outer shadow (dark, bottom-right) — only when raised
+                this.shape = RoundedCornerShape(20.dp); clip = false
                 shadowElevation = 12.dp.toPx() * outerShadowAlpha
                 ambientShadowColor = Color.Black.copy(alpha = 0.3f * outerShadowAlpha)
                 spotShadowColor = Color.Black.copy(alpha = 0.4f * outerShadowAlpha)
             }
             .clip(shape)
-            .background(
-                Brush.horizontalGradient(
-                    colors = listOf(card.gradientStart, card.gradientEnd)
-                )
-            )
-            // ── Neumorphic 3D edges ─────────────────────────────────────
+            .background(Brush.horizontalGradient(listOf(card.gradientStart, card.gradientEnd)))
             .drawWithContent {
                 drawContent()
-
-                val w = size.width
-                val h = size.height
+                val w = size.width; val h = size.height
                 val cr = CornerRadius(20.dp.toPx(), 20.dp.toPx())
-
-                // Top highlight edge — bright white strip (light from top-left)
-                drawRoundRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = highlightAlpha),
-                            Color.Transparent
-                        ),
-                        startY = 0f,
-                        endY = 6.dp.toPx()
-                    ),
-                    size = Size(w, 6.dp.toPx()),
-                    cornerRadius = cr
-                )
-                // Left highlight edge
-                drawRoundRect(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = highlightAlpha * 0.7f),
-                            Color.Transparent
-                        ),
-                        startX = 0f,
-                        endX = 5.dp.toPx()
-                    ),
-                    size = Size(5.dp.toPx(), h),
-                    cornerRadius = cr
-                )
-
-                // Bottom shadow edge — dark strip
-                drawRoundRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = edgeShadowAlpha)
-                        ),
-                        startY = h - 6.dp.toPx(),
-                        endY = h
-                    ),
-                    topLeft = Offset(0f, h - 6.dp.toPx()),
-                    size = Size(w, 6.dp.toPx()),
-                    cornerRadius = cr
-                )
-                // Right shadow edge
-                drawRoundRect(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = edgeShadowAlpha * 0.6f)
-                        ),
-                        startX = w - 5.dp.toPx(),
-                        endX = w
-                    ),
-                    topLeft = Offset(w - 5.dp.toPx(), 0f),
-                    size = Size(5.dp.toPx(), h),
-                    cornerRadius = cr
-                )
-
-                // Inner shadow overlay when pressed (inset neumorphic effect)
+                // Top highlight
+                drawRoundRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = highlightAlpha), Color.Transparent), startY = 0f, endY = 6.dp.toPx()), size = Size(w, 6.dp.toPx()), cornerRadius = cr)
+                // Left highlight
+                drawRoundRect(Brush.horizontalGradient(listOf(Color.White.copy(alpha = highlightAlpha * 0.7f), Color.Transparent), startX = 0f, endX = 5.dp.toPx()), size = Size(5.dp.toPx(), h), cornerRadius = cr)
+                // Bottom shadow
+                drawRoundRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = edgeShadowAlpha)), startY = h - 6.dp.toPx(), endY = h), topLeft = Offset(0f, h - 6.dp.toPx()), size = Size(w, 6.dp.toPx()), cornerRadius = cr)
+                // Right shadow
+                drawRoundRect(Brush.horizontalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = edgeShadowAlpha * 0.6f)), startX = w - 5.dp.toPx(), endX = w), topLeft = Offset(w - 5.dp.toPx(), 0f), size = Size(5.dp.toPx(), h), cornerRadius = cr)
+                // Inner press shadow
                 if (innerShadowAlpha > 0.01f) {
-                    // Top-left inner shadow (dark = pushed in)
-                    drawRoundRect(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                Color.Black.copy(alpha = innerShadowAlpha * 0.5f),
-                                Color.Transparent
-                            ),
-                            start = Offset(0f, 0f),
-                            end = Offset(w * 0.3f, h * 0.3f)
-                        ),
-                        size = size,
-                        cornerRadius = cr
-                    )
-                    // Bottom-right inner highlight (light = floor of pressed area)
-                    drawRoundRect(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.White.copy(alpha = innerShadowAlpha * 0.2f)
-                            ),
-                            start = Offset(w * 0.7f, h * 0.7f),
-                            end = Offset(w, h)
-                        ),
-                        size = size,
-                        cornerRadius = cr
-                    )
+                    drawRoundRect(Brush.linearGradient(listOf(Color.Black.copy(alpha = innerShadowAlpha * 0.5f), Color.Transparent), start = Offset.Zero, end = Offset(w * 0.3f, h * 0.3f)), size = size, cornerRadius = cr)
                 }
-
-                // Thin highlight border around the entire card
-                drawRoundRect(
-                    color = Color.White.copy(alpha = highlightAlpha * 0.4f),
-                    size = size,
-                    cornerRadius = cr,
-                    style = Stroke(width = 1.5.dp.toPx())
-                )
+                // Border highlight
+                drawRoundRect(Color.White.copy(alpha = highlightAlpha * 0.4f), size = size, cornerRadius = cr, style = Stroke(width = 1.5.dp.toPx()))
             }
-            // Shimmer sweep
-            .background(
-                Brush.horizontalGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        Color.White.copy(alpha = 0.12f),
-                        Color.Transparent
-                    ),
-                    startX = shimmer.value * 1000f - 300f,
-                    endX = shimmer.value * 1000f + 100f
-                )
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null, // We handle the visual feedback ourselves
-                onClick = onClick
-            )
+            // Shimmer
+            .background(Brush.horizontalGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.12f), Color.Transparent), startX = shimmer.value * 1000f - 300f, endX = shimmer.value * 1000f + 100f))
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 18.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Emoji icon in a neumorphic-style inset circle
+            // 3D SVG icon in a frosted glass container
             Box(
                 modifier = Modifier
                     .size(52.dp)
@@ -833,64 +494,34 @@ private fun AnimatedHomeCard(
                     .background(Color.White.copy(alpha = 0.15f))
                     .drawWithContent {
                         drawContent()
-                        // Inner subtle shadow on emoji container
                         drawRoundRect(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.Black.copy(alpha = 0.15f),
-                                    Color.Transparent
-                                ),
-                                start = Offset(0f, 0f),
-                                end = Offset(size.width * 0.5f, size.height * 0.5f)
-                            ),
+                            Brush.linearGradient(listOf(Color.Black.copy(alpha = 0.15f), Color.Transparent), start = Offset.Zero, end = Offset(size.width * 0.5f, size.height * 0.5f)),
                             cornerRadius = CornerRadius(14.dp.toPx())
                         )
                         drawRoundRect(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(alpha = 0.2f)
-                                ),
-                                start = Offset(size.width * 0.5f, size.height * 0.5f),
-                                end = Offset(size.width, size.height)
-                            ),
+                            Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.2f)), start = Offset(size.width * 0.5f, size.height * 0.5f), end = Offset(size.width, size.height)),
                             cornerRadius = CornerRadius(14.dp.toPx())
                         )
                     }
-                    .graphicsLayer {
-                        translationY = emojiBounce.value.dp.toPx()
-                    },
+                    .graphicsLayer { translationY = iconFloat.value.dp.toPx() },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = card.emoji,
-                    fontSize = 26.sp
+                Image(
+                    painter = iconPainter,
+                    contentDescription = card.title,
+                    modifier = Modifier.size(38.dp)
                 )
             }
 
             // Title and description
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = card.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+                Text(card.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = card.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.85f)
-                )
+                Text(card.description, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.85f))
             }
 
-            // Arrow indicator
-            Text(
-                text = "›",
-                fontSize = 24.sp,
-                color = Color.White.copy(alpha = 0.8f),
-                fontWeight = FontWeight.Light
-            )
+            // Arrow
+            Text("›", fontSize = 24.sp, color = Color.White.copy(alpha = 0.8f), fontWeight = FontWeight.Light)
         }
     }
 }

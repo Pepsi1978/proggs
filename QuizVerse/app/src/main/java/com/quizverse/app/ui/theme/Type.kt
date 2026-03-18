@@ -39,14 +39,14 @@ val QuizVerseTypography = Typography(
         fontWeight = FontWeight.Bold,
         fontSize   = 57.sp,
         lineHeight = 64.sp,
-        letterSpacing = (-0.25).sp,
+        letterSpacing = 0.5.sp, // wider spacing for premium elegance
     ),
     displayMedium = TextStyle(
         fontFamily = PoppinsFamily,
         fontWeight = FontWeight.Bold,
         fontSize   = 45.sp,
         lineHeight = 52.sp,
-        letterSpacing = 0.sp,
+        letterSpacing = 0.5.sp, // wider spacing for premium elegance
     ),
     displaySmall = TextStyle(
         fontFamily = PoppinsFamily,
@@ -85,7 +85,7 @@ val QuizVerseTypography = Typography(
         fontWeight = FontWeight.Medium,
         fontSize   = 22.sp,
         lineHeight = 28.sp,
-        letterSpacing = 0.sp,
+        letterSpacing = 0.3.sp, // subtle spacing for elegant title look
     ),
     titleMedium = TextStyle(
         fontFamily = PoppinsFamily,

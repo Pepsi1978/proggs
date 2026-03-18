@@ -1,7 +1,6 @@
 package com.quizverse.app.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -10,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.runtime.remember
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,12 +36,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -51,11 +46,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -66,8 +62,45 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.quizverse.app.QuizVerseApp
 import com.quizverse.app.data.repository.QuizRepository
+import com.quizverse.app.ui.components.AnswerButton
+import com.quizverse.app.ui.components.AnswerState
+import com.quizverse.app.ui.components.AnimatedTimer
 import com.quizverse.app.ui.components.CategoryBackground
+import com.quizverse.app.ui.components.QuestionCard
+import com.quizverse.app.ui.components.StreakCounter
 import com.quizverse.app.ui.navigation.Screen
+import com.quizverse.app.ui.theme.AnimalsEnd
+import com.quizverse.app.ui.theme.AnimalsStart
+import com.quizverse.app.ui.theme.DortmundEnd
+import com.quizverse.app.ui.theme.DortmundStart
+import com.quizverse.app.ui.theme.FilmEnd
+import com.quizverse.app.ui.theme.FilmStart
+import com.quizverse.app.ui.theme.FoodEnd
+import com.quizverse.app.ui.theme.FoodStart
+import com.quizverse.app.ui.theme.GeoEnd
+import com.quizverse.app.ui.theme.GeoStart
+import com.quizverse.app.ui.theme.GlassBorder
+import com.quizverse.app.ui.theme.GlassWhite
+import com.quizverse.app.ui.theme.Gold
+import com.quizverse.app.ui.theme.GoldDark
+import com.quizverse.app.ui.theme.HerthaEnd
+import com.quizverse.app.ui.theme.HerthaStart
+import com.quizverse.app.ui.theme.HistoryEnd
+import com.quizverse.app.ui.theme.HistoryStart
+import com.quizverse.app.ui.theme.LiteratureEnd
+import com.quizverse.app.ui.theme.LiteratureStart
+import com.quizverse.app.ui.theme.LogicEnd
+import com.quizverse.app.ui.theme.LogicStart
+import com.quizverse.app.ui.theme.MixedEnd
+import com.quizverse.app.ui.theme.MixedStart
+import com.quizverse.app.ui.theme.MusicEnd
+import com.quizverse.app.ui.theme.MusicStart
+import com.quizverse.app.ui.theme.ScienceEnd
+import com.quizverse.app.ui.theme.ScienceStart
+import com.quizverse.app.ui.theme.SportEnd
+import com.quizverse.app.ui.theme.SportStart
+import com.quizverse.app.ui.theme.TechEnd
+import com.quizverse.app.ui.theme.TechStart
 import com.quizverse.app.util.Constants
 import com.quizverse.app.viewmodel.QuizViewModel
 import com.quizverse.app.viewmodel.QuizViewModelFactory
@@ -75,14 +108,41 @@ import com.quizverse.app.viewmodel.QuizViewModelFactory
 // Answer option labels
 private val ANSWER_LABELS = listOf("A", "B", "C", "D")
 
-// Colors for answer button feedback
-private val ColorCorrect  = Color(0xFF2E7D32)  // green-800
-private val ColorWrong    = Color(0xFFC62828)  // red-800
-private val ColorNeutral  = Color(0xFF455A64)  // blue-grey-700
+// Colors for answer feedback in explanation panel
+private val ColorCorrect = Color(0xFF2E7D32)
+private val ColorWrong   = Color(0xFFC62828)
+
+// ── Category info helper ──────────────────────────────────────────────────────
+
+private data class QuizCategoryInfo(
+    val name: String,
+    val emoji: String,
+    val gradientStart: Color,
+    val gradientEnd: Color,
+)
+
+private fun getCategoryInfo(categoryId: Int): QuizCategoryInfo = when (categoryId) {
+    1  -> QuizCategoryInfo("Weltgeographie",      "\uD83C\uDF0D", GeoStart,        GeoEnd)
+    2  -> QuizCategoryInfo("Wissenschaft",        "\uD83D\uDD2C", ScienceStart,    ScienceEnd)
+    3  -> QuizCategoryInfo("Geschichte",          "\uD83D\uDCDC", HistoryStart,    HistoryEnd)
+    4  -> QuizCategoryInfo("Film & Fernsehen",    "\uD83C\uDFAC", FilmStart,       FilmEnd)
+    5  -> QuizCategoryInfo("Musik",               "\uD83C\uDFB5", MusicStart,      MusicEnd)
+    6  -> QuizCategoryInfo("Sport",               "\u26BD",       SportStart,      SportEnd)
+    7  -> QuizCategoryInfo("Technologie",         "\uD83D\uDCBB", TechStart,       TechEnd)
+    8  -> QuizCategoryInfo("Essen & Trinken",     "\uD83C\uDF73", FoodStart,       FoodEnd)
+    9  -> QuizCategoryInfo("Tierwelt",            "\uD83D\uDC3E", AnimalsStart,    AnimalsEnd)
+    10 -> QuizCategoryInfo("Literatur",           "\uD83D\uDCDA", LiteratureStart, LiteratureEnd)
+    11 -> QuizCategoryInfo("Alle Kategorien",     "\uD83C\uDF1F", MixedStart,      MixedEnd)
+    12 -> QuizCategoryInfo("Logik & Denksport",   "\uD83E\uDDE0", LogicStart,      LogicEnd)
+    13 -> QuizCategoryInfo("Hertha BSC",          "\uD83D\uDC99", HerthaStart,     HerthaEnd)
+    14 -> QuizCategoryInfo("Borussia Dortmund",   "\uD83D\uDC9B", DortmundStart,   DortmundEnd)
+    else -> QuizCategoryInfo("Quiz",              "\u2753",       MixedStart,      MixedEnd)
+}
 
 /**
  * Main quiz screen. Displays one question at a time with a countdown timer,
  * score tracker, answer buttons and an explanation panel after each answer.
+ * Uses premium UI components: AnimatedTimer, QuestionCard (glassmorphism), AnswerButton (3D).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,7 +167,7 @@ fun QuizScreen(
         viewModel.loadQuestions(categoryId, difficulty, questionCount)
     }
 
-    // Timer tick: every second from the start, getting louder + higher + faster
+    // Timer tick: every second, getting louder + higher + faster
     val maxTime = Constants.TIMER_DURATIONS[difficulty] ?: 40
 
     LaunchedEffect(uiState.timeRemaining) {
@@ -128,9 +188,7 @@ fun QuizScreen(
         soundManager.playCountdownTickPitched(volume, pitch)
 
         // Extra ticks for speed-up effect in final seconds
-        // Every 10s bracket gets faster: last 20s = double tick, last 10s = triple tick
         if (remaining <= 10) {
-            // Haptic warning pulse in the last 10 seconds
             hapticManager.vibrateWarning()
             kotlinx.coroutines.delay(300)
             soundManager.playCountdownTickPitched(volume, pitch)
@@ -145,7 +203,7 @@ fun QuizScreen(
     // Auto-navigate to ResultScreen when quiz ends
     LaunchedEffect(uiState.isFinished) {
         if (uiState.isFinished) {
-            val correctCount = uiState.questionIndex // questions answered correctly is tracked via score/streak
+            val correctCount = uiState.questionIndex
             navController.navigate(
                 Screen.Result.createRoute(
                     score      = uiState.score,
@@ -154,32 +212,12 @@ fun QuizScreen(
                     categoryId = categoryId
                 )
             ) {
-                // Remove the quiz screen from the back-stack so the user can't go back to it
                 popUpTo(Screen.Quiz.route) { inclusive = true }
             }
         }
     }
 
-    // Determine timer progress fraction (0.0 = empty, 1.0 = full)
-    val timerFraction = if (maxTime > 0) uiState.timeRemaining.toFloat() / maxTime.toFloat() else 0f
-
-    // Animate the timer bar smoothly
-    val animatedTimerFraction by animateFloatAsState(
-        targetValue    = timerFraction,
-        animationSpec  = tween(durationMillis = 800),
-        label          = "timerProgress"
-    )
-
-    // Timer bar colour: green → yellow → red as time runs out
-    val timerColor by animateColorAsState(
-        targetValue = when {
-            timerFraction > 0.5f -> Color(0xFF388E3C) // green
-            timerFraction > 0.25f -> Color(0xFFF57F17) // amber
-            else -> Color(0xFFD32F2F)                 // red
-        },
-        animationSpec = tween(durationMillis = 500),
-        label = "timerColor"
-    )
+    val categoryInfo = remember(categoryId) { getCategoryInfo(categoryId) }
 
     Scaffold(
         topBar = {
@@ -187,8 +225,9 @@ fun QuizScreen(
                 title = {
                     if (uiState.totalQuestions > 0) {
                         Text(
-                            text = "Frage ${uiState.questionIndex + 1} von ${uiState.totalQuestions}",
-                            style = MaterialTheme.typography.titleMedium
+                            text = "${categoryInfo.emoji} ${categoryInfo.name}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
                         )
                     } else {
                         Text(text = "Quiz")
@@ -203,7 +242,7 @@ fun QuizScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
                 )
             )
         }
@@ -216,6 +255,7 @@ fun QuizScreen(
         ) {
             // Category-specific animated background
             CategoryBackground(categoryId)
+
             when {
                 // ── Loading ──────────────────────────────────────────────────
                 uiState.isLoading -> LoadingContent()
@@ -228,12 +268,12 @@ fun QuizScreen(
 
                 // ── Active Quiz ───────────────────────────────────────────────
                 uiState.currentQuestion != null -> ActiveQuizContent(
-                    uiState             = uiState,
-                    animatedTimerFraction = animatedTimerFraction,
-                    timerColor          = timerColor,
-                    onAnswerSelected    = { index ->
+                    uiState       = uiState,
+                    maxTime       = maxTime,
+                    categoryInfo  = categoryInfo,
+                    difficulty    = difficulty,
+                    onAnswerSelected = { index ->
                         viewModel.submitAnswer(index)
-                        // Play sound + haptic feedback based on correctness
                         val question = uiState.currentQuestion
                         if (question != null) {
                             val correct = index == question.correctAnswer
@@ -245,8 +285,8 @@ fun QuizScreen(
                             }
                         }
                     },
-                    onNextQuestion      = { viewModel.nextQuestion() },
-                    onSkipQuestion      = { viewModel.skipQuestion() }
+                    onNextQuestion = { viewModel.nextQuestion() },
+                    onSkipQuestion = { viewModel.skipQuestion() }
                 )
             }
         }
@@ -264,7 +304,8 @@ private fun LoadingContent() {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator(
                 modifier  = Modifier.size(56.dp),
-                color     = MaterialTheme.colorScheme.primary
+                color     = Gold,
+                strokeWidth = 4.dp,
             )
             Spacer(Modifier.height(16.dp))
             Text(
@@ -320,11 +361,12 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
 @Composable
 private fun ActiveQuizContent(
     uiState: QuizViewModel.QuizUiState,
-    animatedTimerFraction: Float,
-    timerColor: Color,
+    maxTime: Int,
+    categoryInfo: QuizCategoryInfo,
+    difficulty: Int,
     onAnswerSelected: (Int) -> Unit,
     onNextQuestion: () -> Unit,
-    onSkipQuestion: () -> Unit
+    onSkipQuestion: () -> Unit,
 ) {
     val question = uiState.currentQuestion ?: return
 
@@ -336,34 +378,90 @@ private fun ActiveQuizContent(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
 
-        // ── Timer bar ─────────────────────────────────────────────────────
-        TimerBar(
-            fraction  = animatedTimerFraction,
-            color     = timerColor,
-            remaining = uiState.timeRemaining
+        // ── Timer + Score row ─────────────────────────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // Premium circular timer
+            AnimatedTimer(
+                remainingSeconds = uiState.timeRemaining,
+                totalSeconds     = maxTime,
+                size             = 72.dp,
+            )
+
+            // Score chip (glass style)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(GlassWhite)
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.linearGradient(
+                            colors = listOf(Gold.copy(alpha = 0.5f), GoldDark.copy(alpha = 0.2f)),
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                    )
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text  = "Punkte",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Gold.copy(alpha = 0.8f),
+                    )
+                    Text(
+                        text       = uiState.score.toString(),
+                        style      = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color      = Gold,
+                    )
+                }
+            }
+
+            // Streak counter (premium gold look)
+            if (uiState.streak > 0) {
+                StreakCounter(
+                    streak = uiState.streak,
+                )
+            }
+        }
+
+        // ── Question card (glassmorphism) ──────────────────────────────────
+        QuestionCard(
+            questionText   = question.questionText,
+            questionNumber = uiState.questionIndex + 1,
+            totalQuestions = uiState.totalQuestions,
+            categoryEmoji  = categoryInfo.emoji,
+            categoryName   = categoryInfo.name,
+            difficulty     = difficulty,
+            gradientStart  = categoryInfo.gradientStart,
+            gradientEnd    = categoryInfo.gradientEnd,
+            visible        = true,
         )
 
-        // ── Score & streak row ────────────────────────────────────────────
-        ScoreRow(score = uiState.score, streak = uiState.streak)
-
-        // ── Question card ─────────────────────────────────────────────────
-        QuestionCard(questionText = question.questionText)
-
-        // ── Answer buttons (shuffled order per question) ─────────────────
-        // Build a stable shuffled mapping for this question so answers appear
-        // in a random order each time, but stay consistent while answering.
+        // ── Answer buttons (3D premium look) ──────────────────────────────
         val shuffledIndices = remember(question.id) {
             listOf(0, 1, 2, 3).shuffled()
         }
         val answers = listOf(question.answerA, question.answerB, question.answerC, question.answerD)
+
         shuffledIndices.forEachIndexed { displayPos, originalIndex ->
+            val answerState = when {
+                !uiState.isAnswered                                      -> AnswerState.Default
+                originalIndex == question.correctAnswer                  -> AnswerState.Correct
+                originalIndex == uiState.selectedAnswer && !uiState.isCorrect -> AnswerState.Wrong
+                uiState.selectedAnswer == originalIndex                  -> AnswerState.Selected
+                else                                                     -> AnswerState.Default
+            }
             AnswerButton(
-                label          = ANSWER_LABELS[displayPos],
-                text           = answers[originalIndex],
-                isAnswered     = uiState.isAnswered,
-                isSelected     = uiState.selectedAnswer == originalIndex,
-                isCorrect      = question.correctAnswer == originalIndex,
-                onClick        = { onAnswerSelected(originalIndex) }
+                letter  = ANSWER_LABELS[displayPos],
+                text    = answers[originalIndex],
+                state   = answerState,
+                onClick = { onAnswerSelected(originalIndex) },
+                modifier = Modifier.fillMaxWidth(),
             )
         }
 
@@ -383,21 +481,44 @@ private fun ActiveQuizContent(
         // ── Action button (Next / Skip) ───────────────────────────────────
         Spacer(Modifier.height(4.dp))
         if (uiState.isAnswered) {
-            Button(
-                onClick  = onNextQuestion,
-                modifier = Modifier.fillMaxWidth(),
-                shape    = RoundedCornerShape(12.dp)
+            // Premium gradient "Next" button
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(Gold, GoldDark),
+                        ),
+                    )
+                    .border(
+                        width = 0.5.dp,
+                        color = Color.White.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(14.dp),
+                    ),
+                contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text  = "Nächste Frage",
-                    style = MaterialTheme.typography.labelLarge
-                )
-                Spacer(Modifier.width(8.dp))
-                Icon(
-                    imageVector        = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    modifier           = Modifier.size(18.dp)
-                )
+                Button(
+                    onClick  = onNextQuestion,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape    = RoundedCornerShape(14.dp),
+                    colors   = ButtonDefaults.buttonColors(
+                        containerColor = Color.Transparent,
+                        contentColor   = Color(0xFF1A1A2E),
+                    ),
+                ) {
+                    Text(
+                        text       = "Nächste Frage",
+                        style      = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        imageVector        = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        modifier           = Modifier.size(18.dp)
+                    )
+                }
             }
         } else {
             TextButton(
@@ -406,229 +527,12 @@ private fun ActiveQuizContent(
             ) {
                 Text(
                     text  = "Überspringen",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 )
             }
         }
 
         Spacer(Modifier.height(16.dp))
-    }
-}
-
-// ── Timer bar ─────────────────────────────────────────────────────────────────
-
-@Composable
-private fun TimerBar(fraction: Float, color: Color, remaining: Int) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier            = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment   = Alignment.CenterVertically
-        ) {
-            Text(
-                text  = "Zeit",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text       = "${remaining}s",
-                style      = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color      = color
-            )
-        }
-        Spacer(Modifier.height(4.dp))
-        LinearProgressIndicator(
-            progress      = { fraction },
-            modifier      = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp)),
-            color         = color,
-            trackColor    = MaterialTheme.colorScheme.surfaceVariant,
-            strokeCap     = StrokeCap.Round,
-            gapSize       = 0.dp,
-            drawStopIndicator = {}
-        )
-    }
-}
-
-// ── Score & streak row ────────────────────────────────────────────────────────
-
-@Composable
-private fun ScoreRow(score: Int, streak: Int) {
-    Row(
-        modifier              = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Score chip
-        Surface(
-            shape  = RoundedCornerShape(8.dp),
-            color  = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.weight(1f)
-        ) {
-            Column(
-                modifier            = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text  = "Punkte",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Text(
-                    text       = score.toString(),
-                    style      = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color      = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-        }
-
-        // Streak chip — only shown when streak > 0, otherwise neutral
-        Surface(
-            shape    = RoundedCornerShape(8.dp),
-            color    = if (streak > 0)
-                           MaterialTheme.colorScheme.tertiaryContainer
-                       else
-                           MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.weight(1f)
-        ) {
-            Column(
-                modifier            = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text  = "Serie",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (streak > 0)
-                                MaterialTheme.colorScheme.onTertiaryContainer
-                            else
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text       = if (streak > 0) "🔥 $streak" else "–",
-                    style      = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color      = if (streak > 0)
-                                     MaterialTheme.colorScheme.onTertiaryContainer
-                                 else
-                                     MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-// ── Question card ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun QuestionCard(questionText: String) {
-    Card(
-        modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors    = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Text(
-            text      = questionText,
-            style     = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-            textAlign = TextAlign.Center,
-            modifier  = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 24.dp)
-        )
-    }
-}
-
-// ── Answer button ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun AnswerButton(
-    label: String,
-    text: String,
-    isAnswered: Boolean,
-    isSelected: Boolean,
-    isCorrect: Boolean,
-    onClick: () -> Unit
-) {
-    // Decide the visual state
-    val containerColor by animateColorAsState(
-        targetValue = when {
-            !isAnswered                        -> MaterialTheme.colorScheme.surface
-            isCorrect                          -> ColorCorrect.copy(alpha = 0.15f)
-            isSelected && !isCorrect           -> ColorWrong.copy(alpha = 0.15f)
-            else                               -> MaterialTheme.colorScheme.surface
-        },
-        animationSpec = tween(300),
-        label         = "answerBg_$label"
-    )
-
-    val borderColor by animateColorAsState(
-        targetValue = when {
-            !isAnswered                        -> MaterialTheme.colorScheme.outline
-            isCorrect                          -> ColorCorrect
-            isSelected && !isCorrect           -> ColorWrong
-            else                               -> ColorNeutral.copy(alpha = 0.3f)
-        },
-        animationSpec = tween(300),
-        label         = "answerBorder_$label"
-    )
-
-    val textColor by animateColorAsState(
-        targetValue = when {
-            !isAnswered                        -> MaterialTheme.colorScheme.onSurface
-            isCorrect                          -> ColorCorrect
-            isSelected && !isCorrect           -> ColorWrong
-            else                               -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-        },
-        animationSpec = tween(300),
-        label         = "answerText_$label"
-    )
-
-    OutlinedButton(
-        onClick  = onClick,
-        enabled  = !isAnswered,
-        modifier = Modifier.fillMaxWidth(),
-        shape    = RoundedCornerShape(12.dp),
-        border   = BorderStroke(width = 1.5.dp, color = borderColor),
-        colors   = ButtonDefaults.outlinedButtonColors(
-            containerColor         = containerColor,
-            disabledContainerColor = containerColor
-        )
-    ) {
-        Row(
-            modifier          = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Label badge (A / B / C / D)
-            Surface(
-                shape  = RoundedCornerShape(6.dp),
-                color  = borderColor.copy(alpha = 0.2f),
-                modifier = Modifier.size(28.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text       = label,
-                        style      = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color      = borderColor
-                    )
-                }
-            }
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text      = text,
-                style     = MaterialTheme.typography.bodyMedium,
-                color     = textColor,
-                modifier  = Modifier.weight(1f)
-            )
-        }
     }
 }
 

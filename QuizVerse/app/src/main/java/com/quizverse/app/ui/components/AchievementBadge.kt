@@ -23,6 +23,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.quizverse.app.ui.theme.Gold
+import com.quizverse.app.ui.theme.GoldDark
+import com.quizverse.app.ui.theme.GoldLight
 
 /** Tier constants for [AchievementBadge]. */
 object AchievementTier {
@@ -36,6 +39,7 @@ object AchievementTier {
  * - Bronze / Silver / Gold colour ring matching [tier]
  * - [Canvas]-drawn progress arc around the outside
  * - Lock icon overlay when [isUnlocked] == false
+ * - Gold glow animation when unlocked (always)
  * - Shimmer glow animation when [newlyUnlocked] == true
  *
  * @param iconEmoji      Emoji or symbol shown in the centre.
@@ -57,12 +61,19 @@ fun AchievementBadge(
     modifier: Modifier = Modifier,
 ) {
     val tierColors = when (tier) {
-        AchievementTier.GOLD   -> listOf(Color(0xFFFFD700), Color(0xFFFFA500))
-        AchievementTier.SILVER -> listOf(Color(0xFFC0C0C0), Color(0xFF808080))
-        else                   -> listOf(Color(0xFFCD7F32), Color(0xFF8B4513)) // Bronze
+        AchievementTier.GOLD   -> listOf(GoldLight, Gold, GoldDark)
+        AchievementTier.SILVER -> listOf(Color(0xFFE8E8F0), Color(0xFFC0C0C0), Color(0xFF808090))
+        else                   -> listOf(Color(0xFFE8A050), Color(0xFFCD7F32), Color(0xFF8B4513)) // Bronze
     }
 
-    val trackColor  = Color.White.copy(alpha = 0.15f)
+    // Gold glow for unlocked badges
+    val goldGlowColor = when (tier) {
+        AchievementTier.GOLD   -> Gold
+        AchievementTier.SILVER -> Color(0xFFC0C0C0)
+        else                   -> Color(0xFFCD7F32)
+    }
+
+    val trackColor  = Color.White.copy(alpha = 0.10f)
     val lockedAlpha = if (isUnlocked) 1f else 0.35f
 
     // Animate progress arc
@@ -75,13 +86,24 @@ fun AchievementBadge(
         label = "achievementProgress",
     )
 
-    // Shimmer glow when newly unlocked
-    val shimmerTransition = rememberInfiniteTransition(label = "shimmer")
-    val shimmerAlpha by shimmerTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = if (newlyUnlocked) 0.8f else 0f,
+    // Elegant persistent glow for unlocked badges
+    val glowTransition = rememberInfiniteTransition(label = "goldGlow")
+    val glowAlpha by glowTransition.animateFloat(
+        initialValue = if (isUnlocked) 0.25f else 0f,
+        targetValue  = if (isUnlocked) 0.55f else 0f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 700, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 1400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "glowAlpha",
+    )
+
+    // Shimmer glow when newly unlocked
+    val shimmerAlpha by glowTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = if (newlyUnlocked) 0.9f else 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 600, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "shimmerAlpha",
@@ -91,6 +113,23 @@ fun AchievementBadge(
         contentAlignment = Alignment.Center,
         modifier = modifier.size(size),
     ) {
+        // Outer glow halo for unlocked badges
+        if (isUnlocked) {
+            Box(
+                modifier = Modifier
+                    .size(size * 1.25f)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                goldGlowColor.copy(alpha = glowAlpha * 0.35f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+        }
+
         // Progress ring canvas
         Canvas(modifier = Modifier.size(size)) {
             val strokeWidth = size.toPx() * 0.09f
@@ -122,7 +161,7 @@ fun AchievementBadge(
                 )
             }
 
-            // Shimmer glow layer
+            // Shimmer glow layer when newly unlocked
             if (newlyUnlocked) {
                 drawArc(
                     color = Color.White.copy(alpha = shimmerAlpha),
@@ -136,7 +175,7 @@ fun AchievementBadge(
             }
         }
 
-        // Inner circle background
+        // Inner circle background with elegant gradient
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
@@ -145,8 +184,8 @@ fun AchievementBadge(
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            tierColors.first().copy(alpha = if (isUnlocked) 0.35f else 0.1f),
-                            Color(0xFF1E293B),
+                            tierColors.first().copy(alpha = if (isUnlocked) 0.4f else 0.1f),
+                            MaterialTheme.colorScheme.surface,
                         ),
                     ),
                 )
@@ -159,7 +198,7 @@ fun AchievementBadge(
             )
         }
 
-        // Tier label (bottom-right pip)
+        // Tier label pip (bottom-right) — shown when unlocked
         if (isUnlocked) {
             Box(
                 contentAlignment = Alignment.Center,

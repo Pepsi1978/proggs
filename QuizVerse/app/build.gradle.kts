@@ -89,4 +89,8 @@ dependencies {
 
     // JSON
     implementation(libs.gson)
+
+    // Image loading with SVG support
+    implementation(libs.coil.compose)
+    implementation(libs.coil.svg)
 }

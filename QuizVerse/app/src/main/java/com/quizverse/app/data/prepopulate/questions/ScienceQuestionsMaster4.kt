@@ -299,7 +299,7 @@ fun scienceQuestionsMaster4(): List<Question> = listOf(
     // Question 21 – GWAS for Psychiatric Disorders
     Question(
         categoryId = 2,
-        questionText = "Genomweite Assoziationsstudien (GWAS) für Schizophrenie haben über 270 signifikante Loci identifiziert. Was erklärt die „missing heritability" in psychiatrischen GWAS, und was zeigt die hohe genomische SNP-Heritabilität h²_SNP von ~0,23 für Schizophrenie?",
+        questionText = "Genomweite Assoziationsstudien (GWAS) für Schizophrenie haben über 270 signifikante Loci identifiziert. Was erklärt die 'missing heritability' in psychiatrischen GWAS, und was zeigt die hohe genomische SNP-Heritabilität h²_SNP von ~0,23 für Schizophrenie?",
         answerA = "Missing heritability entsteht ausschließlich durch seltene CNVs (> 500 kb), die nicht auf Standard-GWAS-Arrays erfasst werden; h²_SNP = 0,23 bedeutet, dass häufige SNPs 23 % der Bevölkerungsvarianz erklären, der Rest durch seltene Varianten erklärt wird",
         answerB = "Missing heritability resultiert aus mehreren Faktoren: unentdeckten seltenen Varianten (MAF < 0,1 %), Gen×Gen-Interaktionen (Epistasie), Gen×Umwelt-Interaktionen und unvollständigem LD der genotypisierten SNPs mit Kausalvarianten; h²_SNP ~ 0,23 für Schizophrenie zeigt, dass häufige SNPs substanzielle polygene Architektur erklären, obwohl die klinische Heritabilität (aus Zwillingsstudien) ~0,8 beträgt — die 'Lücke' ist real und methodisch bedingt",
         answerC = "Missing heritability ist ein statistisches Artefakt der GWAS-Korrekturen für multiple Tests (Bonferroni); würde man p < 0,01 statt p < 5×10⁻⁸ als Schwellenwert setzen, wären alle Varianten erklärt. h²_SNP = 0,23 entspricht der tatsächlichen biologischen Heritabilität ohne Umweltbeitrag",

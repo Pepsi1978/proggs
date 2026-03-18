@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,8 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,27 +40,34 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.quizverse.app.QuizVerseApp
+import com.quizverse.app.ui.theme.GlassBorder
+import com.quizverse.app.ui.theme.GlassWhite
+import com.quizverse.app.ui.theme.Gold
+import com.quizverse.app.ui.theme.Primary
+import com.quizverse.app.ui.theme.Secondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(navController: NavHostController) {
 
-    // --- Real persisted settings ---
     val app = LocalContext.current.applicationContext as QuizVerseApp
     val settings = app.settingsRepository
     val soundEnabled by settings.soundEnabled.collectAsState()
@@ -69,25 +75,26 @@ fun SettingsScreen(navController: NavHostController) {
     val darkModeEnabled by settings.darkModeEnabled.collectAsState()
     var showResetDialog by remember { mutableStateOf(false) }
 
-    // Entrance animation trigger
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
 
-    // --- Reset confirmation dialog ---
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
             shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
                     text = "Fortschritt zurücksetzen?",
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
                 Text(
                     text = "Möchtest du wirklich deinen gesamten Fortschritt löschen? " +
-                            "Diese Aktion kann nicht rückgängig gemacht werden."
+                            "Diese Aktion kann nicht rückgängig gemacht werden.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             confirmButton = {
@@ -152,6 +159,9 @@ fun SettingsScreen(navController: NavHostController) {
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
+
+                // App logo + version header
+                AppLogoHeader()
 
                 // ── Section 1: Spieleinstellungen ──────────────────────────
                 SettingsSection(title = "Spieleinstellungen") {
@@ -226,9 +236,68 @@ fun SettingsScreen(navController: NavHostController) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper composables
-// ─────────────────────────────────────────────────────────────────────────────
+// ── App logo header ────────────────────────────────────────────────────────────
+
+@Composable
+private fun AppLogoHeader() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        Primary.copy(alpha = 0.15f),
+                        Secondary.copy(alpha = 0.08f)
+                    )
+                )
+            )
+            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+            .padding(20.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // App logo emoji with gold glow
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Gold.copy(alpha = 0.25f),
+                                Primary.copy(alpha = 0.15f)
+                            )
+                        )
+                    )
+                    .border(
+                        1.dp,
+                        Brush.linearGradient(listOf(Gold.copy(alpha = 0.5f), Primary.copy(alpha = 0.3f))),
+                        RoundedCornerShape(16.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "🎓", fontSize = 32.sp)
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "QuizVerse",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Wissen macht Spaß",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+// ── Settings section card ──────────────────────────────────────────────────────
 
 @Composable
 private fun SettingsSection(
@@ -236,7 +305,6 @@ private fun SettingsSection(
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Section header label
         Text(
             text = title,
             style = MaterialTheme.typography.labelLarge,
@@ -244,19 +312,26 @@ private fun SettingsSection(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
         )
-        // Card wrapping all rows
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            modifier = Modifier.fillMaxWidth()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            GlassWhite,
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    )
+                )
+                .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
         ) {
             Column(content = content)
         }
     }
 }
+
+// ── Toggle row with gradient switch ───────────────────────────────────────────
 
 @Composable
 private fun SettingsToggleRow(
@@ -272,12 +347,19 @@ private fun SettingsToggleRow(
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Emoji in a rounded container
         Box(
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.secondaryContainer),
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            Primary.copy(alpha = 0.18f),
+                            Secondary.copy(alpha = 0.12f)
+                        )
+                    )
+                )
+                .border(1.dp, GlassBorder, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
             Text(text = emoji, fontSize = 20.sp)
@@ -285,7 +367,6 @@ private fun SettingsToggleRow(
 
         Spacer(modifier = Modifier.width(14.dp))
 
-        // Label + optional description
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
@@ -306,12 +387,13 @@ private fun SettingsToggleRow(
 
         Spacer(modifier = Modifier.width(12.dp))
 
+        // Gradient-accented switch
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                checkedThumbColor = Color.White,
+                checkedTrackColor = Primary,
                 uncheckedThumbColor = MaterialTheme.colorScheme.outline,
                 uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
             )
@@ -335,7 +417,15 @@ private fun SettingsInfoRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.secondaryContainer),
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            Gold.copy(alpha = 0.18f),
+                            Primary.copy(alpha = 0.12f)
+                        )
+                    )
+                )
+                .border(1.dp, GlassBorder, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
             Text(text = emoji, fontSize = 20.sp)
@@ -359,6 +449,8 @@ private fun SettingsInfoRow(
     }
 }
 
+// ── Destructive 3D-style button row ───────────────────────────────────────────
+
 @Composable
 private fun SettingsDestructiveRow(
     emoji: String,
@@ -367,7 +459,7 @@ private fun SettingsDestructiveRow(
     onClick: () -> Unit
 ) {
     val errorColor = MaterialTheme.colorScheme.error
-    val errorContainerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+    val errorContainerAlpha = 0.4f
 
     TextButton(
         onClick = onClick,
@@ -377,39 +469,46 @@ private fun SettingsDestructiveRow(
             .padding(4.dp),
         colors = ButtonDefaults.textButtonColors(contentColor = errorColor)
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .clip(RoundedCornerShape(12.dp))
+                .background(errorColor.copy(alpha = 0.06f))
+                .border(1.dp, errorColor.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(errorContainerColor),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = emoji, fontSize = 20.sp)
-            }
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(errorColor.copy(alpha = errorContainerAlpha)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = emoji, fontSize = 20.sp)
+                }
 
-            Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(14.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = errorColor
-                )
-                if (description != null) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = errorColor.copy(alpha = 0.7f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = label,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = errorColor
                     )
+                    if (description != null) {
+                        Text(
+                            text = description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = errorColor.copy(alpha = 0.7f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }

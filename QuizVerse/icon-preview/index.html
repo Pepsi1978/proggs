@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuizVerse — Icon-Auswahl</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0e0e1a;
+    color: #fff; min-height: 100vh; padding: 30px 16px 100px;
+  }
+  h1 { text-align: center; font-size: 2.4rem; margin-bottom: 8px;
+    background: linear-gradient(90deg, #6C63FF, #FF6584, #43E97B, #F59E0B);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .sub { text-align: center; color: #777; margin-bottom: 36px; font-size: 1rem; }
+
+  .category {
+    max-width: 960px; margin: 0 auto 36px;
+    background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    border-radius: 28px; padding: 28px;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .cat-head { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+  .cat-icon { width: 52px; height: 52px; border-radius: 16px; display: flex;
+    align-items: center; justify-content: center; font-size: 28px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+  .cat-head h2 { font-size: 1.3rem; font-weight: 700; }
+  .cat-desc { font-size: 0.8rem; color: #888; }
+  .cat-badge { margin-left: auto; padding: 6px 16px; border-radius: 12px;
+    font-size: 0.8rem; font-weight: 700; color: #43E97B;
+    background: rgba(67,233,123,0.1); border: 1px solid rgba(67,233,123,0.2);
+    display: none; }
+  .cat-badge.show { display: block; }
+
+  .icons-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px;
+  }
+  .icon-card {
+    background: linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+    border-radius: 22px; padding: 16px 10px 12px; text-align: center;
+    cursor: pointer; border: 2px solid transparent; transition: all 0.3s ease;
+    position: relative;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .icon-card:hover {
+    background: linear-gradient(160deg, rgba(108,99,255,0.2), rgba(108,99,255,0.05));
+    border-color: rgba(108,99,255,0.5);
+    transform: translateY(-6px) scale(1.03);
+    box-shadow: 0 16px 40px rgba(108,99,255,0.25), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+  .icon-card.selected {
+    border-color: #43E97B;
+    background: linear-gradient(160deg, rgba(67,233,123,0.15), rgba(67,233,123,0.03));
+    box-shadow: 0 8px 32px rgba(67,233,123,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+    transform: translateY(-4px) scale(1.02);
+  }
+  .icon-card.selected::before {
+    content: ''; position: absolute; top: 8px; right: 8px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #43E97B; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(67,233,123,0.5);
+  }
+  .icon-card.selected::after {
+    content: '✓'; position: absolute; top: 10px; right: 12px;
+    color: #000; font-weight: 900; font-size: 13px;
+  }
+  .icon-card .icon-wrap {
+    width: 80px; height: 80px; margin: 0 auto 10px;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.08), transparent);
+    border-radius: 20px; display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.05), inset 0 -2px 4px rgba(0,0,0,0.1);
+  }
+  .icon-card img { width: 64px; height: 64px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); }
+  .icon-card .name { font-size: 0.75rem; color: #ccc; font-weight: 600; margin-bottom: 2px; }
+  .icon-card .src { font-size: 0.6rem; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .summary {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(14,14,26,0.96); backdrop-filter: blur(24px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 14px 24px; display: flex; align-items: center; justify-content: center; gap: 20px; z-index: 100;
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+  }
+  .summary-slot {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: rgba(255,255,255,0.05); display: inline-flex; align-items: center; justify-content: center;
+    border: 2px solid rgba(255,255,255,0.1); margin: 0 3px; transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .summary-slot.filled { border-color: #43E97B; background: rgba(67,233,123,0.08);
+    box-shadow: 0 4px 16px rgba(67,233,123,0.2); }
+  .summary-slot img { width: 32px; height: 32px; }
+  .count { color: #aaa; font-size: 0.9rem; font-weight: 600; }
+  .copy-btn {
+    padding: 12px 28px; border-radius: 14px; border: none;
+    background: linear-gradient(135deg, #43E97B, #06B6D4); color: #000;
+    font-weight: 800; font-size: 0.95rem; cursor: pointer; transition: all 0.3s;
+    box-shadow: 0 4px 16px rgba(67,233,123,0.3);
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .copy-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(67,233,123,0.5); }
+
+  #result { display: none; max-width: 960px; margin: 24px auto; background: rgba(67,233,123,0.06);
+    border: 1px solid rgba(67,233,123,0.2); border-radius: 20px; padding: 24px; text-align: center; }
+  #result pre { background: rgba(0,0,0,0.4); border-radius: 12px; padding: 18px;
+    font-size: 0.95rem; text-align: left; margin: 14px 0; white-space: pre-wrap; color: #43E97B;
+    font-family: 'SF Mono', Monaco, monospace; }
+  #result p { color: #aaa; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<h1>QuizVerse Icon-Auswahl</h1>
+<p class="sub">Klicke auf ein 3D-Icon pro Button. Unten siehst du deine Auswahl.</p>
+
+<div class="category">
+  <div class="cat-head">
+    <div class="cat-icon" style="background:linear-gradient(135deg,#6C63FF,#A855F7);">🎯</div>
+    <div><h2>Quiz starten</h2><div class="cat-desc">Kategorie waehlen und loslegen</div></div>
+    <span class="cat-badge" id="badge-quiz"></span>
+  </div>
+  <div class="icons-grid" id="grid-quiz"></div>
+</div>
+
+<div class="category">
+  <div class="cat-head">
+    <div class="cat-icon" style="background:linear-gradient(135deg,#FF6584,#F43F5E);">⚡</div>
+    <div><h2>Taegliche Challenge</h2><div class="cat-desc">Neues Quiz jeden Tag</div></div>
+    <span class="cat-badge" id="badge-challenge"></span>
+  </div>
+  <div class="icons-grid" id="grid-challenge"></div>
+</div>
+
+<div class="category">
+  <div class="cat-head">
+    <div class="cat-icon" style="background:linear-gradient(135deg,#F59E0B,#EF4444);">🏆</div>
+    <div><h2>Bestenliste</h2><div class="cat-desc">Ranking und Highscores</div></div>
+    <span class="cat-badge" id="badge-leaderboard"></span>
+  </div>
+  <div class="icons-grid" id="grid-leaderboard"></div>
+</div>
+
+<div class="category">
+  <div class="cat-head">
+    <div class="cat-icon" style="background:linear-gradient(135deg,#43E97B,#06B6D4);">👤</div>
+    <div><h2>Profil</h2><div class="cat-desc">Deine Statistiken und Erfolge</div></div>
+    <span class="cat-badge" id="badge-profile"></span>
+  </div>
+  <div class="icons-grid" id="grid-profile"></div>
+</div>
+
+<div class="category">
+  <div class="cat-head">
+    <div class="cat-icon" style="background:linear-gradient(135deg,#6366F1,#8B5CF6);">⚙️</div>
+    <div><h2>Einstellungen</h2><div class="cat-desc">App anpassen</div></div>
+    <span class="cat-badge" id="badge-settings"></span>
+  </div>
+  <div class="icons-grid" id="grid-settings"></div>
+</div>
+
+<div id="result">
+  <strong style="font-size:1.1rem;">Deine Auswahl</strong>
+  <p>Kopiere diesen Text und fuege ihn bei Claude ein:</p>
+  <pre id="result-text"></pre>
+</div>
+
+<div class="summary">
+  <span id="summary-slots"></span>
+  <span class="count" id="summary-count">0 / 5</span>
+  <button class="copy-btn" id="copy-btn">Kopieren</button>
+</div>
+
+<script>
+// 3D Fluent Emoji (Microsoft), Noto (Google), Twemoji (Twitter)
+// fluent-emoji = 3D rendered, noto = detailed color, twemoji = flat color
+var DATA = {
+  quiz: [
+    ['fluent-emoji:direct-hit','Zielscheibe 3D','fluent 3d'],
+    ['fluent-emoji:bullseye','Bullseye 3D','fluent 3d'],
+    ['fluent-emoji:brain','Gehirn 3D','fluent 3d'],
+    ['fluent-emoji:puzzle-piece','Puzzle 3D','fluent 3d'],
+    ['fluent-emoji:red-question-mark','Fragezeichen 3D','fluent 3d'],
+    ['fluent-emoji:books','Buecher 3D','fluent 3d'],
+    ['fluent-emoji:graduation-cap','Doktorhut 3D','fluent 3d'],
+    ['fluent-emoji:light-bulb','Gluehbirne 3D','fluent 3d'],
+    ['noto:direct-hit','Zielscheibe','noto'],
+    ['noto:brain','Gehirn','noto'],
+    ['noto:puzzle-piece','Puzzle','noto'],
+    ['noto:red-question-mark','Fragezeichen','noto'],
+  ],
+  challenge: [
+    ['fluent-emoji:high-voltage','Blitz 3D','fluent 3d'],
+    ['fluent-emoji:fire','Feuer 3D','fluent 3d'],
+    ['fluent-emoji:rocket','Rakete 3D','fluent 3d'],
+    ['fluent-emoji:alarm-clock','Wecker 3D','fluent 3d'],
+    ['fluent-emoji:stopwatch','Stoppuhr 3D','fluent 3d'],
+    ['fluent-emoji:glowing-star','Stern 3D','fluent 3d'],
+    ['fluent-emoji:calendar','Kalender 3D','fluent 3d'],
+    ['fluent-emoji:comet','Komet 3D','fluent 3d'],
+    ['fluent-emoji:bomb','Bombe 3D','fluent 3d'],
+    ['fluent-emoji:hourglass-not-done','Sanduhr 3D','fluent 3d'],
+    ['noto:high-voltage','Blitz','noto'],
+    ['noto:fire','Feuer','noto'],
+    ['noto:rocket','Rakete','noto'],
+  ],
+  leaderboard: [
+    ['fluent-emoji:trophy','Pokal 3D','fluent 3d'],
+    ['fluent-emoji:1st-place-medal','Gold 3D','fluent 3d'],
+    ['fluent-emoji:2nd-place-medal','Silber 3D','fluent 3d'],
+    ['fluent-emoji:crown','Krone 3D','fluent 3d'],
+    ['fluent-emoji:sports-medal','Medaille 3D','fluent 3d'],
+    ['fluent-emoji:military-medal','Orden 3D','fluent 3d'],
+    ['fluent-emoji:star-struck','Starstruck 3D','fluent 3d'],
+    ['fluent-emoji:chart-increasing','Chart hoch 3D','fluent 3d'],
+    ['fluent-emoji:gem-stone','Edelstein 3D','fluent 3d'],
+    ['fluent-emoji:glowing-star','Stern 3D','fluent 3d'],
+    ['noto:trophy','Pokal','noto'],
+    ['noto:1st-place-medal','Gold','noto'],
+    ['noto:crown','Krone','noto'],
+  ],
+  profile: [
+    ['fluent-emoji:bust-in-silhouette','Person 3D','fluent 3d'],
+    ['fluent-emoji:nerd-face','Nerd 3D','fluent 3d'],
+    ['fluent-emoji:smiling-face-with-sunglasses','Cool 3D','fluent 3d'],
+    ['fluent-emoji:winking-face','Zwinkern 3D','fluent 3d'],
+    ['fluent-emoji:student','Student 3D','fluent 3d'],
+    ['fluent-emoji:grinning-face','Grinsen 3D','fluent 3d'],
+    ['fluent-emoji:person-raising-hand','Hand heben 3D','fluent 3d'],
+    ['fluent-emoji:thinking-face','Denkend 3D','fluent 3d'],
+    ['fluent-emoji:superhero','Superheld 3D','fluent 3d'],
+    ['fluent-emoji:man-raising-hand','Mann 3D','fluent 3d'],
+    ['noto:bust-in-silhouette','Person','noto'],
+    ['noto:nerd-face','Nerd','noto'],
+    ['noto:student','Student','noto'],
+  ],
+  settings: [
+    ['fluent-emoji:gear','Zahnrad 3D','fluent 3d'],
+    ['fluent-emoji:wrench','Schraubenschl. 3D','fluent 3d'],
+    ['fluent-emoji:hammer-and-wrench','Werkzeug 3D','fluent 3d'],
+    ['fluent-emoji:nut-and-bolt','Schraube 3D','fluent 3d'],
+    ['fluent-emoji:control-knobs','Regler 3D','fluent 3d'],
+    ['fluent-emoji:level-slider','Schieber 3D','fluent 3d'],
+    ['fluent-emoji:toolbox','Werkzeugkiste 3D','fluent 3d'],
+    ['fluent-emoji:hammer','Hammer 3D','fluent 3d'],
+    ['fluent-emoji:magnifying-glass-tilted-left','Lupe 3D','fluent 3d'],
+    ['fluent-emoji:counterclockwise-arrows-button','Sync 3D','fluent 3d'],
+    ['noto:gear','Zahnrad','noto'],
+    ['noto:wrench','Schraubenschl.','noto'],
+    ['noto:hammer-and-wrench','Werkzeug','noto'],
+  ]
+};
+
+var selection = {};
+
+function iconUrl(id, size) {
+  var parts = id.split(':');
+  return 'https://api.iconify.design/' + parts[0] + '/' + parts.slice(1).join(':') + '.svg?width=' + size + '&height=' + size;
+}
+
+function buildGrid(catId) {
+  var grid = document.getElementById('grid-' + catId);
+  DATA[catId].forEach(function(item) {
+    var card = document.createElement('div');
+    card.className = 'icon-card';
+    card.dataset.iconId = item[0];
+    card.dataset.iconName = item[1];
+
+    var wrap = document.createElement('div');
+    wrap.className = 'icon-wrap';
+    var img = document.createElement('img');
+    img.src = iconUrl(item[0], 64);
+    img.alt = item[1];
+    img.loading = 'lazy';
+    img.onerror = function() { card.style.opacity = '0.15'; card.style.pointerEvents = 'none'; };
+    wrap.appendChild(img);
+
+    var nameEl = document.createElement('div');
+    nameEl.className = 'name';
+    nameEl.textContent = item[1];
+
+    var srcEl = document.createElement('div');
+    srcEl.className = 'src';
+    srcEl.textContent = item[2];
+
+    card.appendChild(wrap);
+    card.appendChild(nameEl);
+    card.appendChild(srcEl);
+
+    card.addEventListener('click', function() {
+      if (selection[catId] && selection[catId].id === item[0]) {
+        delete selection[catId];
+      } else {
+        selection[catId] = { id: item[0], name: item[1] };
+      }
+      updateUI();
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+function updateUI() {
+  var cats = ['quiz','challenge','leaderboard','profile','settings'];
+  var titles = { quiz:'Quiz starten', challenge:'Taegliche Challenge',
+    leaderboard:'Bestenliste', profile:'Profil', settings:'Einstellungen' };
+
+  cats.forEach(function(catId) {
+    var cards = document.querySelectorAll('#grid-' + catId + ' .icon-card');
+    cards.forEach(function(card) {
+      card.classList.toggle('selected', !!(selection[catId] && card.dataset.iconId === selection[catId].id));
+    });
+    var badge = document.getElementById('badge-' + catId);
+    if (selection[catId]) {
+      badge.textContent = selection[catId].name;
+      badge.classList.add('show');
+    } else {
+      badge.textContent = '';
+      badge.classList.remove('show');
+    }
+  });
+
+  // Summary bar
+  var slots = document.getElementById('summary-slots');
+  while (slots.firstChild) slots.removeChild(slots.firstChild);
+  cats.forEach(function(catId) {
+    var slot = document.createElement('span');
+    slot.className = 'summary-slot' + (selection[catId] ? ' filled' : '');
+    if (selection[catId]) {
+      var img = document.createElement('img');
+      img.src = iconUrl(selection[catId].id, 32);
+      slot.appendChild(img);
+    } else {
+      slot.textContent = '?';
+      slot.style.color = '#444';
+      slot.style.fontSize = '14px';
+    }
+    slots.appendChild(slot);
+  });
+
+  var n = Object.keys(selection).length;
+  document.getElementById('summary-count').textContent = n + ' / 5';
+
+  var result = document.getElementById('result');
+  var resultText = document.getElementById('result-text');
+  if (n > 0) {
+    result.style.display = 'block';
+    var lines = cats.map(function(c) {
+      return selection[c] ? titles[c] + ': ' + selection[c].id : titles[c] + ': -';
+    });
+    resultText.textContent = lines.join('\n');
+  } else {
+    result.style.display = 'none';
+  }
+}
+
+document.getElementById('copy-btn').addEventListener('click', function() {
+  var text = document.getElementById('result-text').textContent;
+  if (!text) { alert('Waehle zuerst mindestens ein Icon!'); return; }
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById('copy-btn');
+    btn.textContent = 'Kopiert!';
+    btn.style.background = '#43E97B';
+    setTimeout(function() { btn.textContent = 'Kopieren'; btn.style.background = ''; }, 2500);
+  });
+});
+
+['quiz','challenge','leaderboard','profile','settings'].forEach(buildGrid);
+</script>
+</body>
+</html>

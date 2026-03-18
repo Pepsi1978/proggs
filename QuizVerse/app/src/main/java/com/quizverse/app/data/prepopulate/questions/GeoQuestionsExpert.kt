@@ -2784,5 +2784,765 @@ fun geoQuestionsExpert(): List<Question> = listOf(
         funFact = "Auf Svalbard ist das Sterben regulatorisch eingeschränkt: Schwerkranke und Sterbende werden auf das norwegische Festland ausgeflogen, da der Permafrostboden Leichen nicht verwesen lässt. Svalbard hat keinen aktiven Friedhof für Neubeerdigungen seit Jahrzehnten."
     ),
 
+    // ── EXPERT BATCH 5 (difficulty = 4) ── 50 additional questions ───────────
+    // Topics: magnetic declination, soil liquefaction, subsidence rates, karst aquifers,
+    // snowline altitudes, paleo-lake systems, loess deposits, river meander wavelengths,
+    // periglacial landforms, cryosphere data
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Wert der magnetischen Deklination hat London (Greenwich) aktuell (ca. 2024)?",
+        answerA = "ca. −5,5° (westliche Deklination)",
+        answerB = "ca. +2,0° (östliche Deklination)",
+        answerC = "0° (kein Unterschied)",
+        answerD = "ca. −12° (starke westliche Deklination)",
+        correctAnswer = 1, // B
+        explanation = "In London beträgt die magnetische Deklination ca. 0° bis +1,5° (schwach östlich, Stand 2024) – sie ist dort nach Jahrhunderten westlicher Deklination in den letzten Jahrzehnten auf nahezu Null zurückgegangen und wechselt langsam in den östlichen Bereich. Der Magnetpol wandert Richtung Sibirien und zieht die Deklinationslinien mit.",
+        difficulty = 4,
+        funFact = "Im Jahr 1800 betrug die magnetische Deklination in London noch ca. −24° (westlich). Dieser dramatische Rückgang über 200 Jahre zeigt, wie dynamisch das Erdmagnetfeld ist – Schifffahrtsnavigation musste ständig neu kalibriert werden."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Wert der magnetischen Deklination wurde 2024 in Tokio gemessen?",
+        answerA = "ca. +7° (östliche Deklination)",
+        answerB = "ca. −3° (westliche Deklination)",
+        answerC = "ca. +15° (starke östliche Deklination)",
+        answerD = "ca. −10° (westliche Deklination)",
+        correctAnswer = 0, // A
+        explanation = "In Tokio beträgt die magnetische Deklination ca. +7°–8° (östlich, 2024). Das bedeutet, dass ein Kompass dort etwa 7° östlich vom geografischen Norden zeigt. Im westlichen Pazifik ist die östliche Deklination typisch für diesen Bereich der Erde.",
+        difficulty = 4,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Gebiet Neuseelands trat beim Erdbeben von Christchurch (2011) die stärkste Bodenverflüssigung auf?",
+        answerA = "Westufer des Lake Ellesmere",
+        answerB = "Stadtbezirke Bexley, Avonside und Richmond entlang des Avon-Flusses",
+        answerC = "Gebirgszone der Southern Alps",
+        answerD = "Küstengebiet von Banks Peninsula",
+        correctAnswer = 1, // B
+        explanation = "Beim Christchurch-Erdbeben (22. Februar 2011, M 6,3) trat die schwerste Bodenverflüssigung in den flussnahen Wohngebieten entlang des Avon-Flusses auf – besonders in Bexley, Avonside und Richmond. Die wassergesättigten Alluvialsande verloren ihre Festigkeit, tausende Häuser mussten abgerissen werden. Die gesamte 'Red Zone' wurde stillgelegt.",
+        difficulty = 4,
+        funFact = "Nach dem Christchurch-Erdbeben wurde ein ca. 600 Hektar großes Stadtgebiet ('Red Zone') dauerhaft aufgegeben und in einen Grünkorridor umgewandelt. Das Ereignis ist das wichtigste Lehrbeispiel weltweit für städtische Bodenverflüssigung in modernen Zeiten."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche japanische Stadt verzeichnet jährliche Bodensubsidenz von über 10 mm/Jahr und liegt dadurch teilweise unter dem Meeresspiegel?",
+        answerA = "Tokio (Tokyo)",
+        answerB = "Osaka",
+        answerC = "Niigata",
+        answerD = "Nagoya",
+        correctAnswer = 0, // A
+        explanation = "Tokio hat im 20. Jahrhundert durch exzessive Grundwasserentnahme eine kumulative Subsidenz von bis zu 4–5 Metern erfahren. Teile des Kōtō-Viertels liegen heute über 2 m unter dem Meeresspiegel. Seit Regulierung der Grundwasserentnahme in den 1960er Jahren hat sich die Absenkungsrate auf unter 1 mm/Jahr verringert.",
+        difficulty = 4,
+        funFact = "In Tokio wurden in den 1950er–60er Jahren Gebiete mit über 20 cm/Jahr Subsidenz gemessen – eine industriell verursachte Absinkkrise. Heute schützt ein Netz aus unterirdischen Speicherbecken und Deichen die tief liegenden Stadtteile."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Küstenstadt versinkt weltweit am schnellsten durch anthropogene Subsidenz (Stand 2024)?",
+        answerA = "Jakarta (Indonesien), teils >25 cm/Jahr",
+        answerB = "Dhaka (Bangladesch), ca. 10 cm/Jahr",
+        answerC = "Mumbai (Indien), ca. 5 cm/Jahr",
+        answerD = "Shanghai (China), ca. 3 cm/Jahr",
+        correctAnswer = 0, // A
+        explanation = "Jakarta gilt als die am schnellsten sinkende Großstadt der Welt – in einigen Stadtteilen (z. B. Nordjakarta) wurden Subsidenzraten von über 25 cm/Jahr gemessen, verursacht durch massiven Grundwasserentzug. Bis 2050 könnte ein Drittel der Stadt unter Wasser liegen. Indonesien verlegt deshalb die Hauptstadt nach Nusantara auf Borneo.",
+        difficulty = 4,
+        funFact = "Indonesien beschloss 2019, Jakarta als Hauptstadt aufzugeben und auf Borneo die neue Hauptstadt Nusantara zu bauen – ein beispielloser Hauptstadtumzug direkt wegen Subsidenz und Überschwemmungsrisiken."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Karstaquifer-System gilt als das größte zusammenhängende der Welt?",
+        answerA = "Floridan Aquifer System (USA, Südosten)",
+        answerB = "Großes Artesisches Becken (Australien)",
+        answerC = "Dinarischer Karst (Balkanhalbinsel)",
+        answerD = "Yucatán-Karst-Aquifer (Mexiko)",
+        correctAnswer = 0, // A
+        explanation = "Das Floridan Aquifer System im Südosten der USA (Florida, Georgia, Alabama, South Carolina) gilt als eines der produktivsten und ausgedehntesten Karstaquifer-Systeme der Welt mit einer Fläche von ca. 260.000 km². Es ist ein mehrschichtiges Karbonatgesteins-Aquifer und liefert Trinkwasser für Millionen Menschen.",
+        difficulty = 4,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Karstgebiet befindet sich das weltgrößte bekannte unterirdische Höhlensystem (nach erkundetem Volumen)?",
+        answerA = "Mammoth Cave System (Kentucky, USA)",
+        answerB = "Dinarischer Karst (Kroatien/Bosnien)",
+        answerC = "Sistema Ox Bel Ha (Yucatán, Mexiko)",
+        answerD = "Nullarbor-Karst (Australien)",
+        correctAnswer = 0, // A
+        explanation = "Das Mammoth Cave System in Kentucky ist mit über 675 km erkundeten Gängen das längste bekannte Höhlensystem der Welt (Stand 2024). Es liegt im Mississippi Valley Karbonatgestein und ist UNESCO-Weltnaturerbe. Das Yucatán-System (Sistema Ox Bel Ha) ist das längste Unterwasserhöhlensystem mit ca. 290 km.",
+        difficulty = 4,
+        funFact = "Das Mammoth Cave System wächst noch immer – jährlich werden neue Tunnel entdeckt und kartiert. Die Gesamtlänge könnte laut Schätzungen noch Hunderte weiterer Kilometer betragen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Auf welcher Höhe liegt die mittlere Schneegrenze (Equilibrium Line Altitude) in den Zentralalpen (Schweiz/Österreich) heute?",
+        answerA = "ca. 2.400–2.600 m",
+        answerB = "ca. 3.000–3.200 m",
+        answerC = "ca. 1.800–2.000 m",
+        answerD = "ca. 3.800–4.200 m",
+        correctAnswer = 1, // B
+        explanation = "Die Gleichgewichtslinie (ELA) der Zentralalpen liegt heute bei ca. 3.000–3.200 m über dem Meeresspiegel. Sie ist seit dem Hochstand der Kleinen Eiszeit (ca. 1850) um über 200–300 m angestiegen. Die ELA ist der Höhenbereich, wo Akkumulation und Ablation eines Gletschers gleich sind.",
+        difficulty = 4,
+        funFact = "In den letzten 30 Jahren ist die ELA in den Alpen um ca. 50–100 m gestiegen – ein direktes Maß für den Klimawandel. Gletscher, deren ELA die Gipfelhöhe überschreitet, sterben innerhalb weniger Jahrzehnte ab."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Auf welcher Höhe liegt die Schneegrenze (ELA) am Kilimandscharo (Tansania) auf der feuchteren Südseite?",
+        answerA = "ca. 4.200–4.400 m",
+        answerB = "ca. 5.000–5.200 m",
+        answerC = "ca. 3.600–3.800 m",
+        answerD = "ca. 5.500–5.700 m",
+        correctAnswer = 0, // A
+        explanation = "Am Kilimandscharo liegt die Gleichgewichtslinie (ELA) auf der niederschlagsreicheren Südseite bei ca. 4.200–4.400 m, auf der trockeneren Nordseite bis zu 5.000 m. Durch den Klimawandel ist die ELA um mehrere Hundert Meter gestiegen und der Gletscher hat seit 1912 über 85 % seiner Fläche verloren.",
+        difficulty = 4,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist der paläo-See Agassiz und wo befand er sich?",
+        answerA = "Paläo-See im heutigen Sahara, ca. 12.000–6.000 BP",
+        answerB = "Eiszeitlicher Gletschersee im heutigen Zentralkanada/Nordminesota, ca. 11.000–8.000 BP",
+        answerC = "Paläo-See im heutigen Tibetischen Hochplateau, ca. 8.000–4.000 BP",
+        answerD = "Eiszeitlicher See in Nordrussland, ca. 15.000–10.000 BP",
+        correctAnswer = 1, // B
+        explanation = "Der glaziale Lake Agassiz war der größte Gletschersee der Erdgeschichte – er erstreckte sich vor ca. 11.000–8.000 Jahren über Teile des heutigen Manitoba, Saskatchewan, Ontario (Kanada) und Minnesota/North Dakota (USA). Auf seinem Höhepunkt hatte er eine Fläche von über 440.000 km² – größer als alle heutigen Großen Seen zusammen.",
+        difficulty = 4,
+        funFact = "Als Lake Agassiz ca. 8.200 v. Chr. durch einen Norddurchbruch kollabierte, strömten Hunderte von Kubikkilometern Süßwasser in den Nordatlantik. Dies störte die thermohaline Zirkulation so stark, dass eine kurze globale Abkühlung (8,2-ka-Ereignis) folgte – ein möglicher Auslöser früher Klimaveränderungen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was war der paläo-See Mega-Tschad und wie groß war er auf seinem Maximum?",
+        answerA = "Eiszeitlicher See im Sahel, max. ca. 400.000 km² (fast so groß wie das Kaspische Meer)",
+        answerB = "Kleiner Stausee am Tschadbecken, max. 50.000 km²",
+        answerC = "Paläo-See in Nordafrika, max. 100.000 km²",
+        answerD = "Unterirdischer fossiler Aquifer, kein offener See",
+        correctAnswer = 0, // A
+        explanation = "Der Paläo-Lake Mega-Tschad existierte während des 'Afrikanischen Feuchten Zeitraums' (Holocene African Humid Period, ca. 10.000–5.000 BP) und hatte auf seinem Maximum eine Ausdehnung von ca. 400.000 km² – vergleichbar mit dem Kaspischen Meer. Er bedeckte Teile des heutigen Tschad, Niger, Nigeria und Kamerun. Der heutige Tschadsee ist ein winziger Rest.",
+        difficulty = 4,
+        funFact = "Der heutige Tschadsee schrumpft dramatisch – von ca. 25.000 km² in den 1960ern auf heute unter 1.500 km². Er ist ein direktes Symbol des Klimawandels und der Übernutzung von Zuflüssen in der Sahelzone."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist das größte bekannte Löss-Plateau der Erde und wo liegt es?",
+        answerA = "Pampas-Löss (Argentinien), ca. 600.000 km²",
+        answerB = "Chinesisches Lössplateau (Loess Plateau, Nordchina), ca. 640.000 km²",
+        answerC = "Europäischer Lössgürtel (von Frankreich bis Ukraine), ca. 900.000 km²",
+        answerD = "Mississippi-Löss (USA, Mittlerer Westen), ca. 300.000 km²",
+        correctAnswer = 1, // B
+        explanation = "Das Chinesische Lössplateau (Huang Tu Gaoyuan) in Nordchina ist mit ca. 640.000 km² das größte zusammenhängende Lössgebiet der Erde. Die Lössschicht ist dort bis zu 200–300 m tief und wurde während des Pleistozäns durch äolischen (Wind-)Transport aus der Wüste Gobi abgelagert.",
+        difficulty = 4,
+        funFact = "Das chinesische Lössplateau ist eine der am stärksten erodierten Landschaften der Erde – der Huang He (Gelber Fluss) trägt pro Jahr ca. 1,6 Milliarden Tonnen Löss-Sediment ins Meer und ist der schlammigste Fluss der Welt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Gebiet Europas hat die mächtigsten Lössablagerungen, die bis zu 50 m tief sind?",
+        answerA = "Burgundy (Frankreich)",
+        answerB = "Niederrheinische Bucht (Deutschland)",
+        answerC = "Vojvodina (Serbien) und ungarische Tiefebene",
+        answerD = "Polnische Tiefebene (Masowien)",
+        correctAnswer = 2, // C
+        explanation = "Die Vojvodina in Serbien und die ungarische Tiefebene (Alföld) haben mit stellenweise über 40–50 m die mächtigsten Lössablagerungen Europas. Dieser Löss wurde während des Pleistozäns vom Wind abgelagert und bildet heute extrem fruchtbare Böden (Schwarzerden). Der Titel-Cliff-Profil Batajnica bei Belgrad ist ein Referenz-Lössprofil der Paläoklimaforschung.",
+        difficulty = 4,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie ist die typische Wellenlänge eines ausgewachsenen Mäanders des Mississippi im Unterläufer?",
+        answerA = "ca. 0,5–1 km",
+        answerB = "ca. 5–12 km",
+        answerC = "ca. 30–50 km",
+        answerD = "ca. 2–3 km",
+        correctAnswer = 1, // B
+        explanation = "Die typische Mäanderwellenlänge des unteren Mississippi beträgt ca. 5–12 km, mit Schlingenmäandern von 3–6 km Breite. Die Wellenlänge eines Mäanders ist empirisch etwa 10–14 Mal die Flussbreite. Bei einem Fluss von 500–800 m Breite ergibt sich rechnerisch eine Wellenlänge von ca. 6–10 km.",
+        difficulty = 4,
+        funFact = "Mäanderwellenlängen folgen einer universellen Skalierungsregel: Sie entsprechen ca. 10× bis 14× der mittleren Flussbreite – egal ob kleiner Bach oder riesiger Fluss. Diese Leopold-Wolman-Gleichung ist eine der wichtigsten empirischen Geomorphologie-Gesetze."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Mäanderwellenlänge hat der Amazonas im Mittelläufer (Manaus-Bereich)?",
+        answerA = "ca. 2–5 km",
+        answerB = "ca. 50–100 km",
+        answerC = "ca. 20–40 km",
+        answerD = "ca. 5–10 km",
+        correctAnswer = 2, // C
+        explanation = "Im Mittel- und Unterläufer des Amazonas, wo der Fluss mehrere Kilometer breit ist (2–4 km), beträgt die Mäanderwellenlänge ca. 20–40 km nach der Skalierungsregel. Die Mäander des Amazonas sind so groß, dass sie von Satelliten als charakteristisches Muster erkennbar sind.",
+        difficulty = 4,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist ein Pingo und in welchen Breiten kommt er vor?",
+        answerA = "Ein eiszeitlicher See in der Arktis",
+        answerB = "Ein kegelförmiger Eishügel mit Eiskern im Permafrostgebiet (Arktis und Subarktis)",
+        answerC = "Eine periglaziale Schutthaldenform in den Alpen",
+        answerD = "Ein flaches Hochmoor im borealen Wald",
+        correctAnswer = 1, // B
+        explanation = "Ein Pingo ist ein kegelförmiger Hügel mit einem Eiskern, der durch hydrostatischen oder hydrologischen Druck im Permafrostgebiet entsteht. Pingos können bis zu 70 m hoch und 600 m breit werden. Sie kommen vor allem in der Arktis (Kanada, Sibirien, Alaska, Grönland) vor, gelegentlich auch in subarktischen Gebieten.",
+        difficulty = 4,
+        funFact = "Das Mackenzie-Delta in Kanada hat über 1.350 bekannte Pingos – das größte Pingo-Vorkommen der Erde. Der Name kommt aus der Inuktitut-Sprache der Inuit."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist eine Thermokarstsee und wie entstehen sie?",
+        answerA = "Trichterförmige Senke durch Auftauen von Permafrost-Eislinsen",
+        answerB = "Karsthohlform in tropischen Kalksteinen",
+        answerC = "Salzsee in ariden Regionen ohne Abfluss",
+        answerD = "Glazialer Übertiefungssee in Moränentälern",
+        correctAnswer = 0, // A
+        explanation = "Thermokarstseen entstehen durch das Auftauen von Eis im Permafrost (Eiskeilen, Eislinsen). Wenn das Eis schmilzt, bricht der Boden ein und füllt sich mit Wasser. In Sibirien und Alaska entstehen so Tausende von Seen. Mit dem Klimawandel nehmen Thermokarstseen zu – sie setzen große Mengen CO₂ und Methan frei.",
+        difficulty = 4,
+        funFact = "In der arktischen Tundra Sibiriens gibt es mehr als eine Million Thermokarstseen. Manche dieser Seen blasen Methan-Blasen auf – sogenannte 'Methanlöcher', die bei Entzündung mit einer Flamme brennen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche periglaziale Landform entsteht durch Frostsortierung von Steinen zu geometrischen Mustern?",
+        answerA = "Solifluktionslappen",
+        answerB = "Strukturböden (Steinringe, Steinpolygone)",
+        answerC = "Thermokarst-Depression",
+        answerD = "Pingo",
+        correctAnswer = 1, // B
+        explanation = "Strukturböden (auch Musterböden oder Frostmusterböden) entstehen durch wiederholtes Gefrieren und Auftauen, das größere Steine nach außen transportiert und so geometrische Muster erzeugt: Steinringe, Steinpolygone, Steinstreifen. Sie kommen im Tundra- und Hochgebirgsbereich vor.",
+        difficulty = 4,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist Solifluktion und in welchem Umfeld tritt sie auf?",
+        answerA = "Salzausblühung in Wüsten durch kapillare Wasserbewegung",
+        answerB = "Langsames, schichtweises Fließen aufgetauten Bodens über gefrorenem Untergrund",
+        answerC = "Tektonisch verursachtes Bodengleiten in aktiven Verwerfungszonen",
+        answerD = "Schnelle Massenrutschung durch Starkregenereignisse",
+        correctAnswer = 1, // B
+        explanation = "Solifluktion (auch Bodenfließen) bezeichnet das langsame Fließen des wassergesättigten Auftauhorizonts (Aktive Schicht) über dem dauerhaft gefrorenen Permafrost. Sie tritt im periglazialen Bereich auf und bewegt Erdmaterial hangabwärts mit Geschwindigkeiten von wenigen Zentimetern bis Dezimetern pro Jahr.",
+        difficulty = 4,
+        funFact = "Solifluktionslappen und -bögen sind typische Landschaftsformen der subarktischen Tundra. In isländischen und skandinavischen Bergen kann Solifluktion Infrastruktur (Straßen, Leitungen) ernsthaft beschädigen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Anteil am gesamten globalen Meeresspiegel-Beitrag machte die Gletscherschmelze außerhalb der Polargebiete (Berggletscher) zwischen 2000 und 2019 aus?",
+        answerA = "ca. 5 %",
+        answerB = "ca. 21 %",
+        answerC = "ca. 40 %",
+        answerD = "ca. 60 %",
+        correctAnswer = 1, // B
+        explanation = "Laut IPCC AR6 (2021) trugen die Berggletscher (außerhalb Grönland und Antarktis) ca. 21 % zum Meeresspiegelanstieg zwischen 2000 und 2019 bei. Grönland und Antarktis trugen zusammen ca. 36 %, thermische Ausdehnung der Ozeane ca. 38 %. Obwohl Berggletscher wenig Masse haben, schmelzen sie proportional am schnellsten.",
+        difficulty = 4,
+        funFact = "Die Berggletscher außerhalb der Polargebiete enthalten nur ca. 1 % des globalen Süßwasservorrats, sind aber für Milliarden von Menschen als saisonale Wasserreservoirs unverzichtbar – besonders in Zentralasien, dem Hindukusch und den Anden."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Masseverlust hat der Jakobshavn-Gletscher (Sermeq Kujalleq) in Grönland durchschnittlich pro Jahr?",
+        answerA = "ca. 20 Gigatonnen/Jahr",
+        answerB = "ca. 46 Gigatonnen/Jahr",
+        answerC = "ca. 5 Gigatonnen/Jahr",
+        answerD = "ca. 100 Gigatonnen/Jahr",
+        correctAnswer = 1, // B
+        explanation = "Der Jakobshavn-Gletscher verliert durch Kalbung und Schmelze ca. 44–48 Gigatonnen Eis pro Jahr – er allein trägt zu ca. 4–5 % des grönländischen Gesamtmassenverlustes bei. Er ist der schnellste Gletscher der Erde und einer der produktivsten Eisbergproduzenten.",
+        difficulty = 4,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie dick ist das Meereis in der Arktis im winterlichen Durchschnitt (mehrjähriges Eis, 2024)?",
+        answerA = "ca. 0,5–1 m (hauptsächlich einjähriges Eis)",
+        answerB = "ca. 2–3 m (mehrjähriges Eis)",
+        answerC = "ca. 5–7 m (altes Packeis)",
+        answerD = "ca. 8–10 m (Presseis)",
+        correctAnswer = 1, // B
+        explanation = "Mehrjähriges arktisches Meereis hat eine typische Dicke von ca. 2–3 m, während einjähriges Meereis meist 1–2 m erreicht. Durch die Klimaerwärmung ist der Anteil mehrjährigen Eises drastisch zurückgegangen – 2024 dominiert einjähriges, dünnes Eis den Arktischen Ozean, was das Eis im Sommer früher schmelzen lässt.",
+        difficulty = 4,
+        funFact = "Das arktische Meereis hat seit 1979 (Start der Satellitenmessungen) im Sommer über 40 % seiner Ausdehnung verloren. Das Septemberminimum 2012 war mit ca. 3,4 Millionen km² das kleinste je gemessene."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie hoch ist die mittlere Schneegrenze (ELA) im Karakorum-Gebirge (Zentral-Karakorum) heute?",
+        answerA = "ca. 4.000–4.400 m",
+        answerB = "ca. 5.500–5.900 m",
+        answerC = "ca. 3.200–3.500 m",
+        answerD = "ca. 6.200–6.500 m",
+        correctAnswer = 1, // B
+        explanation = "Im zentralen Karakorum liegt die Gleichgewichtslinie (ELA) bei ca. 5.500–5.900 m – eine der höchsten der Welt, bedingt durch das trockene Kontinentalklima und die extreme Höhe. Trotz hoher ELA gibt es dort mächtige Gletscher (Baltoro, Biafo), weil genügend Niederschlag als Schnee akkumuliert wird.",
+        difficulty = 4,
+        funFact = "Der Karakorum gilt als das einzige Hochgebirge der Erde, in dem die Gletscher in der ersten Hälfte des 20. Jahrhunderts eher stabil blieben oder wuchsen – bekannt als 'Karakorum-Anomalie'. Die Ursachen (veränderte Windmuster, erhöhte Winterniederschläge) sind noch nicht vollständig geklärt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was war der Paläo-See Bonneville und wo befand er sich?",
+        answerA = "Paläo-See im heutigen Turkestan, Zentralasien, vor ca. 20.000 Jahren",
+        answerB = "Eiszeitlicher See im Großen Becken (Utah/Idaho/Nevada, USA), max. ca. 51.700 km²",
+        answerC = "Pleistozäner See in der australischen Nullarbor-Ebene",
+        answerD = "Holozäner Paläo-See in der patagonischen Steppe",
+        correctAnswer = 1, // B
+        explanation = "Lake Bonneville war ein eiszeitlicher Pluvialsee im Großen Becken der USA (hauptsächlich Utah), der auf seinem Maximum (ca. 18.000–14.500 BP) ca. 51.700 km² bedeckte und bis zu 305 m tief war. Das Bonneville Salt Flats und der Great Salt Lake sind seine heutigen Überreste.",
+        difficulty = 4,
+        funFact = "Das Bonneville Salt Flats in Utah ist weltberühmt als Ort für Landgeschwindigkeitsrekorde – die spiegelglatte Salzkruste bietet mehrere Kilometer langen Freiraum für Rekordversuche. Bis 2020 wurden dort über 700 Weltrekorde aufgestellt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Gebiet der Erde treten Yedoma-Ablagerungen auf und was sind sie?",
+        answerA = "Warme, calciumreiche Sedimentfolgen in Karst-Tälern der Tropen",
+        answerB = "Eisreiche Permafrostsedimente in Sibirien/Alaska mit Eiskeilnetzwerken, bis zu 50 m mächtig",
+        answerC = "Vulkanische Tuffe in der isländischen Hochlandtundra",
+        answerD = "Fluviale Sedimentabfolgen im Amazonasbecken",
+        correctAnswer = 1, // B
+        explanation = "Yedoma sind eisreiche, spätpleistozäne Lössablagerungen in Sibirien und Alaska mit enormen Eiskeilen (bis 40–50 m mächtig, Eisanteil bis 80 % des Volumens). Sie wurden während der letzten Eiszeit in einer steppenartigen 'Mammutsteppen'-Landschaft abgelagert. Bei Tauung setzen sie riesige Mengen organischen Kohlenstoffs frei.",
+        difficulty = 4,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist ein Alas (geografischer Begriff) im Kontext der Permafrostgeomorphologie?",
+        answerA = "Ein Tundra-Geomorphologietyp, bei dem Thermokarst-Depression ausgetrocknet ist und eine flache, grasbewachsene Mulde bildet",
+        answerB = "Ein glazialer Übertiefungssee in Skandinavien",
+        answerC = "Eine Küstendünenform im arktischen Schelfgebiet",
+        answerD = "Ein Ringwall aus Kies um einen Pingo",
+        correctAnswer = 0, // A
+        explanation = "Ein Alas (jakutisch für 'Mulde') ist eine flache, ovale Hohlform in der jakutischen Tundra, die durch die Ausdrocknung oder langsame Verlandung ehemaliger Thermokarstseen entsteht. Die Mulde wird dann von Gras und Seggen besiedelt. Die jakutische Landschaft ist geprägt von Millionen solcher Alas-Täler.",
+        difficulty = 4,
+        funFact = "Alas-Landschaften in Jakutien sind wichtige Weidegründe für die sibirische Pferdehaltung. Die flachen, fruchtbaren Mulden mit hohem Grundwasserstand sind in der sonst trockenen Kältetundra produktive Oasen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Karstaquifer liefert den Großteil des Trinkwassers für die Hauptstädte Wien, Graz und zahlreiche weitere österreichische Städte?",
+        answerA = "Dachstein-Karstaquifer",
+        answerB = "Hochschwab-Karstaquifer",
+        answerC = "Ötztaler-Alpen-Grundwasser",
+        answerD = "Donau-Schottteraquifer bei Krems",
+        correctAnswer = 1, // B
+        explanation = "Der Hochschwab-Karstaquifer im steirischen Salzkammergut ist der wichtigste Trinkwasserlieferant für Wien und andere österreichische Städte. Über die 1. und 2. Wiener Hochquellenwasserleitung (Bau 1873 und 1910) fließt Karstquellwasser aus ca. 100 km Entfernung nach Wien.",
+        difficulty = 4,
+        funFact = "Wien ist eine der wenigen Großstädte der Welt, die ihr Trinkwasser praktisch unbehandelt aus natürlichen Karstquellen bezieht – ohne Chlorierung. Die 1. Wiener Hochquellenleitung war bei ihrer Eröffnung 1873 die längste Hochdruckleitung der Welt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Gebiet Westafrikas hat durch saisonale Überschwemmungen ein internes Binnendelta mit wechselnden Mäandermustern gebildet?",
+        answerA = "Niger-Binnendelta (Mali, Mopti-Region) – ein saisonales 'Inland Niger Delta'",
+        answerB = "Senegal-Mündungsgebiet bei Saint-Louis",
+        answerC = "Volta-Stausee-Rückstaugebiet in Ghana",
+        answerD = "Kamerun-Hochland-Becken",
+        correctAnswer = 0, // A
+        explanation = "Das Innere Niger-Delta (Inland Niger Delta) in Mali erstreckt sich auf ca. 40.000 km² und ist eines der größten Binnenfeuchtgebiete der Erde in einer semiariden Region. Jährlich überflutet der Niger ab Juli/August bis zu 40.000 km² – das Flussnetz wechselt sein Mäandermuster saisonal komplett.",
+        difficulty = 4,
+        funFact = "Das Innere Niger-Delta ernährt Millionen von Menschen durch Fischerei, Reisanbau und saisonale Weide. Es ist nach dem Okavango-Delta das wichtigste Binnenfeuchtgebiet Afrikas und UNESCO-Kulturerbe für die Dogon-Civilization."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist das Verhältnis zwischen Mäanderwellenlänge und Flussbreite (Leopold-Wolman-Regel)?",
+        answerA = "Wellenlänge ≈ 3–5 × Flussbreite",
+        answerB = "Wellenlänge ≈ 10–14 × Flussbreite",
+        answerC = "Wellenlänge ≈ 50–100 × Flussbreite",
+        answerD = "Keine stabile Relation – hängt nur von Gefälle ab",
+        correctAnswer = 1, // B
+        explanation = "Nach Leopold und Wolman (1957) beträgt die Mäanderwellenlänge ca. 10–14 Mal die mittlere Flussbreite. Diese Beziehung gilt über mehrere Größenordnungen – vom kleinen Bach bis zum Amazonas. Sie ist eine der bemerkenswertesten universellen Skalierungsgesetze der Geomorphologie.",
+        difficulty = 4,
+        funFact = "Dieses Verhältnis gilt sogar für Mäander in der Stratosphäre (Jet-Stream), in Unterwasserströmungen und für gefrorene Flüsse unter Gletschern. Es scheint eine fundamentale physikalische Gesetzmäßigkeit von Strömungen zu sein."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Region hat die größten Lössablagerungen in Nordamerika?",
+        answerA = "Nebraska Sandhills (USA)",
+        answerB = "Mississippi-Tal-Lössgürtel (Mississippi Loess Bluffs)",
+        answerC = "Great Plains Löss (Nebraska, Kansas, Iowa)",
+        answerD = "Columbia-Plateau-Löss (Washington State)",
+        correctAnswer = 2, // C
+        explanation = "Die Great Plains (Nebraska, Kansas, Iowa, South Dakota) haben die ausgedehntesten Lössablagerungen Nordamerikas, die während des Pleistozäns vom Wind aus glazialen Outwash-Ebenen abgelagert wurden. Der Palouse-Lössgürtel in Washington State ist lokal mächtiger (bis 75 m), aber weniger ausgedehnt.",
+        difficulty = 4,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie hoch ist die mittlere Schneegrenze in den Centralanden (Altiplano-Region, Bolivien/Peru) bei 16–20°S?",
+        answerA = "ca. 4.000–4.500 m",
+        answerB = "ca. 5.000–5.500 m",
+        answerC = "ca. 3.200–3.600 m",
+        answerD = "ca. 6.000–6.500 m",
+        correctAnswer = 1, // B
+        explanation = "In den zentralen Anden zwischen 16° und 20° Süd liegt die Gleichgewichtslinie (ELA) der Gletscher bei ca. 5.000–5.500 m. Das relativ trockene Klima des Altiplano (Kontinentaleffekt) hält die ELA hoch. Durch den Klimawandel steigt die ELA und die tropischen Gletscher der Anden verschwinden schnell.",
+        difficulty = 4,
+        funFact = "Die tropischen Gletscher der Andes (Quelccaya, Huascarán) sind einige der am schnellsten schmelzenden Gletscher der Welt. Sie dienen als wichtige saisonale Wasserspeicher für Millionen Menschen und als Klimaarchive (Eisbohrkerne bis 500.000 Jahre alt)."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was versteht man unter 'aktiver Permafrostschicht' (Active Layer) und wie tief ist sie typischerweise in der arktischen Tundra?",
+        answerA = "Die gesamte Permafrostmächtigkeit; ca. 300–500 m tief",
+        answerB = "Der saisonal auftauende Oberflächenbereich über dem permanenten Eis; ca. 30–200 cm tief",
+        answerC = "Eine tiefe Grundwasserschicht unter dem Permafrost; ca. 10–50 m tief",
+        answerD = "Der saisonale Schneedeckenhorizont; ca. 0,5–2 m",
+        correctAnswer = 1, // B
+        explanation = "Die 'Aktive Schicht' (Active Layer) ist die oberste Bodenschicht über dem dauerhaft gefrorenen Permafrost, die im Sommer auftaut. In der arktischen Tundra beträgt sie typischerweise 30–80 cm, in wärmeren subarktischen Bereichen bis 200 cm. Ihre Tiefe nimmt mit dem Klimawandel zu und destabilisiert Infrastruktur.",
+        difficulty = 4,
+        funFact = "Die Zunahme der Aktiven Schicht durch Klimaerwärmung ist ein globales Problem: Straßen, Pipelines und Gebäude in Permafrostgebieten werden durch das tiefere Auftauen beschädigt. Russland meldet bereits Schäden an Gebäuden in den Milliardenhöhe."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche magnetische Deklination hat San Francisco (Kalifornien) ca. 2024?",
+        answerA = "ca. +13° (östlich)",
+        answerB = "ca. −2° (westlich)",
+        answerC = "ca. +5° (östlich)",
+        answerD = "ca. −20° (westlich)",
+        correctAnswer = 0, // A
+        explanation = "In San Francisco beträgt die magnetische Deklination ca. +13–14° (östlich, Stand 2024). An der US-Westküste ist die östliche Deklination stark ausgeprägt und variiert je nach Breitengrad. Diese Deklination muss bei Kompassnavigation und Luftfahrt berücksichtigt werden.",
+        difficulty = 4,
+        funFact = "Die magnetische Deklination variiert stark über die USA: An der Ostküste (New York) beträgt sie ca. −12° (westlich), in San Francisco ca. +13° (östlich). Die Agone-Null-Linie (0° Deklination) verläuft quer durch die USA von Michigan bis Florida."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist der paläo-See Caspian (Paratethys) und wann existierte er?",
+        answerA = "Ein messinischer Eindampfungssee im Mittelmeer, ca. 5,3 Mio. Jahre alt",
+        answerB = "Das pleistozäne Vorgänger-Mega-Meer des Kaspischen, Schwarzen und Aralsees, Rückzug ca. 10.000 BP",
+        answerC = "Ein eiszeitlicher Gletschersee in Kasachstan, ca. 18.000 BP",
+        answerD = "Der fossile Lake Aral, nur ca. 2.000 Jahre alt",
+        correctAnswer = 1, // B
+        explanation = "Die Paratethys war ein riesiges Binnenmeer, das im Tertiär (vor ca. 34–5 Mio. Jahren) von Mitteleuropa bis Zentralasien reichte. Im Pleistozän führten Klimaschwankungen zu riesigen Vorgängerversionen des Kaspischen Meeres (Caspian Mega-Lake), Schwarzen Meeres und Aralsees, die phasenweise miteinander verbunden waren und sich dann zurückzogen.",
+        difficulty = 4,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie groß ist die durchschnittliche Bodensenkungsrate in Mexiko-Stadt durch Grundwasserentnahme auf dem ehemaligen Seegrund?",
+        answerA = "ca. 2 cm/Jahr",
+        answerB = "ca. 5–9 cm/Jahr (bis zu 50 cm lokal)",
+        answerC = "ca. 1 mm/Jahr",
+        answerD = "ca. 30–50 cm/Jahr (stabile Rate)",
+        correctAnswer = 1, // B
+        explanation = "Mexiko-Stadt sinkt durch Grundwasserentnahme aus dem tonreichen Untergrund des ehemaligen Texcoco-Sees um durchschnittlich 5–9 cm/Jahr, lokal bis zu 30–50 cm/Jahr. Die kumulative Senkung seit Beginn der Industrialisierung beträgt bis zu 10–15 Meter in manchen Stadtteilen. Die historische Kathedrale neigt sich sichtbar.",
+        difficulty = 4,
+        funFact = "Die aztekische Hauptstadt Tenochtitlan wurde auf Inseln im Texcoco-See gebaut. Als die Spanier die Stadt unter den See aufschütteten, legten sie den Grundstein für Jahrhunderte von Subsidenz. Mexiko-Stadt ist ein Lehrbeispiel für die Konsequenzen des Bauens auf ehemaligem Seegrund."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Karstaquifer-System versorgt weite Teile des Mittelmeerraums und hat Quellen unter dem Meer?",
+        answerA = "Dinarischer Karst (Kroatien/Bosnien)",
+        answerB = "Vaucluse-Fontaine (Frankreich, Rhône-Becken)",
+        answerC = "Almería-Aquifer (Spanien)",
+        answerD = "Peneios-Aquifer (Griechenland)",
+        correctAnswer = 0, // A
+        explanation = "Der dinarische Karstaquifer (Dinarides) ist mit einer Fläche von ca. 60.000 km² eines der größten Karstaquifere Europas. Er hat zahlreiche submarine Karstquellen (Vrulje) auf dem Meeresboden der Adria – Süßwasser quillt direkt am Meeresboden aus. Diese Quellen waren historisch für Seefahrer als Trinkwasserquelle bekannt.",
+        difficulty = 4,
+        funFact = "Der dinarische Karst gab der Wissenschaft den Begriff 'Karst' selbst – der Name kommt vom Kras-Plateau (dt. Karst) in Slowenien/Kroatien, wo Geomorphologen im 19. Jahrhundert diese Landschaftsform erstmals systematisch beschrieben."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was sind Eiszapfenrippen (Eiskeil-Pseudomorphosen) und was verraten sie über das Klima?",
+        answerA = "Rezente Eisformationen in aktiven Permafrostböden der Arktis",
+        answerB = "Fossile Keilstrukturen im Boden, wo Eiskeilnetze waren – Beweis für ehemaligen Permafrost",
+        answerC = "Glaziale Kristallisationsstrukturen in Eisschilden",
+        answerD = "Eisformationen in Gebirgsquellen bei Temperaturstürzen",
+        correctAnswer = 1, // B
+        explanation = "Eiskeil-Pseudomorphosen (Eiszapfenrippen) sind fossile Bodenmuster, die in gemäßigten Breiten die Lage ehemaliger Eiskeile aus der letzten Eiszeit markieren. Sie beweisen, dass Gebiete wie Norddeutschland, England oder die Niederlande einst von Permafrost bedeckt waren – wertvolle Paläoklima-Indikatoren.",
+        difficulty = 4,
+        funFact = "Eiskeil-Pseudomorphosen sind in vielen Teilen Mitteleuropas bei Bauarbeiten zu finden. Im norddeutschen Tiefland durchzieht ein dichtes Netz solcher Fossile den Boden – stille Zeugen einer arktischen Periode vor ca. 18.000–12.000 Jahren."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Auf welcher Höhe liegt die mittlere Schneegrenze in Island heute (nordseitige Gletscher)?",
+        answerA = "ca. 500–700 m",
+        answerB = "ca. 1.100–1.300 m",
+        answerC = "ca. 200–300 m",
+        answerD = "ca. 1.800–2.200 m",
+        correctAnswer = 0, // A
+        explanation = "In Island liegt die Gleichgewichtslinie (ELA) der Gletscher bei ca. 500–700 m auf der niederschlagsreichen (ozeanischen) Seite und ca. 1.000–1.200 m auf der trockeneren Lee-Seite. Islands Gletscher (Vatnajökull, Langjökull) sind bei relativ niedrigen Höhen aktiv, weil der hohe Niederschlag die ELA tief hält.",
+        difficulty = 4,
+        funFact = "Der Vatnajökull in Island ist mit ca. 7.900 km² der größte Gletscher Europas und das größte Eisvolumen Europas außerhalb der Arktis. Er bedeckt mehrere aktive Vulkane – bei Ausbrüchen entstehen Jökulhlaup (Gletscherlauffluten)."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie groß ist das Gebiet der Lössablagerungen in Argentinien (Pampa-Löss) und seit wann wurden sie abgelagert?",
+        answerA = "ca. 50.000 km², im Holozän (letzte 10.000 Jahre)",
+        answerB = "ca. 600.000 km², hauptsächlich im späten Pleistozän (ca. 150.000–10.000 BP)",
+        answerC = "ca. 200.000 km², im Miozän (ca. 23–5 Mio. Jahre)",
+        answerD = "ca. 100.000 km², im letzten Glazialen Maximum (ca. 22.000–18.000 BP)",
+        correctAnswer = 1, // B
+        explanation = "Der Pampa-Löss in Argentinien bedeckt ca. 600.000 km² (Provinzen Buenos Aires, Córdoba, Santa Fe, Entre Ríos) und wurde hauptsächlich im späten Pleistozän (ca. 150.000–10.000 BP) durch Wind aus der Patagonischen Steppe transportiert. Er bildet die Grundlage der fruchtbaren Pampa-Böden.",
+        difficulty = 4,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist ein Drumlins und in welchem Prozess entstehen diese Landformen?",
+        answerA = "Windgeformte Sanddünen in ariden Periglazialgebieten",
+        answerB = "Längliche, eiförmige Hügel aus Moränenmaterial, die subglazial durch Eisbewegung geformt werden",
+        answerC = "Kettenförmige Moränenrücken durch Gletschervorstöße",
+        answerD = "Subaquatische Sedimentmuster in arktischen Fjorden",
+        correctAnswer = 1, // B
+        explanation = "Drumlins sind längliche, stromlinienförmige Hügel aus glazialem Till, die durch strömenden Gletscher über älteres Moränenmaterial geformt wurden. Sie zeigen die Fließrichtung des Eises an (ihre Längsachse ist parallel zur Eisflussrichtung) und kommen in Schwärmen vor. Irland, Schottland und die Great Lakes-Region (Kanada/USA) haben klassische Drumlin-Felder.",
+        difficulty = 4,
+        funFact = "Irland hat eines der dichtesten Drumlin-Felder der Welt – das 'Drumlin Belt' durch Cavan, Monaghan und Armagh mit tausenden eng gepackten Drumlins. Der Name kommt aus dem Irischen: 'droimnín' = kleiner Bergrücken."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche typische Fließgeschwindigkeit hat Solifluktion in der arktischen Tundra (Jahresdurchschnitt)?",
+        answerA = "ca. 10–50 m/Jahr",
+        answerB = "ca. 0,5–5 cm/Jahr",
+        answerC = "ca. 50–200 cm/Jahr",
+        answerD = "ca. 1–3 m/Jahr",
+        correctAnswer = 1, // B
+        explanation = "Solifluktion bewegt sich mit typischerweise 0,5–5 cm/Jahr – sehr langsam, aber kontinuierlich. Im subarktischen Hochland kann sie bis zu 10–20 cm/Jahr erreichen. Diese scheinbar geringe Rate führt über Jahrtausende zu erheblicher Massenverschiebung und charakteristischen Solifluktionslappen am Hang.",
+        difficulty = 4,
+        funFact = "Solifluktionsterrasschen (kleine Stufenformen am Hang) sind ein typisches Merkmal subarktischer Tundra-Landschaften. In alpinen Lagen Mitteleuropas finden sich noch aktive Solifluktionszonen über der Waldgrenze."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher See Zentralasiens gilt als Überrest des Paläo-Sees Balkhash-Aral-Kaspi-Systems?",
+        answerA = "Issyk-Kul (Kirgisistan)",
+        answerB = "Kaspisches Meer",
+        answerC = "Aralsee",
+        answerD = "Balkhaschsee",
+        correctAnswer = 3, // D
+        explanation = "Der Balkhaschsee in Kasachstan (ca. 16.400 km², stark schwankend) ist ein Überrest eines größeren pleistozänen Seesystems. Er ist einzigartig: Die westliche Hälfte enthält Süßwasser (Fluss Ili mündet dort), die östliche salziges Wasser – getrennt durch eine schmale Durchfahrt. Frühere Megaseen verbanden ihn zeitweise mit Kaspi und Aral.",
+        difficulty = 4,
+        funFact = "Der Balkhaschsee kämpft heute ums Überleben: Bewässerungsprojekte und Staudämme am Fluss Ili (kommt aus China) haben den Zufluss stark reduziert. Wissenschaftler warnen, er könnte das Schicksal des Aralsees erleiden."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Subsidenzrate zeigen GPS-Messungen für das Mekong-Delta (Vietnam) heute?",
+        answerA = "ca. 1–2 mm/Jahr",
+        answerB = "ca. 1–2 cm/Jahr (lokal bis 4 cm/Jahr)",
+        answerC = "ca. 10–15 cm/Jahr",
+        answerD = "Keine messbare Subsidenz",
+        correctAnswer = 1, // B
+        explanation = "Das Mekong-Delta in Vietnam sinkt durch Grundwasserentnahme und Sedimentmangel (durch Staudämme am Mekong) um ca. 1–2 cm/Jahr, lokal bis 4 cm/Jahr. Kombiniert mit dem Meeresspiegelanstieg von ca. 3 mm/Jahr droht dem Delta eine existentielle Überflutungskrise bis 2100.",
+        difficulty = 4,
+        funFact = "Das Mekong-Delta ernährt ca. 18 Millionen Menschen in Vietnam und produziert die Hälfte des vietnamesischen Reises. Durch Subsidenz und verringerten Sedimentnachschub (ca. 50 % weniger seit dem Staudammbau am oberen Mekong in China) erodiert die Küste jährlich um Hunderte von Metern."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Wert hat die magnetische Deklination in Melbourne (Australien) ca. 2024?",
+        answerA = "ca. +11–12° (östlich)",
+        answerB = "ca. −5° (westlich)",
+        answerC = "ca. +1° (minimal östlich)",
+        answerD = "ca. +25° (stark östlich)",
+        correctAnswer = 0, // A
+        explanation = "In Melbourne (Australien) beträgt die magnetische Deklination ca. +11–12° (östlich, Stand 2024). In der südlichen Hemisphäre ist die Deklination über Australien generell östlich und variiert von ca. 5° im Westen bis ca. 13° im Osten des Kontinents.",
+        difficulty = 4,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist ein Talar und wie unterscheidet er sich von einem anderen Periglazialphänomen?",
+        answerA = "Ein Schuttkegel aus periglazialem Frostschutt, der sich durch Frostsprengung und Solifluktion bildet – im Gegensatz zum Pingo, der durch Eislinsen entsteht",
+        answerB = "Ein Salzmutterlauge-Pool in arktischen Fjorden",
+        answerC = "Eine Windschliff-Fläche (Deflationsfläche) in Kältewüsten",
+        answerD = "Eine Auftausenke (Thermokarst) in Sibirien",
+        correctAnswer = 0, // A
+        explanation = "Ein Talus (Talar) ist ein Schuttkegel oder Schutthang aus Felstrümmern, die durch Frostsprengung (periglaziale Verwitterung) von Steilwänden abgespalten werden und sich am Hangfuß aufhäufen. Im Unterschied zum Pingo (durch Eisdruck) entsteht er durch mechanische Verwitterung und Gravitation. In Gebirgen und arktischen Steilküsten ubiquitär.",
+        difficulty = 4,
+        funFact = "In manchen alpinen Gebirgen wachsen Schuttkegel (Talus) noch aktiv – besonders wenn Permafrost in den Felswänden auftaut und die Klüfte öffnet. Der Klimawandel erhöht die Steinschlaghäufigkeit in vielen Alpengebieten."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie dick ist das Eisschild auf dem Südpol (Amundsen-Scott-Südpol-Station) ungefähr?",
+        answerA = "ca. 500 m",
+        answerB = "ca. 2.850 m",
+        answerC = "ca. 1.200 m",
+        answerD = "ca. 4.500 m",
+        correctAnswer = 1, // B
+        explanation = "Am geographischen Südpol beträgt die Eisdicke ca. 2.835–2.850 m. Die Amundsen-Scott-Station liegt auf 2.835 m Höhe, das darunterliegende Felsgestein liegt jedoch nahe dem Meeresspiegel. Die durchschnittliche Eisdicke des gesamten antarktischen Eisschildes beträgt ca. 2.160 m.",
+        difficulty = 4,
+        funFact = "Die Amundsen-Scott-Station bewegt sich jährlich ca. 10 m mit dem fließenden Eis vom geografischen Südpol weg – die Station muss regelmäßig wieder auf den exakten Polpunkt zentriert werden."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist der Paläo-See Lahontan und wo befand er sich?",
+        answerA = "Eiszeitlicher Pluvialsee im Großen Becken (Nevada/Kalifornien), max. ca. 22.300 km²",
+        answerB = "Holozäner See in der Atacama-Wüste",
+        answerC = "Pleistozäner See auf dem Tibetischen Hochplateau",
+        answerD = "Eiszeitlicher See im Tschad-Becken",
+        correctAnswer = 0, // A
+        explanation = "Lake Lahontan war ein eiszeitlicher Pluvialsee im westlichen Großen Becken (hauptsächlich Nevada, teils Kalifornien und Oregon). Auf seinem Maximum (ca. 14.000 BP) hatte er eine Fläche von ca. 22.300 km² und war bis zu 280 m tief. Der Pyramid Lake in Nevada ist sein direkter Überrest.",
+        difficulty = 4,
+        funFact = "Der Paläo-See Lahontan und Lake Bonneville waren die größten eiszeitlichen Seen der USA. Als das Klima wärmer und trockener wurde, schrumpften sie auf heutige Größe. Die Salzseen und Salzebenen (Playas) des heutigen Nevada sind ihre eingetrockneten Überreste."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Subsidenzrate zeigen GPS-Messungen für Rotterdam (Niederlande) durch Torfsetzung und Grundwasserentnahme?",
+        answerA = "ca. 0,1 mm/Jahr (geologisch stabil)",
+        answerB = "ca. 2–3 mm/Jahr (kombiniert glazioisostatisch und anthropogen)",
+        answerC = "ca. 10–20 mm/Jahr",
+        answerD = "Rotterdam hebt sich durch isostatische Hebung an",
+        correctAnswer = 1, // B
+        explanation = "Rotterdam sinkt durch die Kombination aus glazioisostatischer Subsidenz (ca. 0,4 mm/Jahr) und Torfverdichtung/Grundwasserabsenkung um insgesamt ca. 1,5–3 mm/Jahr. Kombiniert mit Meeresspiegelanstieg (ca. 3–4 mm/Jahr) steigt die relative Überflutungsgefahr um ca. 4–7 mm/Jahr.",
+        difficulty = 4,
+        funFact = "Die Niederlande haben weltweit führende Expertise im Küstenschutz entwickelt – notgedrungen, da Amsterdam, Rotterdam und The Hague alle unter dem Meeresspiegel liegen. Das 'Delta Programme' ist ein Milliarden-Investitionsprogramm für Klimaanpassung."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche typische Tiefe hat ein Karstgrundwasserspiegel im dinarischen Karst (Balkanhalbinsel)?",
+        answerA = "Karstgrundwasser ist immer an der Erdoberfläche (Quellen)",
+        answerB = "Typisch 50–500 m unter der Karstoberfläche, stark variabel nach Niederschlag",
+        answerC = "Immer über 1.000 m tief (artesisches System)",
+        answerD = "Nur 1–5 m tief wie normales Grundwasser",
+        correctAnswer = 1, // B
+        explanation = "Im dinarischen Karst variiert der Karstgrundwasserspiegel stark saisonal und regional: In hohen Karstplateaus kann er 50–500 m unter der Oberfläche liegen. In tiefer liegenden Zonen und Küstenbereichen tritt er als submarine oder Küstenquelle aus. Die extremen Schwankungen sind charakteristisch für Karstsysteme.",
+        difficulty = 4,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Mäanderwellenlänge hat der Río Beni (bolivianisch-amazonischer Tiefland) mit einer Breite von ca. 300 m?",
+        answerA = "ca. 100–200 m",
+        answerB = "ca. 3.000–4.200 m (nach Leopold-Wolman-Regel 10–14× Breite)",
+        answerC = "ca. 15–20 km",
+        answerD = "ca. 500–800 m",
+        correctAnswer = 1, // B
+        explanation = "Nach der Leopold-Wolman-Skalierungsregel (Wellenlänge ≈ 10–14× Breite) hätte ein 300 m breiter Fluss wie der Río Beni typische Mäanderwellenlängen von ca. 3.000–4.200 m (3–4 km). Dies deckt sich mit Satellitenmessungen tropischer Tieflandflüsse dieser Größenordnung.",
+        difficulty = 4,
+        funFact = "Der Río Beni in Bolivien ist für seine aktiven Mäander bekannt – Mäander werden durch Seitenerosion ständig verschoben, schneiden ab (Mäanderdurchbrüche) und bilden Altwässer (Oxbow Lakes). Das bolivianische Amazoniasgebiet ist ein Lehrbuchbeispiel für aktive Mäanderdynamik."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was versteht man unter 'glazialer Isostatischer Anpassung' (GIA) und wo hebt sich Europa noch heute?",
+        answerA = "Tektonische Plattenhebung durch Magmaeinstrom unter Isostasiezonen",
+        answerB = "Langsame Aufwärtsbewegung der Erdkruste nach Entlastung vom Gletschergewicht – Skandinavien hebt sich noch um ca. 1 cm/Jahr",
+        answerC = "Küstenerosion durch wellenbedingte Unterschneidung",
+        answerD = "Setzung des Meeresbodens nach dem letzten Meeresspiegelmaximum",
+        correctAnswer = 1, // B
+        explanation = "Glaziale Isostatische Anpassung (GIA) ist die Wiederaufwärtsbewegung der Erdkruste nach dem Abschmelzen der eiszeitlichen Eisschilde (vor ca. 10.000 Jahren). Skandinavien (insbesondere der Bottnische Meerbusen) hebt sich noch um ca. 7–10 mm/Jahr. Dies führt zum Entstehen neuer Küstengebiete aus dem Meer.",
+        difficulty = 4,
+        funFact = "Durch die isostatische Hebung Skandinaviens erwächst jährlich neues Land aus dem Bottnischen Meerbusen – finnische Bauern haben ihren Landbesitz durch diese natürliche Küstenhebung seit Jahrhunderten vergrößert. In 1.000 Jahren könnten weite Teile des nördlichen Bottnischen Meerbusen trocken sein."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist das größte Lössgebiet der Welt nach ausgedehntester Fläche?",
+        answerA = "Eurasischer Lössgürtel (von Westeuropa bis China), ca. 2–3 Millionen km² insgesamt",
+        answerB = "Chinesisches Lössplateau allein",
+        answerC = "Pampa-Löss Südamerikas",
+        answerD = "North American Loess Belt (Great Plains + Mississippi)",
+        correctAnswer = 0, // A
+        explanation = "Der eurasische Lössgürtel – ein Kontinuum von Lössablagerungen von Frankreich über Deutschland, Polen, die Ukraine bis nach China – ist die größte zusammenhängende (aber nicht überall lückenlose) Lösszone der Erde. Er entstand durch äolischen Transport von periglazialem Feinstaub während der Eiszeiten und ist für die Landwirtschaft Europas und Asiens fundamental.",
+        difficulty = 4,
+        funFact = "Der europäische Lössgürtel ist die Kornkammer Europas: Die fruchtbaren Schwarzerden (Chernozem) der Ukraine, die deutschen Börden und die pannonischen Böden sind alle auf Löss-Unterlagen entstanden – und damit Erben der letzten Eiszeit."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Subsidenzrate hat das Niledelta (Ägypten) durch Sedimentmangel und Grundwasserentnahme (Stand 2024)?",
+        answerA = "Keine messbare Subsidenz",
+        answerB = "ca. 0,1–0,5 mm/Jahr",
+        answerC = "ca. 3–8 mm/Jahr (lokal bis 12 mm/Jahr)",
+        answerD = "ca. 50 mm/Jahr",
+        correctAnswer = 2, // C
+        explanation = "Das Niledelta sinkt durch Sedimentmangel (Aswan-Damm hält Sediment zurück), Grundwasserentnahme und Kompaktion um ca. 3–8 mm/Jahr, lokal bis 12 mm/Jahr. Kombiniert mit dem Meeresspiegelanstieg ergibt sich eine relative Überflutungsrate von ca. 6–11 mm/Jahr. Über 30 % des Nildelta könnten bis 2100 unter Wasser liegen.",
+        difficulty = 4,
+        funFact = "Seit dem Bau des Aswan-Hochdamms (1970) werden ca. 98 % des Nilsediments im Nassersee zurückgehalten – das Niledelta erhält kaum noch Sediment. Früher bauten die jährlichen Nilüberschwemmungen das Delta auf; heute erodiert die Küste jährlich um Meter."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist ein Periglazialklima und in welchen geographischen Breiten herrscht es typischerweise?",
+        answerA = "Polares Eis-Klima mit dauerhaftem Meereis (70°N–90°N)",
+        answerB = "Klima rund um die Eisränder ohne permanente Eisbedeckung, mit starkem Frostwechsel – subarktisch (60°–70° N/S) und hochalpin",
+        answerC = "Ozeanisch-gemäßigtes Klima der britischen Inseln",
+        answerD = "Wüstenklima mit extremen Tagesschwankungen (Sahara, Atacama)",
+        correctAnswer = 1, // B
+        explanation = "Das periglaziale Klima herrscht in Gebieten randlich der Gletscher und Eisschilde – charakteristisch sind viele Frostwechsel pro Jahr (häufiges Auftauen-Gefrieren), langer Bodenfrost, geringe Sommerniederschläge und starke Winde. Es kommt vor in der Subarktis (60°–70° N/S) und in Hochgebirgen (alpin-periglazial). Periglaziale Prozesse haben Mitteleuropa während der Eiszeiten geprägt.",
+        difficulty = 4,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches ist die Hauptbodenverflüssigungszone Japans, die beim Tōhoku-Erdbeben 2011 stark betroffen war?",
+        answerA = "Bergregionen der japanischen Alpen (Hida-Gebirge)",
+        answerB = "Küstenebenen und aufgeschüttete Neulandgebiete rund um die Tokio-Bucht und in der Sendai-Ebene",
+        answerC = "Felsküsten der Izu-Halbinsel",
+        answerD = "Volcanic Ash Zones rund um den Fuji",
+        correctAnswer = 1, // B
+        explanation = "Beim Tōhoku-Erdbeben 2011 (M 9,0) trat massivste Bodenverflüssigung in aufgefüllten Küstengebieten und Neulandarealen rund um die Tokio-Bucht auf (besonders in Urayasu, Chiba) sowie in der Sendai-Ebene. Aufgeschüttetes Land (Landfill) und lockere maritime Ablagerungen sind weltweit die gefährlichsten Zonen für Verflüssigung.",
+        difficulty = 4,
+        funFact = "Die Stadt Urayasu bei Tokio (Disney-Resort-Standort) erlebte 2011 auf über 30 % ihrer Fläche Bodenverflüssigung. Hunderte Häuser kippten, Straßen wurden zerstört. Urayasu liegt fast vollständig auf aufgeschüttetem Boden aus den 1970er Jahren."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie tief ist der Permafrost auf der Tibetischen Hochfläche (Qinghai-Tibet-Plateau) durchschnittlich?",
+        answerA = "ca. 10–30 m",
+        answerB = "ca. 50–120 m",
+        answerC = "ca. 300–600 m",
+        answerD = "ca. 1–5 m (nur saisonaler Frost)",
+        correctAnswer = 1, // B
+        explanation = "Auf dem Tibetischen Hochplateau (durchschnittliche Höhe ca. 4.500 m) beträgt die Permafrosttiefe ca. 50–120 m im Mittel, mit Maxima bis 150 m in den kältesten Bereichen. Das Plateau hat das größte Permafrostgebiet mittlerer Breiten der Erde (ca. 1,06 Millionen km² Permafrost).",
+        difficulty = 4,
+        funFact = "Die Qinghai-Tibet-Eisenbahn (Lhasa-Bahn) musste auf Permafrostboden gebaut werden – Ingenieure entwickelten spezielle Kühlanker und Belüftungsdämme, um das Auftauen des Permafrosts durch die Eisenbahnwärme zu verhindern."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Wert hat die magnetische Deklination in Moskau (Russland) ungefähr (Stand 2024)?",
+        answerA = "ca. +12° (östlich)",
+        answerB = "ca. +6° (östlich)",
+        answerC = "ca. −3° (westlich)",
+        answerD = "ca. +20° (stark östlich)",
+        correctAnswer = 1, // B
+        explanation = "In Moskau beträgt die magnetische Deklination ca. +6–7° (östlich, Stand 2024). In ganz Russland nimmt die östliche Deklination von West nach Ost zu – im Westen Russlands noch ca. 5–8°, in Ostsibirien können es über 20° sein. Die starke Wanderung des Magnetpols nach Sibirien beeinflusst diese Werte laufend.",
+        difficulty = 4,
+        funFact = "In manchen russischen Gebieten Ostsibiriens beträgt die magnetische Deklination über 20° – ein Kompasstand wäre dort ohne Kalibrierung stark irreführend. Für arktische Expeditionen ist die genaue Kenntnis der Deklination überlebenswichtig."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Bodenverflüssigungsgebiet in der San Francisco Bay Area (USA) ist historisch am gefährlichsten eingestuft?",
+        answerA = "Granit-Grundgestein der Peninsula (San Francisco Halbinsel)",
+        answerB = "Aufgeschüttete Küstenbereiche der Bay (Marina District, SOMA, East Bay Fill)",
+        answerC = "Vulkangestein des Mount Tamalpais",
+        answerD = "Sandsteinformationen von Marin County",
+        correctAnswer = 1, // B
+        explanation = "Die höchste Bodenverflüssigungsgefahr in der Bay Area liegt in aufgefüllten Gezeitenbereichen der San Francisco Bay – wie dem Marina District (der beim Loma-Prieta-Erdbeben 1989 stark beschädigt wurde) und großen Teilen der East Bay (Oakland, Berkeley Flatlands). Diese Gebiete wurden im 19./20. Jahrhundert durch Aufschüttung für Bebauung gewonnen.",
+        difficulty = 4,
+        funFact = "Beim Loma-Prieta-Erdbeben 1989 (M 6,9) war der Marina District in San Francisco, der auf aufgeschüttetem Boden (teils Trümmer des Erdbebens 1906) steht, am schwersten betroffen – trotz größerer Entfernung zum Epizentrum als stabilere Bereiche."
+    ),
+
 )
+
 

@@ -2783,5 +2783,632 @@ fun geoQuestionsMaster(): List<Question> = listOf(
         funFact = "Die Malediven hielten 2009 eine Kabinettssitzung unter Wasser ab – Regierungsmitglieder tauchten in Taucherausrüstung und unterzeichneten einen Aufruf an andere Nationen, den Klimawandel zu bekämpfen. Die damalige Regierung erkundete auch den Kauf von neuem Land in Sri Lanka oder Indien als 'Sicherheitsnetz'."
     ),
 
+    // ── MASTER (difficulty = 5) ── questions 214–263 (isostatic rebound, geoid, magnetic poles, ocean heat, volcanic gases, ice cores, sea level, paleomagnetism, geodetic benchmarks) ──
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie hoch ist die aktuelle postglaziare isostatische Hebungsrate in der Gegend um Angermanland (Schweden), dem Gebiet mit der stärksten Landhebung in Skandinavien?",
+        answerA = "ca. 5,2 mm/Jahr",
+        answerB = "ca. 8,9 mm/Jahr",
+        answerC = "ca. 11,3 mm/Jahr",
+        answerD = "ca. 3,7 mm/Jahr",
+        correctAnswer = 1,
+        explanation = "Das Gebiet um Angermanland (Höga Kusten, Schweden) hebt sich postglaziär mit ca. 8,9 mm/Jahr – dem höchsten Wert in Skandinavien. GPS-Messungen des BIFROST-Netzwerks (Baseline Inferences for Fennoscandian Rebound, Ice mass, and Tectonics) bestätigen diesen Wert als den höchsten Punkt der skandinavischen Landhebung.",
+        difficulty = 5,
+        funFact = "Die Höga Kusten (Hohe Küste) in Schweden wurde wegen des postglazialen Isostatik-Phänomens 2000 als UNESCO-Weltnaturerbe eingetragen. Seit dem Ende der letzten Eiszeit hat sich das Land dort bereits um über 285 m gehoben."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Geoidundulations-Wert (N) weist die Region des Indischen Ozeans südlich von Sri Lanka auf, die als 'Indian Ocean Geoid Low' bekannt ist?",
+        answerA = "ca. −50 m",
+        answerB = "ca. −106 m",
+        answerC = "ca. −70 m",
+        answerD = "ca. −130 m",
+        correctAnswer = 1,
+        explanation = "Das 'Indian Ocean Geoid Low' (auch 'Indian Ocean Low') südwestlich von Sri Lanka ist das tiefste Geoid-Anomalie-Gebiet der Erde mit einem Undulations-Wert N von ca. −106 m gegenüber dem GRS80/WGS84-Ellipsoid. EGM2008-Modell-Daten zeigen das Minimum bei etwa 2°N, 74°E.",
+        difficulty = 5,
+        funFact = "Das Indian Ocean Geoid Low ist die tiefste Delle im Erdschwerefeld – die Meeresoberfläche liegt dort um 106 m tiefer, als ein perfekter Ellipsoid vorhersagen würde. Die genaue Ursache ist noch nicht vollständig geklärt; aktuelle Hypothesen verweisen auf einen Mantelplume aus dem Afrikanischen Low-Velocity-Bereich."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Mit welcher Drift-Geschwindigkeit (km/Jahr) wanderte der magnetische Nordpol der Erde zwischen 2000 und 2019 durchschnittlich?",
+        answerA = "ca. 15 km/Jahr",
+        answerB = "ca. 35 km/Jahr",
+        answerC = "ca. 55 km/Jahr",
+        answerD = "ca. 80 km/Jahr",
+        correctAnswer = 2,
+        explanation = "Seit Anfang der 2000er Jahre hat sich die Drift des magnetischen Nordpols von früheren ~10 km/Jahr auf ca. 50–55 km/Jahr beschleunigt. Im Jahr 2019 lag der Pol bereits nahe der Datumsgrenze auf dem Weg von der kanadischen Arktis Richtung Sibirien. Das International Geomagnetic Reference Field (IGRF) wird alle 5 Jahre aktualisiert.",
+        difficulty = 5,
+        funFact = "Die schnelle Polwanderung zwang die NOAA 2019, das World Magnetic Model außerplanmäßig zu aktualisieren – ein Jahr früher als geplant. Navigations-Apps und Kompasse, die auf diesem Modell basieren, hätten sonst erhebliche Abweichungen angezeigt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Wert für den globalen Ozean-Wärmeinhalt (Ocean Heat Content, OHC) in den oberen 2.000 m maß das ARGO-Netzwerk im Jahr 2022 im Vergleich zum Klimamittel 1981–2010?",
+        answerA = "ca. +5 × 10²² Joule Anomalie",
+        answerB = "ca. +10 × 10²² Joule Anomalie",
+        answerC = "ca. +20 × 10²² Joule Anomalie",
+        answerD = "ca. +35 × 10²² Joule Anomalie",
+        correctAnswer = 2,
+        explanation = "Der globale Ozean-Wärmeinhalt in den oberen 2.000 m überstieg 2022 den Klimareferenzwert (1981–2010) um ca. 20 × 10²² Joule – ein Rekordwert gemäß ARGO/NODC-Auswertung. Die oberen 2.000 m der Ozeane haben seit 1960 ca. 90 % der durch den Klimawandel zusätzlich gespeicherten Energie aufgenommen.",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche mittlere SO₂-Emissionsrate (in Tonnen pro Tag) emittiert der Kīlauea-Vulkan (Hawaii) in einer typischen Eruptionsphase?",
+        answerA = "ca. 150 t/Tag",
+        answerB = "ca. 500 t/Tag",
+        answerC = "ca. 2.000 t/Tag",
+        answerD = "ca. 5.000 t/Tag",
+        correctAnswer = 2,
+        explanation = "Im Normalbetrieb (Effusiveruption) emittiert der Kīlauea ca. 500–2.000 Tonnen SO₂ pro Tag. Während der großen Eruption 2018 (Rift-Zone-Eruption) wurden Spitzenwerte von über 100.000 t SO₂/Tag gemessen. Die USGS HVO überwacht die Emissionen kontinuierlich mit FTIR- und UV-Spektrometer-Stationen.",
+        difficulty = 5,
+        funFact = "SO₂ aus dem Kīlauea reagiert in der Atmosphäre mit Feuchtigkeit zu Schwefelsäure und bildet 'Vog' (Volcanic Smog), der auf Hawaii ernsthafte Gesundheitsprobleme verursacht. Der Vog kann sich bei bestimmten Windverhältnissen über den gesamten Inselstaat Hawaii verteilen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Auf welche zeitliche Präzision (±Jahre) können Eisschichten im EPICA-Eiskern (Dome C, Antarktis) für den Zeitraum 800.000 Jahre BP datiert werden?",
+        answerA = "±500 Jahre",
+        answerB = "±2.000 Jahre",
+        answerC = "±6.000 Jahre",
+        answerD = "±15.000 Jahre",
+        correctAnswer = 2,
+        explanation = "Der EPICA Dome C Eiskern (806.000 Jahre BP) kann im älteren Abschnitt (>500.000 Jahre BP) auf ca. ±6.000 Jahre datiert werden (Parrenin et al., 2007, Climate of the Past). Im jüngeren Abschnitt (<100.000 Jahre) ist die Präzision deutlich besser (±200–500 Jahre durch jährliche Schichtenzählung und Synchronisation mit dem Grönländischen GICC05-Zeitrahmen).",
+        difficulty = 5,
+        funFact = "Der EPICA Dome C Eiskern reicht 3.270 m tief und deckt 8 vollständige Glazial-Interglazial-Zyklen ab – er ist damit das älteste kontinuierliche Eisarchiv der Erde. Die Eis-Probe im untersten Meter ist über 800.000 Jahre alt und enthält noch direkt analysierbare Gasblasen mit uralter Atmosphärenluft."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Beitrag liefert der Gletscher-Massenverlust (alpine Gletscher, ohne Grönland und Antarktis) zum globalen Meeressiegelanstieg laut IPCC AR6 (2021) pro Jahr?",
+        answerA = "ca. 0,06 mm/Jahr",
+        answerB = "ca. 0,22 mm/Jahr",
+        answerC = "ca. 0,52 mm/Jahr",
+        answerD = "ca. 0,80 mm/Jahr",
+        correctAnswer = 2,
+        explanation = "Laut IPCC Sixth Assessment Report (AR6, 2021) liefern alpine Gletscher (exkl. Grönland und Antarktis) einen Beitrag von ca. 0,52 mm/Jahr zum mittleren Meeressiegelanstieg (Periode 2006–2018). Zusammen mit dem thermischen Ausdehnen (+1,4 mm/Jahr), Grönland (+0,77 mm/Jahr) und Antarktis (+0,43 mm/Jahr) ergibt sich der Gesamtanstieg von ca. 3,7 mm/Jahr.",
+        difficulty = 5,
+        funFact = "Ca. 220.000 Gletscher außerhalb der Eisschilde enthalten zusammen ca. 0,32 m äquivalenten Meeresspiegelanstieg. Wenn alle schmelzen würden, stiege der Meeresspiegel um 32 cm – verglichen mit 7 m durch Grönland und 58 m durch die Antarktis."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wann fand die letzte vollständige paläomagnetische Polumkehrung (Brunhes-Matuyama-Grenze) statt und auf welchen Wert wird ihr Alter datiert?",
+        answerA = "ca. 780.000 Jahre BP",
+        answerB = "ca. 1,07 Millionen Jahre BP",
+        answerC = "ca. 420.000 Jahre BP",
+        answerD = "ca. 1,77 Millionen Jahre BP",
+        correctAnswer = 0,
+        explanation = "Die Brunhes-Matuyama-Polumkehrung – der Übergang von reverser (Matuyama-Chron) zu normaler (Brunhes-Chron) Polarität – fand vor ca. 780.000 Jahren statt. Dieses Datum ist durch Ar/Ar-Radiometrie von Lavadecken und astronomische Tunung von Tiefseesedimenten auf ±3.000 Jahre genau bestimmt.",
+        difficulty = 5,
+        funFact = "Die Brunhes-Matuyama-Grenze ist ein globaler Korrelationsmarker in der Geologie: Sie findet sich in Tiefseesedimenten, Laven und Lössprofilen weltweit. Ihre genaue Datierung auf 780 ka gilt als eines der verlässlichsten chronologischen Werkzeuge der Quartärgeologie."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches geodätische Hauptreferenznetz-Fundamentalpunkt (Hauptpunkt) diente als Ausgangspunkt für das Europäische Triangulationsnetz (RD) und wo liegt er?",
+        answerA = "Helmert-Turm in Potsdam (52°22′N, 13°04′E)",
+        answerB = "Beobachtungspunkt Sternwarte Babelsberg",
+        answerC = "Triangulationspunkt Observatoire de Paris (48°50′N, 2°20′E)",
+        answerD = "Fundamentalpunkt Genua (44°24′N, 8°54′E)",
+        correctAnswer = 0,
+        explanation = "Der Helmert-Turm (Geodätisches Institut Potsdam) bei 52°22′51,4469″N, 13°03′58,9283″E war der Fundamentalpunkt des Europäischen Datums 1950 (ED50) und des deutschen Hauptdreiecksnetzes. Er diente als primärer Referenzpunkt für die Triangulationsmessungen Mitteleuropas.",
+        difficulty = 5,
+        funFact = "Das Geodätische Institut Potsdam am Telegrafenberg beherbergt auch das CHAMP-, GRACE- und SWARM-Datenzentrum. Potsdam ist bis heute der wichtigste Standort für Schwerefeldmessungen in Deutschland – der Helmert-Turm ist ein nationales Bodendenkmal."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Mit welcher Präzision (in mm) kann das ITRF2020 (International Terrestrial Reference Frame 2020) koordinatenaustauschende Referenzpunkte (Stationen) weltweit an ihrer Position definieren?",
+        answerA = "±5 mm Lage, ±10 mm Höhe",
+        answerB = "±1 mm Lage, ±3 mm Höhe",
+        answerC = "±0,1 mm Lage, ±0,5 mm Höhe",
+        answerD = "±10 mm Lage, ±20 mm Höhe",
+        correctAnswer = 1,
+        explanation = "Das ITRF2020 (veröffentlicht 2022 durch IERS) definiert Koordinaten globaler GNSS/VLBI/SLR/DORIS-Stationen mit einer internen Konsistenz von ~1 mm in der Lage und ~3 mm in der Höhe. Es ist das präziseste geozentrische Referenzsystem, das je realisiert wurde.",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche postglaziare Hebungsrate weist der Bereich um Oulu (Finnland) laut NKG2016LU-Landhebungsmodell auf?",
+        answerA = "ca. 4,2 mm/Jahr",
+        answerB = "ca. 7,1 mm/Jahr",
+        answerC = "ca. 9,5 mm/Jahr",
+        answerD = "ca. 2,8 mm/Jahr",
+        correctAnswer = 1,
+        explanation = "Das nordische Landhebungsmodell NKG2016LU (Nordic Geodetic Commission 2016) gibt für den Großraum Oulu, Finnland, eine postglaziare Landhebungsrate (GIA Vertical Land Movement) von ca. 7–7,2 mm/Jahr an. Das Maximum Fennoskandinaviens liegt bei ~9 mm/Jahr (Umeå/Angermanland-Region, Schweden).",
+        difficulty = 5,
+        funFact = "Finnland gewinnt jährlich durch die isostatische Landhebung ca. 7 km² neues Land – über die Jahrhunderte seit der Gründung Helsinkis hat sich die finnische Küstenlinie um mehrere Kilometer seewärts verschoben. Alte Fischereidörfer am Wasser liegen heute weit im Landesinneren."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen maximalen Geoidundulationswert (positiv, Geoid über Ellipsoid) weist das 'New Guinea Geoid High' auf?",
+        answerA = "ca. +50 m",
+        answerB = "ca. +73 m",
+        answerC = "ca. +85 m",
+        answerD = "ca. +62 m",
+        correctAnswer = 1,
+        explanation = "Das 'New Guinea Geoid High' (Nordpapua-Region) zeigt im EGM2008 einen maximalen Geoid-Undulations-Wert von ca. +73 m – das bedeutet, die Meeresoberfläche liegt dort 73 m höher als auf dem WGS84-Referenzellipsoid. Dieses Maximum entsteht durch die extrem dichte ozeanische Subduktionszone im Bereich der West Pacific Warm Pool-Region.",
+        difficulty = 5,
+        funFact = "Die dramatischen Geoid-Undulationen zwischen dem Indian Ocean Low (−106 m) und dem New Guinea High (+73 m) auf engstem Raum spiegeln die tektonische Komplexität des Indo-Pazifik-Konvergenzgebiets wider. Kein anderes Meeresbecken zeigt auf so kleinem Raum solche Schwerefeldschwankungen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wie schnell driftet der magnetische Südpol der Erde seit 2020 jährlich und in welche Richtung?",
+        answerA = "ca. 10–12 km/Jahr, Richtung Australien",
+        answerB = "ca. 20–25 km/Jahr, Richtung Pazifik",
+        answerC = "ca. 5–8 km/Jahr, Richtung Afrika",
+        answerD = "ca. 40–50 km/Jahr, Richtung Südamerika",
+        correctAnswer = 1,
+        explanation = "Der magnetische Südpol (der Punkt nahe der Antarktis, in dem die Feldlinien nach oben zeigen) driftet seit Jahren mit ca. 20–25 km/Jahr und hat sich von der antarktischen Küste weg in Richtung des Pazifischen Ozeans bewegt. Anders als der magnetische Nordpol hat er seine Drift weniger dramatisch beschleunigt.",
+        difficulty = 5,
+        funFact = "Der magnetische Südpol liegt nie direkt am geographischen Südpol und war historisch bis zu 2.800 km von ihm entfernt. James Clark Ross entdeckte ihn 1841 auf dem Meereseis vor der antarktischen Küste – heute liegt er im offenen Ozean, da er sich seit Ross' Entdeckung um ca. 1.200 km verschoben hat."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Beitrag liefert der Grönlandische Eisschild zum globalen Meeressiegelanstieg laut GRACE/GRACE-FO Satellitendaten (2002–2022) pro Jahr?",
+        answerA = "ca. 0,3 mm/Jahr",
+        answerB = "ca. 0,77 mm/Jahr",
+        answerC = "ca. 1,2 mm/Jahr",
+        answerD = "ca. 2,0 mm/Jahr",
+        correctAnswer = 1,
+        explanation = "GRACE/GRACE-FO Schwerefeld-Satellitendaten (2002–2022) ergeben für Grönland einen Massenverlust von ca. 280 Gt/Jahr, was einem Meeresspiegelanstieg von ~0,77 mm/Jahr entspricht. Grönland hat seit 1992 insgesamt ca. 4.700 Gt Eis verloren (Bamber et al., 2023, Nature Geoscience).",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche CO₂-Emissionsrate (in Megatonnen CO₂ pro Jahr) geben USGS-Daten für den gesamten Mantelentgasung an mittelozeanischen Rücken an?",
+        answerA = "ca. 3–5 Mt CO₂/Jahr",
+        answerB = "ca. 25–65 Mt CO₂/Jahr",
+        answerC = "ca. 150–200 Mt CO₂/Jahr",
+        answerD = "ca. 500–700 Mt CO₂/Jahr",
+        correctAnswer = 1,
+        explanation = "Mittelozeanische Rücken emittieren durch hydrothermale Entgasung und Mantelschmelzen ca. 25–65 Mt CO₂/Jahr (Dasgupta & Hirschmann, 2010; Marty & Tolstikhin, 1998). Subduktionszonen-Vulkane emittieren noch einmal ca. 60–100 Mt CO₂/Jahr – zusammen sind geothermale/vulkanische CO₂-Quellen ca. 500-mal geringer als anthropogene Emissionen (~37.000 Mt CO₂/Jahr, 2022).",
+        difficulty = 5,
+        funFact = "Obwohl mittelozeanische Rücken lediglich 25–65 Mt CO₂/Jahr emittieren, haben sie auf geologischen Zeitskalen die Atmosphäre entscheidend geformt. Vor 55 Millionen Jahren (PETM) führte erhöhte Rücken-Aktivität zu massivem atmosphärischem CO₂ und globaler Erwärmung von 5–8°C."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Datierungsverfahren wurde verwendet, um den 800.000 Jahre alten EPICA Dome C Eiskern auf ±6.000 Jahre zu datieren?",
+        answerA = "Radiokarbondatierung (¹⁴C)",
+        answerB = "Astronomische Tunung an Milankovitch-Zyklen + Schichtzählung",
+        answerC = "Uran-Thorium-Datierung (²³⁰Th/²³⁴U)",
+        answerD = "Kalium-Argon-Datierung (K/Ar)",
+        correctAnswer = 1,
+        explanation = "Die Chronologie des EPICA-Eiskerns basiert auf astronomischer Tunung (Abstimmung von Orbital-Zyklen der Erde auf Isotopen-Signale im Eis), auf physikalischer Schichtzählung der jährlichen Akkumulationsschichten und auf Vergleich mit datierten Tiefseesedimenten (EDC3-Zeitskala). Radiokarbon (¹⁴C) ist nur bis ca. 50.000 Jahre nutzbar.",
+        difficulty = 5,
+        funFact = "Milankovitch-Zyklen – periodische Schwankungen der Erdbahnexzentrizität (100.000 Jahre), der Achsneigung (41.000 Jahre) und der Präzession (23.000 Jahre) – sind im Eiskern wie ein Fingerabdruck ablesbar. Die Übereinstimmung zwischen orbital berechneten Insolationsänderungen und gemessenen Klimasignalen im Eis ist der Schlüssel zur Datierung."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Beitrag leistet die thermische Ausdehnung der Ozeane (Steric Sea Level Rise) zum globalen Meeresspiegelanstieg laut IPCC AR6 für den Zeitraum 2006–2018?",
+        answerA = "ca. 0,5 mm/Jahr",
+        answerB = "ca. 1,4 mm/Jahr",
+        answerC = "ca. 2,2 mm/Jahr",
+        answerD = "ca. 3,5 mm/Jahr",
+        correctAnswer = 1,
+        explanation = "Der IPCC Sixth Assessment Report (AR6, WG1, 2021) gibt für den Steric Sea Level Rise (überwiegend thermische Ausdehnung) im Zeitraum 2006–2018 einen Beitrag von ca. 1,4 mm/Jahr an. Zusammen mit Gletschern (0,52), Grönland (0,77), Antarktis (0,43) und terrestrischem Süßwasser (0,38) ergibt sich der Gesamtanstieg.",
+        difficulty = 5,
+        funFact = "Obwohl es klingt, als würde Wasser nur 'wärmer' werden, ist thermische Ausdehnung der zweitgrößte Treiber des Meeresspiegelanstiegs. Seewasser dehnt sich mit steigender Temperatur aus – 1°C globale Ozeanerwärmung der oberen 2.000 m entspricht etwa 0,5 mm Meeresspiegelanstieg."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wann fand die Jaramillo-Subchron statt – ein kurzes normales paläomagnetisches Ereignis innerhalb des Matuyama-Chrons?",
+        answerA = "ca. 1,77–1,95 Millionen Jahre BP",
+        answerB = "ca. 0,99–1,07 Millionen Jahre BP",
+        answerC = "ca. 0,40–0,55 Millionen Jahre BP",
+        answerD = "ca. 2,58–2,65 Millionen Jahre BP",
+        correctAnswer = 1,
+        explanation = "Die Jaramillo-Subchron ist ein kurzes normales (Brunhes-ähnliches) Magnetfeld-Ereignis innerhalb des reversed Matuyama-Chrons und dauerte von ca. 0,99 bis 1,07 Millionen Jahren BP (ca. 80.000 Jahre lang). Sie wurde erstmals in Lavadecken der Jaramillo Creek Formation (New Mexico, USA) entdeckt.",
+        difficulty = 5,
+        funFact = "Paläomagnetische Subchrons wie Jaramillo, Cobb Mountain und Olduvai werden als globale Zeitmarken in Tiefseesedimenten, Lavasequenzen und Pollenarchiven genutzt. Das Olduvai-Subchron (vor ca. 1,77–1,95 Ma) ist namensgebend für die Schicht in der Olduvai-Schlucht (Tansania), in der Homo habilis-Fossilien gefunden wurden."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Geoid-Modell wird seit 2022 für den amtlichen Höhenbezug in Deutschland verwendet, und welche Genauigkeit hat es?",
+        answerA = "GCG2016 (German Combined Geoid 2016), ±2 cm",
+        answerB = "GCG2024 (German Combined Geoid 2024), ±0,5 cm",
+        answerC = "EGM2008 (Global), ±5 cm für Deutschland",
+        answerD = "EGM96 (Global), ±10 cm für Deutschland",
+        correctAnswer = 0,
+        explanation = "Das German Combined Geoid (GCG2016) ist das aktuelle amtliche Quasigeoid-Modell Deutschlands (AdV, Arbeitsgemeinschaft der Vermessungsverwaltungen), das GNSS-Höhenmessungen (ellipsoidisch) in Normalhöhen über dem Deutschen Haupthöhennetz (DHHN2016) umrechnet. Es hat eine Genauigkeit von ca. ±2 cm im Bundesmittel.",
+        difficulty = 5,
+        funFact = "Das GCG2016 kombiniert terrestrische Schwerefelddaten, Lotabweichungen, GNSS-Nivellements und das internationale Schwerefeldmodell EGM2008. Ohne solche präzisen Geoid-Modelle würde ein GPS-Gerät die Höhe eines Hauses in Hamburg mit 5–10 cm Fehler angeben – zu viel für amtliche Katastervermessungen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Mit welcher Geschwindigkeit hebt sich die Küste Alaskas (Cook Inlet-Region) infolge des postglazialen isostatischen Ausgleichs und der modernen Gletscherschmelze?",
+        answerA = "ca. 1–2 mm/Jahr",
+        answerB = "ca. 5–7 mm/Jahr",
+        answerC = "ca. 10–30 mm/Jahr",
+        answerD = "ca. 50–80 mm/Jahr",
+        correctAnswer = 2,
+        explanation = "Die Küste Alaskas, insbesondere die Gegend um Glacier Bay und Yakutat, hebt sich mit 10–30 mm/Jahr – eine der höchsten postglazialen Hebungsraten der Erde. Der Haupttreiber ist die schnelle Deglaziation großer Gletscher (wie des Malaspina- und Bering-Gletschers), die die darunter liegende Lithosphäre entlastet.",
+        difficulty = 5,
+        funFact = "In Glacier Bay, Alaska, hat sich das Land seit dem Ende der Kleinen Eiszeit (ca. 1750) um über 4 Meter gehoben – messbar durch historische Pegel und GPS. Die Gegend ist damit ein natürliches Labor für postglazialen isostatischen Ausgleich im Echtzeit-Maßstab."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche H₂O-Emissionsrate hat der Ätna (Sizilien) bei normaler Degasierungsaktivität, gemessen als größter nicht-eruptiver vulkanischer Wasserausgaser Europas?",
+        answerA = "ca. 500 t H₂O/Tag",
+        answerB = "ca. 2.500 t H₂O/Tag",
+        answerC = "ca. 10.000 t H₂O/Tag",
+        answerD = "ca. 70.000 t H₂O/Tag",
+        correctAnswer = 2,
+        explanation = "Der Ätna emittiert bei normaler passiver Entgasung (ohne aktive Eruption) ca. 6.000–15.000 t H₂O pro Tag sowie ca. 2.000–10.000 t SO₂/Tag. Dies macht ihn zum mit Abstand größten vulkanischen Ausgaser im Mittelmeerraum und zu einem der wichtigsten natürlichen SO₂-Quellen Europas.",
+        difficulty = 5,
+        funFact = "Der Ätna ist der einzige Vulkan Europas, der ununterbrochen seit der Antike aktiv und gleichzeitig mit über 900.000 Menschen dicht besiedelt ist. Seine Lavaströme fließen meist langsam genug, um evakuiert zu werden – doch der stetige Ascheanfall kostet die Landwirtschaft Millionen Euro pro Jahr."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wann ereignete sich die Laschamp-Exkursion – ein kurzfristiges geomagnetsches Ereignis, bei dem die Feldstärke auf ca. 5 % des Normalwerts sank?",
+        answerA = "ca. 780.000 Jahre BP",
+        answerB = "ca. 41.000 Jahre BP",
+        answerC = "ca. 120.000 Jahre BP",
+        answerD = "ca. 2,1 Millionen Jahre BP",
+        correctAnswer = 1,
+        explanation = "Die Laschamp-Exkursion fand vor ca. 41.000 Jahren statt und dauerte ca. 440 Jahre. Während dieser Zeit sank die Intensität des Erdmagnetfelds auf ~5 % des heutigen Werts, was zu erhöhter kosmischer Strahlung auf der Erdoberfläche führte. Sie ist in Sedimenten, Eiskernen und Lavadecken (besonders der Laschamp-Lava in der Auvergne, Frankreich) nachgewiesen.",
+        difficulty = 5,
+        funFact = "Die Laschamp-Exkursion fiel zeitlich mit dem Aussterben des Neandertalers zusammen (~40.000 Jahre BP). Einige Forscher spekulieren, ob die stark erhöhte UV-Strahlung und Klimaveränderungen (durch veränderte Kosmogenstrahlung) zur erhöhten Sterblichkeit beigetragen haben könnten – bisher ist dies jedoch nicht belegt."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Beitrag leistet der antarktische Eisschild laut GRACE/GRACE-FO-Satellitendaten (2002–2020) zum globalen Meeresspiegelanstieg?",
+        answerA = "ca. 0,1 mm/Jahr",
+        answerB = "ca. 0,43 mm/Jahr",
+        answerC = "ca. 1,2 mm/Jahr",
+        answerD = "ca. 2,5 mm/Jahr",
+        correctAnswer = 1,
+        explanation = "GRACE/GRACE-FO-Daten (2002–2020) ergeben für die Antarktis einen Massenverlust von ca. 155 Gt/Jahr, was ~0,43 mm/Jahr Meeresspiegelanstieg entspricht (Shepherd et al., 2018 und Bamber et al., 2023). Der Verlust konzentriert sich auf Westantarktis und Antarktische Halbinsel; die Ostantarktis ist im Mittel nahezu ausgeglichen.",
+        difficulty = 5,
+        funFact = "Die Westantarktis ist wegen der Marine Ice Sheet Instability (MISI) besonders gefährlich: Ihre Basis liegt unter dem Meeresspiegel, was eine selbstverstärkende Eisverlust-Rückkopplung ermöglicht. Ein vollständiger Kollaps des West Antarctic Ice Sheet würde den Meeresspiegel um ca. 3,3 m erhöhen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Fundamentalpunkt-Observatorium diente als Referenz für das Klassische Europäische Dreiecksnetz (European Datum 1950, ED50)?",
+        answerA = "Observatoire de Paris, Frankreich",
+        answerB = "Sternwarte München-Bogenhausen, Deutschland",
+        answerC = "Geodätisches Institut Potsdam (Helmert-Turm), Deutschland",
+        answerD = "Institut Géographique National Trig-Point, Belgien",
+        correctAnswer = 2,
+        explanation = "Der Fundamentalpunkt des European Datum 1950 (ED50) war das Geodätische Institut Potsdam am Telegrafenberg (Helmert-Turm). ED50 basiert auf dem Hayford-Ellipsoid (International Ellipsoid 1924) mit dem Potsdamer Fundamentalpunkt als Ausgangspunkt aller europäischen Koordinaten.",
+        difficulty = 5,
+        funFact = "ED50 war bis zur Einführung von ETRS89 (European Terrestrial Reference System 1989) das Standard-Koordinatensystem für ganz Europa. Bei der GPS-Revolution stellte sich heraus, dass ED50 je nach Region bis zu 200 m von WGS84 abwich – ein erhebliches Problem für Militär-GPS und internationale Kartografie."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche mittlere SO₂-Emissionsrate emittiert der Vulkankomplex Ambrym (Vanuatu) – einer der produktivsten vulkanischen SO₂-Ausgaser der Erde?",
+        answerA = "ca. 200 t SO₂/Tag",
+        answerB = "ca. 1.000 t SO₂/Tag",
+        answerC = "ca. 2.500 t SO₂/Tag",
+        answerD = "ca. 10.000 t SO₂/Tag",
+        correctAnswer = 2,
+        explanation = "Ambrym auf Vanuatu mit seinen Lavateen Marum und Benbow emittiert im Ruhezustand ca. 1.000–4.500 t SO₂/Tag – im Schnitt ca. 2.500 t SO₂/Tag. TOMS/OMI-Satellitenmessungen zeigen, dass Ambrym in aktiven Phasen 5–10 % aller globalen vulkanischen SO₂-Emissionen liefert.",
+        difficulty = 5,
+        funFact = "Die Lavateen des Ambrym gehören zu den größten dauerhaft aktiven Lavaseen der Welt. Die Bewohner Ambrym-Dörfer haben eine jahrtausendealte Koexistenz mit dem Vulkan entwickelt – traditionelle Riten beinhalten die Verehrung des Vulkans als Heimat der Ahnen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Auf welche Jahrespräzision kann der NGRIP-Eiskern (Nordgrönland) für den Abschnitt der letzten 60.000 Jahre datiert werden?",
+        answerA = "±2.000 Jahre",
+        answerB = "±500 Jahre",
+        answerC = "±50 Jahre",
+        answerD = "±1 Jahr durch jährliche Schichtenzählung",
+        correctAnswer = 2,
+        explanation = "Der NGRIP-Eiskern (North GRIP, Nordgrönland) kann im Abschnitt 0–60.000 Jahre BP auf ca. ±50 Jahre datiert werden (GICC05-Zeitskala, Svensson et al., 2008). Jährliche Isotopen-Schichten sind sichtbar, werden aber durch Ablagerungsvariationen und Postdepositional-Diffusion in tieferen Bereichen unschärfer.",
+        difficulty = 5,
+        funFact = "Die GICC05 (Greenland Ice Core Chronology 2005) ist die internationale Referenzchronologie für die letzten 60.000 Jahre und gilt als genauer als Radiokarbon für viele Zeitabschnitte. Ereignisse wie der Ausbruch des Hekla (3.000 BP) oder des Eldgjá (939 n. Chr.) sind als Schwefelsäure-Spikes präzise lokalisierbar."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Gesamtmenge an CO₂ (in Mt CO₂/Jahr) setzen alle subaerischen Vulkane der Erde nach USGS-Schätzungen frei?",
+        answerA = "ca. 10–15 Mt CO₂/Jahr",
+        answerB = "ca. 180–440 Mt CO₂/Jahr",
+        answerC = "ca. 1.000–2.000 Mt CO₂/Jahr",
+        answerD = "ca. 5.000 Mt CO₂/Jahr",
+        correctAnswer = 1,
+        explanation = "USGS (Gerlach, 2011) schätzt die gesamten vulkanischen CO₂-Emissionen aus subaerischen Vulkanen auf ca. 180–440 Mt CO₂/Jahr (im Mittel ca. 270 Mt/Jahr). Zum Vergleich: Anthropogene CO₂-Emissionen 2022 lagen bei ca. 36.600 Mt – etwa 80–200-mal mehr als alle Vulkane zusammen.",
+        difficulty = 5,
+        funFact = "Trotz ihrer geringen CO₂-Mengen im Vergleich zum Menschen spielen Vulkane auf geologischen Zeitskalen eine entscheidende Rolle: Sie 'recyceln' im Subduktionsozyklus gebundenen Kohlenstoff zurück in die Atmosphäre und halten damit den geologischen CO₂-Kreislauf über Millionen von Jahren im Gleichgewicht."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was ist das Gilbert-Chron in der paläomagnetischen Zeitskala, und wann beginnt und endet es?",
+        answerA = "Ein reverses Magnetfeld-Chron von ca. 3,58–6,03 Millionen Jahren BP",
+        answerB = "Ein normales Magnetfeld-Chron von ca. 2,58–3,58 Millionen Jahren BP",
+        answerC = "Ein reverses Magnetfeld-Chron von ca. 0,78–2,58 Millionen Jahren BP",
+        answerD = "Ein normales Magnetfeld-Chron von ca. 0,78–1,07 Millionen Jahren BP",
+        correctAnswer = 0,
+        explanation = "Das Gilbert-Chron ist ein reverses Magnetfeld-Chron (Polarität entgegengesetzt zur heutigen) von ca. 3,58 bis 6,03 Millionen Jahren BP. Es folgt nach dem Gauss-Chron (normal, 2,58–3,58 Ma) und enthält mehrere Subchrons (Cochiti, Nunivak, Sidufjall, Thvera). Es ist benannt nach dem Physiker William Gilbert.",
+        difficulty = 5,
+        funFact = "Die gesamte geologische Polumkehrungs-Zeitskala (GPTS) besteht aus Hunderten solcher Chrons und Subchrons, die in Seebodensedimenten und Laven weltweit erkennbar sind. Sie ist eines der wichtigsten Werkzeuge zur Datierung ozeanischer Krustengesteine, da die Magnetstreifenmuster am mittelozeanischen Rücken direkt die Polumkehrungschronologie widerspiegeln."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Wert hat der mittlere globale Meeresspiegel-Anstieg aus terrestrischem Wasserhaushalt (Grundwassererschöpfung + Speicherreservoire) laut IPCC AR6?",
+        answerA = "ca. −0,1 mm/Jahr (Senke)",
+        answerB = "ca. +0,38 mm/Jahr",
+        answerC = "ca. +1,0 mm/Jahr",
+        answerD = "ca. +2,5 mm/Jahr",
+        correctAnswer = 1,
+        explanation = "Laut IPCC AR6 (2021) trägt der terrestrische Wasserhaushalt ca. +0,38 mm/Jahr zum Meeresspiegelanstieg bei (Periode 2006–2018). Haupttreiber ist die Erschöpfung von Grundwasservorkommen (Grundwasserpumpen), die schließlich als Süßwasser in die Ozeane fließt. Speicherreservoire (Talsperren) wirken als Gegengewicht (−Beitrag).",
+        difficulty = 5,
+        funFact = "Würden alle Grundwasseraquifere der Erde geleert, würde der Meeresspiegel um ca. 8–10 m steigen. Die Ogallala-Aquifere unter den amerikanischen Great Plains, die Arabische Aquifer-Zone und der Indus-Ganges-Aquifer verlieren jährlich zwischen 100 und 300 km³ Wasser – unwiederbringlich auf menschlichen Zeitskalen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Messverfahren nutzt das GEONET-Netz in Neuseeland zur Überwachung der vertikalen Krustenbewegung mit einer Präzision von <1 mm/Jahr?",
+        answerA = "Klassisches geometrisches Nivellement",
+        answerB = "Kontinuierlich betriebene GNSS-Stationen (CGPS)",
+        answerC = "InSAR (Interferometrische Radar-Fernerkundung)",
+        answerD = "VLBI (Very Long Baseline Interferometry)",
+        correctAnswer = 1,
+        explanation = "Das GeoNet-Netzwerk Neuseelands (GNS Science) nutzt kontinuierlich betriebene GNSS-Stationen (CGPS), die vertikale Krustenbewegungen mit einer Präzision von 0,5–1 mm/Jahr aufzeichnen. Diese Daten sind entscheidend für das Monitoring von Erdbebenzonen, Vulkanen und post-seismischen Deformationen.",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche postglaziare Hebungsrate zeigt die Hudson Bay (Kanada, Zentrum des früheren Laurentidischen Eisschilds) laut GPS-Messungen?",
+        answerA = "ca. 2–3 mm/Jahr",
+        answerB = "ca. 10–13 mm/Jahr",
+        answerC = "ca. 20–25 mm/Jahr",
+        answerD = "ca. 5–7 mm/Jahr",
+        correctAnswer = 1,
+        explanation = "Das Zentrum der einstigen Laurentidischen Vereisung (Hudson Bay) hebt sich mit ca. 10–13 mm/Jahr – eine der höchsten postglazialen Hebungsraten in Nordamerika. Das Maximum liegt bei ca. 12–13 mm/Jahr nahe der Küste des James Bay. Daten stammen aus GPS-Messungen des Canadian Spatial Reference System.",
+        difficulty = 5,
+        funFact = "In der James-Bay-Region hat sich das Land seit dem Abschmelzen des Laurentidischen Eisschilds vor ~8.000 Jahren bereits um über 200 m gehoben. Alte Strandterrassen und Muschelfriedhöfe in hunderten Metern Höhe über dem Meeresspiegel belegen diese dramatische Landhebung."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Vulkansystem in Island emittiert nach TOMS/OMI-Messungen jährlich die größten SO₂-Mengen außerhalb aktiver Eruptionsphasen?",
+        answerA = "Hekla",
+        answerB = "Krafla",
+        answerC = "Grímsvötn",
+        answerD = "Askja",
+        correctAnswer = 2,
+        explanation = "Grímsvötn unter dem Vatnajökull-Gletscher ist außerhalb von Eruptionsphasen der produktivste SO₂-Ausgaser Islands. OMI-Satellitenmessungen registrieren bei Grímsvötn regelmäßig Degasierungs-Anomalien. Bei der Eruption 2011 emittierte Grímsvötn mehr SO₂ als der gesamte europäische Industriesektor in diesem Jahr.",
+        difficulty = 5,
+        funFact = "Grímsvötn liegt unter ca. 200 m Eis und eruptiert deshalb oft unbemerkt als subglazialer Ausbruch. Die Schmelzwasserfluten (Jökulhlaups) durch die Eruption von 1996 waren so massiv, dass sie Brücken wie Streichholzschachteln wegspülten und einen kurzzeitigen Fluss schufen, der größer war als der Amazonas."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Datum hat die Olduvai-Subchron (normales geomagnetsches Ereignis im Matuyama-Chron), die in der Olduvai-Schlucht entdeckt wurde?",
+        answerA = "ca. 0,78–1,07 Millionen Jahre BP",
+        answerB = "ca. 1,77–1,95 Millionen Jahre BP",
+        answerC = "ca. 2,14–2,15 Millionen Jahre BP",
+        answerD = "ca. 3,22–3,33 Millionen Jahre BP",
+        correctAnswer = 1,
+        explanation = "Die Olduvai-Subchron (normales geomagnetsches Ereignis innerhalb des reversen Matuyama-Chrons) erstreckt sich von ca. 1,77 bis 1,95 Millionen Jahren BP und dauerte ca. 180.000 Jahre. Sie wurde erstmals in der Olduvai-Schlucht (Tansania) in vulkanischen Schichten dokumentiert, die auch frühe Homo-habilis-Fossilien enthielten.",
+        difficulty = 5,
+        funFact = "Die Olduvai-Subchron ist ein Leithorizont für die Datierung der Human Evolution: Homo habilis und Paranthropus boisei erscheinen in Schichten, die genau während dieser Subchron abgelagert wurden. Die paläomagnetische Datierung ermöglichte es, das Alter der Australopithecus-Funde auf über 1,8 Millionen Jahre zu bestimmen – ohne Radiokarbon, das nur bis 50.000 Jahre reicht."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Was gibt der Wert 'EGM2008-Undulation' für den Punkt Zugspitze (2.962 m NN) in Deutschland an, und wie groß ist er näherungsweise?",
+        answerA = "ca. +48 m (Geoid 48 m über Ellipsoid)",
+        answerB = "ca. +50 m (Geoid 50 m über Ellipsoid)",
+        answerC = "ca. +35 m (Geoid 35 m über Ellipsoid)",
+        answerD = "ca. +44 m (Geoid 44 m über Ellipsoid)",
+        correctAnswer = 3,
+        explanation = "Am Punkt Zugspitze beträgt die EGM2008-Geoidundulation N ≈ +44 m (Geoid liegt 44 m über dem WGS84-Ellipsoid). Das bedeutet: Die ellipsoidische GPS-Höhe der Zugspitze (h) liegt bei ca. 3.006 m, während die Normalhöhe über dem Geoid (H) ca. 2.962 m beträgt – Differenz ≈ 44 m = Undulation N.",
+        difficulty = 5,
+        funFact = "In Deutschland liegt das Geoid überall deutlich über dem Ellipsoid (N = 35–50 m), da die Alpen und das gesamte mitteleuropäische Festlandmassiv die Erdschwere leicht erhöhen. GPS gibt immer ellipsoidische Höhen – für amtliche Normalhöhen muss die Geoidundulation subtrahiert werden."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Wert für die postglaziare Hebungsrate wurde für den Gothenburg-Bereich (Schweden) durch präzises GNSS-Monitoring (SWEPOS-Netz) ermittelt?",
+        answerA = "ca. 1,8 mm/Jahr",
+        answerB = "ca. 4,6 mm/Jahr",
+        answerC = "ca. 7,2 mm/Jahr",
+        answerD = "ca. 9,8 mm/Jahr",
+        correctAnswer = 1,
+        explanation = "Das SWEPOS-GNSS-Netz Schwedens misst für den Göteborg-Bereich eine vertikale Landerhebung von ca. 4–5 mm/Jahr. Das Maximum der skandinavischen Hebung liegt weiter nördlich im Bottnischen Meerbusen. Göteborg (südlichere Lage) hebt sich merklich langsamer als die nördlichen Regionen Schwedens.",
+        difficulty = 5,
+        funFact = "SWEPOS ist eines der dichtesten permanenten GNSS-Netze der Welt und hat gezeigt, dass die Landhebung in Schweden seit 1990 nicht abgenommen, sondern leicht zugenommen hat. Eine neue Hypothese verbindet dies mit beschleunigter Eisschmelze in Grönland, die die Erdmantelströmungen beeinflusst."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche HF-Emissionsrate (HCl in Tonnen/Tag) verzeichnete der Popocatépetl (Mexiko) als einer der aktivsten HCl-Ausgaser Lateinamerikas in einem typischen Aktivitätsjahr?",
+        answerA = "ca. 10–50 t HCl/Tag",
+        answerB = "ca. 100–400 t HCl/Tag",
+        answerC = "ca. 1.000–3.000 t HCl/Tag",
+        answerD = "ca. 5.000 t HCl/Tag",
+        correctAnswer = 1,
+        explanation = "Der Popocatépetl (5.452 m) emittiert bei mittlerer Aktivität ca. 100–400 t HCl pro Tag sowie ca. 100–1.000 t SO₂/Tag. DOAS-Messungen des CENAPRED (Centro Nacional de Prevención de Desastres) dokumentieren diese Emissionen kontinuierlich. 'Popo' ist einer der aktivsten HCl-Ausgaser des Amerikanischen Kontinents.",
+        difficulty = 5,
+        funFact = "Der Popocatépetl ist 70 km von Mexiko-Stadt entfernt, das mit 22 Millionen Menschen in der Metropolregion die größte Millionenstadt im direkten Einflussbereich eines aktiven Stratovulkans ist. Selbst mäßige Eruptionen verursachen Aschefälle, die Flughäfen schließen und Ernteschäden im Millionenbereich verursachen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welches Referenzsystem definiert den Nullmeridian der ITRF (International Terrestrial Reference Frame)-Familie, und wodurch unterscheidet er sich von Greenwich?",
+        answerA = "Der ITRF-Nullmeridian ist identisch mit dem historischen Greenwich-Meridian",
+        answerB = "Der ITRF-Nullmeridian (IRM) liegt ca. 5,31 Bogensekunden östlich des optischen Greenwich-Meridians",
+        answerC = "Der ITRF-Nullmeridian liegt ca. 0,01 Grad westlich des Primemeridians",
+        answerD = "ITRF hat keinen definierten Nullmeridian; Längengrade basieren auf Satellitenorbitdaten",
+        correctAnswer = 1,
+        explanation = "Der International Reference Meridian (IRM), der Nullmeridian des ITRF und damit auch WGS84/GPS, liegt ca. 5,31 Bogensekunden (ca. 102 m) östlich des historischen optischen Greenwich-Meridians (bestimmt durch das Transit-Instrument des Airy). Der Unterschied entsteht durch den Übertrag von der optischen Astronomie zur VLBI-basierten Geodäsie.",
+        difficulty = 5,
+        funFact = "Touristen, die beim Royal Observatory Greenwich auf dem Nullmeridian stehen und mit GPS ihre Position prüfen, stellen fest, dass ihr GPS-Gerät sie ca. 102 m östlich von 0° Länge zeigt – weil GPS den IRM nutzt, nicht den alten Airy-Meridian. Eine Tafel im Observatory erklärt diesen Unterschied."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche postglaziare Landhebungsrate weist das Zentrum Grönlands (Dome Summit) nach GIA-Modellen (ICE-6G_C) auf?",
+        answerA = "ca. 1–2 mm/Jahr",
+        answerB = "ca. 5–6 mm/Jahr",
+        answerC = "ca. 10–15 mm/Jahr",
+        answerD = "ca. 20–30 mm/Jahr",
+        correctAnswer = 1,
+        explanation = "Das ICE-6G_C-GIA-Modell (Glacial Isostatic Adjustment) prognostiziert für das Zentrum Grönlands eine postglaziare Hebungsrate von ca. 5–6 mm/Jahr durch Entlastung nach der letzten Vereisung. Moderne GNSS-Stationen auf Grönland messen zudem aktuelle Anhebungsraten von bis zu 20–40 mm/Jahr durch die beschleunigte gegenwärtige Gletscherschmelze.",
+        difficulty = 5,
+        funFact = "In Grönland überlappen sich zwei Prozesse: die langsame postglaziare Erholung von der letzten Eiszeit (GIA, 5–6 mm/Jahr) und die schnelle elastische Erdhebung durch die aktuelle Eisschmelze (10–35 mm/Jahr). GPS-Stationen nahe dem Helheim-Gletscher registrierten in einem Jahr eine Hebung von über 38 mm."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Mit welcher Abkürzung wird der internationale Standard-Referenzrahmen für terrestrische Koordinaten bezeichnet, der seit 2015 für geodätische Präzisionsanwendungen empfohlen wird?",
+        answerA = "WGS84 (G1762 Frame)",
+        answerB = "ITRF2014",
+        answerC = "ETRS89 (Europäisch)",
+        answerD = "GRS80",
+        correctAnswer = 1,
+        explanation = "Das ITRF2014 (International Terrestrial Reference Frame 2014), veröffentlicht durch das IERS (International Earth Rotation and Reference Systems Service) 2016, war bis zur Veröffentlichung von ITRF2020 (2022) der internationale Standard für Präzisionsgeodäsie. Es basiert auf Beobachtungen von ~900 GNSS/VLBI/SLR/DORIS-Stationen weltweit.",
+        difficulty = 5,
+        funFact = null
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "In welchem Jahr fand die Matuyama-Gauss-Polumkehrung statt (Übergang von reversem Matuyama- zu normalem Gauss-Chron)?",
+        answerA = "ca. 780.000 Jahre BP",
+        answerB = "ca. 2,58 Millionen Jahre BP",
+        answerC = "ca. 1,77 Millionen Jahre BP",
+        answerD = "ca. 3,58 Millionen Jahre BP",
+        correctAnswer = 1,
+        explanation = "Die Matuyama-Gauss-Grenze – der Übergang vom normalen Gauss-Chron (3,58–2,58 Ma) zum reversen Matuyama-Chron (2,58–0,78 Ma) – fand vor ca. 2,58 Millionen Jahren statt und markiert gleichzeitig die Grenze zwischen dem Pliozän und dem Pleistozän (Quartärbeginn).",
+        difficulty = 5,
+        funFact = "Die Matuyama-Gauss-Grenze fällt fast genau mit dem Beginn der nördlichen Vereisung (Pleistozän, 2,58 Ma) zusammen – ob das ein Zufall oder eine Kausalbeziehung ist, wird noch diskutiert. Einige Forscher spekulieren, ob das schwächere Magnetfeld während der Umkehrung zu Klimaveränderungen führte."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Genauigkeit weist das GNSS-basierte Meeresspiegel-Monitoringsystem (tide gauge + GNSS) an der Deutschen Bucht auf, wenn vertikale Landbewegungen korrigiert werden?",
+        answerA = "±5 cm absolut",
+        answerB = "±1–2 mm/Jahr (relative VLM-korrigierte Rate)",
+        answerC = "±10 cm absolut",
+        answerD = "±0,1 mm/Jahr",
+        correctAnswer = 1,
+        explanation = "Kombinierte Gezeitenpegel-GNSS-Stationen (wie STHN, Cuxhaven) ermöglichen nach Korrektur der Vertikalen Landbewegung (VLM) Meeresspiegel-Trends mit einer Präzision von ca. ±1–2 mm/Jahr. Die Deutsche Bucht zeigt damit einen mittleren relativen Meeresspiegelanstieg von ca. 1,5–2,5 mm/Jahr über die letzten 100 Jahre.",
+        difficulty = 5,
+        funFact = "In Hamburg zeigen Pegeldaten seit 1843 einen relativen Meeresspiegelanstieg von ca. 1,9 mm/Jahr. Da das norddeutsche Festland leicht absinkt (GIA: ca. −0,5 mm/Jahr), ist der absolute Meeresspiegelanstieg tatsächlich etwas geringer – GNSS-Korrekturen sind daher unverzichtbar für verlässliche Klimaaussagen."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche exakte geomagnetssche Intensitäts-Anomalie (in nanoTesla) weist das 'South Atlantic Anomaly' (SAA) im Vergleich zum globalen Mittelwert auf?",
+        answerA = "ca. −5.000 nT schwächer als der Mittelwert",
+        answerB = "ca. −20.000 nT schwächer als der Mittelwert",
+        answerC = "ca. −40.000 nT schwächer als der Mittelwert",
+        answerD = "ca. +15.000 nT stärker als der Mittelwert",
+        correctAnswer = 1,
+        explanation = "Die South Atlantic Anomaly (SAA) zeigt eine geomagnetische Feldschwächung von ca. −20.000 bis −25.000 nT im Vergleich zum globalen Mittelwert (ca. 45.000–60.000 nT). Das Feld über dem zentralen Südatlantik beträgt nur ca. 22.000–25.000 nT – weniger als die Hälfte des globalen Mittels.",
+        difficulty = 5,
+        funFact = "Die SAA verursacht erhebliche Probleme für Satelliten und Raumfahrzeuge: Beim Überflug dieser Zone erfahren sie erhöhte Strahlenbelastung durch einfallende geladene Teilchen aus dem Van-Allen-Gürtel. Die ISS schaltet beim SAA-Überflug bestimmte elektronische Systeme ab, um Strahlenschäden zu minimieren."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche Drift-Richtung und Geschwindigkeit zeigt der magnetische Nordpol laut NOAA World Magnetic Model (WMM2020) aktuell (Stand 2024)?",
+        answerA = "Richtung Sibirien (Russland), ca. 40–45 km/Jahr",
+        answerB = "Richtung Kanada, ca. 15 km/Jahr",
+        answerC = "Richtung Nordpol, stationär seit 2020",
+        answerD = "Richtung Grönland, ca. 25 km/Jahr",
+        correctAnswer = 0,
+        explanation = "Laut WMM2020 (NOAA/BGS) driftet der magnetische Nordpol weiterhin Richtung Sibirien mit ca. 40–45 km/Jahr. Er hat die kanadische Arktis verlassen und befindet sich nun im nördlichen Arktischen Ozean auf dem Weg Richtung russische Arktis. Die Drift hat sich seit den 2000er Jahren beschleunigt.",
+        difficulty = 5,
+        funFact = "Der magnetische Nordpol wurde erstmals 1831 von James Clark Ross auf der Boothia-Halbinsel (Kanada) lokalisiert. Seitdem hat er sich um über 2.400 km verschoben – eine durchschnittliche Drift von ca. 12 km/Jahr über fast 200 Jahre, wobei die letzten 25 Jahre deutlich schneller waren."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen Beitrag zum Meeresspiegel liefert das Schmelzen des permafrosten Bodens (Permafrost) als Süßwasserquelle laut IPCC AR6?",
+        answerA = "Signifikanter Beitrag: ca. 2–5 mm/Jahr",
+        answerB = "Vernachlässigbar: <0,01 mm/Jahr direkt als Flüssigwasser",
+        answerC = "Bedeutsam: ca. 0,5 mm/Jahr",
+        answerD = "Negativer Beitrag: Permafrost speichert mehr Wasser als er abgibt",
+        correctAnswer = 1,
+        explanation = "Schmelzender Permafrost selbst (Tauen von gefrorenem Boden) liefert <0,01 mm/Jahr direkten Meeresspiegelanstieg, da das Wasser hauptsächlich im Boden verbleibt (Thermokarstbildung) oder in Flüsse fließt, aber nur in geringen Mengen ins Meer. Sein Hauptbeitrag zum Klimawandel erfolgt über CO₂- und Methan-Emissionen, nicht über Meeresspiegelerhöhung.",
+        difficulty = 5,
+        funFact = "Der Permafrost speichert ca. 1,5 Billionen Tonnen Kohlenstoff – doppelt so viel wie die gesamte Atmosphäre. Bei vollständigem Auftauen würde dieser Kohlenstoff als CO₂ und CH₄ freigesetzt werden, was eine massive Klimarückkopplung auslösen würde – weit gefährlicher als der Meeresspiegeleffekt des Tauwassers selbst."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welcher Referenzpunkt (Benchmark) dient als Fundamentalpunkt für die Höhenmessungen des chinesischen National Height Datum (1985)?",
+        answerA = "Huanghai-Meeresspiegel bei Qingdao (Huang Hai Mean Sea Level)",
+        answerB = "Meeresspiegel bei Shanghai (Huangpu-Fluss)",
+        answerC = "Astronomisches Observatorium Beijing",
+        answerD = "Tidal Benchmark Hong Kong",
+        correctAnswer = 0,
+        explanation = "Das chinesische National Height Datum 1985 (Guojia Gaocheng 1985) basiert auf dem mittleren Meeresspiegel des Gelben Meeres (Huang Hai) bei Qingdao, gemessen von 1950 bis 1956 am Zhanqiao-Pegel. Dieser Punkt ist der Fundamentalpunkt für alle offiziellen Höhenmessungen in der Volksrepublik China.",
+        difficulty = 5,
+        funFact = "China hat in den 2020er Jahren sein National Height Datum mit GNSS/Geoid-Technologie auf das CGCS2000 (China Geodetic Coordinate System 2000) aktualisiert. Dabei stellte sich heraus, dass der Himalaya-Gipfel Mount Qomolangma 8.848,86 m beträgt – 86 cm mehr als die zuvor anerkannte Höhe von 8.848 m."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welche SO₂-Emissionsrate gibt das USGS Volcano Hazards Program für den Kilauea während der Halema'uma'u-Eruptionsphase (2008–2018) als Tageswert an?",
+        answerA = "ca. 100–300 t SO₂/Tag",
+        answerB = "ca. 500–2.000 t SO₂/Tag",
+        answerC = "ca. 5.000–10.000 t SO₂/Tag",
+        answerD = "ca. 20.000–50.000 t SO₂/Tag",
+        correctAnswer = 1,
+        explanation = "Während der Halema'uma'u-Eruption (2008–2018) emittierte der Kīlauea kontinuierlich 500–2.000 t SO₂/Tag aus dem Lava-See im Halema'uma'u-Krater. Das USGS HVO (Hawaiian Volcano Observatory) überwacht dies mittels FTIR- und UV-Absorptions-Spektrometrie von Bodenstation und Hubschrauber aus.",
+        difficulty = 5,
+        funFact = "Die SO₂-Emissionen des Kīlauea (2008–2018) waren so intensiv, dass der Hawai'i Volcanoes National Park zeitweise für Besucher gesperrt werden musste. Die Wind-Abbdrift-Richtung des Vog nach Kona (Westküste Big Island) verursachte regelmäßig gesundheitsschädliche Luftqualität für Tausende von Einwohnern."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Wann fand die Réunion-Ereignis statt – eine kurze Polumkehrung in der geomagnetschen Zeitskala zu Beginn des Matuyama-Chrons?",
+        answerA = "ca. 2,14–2,15 Millionen Jahre BP",
+        answerB = "ca. 1,77–1,80 Millionen Jahre BP",
+        answerC = "ca. 0,99–1,07 Millionen Jahre BP",
+        answerD = "ca. 3,05–3,10 Millionen Jahre BP",
+        correctAnswer = 0,
+        explanation = "Das Réunion-Ereignis (auch Réunion-Subchron) ist ein kurzes normales geomagnetsches Ereignis nahe der Basis des Matuyama-Chrons, datiert auf ca. 2,14–2,15 Millionen Jahre BP. Es ist benannt nach vulkanischen Basalten der Insel Réunion, in denen dieses kurze Normalfeld-Ereignis erstmals dokumentiert wurde.",
+        difficulty = 5,
+        funFact = "Der Hotspot unter der Insel Réunion (Piton de la Fournaise) ist mit dem Deccan-Traps-Vulkanismus verbunden, der vor ~66 Millionen Jahren beim Massenaussterben der Dinosaurier mitwirkte. Die Insel Réunion liegt über demselben Mantelplume, der sich relativ zur Platte verschoben hat."
+    ),
+
+    Question(
+        categoryId = 1,
+        questionText = "Welchen messbaren Beitrag zum globalen Meeresspiegelanstieg liefert die Meldung des geodätischen Ausgleichs (Glacio-Isostatic Adjustment, GIA) selbst?",
+        answerA = "GIA senkt den Meeresspiegel um ca. 0,3 mm/Jahr (durch Beckenvergrößerung)",
+        answerB = "GIA hat keinen Einfluss auf den absoluten Meeresspiegel",
+        answerC = "GIA hebt den Meeresspiegel um ca. 0,5 mm/Jahr",
+        answerD = "GIA verändert nur lokale Relativ-Pegel, nicht den globalen Meeresspiegel",
+        correctAnswer = 0,
+        explanation = "GIA (Glazioisostatischer Ausgleich) vergrößert die ozeanischen Becken durch das Absinken von Bereichen, die ehemals Eis trugen (forebulge collapse), und durch das isostatische Heben des Meeresbodens. Dieser Geometrieeffekt senkt den globalen Meeresspiegel um ca. 0,3 mm/Jahr – eine Korrektur, die bei Satellitenaltimetrie-Messungen immer abgezogen werden muss.",
+        difficulty = 5,
+        funFact = "Ohne GIA-Korrektur würden Satelliten-Altimeter (wie Jason-3 oder Sentinel-6) einen zu niedrigen globalen Meeresspiegelanstieg messen. Die GIA-Korrektur von −0,3 mm/Jahr ist deshalb eine der wichtigsten und zugleich am schwersten modellierbaren Korrekturen in der modernen Meeresspiegel-Klimatologie."
+    ),
+
 )
+
 

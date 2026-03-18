@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -19,12 +20,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Circular countdown timer drawn on a [Canvas].
+ * Circular countdown timer with a thick ring, glow at low time, and pulse at ≤5s.
  *
- * Colours transition:
+ * Colour transitions:
  *   green  (> 50 %)  →  yellow  (20–50 %)  →  red  (≤ 20 %)
  *
- * A pulsing scale animation activates in the last 5 seconds to draw attention.
+ * A glow layer appears when time is running low.
+ * A pulsing scale animation activates in the last 5 seconds.
  *
  * @param remainingSeconds  How many seconds are left.
  * @param totalSeconds      The full duration of the timer.
@@ -59,54 +61,95 @@ fun AnimatedTimer(
         label = "timerColor",
     )
 
-    // Pulsing scale in last 5 seconds
+    // Glow intensity: increases as time runs low
+    val isLow = fraction <= 0.35f
     val isUrgent = remainingSeconds in 1..5
+
+    // Glow pulse animation when time is low
+    val glowAnim = rememberInfiniteTransition(label = "timerGlow")
+    val glowAlpha by glowAnim.animateFloat(
+        initialValue = 0f,
+        targetValue = if (isLow) 0.55f else 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "timerGlowAlpha",
+    )
+
+    // Pulsing scale in last 5 seconds
     val pulseAnim = rememberInfiniteTransition(label = "timerPulse")
     val pulseScale by pulseAnim.animateFloat(
         initialValue = 1f,
-        targetValue = if (isUrgent) 1.12f else 1f,
+        targetValue = if (isUrgent) 1.14f else 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 500, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 450, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "pulseScale",
     )
 
-    val trackColor = Color.White.copy(alpha = 0.15f)
+    val trackColor = Color.White.copy(alpha = 0.12f)
+    // Thick stroke: 8.dp equivalent as fraction of size
+    val strokeWidthDp = 8.dp
 
     Box(
         contentAlignment = Alignment.Center,
-        modifier = modifier.size(size),
+        modifier = modifier
+            .size(size)
+            .scale(pulseScale),
     ) {
+        // Glow layer behind the arc (soft blurred halo)
         Canvas(modifier = Modifier.size(size)) {
-            val stroke = size.toPx() * 0.1f
-            val padding = stroke / 2f
+            val strokePx = strokeWidthDp.toPx()
+            val glowStroke = strokePx * 3.5f
+            val padding = glowStroke / 2f
 
-            // Background track
+            if (isLow && glowAlpha > 0f) {
+                drawArc(
+                    color = arcColor.copy(alpha = glowAlpha * 0.4f),
+                    startAngle = -90f,
+                    sweepAngle = animatedFraction * 360f,
+                    useCenter = false,
+                    style = Stroke(width = glowStroke, cap = StrokeCap.Round),
+                    topLeft = androidx.compose.ui.geometry.Offset(padding, padding),
+                    size = this.size.copy(
+                        width = this.size.width - glowStroke,
+                        height = this.size.height - glowStroke,
+                    ),
+                )
+            }
+        }
+
+        Canvas(modifier = Modifier.size(size)) {
+            val strokePx = strokeWidthDp.toPx()
+            val padding = strokePx / 2f
+
+            // Background track ring
             drawArc(
                 color = trackColor,
                 startAngle = -90f,
                 sweepAngle = 360f,
                 useCenter = false,
-                style = Stroke(width = stroke, cap = StrokeCap.Round),
+                style = Stroke(width = strokePx, cap = StrokeCap.Round),
                 topLeft = androidx.compose.ui.geometry.Offset(padding, padding),
                 size = this.size.copy(
-                    width = this.size.width - stroke,
-                    height = this.size.height - stroke,
+                    width = this.size.width - strokePx,
+                    height = this.size.height - strokePx,
                 ),
             )
 
-            // Foreground progress arc
+            // Foreground progress arc (thick, prominent)
             drawArc(
                 color = arcColor,
                 startAngle = -90f,
                 sweepAngle = animatedFraction * 360f,
                 useCenter = false,
-                style = Stroke(width = stroke, cap = StrokeCap.Round),
+                style = Stroke(width = strokePx, cap = StrokeCap.Round),
                 topLeft = androidx.compose.ui.geometry.Offset(padding, padding),
                 size = this.size.copy(
-                    width = this.size.width - stroke,
-                    height = this.size.height - stroke,
+                    width = this.size.width - strokePx,
+                    height = this.size.height - strokePx,
                 ),
             )
         }

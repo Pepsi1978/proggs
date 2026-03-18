@@ -1,6 +1,7 @@
 package com.quizverse.app.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.EaseOutCubic
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -12,6 +13,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,11 +34,10 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -62,16 +64,16 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.quizverse.app.QuizVerseApp
 import com.quizverse.app.ui.navigation.Screen
+import com.quizverse.app.ui.theme.Accent
+import com.quizverse.app.ui.theme.GlassBorder
+import com.quizverse.app.ui.theme.GlassWhite
+import com.quizverse.app.ui.theme.Gold
+import com.quizverse.app.ui.theme.Primary
+import com.quizverse.app.ui.theme.Secondary
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val PrimaryColor = Color(0xFF6C63FF)
-private val SecondaryColor = Color(0xFFFF6584)
-private val BackgroundStart = Color(0xFF1A1A2E)
-private val BackgroundEnd = Color(0xFF16213E)
-private val CardBackground = Color(0xFF0F3460)
-private val GoldColor = Color(0xFFFFD700)
 private val GreenSuccess = Color(0xFF4CAF50)
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -110,17 +112,25 @@ fun DailyChallengeScreen(navController: NavHostController) {
         label = "glowAlpha"
     )
 
+    // Animated streak number for dramatic effect
+    val streakGlow by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "streakGlow"
+    )
+
     val buttonScale by animateFloatAsState(
         targetValue = if (alreadyCompleted) 0.97f else 1f,
         animationSpec = tween(300),
         label = "buttonScale"
     )
 
-    val gradientBackground = Brush.verticalGradient(
-        colors = listOf(BackgroundStart, BackgroundEnd)
-    )
     val buttonGradient = Brush.horizontalGradient(
-        colors = listOf(PrimaryColor, SecondaryColor)
+        colors = listOf(Primary, Secondary)
     )
     val completedGradient = Brush.horizontalGradient(
         colors = listOf(GreenSuccess, Color(0xFF81C784))
@@ -132,7 +142,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                 title = {
                     Text(
                         text = "Tägliche Herausforderung",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
                     )
@@ -142,32 +152,24 @@ fun DailyChallengeScreen(navController: NavHostController) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Zurück",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                ),
-                modifier = Modifier.background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            PrimaryColor.copy(alpha = 0.9f),
-                            SecondaryColor.copy(alpha = 0.7f)
-                        )
-                    )
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             )
         },
-        containerColor = Color.Transparent
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(gradientBackground)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
-            // Decorative background circles
+            // Decorative background orbs using theme colors
             Box(
                 modifier = Modifier
                     .size(280.dp)
@@ -177,7 +179,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                         translationY = (-40).dp.toPx()
                     }
                     .clip(CircleShape)
-                    .background(PrimaryColor.copy(alpha = 0.08f))
+                    .background(Primary.copy(alpha = 0.07f))
             )
             Box(
                 modifier = Modifier
@@ -188,7 +190,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                         translationY = 60.dp.toPx()
                     }
                     .clip(CircleShape)
-                    .background(SecondaryColor.copy(alpha = 0.07f))
+                    .background(Secondary.copy(alpha = 0.06f))
             )
 
             Column(
@@ -201,7 +203,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Hero emoji with pulse animation
+                // Dramatic hero emoji with layered glow animation
                 AnimatedVisibility(
                     visible = visible,
                     enter = scaleIn(animationSpec = tween(600)) + fadeIn(animationSpec = tween(600))
@@ -209,18 +211,34 @@ fun DailyChallengeScreen(navController: NavHostController) {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(120.dp)
+                            .size(140.dp)
                             .scale(if (alreadyCompleted) 1f else pulseScale)
                     ) {
+                        // Outer glow ring
                         Box(
                             modifier = Modifier
-                                .size(120.dp)
+                                .size(140.dp)
                                 .clip(CircleShape)
                                 .background(
                                     Brush.radialGradient(
                                         colors = listOf(
-                                            (if (alreadyCompleted) GreenSuccess else SecondaryColor)
-                                                .copy(alpha = glowAlpha * 0.3f),
+                                            (if (alreadyCompleted) GreenSuccess else Gold)
+                                                .copy(alpha = glowAlpha * 0.15f),
+                                            Color.Transparent
+                                        )
+                                    )
+                                )
+                        )
+                        // Inner glow
+                        Box(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.radialGradient(
+                                        colors = listOf(
+                                            (if (alreadyCompleted) GreenSuccess else Secondary)
+                                                .copy(alpha = glowAlpha * 0.25f),
                                             Color.Transparent
                                         )
                                     )
@@ -228,12 +246,12 @@ fun DailyChallengeScreen(navController: NavHostController) {
                         )
                         Text(
                             text = if (alreadyCompleted) "✅" else "🔥",
-                            fontSize = 64.sp
+                            fontSize = 72.sp
                         )
                     }
                 }
 
-                // Title card
+                // Title card with glassmorphism
                 AnimatedVisibility(
                     visible = visible,
                     enter = slideInVertically(
@@ -241,14 +259,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                         animationSpec = tween(500, delayMillis = 150)
                     ) + fadeIn(animationSpec = tween(500, delayMillis = 150))
                 ) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = CardBackground.copy(alpha = 0.8f)
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                    ) {
+                    GlassCard {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -257,29 +268,34 @@ fun DailyChallengeScreen(navController: NavHostController) {
                         ) {
                             Text(
                                 text = "Tages-Quiz",
-                                fontSize = 28.sp,
+                                fontSize = 30.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.Center
                             )
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(50))
                                     .background(
                                         Brush.horizontalGradient(
                                             listOf(
-                                                PrimaryColor.copy(alpha = 0.3f),
-                                                SecondaryColor.copy(alpha = 0.3f)
+                                                Primary.copy(alpha = 0.25f),
+                                                Secondary.copy(alpha = 0.25f)
                                             )
                                         )
                                     )
-                                    .padding(horizontal = 14.dp, vertical = 4.dp)
+                                    .border(
+                                        1.dp,
+                                        GlassBorder,
+                                        RoundedCornerShape(50)
+                                    )
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
                             ) {
                                 Text(
                                     text = todayFormatted,
                                     fontSize = 14.sp,
-                                    color = Color.White.copy(alpha = 0.9f),
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
                                     fontWeight = FontWeight.Medium
                                 )
                             }
@@ -287,7 +303,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                     }
                 }
 
-                // Streak card
+                // Streak card — prominent with fire animation
                 AnimatedVisibility(
                     visible = visible,
                     enter = slideInVertically(
@@ -295,14 +311,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                         animationSpec = tween(500, delayMillis = 250)
                     ) + fadeIn(animationSpec = tween(500, delayMillis = 250))
                 ) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = CardBackground.copy(alpha = 0.8f)
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                    ) {
+                    GlassCard {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -311,47 +320,53 @@ fun DailyChallengeScreen(navController: NavHostController) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(text = "🔥", fontSize = 32.sp)
-                                Spacer(modifier = Modifier.height(4.dp))
+                                // Animated fire emoji scale
+                                Text(
+                                    text = "🔥",
+                                    fontSize = 36.sp,
+                                    modifier = Modifier.scale(pulseScale)
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
                                 Text(
                                     text = "${progress?.dailyChallengeStreak ?: 0}",
-                                    fontSize = 32.sp,
+                                    fontSize = 40.sp,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = GoldColor
+                                    color = Gold.copy(alpha = streakGlow)
                                 )
                                 Text(
                                     text = "Tage-Serie",
                                     fontSize = 13.sp,
-                                    color = Color.White.copy(alpha = 0.7f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
 
                             Box(
                                 modifier = Modifier
-                                    .size(width = 1.dp, height = 60.dp)
-                                    .background(Color.White.copy(alpha = 0.15f))
+                                    .size(width = 1.dp, height = 70.dp)
+                                    .background(GlassBorder)
                             )
 
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(text = "📅", fontSize = 32.sp)
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = "📅", fontSize = 36.sp)
+                                Spacer(modifier = Modifier.height(6.dp))
                                 Text(
                                     text = if (alreadyCompleted) "Heute ✓" else "Heute",
-                                    fontSize = 18.sp,
+                                    fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (alreadyCompleted) GreenSuccess else Color.White
+                                    color = if (alreadyCompleted) GreenSuccess
+                                            else MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = if (alreadyCompleted) "Abgeschlossen" else "Noch offen",
                                     fontSize = 13.sp,
-                                    color = Color.White.copy(alpha = 0.7f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                     }
                 }
 
-                // Description card
+                // Description card with glassmorphism
                 AnimatedVisibility(
                     visible = visible,
                     enter = slideInVertically(
@@ -359,14 +374,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                         animationSpec = tween(500, delayMillis = 350)
                     ) + fadeIn(animationSpec = tween(500, delayMillis = 350))
                 ) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = CardBackground.copy(alpha = 0.8f)
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                    ) {
+                    GlassCard {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -376,7 +384,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                                 text = "Über die Herausforderung",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             InfoRow(icon = "🎯", text = "10 zufällige Fragen aus allen Kategorien")
@@ -390,7 +398,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                     }
                 }
 
-                // Play / completed section
+                // Premium play button section
                 AnimatedVisibility(
                     visible = visible,
                     enter = slideInVertically(
@@ -403,18 +411,17 @@ fun DailyChallengeScreen(navController: NavHostController) {
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         if (alreadyCompleted) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = GreenSuccess.copy(alpha = 0.15f)
-                                ),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                            // Completed status card
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(GreenSuccess.copy(alpha = 0.12f))
+                                    .border(1.dp, GreenSuccess.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
+                                    .padding(16.dp)
                             ) {
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
+                                    modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -424,7 +431,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                                         tint = GreenSuccess,
                                         modifier = Modifier.size(24.dp)
                                     )
-                                    Spacer(modifier = Modifier.size(10.dp))
+                                    Spacer(modifier = Modifier.width(10.dp))
                                     Text(
                                         text = "Bereits abgeschlossen!",
                                         fontSize = 16.sp,
@@ -435,15 +442,24 @@ fun DailyChallengeScreen(navController: NavHostController) {
                             }
                         }
 
-                        // Gradient play button
+                        // Premium 3D play button with gradient + shadow border
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(60.dp)
+                                .height(64.dp)
                                 .scale(buttonScale)
-                                .clip(RoundedCornerShape(30.dp))
+                                .clip(RoundedCornerShape(32.dp))
                                 .background(
                                     if (alreadyCompleted) completedGradient else buttonGradient
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    brush = if (alreadyCompleted) Brush.horizontalGradient(
+                                        listOf(GreenSuccess.copy(alpha = 0.6f), Color(0xFF81C784).copy(alpha = 0.4f))
+                                    ) else Brush.horizontalGradient(
+                                        listOf(Primary.copy(alpha = 0.8f), Secondary.copy(alpha = 0.6f))
+                                    ),
+                                    shape = RoundedCornerShape(32.dp)
                                 )
                         ) {
                             Button(
@@ -464,7 +480,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                                     disabledContainerColor = Color.Transparent
                                 ),
                                 enabled = !alreadyCompleted,
-                                shape = RoundedCornerShape(30.dp),
+                                shape = RoundedCornerShape(32.dp),
                                 elevation = ButtonDefaults.buttonElevation(0.dp)
                             ) {
                                 Text(
@@ -481,7 +497,7 @@ fun DailyChallengeScreen(navController: NavHostController) {
                             Text(
                                 text = "Komm morgen wieder! 👋",
                                 fontSize = 15.sp,
-                                color = Color.White.copy(alpha = 0.7f),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
                                 fontWeight = FontWeight.Medium
                             )
@@ -495,6 +511,28 @@ fun DailyChallengeScreen(navController: NavHostController) {
     }
 }
 
+// ── Glassmorphism card container ───────────────────────────────────────────────
+
+@Composable
+private fun GlassCard(content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        GlassWhite,
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                    )
+                )
+            )
+            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+    ) {
+        content()
+    }
+}
+
 @Composable
 private fun InfoRow(icon: String, text: String) {
     Row(
@@ -505,7 +543,7 @@ private fun InfoRow(icon: String, text: String) {
         Text(
             text = text,
             fontSize = 14.sp,
-            color = Color.White.copy(alpha = 0.85f),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
             lineHeight = 20.sp
         )
     }

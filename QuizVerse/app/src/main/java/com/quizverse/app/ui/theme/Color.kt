@@ -62,10 +62,19 @@ val OnSurfaceLight       = Color(0xFF1C1B1F)
 val OnSurfaceVariantLight= Color(0xFF49454F)
 val OutlineLight         = Color(0xFF79747E)
 
-// Dark theme surfaces
-val SurfaceDark          = Color(0xFF1C1B1F)
-val SurfaceVariantDark   = Color(0xFF49454F)
-val BackgroundDark       = Color(0xFF1C1B1F)
+// Dark theme surfaces — deep blue-black premium palette
+val SurfaceDark          = Color(0xFF141428) // deep indigo surface
+val SurfaceVariantDark   = Color(0xFF1E1E3A) // elevated indigo surface
+val BackgroundDark       = Color(0xFF0A0A1A) // deepest blue-black background
+
+// Gold accent colors for premium feel
+val Gold      = Color(0xFFFFD700)
+val GoldDark  = Color(0xFFF4C430)
+val GoldLight = Color(0xFFFFE57F)
+
+// Glassmorphism colors for frosted-glass UI elements
+val GlassWhite  = Color(0x1AFFFFFF) // 10% white for glass fill
+val GlassBorder = Color(0x33FFFFFF) // 20% white for glass border
 val OnSurfaceDark        = Color(0xFFE6E1E5)
 val OnSurfaceVariantDark = Color(0xFFCAC4D0)
 val OutlineDark          = Color(0xFF938F99)

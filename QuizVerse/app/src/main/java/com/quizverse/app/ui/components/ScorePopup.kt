@@ -13,20 +13,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.quizverse.app.ui.theme.Gold
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Floating score label (e.g. "+100") that animates upward and fades out.
+ * Floating score label (e.g. "+100") that animates upward and fades out with a gold glow.
  *
- * Usage: place this composable at the desired anchor position and control
- * visibility through [visible]. Once [visible] becomes true, the animation
- * plays automatically. Pass [onAnimationEnd] to hide the popup after
+ * The score text is rendered with a layered shadow + glow effect to achieve a
+ * premium gold-glow appearance. Place at the desired anchor position and control
+ * visibility through [visible]. Pass [onAnimationEnd] to hide the popup after
  * the animation completes.
  *
  * @param score          Score delta to display (e.g. "+100", "+250 ⚡").
  * @param visible        Whether the popup is currently showing.
- * @param color          Text colour; defaults to a vivid gold.
+ * @param color          Text colour; defaults to premium Gold.
  * @param onAnimationEnd Called when the exit animation finishes.
  * @param modifier       Optional layout modifier.
  */
@@ -34,34 +35,47 @@ import kotlinx.coroutines.launch
 fun ScorePopup(
     score: String,
     visible: Boolean,
-    color: Color = Color(0xFFFFD700),
+    color: Color = Gold,
     onAnimationEnd: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     if (!visible) return
 
-    // Y-offset: animates from 0 → -120 px (floats upward)
+    // Y-offset: animates from 0 → -140 px (floats upward)
     val offsetY = remember { Animatable(0f) }
     // Alpha: stays at 1 for the first 400 ms, then fades to 0
     val alpha = remember { Animatable(1f) }
+    // Scale: brief pop-in at the start
+    val scale = remember { Animatable(0.7f) }
 
     LaunchedEffect(visible) {
-        // Run movement and fade in parallel using separate launch inside LaunchedEffect scope
+        // Pop in
+        launch {
+            scale.animateTo(
+                targetValue = 1.15f,
+                animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
+            )
+            scale.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 100),
+            )
+        }
+        // Float upward
         launch {
             offsetY.animateTo(
-                targetValue = -120f,
-                animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+                targetValue = -140f,
+                animationSpec = tween(durationMillis = 950, easing = FastOutSlowInEasing),
             )
         }
+        // Fade out after a short hold
         launch {
-            delay(400)
+            delay(380)
             alpha.animateTo(
                 targetValue = 0f,
-                animationSpec = tween(durationMillis = 500, easing = LinearEasing),
+                animationSpec = tween(durationMillis = 550, easing = LinearEasing),
             )
         }
-        // Wait for the longer animation to finish, then signal completion
-        delay(900)
+        delay(950)
         onAnimationEnd()
     }
 
@@ -71,19 +85,28 @@ fun ScorePopup(
             .offset { IntOffset(x = 0, y = offsetY.value.toInt()) }
             .alpha(alpha.value),
     ) {
-        // Shadow layer (offset slightly)
+        // Gold glow halo (blurred behind text)
         Text(
             text = score,
-            color = Color.Black.copy(alpha = 0.4f),
+            color = color.copy(alpha = 0.4f),
             fontWeight = FontWeight.ExtraBold,
-            fontSize = 28.sp,
-            modifier = Modifier.offset(x = 1.5.dp, y = 1.5.dp),
+            fontSize = 30.sp,
+            modifier = Modifier.offset(x = 0.dp, y = 2.dp),
         )
+        // Dark shadow layer for depth
+        Text(
+            text = score,
+            color = Color.Black.copy(alpha = 0.45f),
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 30.sp,
+            modifier = Modifier.offset(x = 1.5.dp, y = 2.dp),
+        )
+        // Main gold text
         Text(
             text = score,
             color = color,
             fontWeight = FontWeight.ExtraBold,
-            fontSize = 28.sp,
+            fontSize = 30.sp,
         )
     }
 }
