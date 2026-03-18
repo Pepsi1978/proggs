@@ -5,6 +5,9 @@ import com.quizverse.app.data.database.entities.Achievement
 import com.quizverse.app.data.database.entities.Category
 import com.quizverse.app.data.database.entities.UserProgress
 import com.quizverse.app.data.prepopulate.questions.animalQuestions
+import com.quizverse.app.data.prepopulate.questions.animalQuestionsExpert2
+import com.quizverse.app.data.prepopulate.questions.animalQuestionsExpert5
+import com.quizverse.app.data.prepopulate.questions.animalQuestionsHard2
 import com.quizverse.app.data.prepopulate.questions.animalQuestionsMedium2
 import com.quizverse.app.data.prepopulate.questions.animalQuestionsMedium3
 import com.quizverse.app.data.prepopulate.questions.animalQuestionsMedium6
@@ -379,6 +382,9 @@ object QuestionSeeder {
             techQuestions() +
             foodQuestions() +
             animalQuestions() +
+            animalQuestionsExpert2() +
+            animalQuestionsExpert5() +
+            animalQuestionsHard2() +
             animalQuestionsMedium2() +
             animalQuestionsMedium3() +
             animalQuestionsMedium6() +
