@@ -72,6 +72,7 @@ import com.quizverse.app.data.prepopulate.questions.literatureQuestions
 import com.quizverse.app.data.prepopulate.questions.logicQuestions
 import com.quizverse.app.data.prepopulate.questions.mixedQuestions
 import com.quizverse.app.data.prepopulate.questions.musicQuestions
+import com.quizverse.app.data.prepopulate.questions.musicQuestionsEasy
 import com.quizverse.app.data.prepopulate.questions.scienceQuestions
 import com.quizverse.app.data.prepopulate.questions.scienceQuestionsEasy
 import com.quizverse.app.data.prepopulate.questions.scienceQuestionsEasy2
@@ -254,6 +255,7 @@ object QuestionSeeder {
             filmQuestionsMaster5() +
             filmQuestionsMaster6() +
             musicQuestions() +
+            musicQuestionsEasy() +
             sportQuestions() +
             techQuestions() +
             foodQuestions() +
