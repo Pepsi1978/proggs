@@ -18,6 +18,11 @@
             "type": "command",
             "command": "bash ~/.claude/hooks/auto-sync.sh",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/disk-guard.sh",
+            "timeout": 5
           }
         ]
       }
@@ -28,6 +33,11 @@
           {
             "type": "command",
             "command": "~/.cargo/bin/parry hook",
+            "timeout": 2
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/intent-anker.sh",
             "timeout": 2
           }
         ]
@@ -185,6 +195,38 @@
           {
             "type": "command",
             "command": "bun run ~/.claude/hooks/session-scorer.ts",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/session-cleanup.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bun run ~/.claude/hooks/session-autopsy.ts",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/subagent-context.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "timeout 5 bash ~/.claude/hooks/stop-failure-logger.sh",
             "timeout": 5
           }
         ]
