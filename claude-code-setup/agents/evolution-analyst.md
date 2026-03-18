@@ -24,6 +24,12 @@ You analyze session quality scores, shared knowledge entries, and capability gap
 3. Propose concrete improvements (new agents, hooks, rules, skills)
 4. Track the effectiveness of past improvements
 
+## Shared Knowledge Integration
+**Before analyzing**: Read ALL three knowledge files to understand the full system state:
+- `.claude/agent-memory/shared/MEMORY.md` — Agent insights and patterns
+- `.claude/agent-memory/shared/FAILURES.md` — Known failure patterns (check if recurring)
+- `.claude/agent-memory/shared/PROCEDURES.md` — Proven workflows (check if still accurate)
+
 ## Data Sources
 
 Read these files to understand the current state:
