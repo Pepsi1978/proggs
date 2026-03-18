@@ -335,10 +335,10 @@ final class OverlayPanel: NSPanel {
         gButton = RoundButton(label: "G", color: .toggleOff)
         enterButton = RoundButton(label: "\u{23CE}", color: .toggleOff)
 
-        // Calculate screen position (right edge, vertically centered)
+        // Calculate screen position (right edge, bottom)
         let screenFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1920, height: 1080)
-        var x = screenFrame.maxX - panelWidth - 30
-        var y = screenFrame.maxY - panelHeight - 78
+        var x = screenFrame.maxX - panelWidth - 34
+        var y = screenFrame.minY + 24
 
         // Restore saved position if available
         if let savedPosition = UserDefaults.standard.dictionary(forKey: OverlayPanel.positionKey),
