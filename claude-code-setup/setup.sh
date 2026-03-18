@@ -201,7 +201,7 @@ INSTALLED=0
 SKIPPED=0
 
 # Official Marketplace Plugins
-for PLUGIN in swift-lsp typescript-lsp csharp-lsp clangd-lsp superpowers frontend-design context7 github feature-dev code-simplifier commit-commands security-guidance claude-md-management pr-review-toolkit claude-code-setup hookify playground ralph-loop code-review playwright coderabbit explanatory-output-style skill-creator plugin-dev agent-sdk-dev serena; do
+for PLUGIN in swift-lsp typescript-lsp csharp-lsp clangd-lsp superpowers frontend-design context7 feature-dev code-simplifier commit-commands security-guidance claude-md-management pr-review-toolkit claude-code-setup hookify playground ralph-loop code-review playwright coderabbit explanatory-output-style skill-creator plugin-dev agent-sdk-dev; do
     echo -ne "  $PLUGIN@claude-plugins-official ... "
     if claude plugins install "$PLUGIN@claude-plugins-official" 2>/dev/null; then
         echo -e "${GREEN}✓${NC}"

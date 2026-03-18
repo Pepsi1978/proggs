@@ -212,12 +212,12 @@ $Skipped = 0
 # Official Marketplace Plugins
 $officialPlugins = @(
     "swift-lsp", "typescript-lsp", "csharp-lsp", "clangd-lsp",
-    "superpowers", "frontend-design", "context7", "github",
+    "superpowers", "frontend-design", "context7",
     "feature-dev", "code-simplifier", "commit-commands", "security-guidance",
     "claude-md-management", "pr-review-toolkit", "claude-code-setup",
     "hookify", "playground", "ralph-loop", "code-review",
     "playwright", "coderabbit", "explanatory-output-style", "skill-creator",
-    "plugin-dev", "agent-sdk-dev", "serena"
+    "plugin-dev", "agent-sdk-dev"
 )
 
 foreach ($plugin in $officialPlugins) {

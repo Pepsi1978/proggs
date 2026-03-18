@@ -117,7 +117,6 @@
       "insecure-defaults",
       "property-based-testing",
       "seatbelt-sandboxer",
-      "second-opinion",
       "semgrep-rule-creator",
       "semgrep-rule-variant-creator",
       "sharp-edges",
