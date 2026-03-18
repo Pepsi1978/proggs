@@ -22,18 +22,18 @@ try {
 $warnings = @()
 $blocks = @()
 
-# effortLevel: Default is medium. Only warn if changed to something unexpected.
+# effortLevel: MUST be "high" — BLOCK anything else (CLAUDE.md requirement)
 $eff = $data.effortLevel
-if ($eff -and $eff -notin @('medium', 'high')) {
-    $warnings += "effortLevel=$eff (erwartet: medium oder high)"
+if ($eff -and $eff -ne 'high') {
+    $blocks += "effortLevel=$eff (MUSS 'high' sein — CLAUDE.md-Regel)"
 }
 
 $env = $data.env
 if ($env) {
     # CLAUDE_CODE_EFFORT_LEVEL in env
     $envEff = $env.CLAUDE_CODE_EFFORT_LEVEL
-    if ($envEff -and $envEff -notin @('medium', 'high')) {
-        $warnings += "CLAUDE_CODE_EFFORT_LEVEL=$envEff (erwartet: medium oder high)"
+    if ($envEff -and $envEff -ne 'high') {
+        $blocks += "CLAUDE_CODE_EFFORT_LEVEL=$envEff (MUSS 'high' sein)"
     }
 
     # SUBAGENT_MODEL: BLOCK if changed from sonnet (critical for cost/quality)

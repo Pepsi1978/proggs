@@ -19,6 +19,15 @@ _No entries yet. The debugger will write root cause patterns here._
 - **2026-03-14**: Shared Knowledge Hub created. Meta-Evolution system initialized.
 - **2026-03-14**: effortLevel was reset to "medium" by /model command — ConfigChange hook exists but Stop hook only catches at session end. Gap: need real-time protection.
 - **2026-03-14**: Session scorer hook installed for automatic quality tracking.
+- **2026-03-18 (Windows Self-Improve v5.7)**: Full environment sync from macOS. 6 critical improvements:
+  - **FIXED** config-guard.ps1: effortLevel=medium was allowed with warning only — now BLOCKED (only 'high' passes)
+  - **FIXED** safety-gate.ps1: Added 3 missing patterns (git restore ., git branch -D, case-insensitive TRUNCATE)
+  - **UPGRADED** debugger + architect agents: Semi-Formal Reasoning Protocol added (Premises→Hypotheses→Refutation→Conclusion)
+  - **INSTALLED** uv 0.10.11 + added to PATH. Prompt-Injection-Defender hook now uses python directly.
+  - **UPDATED** Claude Code 2.1.76 → 2.1.78 (StopFailure hook, streaming, CRLF fix, security patches)
+  - **SYNCED** 89 plugins, 10 marketplaces, 15+ hooks, Shared Knowledge Hub, 2 new skills (android-clean-architecture, android-ninja)
+  - **REMOVED** Termux support (user no longer uses Termux)
+  - **CREATED** self-improve-cache directory (~/.claude/self-improve-cache/) with per-category TTLs
 - **2026-03-14**: Evolution analyst agent created for trend analysis.
 - **2026-03-15**: Android Audio rules added to android.md (Oboe, SoundPool, Media3, TarsosDSP, Spatializer, HapticGenerator).
 - **2026-03-15**: Worktree symlinks extended: .gradle + build added (saves 700MB+ per worktree).
