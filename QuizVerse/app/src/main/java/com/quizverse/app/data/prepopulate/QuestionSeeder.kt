@@ -343,6 +343,7 @@ object QuestionSeeder {
             sportQuestionsMedium() +
             sportQuestionsMedium2() +
             sportQuestionsMedium3() +
+            sportQuestionsMedium4() +
             sportQuestionsMaster() +
             techQuestions() +
             foodQuestions() +
