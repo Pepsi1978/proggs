@@ -35,7 +35,19 @@ For projects with multiple test targets, spawn parallel sub-agents:
 
 For single-target projects, run tests directly without sub-agents.
 
-## Approach
+## Spec-First Testing (PREFERRED — when spec exists)
+
+Before writing tests, check if `/tmp/current-spec.md` exists. If it does:
+
+1. **Read the spec**: Extract invariants, preconditions, postconditions, edge cases
+2. **Generate tests FROM THE SPEC** — not from the code. Each invariant becomes at least one test.
+3. **Verify postconditions**: For each postcondition, write a test that asserts the guarantee holds
+4. **Test edge cases explicitly**: Every edge case listed in the spec gets a dedicated test
+5. **Spec compliance check**: After tests pass, verify the code fulfills ALL spec sections
+
+This catches cases where code is "correct" but solves the WRONG problem.
+
+## Standard Approach (when no spec exists)
 1. **Identify testable code**: Functions, classes, API endpoints, UI behaviors
 2. **Write tests**: Unit tests for logic, integration tests for workflows
 3. **Run tests**: Execute and report results
