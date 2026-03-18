@@ -178,6 +178,8 @@ object QuestionSeeder {
             geoQuestionsExpert2() +
             geoQuestionsMaster() +
             geoQuestionsMaster2() +
+            geoQuestionsMaster3() +
+            geoQuestionsMedium2() +
             scienceQuestions() +
             scienceQuestionsEasy() +
             scienceQuestionsEasy2() +

@@ -727,6 +727,50 @@ fun scienceQuestionsMedium5(): List<Question> = listOf(
         explanation = "Die WHO Environmental Noise Guidelines (2018) empfehlen, Straßenlärm unter 53 dB(A) Leq (Tag) und 45 dB(A) Lnight zu halten. Chronischer Lärm aktiviert dauerhaft das sympathische Nervensystem (Stressreaktion), erhöht Kortisol und Adrenalin, stört den Schlaf (ab 40 dB nachts) und erhöht das Risiko für arterielle Hypertonie und koronare Herzerkrankungen. In Europa sterben laut EEA schätzungsweise 48.000 Menschen jährlich vorzeitig an lärmbedingten Herzerkrankungen.",
         difficulty = 2,
         funFact = "Lärm ist nach Luftverschmutzung der zweitgrößte umweltbedingte Gesundheitsrisikofaktor in Europa – noch vor Wasserverschmutzung und Chemikalienbelastung."
-    )
+    ),
+
+    // ── ADDITIONAL MEDIUM QUESTIONS ──────────────────────────────────────────
+
+    // Question — Immunsystem: Antikörper  [correct: C → correctAnswer=2]
+    Question(
+        categoryId = 2,
+        questionText = "Das Immunsystem bildet Antikoerper, um Krankheitserreger zu bekaempfen. Wie funktioniert die Schluessel-Schloss-Spezifitaet von Antikoerpern, und welche Zellen produzieren sie?",
+        answerA = "Antikoerper werden von Killerzellen (zytotoxischen T-Zellen) produziert und zerstoeren Bakterien durch direkte Zelllyse; ihre Spezifitaet entsteht durch zufaellige Genrekombination erst nach dem Kontakt mit dem Erreger",
+        answerB = "Antikoerper sind kleine RNA-Molekuele, die von Makrophagen ins Blut abgegeben werden; sie binden an Virusoberflaechen und loesen die RNA-Interferenz aus, wodurch die Virusreplikation gestoppt wird",
+        answerC = "Antikoerper sind Y-foermige Proteine, die von Plasmazellen (ausdifferenzierte B-Lymphozyten) produziert werden; jeder Antikoerper hat eine hochspezifische Bindungsstelle (Paratop), die genau zu einem Antigen-Epitop passt wie ein Schluessel zum Schloss",
+        answerD = "Antikoerper entstehen in der Leber und werden permanent ohne Erregerkontakt produziert; sie sind unspezifisch und bekaempfen alle Fremdstoffe gleichermassen durch Agglomeration",
+        correctAnswer = 2, // C
+        explanation = "Antikoerper (Immunglobuline) sind Y-foermige Glykoproteine mit zwei identischen schweren und zwei leichten Ketten. Die variablen Regionen an den Armen des Y (Fab-Fragment) bilden das Paratop — eine einzigartige Bindungsstruktur, die nur an ein spezifisches Antigen-Epitop bindet. Plasmazellen, die aus aktivierten B-Lymphozyten entstehen, produzieren bis zu 2000 Antikoerper pro Sekunde. Durch somatische Hypermutation und klonale Selektion wird die Affinitaet im Verlauf der Immunreaktion optimiert (Affinitaetsreifung). Der Fc-Teil des Antikoerpers aktiviert Komplement und signalisiert Fresszellen.",
+        difficulty = 2,
+        funFact = "Das Immunsystem kann theoretisch ueber 10 hoch 18 verschiedene Antikoerper-Varianten erzeugen — mehr als es Atome im sichtbaren Universum gibt. Dies ermoeglicht es, auf praktisch jeden denkbaren Krankheitserreger zu reagieren, auch auf Substanzen, die in der Natur noch nie vorgekommen sind."
+    ),
+
+    // Question — Chemie: Periodensystem-Gruppen  [correct: A → correctAnswer=0]
+    Question(
+        categoryId = 2,
+        questionText = "Edelgase (Gruppe 18 im Periodensystem) sind unter normalen Bedingungen chemisch extrem reaktionstraege. Was ist die chemische Erklaerung fuer ihre Reaktionstraegheit?",
+        answerA = "Edelgase haben eine vollstaendig gefuellte aeusserste Elektronenschale (Oktettregel erfuellt), was ihnen maximale Stabilitaet verleiht — sie muessen keine Bindungen eingehen, um einen guenstigen Elektronenzustand zu erreichen",
+        answerB = "Edelgase sind reaktionstraege, weil sie keine Elektronen besitzen; sie sind reine Protonenkerne ohne Elektronen-Huelle",
+        answerC = "Edelgase sind radioaktiv und zerfallen zu schnell, um stabile Verbindungen zu bilden; die Reaktionstraegheit ist eine Folge ihrer Instabilitaet",
+        answerD = "Edelgase reagieren bei Raumtemperatur nicht, weil ihre Atome zu gross sind, um sich anderen Atomen naeher als 1 nm zu naehern",
+        correctAnswer = 0, // A
+        explanation = "Edelgase (Helium, Neon, Argon, Krypton, Xenon, Radon) haben vollstaendig gefuellte Valenzelektronenschalen: Helium 2 Elektronen (K-Schale voll), die anderen je 8 Valenzelektronen (Oktettregel). Da chemische Bindungen entstehen, um durch Elektronen-Teilen oder -Uebertragen eine stabile Edelgaskonfiguration zu erreichen, haben Edelgase keinen 'Antrieb' zur Bindungsbildung. Tatsaechlich koennen schwerere Edelgase unter extremen Bedingungen Verbindungen eingehen: Xenonhexafluoroplatinate (XePtF6) wurde 1962 von Neil Bartlett synthetisiert.",
+        difficulty = 2,
+        funFact = null
+    ),
+
+    // Question — Geologie: Halbwertszeit und Radiometrische Datierung  [correct: D → correctAnswer=3]
+    Question(
+        categoryId = 2,
+        questionText = "Wissenschaftler nutzen den radioaktiven Zerfall bestimmter Isotope zur Altersbestimmung von Gesteinen und organischen Materialien. Welche Aussage zur radiometrischen Datierung ist korrekt?",
+        answerA = "Die Kohlenstoff-14-Methode (C-14) kann Gesteine bis 100 Millionen Jahre zuverlaessig datieren, weil C-14 eine extrem lange Halbwertszeit hat",
+        answerB = "Radiometrische Datierung funktioniert nur bei Fossilien, weil nur organisches Material radioaktive Isotope enthaelt",
+        answerC = "Die Uran-Blei-Methode misst, wie viel Uran aus einem Gestein herausgewaschen wurde; je weniger Uran noch vorhanden ist, desto aelter ist das Gestein",
+        answerD = "Bei der C-14-Methode vergleicht man das Verhaeltnis von C-14 zu stabilem C-12 in einer Probe; da C-14 mit einer Halbwertszeit von ca. 5730 Jahren zerraellt, ist die Methode fuer organisches Material bis ca. 50.000 Jahre geeignet",
+        correctAnswer = 3, // D
+        explanation = "Radiokarbondatierung (C-14): Lebende Organismen nehmen C-14 (entsteht durch kosmische Strahlung in der Atmosphaere) im gleichen Verhaeltnis wie C-12 auf. Nach dem Tod wird kein neues C-14 aufgenommen, und der vorhandene Anteil zerraellt mit der Halbwertszeit von 5730 Jahren. Durch Messung des C-14/C-12-Verhaeltnisses laesst sich das Sterbedatum bestimmen — aber nur bis ca. 50.000 Jahre (dann ist der C-14-Anteil zu gering). Fuer aeltere Gesteine verwendet man Uran-Blei (Halbwertszeit ~4,5 Mrd. Jahre), Kalium-Argon oder Rubidium-Strontium.",
+        difficulty = 2,
+        funFact = "Mit der Uran-Blei-Methode wurden Zirkon-Kristalle in Westaustralien auf 4,4 Milliarden Jahre datiert — sie sind die aeltesten bekannten Minerale auf der Erde und fast so alt wie die Erde selbst (4,54 Mrd. Jahre)."
+    ),
 
 )

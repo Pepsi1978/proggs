@@ -586,6 +586,22 @@ fun scienceQuestionsExpert6(): List<Question> = listOf(
         explanation = "Unterhalb der Lysokline (partielle Auflösung) und CCD liegt das Ω_calcit < 1: Die Löslichkeit von Kalzit/Aragonit steigt mit Druck und sinkender Temperatur (Drucklöslichkeit, Le-Chatelier). Biogene Kalkschalen (Foraminiferen, Coccolithen) lösen sich vollständig auf — darunter liegen rote Tonablagerungen statt karbonatreicher Ooze. Die CCD-Position variiert je nach Ozean und Zeit: im Pazifik ≈3,5 km, im Atlantik ≈4,5–5 km.",
         difficulty = 4,
         funFact = "Während des Paläozän-Eozän-Thermalen Maximums (PETM) vor 56 Millionen Jahren stieg die CCD um mehrere Kilometer, was massenhaftes Auflösen von Meeresbodensedimenten verursachte — ein warnendes Beispiel für die Auswirkungen rascher CO₂-Freisetzung."
-    )
+    ),
+
+    // ── ADDITIONAL EXPERT QUESTION ────────────────────────────────────────────
+
+    // Question — CRISPR-Cas9: Off-Target-Effekte und Spezifitaet  [correct: B → correctAnswer=1]
+    Question(
+        categoryId = 2,
+        questionText = "CRISPR-Cas9 revolutioniert die Gentechnik, aber Off-Target-Schnitte sind ein kritisches Sicherheitsproblem. Welche molekularen Mechanismen ermoeglichen Off-Target-Aktivitaet, und welche High-Fidelity-Strategien reduzieren sie?",
+        answerA = "Off-Target-Effekte entstehen ausschliesslich durch Fehler in der chemischen Synthese der sgRNA; High-Fidelity-Ansatz: Verwendung von RNA statt DNA als Template fuer die Cas9-Beladung, wodurch Synthesefehler eliminiert werden",
+        answerB = "Off-Target-Aktivitaet entsteht durch tolerierte Fehlpaarungen zwischen sgRNA und genomischer DNA (besonders in Positionen 1–12 proximal zum PAM) sowie durch unspezifische DNA-Bindung; High-Fidelity-Cas9-Varianten (eSpCas9, HiFi Cas9) enthalten Mutationen, die die Wasserstoffbrueckenbindungskapazitaet zu ungepaarter DNA senken und so die Schnittaktivitaet von Substrat-Fehlpaarungen eliminieren",
+        answerC = "Off-Target-Schnitte entstehen nur wenn Cas9 in der S-Phase des Zellzyklus aktiv ist, weil dort die DNA-Doppelstrangstruktur entspiralisiert ist; High-Fidelity-Ansatz: Zellzyklus-spezifische Cas9-Aktivierung durch synthetische G1-Phase-gebundene Promotoren",
+        answerD = "Off-Target-Effekte entstehen durch immunologische Reaktionen des Wirts auf das bakterielle Cas9-Protein, das im menschlichen Zellkern als Fremdprotein erkannt wird und unspezifische Nukleasen aktiviert; Loesung: Humanisierung der Cas9-Aminosaeursequenz durch synonyme Codon-Optimierung",
+        correctAnswer = 1, // B
+        explanation = "CRISPR-Cas9-Off-Target-Effekte entstehen durch molekulare Toleranz des Cas9-sgRNA-Komplexes gegenueber Fehlpaarungen. Die PAM-proximalen Positionen (1–12 nt der sgRNA, 3'-PAM-Seite) sind fuer Spezifitaet kritisch; PAM-distale Positionen (13–20) tolerieren mehr Fehlpaarungen. Cas9 kann an Stellen mit bis zu 5 Fehlpaarungen schneiden, besonders wenn GU-Wobble-Paarungen oder nahe PAM-Sequenzen vorliegen. High-Fidelity-Varianten: SpCas9-HF1 (Kleinstner et al. 2016) mit Mutationen N497A/R661A/Q695A/Q926A reduziert unspezifische DNA-Kontakte. eSpCas9 (Slaymaker et al. 2016) mit K848A/K1003A/R1060A reduziert nichtspezifische positive Ladungen. Beide Varianten behalten On-Target-Aktivitaet bei, eliminieren aber die meisten Off-Target-Schnitte. Zusaetzliche Strategien: Cas9-Nickase-Paare, truncated sgRNAs (17-18 nt), Anti-CRISPR-Proteine.",
+        difficulty = 4,
+        funFact = "Das menschliche Genom enthaelt ~3 Milliarden Basenpaare. Ein CRISPR-Cas9-System, das eine 20-Nukleotid-Sequenz sucht, muss theoretisch 150 Millionen moegliche PAM-Positionen im Genom pruefen. Dabei genuegt schon eine Chance von 1:1000 fuer Off-Target-Schnitte, um mehrere hundert ungewollte Schnitte pro Zelle zu verursachen."
+    ),
 
 )

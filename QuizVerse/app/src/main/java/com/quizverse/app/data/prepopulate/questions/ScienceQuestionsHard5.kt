@@ -680,6 +680,50 @@ fun scienceQuestionsHard5(): List<Question> = listOf(
         explanation = "Der r-Prozess (rapid neutron capture) erfordert extreme Neutronenflüsse (>10²⁰ n/cm²/s) und kurze Zeitskalen. Er läuft in Neutronenstern-Neutronenstern-Verschmelzungen (Kilonovae) und möglicherweise bestimmten Supernovae ab. Kerne fangen in Millisekunden viele Neutronen ein und zerfallen dann β⁻ zu stabilen neutronenreichen Isotopen. Der Gravitationswellen-Event GW170817 (2017) lieferte starke Evidenz für Kilonova-Nukleosynthese: Sr, Ba und möglicherweise Au wurden spektroskopisch nachgewiesen.",
         difficulty = 3,
         funFact = "Die Neutronensternverschmelzung GW170817 (2017) produzierte in Sekundenbruchteilen mehr Gold als die Masse unserer Erde. Das gesamte Gold auf der Erde stammt aus solchen kosmischen Ereignissen, die vor der Sonnensystementstehung stattfanden."
-    )
+    ),
+
+    // ── ADDITIONAL HARD QUESTIONS ────────────────────────────────────────────
+
+    // Question — Enzyme kinetics: Michaelis-Menten  [correct: B → correctAnswer=1]
+    Question(
+        categoryId = 2,
+        questionText = "Die Michaelis-Menten-Kinetik beschreibt die Geschwindigkeit enzymatischer Reaktionen. Was beschreibt der Km-Wert (Michaelis-Konstante) praezise, und was bedeutet ein niedriger Km-Wert fuer die Substrataffinitaet eines Enzyms?",
+        answerA = "Km ist die maximale Reaktionsgeschwindigkeit (Vmax) geteilt durch die Enzymkonzentration; ein niedriger Km bedeutet, dass das Enzym bei hohen Substratkonzentrationen saettigt und langsamer wird",
+        answerB = "Km ist die Substratkonzentration, bei der die Reaktionsgeschwindigkeit genau halb so gross wie Vmax ist; ein niedriger Km bedeutet hohe Substrataffinitaet — das Enzym ist schon bei wenig Substrat halbgesaettigt",
+        answerC = "Km ist der pH-Wert, bei dem das Enzym optimal arbeitet; ein niedriger Km bedeutet, dass das Enzym bei saurem pH die hoechste Aktivitaet zeigt",
+        answerD = "Km ist das Verhaeltnis von Produktbildungs- zu Substratabbaurate; ein niedriger Km bedeutet, dass das Enzym thermolabil ist und bei hohen Temperaturen denaturiert",
+        correctAnswer = 1, // B
+        explanation = "In der Michaelis-Menten-Gleichung v = Vmax * [S] / (Km + [S]) ist Km jene Substratkonzentration [S], bei der v = Vmax/2. Km reflektiert die Gleichgewichtskonstante des Enzym-Substrat-Komplexes: Km = (k-1 + k2) / k1. Ein niedriger Km (z.B. nmol/L-Bereich) bedeutet, dass das Enzym bereits bei sehr geringer Substratkonzentration halbmaximale Aktivitaet erreicht — hohe Affinitaet. Ein hoher Km bedeutet geringere Affinitaet. Km und Vmax werden experimentell aus Lineweaver-Burk-Plots oder nichtlinearen Regressionen bestimmt.",
+        difficulty = 3,
+        funFact = "Haemaglobin ist streng genommen kein klassisches Michaelis-Menten-Enzym, sondern folgt sigmoider Bindungskinetik (kooperative Bindung). Das erklaert, warum Haemaglobin in der Lunge (hoher O2-Druck) vollbesetzt wird und im Gewebe (niedriger O2-Druck) den Sauerstoff gut wieder abgibt."
+    ),
+
+    // Question — Thermodynamics: Gibbs Free Energy  [correct: D → correctAnswer=3]
+    Question(
+        categoryId = 2,
+        questionText = "Die Gibbs-Energie (deltaG) entscheidet, ob eine chemische Reaktion spontan ablaeuft. Welche Kombination von Enthalpie (deltaH) und Entropie (deltaS) fuehrt bei jeder Temperatur zu einer spontanen Reaktion?",
+        answerA = "deltaH > 0 (endotherm) und deltaS < 0 (Entropieverminderung): Die Reaktion ist bei jeder Temperatur spontan, weil die Enthalpie den Entropiebeitrag immer ueberwiegt",
+        answerB = "deltaH > 0 und deltaS > 0: Die Reaktion ist bei jeder Temperatur spontan, weil steigende Entropie immer freie Energie freisetzt",
+        answerC = "deltaH = 0 und deltaS = 0: Gleichgewichtsreaktionen sind bei jeder Temperatur spontan, weil deltaG = 0 per Definition",
+        answerD = "deltaH < 0 (exotherm) und deltaS > 0 (Entropiezunahme): Die Reaktion ist bei jeder Temperatur spontan, weil deltaG = deltaH - T*deltaS immer negativ ist",
+        correctAnswer = 3, // D
+        explanation = "Die Gibbs-Gleichung lautet deltaG = deltaH - T*deltaS. Eine Reaktion ist spontan wenn deltaG < 0. Wenn deltaH < 0 (Waermeabgabe, exotherm) und deltaS > 0 (Ordnung nimmt ab, Entropie steigt), dann ist deltaG = (negativ) - T*(positiv) = immer negativ — bei jeder Temperatur T > 0. Ist deltaH > 0 und deltaS > 0, ist die Reaktion nur bei hohen Temperaturen (wenn T*deltaS > deltaH) spontan. Ist deltaH < 0 und deltaS < 0, ist sie nur bei niedrigen Temperaturen spontan. Ist deltaH > 0 und deltaS < 0, ist sie bei keiner Temperatur spontan.",
+        difficulty = 3,
+        funFact = null
+    ),
+
+    // Question — Neuroscience: Action Potential  [correct: C → correctAnswer=2]
+    Question(
+        categoryId = 2,
+        questionText = "Ein Aktionspotenzial in Neuronen ist ein schnelles elektrisches Signal, das durch Ionenstroeme entsteht. Welche Abfolge von Ionenkanaelereignissen beschreibt den Ablauf eines Aktionspotenzials korrekt?",
+        answerA = "Kaliumkanale oeffnen zuerst → Kaliumeinstrom depolarisiert die Zelle → Natriumkanale schliessen sich und erzeugen die Repolarisation → Chloridkanale stabilisieren das Ruhepotenzial",
+        answerB = "Calciumkanale oeffnen bei Depolarisation → Calciumeinstrom loest Natriumkanalabsperrtore aus → Natriumausstrom repolarisiert → Kaliumkanale erzeugen Nachpotenzial",
+        answerC = "Spannungsgesteuerte Natriumkanale oeffnen bei Depolarisation → schneller Na+-Einstrom depolarisiert weiter (Aufstrich) → Natriumkanale inaktivieren → Kaliumkanale oeffnen → K+-Ausstrom repolarisiert (Abstrich) → Hyperpolarisation durch verzoegertes K+-Schliessen",
+        answerD = "Chloridkanale oeffnen bei Ruhepotenzial → Chlorideinstrom depolarisiert die Membran → Natriumkanale oeffnen und verstaerken die Depolarisation → Automatisches Schliessung aller Kanale beendet das Signal",
+        correctAnswer = 2, // C
+        explanation = "Ein Aktionspotenzial laeuft in definierten Phasen ab: 1) Ruhepotenzial (~-70 mV). 2) Depolarisation durch ausloesendes Ereignis auf Schwellenwert (~-55 mV). 3) Schnelle Aufwaertsphase: Spannungsgesteuerte Na+-Kanale oeffnen, Na+ stroemt ein (Triebkraft: chemischer Gradient + elektrischer Gradient), Membranpotenzial steigt auf +30 bis +40 mV. 4) Repolarisation: Na+-Kanale inaktivieren (h-Gating), spannungsgesteuerte K+-Kanale oeffnen, K+ stroemt aus. 5) Hyperpolarisation/Nachpotenzial: K+-Kanale schliessen verzoegert, Membran wird kurz negativer als Ruhepotenzial. 6) Erholung auf Ruhepotenzial durch Na+/K+-ATPase. Die absolute Refraktaerzeit (inaktivierte Na+-Kanale) verhindert Rueckpropagation.",
+        difficulty = 3,
+        funFact = "Ein einziges Neuron kann bis zu 1000 Aktionspotenziale pro Sekunde feuern. Das menschliche Gehirn mit ~86 Milliarden Neuronen und ~100 Billionen Synapsen verarbeitet dabei Informationen so effizient, dass es nur ca. 20 Watt verbraucht — so viel wie eine schwache Gluehbirne."
+    ),
 
 )
