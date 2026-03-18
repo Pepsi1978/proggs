@@ -25,6 +25,10 @@ _No entries yet. The debugger will write root cause patterns here._
 - **2026-03-15**: Android audio development readiness confirmed: NDK r29 with AAudio.h + OpenSL ES headers present.
 - **2026-03-15**: dpconde/claude-android-skill reviewed (SAFE) — recommended for Android Kotlin/Compose development.
 - **2026-03-18**: Full env scan — 15 issues found and fixed. Key fixes: Command Injection in notify.sh, config-guard now blocks effortLevel!=high, safety-gate expanded patterns, session-scorer fixed to parse actual transcript format, auto-sync dead code removed. Installed kotlin-lsp + gopls. Manifest + settings-reference synced to high effort.
+- **2026-03-18 (Self-Improve v5.7 Standard Run)**: 3 improvements implemented:
+  - NEW `codebase-memory-mcp` v0.4.10 — persistent Knowledge Graph for code (99.2% token reduction for structural queries). 4 Skills auto-installed (exploring, tracing, quality, reference).
+  - FIXED `optimizer.md` — added Mandatory Write-Back (was the only Senior-Agent without it)
+  - Research cache created in `~/.claude/self-improve-cache/` (R1-R4 cached with per-category TTLs)
 - **2026-03-18 (Self-Improve v5.6 Thorough Run)**: 5 improvements implemented:
   - NEW `StopFailure` hook — auto-logs API errors (rate limit, auth, network) to FAILURES.md
   - UPGRADED all 9 Opus agents with `effort: high` + differentiated `maxTurns` (architect/debugger: 80, quality-gate: 150, others: 60)
