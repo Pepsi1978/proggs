@@ -16,8 +16,11 @@ import com.quizverse.app.data.prepopulate.questions.filmQuestionsMedium2
 import com.quizverse.app.data.prepopulate.questions.filmQuestionsMedium3
 import com.quizverse.app.data.prepopulate.questions.filmQuestionsMedium4
 import com.quizverse.app.data.prepopulate.questions.filmQuestionsMedium5
+import com.quizverse.app.data.prepopulate.questions.filmQuestionsHard
 import com.quizverse.app.data.prepopulate.questions.filmQuestionsHard2
 import com.quizverse.app.data.prepopulate.questions.filmQuestionsHard3
+import com.quizverse.app.data.prepopulate.questions.filmQuestionsHard4
+import com.quizverse.app.data.prepopulate.questions.filmQuestionsHard5
 import com.quizverse.app.data.prepopulate.questions.foodQuestions
 import com.quizverse.app.data.prepopulate.questions.geoQuestions
 import com.quizverse.app.data.prepopulate.questions.geoQuestionsEasy
@@ -221,8 +224,11 @@ object QuestionSeeder {
             filmQuestionsMedium3() +
             filmQuestionsMedium4() +
             filmQuestionsMedium5() +
+            filmQuestionsHard() +
             filmQuestionsHard2() +
             filmQuestionsHard3() +
+            filmQuestionsHard4() +
+            filmQuestionsHard5() +
             musicQuestions() +
             sportQuestions() +
             techQuestions() +
