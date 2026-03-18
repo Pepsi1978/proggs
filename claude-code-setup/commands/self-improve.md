@@ -14,9 +14,12 @@ description: Systematic self-improvement of the Claude Code development environm
 ║  Cross-Platform: macOS + Windows + Termux/Android            ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  Stufe 1: SCAN — env-checker Agent (Full/Quick)              ║
-║  Stufe 2: DEEP-DIVE — 6 parallele Researcher + Caching      ║
+║  Stufe 2: DEEP-DIVE — 6 Researcher + Smart-Cache (TTL)      ║
 ║  Stufe 3: IMPROVE — Updates + Report + Meta-Improve          ║
 ║  Stufe 4: CREATIVE — 6 Linsen + Benchmark + Build            ║
+║  Stufe 5: SUPER INTELLIGENZ — Schlauer denken, nicht nur     ║
+║           Fehler vermeiden                                    ║
+║  Stufe 6: FEHLER-DAUERHAFTIGKEIT — Null Fehler, dauerhaft    ║
 ║  Danach: GitHub-Sync (Pepsi1978/proggs)                      ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
@@ -76,9 +79,21 @@ Full mode includes: Android deep-scan, agent tiers, language readiness, rules, g
 
 **Load researcher templates from**: [self-improve-ref/researchers.md](self-improve-ref/researchers.md)
 
-Key changes in v5.0:
+Key changes in v5.7:
 - **6 researchers** (R1-R6), not 5. R6 is the Creative Explorer (open-ended, no checklist).
-- **Research caching**: If last snapshot < 7 days old, skip R2/R3/R4 (use cached). Always run R1, R5, R6.
+- **Smart-Cache with per-category TTLs (NEW v5.7)**:
+  Cache location: `~/.claude/self-improve-cache/` (NOT in shared memory — prevents contamination).
+  | Researcher | TTL | Grund |
+  |------------|-----|-------|
+  | R1 Updates | 1 Tag | Claude Code Releases aendern sich schnell |
+  | R2 Plugins | 7 Tage | Marketplace aendert sich selten |
+  | R3 Parallel | 7 Tage | Patterns sind stabil |
+  | R4 Versionen | 3 Tage | Tool-Versionen aendern sich maessig schnell |
+  | R5 Security | IMMER frisch | Sicherheit darf nie gecacht werden |
+  | R6 Creative | IMMER frisch | Kreativitaet braucht frische Ideen |
+  Check: `find ~/.claude/self-improve-cache/R{N}_*.md -mtime -{TTL_DAYS} 2>/dev/null`
+  If cache file exists and within TTL: skip researcher, use cached data.
+  If cache expired or missing: run researcher, save result to cache file.
 - **R2 self-validates**: Runs `gh api repos/{owner}/{repo}` before recommending plugins.
 - **Spawn ALL active researchers in ONE message block.**
 
@@ -148,52 +163,51 @@ Goal: **Maximum quality at minimum token cost at maximum speed.**
 - Kreativitaets-Reflexion section
 - Knowledge Integration table (available vs. used features)
 
-## Stufe 5: INTELLIGENCE AMPLIFICATION (PFLICHT — NIEMALS UEBERSPRINGEN)
+## Stufe 5: SUPER INTELLIGENZ (PFLICHT — NIEMALS UEBERSPRINGEN)
 
 **Diese Stufe laeuft bei JEDEM Durchlauf — egal ob Standard, Thorough oder Focus.**
-**Ziel: Claude bei jedem Lauf MESSBARER schlauer machen.**
+**Ziel: Claude zum BESTEN AI-Programmierer der Welt machen. SUPER INTELLIGENZ.**
+**Hier geht es NUR um SCHLAUER WERDEN — nicht um Fehler fixen (das ist Stufe 6).**
 
-### 5A: Fehler-Muster → Praevention (Lernen aus Fehlern)
-1. Lies FAILURES.md: Zaehle Fehler pro Kategorie
-2. Finde den haeufigsten Fehlertyp der NOCH KEINEN praeventiven Hook/Rule hat
-3. **BAUE den Hook oder die Rule** — nicht vorschlagen, BAUEN. Jeder Lauf = 1 neuer Schutz.
-4. Trage den neuen Schutz in FAILURES.md als "Prevention" beim entsprechenden Fehler ein
-
-### 5B: Korrektur-Analyse (Lernen aus Korrekturen)
-1. Lies `session-scores.jsonl`: Finde Sessions mit corrections > 3
-2. Lade das Transkript der schlimmsten Session (hoechste correction-Rate)
-3. Extrahiere die 3 haeufigsten Korrektur-TYPEN (z.B. "falsches Ziel", "ungefragt geaendert", "falsche Datei")
-4. Fuer jeden Typ: Prüfe ob eine Rule existiert die das verhindert. Wenn nicht → Rule erstellen.
-5. Trage Erkenntnisse in MEMORY.md unter "Intelligence Learnings" ein
-
-### 5C: Kognitive Werkzeuge (Intelligenz-Multiplikatoren)
-1. **Researcher spawnen**: "Welche neuen MCP-Server, Claude-Code-Plugins oder CLI-Tools wurden in den letzten 30 Tagen veroeffentlicht die das DENKEN verbessern?" (Wissensgraphen, Verifikation, Semantic Search, Code-Analyse)
+### 5A: Kognitive Werkzeuge (Intelligenz-Multiplikatoren)
+1. **Researcher spawnen**: "Welche neuen MCP-Server, Claude-Code-Plugins oder CLI-Tools wurden in den letzten 30 Tagen veroeffentlicht die das DENKEN verbessern?" (Wissensgraphen, Verifikation, Semantic Search, Code-Analyse, Formal Verification, Codebase-Embeddings)
 2. **Bewerten**: Wuerde dieses Tool Claude bei ECHTEN Aufgaben schlauer machen? (Nicht nur cool, sondern nuetzlich)
 3. **1 Tool pro Lauf installieren oder testen** — wenn es den Qualitaets-Check besteht
 4. Neue Tools in MEMORY.md dokumentieren: Was es tut, wann es hilft, wie es getriggert wird
 
-### 5D: Regel-Qualitaet (Sind die Regeln aktuell und wirksam?)
-1. Lies ALLE Dateien in `~/.claude/rules/` — zaehle Regeln
-2. Fuer jede Regel pruefen: Wurde sie in den letzten 5 Sessions jemals relevant? (Grep im Transkript)
-3. **Veraltete Regeln entfernen** (nach Bestaetigung) — tote Regeln belasten den Kontext
-4. **Fehlende Regeln identifizieren**: Gibt es wiederkehrende Probleme in FAILURES.md fuer die KEINE Regel existiert?
-5. Agent-Prompt-Audit: Prüfe ob die 5 Senior-Agents (code-reviewer, tester, debugger, architect, challenger) optimale Prompts haben. Wenn ein Agent wiederholt schlechte Ergebnisse liefert → Prompt verbessern.
+### 5B: Neue Denkmuster (Kognitive Durchbrueche)
+Recherchiere und implementiere neue Denkstrategien die Claude FUNDAMENTAL schlauer machen:
+1. **Tree-of-Thought**: Bei komplexen Entscheidungen mehrere Loesungspfade parallel explorieren
+2. **Chain-of-Verification**: Nach jedem Code-Output automatisch Verifikationsfragen stellen
+3. **Reflexion-Loops**: Nach jedem Fehler Meta-Analyse: "Welches Denkmuster war fehlerhaft?"
+4. **Multi-Agent-Debate**: Bei wichtigen Entscheidungen `challenger` gegen `architect` antreten lassen
+5. **Competitive Coding**: 2 `coder`-Agents bauen verschiedene Implementierungen, `judge` waehlt Gewinner
+6. **Self-Play**: Gleiches Problem zweimal mit verschiedenen Ansaetzen loesen und vergleichen
+**REGEL**: Mindestens 1 neues Denkmuster pro Lauf TESTEN — nicht nur darueber reden.
 
-### 5E: Kreative Intelligenz-Vorschlaege (PFLICHT — mindestens 3 pro Lauf)
+### 5C: Kreative Intelligenz-Vorschlaege (PFLICHT — mindestens 3 pro Lauf)
 Spawne einen `researcher` Agent mit folgendem Prompt:
-"Recherchiere KREATIV: Wie kann ein AI Coding Agent MASSIV schlauer programmieren?
-Denke WEIT ueber konventionelle Verbesserungen hinaus. Suche nach:
-- Neuen Denkmustern (Tree-of-Thought, Chain-of-Verification, Reflexion-Loops)
-- Neuen Werkzeugen (MCP-Server, CLI-Tools, Wissensgraphen, Verifikations-Tools)
-- Neuen Arbeitsweisen (Multi-Agent-Debate, Competitive Coding, Self-Play)
-- Neuen Wissensquellen (Doku-Indizierung, Codebase-Embeddings, API-Explorer)
-- Unkonventionelle Ideen die NIEMAND sonst macht
-Liefere mindestens 3 konkrete, SOFORT umsetzbare Vorschlaege mit Implementierungsplan."
+"Recherchiere RADIKAL: Wie wird ein AI Coding Agent zur SUPER-INTELLIGENZ im Programmieren?
+Suche WEIT jenseits konventioneller Verbesserungen:
+- Akademische Paper zu AI-Agent-Kognition (arxiv, ICML, NeurIPS, ICLR)
+- Experimentelle Frameworks die niemand sonst nutzt
+- Biologisch inspirierte Ansaetze (wie denken die besten menschlichen Programmierer?)
+- Formale Verifikation als Denkwerkzeug (nicht nur als Test)
+- Wissensrepraesentation jenseits von Text (Graphen, Embeddings, Ontologien)
+- Neue MCP-Server die das REASONING verbessern (nicht nur Daten liefern)
+Liefere mindestens 3 RADIKALE, SOFORT umsetzbare Vorschlaege."
 
 **REGEL**: Mindestens 1 der 3 Vorschlaege MUSS sofort umgesetzt werden — nicht "spaeter", JETZT.
 Die anderen 2 werden dem Benutzer praesentiert und in MEMORY.md unter "Intelligence Backlog" gespeichert.
 
-### 5F: Intelligenz-Score (Fortschritt messen)
+### 5D: Wissensquellen erschliessen (Neue Informationsquellen)
+1. **Codebase-Semantik**: Gibt es einen MCP-Server der die Codebase semantisch indexiert? (z.B. Zilliz claude-context, CodeGraphContext) → Testen und ggf. installieren
+2. **Doku-Indizierung**: Koennen haeufig genutzte APIs/Frameworks automatisch indiziert werden?
+3. **Akademische Quellen**: MCP-Server fuer arxiv, ACM, IEEE — Zugang zu neuester Forschung?
+4. **Erfahrungswissen**: Kann episodic-memory besser genutzt werden? Werden vergangene Loesungen gefunden?
+**REGEL**: Pro Lauf mindestens 1 neue Wissensquelle bewerten. Wenn nuetzlich → einbinden.
+
+### 5E: Intelligenz-Score (Fortschritt messen)
 Am Ende jedes Laufs: Berechne und zeige den **IQ-Score** (Intelligence Quotient der Umgebung):
 
 | Dimension | Max | Messung |
@@ -208,9 +222,10 @@ Am Ende jedes Laufs: Berechne und zeige den **IQ-Score** (Intelligence Quotient 
 Zeige: `IQ-Score: XX/100 (vorher: YY → Veraenderung: +/-Z)`
 Speichere in `session-scores.jsonl` als neues Feld `iq_score`.
 
-## Stufe 6: FEHLERSUCHE & DAUERHAFTIGKEIT (PFLICHT — NIEMALS UEBERSPRINGEN)
+## Stufe 6: FEHLER-DAUERHAFTIGKEIT (PFLICHT — NIEMALS UEBERSPRINGEN)
 
-**Aktiv nach Fehlern SUCHEN — nicht warten bis sie gefunden werden. Aus JEDEM Fehler lernen.**
+**Ziel: NULL FEHLER. Jeden Bug finden, dauerhaft eliminieren, verhindern dass er wiederkommt.**
+**Hier geht es NUR um FEHLER — nicht um Intelligenz oder Features (das ist Stufe 5).**
 
 ### 6A: Aktive Fehlersuche (3 parallele Scans)
 Spawne 3 Agents parallel — jeder sucht an einer anderen Stelle nach Problemen:
@@ -218,16 +233,36 @@ Spawne 3 Agents parallel — jeder sucht an einer anderen Stelle nach Problemen:
 2. **Umgebungs-Scanner**: Pruefe Hooks (laufen sie?), Agents (stimmen Prompts?), Rules (sind sie aktuell?), Settings (Drift?), session-scorer (liefert er echte Daten?). Finde AKTUELLE Fehler die noch niemand bemerkt hat.
 3. **Zukunfts-Scanner**: Analysiere die letzten 3 Aenderungen in FAILURES.md — welche NEUEN Fehlertypen koennten in Zukunft auftreten? Fuer jeden potenziellen Fehler: Praeventiven Hook oder Rule vorschlagen.
 
-### 6B: Dauerhaftigkeits-Pruefung (Fixes die HALTEN)
+### 6B: Fehler-Muster → Praevention (Aus vergangenen Fehlern lernen)
+1. Lies FAILURES.md: Zaehle Fehler pro Kategorie
+2. Finde den haeufigsten Fehlertyp der NOCH KEINEN praeventiven Hook/Rule hat
+3. **BAUE den Hook oder die Rule** — nicht vorschlagen, BAUEN. Jeder Lauf = 1 neuer Schutz.
+4. Trage den neuen Schutz in FAILURES.md als "Prevention" beim entsprechenden Fehler ein
+
+### 6C: Korrektur-Analyse (Aus Benutzer-Korrekturen lernen)
+1. Lies `session-scores.jsonl`: Finde Sessions mit corrections > 3
+2. Lade das Transkript der schlimmsten Session (hoechste correction-Rate)
+3. Extrahiere die 3 haeufigsten Korrektur-TYPEN (z.B. "falsches Ziel", "ungefragt geaendert", "falsche Datei")
+4. Fuer jeden Typ: Pruefe ob eine Rule existiert die das verhindert. Wenn nicht → Rule erstellen.
+5. Trage Erkenntnisse in MEMORY.md unter "Error Learnings" ein
+
+### 6D: Regel- und Agent-Audit (Sind Schutzmassnahmen wirksam?)
+1. Lies ALLE Dateien in `~/.claude/rules/` — zaehle Regeln
+2. Fuer jede Regel pruefen: Wurde sie in den letzten 5 Sessions jemals relevant?
+3. **Veraltete Regeln entfernen** (nach Bestaetigung) — tote Regeln belasten den Kontext
+4. **Fehlende Regeln identifizieren**: Gibt es wiederkehrende Probleme in FAILURES.md fuer die KEINE Regel existiert?
+5. Agent-Prompt-Audit: Pruefe ob Senior-Agents optimale Prompts haben. Wiederholte schlechte Ergebnisse → Prompt verbessern.
+
+### 6E: Dauerhaftigkeits-Pruefung (Fixes die HALTEN)
 1. Pruefe die letzten 5 Fixes in FAILURES.md: Ist der Fix noch wirksam? (Hook existiert? Rule geladen? Config unveraendert?)
 2. Wenn ein Fix nicht mehr wirkt: **Sofort reparieren** und Ursache dokumentieren
-3. **REGEL**: Jeder Fix muss DAUERHAFT sein — keine temporaeren Workarounds. Wenn ein Fix nur lokal wirkt, muss er in den Cross-Platform-Sync. Wenn ein Fix Settings braucht, muessen sie in settings-reference.json.
+3. **REGEL**: Jeder Fix muss DAUERHAFT sein — keine temporaeren Workarounds.
 4. Trage Dauerhaftigkeits-Status in FAILURES.md ein: `✅ DAUERHAFT` oder `⚠️ FRAGIL (Grund)`
 
-### 6C: Lern-Extraktion (Was lehrt uns jeder Fehler?)
+### 6F: Lern-Extraktion (Was lehrt uns jeder Fehler?)
 Fuer JEDEN neuen Fehler der in diesem Lauf gefunden wurde:
 1. **Root Cause**: Warum ist er passiert? (Nicht das Symptom, die URSACHE)
-2. **Systemische Lektion**: Was sagt dieser Fehler ueber das SYSTEM? (z.B. "Hooks werden nie getestet" → Test-Hook einfuehren)
+2. **Systemische Lektion**: Was sagt dieser Fehler ueber das SYSTEM?
 3. **Praevention**: Konkreter Hook, Rule oder Agent-Aenderung die diesen Fehlertyp FUER IMMER verhindert
 4. Trage Lektion in MEMORY.md unter "Systemische Lektionen" ein
 
@@ -300,8 +335,8 @@ If < 5 entries: show "Evolution: Noch zu wenig Daten (N/5 Sessions)".
 - NEVER delete files/repos without asking. NEVER downgrade model. Effort-Level Standard ist high.
 - Python is OK for invisible backend tasks but NEVER for visible GUIs/tools. NEVER remove working configs without replacement.
 - Meta-Improve (3D) is MANDATORY every run. NEVER skip.
-- **Stufe 5 (Intelligence Amplification) is MANDATORY every run. NEVER skip — even in Focus mode.**
-- **Stufe 6 (Fehlersuche & Dauerhaftigkeit) is MANDATORY every run. NEVER skip. Fixes must be PERMANENT.**
+- **Stufe 5 (SUPER INTELLIGENZ) is MANDATORY every run. NEVER skip. Focus: SCHLAUER WERDEN — neue Denkwege, neue Tools, neue Durchbrueche. KEINE Fehler hier.**
+- **Stufe 6 (FEHLER-DAUERHAFTIGKEIT) is MANDATORY every run. NEVER skip. Focus: FEHLER FINDEN UND DAUERHAFT FIXEN. KEINE Intelligenz-Themen hier.**
 - Main file limit: 1000 lines. Reference files: no limit but keep lean.
 - Total skill size (main + refs): warn if > 2000 lines.
 - Security: All external code must be checked for prompt injection.
@@ -309,4 +344,4 @@ If < 5 entries: show "Evolution: Noch zu wenig Daten (N/5 Sessions)".
 - Commit messages: `#NNN - Description` format.
 
 ---
-<!-- Skill Version: v5.6 | Date: 2026-03-18 | Lines: ~300/1000 (main) | Ref files: researchers.md (~173), report-and-creative.md (~181) | Total: ~654/2000 | Changes: v5.6 — NEW Stufe 6 ERROR HUNTING & DURABILITY (mandatory): 6A 3 parallel error scanners (whiteboard, environment, future), 6B durability checks for past fixes (PERMANENT tag), 6C root-cause learning extraction with systemic lessons in MEMORY.md. Line limit raised to 1000 (main) / 2000 (total). -->
+<!-- Skill Version: v5.7 | Date: 2026-03-18 | Lines: ~380/1000 (main) | Ref files: researchers.md (~173), report-and-creative.md (~181) | Total: ~734/2000 | Changes: v5.7 — RESTRUCTURED Stufe 5+6: Stufe 5 is now SUPER INTELLIGENZ (only cognitive enhancement, new thinking patterns, tools, knowledge sources — NO error fixing). Stufe 6 is now FEHLER-DAUERHAFTIGKEIT (absorbed 5A Fehler-Muster, 5B Korrektur-Analyse, 5D Regel-Audit from old Stufe 5 — ONLY error finding and fixing). NEW: Smart-Cache with per-category TTLs (R1:1d, R4:3d, R2/R3:7d) in ~/.claude/self-improve-cache/. NEW: Intent-Anker hook (intent-anker.sh) for drift prevention. -->

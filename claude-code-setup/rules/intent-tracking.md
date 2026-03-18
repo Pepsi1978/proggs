@@ -2,18 +2,21 @@
 
 ## Rule: Track and Verify Original Intent
 
+The original session goal is automatically saved to `/tmp/claude-session-goal.txt` by the intent-anker hook.
+A reminder marker is written every 20 turns to `/tmp/claude-intent-reminder.txt`.
+
 When working on a task that spans more than 10 tool calls:
 
-1. **At the start**: Mentally note the user's original request and goal
-2. **Every ~20 tool calls**: Pause and verify: "Am I still working toward the original goal?"
+1. **At the start**: Read `/tmp/claude-session-goal.txt` to recall the user's original request
+2. **Every ~20 tool calls**: Re-read the goal file and verify: "Am I still working toward this exact goal?"
 3. **Before any major direction change**: Explicitly state what you're about to do differently and why
-4. **If you notice drift**: Stop, summarize what you've done so far, and ask the user if you should continue in this direction
+4. **If you notice drift**: Stop immediately and ask the user
 
 ## Why This Matters
 
 In long sessions (100+ turns), the agent tends to drift from the original intent.
-The last measured session had a 12.1% correction rate (13 corrections in 107 turns).
-Most corrections likely came from the agent going off-track in a long session.
+Measured: 12.1% correction rate (13 corrections in 107 turns).
+Research shows periodic goal reminders reduce KL-divergence by 30% (arxiv 2510.07777).
 
 ## Signs of Intent Drift
 
@@ -24,5 +27,5 @@ Most corrections likely came from the agent going off-track in a long session.
 
 ## Recovery
 
-If you detect drift: Don't try to justify it. Simply say:
-"Ich bin vom ursprünglichen Ziel abgewichen. Das Ziel war: [original intent]. Soll ich zurückkehren?"
+If you detect drift: Don't try to justify it. Read `/tmp/claude-session-goal.txt` and say:
+"Ich bin vom ursprünglichen Ziel abgewichen. Das Ziel war: [goal from file]. Soll ich zurückkehren?"
