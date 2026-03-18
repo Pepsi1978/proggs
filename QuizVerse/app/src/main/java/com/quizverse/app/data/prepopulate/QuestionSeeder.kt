@@ -114,6 +114,7 @@ import com.quizverse.app.data.prepopulate.questions.scienceQuestionsMaster5
 import com.quizverse.app.data.prepopulate.questions.scienceQuestionsMaster6
 import com.quizverse.app.data.prepopulate.questions.sportQuestions
 import com.quizverse.app.data.prepopulate.questions.sportQuestionsEasy
+import com.quizverse.app.data.prepopulate.questions.sportQuestionsExpert
 import com.quizverse.app.data.prepopulate.questions.sportQuestionsHard
 import com.quizverse.app.data.prepopulate.questions.sportQuestionsMedium
 import com.quizverse.app.data.prepopulate.questions.techQuestions
@@ -283,6 +284,7 @@ object QuestionSeeder {
             musicQuestionsMaster() +
             sportQuestions() +
             sportQuestionsEasy() +
+            sportQuestionsExpert() +
             sportQuestionsHard() +
             sportQuestionsMedium() +
             techQuestions() +
