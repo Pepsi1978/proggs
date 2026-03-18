@@ -24,7 +24,7 @@ description: Systematic self-improvement of the Claude Code development environm
 ## Core Rules
 
 - NEVER run hidden (no `run_in_background`, no silent subagents). User reads EVERYTHING.
-- Default: `effortLevel: medium` (Benutzer kann manuell auf high wechseln, gilt bis Session-Ende). Protected: `model: claude-opus-4-6`, `SUBAGENT_MODEL: sonnet`
+- Default: `effortLevel: high` (permanenter Standard laut CLAUDE.md). Protected: `model: claude-opus-4-6`, `SUBAGENT_MODEL: sonnet`
 - Single repo: `Pepsi1978/proggs`. NEVER create new repos.
 - Parallel execution: Maximum simultaneous agents wherever possible.
 - No Python for visible things. Preferred: Swift, C#, TypeScript, Rust, Go, Kotlin.
@@ -55,6 +55,16 @@ the corresponding researcher gets a focused prompt. If capability gaps are detec
 R6 Creative is directed to search for solutions to those specific gaps.
 
 If `session-scores.jsonl` doesn't exist or has < 3 entries: skip Stufe 0 silently.
+
+**Score Plausibility Check (v5.3 — MANDATORY before trend analysis):**
+1. Load last 5 entries from `session-scores.jsonl`
+2. Check if `total_turns > 0` in at least 3 of 5 entries
+3. Check if `tool_calls > 0` in at least 3 of 5 entries
+4. If BOTH fail: **WARNING** — "Session-Scorer liefert Dummy-Daten!" Then:
+   - Load newest non-agent transcript from `~/.claude/projects/*/` (UUID filename, not `agent-*`)
+   - Parse first 5 JSONL lines and check if `entry.type` or `entry.role` format is used
+   - If format mismatch: report as ❌ DEFECT and add to fix list
+5. If plausible: proceed with trend analysis normally
 
 ## Stufe 1: SCAN
 
@@ -156,8 +166,14 @@ cp ~/.claude/hooks/*.ts ~/proggs/claude-code-setup/hooks/ 2>/dev/null
 cp ~/.claude/hooks/*.ps1 ~/proggs/claude-code-setup/hooks/ 2>/dev/null
 cp ~/CLAUDE.md ~/proggs/CLAUDE.md
 # settings-reference.json muss MANUELL aktualisiert werden wenn Hooks/Plugins/Env sich aendern!
-cd ~/proggs && git pull --rebase && git add claude-code-setup/ CLAUDE.md
-git diff --cached --quiet || git commit -m "#NNN - Self-improve sync ([Platform])" && git push
+cd ~/proggs && git pull --rebase
+git add claude-code-setup/ CLAUDE.md
+# Re-stage after async formatters may have modified staged files (race condition fix)
+sleep 1 && git add claude-code-setup/ CLAUDE.md
+# Use git status instead of git diff --cached --quiet (more robust against formatter hooks)
+if git status --porcelain claude-code-setup/ CLAUDE.md | grep -q .; then
+  git commit -m "#NNN - Self-improve sync ([Platform])" && git push
+fi
 ```
 
 ## Final Summary
@@ -172,7 +188,7 @@ If < 5 entries: show "Evolution: Noch zu wenig Daten (N/5 Sessions)".
 ## Important Rules
 
 - NEVER create new repos. NEVER modify this skill without user approval.
-- NEVER delete files/repos without asking. NEVER downgrade model. Effort-Level Standard ist medium.
+- NEVER delete files/repos without asking. NEVER downgrade model. Effort-Level Standard ist high.
 - NEVER install Python for visible/GUI. NEVER remove working configs without replacement.
 - Meta-Improve (3C) is MANDATORY every run. NEVER skip.
 - Main file limit: 300 lines. Reference files: no limit but keep lean.
@@ -182,4 +198,4 @@ If < 5 entries: show "Evolution: Noch zu wenig Daten (N/5 Sessions)".
 - Commit messages: `#NNN - Description` format.
 
 ---
-<!-- Skill Version: v5.2 | Date: 2026-03-15 | Lines: ~185/300 (main) | Ref files: researchers.md (~155), report-and-creative.md (~170) | Total: ~510/800 | Changes: v5.2 — (1) R3 now dynamically checks hook events from schema instead of hardcoded count, (2) Cross-validation rules 7+8 added (no hardcoded event counts, trust schema validator), (3) Session-Score Stop hook added for automatic quality tracking, (4) pending-admin-updates SessionEnd hook generates admin update scripts -->
+<!-- Skill Version: v5.3 | Date: 2026-03-18 | Lines: ~197/300 (main) | Ref files: researchers.md (~173), report-and-creative.md (~181) | Total: ~551/800 | Changes: v5.3 — (1) effortLevel default fixed medium→high to match CLAUDE.md and config-guard, (2) Cross-Platform Sync commit logic hardened against async formatter race condition (re-stage + git status instead of git diff --cached --quiet), (3) Stufe 0 Score Plausibility Check added to detect broken session-scorer before trend analysis -->
