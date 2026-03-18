@@ -38,6 +38,8 @@ function findLatestTranscript(): string | null {
 
     for (const entry of entries) {
       if (!entry.endsWith(".jsonl")) continue;
+      // Skip agent transcripts — only score main sessions (UUID format)
+      if (entry.startsWith("agent-")) continue;
       const fullPath = join(PROJECTS_DIR, entry);
       try {
         const stat = statSync(fullPath);
@@ -75,11 +77,15 @@ function analyzeTranscript(path: string): SessionMetrics {
     try {
       const entry = JSON.parse(line);
 
-      if (entry.role === "user") {
+      // Claude Code transcript format: { type: "user"|"assistant"|"tool_result", message: {...} }
+      const entryType = entry.type;
+      const msg = entry.message;
+
+      if (entryType === "user" && msg) {
         totalTurns++;
-        const text = typeof entry.content === "string"
-          ? entry.content
-          : JSON.stringify(entry.content);
+        const text = typeof msg.content === "string"
+          ? msg.content
+          : JSON.stringify(msg.content);
         for (const pattern of correctionPatterns) {
           if (pattern.test(text)) {
             corrections++;
@@ -88,14 +94,17 @@ function analyzeTranscript(path: string): SessionMetrics {
         }
       }
 
-      if (entry.role === "assistant" && entry.tool_calls) {
-        toolCalls += Array.isArray(entry.tool_calls) ? entry.tool_calls.length : 1;
+      if (entryType === "assistant" && msg) {
+        // Tool calls are content blocks with type "tool_use"
+        const content = Array.isArray(msg.content) ? msg.content : [];
+        const toolUseBlocks = content.filter((b: any) => b.type === "tool_use");
+        toolCalls += toolUseBlocks.length;
       }
 
-      if (entry.role === "tool" && entry.output) {
-        const output = typeof entry.output === "string"
-          ? entry.output
-          : JSON.stringify(entry.output);
+      if (entryType === "tool_result" && msg) {
+        const output = typeof msg.content === "string"
+          ? msg.content
+          : JSON.stringify(msg.content);
         if (/error|failed|exception|ENOENT|EPERM/i.test(output)) {
           errors++;
         }

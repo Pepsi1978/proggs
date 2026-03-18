@@ -3,8 +3,11 @@
 .env.*
 *.pem
 *.key
+*.p12
 credentials.json
 secrets.json
+.npmrc
+.netrc
 
 # macOS
 .DS_Store

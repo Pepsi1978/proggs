@@ -2,6 +2,13 @@
 name: env-checker
 description: Comprehensive environment health checker. Audits ALL installed tools, versions, settings, hooks, plugins, language readiness, mobile dev readiness, security patches, backup drift, and disk space. Returns a detailed structured report. Use this agent for Phase 1 of self-improve or standalone environment checks.
 model: sonnet
+tools:
+  - Bash
+  - Read
+  - Glob
+  - Grep
+  - WebSearch
+  - WebFetch
 ---
 
 # Environment Health Checker
@@ -27,8 +34,8 @@ Also check npm registry for Claude Code latest: `npm view @anthropic-ai/claude-c
 ### 2. Settings Verification
 Read `~/.claude/settings.json` and verify:
 - `model` = "claude-opus-4-6"
-- `effortLevel` = "medium"
-- `env.CLAUDE_CODE_EFFORT_LEVEL` = "medium"
+- `effortLevel` = "high"
+- `env.CLAUDE_CODE_EFFORT_LEVEL` = "high"
 - `env.CLAUDE_CODE_SUBAGENT_MODEL` = "sonnet"
 - `env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` = "95"
 - `env.CLAUDE_CODE_MAX_OUTPUT_TOKENS` = "64000"

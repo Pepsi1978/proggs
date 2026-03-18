@@ -89,8 +89,7 @@
       "explanatory-output-style",
       "skill-creator",
       "plugin-dev",
-      "agent-sdk-dev",
-      "serena"
+      "agent-sdk-dev"
     ],
     "superpowers-marketplace": [
       "episodic-memory",
@@ -158,6 +157,15 @@
     ],
     "boostvolt": [
       "claude-code-lsps"
+    ],
+    "xclaude-plugin-marketplace": [
+      "xclaude-plugin"
+    ],
+    "apple-platform-build-tools": [
+      "apple-platform-build-tools"
+    ],
+    "claude-reflect-marketplace": [
+      "claude-reflect"
     ]
   },
 
@@ -190,6 +198,18 @@
     "boostvolt": {
       "source": "github",
       "repo": "boostvolt/claude-code-lsps"
+    },
+    "xclaude-plugin-marketplace": {
+      "source": "github",
+      "repo": "conorluddy/xclaude-plugin"
+    },
+    "apple-platform-build-tools": {
+      "source": "github",
+      "repo": "kylehughes/apple-platform-build-tools-claude-code-plugin"
+    },
+    "claude-reflect-marketplace": {
+      "source": "github",
+      "repo": "BayramAnnakov/claude-reflect"
     }
   },
 
@@ -256,7 +276,7 @@
   ],
 
   "settings": {
-    "effortLevel": "medium",
+    "effortLevel": "high",
     "env": {
       "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
       "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",

@@ -66,8 +66,8 @@ if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; th
 fi
 
 # Pull with rebase
-PULL_OUTPUT=$(git pull --rebase --quiet 2>&1) || true
-PULL_RC=${PIPESTATUS[0]:-0}
+PULL_OUTPUT=$(git pull --rebase --quiet 2>&1)
+PULL_RC=$?
 
 # Restore stashed changes
 if [ "$STASHED" = true ]; then
@@ -149,22 +149,12 @@ fi
 REF_SETTINGS="$SETUP_DIR/settings-reference.json"
 LOCAL_SETTINGS="$CLAUDE_DIR/settings.json"
 if [ -f "$REF_SETTINGS" ] && [ -f "$LOCAL_SETTINGS" ] && command -v python3 &>/dev/null; then
-    SETTINGS_CHANGES=$(python3 << 'PYEOF' 2>/dev/null || echo "0"
-import json, sys
-try:
-    ref = json.load(open("$REF_SETTINGS".replace("$REF_SETTINGS", "$REF_SETTINGS")))
-    local = json.load(open("$LOCAL_SETTINGS".replace("$LOCAL_SETTINGS", "$LOCAL_SETTINGS")))
-    print(0)
-except:
-    print(0)
-PYEOF
-    )
-    # Use a separate python3 call with proper variable substitution
-    SETTINGS_CHANGES=$(python3 -c "
+    # Settings merge via python3 with env vars (safe, no shell interpolation in code)
+    SETTINGS_CHANGES=$(REF_PATH="$REF_SETTINGS" LOCAL_PATH="$LOCAL_SETTINGS" python3 -c "
 import json, sys, os
 try:
-    ref = json.load(open(os.path.expanduser('$REF_SETTINGS')))
-    local = json.load(open(os.path.expanduser('$LOCAL_SETTINGS')))
+    ref = json.load(open(os.environ['REF_PATH']))
+    local = json.load(open(os.environ['LOCAL_PATH']))
     changes = 0
     # Sync enabledPlugins
     ref_plugins = ref.get('enabledPlugins', {})
@@ -201,8 +191,8 @@ try:
             local['hooks'] = ref_hooks
             changes += 1
     if changes > 0:
-        json.dump(local, open('$LOCAL_SETTINGS', 'w'), indent=2)
-        with open('$LOCAL_SETTINGS', 'a') as f:
+        json.dump(local, open(os.environ['LOCAL_PATH'], 'w'), indent=2)
+        with open(os.environ['LOCAL_PATH'], 'a') as f:
             f.write('\n')
     print(changes)
 except Exception as e:

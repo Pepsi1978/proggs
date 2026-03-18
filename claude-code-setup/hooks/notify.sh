@@ -14,5 +14,7 @@ fi
 # Truncate
 [ ${#MESSAGE} -gt 200 ] && MESSAGE="${MESSAGE:0:197}..."
 
-osascript -e "display notification \"$MESSAGE\" with title \"Claude Code\"" 2>/dev/null || true
+# Escape MESSAGE for safe osascript injection (prevent command injection)
+SAFE_MESSAGE=$(printf '%s' "$MESSAGE" | sed 's/\\/\\\\/g; s/"/\\"/g')
+osascript -e "display notification \"$SAFE_MESSAGE\" with title \"Claude Code\"" 2>/dev/null || true
 exit 0

@@ -20,13 +20,13 @@ try:
     d = json.load(open('$SETTINGS'))
     warnings = []
     blocks = []
-    eff = d.get('effortLevel', 'medium')
-    if eff not in ('medium', 'high'):
-        warnings.append(f'effortLevel={eff}(erwartet:medium oder high)')
+    eff = d.get('effortLevel', 'high')
+    if eff != 'high':
+        blocks.append(f'effortLevel={eff}(erwartet:high)')
     env = d.get('env', {})
-    env_eff = env.get('CLAUDE_CODE_EFFORT_LEVEL', 'medium')
-    if env_eff not in ('medium', 'high'):
-        warnings.append(f'CLAUDE_CODE_EFFORT_LEVEL={env_eff}(erwartet:medium oder high)')
+    env_eff = env.get('CLAUDE_CODE_EFFORT_LEVEL', 'high')
+    if env_eff != 'high':
+        blocks.append(f'CLAUDE_CODE_EFFORT_LEVEL={env_eff}(erwartet:high)')
     if env.get('CLAUDE_CODE_SUBAGENT_MODEL') != 'sonnet':
         blocks.append(f\"CLAUDE_CODE_SUBAGENT_MODEL={env.get('CLAUDE_CODE_SUBAGENT_MODEL')}(erwartet:sonnet)\")
     acp = env.get('CLAUDE_AUTOCOMPACT_PCT_OVERRIDE', '95')

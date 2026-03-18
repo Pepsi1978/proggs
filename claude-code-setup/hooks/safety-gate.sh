@@ -22,11 +22,15 @@ fi
 
 # Dangerous patterns to block
 PATTERNS=(
-    'rm[[:space:]]+-rf[[:space:]]+[/~]'
-    'git[[:space:]]+push[[:space:]]+--force[[:space:]]+.*main'
+    'rm[[:space:]]+-rf[[:space:]]+'
+    'git[[:space:]]+push[[:space:]]+--force'
+    'git[[:space:]]+push[[:space:]]+-f[[:space:]]'
     'git[[:space:]]+reset[[:space:]]+--hard'
+    'git[[:space:]]+clean[[:space:]]+-[a-z]*f'
+    'git[[:space:]]+checkout[[:space:]]+--[[:space:]]+\.'
     'DROP[[:space:]]+TABLE'
     'DROP[[:space:]]+DATABASE'
+    'TRUNCATE[[:space:]]+TABLE'
 )
 
 for pattern in "${PATTERNS[@]}"; do
