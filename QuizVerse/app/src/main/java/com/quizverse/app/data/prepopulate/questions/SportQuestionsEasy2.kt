@@ -352,15 +352,15 @@ fun sportQuestionsEasy2(): List<Question> = listOf(
 
     Question(
         categoryId = 6,
-        questionText = "Was ist ein 'Birdie' beim Golf?",
-        answerA = "Ein Schlag mehr als Par",
-        answerB = "Zwei Schlaege weniger als Par",
-        answerC = "Ein Schlag weniger als Par",
-        answerD = "Das Loch in einem Schlag",
+        questionText = "Wie viele Spieler hat eine Handball-Mannschaft auf dem Feld (inklusive Torwart)?",
+        answerA = "5",
+        answerB = "6",
+        answerC = "7",
+        answerD = "8",
         correctAnswer = 2,
-        explanation = "Ein Birdie bedeutet, das Loch mit einem Schlag weniger als Par zu beenden – z.B. ein Par-4-Loch in 3 Schlaegen.",
+        explanation = "Eine Handball-Mannschaft besteht aus 7 Spielern auf dem Feld: 6 Feldspieler und 1 Torwart. Insgesamt duerfen bis zu 14 Spieler im Kader stehen.",
         difficulty = 1,
-        funFact = "Der Begriff 'Birdie' stammt aus dem amerikanischen Slang – 'bird' war im 19. Jahrhundert ein Wort fuer etwas Aussergewoehnliches."
+        funFact = "Handball wurde 1936 in Berlin zum ersten Mal als olympische Sportart gespielt – damals noch als Feldhandball mit 11 Spielern pro Team."
     ),
 
     // ─── REITSPORT (6) ────────────────────────────────────────────────────────
