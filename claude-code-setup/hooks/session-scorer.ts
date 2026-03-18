@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Session Scorer — Meta-Evolution Artifact #1
+ * Session Scorer — Meta-Evolution Artifact #1 (Windows Version)
  *
  * Runs at SessionEnd to analyze the current session transcript
  * and extract quality metrics into a JSONL log file.
@@ -16,9 +16,34 @@
 import { readFileSync, appendFileSync, readdirSync, statSync, existsSync } from "fs";
 import { join } from "path";
 
-const HOME = process.env.HOME || "/Users/frank";
+const HOME = process.env.USERPROFILE || process.env.HOME || "C:\\Users\\barwa";
 const SCORES_FILE = join(HOME, ".claude", "session-scores.jsonl");
-const PROJECTS_DIR = join(HOME, ".claude", "projects", "-Users-frank");
+
+// Windows project directory path
+function findProjectsDir(): string {
+  const claudeDir = join(HOME, ".claude", "projects");
+  if (!existsSync(claudeDir)) return "";
+  try {
+    const entries = readdirSync(claudeDir);
+    // Find the project dir matching C--Users-barwa or similar
+    for (const entry of entries) {
+      const fullPath = join(claudeDir, entry);
+      if (statSync(fullPath).isDirectory() && entry.startsWith("C--")) {
+        return fullPath;
+      }
+    }
+    // Fallback: use first directory
+    for (const entry of entries) {
+      const fullPath = join(claudeDir, entry);
+      if (statSync(fullPath).isDirectory()) {
+        return fullPath;
+      }
+    }
+  } catch { /* ignore */ }
+  return "";
+}
+
+const PROJECTS_DIR = findProjectsDir();
 
 interface SessionMetrics {
   date: string;
@@ -31,6 +56,7 @@ interface SessionMetrics {
 }
 
 function findLatestTranscript(): string | null {
+  if (!PROJECTS_DIR) return null;
   try {
     const entries = readdirSync(PROJECTS_DIR);
     let latest = "";
@@ -76,8 +102,6 @@ function analyzeTranscript(path: string): SessionMetrics {
   for (const line of lines) {
     try {
       const entry = JSON.parse(line);
-
-      // Claude Code transcript format: { type: "user"|"assistant"|"tool_result", message: {...} }
       const entryType = entry.type;
       const msg = entry.message;
 
@@ -86,8 +110,7 @@ function analyzeTranscript(path: string): SessionMetrics {
         const text = typeof msg.content === "string"
           ? msg.content
           : JSON.stringify(msg.content);
-        // v2: Context-aware correction detection (Challenger fix: reduce false positives)
-        // Only count as correction if: not a question, no code block, match in first 80 chars
+        // v2: Context-aware correction detection
         const isQuestion = text.includes("?");
         const hasCodeBlock = text.includes("```");
         const textStart = text.slice(0, 80);
@@ -100,7 +123,6 @@ function analyzeTranscript(path: string): SessionMetrics {
       }
 
       if (entryType === "assistant" && msg) {
-        // Tool calls are content blocks with type "tool_use"
         const content = Array.isArray(msg.content) ? msg.content : [];
         const toolUseBlocks = content.filter((b: any) => b.type === "tool_use");
         toolCalls += toolUseBlocks.length;
@@ -120,10 +142,8 @@ function analyzeTranscript(path: string): SessionMetrics {
   }
 
   // Calculate composite quality score (1-10)
-  // v2: Rate-based scoring for better granularity (v1 capped at -2, making 4 and 30 corrections identical)
-  let score = 8.0; // Higher base to allow more differentiation
+  let score = 8.0;
 
-  // Error penalty: rate-based (errors per tool call), max -2
   if (toolCalls > 0) {
     const errorRate = errors / toolCalls;
     if (errorRate < 0.02) { /* no penalty */ }
@@ -133,27 +153,24 @@ function analyzeTranscript(path: string): SessionMetrics {
     else score -= 2.0;
   }
 
-  // Correction penalty: rate-based (corrections per turn), max -5
-  // This is the KEY differentiator — v1 couldn't tell 4 from 30 corrections
   if (totalTurns > 0) {
     const correctionRate = corrections / totalTurns;
-    if (correctionRate === 0 && totalTurns >= 10) score += 0.5; // Bonus only for non-trivial sessions
-    else if (correctionRate === 0) { /* short session: no bonus, no penalty */ }
-    else if (correctionRate < 0.03) score -= 0.5;  // Rare corrections
-    else if (correctionRate < 0.07) score -= 1.5;  // Occasional corrections
-    else if (correctionRate < 0.12) score -= 2.5;  // Frequent corrections
-    else if (correctionRate < 0.20) score -= 3.5;  // High correction rate
-    else score -= 5.0;                              // Extreme correction rate (>20%)
+    if (correctionRate === 0 && totalTurns >= 10) score += 0.5;
+    else if (correctionRate === 0) { /* short session */ }
+    else if (correctionRate < 0.03) score -= 0.5;
+    else if (correctionRate < 0.07) score -= 1.5;
+    else if (correctionRate < 0.12) score -= 2.5;
+    else if (correctionRate < 0.20) score -= 3.5;
+    else score -= 5.0;
   }
 
-  // Engagement bonus: productive sessions with many tool calls
   if (toolCalls > 50) score += 0.3;
   else if (toolCalls > 20) score += 0.15;
   if (totalTurns > 0 && toolCalls / totalTurns > 3) score += 0.2;
 
   score = Math.max(1.0, Math.min(10.0, Math.round(score * 10) / 10));
 
-  const sessionId = path.split("/").pop()?.replace(".jsonl", "") || "unknown";
+  const sessionId = path.split(/[/\\]/).pop()?.replace(".jsonl", "") || "unknown";
 
   return {
     date: new Date().toISOString(),
@@ -176,22 +193,19 @@ function detectTrends(currentMetrics: SessionMetrics): void {
       try { return JSON.parse(l) as SessionMetrics; } catch { return null; }
     })
     .filter((s): s is SessionMetrics => s !== null && s.total_turns > 0)
-    // v2 Challenger fix: exclude short sessions (< 10 turns) from SPC to prevent baseline inflation
     .filter((s) => s.total_turns >= 10);
 
   if (allScores.length < 5) return;
 
   const sharedMemory = join(HOME, ".claude", "agent-memory", "shared", "MEMORY.md");
 
-  // Phase 1: Simple trend check (< 20 real sessions)
   if (allScores.length < 20) {
     const recent = allScores.slice(-5);
     const avg = recent.reduce((s, m) => s + m.quality_score, 0) / recent.length;
-
     if (allScores.length >= 10) {
       const prevAvg = allScores.slice(-10, -5).reduce((s, m) => s + m.quality_score, 0) / 5;
       if (avg < prevAvg - 0.5) {
-        const warning = `\n- **${currentMetrics.date.split("T")[0]}**: Quality declining: ${prevAvg.toFixed(1)} → ${avg.toFixed(1)} (simple trend, ${allScores.length}/20 sessions for SPC)\n`;
+        const warning = `\n- **${currentMetrics.date.split("T")[0]}**: Quality declining: ${prevAvg.toFixed(1)} → ${avg.toFixed(1)} (simple trend)\n`;
         if (existsSync(sharedMemory)) {
           appendFileSync(sharedMemory, warning, "utf-8");
         }
@@ -200,65 +214,43 @@ function detectTrends(currentMetrics: SessionMetrics): void {
     return;
   }
 
-  // Phase 2: Statistical Process Control (>= 20 real sessions)
+  // Phase 2: SPC (>= 20 sessions)
   const scores = allScores.map(s => s.quality_score);
   const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
   const stdDev = Math.sqrt(scores.reduce((sum, s) => sum + (s - mean) ** 2, 0) / scores.length);
   const ucl = mean + 3 * stdDev;
   const lcl = mean - 3 * stdDev;
-
   const current = currentMetrics.quality_score;
   const warnings: string[] = [];
 
-  // Rule 1: Point outside control limits
   if (current > ucl || current < lcl) {
     warnings.push(`SPC SIGNAL: Score ${current} outside limits [${lcl.toFixed(1)}, ${ucl.toFixed(1)}]`);
   }
 
-  // Rule 2: 7-point run below mean (process shift)
   const last7 = allScores.slice(-7).map(s => s.quality_score);
   if (last7.length === 7 && last7.every(s => s < mean)) {
-    warnings.push(`SPC SIGNAL: 7 consecutive sessions below mean (${mean.toFixed(1)}) — process shift detected`);
-  }
-
-  // Rule 3: 5-session moving average comparison
-  const recent5 = allScores.slice(-5);
-  const prev5 = allScores.slice(-10, -5);
-  if (prev5.length === 5) {
-    const recentAvg = recent5.reduce((s, m) => s + m.quality_score, 0) / 5;
-    const prevAvg = prev5.reduce((s, m) => s + m.quality_score, 0) / 5;
-    if (recentAvg < prevAvg - 0.5) {
-      warnings.push(`Trend: ${prevAvg.toFixed(1)} → ${recentAvg.toFixed(1)} (declining)`);
-    }
+    warnings.push(`SPC SIGNAL: 7 consecutive sessions below mean (${mean.toFixed(1)})`);
   }
 
   if (warnings.length > 0 && existsSync(sharedMemory)) {
-    const entry = `\n- **${currentMetrics.date.split("T")[0]}**: ${warnings.join("; ")} [SPC: μ=${mean.toFixed(1)}, σ=${stdDev.toFixed(2)}, UCL=${ucl.toFixed(1)}, LCL=${lcl.toFixed(1)}, N=${scores.length}]\n`;
+    const entry = `\n- **${currentMetrics.date.split("T")[0]}**: ${warnings.join("; ")} [SPC: μ=${mean.toFixed(1)}, σ=${stdDev.toFixed(2)}, N=${scores.length}]\n`;
     appendFileSync(sharedMemory, entry, "utf-8");
   }
 }
 
 function validateMetrics(metrics: SessionMetrics, transcriptPath: string): boolean {
-  // Self-validation: detect when scorer produces dummy data
   try {
     const content = readFileSync(transcriptPath, "utf-8");
     const lineCount = content.trim().split("\n").length;
-
     if (metrics.total_turns === 0 && lineCount > 50) {
-      // Transcript has 50+ lines but we found 0 turns — something is wrong
-      const warning = `\n### [${new Date().toISOString().split("T")[0]}] SCORER WARNING: 0 turns parsed from ${lineCount}-line transcript\n` +
-        `- **Session**: ${metrics.session_id}\n` +
-        `- **Action**: Skipped writing dummy score. Check transcript format.\n`;
-
+      const warning = `\n### [${new Date().toISOString().split("T")[0]}] SCORER WARNING: 0 turns parsed from ${lineCount}-line transcript\n- **Session**: ${metrics.session_id}\n- **Action**: Skipped writing dummy score.\n`;
       const failuresPath = join(HOME, ".claude", "agent-memory", "shared", "FAILURES.md");
       if (existsSync(failuresPath)) {
         appendFileSync(failuresPath, warning, "utf-8");
       }
-      return false; // Don't write this score
+      return false;
     }
-  } catch {
-    // Can't validate — proceed with caution
-  }
+  } catch { /* proceed */ }
   return true;
 }
 
@@ -270,16 +262,12 @@ function main() {
 
   try {
     const metrics = analyzeTranscript(transcript);
-
-    // Self-validation: don't write dummy data
     if (!validateMetrics(metrics, transcript!)) {
       process.exit(0);
     }
-
     appendFileSync(SCORES_FILE, JSON.stringify(metrics) + "\n", "utf-8");
     detectTrends(metrics);
   } catch {
-    // Fail silently — never block session exit
     process.exit(0);
   }
 }
