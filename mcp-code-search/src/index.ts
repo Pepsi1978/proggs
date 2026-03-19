@@ -1,11 +1,20 @@
 // mcp-code-search — Local Semantic Code Search MCP Server
 // Uses Ollama + nomic-embed-text for embeddings, sqlite-vec for vector search.
 // Tools: index_codebase, search_code, status
+// Uses pointer-based DB switching to avoid file locking conflicts during reindex.
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { resolve, join } from "path";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+	readdirSync,
+	unlinkSync,
+} from "fs";
 
 import {
 	generateEmbeddings,
@@ -15,33 +24,82 @@ import {
 import { VectorStore } from "./store.js";
 import { findCodeFiles, chunkFile } from "./indexer.js";
 
-// Store lives next to the indexed codebase as .code-search/index.db
+// Pointer-based DB management: current.txt points to the active DB file.
+// The reindex hook writes to a NEW file and only updates the pointer when done.
+// This avoids Windows file locking issues during reindex.
 let store: VectorStore | null = null;
-let indexedRoot: string | null = null;
+let currentDbPath: string | null = null;
+
+function resolveCurrentDb(dbDir: string): string {
+	const pointerFile = join(dbDir, "current.txt");
+	if (existsSync(pointerFile)) {
+		const pointer = readFileSync(pointerFile, "utf-8").trim();
+		if (pointer && existsSync(join(dbDir, pointer))) {
+			return join(dbDir, pointer);
+		}
+	}
+	// Fallback: use index.db directly (backwards compatible)
+	return join(dbDir, "index.db");
+}
 
 function getStore(rootDir: string): VectorStore {
 	const dbDir = join(rootDir, ".code-search");
-	const fs = require("fs");
-	if (!fs.existsSync(dbDir)) {
-		fs.mkdirSync(dbDir, { recursive: true });
+	if (!existsSync(dbDir)) {
+		mkdirSync(dbDir, { recursive: true });
 	}
-	if (!store || indexedRoot !== rootDir) {
+
+	const targetDb = resolveCurrentDb(dbDir);
+
+	// Reopen if the pointer changed (reindex happened) or first call
+	if (!store || currentDbPath !== targetDb) {
 		store?.close();
-		store = new VectorStore(join(dbDir, "index.db"));
-		indexedRoot = rootDir;
+		store = new VectorStore(targetDb);
+		currentDbPath = targetDb;
 	}
 	return store;
 }
 
+function nextDbName(dbDir: string): string {
+	// Find the highest index-N.db number and return N+1
+	let maxN = 0;
+	if (existsSync(dbDir)) {
+		for (const f of readdirSync(dbDir)) {
+			const match = f.match(/^index-(\d+)\.db$/);
+			if (match) {
+				const n = parseInt(match[1], 10);
+				if (n > maxN) maxN = n;
+			}
+		}
+	}
+	return `index-${maxN + 1}.db`;
+}
+
+function cleanupOldDbs(dbDir: string, currentFile: string): void {
+	// Delete old index-N.db files that are not the current one
+	if (!existsSync(dbDir)) return;
+	for (const f of readdirSync(dbDir)) {
+		if (
+			f.match(/^index-\d+\.db/) &&
+			!f.startsWith(currentFile.replace(".db", ""))
+		) {
+			try {
+				unlinkSync(join(dbDir, f));
+			} catch {
+				// File still locked — skip, will be cleaned up next time
+			}
+		}
+	}
+}
+
 const server = new McpServer({
 	name: "code-search",
-	version: "1.0.0",
+	version: "1.1.0",
 });
 
 // --- Tool: index_codebase ---
 server.tool(
 	"index_codebase",
-	"Index a local codebase for semantic code search. Walks all source files, chunks them, generates embeddings via Ollama, and stores in a local vector database.",
+	"Index a local codebase for semantic code search. Walks all source files, chunks them, generates embeddings via Ollama, and stores in a local vector database. Safe to run while searching — uses atomic pointer swap.",
 	{
 		directory: z
 			.string()
@@ -50,7 +108,6 @@ server.tool(
 	async ({ directory }) => {
 		const rootDir = resolve(directory);
 
-		// Check Ollama availability
 		const ollamaCheck = await checkOllama();
 		if (!ollamaCheck.ok) {
 			return {
@@ -60,12 +117,20 @@ server.tool(
 			};
 		}
 
-		const vs = getStore(rootDir);
-		vs.clear(); // Full re-index in v1
+		const dbDir = join(rootDir, ".code-search");
+		if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
 
-		// Find all code files
+		// Write to a NEW db file (pointer-based, no file locking conflicts)
+		const newDbName = nextDbName(dbDir);
+		const newDbPath = join(dbDir, newDbName);
+		const newStore = new VectorStore(newDbPath);
+
 		const files = await findCodeFiles(rootDir);
 		if (files.length === 0) {
+			newStore.close();
+			try {
+				unlinkSync(newDbPath);
+			} catch {}
 			return {
 				content: [
 					{ type: "text" as const, text: `No code files found in ${rootDir}` },
@@ -73,7 +138,6 @@ server.tool(
 			};
 		}
 
-		// Chunk all files
 		const allChunks: Array<{
 			filePath: string;
 			startLine: number;
@@ -88,6 +152,10 @@ server.tool(
 		}
 
 		if (allChunks.length === 0) {
+			newStore.close();
+			try {
+				unlinkSync(newDbPath);
+			} catch {}
 			return {
 				content: [
 					{
@@ -98,26 +166,35 @@ server.tool(
 			};
 		}
 
-		// Generate embeddings in batches
 		const EMBED_BATCH = 32;
-		let embeddedCount = 0;
-
 		for (let i = 0; i < allChunks.length; i += EMBED_BATCH) {
 			const batch = allChunks.slice(i, i + EMBED_BATCH);
 			const texts = batch.map((c) => c.content);
-
 			const embeddings = await generateEmbeddings(texts);
-
-			vs.insertBatch(batch, embeddings);
-			embeddedCount += batch.length;
+			newStore.insertBatch(batch, embeddings);
 		}
 
-		const stats = vs.stats();
+		const stats = newStore.stats();
+		newStore.close();
+
+		// Update pointer to new DB (atomic — just a text file write)
+		writeFileSync(join(dbDir, "current.txt"), newDbName);
+
+		// Close old store so next getStore() picks up the new pointer
+		if (store) {
+			store.close();
+			store = null;
+			currentDbPath = null;
+		}
+
+		// Clean up old DB files (best-effort, skips locked files)
+		cleanupOldDbs(dbDir, newDbName);
+
 		return {
 			content: [
 				{
 					type: "text" as const,
-					text: `Indexed ${stats.totalFiles} files, ${stats.totalChunks} chunks in ${rootDir}.\nDatabase: ${rootDir}/.code-search/index.db`,
+					text: `Indexed ${stats.totalFiles} files, ${stats.totalChunks} chunks in ${rootDir}.\nDatabase: ${newDbPath}`,
 				},
 			],
 		};
@@ -158,7 +235,6 @@ server.tool(
 			};
 		}
 
-		// Check Ollama for query embedding
 		const ollamaCheck = await checkOllama();
 		if (!ollamaCheck.ok) {
 			return {
@@ -205,15 +281,26 @@ server.tool(
 	},
 	async ({ directory }) => {
 		const rootDir = resolve(directory);
-		const dbPath = join(rootDir, ".code-search", "index.db");
+		const dbDir = join(rootDir, ".code-search");
 
-		const fs = require("fs");
-		if (!fs.existsSync(dbPath)) {
+		if (!existsSync(dbDir)) {
 			return {
 				content: [
 					{
 						type: "text" as const,
 						text: `No index found at ${rootDir}/.code-search/`,
+					},
+				],
+			};
+		}
+
+		const currentDb = resolveCurrentDb(dbDir);
+		if (!existsSync(currentDb)) {
+			return {
+				content: [
+					{
+						type: "text" as const,
+						text: `No index database found. Run index_codebase first.`,
 					},
 				],
 			};
@@ -230,7 +317,7 @@ server.tool(
 						`Index status for ${rootDir}:\n` +
 						`- Files indexed: ${stats.totalFiles}\n` +
 						`- Code chunks: ${stats.totalChunks}\n` +
-						`- Database: ${dbPath}\n` +
+						`- Database: ${currentDb}\n` +
 						`- Ollama model: nomic-embed-text (768 dimensions)`,
 				},
 			],
