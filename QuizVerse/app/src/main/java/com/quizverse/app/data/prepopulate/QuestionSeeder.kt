@@ -101,6 +101,16 @@ import com.quizverse.app.data.prepopulate.questions.historyQuestionsMaster4
 import com.quizverse.app.data.prepopulate.questions.historyQuestionsMaster5
 import com.quizverse.app.data.prepopulate.questions.historyQuestionsMaster6
 import com.quizverse.app.data.prepopulate.questions.literatureQuestions
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsEasy2
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsEasy3
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsEasy4
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsEasy5
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsEasy6
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsMedium1
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsMedium2
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsMedium3
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsMedium4
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsMedium5
 import com.quizverse.app.data.prepopulate.questions.literatureQuestionsHard1
 import com.quizverse.app.data.prepopulate.questions.literatureQuestionsHard2
 import com.quizverse.app.data.prepopulate.questions.literatureQuestionsHard3
@@ -560,6 +570,16 @@ object QuestionSeeder {
             animalQuestionsMaster6() +
             animalQuestionsMaster7() +
             literatureQuestions() +
+            literatureQuestionsEasy2() +
+            literatureQuestionsEasy3() +
+            literatureQuestionsEasy4() +
+            literatureQuestionsEasy5() +
+            literatureQuestionsEasy6() +
+            literatureQuestionsMedium1() +
+            literatureQuestionsMedium2() +
+            literatureQuestionsMedium3() +
+            literatureQuestionsMedium4() +
+            literatureQuestionsMedium5() +
             literatureQuestionsHard1() +
             literatureQuestionsHard2() +
             literatureQuestionsHard3() +
