@@ -91,6 +91,14 @@ _Patterns detected across multiple sessions will be logged here automatically._
 - **Tool/Turn-Ratio unveraendert niedrig**: 0.90–0.95 in allen 3 Sessions. Kein Anstieg trotz CLAUDE.md-Parallelisierungsgebot. Moegliche Ursache: Scorer bewertet Ratio unter 3.0 neutral (kein Abzug, kein Bonus) — kein Anreiz zur Verbesserung. Empfehlung: Parallelisierungs-Bonus im Scorer ab Ratio 1.5 einfuehren.
 - **Researcher-Fokus Stufe 2**: R1=Gradle-Build-Profile, R2=Git-fsmonitor+Push-Latenz, R3=Defender-Daemon-Architektur, R4=Parallelisierungsrate-Metrik
 
+### [2026-03-19] Evolution Analyst — Trendanalyse R6-Analyse (25 Sessions)
+- **Quality-Trend**: Vorperiode Eintraege 1-10 (Schnitt 8.72), aktuelle Periode Eintraege 11-25 (Schnitt 8.68). Delta: -0.04 — STABIL. Systemisch eingefroren auf hohem Niveau.
+- **Corrections-Rate**: 0.0% in 25 aufeinanderfolgenden Sessions. Intent-Anker haelt dauerhaft, gilt jetzt als Baseline-Normal.
+- **Tool/Turn-Ratio**: Negativtrend bestaetigt — 0.92 (Ausgangspunkt) → 0.88 → 0.80 → 0.83 (aktuell). Ziel 1.5 weiterhin unerreicht. Ursache: Kein Scoring-Anreiz. Challenger-Kalibrierung: Bonus ab 1.2 (nicht 1.5), Malus erst ab 0.6 (nicht 0.7) — auf realer Baseline von 0.80-0.88 kalibriert.
+- **Agent Write-Back**: 0 Eintraege von Code-Reviewer/Tester/Architect/Debugger nach 24+ Stunden. Mandatory-Write-Back-Regel ohne technisches Enforcement unwirksam. SubagentStop-Prompt-Hook loest es nicht (kein Dateisystem-Zugriff). Einzig wirksame Loesung: PowerShell-PostToolUse-Hook.
+- **R6 Creative Fokus**: Scorer-Incentive fuer Tool/Turn-Ratio. Schwellenwerte auf Basis gemessener Baseline kalibrieren (nicht aus der Luft greifen).
+- **R8 Intelligence Fokus**: PowerShell-PostToolUse-Hook fuer Write-Back-Enforcement — hoechste Prioritaet. Ohne echte Agenten-Daten bleibt der Knowledge Hub dauerhaft leer.
+
 ### [2026-03-19] Evolution Analyst — Trendanalyse R7 (23 Sessions, vollstaendige Datenbasis)
 - **Quality-Trend**: Vorperiode Eintraege 1-9 (Schnitt 8.72), aktuelle Periode Eintraege 14-23 (Schnitt 8.76). Delta: +0.04 — STABIL. Keine statistisch signifikante Bewegung in beiden Richtungen (Schwelle 0.5 weit unterschritten).
 - **Plausibilitaets-Check**: BESTANDEN. Die letzten 10 Eintraege zeigen errors=0, corrections=0 in allen Sessions. Session 279141ac (3 Turns, 1 Tool-Call, Score 8.0) ist valide Kurzsession — korrekt erkannt, keine Inflationsgefahr fuer SPC-Baseline.
@@ -100,6 +108,16 @@ _Patterns detected across multiple sessions will be logged here automatically._
 - **R6 Creative (aktualisiert)**: Parallelisierungs-Bonus im Scorer ab Ratio 1.5 einbauen. Ratio sank von 0.88 auf 0.80 — CLAUDE.md-Parallelisierungsregel wird nicht durch Scoring-Anreize verstaerkt.
 - **R8 Intelligence (aktualisiert)**: SubagentStop-Hook Implementierung ist der kritischste Intelligence-Fokus. Ohne technisches Enforcement bleiben alle 4 Senior-Agenten stille Silos — Knowledge Hub nie befuellt.
 
+### [2026-03-19] Self-Improve Thorough Run — 7 Verbesserungen implementiert
+- **FIXED** settings.json: SessionEnd-Hooks-Timeout von 5s auf 30s erhoeht (session-scorer/autopsy liefen in Timeouts)
+- **UPGRADED** architect.md: Multi-Step Commit Planning (SWE-EVO Paper arxiv 2512.18470 — loest Multi-Commit-Blind-Spot)
+- **UPGRADED** debugger.md: Fehlertyp-Klassifikation mit 10 Kategorien (SWE-RL Paper arxiv 2512.18552)
+- **FIXED** FAILURES.md: 3 doppelte Write-Back-Eintraege konsolidiert, Challenger-Findings dokumentiert
+- **UPDATED** intelligence-backlog.md: 6 neue Findings (13-18) aus R8 Zweiter Lauf hinzugefuegt
+- **CONFIRMED** .NET Runtime 10.0.5 NICHT von CVE-2026-26127/26130 betroffen (R5 falsches SDK→Runtime-Mapping)
+- **CONFIRMED** Alle 15 Tools aktuell, kein Update noetig. Agent Count: 15 (intelligence-researcher neu)
+- **CONFIRMED** boostvolt/claude-code-lsps bereits installiert (R2 hatte als "neu" empfohlen)
+
 ## Capability Gaps
 _Tasks that required missing agents/skills will be logged here._
 
@@ -107,3 +125,4 @@ _Tasks that required missing agents/skills will be logged here._
 - **2026-03-18**: ✅ BEHOBEN — Session-Scorer v2: Kurzzeit-Sessions (< 10 turns) aus SPC ausgeschlossen (Zeile 180), kein Korrektur-Bonus fuer Kurzsessions (Zeile 141). Scoring jetzt rate-basiert statt count-basiert.
 - **2026-03-19 (Challenger)**: Speed-Plan 7 Punkte geprueft — KRITISCH: Defender-Allowlist per Pfad ist ein struktureller Security-Blind-Spot. Angreifer koennen praeparierte Dateien in vertrauenswuerdige Pfade schreiben und sind dann unsichtbar. Fix: SHA-256-Hash-Whitelist statt Pfad-Allowlist. Weitere Risiken: /tmp/ Cache instabil auf Windows (Gradle Config-Cache inkompatibel mit AGP 8.x), Einzelmessungen (700ms/300ms) haben zu wenig Datenbasis fuer permanente MEMORY-Eintraege, speed-coding.md-Rule konfligiert mit spec-first.md.
 - **2026-03-19 (Challenger)**: 4 Verbesserungen geprueft — KRITISCH: SubagentStop-Prompt-Hook kann MEMORY.md nicht wirklich pruefen (kein Dateisystem-Zugriff aus Prompt-Hook), loest die bekannte Enforcement-Luecke NICHT. Scorer-Bonus ab Ratio 1.5 bestraft aktuell die Haelfte aller Sessions (Baseline 0.88, Max 1.27 — Malus-Schwellenwert von 0.7 trifft reale Sessions). Coder-Selbsttests erzeugen False-Safety durch blinde Flecken. Empfehlung: Echter PowerShell-PostToolUse-Hook fuer Write-Back-Enforcement, Scorer-Schwellenwerte auf Baseline-Daten kalibrieren.
+- **2026-03-19 (Challenger)**: Self-Improve v5.11 Thorough Run geprueft — KRITISCH: Commit-Sequenz-Plan (Improvement 2) wird von CLAUDE.md-Parallelisierungsregel aktiv sabotiert (Agents sofort parallel starten). Ohne JSON-Enforcement-Mechanismus ist der Dependency-Graph nur eine Empfehlung. Weitere Risiken: SessionEnd 30s Timeout blockiert neue Session auf Windows (Defender-Bun-Latenz), Error-Type-Library in MEMORY.md statt FAILURES.md schichtet Tech-Debt auf ungefixte Write-Back-Luecke, Arena Mode ohne Divergenz-Pruefung verdoppelt Kosten ohne garantierten Erkenntnisgewinn, Finding 15+16 brauchen atomares Agent-Update bzw. Python-Bestaetigung vom Benutzer.

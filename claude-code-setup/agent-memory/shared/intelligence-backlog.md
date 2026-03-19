@@ -72,3 +72,44 @@
 - **Quelle:** arxiv.org/html/2603.18000
 - **Status:** BEREITS VORHANDEN — Skills-System erfuellt diese Funktion
 - **Prioritaet:** Keine Aktion noetig
+
+## Lauf 2026-03-19 (Zweiter Lauf — 6 neue Findings)
+
+### Finding 13: Live-SWE-agent — Session-Patterns automatisch extrahieren
+- **Quelle:** arxiv.org/html/2511.13646v3
+- **Kernidee:** Agent entwickelt sich in Echtzeit weiter, extrahiert Loesungsmuster aus bearbeiteten Issues
+- **Ergebnis:** 77.4% auf SWE-bench Verified (bester Open-Source zum Zeitpunkt)
+- **Status:** OFFEN — session-scorer.ts um Pattern-Extraktion erweitern
+- **Prioritaet:** HOCH — 1 Tag Aufwand
+
+### Finding 14: SWE-RL — Fehlertyp-Bibliothek durch Bug-Injektion
+- **Quelle:** arxiv.org/abs/2512.18552
+- **Kernidee:** Agent injiziert Bugs, repariert sie selbst, lernt Fehlertypen systematisch
+- **Status:** UMGESETZT (teilweise) — Fehlertyp-Klassifikation in debugger.md hinzugefuegt (2026-03-19)
+- **Umsetzung:** debugger.md → "Fehlertyp-Klassifikation" Sektion mit 10 Kategorien
+- **Prioritaet:** HOCH — 30 Min
+
+### Finding 15: OpenSage — Hierarchisches Gedaechtnis schlaegt Flat-File
+- **Quelle:** arxiv.org/abs/2602.16891
+- **Kernidee:** Graph-Netzwerk fuer langfristiges Wissen + kurzfristige Ausfuehrungs-Spur
+- **Status:** OFFEN — MEMORY.md-Restrukturierung in PATTERNS/ERRORS/DECISIONS geplant
+- **Prioritaet:** MITTEL — 30 Min, Challenger: zusammen mit Finding 14 umsetzen
+
+### Finding 16: MCP-Solver — Z3-SMT-Solver als MCP-Server
+- **Quelle:** arxiv.org/html/2501.00539v2
+- **Kernidee:** LLM kann mathematisch beweisen dass Bedingungen nie verletzt werden
+- **Status:** OFFEN — Python-Backend noetig, Benutzer-Bestaetigung erforderlich
+- **Prioritaet:** MITTEL-LANG — 1 Std
+
+### Finding 17: Arena Mode — Blindvergleich paralleler Agent-Ergebnisse
+- **Quelle:** morphllm.com/comparisons/windsurf-vs-cursor (Windsurf Wave 14)
+- **Kernidee:** Gleiche Aufgabe an 2 Modelle/Agents, bestes Ergebnis waehlen
+- **Status:** OFFEN — Challenger: erst mit Divergenz-Pruefung + Entscheidungsmatrix deployen
+- **Prioritaet:** NIEDRIG — Token-Kosten ohne klaren Mehrwert bei niedriger Temperatur
+
+### Finding 18: SWE-EVO — Multi-Commit-Aufgaben als blinder Fleck
+- **Quelle:** arxiv.org/html/2512.18470v1
+- **Kernidee:** Alle Coding-Agents loesen Einzel-Issues gut, brechen bei Multi-Commit (<20% Erfolg)
+- **Status:** UMGESETZT — Multi-Step Commit Planning in architect.md hinzugefuegt (2026-03-19)
+- **Umsetzung:** architect.md → "Multi-Step Commit Planning" Sektion mit Abhaengigkeitsgraph
+- **Prioritaet:** HOCH — 30 Min

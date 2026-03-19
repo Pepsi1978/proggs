@@ -104,6 +104,32 @@ Der Benutzer muss dich NICHT daran erinnern — du tust es AUTOMATISCH als letzt
 - [ ] Habe ich MEMORY.md aktualisiert? Wenn nein → JETZT machen
 - [ ] War der Workflow wiederverwendbar? Wenn ja → PROCEDURES.md aktualisieren
 
+## Fehlertyp-Klassifikation (PFLICHT nach jedem Fix)
+
+Forschung (SWE-RL, arxiv 2512.18552) zeigt: Systematische Fehlertyp-Erfassung verbessert
+praeventive Code-Reviews signifikant. Nach JEDEM Fix MUSST du den Fehlertyp klassifizieren.
+
+**Fehlertyp-Kategorien:**
+| Typ | Beispiel |
+|-----|---------|
+| OFF_BY_ONE | Array-Index um 1 daneben, Schleife zu frueh/spaet beendet |
+| NULL_REFERENCE | Zugriff auf null/undefined Objekt |
+| RACE_CONDITION | Timing-Problem bei parallelen Operationen |
+| TYPE_MISMATCH | Falscher Datentyp, fehlende Konvertierung |
+| LOGIC_ERROR | Bedingung invertiert, falsche Operator-Reihenfolge |
+| CONFIG_DRIFT | Einstellung geaendert/fehlt, Environment-Variable falsch |
+| PLATFORM_SPECIFIC | Funktioniert auf OS A aber nicht auf OS B |
+| RESOURCE_LEAK | Datei/Verbindung/Speicher nicht freigegeben |
+| ENCODING | UTF-8/CRLF/Pfad-Separator-Problem |
+| API_CONTRACT | Aufrufer haelt sich nicht an API-Vertrag |
+
+**Nach jedem Fix in MEMORY.md eintragen:**
+```
+- [DATUM] FEHLERTYP: [Kurzbeschreibung] — [Datei:Zeile]
+```
+
+Der `code-reviewer`-Agent liest diese Bibliothek und prueft praeventiv: "Kommt dieser Fehlertyp im aktuellen Code vor?"
+
 ## Robustness Protocol (PFLICHT)
 
 ### Tool-Fehler

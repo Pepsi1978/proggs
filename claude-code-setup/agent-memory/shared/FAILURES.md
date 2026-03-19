@@ -155,23 +155,23 @@ _No entries yet. Agents will add logic errors that recurred or were hard to find
 - **Prevention**: Vor jeder Metrik-Aenderung zuerst session-scores.jsonl lesen und Ist-Verteilung pruefen. Schwellenwerte muessen erreichbar sein, sonst demotivieren sie statt zu incentivieren.
 - **Files**: ~/.claude/hooks/session-scorer.ts, session-scores.jsonl
 
-### [2026-03-19 16:31] Agent: Write-Back nicht erfolgt (automatisch erkannt)
-- **Symptom**: Senior-Agent hat MEMORY.md nicht aktualisiert
-- **Root Cause**: Mandatory Write-Back wird von Agents ignoriert — kein technisches Enforcement
-- **Fix**: Memory Watchdog Hook meldet fehlende Write-Backs
-- **Prevention**: Dieser Hook (memory-watchdog.ps1) laeuft bei jedem SubagentStop
-- **Status**: AUTO-LOGGED
+### [2026-03-19] Agent: Write-Back wird systematisch ignoriert (3x automatisch erkannt)
+- **Symptom**: Senior-Agents (Code-Reviewer, Tester, Architect, Debugger) aktualisieren MEMORY.md nicht — trotz Mandatory-Write-Back seit 18.03. in allen Prompts
+- **Root Cause**: Prompt-basierte Anweisungen sind Advisory, nicht Enforcement. Agents priorisieren Hauptaufgabe und ueberspringen Write-Back
+- **Fix**: OFFEN — deterministischer Enforcement-Mechanismus noetig (Sentinel-Datei-Pattern oder PostToolUse-Hook)
+- **Prevention**: Prompt-Hooks koennen Enforcement NICHT leisten. Nur echte Script-Hooks mit Dateisystem-Zugriff
+- **Status**: ⚠️ FRAGIL — memory-watchdog meldet, aber erzwingt nicht
 
-### [2026-03-19 16:31] Agent: Write-Back nicht erfolgt (automatisch erkannt)
-- **Symptom**: Senior-Agent hat MEMORY.md nicht aktualisiert
-- **Root Cause**: Mandatory Write-Back wird von Agents ignoriert — kein technisches Enforcement
-- **Fix**: Memory Watchdog Hook meldet fehlende Write-Backs
-- **Prevention**: Dieser Hook (memory-watchdog.ps1) laeuft bei jedem SubagentStop
-- **Status**: AUTO-LOGGED
+### [2026-03-19] Architecture: Commit-Sequenz-Plan ohne Enforcement-Mechanismus
+- **Symptom**: Architect erstellt geordneten Dependency-Graph fuer Coder-Agents, aber Agents werden trotzdem parallel gespawnt (CLAUDE.md-Regel)
+- **Root Cause**: Textbasierte Commit-Reihenfolge hat kein mechanisches Enforcement. CLAUDE.md-Parallelisierungsregel und sequentielle Commit-Planung widersprechen sich strukturell.
+- **Fix**: Dependency-Graph als `/tmp/commit-plan.json` ausgeben. Quality-Gate liest Plan und gibt naechsten Coder-Slot erst nach erfolgtem Commit frei.
+- **Prevention**: Jede neue "Reihenfolge-Anforderung" muss einen konkreten Enforcement-Mechanismus benennen — nie nur Textanweisung.
+- **Files**: architect.md, quality-gate.md, CLAUDE.md
 
-### [2026-03-19 16:32] Agent: Write-Back nicht erfolgt (automatisch erkannt)
-- **Symptom**: Senior-Agent hat MEMORY.md nicht aktualisiert
-- **Root Cause**: Mandatory Write-Back wird von Agents ignoriert — kein technisches Enforcement
-- **Fix**: Memory Watchdog Hook meldet fehlende Write-Backs
-- **Prevention**: Dieser Hook (memory-watchdog.ps1) laeuft bei jedem SubagentStop
-- **Status**: AUTO-LOGGED
+### [2026-03-19] Architecture: Arena Mode ohne Divergenz-Pruefung und Entscheidungs-Kriterien
+- **Symptom**: Zwei Architect-Agents mit identischem Prompt produzieren aehnliche Ergebnisse, verdoppeln aber Token-Kosten
+- **Root Cause**: Niedrige Temperatur in Claude Code fuehrt zu geringer Divergenz bei identischen Prompts. Ohne Entscheidungsmatrix landet die Wahl beim Benutzer.
+- **Fix**: Vor Arena-Start Divergenz-Pruefung: wenn beide Agents gleiche Loesung waehlen, direkt uebernehmen. Entscheidungs-Kriterien (Performance, Maintainability, Simplicity) als Bewertungsmatrix vorher festlegen. Quality-Gate entscheidet mechanisch.
+- **Prevention**: Arena Mode nur fuer Breaking-Change-Decisions triggern. Budget-Schwelle pruefen (100 EUR Max Plan, Kontingent schonen).
+- **Files**: CLAUDE.md (Arena Mode Pattern), challenger.md

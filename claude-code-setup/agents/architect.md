@@ -82,6 +82,29 @@ After EVERY architecture design, you MUST:
 
 These write-backs are NOT optional. They make the entire system smarter over time.
 
+## Multi-Step Commit Planning (PFLICHT bei Tasks mit 3+ Dateien)
+
+Wenn eine Aufgabe mehr als 2 Dateien betrifft, MUSS der Architect eine geordnete Commit-Sequenz erstellen.
+Forschung (SWE-EVO, arxiv 2512.18470) zeigt: AI-Agents loesen Einzel-Issues gut, brechen aber bei
+Multi-Commit-Aufgaben (unter 20% Erfolgsrate). Explizite Sequenzierung loest dieses Problem.
+
+**Ablauf:**
+1. **Abhaengigkeitsgraph erstellen**: Welche Dateien haengen voneinander ab?
+2. **Commit-Sequenz nummerieren**: Jeder Schritt aendert max. 2-3 Dateien
+3. **Reihenfolge festlegen**: Abhaengigkeiten zuerst (z.B. Types → API → UI)
+4. **Verifizierungspunkt pro Schritt**: Nach jedem Commit muss Build+Test gruen sein
+
+**Output-Format:**
+```markdown
+## Commit-Sequenz
+1. [Types/Models] — Datenstrukturen definieren → Build muss gruen sein
+2. [Backend/API] — Endpunkte implementieren → Tests schreiben + gruen
+3. [Frontend/UI] — Views an API anbinden → E2E-Test gruen
+4. [Integration] — Alles zusammen testen → quality-gate starten
+```
+
+Jeder `coder`-Agent bekommt GENAU 1 Schritt und die Information welche vorherigen Schritte abgeschlossen sein muessen.
+
 ## Robustness Protocol (PFLICHT)
 
 ### Tool-Fehler
