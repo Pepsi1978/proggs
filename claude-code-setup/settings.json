@@ -169,7 +169,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/notify.ps1\"",
+            "command": "powershell.exe -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/notify.ps1\"",
             "timeout": 5
           }
         ]
@@ -181,7 +181,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$USERPROFILE/.claude/hooks/prompt-injection-defender/post-tool-defender.py\"",
+            "command": "\"C:/Users/barwa/AppData/Local/Programs/Python/Python313/python.exe\" \"$USERPROFILE/.claude/hooks/prompt-injection-defender/post-tool-defender.py\"",
             "timeout": 5
           }
         ]
@@ -286,6 +286,17 @@
         ]
       }
     ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Context was just compacted. Read /tmp/claude-session-goal.txt to recall the original user goal. Briefly state what you were working on before compaction.",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
         "hooks": [
@@ -311,7 +322,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run \"$USERPROFILE/.claude/hooks/session-scorer.ts\"",
+            "command": "\"C:/Users/barwa/.bun/bin/bun.exe\" run \"$USERPROFILE/.claude/hooks/session-scorer.ts\"",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"C:/Users/barwa/.bun/bin/bun.exe\" run \"$USERPROFILE/.claude/hooks/session-autopsy.ts\"",
             "timeout": 10,
             "async": true
           }
@@ -414,7 +435,8 @@
     "claude-code-lsps@boostvolt": true,
     "xclaude-plugin@xclaude-plugin-marketplace": true,
     "apple-platform-build-tools@apple-platform-build-tools": true,
-    "claude-reflect@claude-reflect-marketplace": true
+    "claude-reflect@claude-reflect-marketplace": true,
+    "coderabbit@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "superpowers-marketplace": {

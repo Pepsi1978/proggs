@@ -1,289 +1,285 @@
 {
-  "description": "Claude Code Setup-Manifest - Installiert alle Plugins, Skills, Dev-Tools, MCP-Server und Settings auf einem neuen Rechner",
-  "version": "3.0.0",
-  "author": "Pepsi1978",
-  "github_user": "Pepsi1978",
-  "repo": "https://github.com/Pepsi1978/proggs",
+	"description": "Claude Code Setup-Manifest - Installiert alle Plugins, Skills, Dev-Tools, MCP-Server und Settings auf einem neuen Rechner",
+	"version": "3.0.0",
+	"author": "Pepsi1978",
+	"github_user": "Pepsi1978",
+	"repo": "https://github.com/Pepsi1978/proggs",
 
-  "dev_tools": {
-    "required": ["node", "git", "gh"],
-    "recommended": {
-      "bun": {
-        "macos": "brew install oven-sh/bun/bun",
-        "windows": "winget install Oven-sh.Bun"
-      },
-      "deno": {
-        "macos": "brew install deno",
-        "windows": "winget install DenoLand.Deno"
-      },
-      "rust": {
-        "macos": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
-        "windows": "winget install Rustlang.Rustup"
-      },
-      "go": {
-        "macos": "brew install go",
-        "windows": "winget install GoLang.Go"
-      },
-      "dotnet": {
-        "macos": "brew install dotnet-sdk",
-        "windows": "winget install Microsoft.DotNet.SDK.10"
-      },
-      "java": {
-        "macos": "brew install openjdk",
-        "windows": "winget install Microsoft.OpenJDK.21"
-      },
-      "cmake": {
-        "macos": "brew install cmake",
-        "windows": "winget install Kitware.CMake"
-      },
-      "llvm": {
-        "macos": "brew install llvm",
-        "windows": "winget install LLVM.LLVM"
-      },
-      "make": {
-        "macos": "already included with Xcode CLI tools",
-        "windows": "winget install GnuWin32.Make"
-      },
-      "jq": {
-        "macos": "brew install jq",
-        "windows": "winget install jqlang.jq"
-      },
-      "uv": {
-        "macos": "curl -LsSf https://astral.sh/uv/install.sh | sh",
-        "windows": "winget install astral-sh.uv"
-      }
-    }
-  },
+	"dev_tools": {
+		"required": ["node", "git", "gh"],
+		"recommended": {
+			"bun": {
+				"macos": "brew install oven-sh/bun/bun",
+				"windows": "winget install Oven-sh.Bun"
+			},
+			"deno": {
+				"macos": "brew install deno",
+				"windows": "winget install DenoLand.Deno"
+			},
+			"rust": {
+				"macos": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
+				"windows": "winget install Rustlang.Rustup"
+			},
+			"go": {
+				"macos": "brew install go",
+				"windows": "winget install GoLang.Go"
+			},
+			"dotnet": {
+				"macos": "brew install dotnet-sdk",
+				"windows": "winget install Microsoft.DotNet.SDK.10"
+			},
+			"java": {
+				"macos": "brew install openjdk",
+				"windows": "winget install Microsoft.OpenJDK.21"
+			},
+			"cmake": {
+				"macos": "brew install cmake",
+				"windows": "winget install Kitware.CMake"
+			},
+			"llvm": {
+				"macos": "brew install llvm",
+				"windows": "winget install LLVM.LLVM"
+			},
+			"make": {
+				"macos": "already included with Xcode CLI tools",
+				"windows": "winget install GnuWin32.Make"
+			},
+			"jq": {
+				"macos": "brew install jq",
+				"windows": "winget install jqlang.jq"
+			},
+			"uv": {
+				"macos": "curl -LsSf https://astral.sh/uv/install.sh | sh",
+				"windows": "winget install astral-sh.uv"
+			}
+		}
+	},
 
-  "plugins": {
-    "claude-plugins-official": [
-      "swift-lsp",
-      "typescript-lsp",
-      "csharp-lsp",
-      "clangd-lsp",
-      "rust-analyzer-lsp",
-      "gopls-lsp",
-      "jdtls-lsp",
-      "kotlin-lsp",
-      "lua-lsp",
-      "php-lsp",
-      "pyright-lsp",
-      "ruby-lsp",
-      "superpowers",
-      "frontend-design",
-      "context7",
-      "github",
-      "feature-dev",
-      "code-simplifier",
-      "commit-commands",
-      "security-guidance",
-      "claude-md-management",
-      "pr-review-toolkit",
-      "claude-code-setup",
-      "hookify",
-      "playground",
-      "ralph-loop",
-      "code-review",
-      "playwright",
-      "coderabbit",
-      "explanatory-output-style",
-      "skill-creator",
-      "plugin-dev",
-      "agent-sdk-dev"
-    ],
-    "superpowers-marketplace": [
-      "episodic-memory",
-      "double-shot-latte",
-      "superpowers-chrome",
-      "claude-session-driver",
-      "superpowers-lab",
-      "superpowers-developing-for-claude-code",
-      "elements-of-style"
-    ],
-    "trailofbits": [
-      "ask-questions-if-underspecified",
-      "audit-context-building",
-      "building-secure-contracts",
-      "burpsuite-project-parser",
-      "claude-in-chrome-troubleshooting",
-      "constant-time-analysis",
-      "differential-review",
-      "dwarf-expert",
-      "entry-point-analyzer",
-      "firebase-apk-scanner",
-      "fp-check",
-      "gh-cli",
-      "git-cleanup",
-      "insecure-defaults",
-      "property-based-testing",
-      "seatbelt-sandboxer",
-      "semgrep-rule-creator",
-      "semgrep-rule-variant-creator",
-      "sharp-edges",
-      "skill-improver",
-      "spec-to-code-compliance",
-      "static-analysis",
-      "supply-chain-risk-auditor",
-      "testing-handbook-skills",
-      "variant-analysis",
-      "workflow-skill-design",
-      "yara-authoring",
-      "zeroize-audit",
-      "agentic-actions-auditor"
-    ],
-    "thedotmack": [
-      "claude-mem"
-    ],
-    "everything-claude-code": [
-      "everything-claude-code"
-    ],
-    "compound-engineering-plugin": [
-      "compound-engineering"
-    ],
-    "context-engineering-kit": [
-      "customaize-agent",
-      "ddd",
-      "docs",
-      "fpf",
-      "git",
-      "kaizen",
-      "mcp",
-      "reflexion",
-      "sadd",
-      "sdd",
-      "tdd",
-      "tech-stack"
-    ],
-    "boostvolt": [
-      "claude-code-lsps"
-    ],
-    "xclaude-plugin-marketplace": [
-      "xclaude-plugin"
-    ],
-    "apple-platform-build-tools": [
-      "apple-platform-build-tools"
-    ],
-    "claude-reflect-marketplace": [
-      "claude-reflect"
-    ]
-  },
+	"plugins": {
+		"claude-plugins-official": [
+			"swift-lsp",
+			"typescript-lsp",
+			"csharp-lsp",
+			"clangd-lsp",
+			"rust-analyzer-lsp",
+			"gopls-lsp",
+			"jdtls-lsp",
+			"kotlin-lsp",
+			"lua-lsp",
+			"php-lsp",
+			"pyright-lsp",
+			"ruby-lsp",
+			"superpowers",
+			"frontend-design",
+			"context7",
+			"github",
+			"feature-dev",
+			"code-simplifier",
+			"commit-commands",
+			"security-guidance",
+			"claude-md-management",
+			"pr-review-toolkit",
+			"claude-code-setup",
+			"hookify",
+			"playground",
+			"ralph-loop",
+			"code-review",
+			"playwright",
+			"coderabbit",
+			"explanatory-output-style",
+			"skill-creator",
+			"plugin-dev",
+			"agent-sdk-dev"
+		],
+		"superpowers-marketplace": [
+			"episodic-memory",
+			"double-shot-latte",
+			"superpowers-chrome",
+			"claude-session-driver",
+			"superpowers-lab",
+			"superpowers-developing-for-claude-code",
+			"elements-of-style"
+		],
+		"trailofbits": [
+			"ask-questions-if-underspecified",
+			"audit-context-building",
+			"building-secure-contracts",
+			"burpsuite-project-parser",
+			"claude-in-chrome-troubleshooting",
+			"constant-time-analysis",
+			"differential-review",
+			"dwarf-expert",
+			"entry-point-analyzer",
+			"firebase-apk-scanner",
+			"fp-check",
+			"gh-cli",
+			"git-cleanup",
+			"insecure-defaults",
+			"property-based-testing",
+			"seatbelt-sandboxer",
+			"semgrep-rule-creator",
+			"semgrep-rule-variant-creator",
+			"sharp-edges",
+			"skill-improver",
+			"spec-to-code-compliance",
+			"static-analysis",
+			"supply-chain-risk-auditor",
+			"testing-handbook-skills",
+			"variant-analysis",
+			"workflow-skill-design",
+			"yara-authoring",
+			"zeroize-audit",
+			"agentic-actions-auditor"
+		],
+		"thedotmack": ["claude-mem"],
+		"everything-claude-code": ["everything-claude-code"],
+		"compound-engineering-plugin": ["compound-engineering"],
+		"context-engineering-kit": [
+			"customaize-agent",
+			"ddd",
+			"docs",
+			"fpf",
+			"git",
+			"kaizen",
+			"mcp",
+			"reflexion",
+			"sadd",
+			"sdd",
+			"tdd",
+			"tech-stack"
+		],
+		"boostvolt": ["claude-code-lsps"],
+		"xclaude-plugin-marketplace": ["xclaude-plugin"],
+		"apple-platform-build-tools": ["apple-platform-build-tools"],
+		"claude-reflect-marketplace": ["claude-reflect"]
+	},
 
-  "extra_marketplaces": {
-    "superpowers-marketplace": {
-      "source": "github",
-      "repo": "obra/superpowers-marketplace",
-      "autoUpdate": true
-    },
-    "trailofbits": {
-      "source": "github",
-      "repo": "trailofbits/skills"
-    },
-    "thedotmack": {
-      "source": "github",
-      "repo": "thedotmack/claude-mem"
-    },
-    "everything-claude-code": {
-      "source": "github",
-      "repo": "affaan-m/everything-claude-code"
-    },
-    "compound-engineering-plugin": {
-      "source": "github",
-      "repo": "EveryInc/compound-engineering-plugin"
-    },
-    "context-engineering-kit": {
-      "source": "github",
-      "repo": "NeoLabHQ/context-engineering-kit"
-    },
-    "boostvolt": {
-      "source": "github",
-      "repo": "boostvolt/claude-code-lsps"
-    },
-    "xclaude-plugin-marketplace": {
-      "source": "github",
-      "repo": "conorluddy/xclaude-plugin"
-    },
-    "apple-platform-build-tools": {
-      "source": "github",
-      "repo": "kylehughes/apple-platform-build-tools-claude-code-plugin"
-    },
-    "claude-reflect-marketplace": {
-      "source": "github",
-      "repo": "BayramAnnakov/claude-reflect"
-    }
-  },
+	"extra_marketplaces": {
+		"superpowers-marketplace": {
+			"source": "github",
+			"repo": "obra/superpowers-marketplace",
+			"autoUpdate": true
+		},
+		"trailofbits": {
+			"source": "github",
+			"repo": "trailofbits/skills"
+		},
+		"thedotmack": {
+			"source": "github",
+			"repo": "thedotmack/claude-mem"
+		},
+		"everything-claude-code": {
+			"source": "github",
+			"repo": "affaan-m/everything-claude-code"
+		},
+		"compound-engineering-plugin": {
+			"source": "github",
+			"repo": "EveryInc/compound-engineering-plugin"
+		},
+		"context-engineering-kit": {
+			"source": "github",
+			"repo": "NeoLabHQ/context-engineering-kit"
+		},
+		"boostvolt": {
+			"source": "github",
+			"repo": "boostvolt/claude-code-lsps"
+		},
+		"xclaude-plugin-marketplace": {
+			"source": "github",
+			"repo": "conorluddy/xclaude-plugin"
+		},
+		"apple-platform-build-tools": {
+			"source": "github",
+			"repo": "kylehughes/apple-platform-build-tools-claude-code-plugin"
+		},
+		"claude-reflect-marketplace": {
+			"source": "github",
+			"repo": "BayramAnnakov/claude-reflect"
+		}
+	},
 
-  "mcp_servers": {
-    "sequential-thinking": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
-    }
-  },
+	"mcp_servers": {
+		"sequential-thinking": {
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+		}
+	},
 
-  "security_tools": {
-    "parry": {
-      "install": {
-        "macos": "cargo install --git https://github.com/vaporif/parry-guard parry-guard --no-default-features --features candle",
-        "windows": "not supported (use macOS or WSL)"
-      },
-      "hooks": {
-        "PreToolUse": { "command": "parry-guard hook", "timeout": 1000 },
-        "PostToolUse": { "command": "parry-guard hook", "timeout": 5000 },
-        "UserPromptSubmit": { "command": "parry-guard hook", "timeout": 2000 }
-      },
-      "note": "Requires HuggingFace token (HF_TOKEN). Full mode needs --features candle."
-    },
-    "lasso-defender": {
-      "install": "pip install pyyaml (or uv available)",
-      "hooks": {
-        "PostToolUse": {
-          "matcher": "Read|WebFetch|Bash|Grep|Task",
-          "command": "uv run $HOME/.claude/hooks/prompt-injection-defender/post-tool-defender.py",
-          "timeout": 5
-        }
-      },
-      "description": "Pattern-based prompt injection scanner (50+ patterns, 4 categories)"
-    },
-    "cargo-audit": {
-      "install": {
-        "macos": "cargo install cargo-audit",
-        "windows": "cargo install cargo-audit"
-      },
-      "description": "Scans Rust crate dependencies for known CVEs (run: cargo audit)"
-    }
-  },
+	"security_tools": {
+		"parry": {
+			"install": {
+				"macos": "cargo install --git https://github.com/vaporif/parry-guard parry-guard --no-default-features --features candle",
+				"windows": "not supported (use macOS or WSL)"
+			},
+			"hooks": {
+				"PreToolUse": { "command": "parry-guard hook", "timeout": 1000 },
+				"PostToolUse": { "command": "parry-guard hook", "timeout": 5000 },
+				"UserPromptSubmit": { "command": "parry-guard hook", "timeout": 2000 }
+			},
+			"note": "Requires HuggingFace token (HF_TOKEN). Full mode needs --features candle."
+		},
+		"lasso-defender": {
+			"install": "pip install pyyaml (or uv available)",
+			"hooks": {
+				"PostToolUse": {
+					"matcher": "Read|WebFetch|Bash|Grep|Task",
+					"command": "uv run $HOME/.claude/hooks/prompt-injection-defender/post-tool-defender.py",
+					"timeout": 5
+				}
+			},
+			"description": "Pattern-based prompt injection scanner (50+ patterns, 4 categories)"
+		},
+		"cargo-audit": {
+			"install": {
+				"macos": "cargo install cargo-audit",
+				"windows": "cargo install cargo-audit"
+			},
+			"description": "Scans Rust crate dependencies for known CVEs (run: cargo audit)"
+		}
+	},
 
-  "custom_skills": [
-    "auto-verify-iterate",
-    "cross-platform",
-    "tampermonkey-version",
-    "undo-changes"
-  ],
+	"custom_skills": [
+		"auto-verify-iterate",
+		"cross-platform",
+		"tampermonkey-version",
+		"undo-changes"
+	],
 
-  "custom_agents": [
-    "architect",
-    "batch-reviewer",
-    "code-reviewer",
-    "coder",
-    "debugger",
-    "env-checker",
-    "evolution-analyst",
-    "optimizer",
-    "quality-gate",
-    "researcher",
-    "tester",
-    "ui-polisher"
-  ],
+	"custom_agents": [
+		"architect",
+		"batch-reviewer",
+		"challenger",
+		"code-reviewer",
+		"coder",
+		"debugger",
+		"env-checker",
+		"evolution-analyst",
+		"mar-reviewer",
+		"optimizer",
+		"quality-gate",
+		"researcher",
+		"tester",
+		"ui-polisher"
+	],
 
-  "settings": {
-    "effortLevel": "high",
-    "env": {
-      "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-      "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
-      "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "95"
-    },
-    "permissions": [
-      "Bash", "Read", "Edit", "Write", "Glob", "Grep",
-      "WebFetch", "WebSearch", "Agent", "NotebookEdit"
-    ]
-  }
+	"settings": {
+		"effortLevel": "high",
+		"env": {
+			"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+			"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
+			"CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "95"
+		},
+		"permissions": [
+			"Bash",
+			"Read",
+			"Edit",
+			"Write",
+			"Glob",
+			"Grep",
+			"WebFetch",
+			"WebSearch",
+			"Agent",
+			"NotebookEdit"
+		]
+	}
 }
