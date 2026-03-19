@@ -38,8 +38,31 @@ function resolveCurrentDb(dbDir: string): string {
 			return join(dbDir, pointer);
 		}
 	}
-	// Fallback: use index.db directly (backwards compatible)
-	return join(dbDir, "index.db");
+	// Fallback 1: index.db directly (backwards compatible)
+	if (existsSync(join(dbDir, "index.db"))) {
+		return join(dbDir, "index.db");
+	}
+	// Fallback 2: find the highest numbered index-N.db (recover from missing pointer)
+	if (existsSync(dbDir)) {
+		let maxN = 0;
+		let found = "";
+		for (const f of readdirSync(dbDir)) {
+			const match = f.match(/^index-(\d+)\.db$/);
+			if (match) {
+				const n = parseInt(match[1], 10);
+				if (n > maxN) {
+					maxN = n;
+					found = f;
+				}
+			}
+		}
+		if (found) {
+			// Auto-repair: write pointer so this doesn't happen again
+			writeFileSync(pointerFile, found);
+			return join(dbDir, found);
+		}
+	}
+	return join(dbDir, "index.db"); // Will trigger "no index" message downstream
 }
 
 function getStore(rootDir: string): VectorStore {
@@ -75,17 +98,16 @@ function nextDbName(dbDir: string): string {
 }
 
 function cleanupOldDbs(dbDir: string, currentFile: string): void {
-	// Delete old index-N.db files that are not the current one
+	// Delete old index-N.db files (and their WAL/SHM companions) that are not the current one
 	if (!existsSync(dbDir)) return;
+	const currentBase = currentFile.replace(".db", "");
 	for (const f of readdirSync(dbDir)) {
-		if (
-			f.match(/^index-\d+\.db/) &&
-			!f.startsWith(currentFile.replace(".db", ""))
-		) {
+		// Match index-N.db, index-N.db-wal, index-N.db-shm — but NOT the current one
+		if (f.match(/^index-\d+\.db/) && !f.startsWith(currentBase)) {
 			try {
 				unlinkSync(join(dbDir, f));
 			} catch {
-				// File still locked — skip, will be cleaned up next time
+				// File still locked on Windows — skip, will be cleaned up next time
 			}
 		}
 	}
