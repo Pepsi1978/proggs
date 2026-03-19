@@ -1,0 +1,9 @@
+{
+	"_comment": "MCP server configuration for Windows. Copy into ~/proggs/.mcp.json on Windows.",
+	"mcpServers": {
+		"code-search": {
+			"command": "bun",
+			"args": ["run", "C:/Users/barwa/proggs/mcp-code-search/src/index.ts"]
+		}
+	}
+}

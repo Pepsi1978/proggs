@@ -1,74 +1,80 @@
 {
-  "_comment": "Add this 'hooks' section to settings.json on macOS. Add Parry hook only after installing parry.",
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/auto-sync.sh",
-            "timeout": 30
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/notify.sh",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/auto-format.sh",
-            "timeout": 5,
-            "async": true
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/safety-gate.sh",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "RESPOND WITH ONLY A RAW JSON OBJECT. NO markdown, NO explanation, NO text before or after.\n\nCheck the conversation: Were any protected settings in ~/.claude/settings.json modified this turn?\n\nProtected settings (BLOCK if changed):\n1. env.CLAUDE_CODE_SUBAGENT_MODEL must be 'sonnet'\n2. env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE must be >= 95\n\nWARNING-ONLY settings (allow but note in reason):\n3. effortLevel — user may intentionally switch between 'medium' and 'high'. Do NOT block.\n4. model — user may change models. Do NOT block.\n\nIf NONE were changed (most common case), respond EXACTLY: {\"decision\":true}\nIf a BLOCKED setting was modified, respond: {\"decision\":false,\"reason\":\"BLOCKED: [which setting and to what value]\"}\nIf only WARNING settings were changed, respond: {\"decision\":true,\"reason\":\"WARNUNG: effortLevel/model geaendert — ab sofort mit geaendertem Setting aktiv\"}",
-            "timeout": 15
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "Before context compression: Extract and list any critical information that should survive compaction: (1) Current task status and progress, (2) File paths that were modified, (3) Decisions made by the user, (4) Any pending actions. Format as a concise summary that can be injected after compaction.",
-            "timeout": 15
-          }
-        ]
-      }
-    ]
-  }
+	"_comment": "Add this 'hooks' section to settings.json on macOS. Add Parry hook only after installing parry.",
+	"hooks": {
+		"SessionStart": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash ~/.claude/hooks/auto-sync.sh",
+						"timeout": 30
+					},
+					{
+						"type": "command",
+						"command": "bash ~/.claude/hooks/reindex-codebase.sh",
+						"timeout": 300,
+						"async": true
+					}
+				]
+			}
+		],
+		"Notification": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "~/.claude/hooks/notify.sh",
+						"timeout": 5
+					}
+				]
+			}
+		],
+		"PostToolUse": [
+			{
+				"matcher": "Edit|Write",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "~/.claude/hooks/auto-format.sh",
+						"timeout": 5,
+						"async": true
+					}
+				]
+			}
+		],
+		"PreToolUse": [
+			{
+				"matcher": "Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash ~/.claude/hooks/safety-gate.sh",
+						"timeout": 5
+					}
+				]
+			}
+		],
+		"Stop": [
+			{
+				"hooks": [
+					{
+						"type": "prompt",
+						"prompt": "RESPOND WITH ONLY A RAW JSON OBJECT. NO markdown, NO explanation, NO text before or after.\n\nCheck the conversation: Were any protected settings in ~/.claude/settings.json modified this turn?\n\nProtected settings (BLOCK if changed):\n1. env.CLAUDE_CODE_SUBAGENT_MODEL must be 'sonnet'\n2. env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE must be >= 95\n\nWARNING-ONLY settings (allow but note in reason):\n3. effortLevel — user may intentionally switch between 'medium' and 'high'. Do NOT block.\n4. model — user may change models. Do NOT block.\n\nIf NONE were changed (most common case), respond EXACTLY: {\"decision\":true}\nIf a BLOCKED setting was modified, respond: {\"decision\":false,\"reason\":\"BLOCKED: [which setting and to what value]\"}\nIf only WARNING settings were changed, respond: {\"decision\":true,\"reason\":\"WARNUNG: effortLevel/model geaendert — ab sofort mit geaendertem Setting aktiv\"}",
+						"timeout": 15
+					}
+				]
+			}
+		],
+		"PreCompact": [
+			{
+				"hooks": [
+					{
+						"type": "prompt",
+						"prompt": "Before context compression: Extract and list any critical information that should survive compaction: (1) Current task status and progress, (2) File paths that were modified, (3) Decisions made by the user, (4) Any pending actions. Format as a concise summary that can be injected after compaction.",
+						"timeout": 15
+					}
+				]
+			}
+		]
+	}
 }
