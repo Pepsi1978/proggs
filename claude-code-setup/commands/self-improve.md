@@ -120,9 +120,11 @@ Wenn `~/proggs/mcp-code-search/` existiert: Pruefe ob der Index aktuell ist.
 - Im Report melden: "Semantic Index: [N] Dateien, [N] Chunks (aktualisiert/bereits aktuell)"
 - **Voraussetzung**: Ollama muss laufen. Wenn nicht → ueberspringen mit Hinweis.
 
-**Semantic Search Health-Check (v5.15 — PFLICHT bei jedem Lauf):**
-Nach dem Indexieren (oder wenn Index bereits aktuell): Funktionalitaetstest durchfuehren.
-Dieser Test prueft ob die GESAMTE Kette funktioniert (Ollama → Embedding → sqlite-vec → Suche):
+**Semantic Search Integritaetstest (v5.16 — PFLICHT bei jedem Lauf):**
+Nach dem Indexieren (oder wenn Index bereits aktuell): Vollstaendigen Integritaetstest durchfuehren.
+Prueft 4 Kategorien: Grundfunktion, Pointer-Konsistenz, Aufraeum-Status, Infrastruktur.
+
+**Kategorie 1: Grundfunktion (Ollama → Embedding → DB → Suche)**
 ```bash
 cd ~/proggs/mcp-code-search && bun -e "
   import { VectorStore } from './src/store.ts';
@@ -131,32 +133,75 @@ cd ~/proggs/mcp-code-search && bun -e "
   import { existsSync, readFileSync } from 'fs';
   const root = resolve('\$HOME/proggs');
   const dbDir = join(root, '.code-search');
-  // Read pointer to find active DB file
   const pointerFile = join(dbDir, 'current.txt');
-  if (!existsSync(pointerFile)) { console.log('FAIL: current.txt fehlt — Index nie erstellt'); process.exit(1); }
+  if (!existsSync(pointerFile)) { console.log('FAIL-1A: current.txt fehlt'); process.exit(1); }
   const dbName = readFileSync(pointerFile, 'utf-8').trim();
-  const dbPath = join(dbDir, dbName);
-  if (!existsSync(dbPath)) { console.log('FAIL: ' + dbName + ' existiert nicht'); process.exit(1); }
-  const store = new VectorStore(dbPath);
+  if (!existsSync(join(dbDir, dbName))) { console.log('FAIL-1B: ' + dbName + ' existiert nicht'); process.exit(1); }
+  const store = new VectorStore(join(dbDir, dbName));
   const stats = store.stats();
-  if (stats.totalChunks === 0) { console.log('FAIL: Index leer'); process.exit(1); }
+  if (stats.totalChunks === 0) { console.log('FAIL-1C: Index leer'); process.exit(1); }
   const emb = await generateEmbedding('test query for health check');
-  if (emb.length !== 768) { console.log('FAIL: Embedding hat ' + emb.length + ' statt 768 Dimensionen'); process.exit(1); }
+  if (emb.length !== 768) { console.log('FAIL-1D: Embedding ' + emb.length + ' statt 768 dim'); process.exit(1); }
   const results = store.search(emb, 3);
-  if (results.length === 0) { console.log('FAIL: Suche liefert 0 Ergebnisse'); process.exit(1); }
+  if (results.length === 0) { console.log('FAIL-1E: Suche 0 Ergebnisse'); process.exit(1); }
   store.close();
-  console.log('OK: ' + stats.totalFiles + ' Dateien, ' + stats.totalChunks + ' Chunks, DB=' + dbName + ', Suche liefert ' + results.length + ' Treffer');
+  console.log('OK-1: ' + stats.totalFiles + ' Dateien, ' + stats.totalChunks + ' Chunks, DB=' + dbName);
 "
 ```
-**Auswertung:**
-- `OK` → Im Report als ✅ melden: "Semantische Suche: [N] Dateien, [N] Chunks, funktioniert"
-- `FAIL` → Im Report als ❌ melden mit Fehlerdetail. Moegliche Ursachen pruefen:
-  1. Ollama laeuft nicht → `curl http://localhost:11434/api/tags` testen
-  2. nomic-embed-text fehlt → `ollama pull nomic-embed-text` ausfuehren
-  3. Index-DB korrupt → DB loeschen und neu indexieren
-  4. sqlite-vec Extension fehlt → `bun install` in mcp-code-search/ ausfuehren
-  Jeden Fehler in FAILURES.md eintragen und Behebung versuchen.
-- **SessionStart-Hook pruefen**: Pruefe ob `reindex-codebase.ps1` in settings.json als SessionStart-Hook registriert ist. Wenn nicht → als DEFEKT melden.
+
+**Kategorie 2: Pointer-Konsistenz (Zeiger zeigt auf die richtige DB?)**
+Pruefe manuell per Bash (kein Bun noetig):
+```bash
+DBDIR=~/proggs/.code-search
+# 2A: current.txt existiert und ist nicht leer
+test -s "$DBDIR/current.txt" && echo "OK-2A" || echo "FAIL-2A: current.txt fehlt oder leer"
+# 2B: Die referenzierte DB-Datei existiert
+POINTER=$(cat "$DBDIR/current.txt" 2>/dev/null)
+test -f "$DBDIR/$POINTER" && echo "OK-2B: $POINTER" || echo "FAIL-2B: $POINTER nicht gefunden"
+# 2C: Keine verwaisten index-N.db Dateien (mehr als 1 = Cleanup hat nicht funktioniert)
+COUNT=$(ls "$DBDIR"/index-*.db 2>/dev/null | wc -l)
+if [ "$COUNT" -le 1 ]; then echo "OK-2C: $COUNT DB-Datei(en)"; else echo "WARN-2C: $COUNT DB-Dateien — Cleanup pruefen"; fi
+# 2D: Keine verwaisten WAL/SHM-Dateien von ALTEN Indexen
+OLD_WAL=$(ls "$DBDIR"/index-*.db-wal "$DBDIR"/index-*.db-shm 2>/dev/null | grep -v "$POINTER" | wc -l)
+if [ "$OLD_WAL" -eq 0 ]; then echo "OK-2D: Keine verwaisten WAL/SHM"; else echo "WARN-2D: $OLD_WAL alte WAL/SHM-Dateien — aufraumen"; fi
+```
+
+**Kategorie 3: Infrastruktur (Hooks, MCP, Konfiguration)**
+Pruefe per Bash:
+```bash
+# 3A: SessionStart-Hook registriert?
+grep -q "reindex-codebase" ~/.claude/settings.json && echo "OK-3A: Hook registriert" || echo "FAIL-3A: Hook fehlt"
+# 3B: MCP-Server in .mcp.json konfiguriert?
+grep -q "code-search" ~/proggs/.mcp.json && echo "OK-3B: MCP konfiguriert" || echo "FAIL-3B: MCP fehlt"
+# 3C: .code-search in .gitignore?
+grep -q "code-search" ~/proggs/.gitignore && echo "OK-3C: .gitignore OK" || echo "FAIL-3C: DB wuerde ins Repo committed!"
+# 3D: node_modules vorhanden?
+test -d ~/proggs/mcp-code-search/node_modules && echo "OK-3D: Dependencies installiert" || echo "FAIL-3D: bun install noetig"
+# 3E: Ollama erreichbar?
+curl -s -o /dev/null -w "%{http_code}" http://localhost:11434/api/tags | grep -q 200 && echo "OK-3E: Ollama laeuft" || echo "WARN-3E: Ollama nicht erreichbar"
+# 3F: nomic-embed-text geladen?
+curl -s http://localhost:11434/api/tags | grep -q "nomic-embed-text" && echo "OK-3F: Modell vorhanden" || echo "FAIL-3F: ollama pull nomic-embed-text noetig"
+```
+
+**Kategorie 4: Parallelitaets-Sicherheit (Race Conditions)**
+Diese Pruefung ist EINMALIG bei der Ersteinrichtung und danach NUR im Thorough-Modus noetig:
+- Pruefe ob der MCP-Server `resolveCurrentDb()` bei JEDEM Tool-Call den Pointer neu liest (nicht cached)
+- Pruefe ob der Reindex-Hook in eine NEUE DB schreibt (nicht in die aktive)
+- Pruefe ob die Cleanup-Logik gesperrte Dateien ueberspringt (try/catch um unlinkSync)
+Wenn eine dieser Pruefungen fehlschlaegt → als KRITISCHER DEFEKT in FAILURES.md eintragen.
+**Schnelltest:** `grep -c "resolveCurrentDb" ~/proggs/mcp-code-search/src/index.ts` muss >= 2 sein (einmal Definition, mindestens einmal Aufruf in getStore).
+
+**Auswertung aller 4 Kategorien:**
+- Alle OK → ✅ "Semantische Suche: voll funktionsfaehig ([N] Dateien, [N] Chunks)"
+- WARN vorhanden → ⚠️ Melden + Cleanup versuchen (alte DBs loeschen, WAL/SHM aufraumen)
+- FAIL vorhanden → ❌ Melden + Auto-Reparatur versuchen:
+  1. current.txt fehlt → Auto-Discover: hoechste index-N.db finden, Pointer schreiben
+  2. Ollama fehlt → Hinweis an Benutzer
+  3. Modell fehlt → `ollama pull nomic-embed-text` ausfuehren
+  4. DB korrupt → DB loeschen, neu indexieren
+  5. Hook fehlt → Hook-Registrierung in settings.json reparieren
+  6. .gitignore fehlt → `.code-search/` hinzufuegen
+  Jeden Fehler in FAILURES.md eintragen und Behebungsversuch dokumentieren.
 
 ## Stufe 2: DEEP-DIVE
 
