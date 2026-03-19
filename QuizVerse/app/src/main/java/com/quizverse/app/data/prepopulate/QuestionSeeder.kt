@@ -207,7 +207,9 @@ import com.quizverse.app.data.prepopulate.questions.techQuestionsHard5
 import com.quizverse.app.data.prepopulate.questions.techQuestionsExpert
 import com.quizverse.app.data.prepopulate.questions.techQuestionsExpert2
 import com.quizverse.app.data.prepopulate.questions.techQuestionsExpert3
+import com.quizverse.app.data.prepopulate.questions.techQuestionsExpert4
 import com.quizverse.app.data.prepopulate.questions.techQuestionsExpert5
+import com.quizverse.app.data.prepopulate.questions.techQuestionsExpert6
 import com.quizverse.app.data.prepopulate.questions.techQuestionsMaster1
 import com.quizverse.app.data.prepopulate.questions.herthaBscQuestions
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestions
@@ -216,6 +218,11 @@ import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsEasy3
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsEasy4
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsEasy5
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsEasy6
+import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsMedium1
+import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsMedium2
+import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsMedium3
+import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsMedium4
+import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsMedium5
 
 /**
  * Seeds the database with initial data (categories, questions, achievements, user progress).
@@ -445,7 +452,9 @@ object QuestionSeeder {
             techQuestionsExpert() +
             techQuestionsExpert2() +
             techQuestionsExpert3() +
+            techQuestionsExpert4() +
             techQuestionsExpert5() +
+            techQuestionsExpert6() +
             techQuestionsMaster1() +
             foodQuestions() +
             foodQuestionsEasy2() +
@@ -487,6 +496,11 @@ object QuestionSeeder {
             dortmundQuestionsEasy4() +
             dortmundQuestionsEasy5() +
             dortmundQuestionsEasy6() +
+            dortmundQuestionsMedium1() +
+            dortmundQuestionsMedium2() +
+            dortmundQuestionsMedium3() +
+            dortmundQuestionsMedium4() +
+            dortmundQuestionsMedium5() +
             // ── Health & Medicine (categoryId = 16) ──────────────────────
             healthQuestionsEasy1() +
             healthQuestionsEasy2() +
