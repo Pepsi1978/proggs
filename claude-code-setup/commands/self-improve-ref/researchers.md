@@ -7,7 +7,6 @@ Before spawning researchers, check for a recent snapshot:
 # Path varies by platform — use the project-specific memory directory:
 # macOS:   ~/.claude/projects/-Users-frank/memory/reference_last_research_snapshot.md
 # Windows: ~/.claude/projects/C--Users-barwa/memory/reference_last_research_snapshot.md
-# Termux:  ~/.claude/projects/-data-data-com.termux-files-home/memory/reference_last_research_snapshot.md
 SNAPSHOT="$(find ~/.claude/projects/*/memory -name 'reference_last_research_snapshot.md' 2>/dev/null | head -1)"
 # If snapshot exists and is < 7 days old: skip R2, R3, R4 (use cached data)
 # Always run: R1 (Claude Code Updates), R5 (Security), R6 (Creative)
@@ -33,11 +32,9 @@ Expires: [today + 7 days]
 ## R4 Cache: Tool Versions
 [version comparison table]
 
-## R6 Cache: Meta-Evolution (NEW v5.1)
-[recommended plugins with status: reviewed/installed/skipped]
-[generated ideas with status: built/planned/rejected]
-[evolution-analyst findings: quality trend, top weaknesses]
-[R6 research approach for next run: what to search for, what to feed into evolution-analyst]
+## Evolution-Analyst Findings (for Stufe 0 — not cached, refreshed every run)
+[quality trend, top weaknesses, capability gaps detected]
+[R6 research direction for next run: what to focus on]
 ```
 
 ## Researcher Templates
