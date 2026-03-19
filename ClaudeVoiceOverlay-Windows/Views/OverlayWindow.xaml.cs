@@ -254,14 +254,12 @@ namespace ClaudeVoiceOverlay.Views
             // Flash X button: gray for 2 s then back to red
             XButton.Background = BtnIdle;
 
-            // Run ClearInput on background thread (Thread.Sleep blocks UI thread)
-            await Task.Run(() => AppController.ClearInput(hwnd));
+            // Clear input with proper async/await
+            await AppController.ClearInputAsync(hwnd);
 
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(2000);
-                Dispatcher.Invoke(() => XButton.Background = BtnX);
-            });
+            // Reset X button color after 2 seconds
+            await Task.Delay(2000);
+            XButton.Background = BtnX;
         }
 
         /// <summary>Main mic button — start / stop recording.</summary>
@@ -319,7 +317,7 @@ namespace ClaudeVoiceOverlay.Views
                     if (hasPastedText)
                         finalText = " " + finalText;
 
-                    AppController.PasteText(finalText, _appWatcher.ActiveAppHwnd, autoEnterEnabled);
+                    await AppController.PasteTextAsync(finalText, _appWatcher.ActiveAppHwnd, autoEnterEnabled);
                     SetMicState(RecordingState.Success);
                     Console.WriteLine("Text inserted");
 
@@ -418,7 +416,7 @@ namespace ClaudeVoiceOverlay.Views
                     else
                         finalText = "/btw " + finalText;
 
-                    AppController.PasteText(finalText, _appWatcher.ActiveAppHwnd, autoEnterEnabled);
+                    await AppController.PasteTextAsync(finalText, _appWatcher.ActiveAppHwnd, autoEnterEnabled);
                     SetBtwMicState(RecordingState.Success);
                     Console.WriteLine("BTW text inserted");
 
@@ -468,13 +466,13 @@ namespace ClaudeVoiceOverlay.Views
         }
 
         /// <summary>W button — undo Gemini correction, paste raw Whisper text.</summary>
-        private void BtnWhisperUndo_Click(object sender, RoutedEventArgs e)
+        private async void BtnWhisperUndo_Click(object sender, RoutedEventArgs e)
         {
             if (lastRawTranscript == null) return;
 
-            AppController.ClearInput(_appWatcher.ActiveAppHwnd);
-            System.Threading.Thread.Sleep(100);
-            AppController.PasteText(lastRawTranscript, _appWatcher.ActiveAppHwnd);
+            await AppController.ClearInputAsync(_appWatcher.ActiveAppHwnd);
+            await Task.Delay(100);
+            await AppController.PasteTextAsync(lastRawTranscript, _appWatcher.ActiveAppHwnd);
             hasPastedText = true;
             Console.WriteLine($"Whisper raw text inserted: {lastRawTranscript}");
 
@@ -506,7 +504,7 @@ namespace ClaudeVoiceOverlay.Views
         /// <summary>Enter button — toggle auto-enter.
         /// ON→OFF: button goes dark.
         /// OFF→ON: button goes orange AND fires Return immediately.</summary>
-        private void BtnAutoEnter_Click(object sender, RoutedEventArgs e)
+        private async void BtnAutoEnter_Click(object sender, RoutedEventArgs e)
         {
             if (autoEnterEnabled)
             {
@@ -525,7 +523,7 @@ namespace ClaudeVoiceOverlay.Views
                 Console.WriteLine("Auto-enter ON — firing Return");
 
                 // Fire a Return key press into the active app
-                AppController.PressReturn(_appWatcher.ActiveAppHwnd);
+                await AppController.PressReturnAsync(_appWatcher.ActiveAppHwnd);
             }
         }
 

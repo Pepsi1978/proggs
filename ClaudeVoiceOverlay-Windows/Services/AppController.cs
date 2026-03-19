@@ -16,17 +16,52 @@ namespace ClaudeVoiceOverlay.Services
         private const ushort VK_HOME = 0x24;
         private const ushort VK_END = 0x23;
 
-        public static void PasteText(string text, IntPtr appHwnd, bool autoEnter = false)
+        /// <summary>
+        /// Pastes text into the active application using clipboard simulation.
+        /// Robust implementation with error handling and proper timing.
+        /// </summary>
+        public static async Task PasteTextAsync(string text, IntPtr appHwnd, bool autoEnter = false)
         {
-            string? previousClipboard = null;
-            Application.Current.Dispatcher.Invoke(() =>
+            if (appHwnd == IntPtr.Zero)
             {
-                if (Clipboard.ContainsText())
-                    previousClipboard = Clipboard.GetText();
-                Clipboard.SetText(text);
-            });
+                Console.WriteLine("AppController: Invalid window handle — aborting paste");
+                return;
+            }
 
+            string? previousClipboard = null;
+            bool clipboardSaveSuccess = false;
+
+            // Save clipboard content with error handling
+            try
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    if (Clipboard.ContainsText())
+                    {
+                        previousClipboard = Clipboard.GetText();
+                        clipboardSaveSuccess = true;
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"AppController: Clipboard save failed: {ex.Message} — continuing without restore");
+            }
+
+            // Set new text to clipboard
+            try
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() => Clipboard.SetText(text));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"AppController: Failed to set clipboard: {ex.Message}");
+                return;
+            }
+
+            // Bring window to foreground and wait for it to be ready
             BringToForeground(appHwnd);
+            WaitForInputReady(appHwnd);
 
             bool isCodex = IsCodexProcess(appHwnd);
 
@@ -37,93 +72,111 @@ namespace ClaudeVoiceOverlay.Services
                 // SetFocus on any child window STEALS keyboard focus.
                 // Instead: just Escape (returns focus to input) → Ctrl+V
                 Console.WriteLine("AppController: Codex mode — Escape → Ctrl+V");
-                SendKey(Win32.VK_ESCAPE);
-                Thread.Sleep(200);
-                SendCtrlV();
+                SendInputKeys(Win32.VK_ESCAPE);
+                await Task.Delay(150);
+                SendInputPaste();
             }
             else
             {
                 // Claude Desktop: render widget is a direct child — SetFocus + click works
                 FocusDirectRenderWidget(appHwnd);
                 ClickInputField(appHwnd);
-                SendCtrlV();
+                SendInputPaste();
             }
 
             if (autoEnter)
             {
-                Thread.Sleep(300);
-                SendKey(VK_RETURN);
+                await Task.Delay(200);
+                SendInputKeys(VK_RETURN);
             }
 
-            if (previousClipboard != null)
+            // Restore clipboard content with proper async await
+            if (clipboardSaveSuccess && previousClipboard != null)
             {
                 var prev = previousClipboard;
-                Task.Delay(500).ContinueWith(_ =>
+                try
                 {
-                    Application.Current.Dispatcher.Invoke(() => Clipboard.SetText(prev));
-                });
+                    await Task.Delay(500);
+                    await Application.Current.Dispatcher.InvokeAsync(() => Clipboard.SetText(prev));
+                    Console.WriteLine("AppController: Clipboard restored");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"AppController: Clipboard restore failed: {ex.Message}");
+                }
             }
         }
 
-        public static void ClearInput(IntPtr appHwnd)
+        /// <summary>
+        /// Clears the current input field using selection and delete.
+        /// </summary>
+        public static async Task ClearInputAsync(IntPtr appHwnd)
         {
+            if (appHwnd == IntPtr.Zero)
+            {
+                Console.WriteLine("AppController: Invalid window handle — aborting clear");
+                return;
+            }
+
             BringToForeground(appHwnd);
+            WaitForInputReady(appHwnd);
 
             if (IsCodexProcess(appHwnd))
             {
                 // Codex: double-Escape — first closes any popup/autocomplete,
                 // second ensures focus lands in the input field
-                SendKey(Win32.VK_ESCAPE);
-                Thread.Sleep(150);
-                SendKey(Win32.VK_ESCAPE);
-                Thread.Sleep(200);
-                SendKey(VK_END);
-                Thread.Sleep(30);
+                SendInputKeys(Win32.VK_ESCAPE);
+                await Task.Delay(100);
+                SendInputKeys(Win32.VK_ESCAPE);
+                await Task.Delay(150);
+                SendInputKeys(VK_END);
+                await Task.Delay(30);
                 // Ctrl+Shift+Home selects all text from cursor to start within the input
-                byte ctrlScan = (byte)Win32.MapVirtualKey(Win32.VK_CONTROL, Win32.MAPVK_VK_TO_VSC);
-                byte shiftScan = (byte)Win32.MapVirtualKey(Win32.VK_SHIFT, Win32.MAPVK_VK_TO_VSC);
-                byte homeScan = (byte)Win32.MapVirtualKey((uint)VK_HOME, Win32.MAPVK_VK_TO_VSC);
-                Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, 0, UIntPtr.Zero);
-                Win32.keybd_event((byte)Win32.VK_SHIFT, shiftScan, 0, UIntPtr.Zero);
-                Win32.keybd_event((byte)VK_HOME, homeScan, Win32.KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
-                Win32.keybd_event((byte)VK_HOME, homeScan, Win32.KEYEVENTF_EXTENDEDKEY | Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                Win32.keybd_event((byte)Win32.VK_SHIFT, shiftScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                Thread.Sleep(50);
-                SendKey(VK_BACKSPACE);
+                SendInputModifierCombo(Win32.VK_CONTROL, Win32.VK_SHIFT, VK_HOME);
+                await Task.Delay(50);
+                SendInputKeys(VK_BACKSPACE);
             }
             else
             {
                 // Claude Desktop: click into input field, then Ctrl+A is safe
                 FocusDirectRenderWidget(appHwnd);
                 ClickInputField(appHwnd);
-                SendKeyCombo(Win32.VK_CONTROL, VK_A);
-                Thread.Sleep(50);
-                SendKey(VK_BACKSPACE);
+                await Task.Delay(100);
+                SendInputModifierCombo(Win32.VK_CONTROL, VK_A);
+                await Task.Delay(50);
+                SendInputKeys(VK_BACKSPACE);
             }
         }
 
         public static void SendReturn()
         {
-            SendKey(VK_RETURN);
+            SendInputKeys(VK_RETURN);
         }
 
-        public static void PressReturn(IntPtr appHwnd)
+        public static async Task PressReturnAsync(IntPtr appHwnd)
         {
+            if (appHwnd == IntPtr.Zero)
+            {
+                Console.WriteLine("AppController: Invalid window handle — aborting return");
+                return;
+            }
+
             BringToForeground(appHwnd);
+            WaitForInputReady(appHwnd);
 
             if (IsCodexProcess(appHwnd))
             {
-                SendKey(Win32.VK_ESCAPE);
-                Thread.Sleep(100);
+                SendInputKeys(Win32.VK_ESCAPE);
+                await Task.Delay(100);
             }
             else
             {
                 FocusDirectRenderWidget(appHwnd);
                 ClickInputField(appHwnd);
+                await Task.Delay(100);
             }
 
-            SendKey(VK_RETURN);
+            SendInputKeys(VK_RETURN);
         }
 
         // ── Process Detection ──
@@ -163,10 +216,32 @@ namespace ClaudeVoiceOverlay.Services
             Win32.AllowSetForegroundWindow(unchecked((uint)-1));
             Win32.SetForegroundWindow(appHwnd);
             Win32.BringWindowToTop(appHwnd);
-            Thread.Sleep(200);
 
             if (attached)
                 Win32.AttachThreadInput(ourThread, targetThread, false);
+        }
+
+        /// <summary>
+        /// Waits for the target application to be ready for input.
+        /// Uses adaptive timing instead of fixed delays.
+        /// </summary>
+        private static void WaitForInputReady(IntPtr appHwnd)
+        {
+            // Wait for the window to process pending messages
+            // This is more reliable than fixed Thread.Sleep
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+            // Pump messages briefly to let window settle
+            while (stopwatch.ElapsedMilliseconds < 150)
+            {
+                Thread.Sleep(10);
+                // Check if window is still foreground
+                if (Win32.GetForegroundWindow() != appHwnd)
+                {
+                    Console.WriteLine("AppController: Window lost foreground — re-activating");
+                    BringToForeground(appHwnd);
+                }
+            }
         }
 
         // ── Render Widget Focus (Claude Desktop only) ──
@@ -240,35 +315,182 @@ namespace ClaudeVoiceOverlay.Services
             return fgPid == appPid && fgPid != 0;
         }
 
-        private static void SendKeyCombo(ushort modifier, ushort key)
-        {
-            byte modScan = (byte)Win32.MapVirtualKey(modifier, Win32.MAPVK_VK_TO_VSC);
-            byte keyScan = (byte)Win32.MapVirtualKey(key, Win32.MAPVK_VK_TO_VSC);
-
-            Win32.keybd_event((byte)modifier, modScan, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)key, keyScan, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)key, keyScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            Win32.keybd_event((byte)modifier, modScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-        }
-
-        private static void SendCtrlV()
-        {
-            byte ctrlScan = (byte)Win32.MapVirtualKey(Win32.VK_CONTROL, Win32.MAPVK_VK_TO_VSC);
-            byte vScan    = (byte)Win32.MapVirtualKey(Win32.VK_V, Win32.MAPVK_VK_TO_VSC);
-
-            Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_V, vScan, 0, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_V, vScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-            Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-        }
-
-        private static void SendKey(ushort vk)
+        /// <summary>
+        /// Sends keyboard input using the modern SendInput API.
+        /// More reliable than keybd_event, especially for Electron apps.
+        /// </summary>
+        private static void SendInputKeys(ushort vk)
         {
             byte scan = (byte)Win32.MapVirtualKey(vk, Win32.MAPVK_VK_TO_VSC);
             uint flags = (vk >= 0x21 && vk <= 0x2E) ? Win32.KEYEVENTF_EXTENDEDKEY : 0;
 
-            Win32.keybd_event((byte)vk, scan, flags, UIntPtr.Zero);
-            Win32.keybd_event((byte)vk, scan, flags | Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+            var inputs = new[]
+            {
+                new Win32.INPUT
+                {
+                    type = Win32.INPUT_KEYBOARD,
+                    u = new Win32.INPUTUNION
+                    {
+                        ki = new Win32.KEYBDINPUT
+                        {
+                            wVk = vk,
+                            wScan = scan,
+                            dwFlags = flags,
+                            time = 0,
+                            dwExtraInfo = IntPtr.Zero
+                        }
+                    }
+                },
+                new Win32.INPUT
+                {
+                    type = Win32.INPUT_KEYBOARD,
+                    u = new Win32.INPUTUNION
+                    {
+                        ki = new Win32.KEYBDINPUT
+                        {
+                            wVk = vk,
+                            wScan = scan,
+                            dwFlags = flags | Win32.KEYEVENTF_KEYUP,
+                            time = 0,
+                            dwExtraInfo = IntPtr.Zero
+                        }
+                    }
+                }
+            };
+
+            Win32.SendInput(2, inputs, System.Runtime.InteropServices.Marshal.SizeOf<Win32.INPUT>());
+        }
+
+        /// <summary>
+        /// Sends Ctrl+V using SendInput for paste operation.
+        /// </summary>
+        private static void SendInputPaste()
+        {
+            byte ctrlScan = (byte)Win32.MapVirtualKey(Win32.VK_CONTROL, Win32.MAPVK_VK_TO_VSC);
+            byte vScan = (byte)Win32.MapVirtualKey(Win32.VK_V, Win32.MAPVK_VK_TO_VSC);
+
+            var inputs = new[]
+            {
+                // Ctrl down
+                new Win32.INPUT
+                {
+                    type = Win32.INPUT_KEYBOARD,
+                    u = new Win32.INPUTUNION
+                    {
+                        ki = new Win32.KEYBDINPUT
+                        {
+                            wVk = Win32.VK_CONTROL,
+                            wScan = ctrlScan,
+                            dwFlags = 0,
+                            time = 0,
+                            dwExtraInfo = IntPtr.Zero
+                        }
+                    }
+                },
+                // V down
+                new Win32.INPUT
+                {
+                    type = Win32.INPUT_KEYBOARD,
+                    u = new Win32.INPUTUNION
+                    {
+                        ki = new Win32.KEYBDINPUT
+                        {
+                            wVk = Win32.VK_V,
+                            wScan = vScan,
+                            dwFlags = 0,
+                            time = 0,
+                            dwExtraInfo = IntPtr.Zero
+                        }
+                    }
+                },
+                // V up
+                new Win32.INPUT
+                {
+                    type = Win32.INPUT_KEYBOARD,
+                    u = new Win32.INPUTUNION
+                    {
+                        ki = new Win32.KEYBDINPUT
+                        {
+                            wVk = Win32.VK_V,
+                            wScan = vScan,
+                            dwFlags = Win32.KEYEVENTF_KEYUP,
+                            time = 0,
+                            dwExtraInfo = IntPtr.Zero
+                        }
+                    }
+                },
+                // Ctrl up
+                new Win32.INPUT
+                {
+                    type = Win32.INPUT_KEYBOARD,
+                    u = new Win32.INPUTUNION
+                    {
+                        ki = new Win32.KEYBDINPUT
+                        {
+                            wVk = Win32.VK_CONTROL,
+                            wScan = ctrlScan,
+                            dwFlags = Win32.KEYEVENTF_KEYUP,
+                            time = 0,
+                            dwExtraInfo = IntPtr.Zero
+                        }
+                    }
+                }
+            };
+
+            Win32.SendInput(4, inputs, System.Runtime.InteropServices.Marshal.SizeOf<Win32.INPUT>());
+        }
+
+        /// <summary>
+        /// Sends a modifier+key combo using SendInput (e.g., Ctrl+A, Ctrl+Shift+Home).
+        /// </summary>
+        private static void SendInputModifierCombo(ushort modifier, ushort key)
+        {
+            byte modScan = (byte)Win32.MapVirtualKey(modifier, Win32.MAPVK_VK_TO_VSC);
+            byte keyScan = (byte)Win32.MapVirtualKey(key, Win32.MAPVK_VK_TO_VSC);
+            uint keyFlags = (key >= 0x21 && key <= 0x2E) ? Win32.KEYEVENTF_EXTENDEDKEY : 0;
+
+            var inputs = new[]
+            {
+                // Modifier down
+                new Win32.INPUT { type = Win32.INPUT_KEYBOARD, u = new Win32.INPUTUNION { ki = new Win32.KEYBDINPUT { wVk = modifier, wScan = modScan, dwFlags = 0, time = 0, dwExtraInfo = IntPtr.Zero } } },
+                // Key down
+                new Win32.INPUT { type = Win32.INPUT_KEYBOARD, u = new Win32.INPUTUNION { ki = new Win32.KEYBDINPUT { wVk = key, wScan = keyScan, dwFlags = keyFlags, time = 0, dwExtraInfo = IntPtr.Zero } } },
+                // Key up
+                new Win32.INPUT { type = Win32.INPUT_KEYBOARD, u = new Win32.INPUTUNION { ki = new Win32.KEYBDINPUT { wVk = key, wScan = keyScan, dwFlags = keyFlags | Win32.KEYEVENTF_KEYUP, time = 0, dwExtraInfo = IntPtr.Zero } } },
+                // Modifier up
+                new Win32.INPUT { type = Win32.INPUT_KEYBOARD, u = new Win32.INPUTUNION { ki = new Win32.KEYBDINPUT { wVk = modifier, wScan = modScan, dwFlags = Win32.KEYEVENTF_KEYUP, time = 0, dwExtraInfo = IntPtr.Zero } } }
+            };
+
+            Win32.SendInput(4, inputs, System.Runtime.InteropServices.Marshal.SizeOf<Win32.INPUT>());
+        }
+
+        /// <summary>
+        /// Sends Ctrl+Shift+Home using SendInput for text selection.
+        /// </summary>
+        private static void SendInputModifierCombo(ushort modifier1, ushort modifier2, ushort key)
+        {
+            byte mod1Scan = (byte)Win32.MapVirtualKey(modifier1, Win32.MAPVK_VK_TO_VSC);
+            byte mod2Scan = (byte)Win32.MapVirtualKey(modifier2, Win32.MAPVK_VK_TO_VSC);
+            byte keyScan = (byte)Win32.MapVirtualKey(key, Win32.MAPVK_VK_TO_VSC);
+            uint keyFlags = Win32.KEYEVENTF_EXTENDEDKEY; // Home is extended key
+
+            var inputs = new[]
+            {
+                // Ctrl down
+                new Win32.INPUT { type = Win32.INPUT_KEYBOARD, u = new Win32.INPUTUNION { ki = new Win32.KEYBDINPUT { wVk = modifier1, wScan = mod1Scan, dwFlags = 0, time = 0, dwExtraInfo = IntPtr.Zero } } },
+                // Shift down
+                new Win32.INPUT { type = Win32.INPUT_KEYBOARD, u = new Win32.INPUTUNION { ki = new Win32.KEYBDINPUT { wVk = modifier2, wScan = mod2Scan, dwFlags = 0, time = 0, dwExtraInfo = IntPtr.Zero } } },
+                // Home down
+                new Win32.INPUT { type = Win32.INPUT_KEYBOARD, u = new Win32.INPUTUNION { ki = new Win32.KEYBDINPUT { wVk = key, wScan = keyScan, dwFlags = keyFlags, time = 0, dwExtraInfo = IntPtr.Zero } } },
+                // Home up
+                new Win32.INPUT { type = Win32.INPUT_KEYBOARD, u = new Win32.INPUTUNION { ki = new Win32.KEYBDINPUT { wVk = key, wScan = keyScan, dwFlags = keyFlags | Win32.KEYEVENTF_KEYUP, time = 0, dwExtraInfo = IntPtr.Zero } } },
+                // Shift up
+                new Win32.INPUT { type = Win32.INPUT_KEYBOARD, u = new Win32.INPUTUNION { ki = new Win32.KEYBDINPUT { wVk = modifier2, wScan = mod2Scan, dwFlags = Win32.KEYEVENTF_KEYUP, time = 0, dwExtraInfo = IntPtr.Zero } } },
+                // Ctrl up
+                new Win32.INPUT { type = Win32.INPUT_KEYBOARD, u = new Win32.INPUTUNION { ki = new Win32.KEYBDINPUT { wVk = modifier1, wScan = mod1Scan, dwFlags = Win32.KEYEVENTF_KEYUP, time = 0, dwExtraInfo = IntPtr.Zero } } }
+            };
+
+            Win32.SendInput(6, inputs, System.Runtime.InteropServices.Marshal.SizeOf<Win32.INPUT>());
         }
     }
 }
