@@ -271,6 +271,11 @@ import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsMedium2
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsMedium3
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsMedium4
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsMedium5
+import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsHard1
+import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsHard2
+import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsHard3
+import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsHard4
+import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsHard5
 
 /**
  * Seeds the database with initial data (categories, questions, achievements, user progress).
@@ -565,6 +570,11 @@ object QuestionSeeder {
             dortmundQuestionsMedium3() +
             dortmundQuestionsMedium4() +
             dortmundQuestionsMedium5() +
+            dortmundQuestionsHard1() +
+            dortmundQuestionsHard2() +
+            dortmundQuestionsHard3() +
+            dortmundQuestionsHard4() +
+            dortmundQuestionsHard5() +
             // ── Health & Medicine (categoryId = 16) ──────────────────────
             healthQuestionsEasy1() +
             healthQuestionsEasy2() +
