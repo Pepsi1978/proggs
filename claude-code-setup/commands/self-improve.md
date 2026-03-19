@@ -174,12 +174,52 @@ After planning improvements but BEFORE implementing them, spawn the `challenger`
 - Address each weakness before implementing
 This prevents the self-improve skill from making changes that make things worse.
 
-### 3C: Structured Report
+### 3C: Structured Report + Entscheidungsliste (PFLICHT — v5.12)
 Use the template from reference file. Includes new **Performance-Benchmark** section.
 Add a "Shared Knowledge" section showing what code-reviewer learned and what self-improve contributed.
 
+**ENTSCHEIDUNGSLISTE (v5.12 — PFLICHT am Ende jedes Reports):**
+ALLE Findings aus ALLEN Stufen muessen am Ende als eine einzige Entscheidungsliste fuer den
+Benutzer zusammengefasst werden. Der Benutzer ist KEIN Programmierer und will nicht selbst
+aus 50 Findings herausfiltern was wichtig ist. Format:
+
+```markdown
+## Entscheidungsliste — Was soll umgesetzt werden?
+
+### A) Sofort umsetzbar (kann ich JETZT machen)
+| # | Was genau? | Aufwand | Was bringt es dir? | Empfehlung | Ja/Nein? |
+|---|-----------|---------|-------------------|------------|----------|
+| A1 | [Konkreter Vorschlag] | [5 Min / 30 Min] | [Nutzen in 1 Satz] | JA/NEIN + Grund | |
+
+### B) Mittlerer Aufwand (10-60 Min)
+[Gleiche Spalten]
+
+### C) Strategisch (betrifft wie das System langfristig arbeitet)
+[Gleiche Spalten]
+
+### D) Nicht empfohlen (mit Begruendung warum NICHT)
+| # | Was | Warum NICHT |
+```
+
+**REGELN fuer die Entscheidungsliste:**
+- JEDER Researcher-Fund, JEDE Verbesserung, JEDER Fix muss in genau EINER Zeile landen
+- "Was genau?" muss fuer einen Nicht-Programmierer verstaendlich sein
+- "Was bringt es dir?" erklaert den konkreten Nutzen, nicht das technische Detail
+- "Empfehlung" ist IMMER JA oder NEIN mit kurzem Grund
+- Benutzer antwortet nur: "Mach A1, A3, B2" — das ist alles was er sagen muss
+- KEINE reinen Informationstabellen ohne Handlungsaufforderung
+- KEINE Findings die nur "zur Info" praesentiert werden — entweder Handlung oder "Nicht empfohlen"
+
 ### 3D: Meta-Improve (MANDATORY)
 Present 3 suggestions for THIS SKILL. Apply only after user approval. Backup first.
+
+### 3E: R8 Intelligence Agent (NEW v5.12)
+**Stufe 2 verwendet jetzt den dedizierten `intelligence-researcher` Agent** statt eines generischen
+Researcher-Prompts. Der Agent hat:
+- Eigenes Backlog-File (`~/.claude/agent-memory/shared/intelligence-backlog.md`) mit Status pro Finding
+- Liest vorherige Findings und sucht gezielt NEUE Ideen (kein Duplicate Research)
+- Output-Format mit expliziter JA/NEIN-Empfehlung pro Finding
+Spawn: `Agent(subagent_type="intelligence-researcher", name="r8-intelligence")`
 
 ## Stufe 4: CREATIVE RESEARCH
 

@@ -28,8 +28,8 @@
 - Terminal-Befehle **immer direkt selbst ausfuehren** (ueber das Bash-Tool), niemals dem Benutzer Zeilen zum Kopieren geben.
 
 ## Shell/Terminal-Updates (KRITISCH)
-- Updates von Shell-Umgebungen (PowerShell, Git, Git Bash, Node.js, npm, Bun, Deno, Python, Claude Code CLI) IMMER als ALLERLETZTEN Schritt NACH Abschluss aller anderen Aufgaben ausfuehren.
-- Diese Updates zerstoeren ALLE offenen Terminal-Fenster und killen laufende Prozesse.
+- Updates von Shell-Umgebungen (PowerShell, Git, Git Bash, Node.js, npm, Bun, Deno, Python, Claude Code CLI, ADB, Android SDK Platform Tools, Android Emulator, Gradle) IMMER als ALLERLETZTEN Schritt NACH Abschluss aller anderen Aufgaben ausfuehren.
+- Diese Updates zerstoeren ALLE offenen Terminal-Fenster und killen laufende Prozesse (inkl. Android Emulator).
 - NIEMALS Shell-Updates waehrend laufender Arbeit oder mitten in einer Aufgabe ausfuehren.
 - VOR Shell-Updates: Benutzer WARNEN und um explizite Bestaetigung bitten.
 - Reihenfolge: Alle Aufgaben erledigen → Ergebnisse committen/pushen → Benutzer warnen → Bestaetigung abwarten → Shell-Updates als letzten Schritt.

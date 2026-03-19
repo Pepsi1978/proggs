@@ -1,17 +1,43 @@
 # Self-Improve: Researcher Templates (v5.0)
 
-## Research Caching
+## Research Caching (v5.12 — Git-Diff-basiert statt TTL)
 
-Before spawning researchers, check for a recent snapshot:
+**Neue Logik**: Cache wird NICHT nach fester Zeit invalidiert, sondern wenn sich die Umgebung
+tatsaechlich geaendert hat. Das spart Token bei stabilen Umgebungen und garantiert frische
+Daten nach echten Aenderungen.
+
 ```bash
-# Path varies by platform — use the project-specific memory directory:
-# macOS:   ~/.claude/projects/-Users-frank/memory/reference_last_research_snapshot.md
-# Windows: ~/.claude/projects/C--Users-barwa/memory/reference_last_research_snapshot.md
-SNAPSHOT="$(find ~/.claude/projects/*/memory -name 'reference_last_research_snapshot.md' 2>/dev/null | head -1)"
-# If snapshot exists and is < 7 days old: skip R2, R3, R4 (use cached data)
-# Always run: R1 (Claude Code Updates), R5 (Security), R6 (Creative), R8 (Intelligence)
-# If snapshot is > 7 days old or missing: run ALL 8 researchers
+# Pruefe ob sich ~/.claude/ seit dem letzten Cache-Zeitstempel geaendert hat:
+CACHE_DIR="$HOME/.claude/self-improve-cache"
+CACHE_STAMP="$CACHE_DIR/.last-cache-time"
+
+if [ -f "$CACHE_STAMP" ]; then
+  LAST_CACHE=$(cat "$CACHE_STAMP")
+  # Pruefe Aenderungen an Agents, Hooks, Settings seit letztem Cache
+  CHANGES=$(find "$HOME/.claude/agents" "$HOME/.claude/hooks" "$HOME/.claude/rules" \
+    -newer "$CACHE_STAMP" -type f 2>/dev/null | wc -l)
+  SETTINGS_CHANGED=$(find "$HOME/.claude/settings.json" -newer "$CACHE_STAMP" 2>/dev/null | wc -l)
+  TOTAL=$((CHANGES + SETTINGS_CHANGED))
+
+  if [ "$TOTAL" -gt 0 ]; then
+    echo "CACHE INVALIDIERT: $TOTAL Dateien geaendert seit letztem Lauf"
+    # Alle Researcher laufen frisch
+  else
+    echo "CACHE GUELTIG: Keine Umgebungsaenderungen — R2, R3, R4 aus Cache"
+    # Nur R1, R5, R6, R8 laufen (immer frisch)
+  fi
+else
+  echo "KEIN CACHE: Erster Lauf — alle Researcher starten"
+fi
+
+# Nach dem Lauf: Zeitstempel aktualisieren
+touch "$CACHE_STAMP"
 ```
+
+**Immer frisch** (unabhaengig vom Cache): R1 (Updates), R5 (Security), R6 (Creative), R8 (Intelligence)
+**Cache-gesteuert**: R2 (Plugins), R3 (Parallel), R4 (Versionen)
+**Absolute Untergrenze**: Auch bei gueltigem Cache: Alle 14 Tage ALLE Researcher frisch laufen lassen.
+**Thorough-Modus**: Ignoriert Cache komplett — alle Researcher laufen immer frisch.
 
 When a run completes, save a snapshot to memory:
 ```markdown
