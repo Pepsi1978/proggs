@@ -71,7 +71,7 @@ instructionOverridePatterns:
     severity: high
 
   # --- Priority Manipulation ---
-  - pattern: '(?i)\b(highest|top|maximum|critical)\s+priority\s*(:|instruction|override)?'
+  - pattern: '(?i)\b(highest|top|maximum|critical)\s+priority\s*(instruction|override|command|directive)'
     reason: "Priority manipulation attempt"
     severity: medium
 
@@ -369,25 +369,25 @@ contextManipulationPatterns:
     reason: "Instruction hidden in code comment"
     severity: high
 
-  - pattern: '//\s*(ignore|system|override|instruction|execute)'
-    reason: "Instruction in single-line comment"
+  - pattern: '//\s*(ignore\s+(all|previous|prior)|override\s+(your|all|system)|execute\s+(this|the|hidden))'
+    reason: "Injection hidden in single-line comment"
     severity: medium
 
-  - pattern: '#\s*(system|instruction|hidden|secret|execute)\s*(prompt|instruction|command|override)'
-    reason: "Instruction hidden in hash comment"
+  - pattern: '#\s*(hidden|secret)\s+(instruction|command|prompt|override)'
+    reason: "Injection hidden in hash comment"
     severity: medium
 
   # --- JSON/Data Structure Manipulation ---
-  - pattern: '(?i)"\s*(system|role|instruction|prompt)\s*"\s*:\s*"'
-    reason: "System role in JSON structure"
-    severity: medium
+  # NOTE: Generic JSON key matching (e.g. "prompt": "...") was removed because
+  # it triggered on every config file, settings.json, and API response.
+  # The specific {"role": "system"} pattern below catches actual injection attempts.
 
   - pattern: '(?i)\{"role"\s*:\s*"system"'
     reason: "Fake system role JSON"
     severity: high
 
-  - pattern: '(?i)\{"type"\s*:\s*"(instruction|command|system)"'
-    reason: "Fake instruction type JSON"
+  - pattern: '(?i)\{"type"\s*:\s*"(instruction|command|system)"\s*,\s*"(content|text|message)"\s*:'
+    reason: "Fake instruction type JSON with content payload"
     severity: medium
 
   - pattern: "(?i)<system[^>]*>|<instruction[^>]*>|<override[^>]*>"
@@ -408,8 +408,8 @@ contextManipulationPatterns:
     severity: high
 
   # --- False Context Claims ---
-  - pattern: '(?i)\b(context|background|situation)\s*[:\s]+\s*(you\s+are|this\s+is\s+a|assume\s+that)'
-    reason: "False context preamble"
+  - pattern: '(?i)\b(context|background|situation)\s*[:\s]+\s*(you\s+are\s+(now|a|an)|assume\s+that\s+you)'
+    reason: "False context preamble with persona assignment"
     severity: medium
 
   - pattern: '(?i)\bprevious\s+conversation\s+(summary|context|history)\s*:'
@@ -446,7 +446,7 @@ contextManipulationPatterns:
     reason: "System prompt extraction attempt"
     severity: high
 
-  - pattern: '(?i)\b(what|list|show)\s+(are\s+)?(your\s+)?(system\s+)?(instructions?|guidelines?|rules?|directives?)'
+  - pattern: '(?i)\b(what|list|show)\s+are\s+your\s+(system\s+)?(instructions?|guidelines?|rules?|directives?)\s*(verbatim|\?|exactly)'
     reason: "Instruction extraction attempt"
     severity: medium
 

@@ -254,6 +254,17 @@ def format_warning(
     return "\n".join(lines)
 
 
+def _get_trusted_prefixes() -> list:
+    """Return list of trusted path prefixes (normalized, lowercase)."""
+    home = os.environ.get("USERPROFILE", os.environ.get("HOME", ""))
+    if not home:
+        return []
+    return [
+        os.path.join(home, ".claude").replace("\\", "/").lower(),
+        os.path.join(home, "proggs").replace("\\", "/").lower(),
+    ]
+
+
 def is_trusted_path(tool_name: str, tool_input: Dict[str, Any]) -> bool:
     """Check if the source is a trusted local path that should skip scanning.
 
@@ -261,17 +272,9 @@ def is_trusted_path(tool_name: str, tool_input: Dict[str, Any]) -> bool:
     These frequently contain security-related keywords that trigger
     false positives (e.g., patterns.yaml contains injection patterns by design).
     """
-    home = os.environ.get("USERPROFILE", os.environ.get("HOME", ""))
-    if not home:
+    trusted_prefixes = _get_trusted_prefixes()
+    if not trusted_prefixes:
         return False
-
-    # Normalize path separators for comparison
-    home_normalized = home.replace("\\", "/").rstrip("/").lower()
-
-    trusted_prefixes = [
-        os.path.join(home, ".claude").replace("\\", "/").lower(),
-        os.path.join(home, "proggs").replace("\\", "/").lower(),
-    ]
 
     source_path = ""
     if tool_name == "Read":
@@ -280,12 +283,69 @@ def is_trusted_path(tool_name: str, tool_input: Dict[str, Any]) -> bool:
         source_path = tool_input.get("path", "")
     elif tool_name == "Glob":
         source_path = tool_input.get("path", "")
+    elif tool_name == "Bash":
+        return _is_trusted_bash_command(tool_input.get("command", ""), trusted_prefixes)
 
     if source_path:
         normalized = source_path.replace("\\", "/").lower()
         for prefix in trusted_prefixes:
             if normalized.startswith(prefix):
                 return True
+
+    return False
+
+
+def _is_trusted_bash_command(command: str, trusted_prefixes: list) -> bool:
+    """Check if a bash command only accesses trusted local paths or safe system commands.
+
+    Reduces false positives from commands like 'cat ~/.claude/settings.json'
+    or 'env | grep ANTHROPIC' which read local/trusted data.
+    """
+    if not command:
+        return False
+
+    home = os.environ.get("USERPROFILE", os.environ.get("HOME", ""))
+    if not home:
+        return False
+
+    home_normalized = home.replace("\\", "/").lower()
+    cmd_lower = command.lower().replace("\\", "/")
+
+    # Shell-variable forms of trusted dirs (often appear in commands)
+    trusted_refs = [
+        f"{home_normalized}/.claude",
+        f"{home_normalized}/proggs",
+        "$userprofile/.claude",
+        "$home/.claude",
+        "~/.claude",
+        "~/proggs",
+    ]
+
+    # Commands that only inspect the local environment are safe
+    safe_lead_commands = {"env", "echo", "set", "printenv", "which", "where",
+                         "type", "command", "uname", "hostname", "whoami",
+                         "git", "node", "python", "rustc", "go", "dotnet",
+                         "claude", "npm", "bun", "deno", "cargo"}
+
+    # Get the first command (before any pipe)
+    first_segment = cmd_lower.split("|")[0].strip()
+    first_word = first_segment.split()[0] if first_segment.split() else ""
+    # Strip path prefix (e.g. /usr/bin/env -> env)
+    first_word = first_word.rsplit("/", 1)[-1]
+
+    # Pure safe commands (env, git status, node --version, etc.)
+    if first_word in safe_lead_commands:
+        return True
+
+    # Commands that explicitly reference trusted dirs
+    for ref in trusted_refs:
+        if ref in cmd_lower:
+            return True
+
+    # Commands reading from trusted absolute paths
+    for prefix in trusted_prefixes:
+        if prefix in cmd_lower:
+            return True
 
     return False
 
@@ -372,6 +432,18 @@ def main() -> None:
     detections = scan_for_injections(text, config)
 
     if detections:
+        # Apply severity threshold to reduce false positives:
+        # - 1+ HIGH detection → always warn (likely real attack)
+        # - 2+ MEDIUM detections → warn (multiple signals = suspicious)
+        # - 1 MEDIUM + 0 HIGH → suppress (single medium is usually a false positive)
+        # - Only LOW detections → suppress
+        high_count = sum(1 for d in detections if d[3] == "high")
+        medium_count = sum(1 for d in detections if d[3] == "medium")
+
+        if high_count == 0 and medium_count < 2:
+            # Insufficient signal — likely false positive, stay silent
+            sys.exit(0)
+
         # Format and output warning
         source_info = get_source_info(tool_name, tool_input)
         warning = format_warning(detections, tool_name, source_info)
