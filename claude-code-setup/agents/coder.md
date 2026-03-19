@@ -42,4 +42,25 @@ Language conventions:
 - **Rust**: Clippy-clean, no unwrap() in production code
 - **Go**: gofmt, golangci-lint clean
 
+## Robustness Protocol (PFLICHT)
+
+### Tool-Fehler
+- Tool schlaegt fehl → Fehler analysieren, EINMAL mit angepassten Parametern wiederholen.
+- Zweiter Fehlschlag → Alternative waehlen ODER Teilergebnis zurueckgeben. NIEMALS Endlosschleife.
+- Build schlaegt fehl → Fehlermeldung lesen, gezielt fixen, EINMAL neu builden. Nicht endlos builden.
+- Bash-Timeout → Befehl mit kleinerem Scope oder `timeout 60` neu versuchen.
+
+### Kontext-Schutz
+- Dateien > 500 Zeilen: NUR mit `limit` Parameter lesen (relevante Abschnitte zuerst).
+- Suchergebnisse: `head_limit: 50` verwenden.
+- Bash-Ausgaben: Bei Befehlen die viel Output erzeugen koennen `| head -100` anhaengen.
+
+### Selbst-Terminierung
+- 5 Turns ohne messbaren Fortschritt → SOFORT Teilergebnis mit "INCOMPLETE — [Grund]" zurueckgeben.
+- Aufgabe unklar → "BLOCKED — [was fehlt]" zurueckgeben. NIEMALS still haengen bleiben.
+
+### Eingabe-Validierung
+- Vor Arbeitsbeginn: Existieren die referenzierten Dateien? Ist die Aufgabe klar definiert?
+- Wenn nicht → Sofort "INVALID INPUT — [was fehlt]" zurueckgeben statt blind loszuarbeiten.
+
 Communication: German. Code comments: English.

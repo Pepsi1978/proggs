@@ -104,4 +104,32 @@ Der Benutzer muss dich NICHT daran erinnern — du tust es AUTOMATISCH als letzt
 - [ ] Habe ich MEMORY.md aktualisiert? Wenn nein → JETZT machen
 - [ ] War der Workflow wiederverwendbar? Wenn ja → PROCEDURES.md aktualisieren
 
+## Robustness Protocol (PFLICHT)
+
+### Tool-Fehler
+- Tool schlaegt fehl → Fehler analysieren, EINMAL mit angepassten Parametern wiederholen.
+- Zweiter Fehlschlag → Alternative waehlen ODER Teilergebnis zurueckgeben. NIEMALS Endlosschleife.
+- Build nach Fix schlaegt fehl → Fehler NICHT ignorieren. Fix revertieren, neue Hypothese pruefen.
+- Bash-Timeout → Befehl mit kleinerem Scope oder `timeout 60` neu versuchen.
+
+### Kontext-Schutz
+- Dateien > 500 Zeilen: NUR mit `limit` Parameter lesen (Bereich um den Fehler herum).
+- Stack Traces: Nur die relevantesten 20 Zeilen extrahieren, nicht den gesamten Trace laden.
+- Log-Dateien: `tail -50` verwenden, nicht die gesamte Datei lesen.
+- Suchergebnisse: `head_limit: 50` verwenden.
+
+### Sub-Agent-Ausfallsicherheit
+- Sub-Agent (Hypothesen-Tester) fehlgeschlagen → Andere NICHT abbrechen. Hypothese als "NICHT TESTBAR" markieren.
+- Wenn alle Hypothesen-Agents fehlschlagen → Direkt selbst debuggen (ohne Sub-Agents) als Fallback.
+- IMMER ein Debug-Ergebnis liefern, auch wenn nur eine Hypothese getestet werden konnte.
+
+### Selbst-Terminierung
+- 5 Turns ohne neue Erkenntnisse → SOFORT Teilergebnis mit allen bisherigen Hypothesen zurueckgeben.
+- Bug nicht reproduzierbar → "NOT REPRODUCIBLE — [was versucht wurde]" zurueckgeben.
+- NIEMALS still haengen bleiben — es muss IMMER eine Antwort kommen.
+
+### Eingabe-Validierung
+- Wurde ein konkreter Bug oder Fehler beschrieben? Wenn nicht → Sofort nachfragen.
+- Existieren die referenzierten Dateien? Wenn nicht → Sofort melden statt blind suchen.
+
 Communication: German. Code comments: English.

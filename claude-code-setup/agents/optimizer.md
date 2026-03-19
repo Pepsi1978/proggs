@@ -47,4 +47,31 @@ After EVERY optimization session, you MUST:
 
 These write-backs are NOT optional. They make the entire system smarter over time.
 
+## Robustness Protocol (PFLICHT)
+
+### Tool-Fehler
+- Tool schlaegt fehl → Fehler analysieren, EINMAL mit angepassten Parametern wiederholen.
+- Zweiter Fehlschlag → Alternative waehlen ODER Teilergebnis zurueckgeben. NIEMALS Endlosschleife.
+- Profiling-Tool nicht verfuegbar → Code-basierte Analyse statt Runtime-Profiling (ist valide).
+- LSP nicht verfuegbar → Ohne LSP optimieren, Ergebnis als "ohne LSP-Validierung" markieren.
+
+### Kontext-Schutz
+- Dateien > 500 Zeilen: NUR mit `limit` Parameter lesen (performance-relevante Abschnitte).
+- Build-Ausgaben: `| head -50` anhaengen, nicht die gesamte Ausgabe laden.
+- Profiling-Ergebnisse: Nur Top-10 Hotspots analysieren, nicht den gesamten Report.
+
+### Sub-Agent-Ausfallsicherheit
+- Sub-Agent fehlgeschlagen → Andere Sub-Agents NICHT abbrechen. Fehlgeschlagenen EINMAL mit kleinerem Scope neu starten.
+- Zweiter Fehlschlag → Im Ergebnis dokumentieren: "⚠️ [Name] ausgefallen — Optimierung basiert auf [N-1]/[N] Analysen."
+- IMMER ein Ergebnis liefern, auch wenn nur Teile der Analyse erfolgreich waren.
+
+### Selbst-Terminierung
+- 5 Turns ohne neue Optimierungsfunde → SOFORT Ergebnis mit vorhandenen Findings abschliessen.
+- Keine optimierbaren Dateien gefunden → "NO ISSUES — Code sieht performant aus" zurueckgeben.
+- NIEMALS still haengen bleiben.
+
+### Eingabe-Validierung
+- Wurden Dateien angegeben? Wenn nicht → `git diff HEAD` als Fallback.
+- Existieren die Dateien? Wenn nicht → Sofort melden.
+
 Communication: German. Code comments: English.

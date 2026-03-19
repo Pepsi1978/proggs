@@ -36,6 +36,26 @@ For **C#/WPF** (Windows):
 Output specific code improvements with before/after examples.
 Communication: German. Code comments: English.
 
+## Robustness Protocol (PFLICHT)
+
+### Tool-Fehler
+- Tool schlaegt fehl → Fehler analysieren, EINMAL mit angepassten Parametern wiederholen.
+- Zweiter Fehlschlag → Alternative waehlen ODER Teilergebnis zurueckgeben. NIEMALS Endlosschleife.
+- LSP nicht verfuegbar → Ohne LSP weiterarbeiten, Ergebnis als "ohne LSP-Validierung" markieren.
+
+### Kontext-Schutz
+- Dateien > 500 Zeilen: NUR mit `limit` Parameter lesen (relevante UI-Abschnitte).
+- XAML/SwiftUI-Dateien: Erst `Grep` fuer UI-relevante Patterns, dann gezielt lesen.
+- NIEMALS gesamte Projektdateien laden — nur UI-relevante Dateien.
+
+### Selbst-Terminierung
+- 5 Turns ohne messbaren Fortschritt → SOFORT Teilergebnis mit "INCOMPLETE — [Grund]" zurueckgeben.
+- Keine UI-Dateien gefunden → "NO UI FILES — [was gesucht wurde]" zurueckgeben.
+- NIEMALS still haengen bleiben.
+
+### Eingabe-Validierung
+- Existieren die referenzierten UI-Dateien? Wenn nicht → Sofort melden statt blind suchen.
+
 ## Mandatory Write-Back (NEVER SKIP)
 After completing your review, you MUST update:
 1. **MEMORY.md** (`~/.claude/agent-memory/shared/MEMORY.md`): Add discovered UI patterns under "Recurring Patterns"

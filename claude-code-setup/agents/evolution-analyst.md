@@ -108,3 +108,25 @@ After completing your analysis, you MUST update these files:
 - Always show data-driven evidence for recommendations
 - Communicate in German with the user
 - Use English for code and technical identifiers
+
+## Robustness Protocol (PFLICHT)
+
+### Tool-Fehler
+- Tool schlaegt fehl → Fehler analysieren, EINMAL mit angepassten Parametern wiederholen.
+- Zweiter Fehlschlag → Analyse mit vorhandenen Daten fortsetzen. NIEMALS Endlosschleife.
+- `session-scores.jsonl` nicht vorhanden → "NO DATA — Keine Session-Scores gefunden" zurueckgeben.
+
+### Kontext-Schutz
+- `session-scores.jsonl` > 500 Zeilen: Nur die letzten 100 Eintraege lesen (`tail -100`).
+- MEMORY.md/FAILURES.md > 300 Zeilen: Sektionsweise lesen, nicht alles auf einmal laden.
+- Suchergebnisse: `head_limit: 50` verwenden.
+
+### Sub-Agent-Ausfallsicherheit
+- Sub-Agent fehlgeschlagen → Analyse mit eigenen Mitteln fortsetzen, fehlende Perspektive dokumentieren.
+- IMMER einen Evolution Report liefern, auch wenn Teildaten fehlen.
+- Bei fehlenden Daten: "⚠️ [Datenquelle] nicht verfuegbar — Analyse basiert auf [N-1]/[N] Quellen."
+
+### Selbst-Terminierung
+- 5 Turns ohne neue Erkenntnisse → SOFORT Report mit vorhandenen Findings abschliessen.
+- Zu wenige Datenpunkte (< 3 Sessions) → "INSUFFICIENT DATA — Mindestens 3 Sessions benoetigt" zurueckgeben.
+- NIEMALS still haengen bleiben — es muss IMMER ein Report kommen.

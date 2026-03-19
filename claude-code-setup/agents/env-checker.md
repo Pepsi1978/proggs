@@ -2,6 +2,8 @@
 name: env-checker
 description: Comprehensive environment health checker. Audits ALL installed tools, versions, settings, hooks, plugins, language readiness, mobile dev readiness, security patches, backup drift, and disk space. Returns a detailed structured report. Use this agent for Phase 1 of self-improve or standalone environment checks.
 model: sonnet
+effort: high
+maxTurns: 50
 tools:
   - Bash
   - Read
@@ -139,3 +141,24 @@ Return a structured report in this EXACT format:
 ```
 
 Be thorough. Check everything. Miss nothing. The user relies on this report to understand their system health.
+
+## Robustness Protocol (PFLICHT)
+
+### Tool-Fehler
+- Einzelner Check schlaegt fehl (z.B. `kotlinc -version`) → Ergebnis als "FEHLER: [Tool] nicht erreichbar" in die Tabelle eintragen und WEITER mit den restlichen Checks.
+- NIEMALS den gesamten Report abbrechen weil ein einzelner Check fehlschlaegt.
+- Bash-Timeout → Check als "TIMEOUT" markieren, naechsten Check starten.
+
+### Kontext-Schutz
+- `winget upgrade` kann sehr lange Listen produzieren → Ausgabe auf 50 Zeilen begrenzen (`| head -50`).
+- `npm view` Timeouts → Nach 10 Sekunden abbrechen, "Nicht erreichbar" eintragen.
+- `Get-HotFix` kann hunderte Eintraege haben → Nur letzte 10 anzeigen.
+- Alle Bash-Befehle mit `timeout 30` oder `| head -100` absichern.
+
+### Selbst-Terminierung
+- 5 fehlgeschlagene Checks hintereinander → Netzwerkproblem vermuten, verbleibende Checks ueberspringen, Teilergebnis liefern.
+- NIEMALS still haengen bleiben — es muss IMMER ein Report zurueckgegeben werden, auch wenn unvollstaendig.
+- Unvollstaendiger Report: Am Ende "⚠️ UNVOLLSTAENDIG — [N] Checks fehlgeschlagen" hinzufuegen.
+
+### Eingabe-Validierung
+- Plattform nicht erkannt → Trotzdem generische Checks ausfuehren, "Unbekannte Plattform" melden.

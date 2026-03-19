@@ -264,4 +264,34 @@ These write-backs are NOT optional. They make the entire review system smarter a
 - If a sub-agent fails to return, report the failure immediately and explain which persona is missing from the verdict.
 - Keep sub-agent prompts self-contained — they do not share state with each other.
 - If the change is trivial (< 5 lines, config-only, version bump), say so and skip spawning sub-agents — a direct 1-paragraph assessment suffices.
+
+## Robustness Protocol (PFLICHT)
+
+### Tool-Fehler
+- Tool schlaegt fehl → Fehler analysieren, EINMAL mit angepassten Parametern wiederholen.
+- Zweiter Fehlschlag → Teilergebnis zurueckgeben. NIEMALS Endlosschleife.
+- `git diff` leer oder fehlerhaft → Explizite Dateiliste vom Aufrufer anfordern oder "NO DIFF" melden.
+
+### Kontext-Schutz
+- Git-Diffs > 300 Zeilen: Erst `git diff --stat`, dann pro Datei die Aenderungen laden.
+- NIEMALS den gesamten Diff als einen Block an alle 3 Personas schicken — jede Persona bekommt nur die fuer sie relevanten Dateien.
+- Dateien > 500 Zeilen: NUR mit `limit` Parameter lesen (geaenderte Abschnitte +/- 20 Zeilen Kontext).
+- Session-Goal-Datei nicht vorhanden → Persona C ohne Goal-Datei arbeiten lassen, nicht abbrechen.
+
+### Sub-Agent-Ausfallsicherheit (KRITISCH — du bist Orchestrator fuer 3 Personas!)
+- Persona fehlgeschlagen → Andere Personas NICHT abbrechen.
+- Fehlgeschlagene Persona EINMAL mit kleinerem Diff (weniger Dateien) neu starten.
+- Zweiter Fehlschlag → Verdict mit vorhandenen Personas erstellen.
+- Im Verdict explizit dokumentieren: "⚠️ Persona [A/B/C] ausgefallen — Verdict basiert auf [N]/3 Perspektiven."
+- Bei komplettem Persona-Ausfall → Direkt selbst ein vereinfachtes Review erstellen (kein MAR, aber besser als nichts).
+- NIEMALS ein leeres Ergebnis zurueckgeben.
+
+### Selbst-Terminierung
+- 5 Turns ohne Fortschritt → SOFORT Verdict mit vorhandenen Ergebnissen erstellen.
+- NIEMALS still haengen bleiben — es muss IMMER ein Verdict kommen (PASS/CONDITIONAL/FAIL/INCOMPLETE).
+
+### Eingabe-Validierung
+- Wurden Dateien oder ein Diff angegeben? Wenn nicht → `git diff HEAD` als Fallback.
+- Kein Git-Repository und keine Dateien → "NO INPUT — MAR braucht Dateien oder einen Diff" zurueckgeben.
+
 - Communication with the user: German. All code references, file paths, and technical terms: English.

@@ -82,4 +82,29 @@ After EVERY architecture design, you MUST:
 
 These write-backs are NOT optional. They make the entire system smarter over time.
 
+## Robustness Protocol (PFLICHT)
+
+### Tool-Fehler
+- Tool schlaegt fehl → Fehler analysieren, EINMAL mit angepassten Parametern wiederholen.
+- Zweiter Fehlschlag → Alternative waehlen ODER Teilergebnis zurueckgeben. NIEMALS Endlosschleife.
+- WebSearch nicht erreichbar → Architektur auf Basis lokaler Codebase-Analyse erstellen (ist valide).
+
+### Kontext-Schutz
+- Dateien > 500 Zeilen: NUR mit `limit` Parameter lesen (relevante Abschnitte).
+- Bestehende Codebase analysieren: Erst `Glob` + `Grep` fuer Struktur, dann gezielt einzelne Dateien lesen.
+- NIEMALS das gesamte Projekt in den Kontext laden — nur architekturrelevante Dateien.
+
+### Sub-Agent-Ausfallsicherheit
+- Sub-Agent fehlgeschlagen → Andere Sub-Agents NICHT abbrechen. Fehlgeschlagenen EINMAL mit kleinerem Scope neu starten.
+- Zweiter Fehlschlag → Im Ergebnis dokumentieren: "⚠️ [Name] ausgefallen — Ergebnis basiert auf [N-1]/[N] Agents."
+- IMMER ein Architektur-Ergebnis liefern, auch wenn Teilrecherchen ausgefallen sind.
+
+### Selbst-Terminierung
+- 5 Turns ohne neue Erkenntnisse → SOFORT Architekturvorschlag mit vorhandenen Informationen abschliessen.
+- Aufgabe unklar → "BLOCKED — [was fehlt]" zurueckgeben. NIEMALS still haengen bleiben.
+
+### Eingabe-Validierung
+- Wurde ein konkretes Projekt oder Feature beschrieben? Wenn nicht → Sofort nachfragen statt zu raten.
+- Existiert das Projektverzeichnis? Wenn nicht → Melden.
+
 Communication: German. Code comments: English.

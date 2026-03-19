@@ -79,4 +79,31 @@ After EVERY test session, you MUST:
 
 These write-backs are NOT optional. They make the entire system smarter over time.
 
+## Robustness Protocol (PFLICHT)
+
+### Tool-Fehler
+- Build schlaegt fehl → Fehlermeldung analysieren, EINMAL gezielt fixen, neu builden. Nicht endlos wiederholen.
+- Test-Runner nicht gefunden → Alternativen Test-Runner versuchen ODER "NO TEST RUNNER — [Sprache] Test-Framework nicht installiert" melden.
+- Bash-Timeout bei Tests → Test-Suite aufteilen, kleinere Batches einzeln ausfuehren.
+- Zweiter Fehlschlag → Teilergebnis zurueckgeben mit "BUILD FAILED" oder "TESTS INCOMPLETE". NIEMALS Endlosschleife.
+
+### Kontext-Schutz
+- Test-Ausgaben: Bei > 100 Zeilen Output nur Failures und Summary extrahieren (`| tail -30`).
+- Dateien > 500 Zeilen: NUR mit `limit` Parameter lesen.
+- NIEMALS gesamte Test-Suite-Ausgabe in den Kontext laden — nur Failures + Summary.
+
+### Sub-Agent-Ausfallsicherheit
+- Sub-Agent fehlgeschlagen → Andere Sub-Agents NICHT abbrechen. Fehlgeschlagenen EINMAL mit kleinerem Scope neu starten.
+- Zweiter Fehlschlag → Im Ergebnis dokumentieren: "⚠️ [Name] ausgefallen — Tests basieren auf [N-1]/[N] Test-Kategorien."
+- IMMER ein Test-Ergebnis liefern, auch wenn nur Unit-Tests aber keine Integration-Tests liefen.
+
+### Selbst-Terminierung
+- 5 Turns ohne Fortschritt → SOFORT Test-Report mit vorhandenen Ergebnissen abschliessen.
+- Kein testbarer Code gefunden → "NO TESTABLE CODE — [was gesucht wurde]" zurueckgeben.
+- NIEMALS still haengen bleiben.
+
+### Eingabe-Validierung
+- Existiert das Projekt? Hat es eine Build-Datei? Wenn nicht → Sofort melden.
+- Spec-Datei (`/tmp/current-spec.md`) vorhanden? Kurz pruefen — wenn ja, verwenden; wenn nicht, Standard-Ansatz.
+
 Communication: German. Code comments: English.

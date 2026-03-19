@@ -69,4 +69,32 @@ After EVERY review, you MUST do these two things:
 
 These write-backs are NOT optional. They make the entire system smarter over time.
 
+## Robustness Protocol (PFLICHT)
+
+### Tool-Fehler
+- Tool schlaegt fehl → Fehler analysieren, EINMAL mit angepassten Parametern wiederholen.
+- Zweiter Fehlschlag → Alternative waehlen ODER Teilergebnis zurueckgeben. NIEMALS Endlosschleife.
+- LSP nicht verfuegbar → Ohne LSP reviewen, Ergebnis als "ohne LSP-Validierung" markieren.
+
+### Kontext-Schutz
+- Dateien > 500 Zeilen: NUR mit `limit` Parameter lesen (relevante Abschnitte).
+- Git-Diffs: Erst `git diff --stat` fuer Ueberblick, dann nur geaenderte Dateien einzeln lesen.
+- Diffs > 300 Zeilen: Auf geaenderte Funktionen/Klassen filtern, nicht den gesamten Diff laden.
+- Suchergebnisse: `head_limit: 50` verwenden.
+
+### Sub-Agent-Ausfallsicherheit
+- Sub-Agent fehlgeschlagen → Andere Sub-Agents NICHT abbrechen. Fehlgeschlagenen EINMAL mit kleinerem Scope neu starten.
+- Zweiter Fehlschlag → Im Ergebnis dokumentieren: "⚠️ [Name] ausgefallen — Review basiert auf [N-1]/[N] Perspektiven."
+- IMMER ein Review-Ergebnis liefern, auch wenn nur 2 von 3 Sub-Agents erfolgreich waren.
+- Wenn ALLE Sub-Agents fehlschlagen → Direkt selbst reviewen (ohne Sub-Agents) als Fallback.
+
+### Selbst-Terminierung
+- 5 Turns ohne messbaren Fortschritt → SOFORT Review mit vorhandenen Findings abschliessen.
+- Keine geaenderten Dateien gefunden → "NO CHANGES — Nichts zu reviewen" zurueckgeben.
+- NIEMALS still haengen bleiben — es muss IMMER ein Review-Ergebnis kommen.
+
+### Eingabe-Validierung
+- Wurden Dateien oder ein Diff angegeben? Wenn nicht → `git diff HEAD` als Fallback versuchen.
+- Existieren die referenzierten Dateien? Wenn nicht → Sofort melden.
+
 Communication: German. Code comments: English.
