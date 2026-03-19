@@ -211,6 +211,53 @@ import com.quizverse.app.data.prepopulate.questions.techQuestionsExpert4
 import com.quizverse.app.data.prepopulate.questions.techQuestionsExpert5
 import com.quizverse.app.data.prepopulate.questions.techQuestionsExpert6
 import com.quizverse.app.data.prepopulate.questions.techQuestionsMaster1
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsEasy1
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsEasy2
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsEasy3
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsEasy4
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsEasy5
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsEasy6
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsMedium1
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsMedium2
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsMedium3
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsMedium4
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsMedium5
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsMedium6
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsHard1
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsHard2
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsHard3
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsHard4
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsHard5
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsHard6
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsExpert1
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsExpert2
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsExpert3
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsExpert4
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsExpert5
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsExpert6
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsExpert7
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsMaster1
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsMaster2
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsMaster3
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsMaster4
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsMaster5
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsMaster6
+import com.quizverse.app.data.prepopulate.questions.healthQuestionsMaster7
+import com.quizverse.app.data.prepopulate.questions.foodQuestionsEasy1
+import com.quizverse.app.data.prepopulate.questions.foodQuestionsEasy3
+import com.quizverse.app.data.prepopulate.questions.foodQuestionsEasy4
+import com.quizverse.app.data.prepopulate.questions.foodQuestionsMedium2
+import com.quizverse.app.data.prepopulate.questions.foodQuestionsHard2
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsEasy1
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsEasy2
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsEasy3
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsEasy4
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsMedium1
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsMedium2
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsMedium3
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsHard1
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsExpert1
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsMaster1
 import com.quizverse.app.data.prepopulate.questions.herthaBscQuestions
 import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsMedium2
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestions
@@ -458,7 +505,12 @@ object QuestionSeeder {
             techQuestionsExpert6() +
             techQuestionsMaster1() +
             foodQuestions() +
+            foodQuestionsEasy1() +
             foodQuestionsEasy2() +
+            foodQuestionsEasy3() +
+            foodQuestionsEasy4() +
+            foodQuestionsMedium2() +
+            foodQuestionsHard2() +
             animalQuestions() +
             animalQuestionsEasy2() +
             animalQuestionsEasy3() +
@@ -490,6 +542,16 @@ object QuestionSeeder {
             literatureQuestions() +
             mixedQuestions() +
             logicQuestions() +
+            logicQuestionsEasy1() +
+            logicQuestionsEasy2() +
+            logicQuestionsEasy3() +
+            logicQuestionsEasy4() +
+            logicQuestionsMedium1() +
+            logicQuestionsMedium2() +
+            logicQuestionsMedium3() +
+            logicQuestionsHard1() +
+            logicQuestionsExpert1() +
+            logicQuestionsMaster1() +
             herthaBscQuestions() +
             herthaBscQuestionsMedium2() +
             dortmundQuestions() +
@@ -533,7 +595,9 @@ object QuestionSeeder {
             healthQuestionsMaster3() +
             healthQuestionsMaster4() +
             healthQuestionsMaster5() +
-            healthQuestionsMaster6()
+            healthQuestionsMaster6() +
+            healthQuestionsExpert7() +
+            healthQuestionsMaster7()
         dao.insertAll(all)
     }
 
