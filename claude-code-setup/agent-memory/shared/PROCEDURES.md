@@ -29,6 +29,7 @@ Wenn ein Agent eine Aufgabe 3x ähnlich löst, soll er den Ablauf hier als neuen
 - Vergessen, den Import UND die Registrierung in QuestionSeeder.kt hinzuzufügen
 - questionCount nicht aktualisiert → App zeigt falsche Fortschrittsanzeige
 - Fakten nicht geprüft → falsche Antworten in der App
+- **ABSTURZ-GEFAHR**: Mehr als 50 Fragen auf einmal generieren → Agent-Crash durch Kontext-/Output-Überlauf! Immer in Chunks von max 50 arbeiten (siehe "Bulk Content Generation" Workflow unten)
 
 ---
 
@@ -57,14 +58,50 @@ Wenn ein Agent eine Aufgabe 3x ähnlich löst, soll er den Ablauf hier als neuen
 1. Platform erkennen (Darwin/MINGW/Linux)
 2. Stufe 0: session-scores.jsonl Plausibility Check + evolution-analyst
 3. Stufe 1: env-checker Agent (full/quick)
-4. Stufe 2: Researchers parallel (R1+R5+R6 immer, R2-R4 wenn Cache >7 Tage)
-5. Stufe 3: Verbesserungen implementieren, Report, Meta-Improve
-6. Cross-Platform-Sync: Alle Änderungen nach ~/proggs/claude-code-setup/ kopieren
-7. Committen und Pushen
+4. Stufe 2: Researchers parallel (R1-R8; R1+R5+R6+R8 immer, R2-R4 wenn Cache >7 Tage)
+5. Stufe 3: Challenger Gate (Verbesserungen prüfen) → Implementieren → Report → Meta-Improve
+6. Stufe 4: Creative Research (6 Linsen + Benchmark)
+7. Stufe 5: Super Intelligenz (R8-Ergebnisse umsetzen)
+8. Stufe 6: Fehler-Dauerhaftigkeit (3 parallele Scans + Fixes)
+9. Agents auf Robustness-Protocol prüfen (maxTurns, Tool-Fehler, Kontext-Schutz)
+10. Cross-Platform-Sync: Alle Änderungen nach ~/proggs/claude-code-setup/ kopieren
+11. Shell-Updates als ALLERLETZTER Schritt (nach Benutzer-Bestätigung)
+12. Committen und Pushen
 
 **Bekannte Fallstricke**:
 - settings-reference.json vergessen zu aktualisieren bei Hook-Änderungen
 - Git push ohne vorheriges pull --rebase → Merge-Konflikte
+- Shell-Updates (PowerShell, Git, Node.js, ADB) während des Laufs zerstören Terminals
+- Session-Scorer kann bei Claude-Code-Updates neues Transcript-Format nicht parsen
+- Turn-Counter wird nicht zurückgesetzt → Intent-Drift-Schutz unwirksam in neuer Session
+
+---
+
+## Bulk Content Generation (Anti-Crash Chunking)
+
+**Wann**: Wenn grosse Mengen aehnlicher Inhalte generiert werden sollen (Quiz-Fragen, Test-Daten, Seed-Daten, Uebersetzungen, etc.)
+**Schwelle**: Ab 50+ Items MUSS gechukt werden. Unter 50: direkt generieren ist OK.
+
+**Schritte**:
+1. Gesamtmenge bestimmen (z.B. 200 Fragen)
+2. In Chunks von max 50 aufteilen (200 → 4 Chunks à 50)
+3. **Fuer sequentielle Ausfuehrung**: Chunk 1 generieren → in Datei schreiben → Chunk 2 generieren → anhaengen → ...
+4. **Fuer parallele Ausfuehrung (BEVORZUGT)**: Mehrere coder-Agents spawnen, jeder generiert einen Chunk:
+   - Coder 1: Items 1-50 → schreibt in Datei A
+   - Coder 2: Items 51-100 → schreibt in Datei B
+   - Coder 3: Items 101-150 → schreibt in Datei C
+   - Coder 4: Items 151-200 → schreibt in Datei D
+5. Am Ende: Alle Teildateien zusammenfuehren oder einzeln registrieren
+
+**Warum**:
+- 200+ Items auf einmal → Agent-Kontext und Output-Buffer ueberlaufen → interner Fehler → Totalverlust
+- 50 Items bleiben sicher innerhalb der Token-Limits
+- Parallel: 4x schneller als sequentiell
+
+**Bekannte Fallstricke**:
+- Chunk-Grenzen koennen zu Duplikaten fuehren → nach dem Zusammenfuehren auf Duplikate pruefen
+- Nummerierung/IDs muessen chunk-uebergreifend konsistent sein
+- Bei Fakten-basierten Inhalten: Jeder Chunk braucht eigene Web-Recherche-Validierung
 
 ---
 

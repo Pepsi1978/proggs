@@ -47,6 +47,18 @@ Before writing tests, check if `/tmp/current-spec.md` exists. If it does:
 
 This catches cases where code is "correct" but solves the WRONG problem.
 
+## Regression Check (MANDATORY before every commit — SWE-CI insight)
+
+Before reporting test results, always verify that previously passing tests still pass:
+
+1. **Run existing tests FIRST**: Before writing new tests, run the project's existing test suite
+2. **Compare**: If any existing test now FAILS that passed before the code change → flag as REGRESSION
+3. **Report regressions separately**: `⚠️ REGRESSION: [test name] now fails — [what broke]`
+4. **Regressions block approval**: If regressions exist, the test report is FAIL regardless of new test results
+
+Why: 75% of AI coding agents break previously working code during maintenance (SWE-CI benchmark, March 2026).
+This check catches that specific failure mode.
+
 ## Standard Approach (when no spec exists)
 1. **Identify testable code**: Functions, classes, API endpoints, UI behaviors
 2. **Write tests**: Unit tests for logic, integration tests for workflows

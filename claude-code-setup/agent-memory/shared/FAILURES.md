@@ -84,6 +84,13 @@ _No entries yet. Agents will add logic errors that recurred or were hard to find
 
 ## Agent & Workflow Failures
 
+### [2026-03-19] Agent: Alle 14 Agents hatten keine Absturz-Sicherung
+- **Symptom**: Researcher (R2) stuerzte bei WebFetch von claudecodemarketplace.com ab. Weitere Agents (batch-reviewer, env-checker) hatten kein maxTurns und konnten endlos laufen. Kein Agent hatte Schutz gegen Kontext-Ueberlauf durch grosse Dateien/Diffs.
+- **Root Cause**: Fehlende Robustness-Massnahmen in allen Agent-Definitionen: (1) kein maxTurns bei 3 Agents, (2) keine Tool-Fehler-Behandlung, (3) kein Kontext-Schutz, (4) keine Selbst-Terminierung, (5) Orchestratoren hatten keinen Sub-Agent-Failover
+- **Fix**: Robustness Protocol zu allen 14 Agents hinzugefuegt — Tool-Fehler-Recovery, Kontext-Schutz (Dateien >500 Zeilen begrenzen, Diffs aufteilen, head_limit), Selbst-Terminierung nach 5 stalled Turns, Sub-Agent-Failover fuer Orchestratoren, Eingabe-Validierung
+- **Prevention**: maxTurns jetzt Pflicht fuer jeden neuen Agent. Robustness Protocol ist Standard-Sektion die jeder Agent haben muss.
+- **Files**: ~/.claude/agents/*.md (alle 14 Dateien)
+
 ### [2026-03-18] Agent: Shared Knowledge Hub empty after 12 days
 - **Symptom**: No agent ever wrote to shared/MEMORY.md despite instructions
 - **Root Cause**: Agent definitions say "update MEMORY.md" but don't enforce it — agents prioritize their main task and skip the write-back
@@ -133,3 +140,38 @@ _No entries yet. Agents will add logic errors that recurred or were hard to find
 - **Fix**: Kein Messwert ohne Messkontext (Datum, Netzwerktyp, Systemlast) in MEMORY.md schreiben. Werte erst nach 5+ Messungen als Durchschnitt eintragen.
 - **Prevention**: Vor MEMORY.md-Eintrag mit Latenzwert: Immer "(n=X, Median: Y, Range: Z-W)" erwaehnen.
 - **Files**: .claude/agent-memory/shared/MEMORY.md
+
+### [2026-03-19] Design: Prompt-Hook als Enforcement-Mechanismus — strukturelles Anti-Pattern
+- **Symptom**: SubagentStop-Prompt-Hook soll pruefen ob MEMORY.md beschrieben wurde — hat aber keinen Dateisystem-Zugriff
+- **Root Cause**: Prompt-Hooks sind Instruktionen im Agent-Kontext, keine ausfuehrbaren Scripts. Compliance != Enforcement. Bekanntes Muster: Mandatory-Write-Back gilt seit 18.03., KEIN Agent hat je etwas geschrieben (MEMORY.md Zeile 76+99).
+- **Fix**: Enforcement NUR per echtem Script-Hook (PowerShell PostToolUse auf Task-Events) der MEMORY.md per mtime prueft und ggf. Platzhalter injiziert.
+- **Prevention**: Wenn "Enforcement" durch einen Prompt umgesetzt werden soll: IMMER als CONCERN markieren. Echter Enforcement = Dateisystem-Operation, nicht Prompt-Text.
+- **Files**: .claude/agent-memory/shared/MEMORY.md, SubagentStop-Hook
+
+### [2026-03-19] Metrics: Scoring-Schwellenwerte ohne Baseline-Kalibrierung — False-Incentive
+- **Symptom**: Parallelisierungs-Bonus ab Ratio 1.5 eingebaut, obwohl kein einziger realer Run diese Ratio je erreicht hat (Max 1.27, Schnitt 0.88). Malus ab < 0.7 trifft reale Sessions.
+- **Root Cause**: Schwellenwerte wurden normativ gesetzt statt empirisch aus bestehenden Session-Daten abgeleitet.
+- **Fix**: Bonus-Schwellenwert = Baseline + 20%. Malus-Schwellenwert = Baseline - 30%. Beide alle 20 Sessions automatisch neu kalibrieren (analog Two-Phase-SPC).
+- **Prevention**: Vor jeder Metrik-Aenderung zuerst session-scores.jsonl lesen und Ist-Verteilung pruefen. Schwellenwerte muessen erreichbar sein, sonst demotivieren sie statt zu incentivieren.
+- **Files**: ~/.claude/hooks/session-scorer.ts, session-scores.jsonl
+
+### [2026-03-19 16:31] Agent: Write-Back nicht erfolgt (automatisch erkannt)
+- **Symptom**: Senior-Agent hat MEMORY.md nicht aktualisiert
+- **Root Cause**: Mandatory Write-Back wird von Agents ignoriert — kein technisches Enforcement
+- **Fix**: Memory Watchdog Hook meldet fehlende Write-Backs
+- **Prevention**: Dieser Hook (memory-watchdog.ps1) laeuft bei jedem SubagentStop
+- **Status**: AUTO-LOGGED
+
+### [2026-03-19 16:31] Agent: Write-Back nicht erfolgt (automatisch erkannt)
+- **Symptom**: Senior-Agent hat MEMORY.md nicht aktualisiert
+- **Root Cause**: Mandatory Write-Back wird von Agents ignoriert — kein technisches Enforcement
+- **Fix**: Memory Watchdog Hook meldet fehlende Write-Backs
+- **Prevention**: Dieser Hook (memory-watchdog.ps1) laeuft bei jedem SubagentStop
+- **Status**: AUTO-LOGGED
+
+### [2026-03-19 16:32] Agent: Write-Back nicht erfolgt (automatisch erkannt)
+- **Symptom**: Senior-Agent hat MEMORY.md nicht aktualisiert
+- **Root Cause**: Mandatory Write-Back wird von Agents ignoriert — kein technisches Enforcement
+- **Fix**: Memory Watchdog Hook meldet fehlende Write-Backs
+- **Prevention**: Dieser Hook (memory-watchdog.ps1) laeuft bei jedem SubagentStop
+- **Status**: AUTO-LOGGED

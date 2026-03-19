@@ -42,7 +42,7 @@ _No entries yet. The debugger will write root cause patterns here._
   - NEW `StopFailure` hook — auto-logs API errors (rate limit, auth, network) to FAILURES.md
   - UPGRADED all 9 Opus agents with `effort: high` + differentiated `maxTurns` (architect/debugger: 80, quality-gate: 150, others: 60)
   - ENHANCED session-scorer.ts with Two-Phase SPC (Phase 1: simple trend <20 sessions, Phase 2: UCL/LCL + 7-point run >=20 sessions)
-  - CORRECTED memory: Claude Code 2.1.78, Kotlin 2.3.20, Bun 1.3.11, 89 plugins (not 93)
+  - CORRECTED memory: Claude Code 2.1.79, Kotlin 2.3.0 (2.3.20 pending), Bun 1.3.11, 88 plugins (86 aktiv + 2 deaktiviert)
   - Updated Homebrew packages (uv 0.10.11)
 - **2026-03-18 (Intelligence Run)**: 6 intelligence improvements implemented:
   - NEW `challenger` agent — Devil's Advocate for architecture plans (Multi-Agent Debate pattern)
@@ -66,8 +66,44 @@ _No entries yet. The debugger will write root cause patterns here._
 ## Recurring Patterns
 _Patterns detected across multiple sessions will be logged here automatically._
 
+### [2026-03-19] Evolution Analyst — Trendanalyse (16 Sessions, 2026-03-18 bis 2026-03-19)
+- **Quality-Trend**: Stabil zwischen 8.0 und 8.8. Vorperioden-Schnitt (Eintraege 1-8): 8.69. Aktuelle Periode (Eintraege 9-16): 8.63. Delta: -0.06 — STABIL (Schwelle: 0.5).
+- **Plausibilitaets-Check**: BESTANDEN. Alle 16 Eintraege haben total_turns > 0. 14 von 16 Eintraege zeigen tool_calls > 0. Ausnahmen: Eintrag 11 (1 Turn, 0 Tool-Calls — vermutlich leere/abgebrochene Session).
+- **Corrections-Rate**: 0.0% in ALLEN 16 Sessions — Intent-Anker-Fix vom 18.03. zeigt anhaltende Wirksamkeit. Kein einziger Drift-Vorfall seit dem Fix.
+- **Tool/Turn-Ratio**: Aktuell 0.88 (Eintraege 12-16, Durchschnitt). Bereich: 0.0 (Eintrag 11) bis 1.27 (Eintrag 4). Ziel 1.5 wird in KEINER Session erreicht. Sequentielle Toolnutzung dominiert.
+- **Error-Rate**: 0.0% in allen Sessions. Kein Fehlertyp sichtbar — aber Erinnerung: Fehlende Build-Latenzen bedeuten versteckte Performance-Probleme koennen unerkannt bleiben.
+- **Kurzsessions (<10 Turns)**: 3 von 16 Sessions haben <=7 Turns (Eintraege 4, 10, 11). Diese werden korrekt aus SPC-Trendanalyse ausgeschlossen (Scorer v2 Fix vom 18.03.).
+- **Agent Write-Back**: Noch immer keine Eintraege von Code-Reviewer, Tester, Architect oder Debugger seit Mandatory-Write-Back-Fix (18.03.). Technische Enforcement-Luecke bleibt offen.
+- **R6 Creative Fokus-Empfehlung**: Hoechste Prioritaet liegt bei Tool/Turn-Ratio-Verbesserung (0.88 vs. Ziel 1.5). Konkret: Recherche zu automatischen Parallelisierungs-Hinweisen und Scoring-Anreizen (Bonus ab Ratio 1.5 im Scorer) — das ist der einzige Hebel der ohne Code-Aenderungen sofort wirkt.
+
+### [2026-03-19] Evolution Analyst — Erstanalyse (3 Sessions, 2026-03-18)
+- **Quality-Trend**: Stabil bei 8.8 (alle 3 Sessions identisch). Datenbasis zu klein fuer SPC (benoetigt 20 Sessions, Trend-Analyse ab 10).
+- **Corrections-Rate**: 0.0% in allen Sessions — Intent-Anker-Fix vom 18.03. wirksam.
+- **Tools/Turn-Ratio**: Durchschnitt 0.92 (Ziel: 1.5+). Sequentielle statt parallele Tool-Calls dominieren. Score-Schwelle von 3.0 im Scorer ist unrealistisch — sollte auf 1.5 gesenkt werden.
+- **Agent Write-Back**: Noch keine Eintraege von Senior-Agenten seit Mandatory-Write-Back-Fix (18.03.). Enforcement fehlt technisch — SubagentStop-Hook ausstehend.
+- **Prompt-Injection False Positive**: Defender erkennt JSDoc-Kommentare in ~/.claude/hooks/ als "Context Manipulation" — Allowlist fuer vertrauenswuerdige Pfade fehlt.
+
+### [2026-03-19] Evolution Analyst — Performance-Analyse (3 Sessions, Performance-Fokus)
+- **Unsichtbare Build-Zeiten**: Session-Scorer erfasst KEINE Build-Latenzen (Gradle, dotnet). Performance-Verluste durch langsame Builds bleiben systemisch unsichtbar. FAILURES.md "Build & Compilation" Sektion ist leer — bedeutet fehlende Dokumentation, nicht fehlende Probleme.
+- **Git-fsmonitor fehlt**: `core.fsmonitor` nicht konfiguriert auf Windows. Bekannter 2–10x Speed-Up fuer git-status in grossen Repos. QuickFix: `git config --global core.fsmonitor true`.
+- **Defender-Hook-Overhead**: PostToolUse-Defender spawnt Python-Prozess bei JEDEM Read/Bash/Grep/WebFetch. Auf Windows (kein fork, teures CreateProcess) messbar. Daemon-Architektur wuerde ~100–300ms pro Tool-Call sparen.
+- **Gradle Config-Cache blockiert**: Challenger bestaetigt Inkompatibilitaet mit AGP 8.x — potenzieller Build-Speed-Gewinn (bis 80% bei wiederholten Builds) nicht nutzbar. R1 soll konkreten AGP-Versionsstand pruefen.
+- **Tool/Turn-Ratio unveraendert niedrig**: 0.90–0.95 in allen 3 Sessions. Kein Anstieg trotz CLAUDE.md-Parallelisierungsgebot. Moegliche Ursache: Scorer bewertet Ratio unter 3.0 neutral (kein Abzug, kein Bonus) — kein Anreiz zur Verbesserung. Empfehlung: Parallelisierungs-Bonus im Scorer ab Ratio 1.5 einfuehren.
+- **Researcher-Fokus Stufe 2**: R1=Gradle-Build-Profile, R2=Git-fsmonitor+Push-Latenz, R3=Defender-Daemon-Architektur, R4=Parallelisierungsrate-Metrik
+
+### [2026-03-19] Evolution Analyst — Trendanalyse R7 (23 Sessions, vollstaendige Datenbasis)
+- **Quality-Trend**: Vorperiode Eintraege 1-9 (Schnitt 8.72), aktuelle Periode Eintraege 14-23 (Schnitt 8.76). Delta: +0.04 — STABIL. Keine statistisch signifikante Bewegung in beiden Richtungen (Schwelle 0.5 weit unterschritten).
+- **Plausibilitaets-Check**: BESTANDEN. Die letzten 10 Eintraege zeigen errors=0, corrections=0 in allen Sessions. Session 279141ac (3 Turns, 1 Tool-Call, Score 8.0) ist valide Kurzsession — korrekt erkannt, keine Inflationsgefahr fuer SPC-Baseline.
+- **Corrections-Rate**: 0.0% in 23 aufeinanderfolgenden Sessions. Intent-Anker-Fix haelt seit > 1 Tag ohne Rueckfall. Stabilitaet bestaetigt.
+- **Tool/Turn-Ratio aktuell**: Session e2d0f78c: 21/30=0.70, 29/40=0.73, 37/50=0.74, 50/61=0.82, 59/70=0.84. Session 59baa6d4: 39/40=0.98, 48/50=0.96, 51/55=0.93, 59/64=0.92. Session 279141ac: 1/3=0.33. Gesamtschnitt letzte 10 Eintraege: 0.80. Rueckgang von frueheren 0.88 auf jetzt 0.80 — Negativtrend sichtbar, Ziel 1.5 weiterhin unerreicht.
+- **Agent Write-Back**: Nach 24+ Stunden seit Mandatory-Write-Back-Fix (18.03.) IMMER NOCH keine einzigen Eintraege von Code-Reviewer, Tester, Architect, Debugger. Enforcement-Luecke ist SYSTEMISCH, nicht zufall. SubagentStop-Hook fehlt — hoechste offene Prioritaet.
+- **R6 Creative (aktualisiert)**: Parallelisierungs-Bonus im Scorer ab Ratio 1.5 einbauen. Ratio sank von 0.88 auf 0.80 — CLAUDE.md-Parallelisierungsregel wird nicht durch Scoring-Anreize verstaerkt.
+- **R8 Intelligence (aktualisiert)**: SubagentStop-Hook Implementierung ist der kritischste Intelligence-Fokus. Ohne technisches Enforcement bleiben alle 4 Senior-Agenten stille Silos — Knowledge Hub nie befuellt.
+
 ## Capability Gaps
 _Tasks that required missing agents/skills will be logged here._
 
 ## From Challenger
 - **2026-03-18**: ✅ BEHOBEN — Session-Scorer v2: Kurzzeit-Sessions (< 10 turns) aus SPC ausgeschlossen (Zeile 180), kein Korrektur-Bonus fuer Kurzsessions (Zeile 141). Scoring jetzt rate-basiert statt count-basiert.
+- **2026-03-19 (Challenger)**: Speed-Plan 7 Punkte geprueft — KRITISCH: Defender-Allowlist per Pfad ist ein struktureller Security-Blind-Spot. Angreifer koennen praeparierte Dateien in vertrauenswuerdige Pfade schreiben und sind dann unsichtbar. Fix: SHA-256-Hash-Whitelist statt Pfad-Allowlist. Weitere Risiken: /tmp/ Cache instabil auf Windows (Gradle Config-Cache inkompatibel mit AGP 8.x), Einzelmessungen (700ms/300ms) haben zu wenig Datenbasis fuer permanente MEMORY-Eintraege, speed-coding.md-Rule konfligiert mit spec-first.md.
+- **2026-03-19 (Challenger)**: 4 Verbesserungen geprueft — KRITISCH: SubagentStop-Prompt-Hook kann MEMORY.md nicht wirklich pruefen (kein Dateisystem-Zugriff aus Prompt-Hook), loest die bekannte Enforcement-Luecke NICHT. Scorer-Bonus ab Ratio 1.5 bestraft aktuell die Haelfte aller Sessions (Baseline 0.88, Max 1.27 — Malus-Schwellenwert von 0.7 trifft reale Sessions). Coder-Selbsttests erzeugen False-Safety durch blinde Flecken. Empfehlung: Echter PowerShell-PostToolUse-Hook fuer Write-Back-Enforcement, Scorer-Schwellenwerte auf Baseline-Daten kalibrieren.
