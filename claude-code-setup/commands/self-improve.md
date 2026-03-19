@@ -95,19 +95,26 @@ Wenn `~/proggs/mcp-code-search/` existiert: Pruefe ob der Index aktuell ist.
     import { generateEmbeddings } from './src/ollama.ts';
     import { VectorStore } from './src/store.ts';
     import { resolve, join } from 'path';
-    import { mkdirSync, existsSync } from 'fs';
-    const root = resolve('$HOME/proggs');
+    import { mkdirSync, existsSync, writeFileSync, readdirSync, unlinkSync } from 'fs';
+    const root = resolve('\$HOME/proggs');
     const dbDir = join(root, '.code-search');
     if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
+    // Pointer-based: find next index-N.db number
+    let maxN = 0;
+    for (const f of readdirSync(dbDir)) { const m = f.match(/^index-(\d+)\.db$/); if (m) maxN = Math.max(maxN, +m[1]); }
+    const newName = 'index-' + (maxN+1) + '.db';
     const files = await findCodeFiles(root);
     const chunks = []; for (const f of files) chunks.push(...await chunkFile(f, root));
-    const store = new VectorStore(join(dbDir, 'index.db')); store.clear();
+    const store = new VectorStore(join(dbDir, newName));
     for (let i = 0; i < chunks.length; i += 32) {
       const b = chunks.slice(i, i+32);
       store.insertBatch(b, await generateEmbeddings(b.map(c=>c.content)));
     }
     store.close();
-    console.log('Indexed: ' + files.length + ' files, ' + chunks.length + ' chunks');
+    writeFileSync(join(dbDir, 'current.txt'), newName); // Pointer-swap
+    // Cleanup old DBs (best-effort, skips locked files)
+    for (const f of readdirSync(dbDir)) { if (f.match(/^index-\d+\.db/) && !f.startsWith(newName.replace('.db',''))) try { unlinkSync(join(dbDir,f)); } catch {} }
+    console.log('Indexed: ' + files.length + ' files, ' + chunks.length + ' chunks (' + newName + ')');
   "
   ```
 - Im Report melden: "Semantic Index: [N] Dateien, [N] Chunks (aktualisiert/bereits aktuell)"
@@ -121,8 +128,16 @@ cd ~/proggs/mcp-code-search && bun -e "
   import { VectorStore } from './src/store.ts';
   import { generateEmbedding } from './src/ollama.ts';
   import { resolve, join } from 'path';
+  import { existsSync, readFileSync } from 'fs';
   const root = resolve('\$HOME/proggs');
-  const store = new VectorStore(join(root, '.code-search', 'index.db'));
+  const dbDir = join(root, '.code-search');
+  // Read pointer to find active DB file
+  const pointerFile = join(dbDir, 'current.txt');
+  if (!existsSync(pointerFile)) { console.log('FAIL: current.txt fehlt — Index nie erstellt'); process.exit(1); }
+  const dbName = readFileSync(pointerFile, 'utf-8').trim();
+  const dbPath = join(dbDir, dbName);
+  if (!existsSync(dbPath)) { console.log('FAIL: ' + dbName + ' existiert nicht'); process.exit(1); }
+  const store = new VectorStore(dbPath);
   const stats = store.stats();
   if (stats.totalChunks === 0) { console.log('FAIL: Index leer'); process.exit(1); }
   const emb = await generateEmbedding('test query for health check');
@@ -130,7 +145,7 @@ cd ~/proggs/mcp-code-search && bun -e "
   const results = store.search(emb, 3);
   if (results.length === 0) { console.log('FAIL: Suche liefert 0 Ergebnisse'); process.exit(1); }
   store.close();
-  console.log('OK: ' + stats.totalFiles + ' Dateien, ' + stats.totalChunks + ' Chunks, Suche liefert ' + results.length + ' Treffer');
+  console.log('OK: ' + stats.totalFiles + ' Dateien, ' + stats.totalChunks + ' Chunks, DB=' + dbName + ', Suche liefert ' + results.length + ' Treffer');
 "
 ```
 **Auswertung:**
