@@ -85,6 +85,34 @@ Delegate to `env-checker` agent: `mode: quick|full`, `Platform: [detected]`, `Da
 Full mode includes: Android deep-scan, agent tiers, language readiness, rules, git config.
 **Stufe 0, 1 and 2 start SIMULTANEOUSLY.**
 
+**Semantic Search Index (v5.14 — parallel mit Stufe 1):**
+Wenn `~/proggs/mcp-code-search/` existiert: Pruefe ob der Index aktuell ist.
+- Pruefe `~/proggs/.code-search/.last-index-time` — wenn aelter als 24h oder nicht vorhanden: Neu indexieren.
+- Indexierung laeuft per Bash parallel zu den anderen Stufe-1-Aufgaben:
+  ```bash
+  cd ~/proggs/mcp-code-search && bun -e "
+    import { findCodeFiles, chunkFile } from './src/indexer.ts';
+    import { generateEmbeddings } from './src/ollama.ts';
+    import { VectorStore } from './src/store.ts';
+    import { resolve, join } from 'path';
+    import { mkdirSync, existsSync } from 'fs';
+    const root = resolve('$HOME/proggs');
+    const dbDir = join(root, '.code-search');
+    if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
+    const files = await findCodeFiles(root);
+    const chunks = []; for (const f of files) chunks.push(...await chunkFile(f, root));
+    const store = new VectorStore(join(dbDir, 'index.db')); store.clear();
+    for (let i = 0; i < chunks.length; i += 32) {
+      const b = chunks.slice(i, i+32);
+      store.insertBatch(b, await generateEmbeddings(b.map(c=>c.content)));
+    }
+    store.close();
+    console.log('Indexed: ' + files.length + ' files, ' + chunks.length + ' chunks');
+  "
+  ```
+- Im Report melden: "Semantic Index: [N] Dateien, [N] Chunks (aktualisiert/bereits aktuell)"
+- **Voraussetzung**: Ollama muss laufen. Wenn nicht → ueberspringen mit Hinweis.
+
 ## Stufe 2: DEEP-DIVE
 
 **Load researcher templates from**: [self-improve-ref/researchers.md](self-improve-ref/researchers.md)
