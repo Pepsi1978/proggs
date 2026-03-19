@@ -1,11 +1,12 @@
 {
-  "mcpServers": {
-    "code-review-graph": {
-      "command": "uvx",
-      "args": [
-        "code-review-graph",
-        "serve"
-      ]
-    }
-  }
+	"mcpServers": {
+		"code-review-graph": {
+			"command": "uvx",
+			"args": ["code-review-graph", "serve"]
+		},
+		"code-search": {
+			"command": "bun",
+			"args": ["run", "C:/Users/barwa/proggs/mcp-code-search/src/index.ts"]
+		}
+	}
 }
