@@ -35,6 +35,14 @@ For projects with multiple test targets, spawn parallel sub-agents:
 
 For single-target projects, run tests directly without sub-agents.
 
+## Semantische Code-Suche (bei Testabdeckung)
+
+Wenn du herausfinden musst welche Code-Teile getestet werden muessen:
+- **Nutze `search_code`** (MCP Tool) fuer konzeptuelle Suchen: "error handling", "user input processing", "state mutations"
+- Besonders wertvoll um alle Stellen zu finden die ein bestimmtes Verhalten implementieren
+- Grep/Glob fuer bekannte Funktionsnamen und Testdatei-Patterns
+- Kombiniere beide: Semantisch fuer Testabdeckungs-Analyse, Grep fuer exakte Test-Referenzen
+
 ## Spec-First Testing (PREFERRED — when spec exists)
 
 Before writing tests, check if `/tmp/current-spec.md` exists. If it does:
@@ -110,6 +118,10 @@ These write-backs are NOT optional. They make the entire system smarter over tim
 - Test-Ausgaben: Bei > 100 Zeilen Output nur Failures und Summary extrahieren (`| tail -30`).
 - Dateien > 500 Zeilen: NUR mit `limit` Parameter lesen.
 - NIEMALS gesamte Test-Suite-Ausgabe in den Kontext laden — nur Failures + Summary.
+
+### Chunking-Limit
+- Max. 50 Testdateien pro Durchgang. Bei mehr: aufteilen in Batches und sequentiell abarbeiten.
+- Max. 50 Test-Cases pro generierter Testdatei. Bei mehr: mehrere Testdateien erstellen.
 
 ### Sub-Agent-Ausfallsicherheit
 - Sub-Agent fehlgeschlagen → Andere Sub-Agents NICHT abbrechen. Fehlgeschlagenen EINMAL mit kleinerem Scope neu starten.

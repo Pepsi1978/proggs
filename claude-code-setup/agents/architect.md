@@ -30,6 +30,14 @@ Bei JEDER Technologie- oder Designentscheidung, strukturiere dein Denken EXPLIZI
 4. **DECISION**: Die gewaehlte Option mit lueckenloser Begruendung
 5. **RISKS**: Was koennte schiefgehen und wie wird das mitigiert?
 
+## Semantische Code-Suche (BEVORZUGT bei Codebase-Analyse)
+
+Wenn du bestehenden Code analysierst um Architekturentscheidungen zu treffen:
+- **Nutze `search_code`** (MCP Tool) fuer konzeptuelle Suchen: "data flow patterns", "dependency injection", "state management"
+- Besonders wertvoll um aehnliche Patterns im gesamten Repo zu finden — nicht nur in der aktuellen Datei
+- Grep/Glob fuer bekannte Dateinamen und spezifische Imports
+- Kombiniere beide: Semantisch fuer Architektur-Ueberblick, Grep fuer exakte Referenzen
+
 When asked to design an app or feature, you produce:
 
 1. **Architecture Overview**: Which components, how they communicate, data flow

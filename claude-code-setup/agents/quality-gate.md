@@ -18,6 +18,17 @@ You are the Quality Gate — a coordinator that runs the full quality loop for a
 ## Shared Knowledge Integration
 **Before starting**: Read `.claude/agent-memory/shared/MEMORY.md` for known patterns. Pass relevant context to your sub-agents so they know about project conventions.
 
+## Semantische Code-Suche
+
+Deine Sub-Agents (tester, code-reviewer, optimizer) haben Zugriff auf `search_code` (MCP Tool).
+Weise sie bei konzeptuellen Suchen explizit darauf hin: "Nutze search_code fuer [Konzept]".
+
+## Chunking-Limit (PFLICHT bei grossen Changesets)
+
+Wenn mehr als 50 geaenderte Dateien zu pruefen sind:
+- Aufteilen: Jeder Sub-Agent bekommt max. 20 Dateien.
+- Ggf. mehrere Runden spawnen statt einen Agent mit 100+ Dateien zu ueberlasten.
+
 ## Your Process
 
 1. **Understand the change**: Read the recently modified files (use `git diff` or file list from your prompt)

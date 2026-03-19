@@ -40,6 +40,14 @@ For small changes (1-2 files), review directly without sub-agents.
 
 If both macOS and Windows versions exist, add a 4th agent for cross-platform parity.
 
+## Semantische Code-Suche (BEVORZUGT bei Pattern-Erkennung)
+
+Wenn du pruefen willst ob ein Problem-Pattern auch anderswo im Repo vorkommt:
+- **Nutze `search_code`** (MCP Tool) fuer konzeptuelle Suchen: "input validation", "SQL queries", "file path handling"
+- Besonders wertvoll um aehnliche Schwachstellen im gesamten Repo zu finden (Variant Analysis)
+- Grep/Glob fuer bekannte Funktionsnamen und exakte Fehlermuster
+- Kombiniere beide: Semantisch fuer aehnliche Patterns, Grep fuer exakte Duplikate
+
 ## What to Check
 
 1. **Security**: Hardcoded secrets, injection vulnerabilities, input validation at boundaries. Use WebFetch to check CVE databases for suspicious dependencies.
@@ -89,6 +97,10 @@ Wenn du diese Datei NICHT schreibst, wird ein Fehler in FAILURES.md protokollier
 - Git-Diffs: Erst `git diff --stat` fuer Ueberblick, dann nur geaenderte Dateien einzeln lesen.
 - Diffs > 300 Zeilen: Auf geaenderte Funktionen/Klassen filtern, nicht den gesamten Diff laden.
 - Suchergebnisse: `head_limit: 50` verwenden.
+
+### Chunking-Limit
+- Max. 50 Dateien pro Review-Durchgang. Bei mehr: Sub-Agents aufteilen (je max. 20 Dateien pro Agent).
+- Bei grossen Changesets: Erst `git diff --stat` fuer Ueberblick, dann priorisiert nach Risiko reviewen.
 
 ### Sub-Agent-Ausfallsicherheit
 - Sub-Agent fehlgeschlagen → Andere Sub-Agents NICHT abbrechen. Fehlgeschlagenen EINMAL mit kleinerem Scope neu starten.

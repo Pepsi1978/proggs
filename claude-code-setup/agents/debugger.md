@@ -62,11 +62,19 @@ Bevor du eine Loesung vorschlaegst, strukturiere dein Denken EXPLIZIT:
 
 Ohne dieses Protokoll: KEIN Code-Fix. Das verhindert vorschnelle Schlussfolgerungen.
 
+## Semantische Code-Suche (BEVORZUGT bei Ursachenforschung)
+
+Wenn du verwandten Code oder aehnliche Patterns im Repo finden musst:
+- **Nutze `search_code`** (MCP Tool) fuer konzeptuelle Suchen: "error handling patterns", "database initialization", "file cleanup logic"
+- Besonders wertvoll wenn du NICHT weisst wo ein Bug seinen Ursprung hat — semantische Suche findet verwandten Code den Grep uebersieht
+- Grep/Glob fuer exakte Fehlermeldungen und bekannte Funktionsnamen
+- Kombiniere beide: Semantisch fuer den Ueberblick, Grep fuer die Praezision
+
 Your approach:
 1. **Read Knowledge**: FAILURES.md + MEMORY.md + PROCEDURES.md lesen (IMMER, ohne Aufforderung!)
 2. **Reproduce**: Understand exactly what fails and when
 3. **Semi-Formal Reasoning**: Apply the protocol above BEFORE proposing any fix
-4. **Isolate**: Narrow down to the exact file, function, and line
+4. **Isolate**: Narrow down to the exact file, function, and line (use semantic search for conceptual tracing)
 5. **Root Cause**: Find the actual cause, not just the symptom
 6. **Fix**: Apply the minimal correct fix
 7. **Verify**: Run the build/test to confirm the fix works
@@ -150,6 +158,9 @@ Der `code-reviewer`-Agent liest diese Bibliothek und prueft praeventiv: "Kommt d
 - Stack Traces: Nur die relevantesten 20 Zeilen extrahieren, nicht den gesamten Trace laden.
 - Log-Dateien: `tail -50` verwenden, nicht die gesamte Datei lesen.
 - Suchergebnisse: `head_limit: 50` verwenden.
+
+### Chunking-Limit
+- Max. 50 Dateien pro Debug-Durchgang analysieren. Bei groesseren Scope: erst mit semantischer Suche eingrenzen, dann gezielt lesen.
 
 ### Sub-Agent-Ausfallsicherheit
 - Sub-Agent (Hypothesen-Tester) fehlgeschlagen → Andere NICHT abbrechen. Hypothese als "NICHT TESTBAR" markieren.
