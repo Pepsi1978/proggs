@@ -207,6 +207,7 @@ import com.quizverse.app.data.prepopulate.questions.techQuestionsHard5
 import com.quizverse.app.data.prepopulate.questions.techQuestionsExpert
 import com.quizverse.app.data.prepopulate.questions.techQuestionsExpert2
 import com.quizverse.app.data.prepopulate.questions.techQuestionsExpert3
+import com.quizverse.app.data.prepopulate.questions.techQuestionsExpert5
 import com.quizverse.app.data.prepopulate.questions.techQuestionsMaster1
 import com.quizverse.app.data.prepopulate.questions.herthaBscQuestions
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestions
@@ -444,6 +445,7 @@ object QuestionSeeder {
             techQuestionsExpert() +
             techQuestionsExpert2() +
             techQuestionsExpert3() +
+            techQuestionsExpert5() +
             techQuestionsMaster1() +
             foodQuestions() +
             foodQuestionsEasy2() +
