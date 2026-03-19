@@ -28,8 +28,8 @@
 - Terminal-Befehle **immer direkt selbst ausfuehren** (ueber das Bash-Tool), niemals dem Benutzer Zeilen zum Kopieren geben.
 
 ## Shell/Terminal-Updates (KRITISCH)
-- Updates von Shell-Umgebungen (PowerShell, Git, Git Bash, Node.js, npm, Bun, Deno, Python, Claude Code CLI, ADB, Android SDK Platform Tools, Android Emulator, Gradle) IMMER als ALLERLETZTEN Schritt NACH Abschluss aller anderen Aufgaben ausfuehren.
-- Diese Updates zerstoeren ALLE offenen Terminal-Fenster und killen laufende Prozesse (inkl. Android Emulator).
+- Updates von Shell-Umgebungen (PowerShell, Git, Git Bash, Node.js, npm, Bun, Deno, Python, Claude Code CLI) IMMER als ALLERLETZTEN Schritt NACH Abschluss aller anderen Aufgaben ausfuehren.
+- Diese Updates zerstoeren ALLE offenen Terminal-Fenster und killen laufende Prozesse.
 - NIEMALS Shell-Updates waehrend laufender Arbeit oder mitten in einer Aufgabe ausfuehren.
 - VOR Shell-Updates: Benutzer WARNEN und um explizite Bestaetigung bitten.
 - Reihenfolge: Alle Aufgaben erledigen → Ergebnisse committen/pushen → Benutzer warnen → Bestaetigung abwarten → Shell-Updates als letzten Schritt.
@@ -215,6 +215,22 @@ Richtiges Modell fuer die richtige Aufgabe — Opus denkt, Sonnet macht:
 - Die CLAUDE.md existiert lokal (`~/CLAUDE.md`) und im Repository (`~/proggs/CLAUDE.md`)
 - Bei jeder Aenderung muessen **beide Versionen synchron** gehalten werden
 - Workflow: Datei bearbeiten → beide Kopien aktualisieren → committen → pushen
+
+## Semantische Code-Suche (BEVORZUGT)
+- Bei konzeptuellen Fragen oder wenn viele Dateien (~20+) betroffen sein koennten: **Automatisch die semantische Suche** (MCP `search_code` Tool) nutzen, nicht nur Grep/Glob.
+- Nicht warten bis der Benutzer "suche semantisch" sagt — selbststaendig entscheiden.
+- **Semantisch suchen wenn:**
+  - Die Frage ein Konzept beschreibt, keine exakten Datei-/Funktionsnamen
+  - Mehr als ~20 Dateien betroffen sein koennten
+  - Der Benutzer auf Deutsch nach englischem Code fragt
+  - Grep nach 2-3 Versuchen nichts Gutes findet → automatisch auf semantisch wechseln
+  - Die Frage uebergreifende Zusammenhaenge betrifft ("Alles was mit X zu tun hat")
+- **Grep/Glob weiterhin nutzen wenn:**
+  - Ein konkreter Datei- oder Funktionsname genannt wird
+  - Eine exakte Fehlermeldung gesucht wird
+  - Eine einzelne bekannte Datei geoeffnet werden soll
+- Bei Unsicherheit beide kombinieren: Semantisch fuer den Ueberblick, Grep fuer die Praezision.
+- Voraussetzung: Der Index muss vorhanden sein (wird beim SessionStart automatisch aufgebaut).
 
 ## Sprache
 - Kommunikation mit dem Benutzer auf Deutsch.
