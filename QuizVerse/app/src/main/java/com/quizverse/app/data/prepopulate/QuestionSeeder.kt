@@ -101,6 +101,11 @@ import com.quizverse.app.data.prepopulate.questions.historyQuestionsMaster4
 import com.quizverse.app.data.prepopulate.questions.historyQuestionsMaster5
 import com.quizverse.app.data.prepopulate.questions.historyQuestionsMaster6
 import com.quizverse.app.data.prepopulate.questions.literatureQuestions
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsHard1
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsHard2
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsHard3
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsHard4
+import com.quizverse.app.data.prepopulate.questions.literatureQuestionsHard5
 import com.quizverse.app.data.prepopulate.questions.logicQuestions
 import com.quizverse.app.data.prepopulate.questions.mixedQuestions
 import com.quizverse.app.data.prepopulate.questions.musicQuestions
@@ -555,6 +560,11 @@ object QuestionSeeder {
             animalQuestionsMaster6() +
             animalQuestionsMaster7() +
             literatureQuestions() +
+            literatureQuestionsHard1() +
+            literatureQuestionsHard2() +
+            literatureQuestionsHard3() +
+            literatureQuestionsHard4() +
+            literatureQuestionsHard5() +
             mixedQuestions() +
             logicQuestions() +
             logicQuestionsEasy1() +
