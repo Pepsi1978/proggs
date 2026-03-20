@@ -7,6 +7,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <RootNamespace>ClaudeVoiceOverlay</RootNamespace>
     <AssemblyName>ClaudeVoiceOverlay</AssemblyName>
     <Product>Spracheingabe - Claude Desktop</Product>

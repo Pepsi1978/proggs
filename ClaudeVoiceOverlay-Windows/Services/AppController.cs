@@ -68,13 +68,13 @@ namespace ClaudeVoiceOverlay.Services
 
             if (isCodex)
             {
-                // Codex has a different Electron window structure:
+                // Codex/Cursor: Electron window structure differs from Claude Desktop.
                 // Chrome_RenderWidgetHostHWND is NOT a child of the main window.
                 // SetFocus on any child window STEALS keyboard focus.
                 // Instead: just Escape (returns focus to input) → Ctrl+V
-                Console.WriteLine("AppController: Codex mode — Escape → Ctrl+V");
+                Console.WriteLine("AppController: Codex/Cursor mode — Escape → Ctrl+V");
                 SendInputKeys(Win32.VK_ESCAPE);
-                await Task.Delay(150);
+                await Task.Delay(200);
                 SendInputPaste();
             }
             else
@@ -82,6 +82,7 @@ namespace ClaudeVoiceOverlay.Services
                 // Claude Desktop: render widget is a direct child — SetFocus + click works
                 FocusDirectRenderWidget(appHwnd);
                 ClickInputField(appHwnd);
+                await Task.Delay(200); // Give Electron time to process click and set focus
                 SendInputPaste();
             }
 
@@ -189,7 +190,10 @@ namespace ClaudeVoiceOverlay.Services
             try
             {
                 using var proc = Process.GetProcessById((int)pid);
-                return proc.ProcessName.Equals("Codex", StringComparison.OrdinalIgnoreCase);
+                var name = proc.ProcessName;
+                // Codex and Cursor both use Electron but with different window structure than Claude Desktop
+                return name.Equals("Codex", StringComparison.OrdinalIgnoreCase)
+                    || name.Equals("Cursor", StringComparison.OrdinalIgnoreCase);
             }
             catch { return false; }
         }
@@ -384,17 +388,17 @@ namespace ClaudeVoiceOverlay.Services
                     return false;
                 }
 
-                // Try SetFocus first (cleaner than clicking)
+                // Try SetFocus first, but ALWAYS follow up with a click.
+                // UIA SetFocus does not reliably move keyboard focus in Chromium/Electron web content.
                 try
                 {
                     bestMatch.SetFocus();
                     Thread.Sleep(100);
-                    Console.WriteLine("AppController: UIA SetFocus succeeded");
-                    return true;
+                    Console.WriteLine("AppController: UIA SetFocus called");
                 }
                 catch
                 {
-                    // SetFocus failed — fall through to click on the element
+                    Console.WriteLine("AppController: UIA SetFocus failed — will click instead");
                 }
 
                 // Click on the center of the found input element
@@ -509,7 +513,9 @@ namespace ClaudeVoiceOverlay.Services
                 }
             };
 
-            Win32.SendInput(2, inputs, System.Runtime.InteropServices.Marshal.SizeOf<Win32.INPUT>());
+            uint sent = Win32.SendInput(2, inputs, System.Runtime.InteropServices.Marshal.SizeOf<Win32.INPUT>());
+            if (sent != 2)
+                Console.WriteLine($"AppController: SendInput key 0x{vk:X2} failed — sent {sent}/2 (error {Marshal.GetLastWin32Error()})");
         }
 
         /// <summary>
@@ -588,7 +594,9 @@ namespace ClaudeVoiceOverlay.Services
                 }
             };
 
-            Win32.SendInput(4, inputs, System.Runtime.InteropServices.Marshal.SizeOf<Win32.INPUT>());
+            uint sent = Win32.SendInput(4, inputs, System.Runtime.InteropServices.Marshal.SizeOf<Win32.INPUT>());
+            if (sent != 4)
+                Console.WriteLine($"AppController: SendInput paste failed — sent {sent}/4 (error {Marshal.GetLastWin32Error()})");
         }
 
         /// <summary>
@@ -612,7 +620,9 @@ namespace ClaudeVoiceOverlay.Services
                 new Win32.INPUT { type = Win32.INPUT_KEYBOARD, u = new Win32.INPUTUNION { ki = new Win32.KEYBDINPUT { wVk = modifier, wScan = modScan, dwFlags = Win32.KEYEVENTF_KEYUP, time = 0, dwExtraInfo = IntPtr.Zero } } }
             };
 
-            Win32.SendInput(4, inputs, System.Runtime.InteropServices.Marshal.SizeOf<Win32.INPUT>());
+            uint sent2 = Win32.SendInput(4, inputs, System.Runtime.InteropServices.Marshal.SizeOf<Win32.INPUT>());
+            if (sent2 != 4)
+                Console.WriteLine($"AppController: SendInput modifier combo failed — sent {sent2}/4 (error {Marshal.GetLastWin32Error()})");
         }
 
         /// <summary>
@@ -641,7 +651,9 @@ namespace ClaudeVoiceOverlay.Services
                 new Win32.INPUT { type = Win32.INPUT_KEYBOARD, u = new Win32.INPUTUNION { ki = new Win32.KEYBDINPUT { wVk = modifier1, wScan = mod1Scan, dwFlags = Win32.KEYEVENTF_KEYUP, time = 0, dwExtraInfo = IntPtr.Zero } } }
             };
 
-            Win32.SendInput(6, inputs, System.Runtime.InteropServices.Marshal.SizeOf<Win32.INPUT>());
+            uint sent3 = Win32.SendInput(6, inputs, System.Runtime.InteropServices.Marshal.SizeOf<Win32.INPUT>());
+            if (sent3 != 6)
+                Console.WriteLine($"AppController: SendInput triple modifier combo failed — sent {sent3}/6 (error {Marshal.GetLastWin32Error()})");
         }
     }
 }
