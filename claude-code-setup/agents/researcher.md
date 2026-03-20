@@ -8,6 +8,7 @@ tools:
   - WebSearch
   - WebFetch
   - Read
+  - Write
   - Glob
   - Grep
 ---

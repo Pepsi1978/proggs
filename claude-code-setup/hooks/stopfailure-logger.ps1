@@ -4,10 +4,8 @@
 
 param()
 
-$ErrorActionPreference = 'SilentlyContinue'
-
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
-$whiteboardPath = "$HOME\proggs\.claude\agent-memory\shared\MEMORY.md"
+$whiteboardPath = Join-Path $env:USERPROFILE "proggs" ".claude" "agent-memory" "shared" "MEMORY.md"
 
 # Read stdin for error details (Claude Code pipes error info)
 $errorInput = ""
@@ -40,13 +38,22 @@ $entry = @"
 **Status:** OFFEN
 "@
 
-# Use whiteboard-insert if available, otherwise direct append as fallback
-$inserter = "$HOME\.claude\hooks\whiteboard-insert.ps1"
+# Use whiteboard-insert via dot-sourcing (& call-operator does NOT expose functions)
+$inserter = Join-Path $PSScriptRoot "whiteboard-insert.ps1"
 if (Test-Path $inserter) {
-    & $inserter -Section "Offene Fehler & Probleme" -Content $entry
+    . $inserter
+    try {
+        Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
+    } catch {
+        # Fallback: direct append (better than losing the error entirely)
+        if (Test-Path $whiteboardPath) {
+            Add-Content -Path $whiteboardPath -Value $entry -Encoding UTF8 -ErrorAction SilentlyContinue
+        }
+    }
 } else {
-    # Fallback: direct file append (not ideal but better than losing the error)
-    Add-Content -Path $whiteboardPath -Value $entry -Encoding UTF8
+    if (Test-Path $whiteboardPath) {
+        Add-Content -Path $whiteboardPath -Value $entry -Encoding UTF8 -ErrorAction SilentlyContinue
+    }
 }
 
 Write-Host "StopFailure logged to whiteboard at $timestamp"

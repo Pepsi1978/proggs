@@ -17,6 +17,9 @@ import {
 	statSync,
 	existsSync,
 	mkdirSync,
+	unlinkSync,
+	openSync,
+	closeSync,
 } from "fs";
 import { join } from "path";
 
@@ -277,6 +280,51 @@ const RULE_SUGGESTIONS: Record<CorrectionType, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Cross-process file lock helper for MEMORY.md
+// Uses exclusive file creation (wx flag) as a portable lock primitive.
+// Retries up to 50 times with 100ms delay (5 second total timeout).
+// ---------------------------------------------------------------------------
+
+function withFileLock<T>(lockPath: string, fn: () => T): T {
+	const maxRetries = 50;
+	const retryDelayMs = 100;
+	let fd: number | null = null;
+
+	// Spin-wait until we can exclusively create the lock file
+	for (let attempt = 0; attempt < maxRetries; attempt++) {
+		try {
+			fd = openSync(lockPath, "wx");
+			closeSync(fd);
+			fd = null;
+			break; // Lock acquired
+		} catch (err: any) {
+			if (err.code === "EEXIST") {
+				// Lock held by another process — busy-wait synchronously
+				const deadline = Date.now() + retryDelayMs;
+				while (Date.now() < deadline) {
+					/* spin */
+				}
+			} else {
+				// Unexpected error — proceed without lock rather than crash
+				break;
+			}
+		}
+	}
+
+	// Run the critical section
+	try {
+		return fn();
+	} finally {
+		// Always release the lock file
+		try {
+			unlinkSync(lockPath);
+		} catch {
+			// Ignore — lock may already be gone
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
 // MEMORY.md section-based insertion (v2 — replaces AUTOPSY.md)
 // Complies with "nur ein Whiteboard" rule from Deep-Scan Runde 6.
 // Writes condensed autopsy summary to "Debugging-Muster" section.
@@ -285,38 +333,41 @@ const RULE_SUGGESTIONS: Record<CorrectionType, string> = {
 function insertIntoMemorySection(sectionName: string, entry: string): void {
 	if (!existsSync(MEMORY_FILE)) return;
 
-	const content = readFileSync(MEMORY_FILE, "utf-8");
-	const lines = content.split("\n");
-	const placeholder = "_Noch keine Eintraege._";
+	const lockPath = `${MEMORY_FILE}.lock`;
+	withFileLock(lockPath, () => {
+		const content = readFileSync(MEMORY_FILE, "utf-8");
+		const lines = content.split("\n");
+		const placeholder = "_Noch keine Eintraege._";
 
-	let sectionIdx = -1;
-	for (let i = 0; i < lines.length; i++) {
-		if (lines[i].trimEnd().startsWith(`## ${sectionName}`)) {
-			sectionIdx = i;
-			break;
+		let sectionIdx = -1;
+		for (let i = 0; i < lines.length; i++) {
+			if (lines[i].trimEnd().startsWith(`## ${sectionName}`)) {
+				sectionIdx = i;
+				break;
+			}
 		}
-	}
 
-	if (sectionIdx === -1) return;
+		if (sectionIdx === -1) return;
 
-	let insertIdx = sectionIdx + 1;
-	let placeholderIdx = -1;
-	for (let j = sectionIdx + 1; j < lines.length; j++) {
-		if (lines[j].startsWith("## ") || lines[j].startsWith("---")) break;
-		if (lines[j].trim() === placeholder) {
-			placeholderIdx = j;
-			break;
+		let insertIdx = sectionIdx + 1;
+		let placeholderIdx = -1;
+		for (let j = sectionIdx + 1; j < lines.length; j++) {
+			if (lines[j].startsWith("## ") || lines[j].startsWith("---")) break;
+			if (lines[j].trim() === placeholder) {
+				placeholderIdx = j;
+				break;
+			}
+			insertIdx = j + 1;
 		}
-		insertIdx = j + 1;
-	}
 
-	if (placeholderIdx >= 0) {
-		lines[placeholderIdx] = entry;
-	} else {
-		lines.splice(insertIdx, 0, entry);
-	}
+		if (placeholderIdx >= 0) {
+			lines[placeholderIdx] = entry;
+		} else {
+			lines.splice(insertIdx, 0, entry);
+		}
 
-	writeFileSync(MEMORY_FILE, lines.join("\n"), "utf-8");
+		writeFileSync(MEMORY_FILE, lines.join("\n"), "utf-8");
+	});
 }
 
 // ---------------------------------------------------------------------------

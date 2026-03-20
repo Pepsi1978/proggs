@@ -18,6 +18,20 @@ $counterFile = Join-Path $env:TEMP "claude-writeback-counter.txt"
 # Count SubagentStop events since last MEMORY.md write
 # This avoids the false-negative problem where a non-senior agent finishes
 # right after a senior agent modified MEMORY.md — we track cumulative misses instead.
+
+# Acquire a file-based lock for the counter file to prevent concurrent read-modify-write
+$lockFile = "$counterFile.lock"
+$lockAcquired = $false
+for ($retry = 0; $retry -lt 10; $retry++) {
+    try {
+        [System.IO.File]::Open($lockFile, 'CreateNew', 'Write').Close()
+        $lockAcquired = $true
+        break
+    } catch {
+        Start-Sleep -Milliseconds 100
+    }
+}
+
 $missCount = 0
 if (Test-Path $counterFile) {
     $missCount = [int](Get-Content $counterFile -ErrorAction SilentlyContinue)
@@ -36,6 +50,7 @@ if (Test-Path $memoryFile) {
 if ($recentWrite) {
     # Reset counter — someone wrote to MEMORY.md recently
     Set-Content -Path $counterFile -Value "0" -Force
+    if ($lockAcquired) { Remove-Item $lockFile -Force -ErrorAction SilentlyContinue }
     Write-Output "MEMORY_WATCHDOG: Write-back detected — counter reset"
     exit 0
 }
@@ -43,6 +58,7 @@ if ($recentWrite) {
 # Increment miss counter
 $missCount++
 Set-Content -Path $counterFile -Value "$missCount" -Force
+if ($lockAcquired) { Remove-Item $lockFile -Force -ErrorAction SilentlyContinue }
 
 # Only alert after 5+ consecutive misses (avoids false positives from coder/researcher agents)
 if ($missCount -ge 5) {

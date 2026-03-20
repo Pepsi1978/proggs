@@ -11,35 +11,41 @@ if (-not $filePath -or -not (Test-Path $filePath)) { exit 0 }
 
 Hook-Log "formatting $filePath"
 $ext = [System.IO.Path]::GetExtension($filePath).TrimStart('.')
+$formatResult = $null
+$formatCmd = ""
 switch ($ext) {
-    'go'    { & gofmt -w $filePath 2>$null }
-    'rs'    { & rustfmt $filePath 2>$null }
+    'go'    { $formatCmd = "gofmt"; $formatResult = & gofmt -w $filePath 2>&1 }
+    'rs'    { $formatCmd = "rustfmt"; $formatResult = & rustfmt $filePath 2>&1 }
     'cs'    {
         $dir = [System.IO.Path]::GetDirectoryName($filePath)
         $proj = Get-ChildItem -Path $dir -Filter "*.csproj" -Recurse -Depth 3 -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($proj) { & dotnet format whitespace $proj.DirectoryName --include $filePath 2>$null }
+        if ($proj) { $formatCmd = "dotnet-format"; $formatResult = & dotnet format whitespace $proj.DirectoryName --include $filePath 2>&1 }
     }
     { $_ -in 'ts','tsx','mts','js','jsx','mjs','json','css' } {
         if (Get-Command biome -ErrorAction SilentlyContinue) {
-            & biome format --write $filePath 2>$null
+            $formatCmd = "biome"; $formatResult = & biome format --write $filePath 2>&1
         } elseif (Get-Command prettier -ErrorAction SilentlyContinue) {
-            & prettier --write $filePath 2>$null
+            $formatCmd = "prettier"; $formatResult = & prettier --write $filePath 2>&1
         }
     }
     { $_ -in 'c','cpp','h','hpp' } {
         if (Get-Command clang-format -ErrorAction SilentlyContinue) {
-            & clang-format -i $filePath 2>$null
+            $formatCmd = "clang-format"; $formatResult = & clang-format -i $filePath 2>&1
         }
     }
     { $_ -in 'kt','kts' } {
         if (Get-Command ktfmt -ErrorAction SilentlyContinue) {
-            & ktfmt --kotlinlang-style $filePath 2>$null
+            $formatCmd = "ktfmt"; $formatResult = & ktfmt --kotlinlang-style $filePath 2>&1
         }
     }
     'java' {
         if (Get-Command google-java-format -ErrorAction SilentlyContinue) {
-            & google-java-format --replace $filePath 2>$null
+            $formatCmd = "google-java-format"; $formatResult = & google-java-format --replace $filePath 2>&1
         }
     }
+}
+# Log formatter errors instead of swallowing them
+if ($formatCmd -and $LASTEXITCODE -ne 0) {
+    Hook-LogWarn "formatter $formatCmd failed (exit $LASTEXITCODE) on $filePath"
 }
 exit 0

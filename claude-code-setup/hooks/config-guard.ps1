@@ -8,6 +8,7 @@
 #   OK:      no output
 
 . "$PSScriptRoot/hook-log.ps1"
+. "$PSScriptRoot/whiteboard-insert.ps1"
 
 # Read hook input from stdin to check if the edited file is settings.json
 $hookInput = [Console]::In.ReadToEnd()
@@ -89,6 +90,11 @@ if ($envData) {
 if ($blocks.Count -gt 0) {
     $blockMsg = $blocks -join "; "
     Hook-LogError "BLOCKED — protected settings changed: $blockMsg"
+    # Log to whiteboard — wrapped in try/catch so exit 2 is always reached
+    try {
+        $entry = "### $(Get-Date -Format 'yyyy-MM-dd HH:mm') — Hook: config-guard.ps1 — Settings-Aenderung blockiert: $blockMsg"
+        Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
+    } catch { }
     # Output valid JSON for hook compatibility
     $jsonOutput = @{ error = "CONFIG-GUARD: BLOCKIERT — Geschuetzte Settings geaendert: $blockMsg" } | ConvertTo-Json -Compress
     Write-Output $jsonOutput
