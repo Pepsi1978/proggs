@@ -203,12 +203,11 @@ fun QuizScreen(
     // Auto-navigate to ResultScreen when quiz ends
     LaunchedEffect(uiState.isFinished) {
         if (uiState.isFinished) {
-            val correctCount = uiState.questionIndex
             navController.navigate(
                 Screen.Result.createRoute(
                     score      = uiState.score,
                     total      = uiState.totalQuestions,
-                    correct    = correctCount,
+                    correct    = uiState.correctAnswers,
                     categoryId = categoryId
                 )
             ) {

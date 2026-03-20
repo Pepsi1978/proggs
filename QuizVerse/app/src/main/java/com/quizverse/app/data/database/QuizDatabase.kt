@@ -15,6 +15,7 @@ import com.quizverse.app.data.database.entities.HighScore
 import com.quizverse.app.data.database.entities.Question
 import com.quizverse.app.data.database.entities.UserProgress
 import com.quizverse.app.data.prepopulate.QuestionSeeder
+import androidx.room.migration.Migration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -52,13 +53,23 @@ abstract class QuizDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 1 to 2: no-op (schema unchanged, version bumped
+         * during development). Keeps all user data intact on update.
+         */
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Schema was identical between v1 and v2 — nothing to alter.
+            }
+        }
+
         private fun buildDatabase(context: Context): QuizDatabase {
             return Room.databaseBuilder(
                 context.applicationContext,
                 QuizDatabase::class.java,
                 "quiz_database"
             )
-                .fallbackToDestructiveMigration()
+                .addMigrations(MIGRATION_1_2)
                 .addCallback(DatabaseCallback())
                 .build()
         }
@@ -72,13 +83,6 @@ abstract class QuizDatabase : RoomDatabase() {
 
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
-            // TODO: Call QuestionSeeder here once it is implemented.
-            // Example:
-            //   INSTANCE?.let { database ->
-            //       CoroutineScope(Dispatchers.IO).launch {
-            //           QuestionSeeder.seed(database)
-            //       }
-            //   }
             INSTANCE?.let { database ->
                 CoroutineScope(Dispatchers.IO).launch {
                     QuestionSeeder.seedDatabase(database)

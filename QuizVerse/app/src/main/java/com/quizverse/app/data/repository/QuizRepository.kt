@@ -116,6 +116,18 @@ class QuizRepository(private val database: QuizDatabase) {
         progressDao.updateStreak(newStreak, newLongest)
     }
 
+    /**
+     * Increments the cumulative answer counters after each question.
+     * Always increments [totalQuestionsAnswered]; only increments
+     * [totalCorrectAnswers] when the answer was correct.
+     */
+    suspend fun incrementAnswerStats(correct: Boolean) {
+        val current = progressDao.getProgress().first() ?: return
+        val newAnswered = current.totalQuestionsAnswered + 1
+        val newCorrect  = current.totalCorrectAnswers + if (correct) 1 else 0
+        progressDao.updateStats(newAnswered, newCorrect, current.totalPlayTime)
+    }
+
     // ---- Categories --------------------------------------------------------
 
     /**
@@ -145,11 +157,25 @@ class QuizRepository(private val database: QuizDatabase) {
 
             // Map achievement id prefix to the relevant progress value
             val currentValue: Int = when {
-                achievement.id.startsWith("questions_") -> progress.totalQuestionsAnswered
+                achievement.id.startsWith("quiz_")      -> progress.totalQuestionsAnswered
+                achievement.id.startsWith("first_")     -> progress.totalQuestionsAnswered
                 achievement.id.startsWith("correct_")   -> progress.totalCorrectAnswers
                 achievement.id.startsWith("streak_")    -> progress.longestStreak
                 achievement.id.startsWith("level_")     -> progress.currentLevel
                 achievement.id.startsWith("daily_")     -> progress.dailyChallengeStreak
+                achievement.id.startsWith("xp_")        -> progress.totalXp
+                achievement.id.startsWith("speed_")     -> progress.totalCorrectAnswers // approximation
+                achievement.id.startsWith("hard_")      -> progress.totalCorrectAnswers
+                achievement.id.startsWith("master_")    -> progress.totalCorrectAnswers
+                achievement.id.startsWith("perfect_")   -> progress.totalCorrectAnswers
+                achievement.id.startsWith("marathon_")  -> progress.totalQuestionsAnswered
+                achievement.id.startsWith("playtime_")  -> (progress.totalPlayTime / 60_000).toInt() // ms to minutes
+                achievement.id.startsWith("cat_")       -> progress.totalQuestionsAnswered // per-category tracking would need separate counters
+                achievement.id.startsWith("night_")     -> 0 // checked at runtime, not via progress
+                achievement.id.startsWith("early_")     -> 0 // checked at runtime, not via progress
+                achievement.id.startsWith("no_hint")    -> progress.totalQuestionsAnswered
+                achievement.id.startsWith("comeback")   -> progress.longestStreak
+                achievement.id.startsWith("quick_")     -> progress.totalQuestionsAnswered
                 else                                     -> 0
             }
 

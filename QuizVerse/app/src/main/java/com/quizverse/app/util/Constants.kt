@@ -96,17 +96,22 @@ object Constants {
     data class CategoryInfo(val name: String, val emoji: String)
 
     val CATEGORIES: Map<Int, CategoryInfo> = mapOf(
-        1  to CategoryInfo("Wissenschaft",      "🔬"),
-        2  to CategoryInfo("Geschichte",         "📜"),
-        3  to CategoryInfo("Geographie",         "🌍"),
-        4  to CategoryInfo("Sport",              "⚽"),
-        5  to CategoryInfo("Musik",              "🎵"),
-        6  to CategoryInfo("Film & TV",          "🎬"),
-        7  to CategoryInfo("Technologie",        "💻"),
-        8  to CategoryInfo("Natur",              "🌿"),
-        9  to CategoryInfo("Kunst & Literatur",  "🎨"),
-        10 to CategoryInfo("Politik",            "🏛️"),
-        11 to CategoryInfo("Essen & Trinken",    "🍕"),
-        12 to CategoryInfo("Allgemeinwissen",    "🧠")
+        1  to CategoryInfo("Weltgeographie",       "🌍"),
+        2  to CategoryInfo("Wissenschaft & Natur", "🔬"),
+        3  to CategoryInfo("Geschichte",           "📜"),
+        4  to CategoryInfo("Film & Fernsehen",     "🎬"),
+        5  to CategoryInfo("Musik",                "🎵"),
+        6  to CategoryInfo("Sport",                "⚽"),
+        7  to CategoryInfo("Technologie",          "💻"),
+        8  to CategoryInfo("Essen & Trinken",      "🍳"),
+        9  to CategoryInfo("Tierwelt",             "🐾"),
+        10 to CategoryInfo("Sprache & Literatur",  "📚"),
+        11 to CategoryInfo("Alle Kategorien",      "🌟"),
+        12 to CategoryInfo("Logik & Denksport",    "🧠"),
+        13 to CategoryInfo("Hertha BSC",           "⚽"),
+        14 to CategoryInfo("Borussia Dortmund",    "⚽"),
+        15 to CategoryInfo("Fußball",              "⚽"),
+        16 to CategoryInfo("Gesundheit & Medizin", "🏥"),
+        17 to CategoryInfo("Politik & Gesellschaft","🏛️")
     )
 }

@@ -30,6 +30,8 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
         val streak: Int = 0,
         /** Seconds remaining on the countdown timer */
         val timeRemaining: Int = 0,
+        /** Total number of correctly answered questions in this session */
+        val correctAnswers: Int = 0,
         /** Whether the player has already submitted an answer for the current question */
         val isAnswered: Boolean = false,
         /** Index of the answer the player tapped (0–3), or -1 if none yet */
@@ -131,6 +133,7 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
 
         viewModelScope.launch {
             repository.updateStreak(correct)
+            repository.incrementAnswerStats(correct)
             if (correct) {
                 val xpGained = Constants.XP_BASE * currentDifficulty
                 repository.updateXpAndLevel(xpGained)
@@ -145,7 +148,8 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
                 showExplanation = true,
                 score           = newScore,
                 streak          = newStreak,
-                lives           = newLives
+                lives           = newLives,
+                correctAnswers  = if (correct) it.correctAnswers + 1 else it.correctAnswers
             )
         }
     }
@@ -231,6 +235,15 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
         val state = _uiState.value
 
         viewModelScope.launch {
+            // Save the completed session as a high score entry
+            repository.saveHighScore(
+                mode       = if (isSurvivalMode) "survival" else "classic",
+                categoryId = state.currentQuestion?.categoryId,
+                score      = state.score,
+                answered   = state.questionIndex + 1,
+                correct    = state.correctAnswers,
+                difficulty = currentDifficulty
+            )
             repository.checkAndUnlockAchievements()
         }
 
