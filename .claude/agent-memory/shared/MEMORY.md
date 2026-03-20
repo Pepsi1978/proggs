@@ -48,21 +48,30 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 <!-- WICHTIG: Fehler MUESSEN ausfuehrlich genug beschrieben werden, dass ein -->
 <!-- frischer /self-improve Lauf sie ohne zusaetzlichen Kontext fixen kann! -->
 
-_Aktuell keine offenen Fehler._
-
 ### 2026-03-20 — Hook: reindex-codebase.ps1 — Stille Indexierungsfehler + Timeout
 **Quelle:** Hook: reindex-codebase.ps1 (SessionStart, async)
 **Symptom:** Semantischer Index 16+ Stunden veraltet, spaeter ExitCode 143 (Timeout)
 **Ursache:** 1) Bun Import-Pfade relativ zur Datei, nicht CWD — Temp in %TEMP% fand ./src/ nicht.
 2) Timeout 180s zu knapp bei 600+ Dateien.
 **Fix:** Temp-Datei ins mcp-code-search/ verschoben, Timeout auf 300s erhoeht, finally{}-Cleanup.
+**Regel abgeleitet:** Hooks duerfen NIEMALS Fehler still verschlucken. Jeder catch-Block MUSS ins Whiteboard loggen.
 **Status:** GEFIXT (2026-03-20)
 
-### 2026-03-20 — Hook: reindex-codebase.ps1 — Stille Indexierungsfehler
-**Problem:** Bun loeste Imports relativ zur Temp-Datei in %TEMP% statt zum mcp-code-search/ Verzeichnis auf. `catch {}` verschluckte den Fehler — Index war 16+ Stunden veraltet.
-**Fix:** Temp-Datei ins mcp-code-search/ Verzeichnis verschoben. Catch-Bloecke loggen jetzt hierher.
-**Status:** GEFIXT (2026-03-20)
-**Regel abgeleitet:** Hooks duerfen NIEMALS Fehler still verschlucken. Jeder catch-Block MUSS ins Whiteboard loggen.
+### 2026-03-20 14:10 — Hook: reindex-codebase.ps1 — Erneuter ExitCode 143 (Duplikat)
+**Hinweis:** Automatisch vom Hook eingetragen, aber Timeout war bereits auf 300s erhoeht. Hook lief mit alter Session-Konfiguration (180s). Kein neuer Fehler.
+**Status:** GEFIXT (2026-03-20) — Duplikat des obigen Eintrags
+
+### 2026-03-20 14:35 — Hook: reindex-codebase.ps1 — Indexierung ExitCode 143 (Duplikat)
+**Hinweis:** Dritter automatischer Eintrag vom selben Problem. Timeout bereits auf 300s erhoeht, wirkt ab naechster Session.
+**Status:** GEFIXT (2026-03-20) — Duplikat, alle drei Eintraege betreffen denselben Bug
+
+### 2026-03-20 18:10 — System: Cross-Platform — KEINE .sh Hook-Gegenstuecke
+**Quelle:** Deep-Scan Runde 5
+**Symptom:** 14 PowerShell-Hooks vorhanden, aber KEIN einziges .sh-Gegenstueck fuer macOS
+**Ursache:** Hooks wurden nur fuer Windows erstellt, macOS-Aequivalente nie nachgezogen
+**Betroffene Dateien:** ~/.claude/hooks/ (alle 14 .ps1 Dateien brauchen .sh Gegenstuecke)
+**Fix-Vorschlag:** Fuer jeden .ps1-Hook ein funktionsaequivalentes .sh-Script erstellen. Prioritaet: auto-sync.sh, safety-gate.sh, memory-watchdog.sh, writeback-enforcer.sh (diese 4 sind systemkritisch)
+**Status:** OFFEN
 
 ---
 
@@ -76,9 +85,10 @@ _Aktuell keine offenen Fehler._
 - **Ollama:** v0.18.2, nomic-embed-text Modell, Fenster versteckt (nur Tray)
 - **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
 - **Agents:** 15 aktiv (code-reviewer hat memory:project, coder hat isolation:worktree)
-- **Hooks:** 15 Events registriert (auto-sync, disk-guard, safety-gate, reindex, etc.)
-- **Plugins:** 92 Eintraege, 89 aktiv
+- **Hooks:** 15 Event-Typen, 23 individuelle Hooks registriert (auto-sync, disk-guard, safety-gate, reindex, intent-anker, notify, prompt-injection-defender, auto-format, config-guard, memory-watchdog, writeback-enforcer, session-scorer, session-autopsy, session-cleanup, pending-admin-updates + 8 Prompt-Hooks)
+- **Plugins:** 90 Eintraege, 87 aktiv (3 deaktiviert: zeroize-audit, xclaude-plugin, apple-platform-build-tools)
 - **Preferred Patterns:** MVVM (Swift), Fluent Design (C#), strict mode (TypeScript)
+- **Cross-Platform-Luecke:** macOS hat 0 von 14 .sh-Hook-Gegenstuecken (nur Windows-Hooks vorhanden)
 
 ---
 
@@ -124,8 +134,4 @@ _Noch keine Eintraege._
 - Einziges Repository: Pepsi1978/proggs
 - Cross-Platform: Jede Aenderung MUSS auf beiden Plattformen funktionieren
 - Status-Meldung: "Committed, gepusht und plattformuebergreifend" nur wenn ehrlich
-
-### 2026-03-20 14:10 — Hook: reindex-codebase.ps1 — Erneuter ExitCode 143 (Duplikat)
-**Hinweis:** Dieser Fehler wurde automatisch vom Hook eingetragen, aber das Timeout war bereits
-auf 300s erhoeht. Der Hook lief mit der alten Session-Konfiguration (180s). Kein neuer Fehler.
-**Status:** GEFIXT (2026-03-20) — Timeout bereits auf 300s, wirkt ab naechster Session
+- Writeback-Enforcer: Sentinel-Daten gehoeren in die thematisch passende Sektion, NICHT ans Dateiende

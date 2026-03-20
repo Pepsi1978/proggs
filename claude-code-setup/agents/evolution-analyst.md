@@ -127,3 +127,10 @@ After completing your analysis, you MUST update:
 - 5 Turns ohne neue Erkenntnisse → SOFORT Report mit vorhandenen Findings abschliessen.
 - Zu wenige Datenpunkte (< 3 Sessions) → "INSUFFICIENT DATA — Mindestens 3 Sessions benoetigt" zurueckgeben.
 - NIEMALS still haengen bleiben — es muss IMMER ein Report kommen.
+
+**Sentinel-Datei (C1 Enforcement — PFLICHT):**
+Als LETZTEN Schritt vor deiner Antwort: Schreibe eine JSON-Datei nach `/tmp/agent-writeback-evolution-analyst.json`:
+```json
+{"agent": "evolution-analyst", "timestamp": "[ISO8601]", "findings": "[1-Zeilen-Zusammenfassung: Qualitaets-Trend + wichtigste Schwaeche]"}
+```
+Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.

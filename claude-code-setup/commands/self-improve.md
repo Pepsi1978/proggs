@@ -3,15 +3,15 @@ name: self-improve
 description: Systematic self-improvement of the Claude Code development environment (~10-30 min, token-intensive). ONLY use when the user explicitly says "/self-improve", "verbessere dich", "optimiere deine Umgebung", "check dein Setup", "update alles", "mach mich besser", "aktualisiere alles", "pruef mein System", "System-Check", or "Umgebung pruefen". NEVER run this proactively or automatically — only on manual user request.
 ---
 
-# Self-Improve v5.11 — Systematic + Creative + Intelligence Environment Optimization
+# Self-Improve v5.15 — Systematic + Creative + Intelligence Environment Optimization
 
 **Before doing ANYTHING, show this overview in German:**
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║  Self-Improve Skill v5.0 — Deine Entwicklungsumgebung       ║
+║  Self-Improve Skill v5.15 — Deine Entwicklungsumgebung      ║
 ║  pruefen, aktualisieren, KREATIV ERFORSCHEN                  ║
-║  Cross-Platform: macOS + Windows + Termux/Android            ║
+║  Cross-Platform: macOS + Windows                             ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  Stufe 1: SCAN — env-checker Agent (Full/Quick)              ║
 ║  Stufe 2: DEEP-DIVE — 8 Researcher + Smart-Cache (TTL)      ║
@@ -35,7 +35,7 @@ fuer ALLE Komponenten des Claude Code Systems: Agents, Skills, Hooks, MCP-Server
    MUSS in diesem Lauf gefixt oder zumindest adressiert werden.
    Fehlerformat im Whiteboard: Quelle, Symptom, Ursache, Betroffene Dateien, Fix-Vorschlag, Status.
    Der "Fix-Vorschlag" sagt dir konkret was zu tun ist — folge ihm oder verbessere ihn.
-3. **Benutzer-Feedback lesen**: `~/.claude/projects/*/memory/feedback_*.md` enthalt
+3. **Benutzer-Feedback lesen**: `~/.claude/projects/*/memory/feedback_*.md` enthaelt
    direkte Korrekturen und Praeferenzen des Benutzers. Diese MUESSEN gelesen werden, weil:
    - Feedback-Muster die systemweit gelten → als neue Regel oder Hook implementieren
    - Wiederholte Korrekturen → deuten auf fehlendes automatisches Verhalten hin
@@ -46,7 +46,7 @@ fuer ALLE Komponenten des Claude Code Systems: Agents, Skills, Hooks, MCP-Server
    nutzbar sind (z.B. wiederkehrende Probleme die ueber mehrere Sessions beobachtet wurden).
 5. **Systemzustand aktualisieren**: Nach Aenderungen die Sektion "Systemzustand" updaten
 6. **Erkenntnisse eintragen**: Alles was fuer andere Agents/Skills nuetzlich ist → reinschreiben
-6. **Keine separaten Wissens-Dateien**: Es gibt NUR dieses eine Whiteboard fuer System-Wissen.
+7. **Keine separaten Wissens-Dateien**: Es gibt NUR dieses eine Whiteboard fuer System-Wissen.
    Die Benutzer-Feedback-Memories sind die EINZIGE Ausnahme — sie sind an das Whiteboard
    angeschlossen (siehe Header) und werden von /self-improve mitgelesen.
 
@@ -533,9 +533,11 @@ cp ~/.claude/rules/*.md ~/proggs/claude-code-setup/rules/
 cp ~/.claude/agents/*.md ~/proggs/claude-code-setup/agents/
 cp ~/.claude/commands/self-improve.md ~/proggs/claude-code-setup/commands/
 cp -r ~/.claude/commands/self-improve-ref/ ~/proggs/claude-code-setup/commands/self-improve-ref/
-cp ~/.claude/hooks/*.sh ~/proggs/claude-code-setup/hooks/
+cp ~/.claude/hooks/*.sh ~/proggs/claude-code-setup/hooks/ 2>/dev/null
 cp ~/.claude/hooks/*.ts ~/proggs/claude-code-setup/hooks/ 2>/dev/null
 cp ~/.claude/hooks/*.ps1 ~/proggs/claude-code-setup/hooks/ 2>/dev/null
+# Subdirectories (z.B. prompt-injection-defender/) ebenfalls kopieren
+cp -r ~/.claude/hooks/prompt-injection-defender/ ~/proggs/claude-code-setup/hooks/prompt-injection-defender/ 2>/dev/null
 cp ~/CLAUDE.md ~/proggs/CLAUDE.md
 # Knowledge files (cross-platform shared intelligence)
 mkdir -p ~/proggs/claude-code-setup/agent-memory/shared/

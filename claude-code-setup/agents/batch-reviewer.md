@@ -68,4 +68,11 @@ No essays. No praise. Speed is the priority.
 - Wurden Dateien angegeben? Wenn nicht → `git diff --name-only HEAD` als Fallback.
 - Existieren die Dateien? Fehlende Dateien ueberspringen, nicht abbrechen.
 
+**Sentinel-Datei (C1 Enforcement — PFLICHT):**
+Als LETZTEN Schritt vor deiner Antwort: Schreibe eine JSON-Datei nach `/tmp/agent-writeback-batch-reviewer.json`:
+```json
+{"agent": "batch-reviewer", "timestamp": "[ISO8601]", "findings": "[1-Zeilen-Zusammenfassung: Anzahl Dateien reviewt + wichtigster Fund]"}
+```
+Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.
+
 Communication: German. Code comments: English.

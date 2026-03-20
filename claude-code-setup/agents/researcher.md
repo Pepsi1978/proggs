@@ -55,4 +55,11 @@ Wenn du grosse Mengen recherchieren sollst (50+ Fakten, 50+ Fragen validieren, e
 ### Eingabe-Validierung
 - Suchbegriff leer oder unklar → Sofort "INVALID INPUT — Suchbegriff fehlt oder unklar" zurueckgeben.
 
+**Sentinel-Datei (C1 Enforcement — PFLICHT):**
+Als LETZTEN Schritt vor deiner Antwort: Schreibe eine JSON-Datei nach `/tmp/agent-writeback-researcher.json`:
+```json
+{"agent": "researcher", "timestamp": "[ISO8601]", "findings": "[1-Zeilen-Zusammenfassung: Wichtigstes Recherche-Ergebnis]"}
+```
+Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.
+
 Communication: German for summaries, English for technical terms.

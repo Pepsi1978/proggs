@@ -61,3 +61,11 @@ Communication: German. Code comments: English.
 After completing your review, you MUST update `.claude/agent-memory/shared/MEMORY.md`:
 1. **"UI/UX-Patterns"**: Add discovered UI patterns under "UI/UX-Patterns"
 2. **"Offene Fehler & Probleme"**: If you find recurring UI anti-patterns, document them under "Offene Fehler & Probleme"
+
+**Sentinel-Datei (C1 Enforcement — PFLICHT):**
+Als LETZTEN Schritt vor deiner Antwort: Schreibe eine JSON-Datei nach `/tmp/agent-writeback-ui-polisher.json`:
+```json
+{"agent": "ui-polisher", "timestamp": "[ISO8601]", "findings": "[1-Zeilen-Zusammenfassung deiner wichtigsten UI-Erkenntnis]"}
+```
+Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.
+Wenn du diese Datei NICHT schreibst, wird ein Fehler in MEMORY.md protokolliert.
