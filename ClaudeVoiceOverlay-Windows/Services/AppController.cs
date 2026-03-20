@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Automation;
 using ClaudeVoiceOverlay.NativeMethods;
 
 namespace ClaudeVoiceOverlay.Services
@@ -275,25 +276,177 @@ namespace ClaudeVoiceOverlay.Services
 
         // ── Input Field Click (Claude Desktop only) ──
 
+        /// <summary>
+        /// Finds and clicks the input field in Claude Desktop.
+        /// Uses UI Automation to locate the actual input element (works across all tabs:
+        /// Code, Chat, Cowork) with a fixed-position fallback for robustness.
+        /// </summary>
         private static void ClickInputField(IntPtr appHwnd)
         {
             if (appHwnd == IntPtr.Zero) return;
+
+            // Strategy 1: UI Automation — find the real input element regardless of tab
+            if (TryClickInputViaAutomation(appHwnd))
+                return;
+
+            // Strategy 2: Fallback to fixed position (Code tab default at 86% height)
+            ClickAtFixedPosition(appHwnd);
+        }
+
+        /// <summary>
+        /// Uses Windows UI Automation to find the text input field in the Electron app.
+        /// Chromium automatically builds its accessibility tree when a UIA client queries it.
+        /// Scoring: Edit controls + keyboard-focusable + moderate height = main input field.
+        /// </summary>
+        private static bool TryClickInputViaAutomation(IntPtr appHwnd)
+        {
+            try
+            {
+                var window = AutomationElement.FromHandle(appHwnd);
+                if (window == null) return false;
+
+                // Search for Edit and Document controls (textarea, contenteditable divs)
+                var condition = new OrCondition(
+                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
+                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Document)
+                );
+
+                var elements = window.FindAll(TreeScope.Descendants, condition);
+                if (elements.Count == 0)
+                {
+                    Console.WriteLine("AppController: UIA found no edit controls — using fallback");
+                    return false;
+                }
+
+                Console.WriteLine($"AppController: UIA found {elements.Count} candidate(s)");
+
+                AutomationElement? bestMatch = null;
+                double bestScore = -1;
+
+                foreach (AutomationElement element in elements)
+                {
+                    try
+                    {
+                        if (!element.Current.IsEnabled) continue;
+                        if (element.Current.IsOffscreen) continue;
+
+                        var rect = element.Current.BoundingRectangle;
+                        if (rect.IsEmpty || double.IsInfinity(rect.Width) || double.IsInfinity(rect.Height))
+                            continue;
+                        if (rect.Width < 100 || rect.Height < 20) continue;
+
+                        double score = 0;
+
+                        // Prefer Edit over Document (Edit = textarea/input, Document = page area)
+                        if (element.Current.ControlType == ControlType.Edit)
+                            score += 2000;
+
+                        // Prefer keyboard-focusable elements (input fields accept keyboard input)
+                        if (element.Current.IsKeyboardFocusable)
+                            score += 1000;
+
+                        // Prefer moderate height (input fields: 30-200px)
+                        // Penalize very tall elements (conversation area: 400px+)
+                        if (rect.Height < 200)
+                            score += 800;
+                        else if (rect.Height < 400)
+                            score += 400;
+                        else
+                            score += 50; // likely conversation area
+
+                        // Wider elements get a small boost (input spans most of window width)
+                        score += rect.Width * 0.5;
+
+                        // Prefer elements that support ValuePattern (writable text input)
+                        try
+                        {
+                            if (element.TryGetCurrentPattern(ValuePattern.Pattern, out _))
+                                score += 500;
+                        }
+                        catch { /* Some elements may not support pattern queries */ }
+
+                        Console.WriteLine($"  UIA: {element.Current.ControlType.ProgrammaticName} " +
+                            $"at ({rect.X:F0},{rect.Y:F0}) {rect.Width:F0}x{rect.Height:F0} " +
+                            $"score={score:F0} focusable={element.Current.IsKeyboardFocusable}");
+
+                        if (score > bestScore)
+                        {
+                            bestScore = score;
+                            bestMatch = element;
+                        }
+                    }
+                    catch { continue; }
+                }
+
+                if (bestMatch == null)
+                {
+                    Console.WriteLine("AppController: UIA no suitable input found — using fallback");
+                    return false;
+                }
+
+                // Try SetFocus first (cleaner than clicking)
+                try
+                {
+                    bestMatch.SetFocus();
+                    Thread.Sleep(100);
+                    Console.WriteLine("AppController: UIA SetFocus succeeded");
+                    return true;
+                }
+                catch
+                {
+                    // SetFocus failed — fall through to click on the element
+                }
+
+                // Click on the center of the found input element
+                var inputRect = bestMatch.Current.BoundingRectangle;
+                int clickX = (int)(inputRect.X + inputRect.Width / 2);
+                int clickY = (int)(inputRect.Y + inputRect.Height / 2);
+
+                if (clickX < 0 || clickY < 0) return false;
+
+                PerformClick(clickX, clickY);
+                Console.WriteLine($"AppController: UIA clicked input at ({clickX},{clickY}), " +
+                    $"size=({inputRect.Width:F0}x{inputRect.Height:F0})");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"AppController: UIA failed: {ex.Message} — using fallback");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Fallback: clicks at a fixed position (86% height, 55% width) — works for Code tab.
+        /// </summary>
+        private static void ClickAtFixedPosition(IntPtr appHwnd)
+        {
             if (!Win32.GetWindowRect(appHwnd, out Win32.RECT rect)) return;
 
             int windowWidth = rect.Right - rect.Left;
             int windowHeight = rect.Bottom - rect.Top;
             if (windowWidth < 100 || windowHeight < 100) return;
 
-            // Claude Desktop: input at ~86% height, 55% width (past sidebar)
+            // Claude Desktop Code tab: input at ~86% height, 55% width (past sidebar)
             int clickX = rect.Left + (int)(windowWidth * 0.55);
             int clickY = rect.Top + (int)(windowHeight * 0.86);
 
             clickX = Math.Clamp(clickX, rect.Left + 50, rect.Right - 50);
             clickY = Math.Clamp(clickY, rect.Top + 50, rect.Bottom - 50);
 
+            PerformClick(clickX, clickY);
+            Console.WriteLine($"AppController: Fallback click at ({clickX},{clickY}), " +
+                $"window=({rect.Left},{rect.Top},{rect.Right},{rect.Bottom})");
+        }
+
+        /// <summary>
+        /// Performs a mouse click at the given screen coordinates, preserving cursor position.
+        /// </summary>
+        private static void PerformClick(int x, int y)
+        {
             Win32.GetCursorPos(out Win32.POINT savedPos);
 
-            Win32.SetCursorPos(clickX, clickY);
+            Win32.SetCursorPos(x, y);
             Thread.Sleep(15);
             Win32.mouse_event(Win32.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
             Thread.Sleep(15);
@@ -301,8 +454,6 @@ namespace ClaudeVoiceOverlay.Services
             Thread.Sleep(150);
 
             Win32.SetCursorPos(savedPos.X, savedPos.Y);
-
-            Console.WriteLine($"AppController: Clicked at ({clickX},{clickY}), window=({rect.Left},{rect.Top},{rect.Right},{rect.Bottom})");
         }
 
         // ── Helpers ──
