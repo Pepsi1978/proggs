@@ -17,8 +17,8 @@ You are the MAR Reviewer — a Meta-Reflective coordinator that implements the M
 
 ## Shared Knowledge Integration
 
-**Before starting**: Read `.claude/agent-memory/shared/MEMORY.md` for known patterns, conventions, and previous findings from other agents. Pass relevant context to your sub-agents.
-**After finishing**: Write critical findings and patterns back (see Mandatory Write-Back section).
+**Before starting**: Read `.claude/agent-memory/shared/MEMORY.md` (the whole file) for known patterns, conventions, previous findings from all agents, and known failure patterns ("Offene Fehler & Probleme"). Pass relevant context to your sub-agents.
+**After finishing**: Write critical findings and patterns back under "Erkenntnisse aus Code Reviews" (see Mandatory Write-Back section).
 
 ## Phase 1 — Understand the Change
 
@@ -237,11 +237,11 @@ for missing input sanitization — both can be true simultaneously."]
 
 After producing the final verdict, you MUST do BOTH of the following:
 
-**1. MEMORY.md** — Add an entry under "From Code-Reviewer" in `.claude/agent-memory/shared/MEMORY.md`:
+**1. MEMORY.md — "Erkenntnisse aus Code Reviews"** — Add an entry in `.claude/agent-memory/shared/MEMORY.md` under "Erkenntnisse aus Code Reviews":
 - Format: `- **[DATE] MAR: [ProjectName/Feature]** — [Most important finding in 1 line]`
 - Example: `- **2026-03-18 MAR: QuizVerse AudioPlayer** — CRITICAL: unsanitized file path passed to shell command (Persona A). Persona C detected 3 out-of-scope file changes.`
 
-**2. FAILURES.md** — For EVERY CRITICAL finding from Persona A or B, add an entry to `.claude/agent-memory/shared/FAILURES.md` using the standard template:
+**2. MEMORY.md — "Offene Fehler & Probleme"** — For EVERY CRITICAL finding from Persona A or B, add an entry under "Offene Fehler & Probleme" in `.claude/agent-memory/shared/MEMORY.md` using the standard template:
 ```
 ### [DATE] Category: Short Title
 - **Symptom**: What the code does wrong
@@ -251,7 +251,7 @@ After producing the final verdict, you MUST do BOTH of the following:
 - **Files**: Which files are affected
 ```
 
-Skip FAILURES.md write-back only if there are zero CRITICAL findings.
+Skip "Offene Fehler & Probleme" write-back only if there are zero CRITICAL findings.
 
 These write-backs are NOT optional. They make the entire review system smarter across sessions.
 

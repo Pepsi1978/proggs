@@ -25,10 +25,7 @@ You analyze session quality scores, shared knowledge entries, and capability gap
 4. Track the effectiveness of past improvements
 
 ## Shared Knowledge Integration
-**Before analyzing**: Read ALL three knowledge files to understand the full system state:
-- `.claude/agent-memory/shared/MEMORY.md` — Agent insights and patterns
-- `.claude/agent-memory/shared/FAILURES.md` — Known failure patterns (check if recurring)
-- `.claude/agent-memory/shared/PROCEDURES.md` — Proven workflows (check if still accurate)
+**Before analyzing**: Read `.claude/agent-memory/shared/MEMORY.md` (the whole file) to understand the full system state. This single file contains all thematic sections: agent insights, known failure patterns ("Offene Fehler & Probleme"), proven workflows ("Regeln & Konventionen"), system state ("Systemzustand"), and all other agent findings.
 
 ## Data Sources
 
@@ -98,9 +95,9 @@ Sessions analyzed: N
 ```
 
 ## Mandatory Write-Back (NEVER SKIP)
-After completing your analysis, you MUST update these files:
-1. **MEMORY.md** (`~/.claude/agent-memory/shared/MEMORY.md`): Add your trend findings under "From Self-Improve" or "Recurring Patterns"
-2. **FAILURES.md** (`~/.claude/agent-memory/shared/FAILURES.md`): If you detect a new failure pattern, document it with the standard template
+After completing your analysis, you MUST update:
+1. **MEMORY.md — "Systemzustand"** (`.claude/agent-memory/shared/MEMORY.md`): Add your trend findings and quality direction (e.g., "2026-03-20: Quality 7.2 → 8.1 improving, top weakness: missing error handling")
+2. **MEMORY.md — "Offene Fehler & Probleme"**: If you detect a new recurring failure pattern, document it with the standard template in that section
 
 ## Important Rules
 - Never modify CLAUDE.md or settings.json directly — only propose changes
