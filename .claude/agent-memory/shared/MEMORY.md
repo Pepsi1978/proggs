@@ -48,6 +48,14 @@ Das zentrale Nervensystem des Claude Code Systems. JEDE Komponente die hier arbe
 
 _Aktuell keine offenen Fehler._
 
+### 2026-03-20 — Hook: reindex-codebase.ps1 — Stille Indexierungsfehler + Timeout
+**Quelle:** Hook: reindex-codebase.ps1 (SessionStart, async)
+**Symptom:** Semantischer Index 16+ Stunden veraltet, spaeter ExitCode 143 (Timeout)
+**Ursache:** 1) Bun Import-Pfade relativ zur Datei, nicht CWD — Temp in %TEMP% fand ./src/ nicht.
+2) Timeout 180s zu knapp bei 600+ Dateien.
+**Fix:** Temp-Datei ins mcp-code-search/ verschoben, Timeout auf 300s erhoeht, finally{}-Cleanup.
+**Status:** GEFIXT (2026-03-20)
+
 ### 2026-03-20 — Hook: reindex-codebase.ps1 — Stille Indexierungsfehler
 **Problem:** Bun loeste Imports relativ zur Temp-Datei in %TEMP% statt zum mcp-code-search/ Verzeichnis auf. `catch {}` verschluckte den Fehler — Index war 16+ Stunden veraltet.
 **Fix:** Temp-Datei ins mcp-code-search/ Verzeichnis verschoben. Catch-Bloecke loggen jetzt hierher.
@@ -113,12 +121,5 @@ _Noch keine Eintraege._
 - Fehler NIEMALS still verschlucken — immer ins Whiteboard loggen
 - Neue Dateien/Strukturen: Pruefen ob Whiteboard-Eintrag noetig
 - Einziges Repository: Pepsi1978/proggs
-
-### 2026-03-20 13:04 — Hook: reindex-codebase.ps1 — Timeout bei Indexierung
-**Quelle:** Hook: reindex-codebase.ps1 (SessionStart, async)
-**Symptom:** Indexierung fehlgeschlagen mit ExitCode 143 (SIGTERM = Prozess vom System gekillt)
-**Ursache:** Der SessionStart-Hook hat ein 180s Timeout. Wenn die Indexierung laenger dauert (z.B. bei 599+ Dateien und kaltem Ollama-Start), wird der Bun-Prozess nach 180s gekillt. ExitCode 128+15=143 bedeutet SIGTERM. Der Hook lief vermutlich parallel zum manuell gestarteten Reindex, der bereits erfolgreich war.
-**Betroffene Dateien:** `~/.claude/settings.json` (Hook-Timeout), `~/.claude/hooks/reindex-codebase.ps1`
-**Reproduktion:** SessionStart mit veraltetem Index + langsame Ollama-Antwort → Timeout nach 180s
-**Fix-Vorschlag:** Hook-Timeout von 180s auf 300s erhoehen in settings.json. Alternativ: Hook prueft ob bereits eine Indexierung laeuft (Lock-File).
-**Status:** GEFIXT (2026-03-20) — Timeout auf 300s erhoeht
+- Cross-Platform: Jede Aenderung MUSS auf beiden Plattformen funktionieren
+- Status-Meldung: "Committed, gepusht und plattformuebergreifend" nur wenn ehrlich

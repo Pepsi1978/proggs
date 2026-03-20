@@ -35,7 +35,7 @@ fuer ALLE Komponenten des Claude Code Systems: Agents, Skills, Hooks, MCP-Server
    MUSS in diesem Lauf gefixt oder zumindest adressiert werden.
    Fehlerformat im Whiteboard: Quelle, Symptom, Ursache, Betroffene Dateien, Fix-Vorschlag, Status.
    Der "Fix-Vorschlag" sagt dir konkret was zu tun ist — folge ihm oder verbessere ihn.
-3. **Benutzer-Feedback lesen**: `~/.claude/projects/C--Users-barwa/memory/feedback_*.md` enthalt
+3. **Benutzer-Feedback lesen**: `~/.claude/projects/*/memory/feedback_*.md` enthalt
    direkte Korrekturen und Praeferenzen des Benutzers. Diese MUESSEN gelesen werden, weil:
    - Feedback-Muster die systemweit gelten → als neue Regel oder Hook implementieren
    - Wiederholte Korrekturen → deuten auf fehlendes automatisches Verhalten hin
@@ -220,7 +220,7 @@ Diese Pruefung ist EINMALIG bei der Ersteinrichtung und danach NUR im Thorough-M
 - Pruefe ob der MCP-Server `resolveCurrentDb()` bei JEDEM Tool-Call den Pointer neu liest (nicht cached)
 - Pruefe ob der Reindex-Hook in eine NEUE DB schreibt (nicht in die aktive)
 - Pruefe ob die Cleanup-Logik gesperrte Dateien ueberspringt (try/catch um unlinkSync)
-Wenn eine dieser Pruefungen fehlschlaegt → als KRITISCHER DEFEKT in MEMORY.md (Sektion "Offene Fehler & Probleme") eintragen.
+Wenn eine dieser Pruefungen fehlschlaegt → als KRITISCHER DEFEKT in MEMORY.md unter "Offene Fehler & Probleme" eintragen.
 **Schnelltest:** `grep -c "resolveCurrentDb" ~/proggs/mcp-code-search/src/index.ts` muss >= 2 sein (einmal Definition, mindestens einmal Aufruf in getStore).
 
 **Auswertung aller 4 Kategorien:**
@@ -233,7 +233,7 @@ Wenn eine dieser Pruefungen fehlschlaegt → als KRITISCHER DEFEKT in MEMORY.md 
   4. DB korrupt → DB loeschen, neu indexieren
   5. Hook fehlt → Hook-Registrierung in settings.json reparieren
   6. .gitignore fehlt → `.code-search/` hinzufuegen
-  Jeden Fehler in MEMORY.md (Sektion "Offene Fehler & Probleme") eintragen und Behebungsversuch dokumentieren.
+  Jeden Fehler in MEMORY.md unter "Offene Fehler & Probleme" eintragen und Behebungsversuch dokumentieren.
 
 ## Stufe 2: DEEP-DIVE
 
@@ -269,7 +269,7 @@ dadurch haengenbleiben. Fuer JEDEN Researcher gilt:
    blockiert NICHT den Rest. Stufe 2 wartet nur auf die noch laufenden Agents.
 3. **1x Neustart versuchen**: Den gescheiterten Researcher EINMAL neu starten mit
    kleinerem Scope (z.B. nur die wichtigste Teilfrage). Wenn auch der Neustart scheitert → ueberspringen.
-4. **Fehler dokumentieren**: Jeden Absturz sofort in `~/.claude/agent-memory/shared/MEMORY.md (Sektion "Offene Fehler & Probleme")` eintragen:
+4. **Fehler dokumentieren**: Jeden Absturz sofort in `~/.claude/agent-memory/shared/MEMORY.md unter "Offene Fehler & Probleme"` eintragen:
    ```
    ## [Datum] Researcher R[N] Absturz
    - **Agent**: R[N] — [Name]
@@ -279,7 +279,7 @@ dadurch haengenbleiben. Fuer JEDEN Researcher gilt:
    ```
 5. **Im Final Summary nennen**: Unter "Probleme waehrend des Laufs" jeden Absturz auflisten
    mit Empfehlung, ob der Researcher beim naechsten Lauf manuell getriggert werden sollte.
-6. **Ursachenanalyse**: Nach Abschluss aller Stufen die MEMORY.md (Sektion "Offene Fehler & Probleme")-Eintraege pruefen —
+6. **Ursachenanalyse**: Nach Abschluss aller Stufen die MEMORY.md unter "Offene Fehler & Probleme"-Eintraege pruefen —
    wenn ein Researcher 2+ Mal abgestuerzt ist, dessen Prompt vereinfachen oder aufteilen.
 
 **Faustregel**: Lieber ein Researcher-Ergebnis weniger als ein komplett steckengebliebener Lauf.
@@ -365,7 +365,7 @@ Present 3 suggestions for THIS SKILL. Apply only after user approval. Backup fir
 ### 3E: R8 Intelligence Agent (NEW v5.12)
 **Stufe 2 verwendet jetzt den dedizierten `intelligence-researcher` Agent** statt eines generischen
 Researcher-Prompts. Der Agent hat:
-- Eigenes Backlog-File (`~/.claude/agent-memory/shared/MEMORY.md (Sektion "Forschung & Intelligence")`) mit Status pro Finding
+- Eigenes Backlog-File (`~/.claude/agent-memory/shared/MEMORY.md unter "Forschung & Intelligence"`) mit Status pro Finding
 - Liest vorherige Findings und sucht gezielt NEUE Ideen (kein Duplicate Research)
 - Output-Format mit expliziter JA/NEIN-Empfehlung pro Finding
 Spawn: `Agent(subagent_type="intelligence-researcher", name="r8-intelligence")`
@@ -464,13 +464,13 @@ ausfuehrlichen Laeufen genug Mehrwert.
 Spawne 3 Agents parallel — jeder sucht an einer anderen Stelle nach Problemen:
 1. **Whiteboard-Scanner**: Lies `.claude/agent-memory/shared/MEMORY.md` komplett → Finde ALLE unfixten Probleme (Status: OFFEN), veraltete Eintraege, Widersprueche. Jedes Problem MUSS in diesem Lauf gefixt werden.
 2. **Umgebungs-Scanner**: Pruefe Hooks (laufen sie?), Agents (stimmen Prompts?), Rules (sind sie aktuell?), Settings (Drift?), session-scorer (liefert er echte Daten?). Finde AKTUELLE Fehler die noch niemand bemerkt hat.
-3. **Zukunfts-Scanner**: Analysiere die letzten 3 Aenderungen in MEMORY.md (Sektion "Offene Fehler & Probleme") — welche NEUEN Fehlertypen koennten in Zukunft auftreten? Fuer jeden potenziellen Fehler: Praeventiven Hook oder Rule vorschlagen.
+3. **Zukunfts-Scanner**: Analysiere die letzten 3 Aenderungen in MEMORY.md unter "Offene Fehler & Probleme" — welche NEUEN Fehlertypen koennten in Zukunft auftreten? Fuer jeden potenziellen Fehler: Praeventiven Hook oder Rule vorschlagen.
 
 ### 6B: Fehler-Muster → Praevention (Aus vergangenen Fehlern lernen)
-1. Lies MEMORY.md (Sektion "Offene Fehler & Probleme"): Zaehle Fehler pro Kategorie
+1. Lies MEMORY.md unter "Offene Fehler & Probleme": Zaehle Fehler pro Kategorie
 2. Finde den haeufigsten Fehlertyp der NOCH KEINEN praeventiven Hook/Rule hat
 3. **BAUE den Hook oder die Rule** — nicht vorschlagen, BAUEN. Jeder Lauf = 1 neuer Schutz.
-4. Trage den neuen Schutz in MEMORY.md (Sektion "Offene Fehler & Probleme") als "Prevention" beim entsprechenden Fehler ein
+4. Trage den neuen Schutz in MEMORY.md unter "Offene Fehler & Probleme" als "Prevention" beim entsprechenden Fehler ein
 
 ### 6C: Korrektur-Analyse (Aus Benutzer-Korrekturen lernen)
 1. Lies `session-scores.jsonl`: Finde Sessions mit corrections > 3
@@ -483,14 +483,14 @@ Spawne 3 Agents parallel — jeder sucht an einer anderen Stelle nach Problemen:
 1. Lies ALLE Dateien in `~/.claude/rules/` — zaehle Regeln
 2. Fuer jede Regel pruefen: Wurde sie in den letzten 5 Sessions jemals relevant?
 3. **Veraltete Regeln entfernen** (nach Bestaetigung) — tote Regeln belasten den Kontext
-4. **Fehlende Regeln identifizieren**: Gibt es wiederkehrende Probleme in MEMORY.md (Sektion "Offene Fehler & Probleme") fuer die KEINE Regel existiert?
+4. **Fehlende Regeln identifizieren**: Gibt es wiederkehrende Probleme in MEMORY.md unter "Offene Fehler & Probleme" fuer die KEINE Regel existiert?
 5. Agent-Prompt-Audit: Pruefe ob Senior-Agents optimale Prompts haben. Wiederholte schlechte Ergebnisse → Prompt verbessern.
 
 ### 6E: Dauerhaftigkeits-Pruefung (Fixes die HALTEN)
-1. Pruefe die letzten 5 Fixes in MEMORY.md (Sektion "Offene Fehler & Probleme"): Ist der Fix noch wirksam? (Hook existiert? Rule geladen? Config unveraendert?)
+1. Pruefe die letzten 5 Fixes in MEMORY.md unter "Offene Fehler & Probleme": Ist der Fix noch wirksam? (Hook existiert? Rule geladen? Config unveraendert?)
 2. Wenn ein Fix nicht mehr wirkt: **Sofort reparieren** und Ursache dokumentieren
 3. **REGEL**: Jeder Fix muss DAUERHAFT sein — keine temporaeren Workarounds.
-4. Trage Dauerhaftigkeits-Status in MEMORY.md (Sektion "Offene Fehler & Probleme") ein: `✅ DAUERHAFT` oder `⚠️ FRAGIL (Grund)`
+4. Trage Dauerhaftigkeits-Status in MEMORY.md unter "Offene Fehler & Probleme" ein: `✅ DAUERHAFT` oder `⚠️ FRAGIL (Grund)`
 
 ### 6F: Lern-Extraktion (Was lehrt uns jeder Fehler?)
 Fuer JEDEN neuen Fehler der in diesem Lauf gefunden wurde:
@@ -540,8 +540,7 @@ cp ~/CLAUDE.md ~/proggs/CLAUDE.md
 # Knowledge files (cross-platform shared intelligence)
 mkdir -p ~/proggs/claude-code-setup/agent-memory/shared/
 cp ~/.claude/agent-memory/shared/MEMORY.md ~/proggs/claude-code-setup/agent-memory/shared/
-cp ~/.claude/agent-memory/shared/MEMORY.md (Sektion "Offene Fehler & Probleme") ~/proggs/claude-code-setup/agent-memory/shared/ 2>/dev/null
-cp ~/.claude/agent-memory/shared/MEMORY.md ~/proggs/claude-code-setup/agent-memory/shared/ 2>/dev/null
+# Nur MEMORY.md — es gibt keine separaten Dateien mehr (alles konsolidiert)
 # settings-reference.json muss MANUELL aktualisiert werden wenn Hooks/Plugins/Env sich aendern!
 cd ~/proggs && git pull --rebase
 git add claude-code-setup/ CLAUDE.md
