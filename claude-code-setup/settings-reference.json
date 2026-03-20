@@ -328,7 +328,7 @@
     "zeroize-audit@trailofbits": false,
     "agentic-actions-auditor@trailofbits": true,
     "skill-improver@trailofbits": true,
-    "fp-check@trailofbits": true,
+    "fp-check@trailofbits": false,
     "claude-mem@thedotmack": true,
     "everything-claude-code@everything-claude-code": true,
     "compound-engineering@compound-engineering-plugin": true,
