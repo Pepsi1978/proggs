@@ -398,7 +398,7 @@ Goal: **Maximum quality at minimum token cost at maximum speed.**
 **Hier geht es NUR um SCHLAUER WERDEN — nicht um Fehler fixen (das ist Stufe 6).**
 
 ### 5A: Kognitive Werkzeuge (Intelligenz-Multiplikatoren)
-1. **Researcher spawnen**: "Welche neuen MCP-Server, Claude-Code-Plugins oder CLI-Tools wurden in den letzten 30 Tagen veroeffentlicht die das DENKEN verbessern?" (Wissensgraphen, Verifikation, Semantic Search, Code-Analyse, Formal Verification, Codebase-Embeddings)
+1. **Researcher spawnen** _(Nutzt R8-Ergebnisse statt eigenem Researcher-Spawn — siehe 5C)_: "Welche neuen MCP-Server, Claude-Code-Plugins oder CLI-Tools wurden in den letzten 30 Tagen veroeffentlicht die das DENKEN verbessern?" (Wissensgraphen, Verifikation, Semantic Search, Code-Analyse, Formal Verification, Codebase-Embeddings)
 2. **Bewerten**: Wuerde dieses Tool Claude bei ECHTEN Aufgaben schlauer machen? (Nicht nur cool, sondern nuetzlich)
 3. **1 Tool pro Lauf installieren oder testen** — wenn es den Qualitaets-Check besteht
 4. Neue Tools in MEMORY.md dokumentieren: Was es tut, wann es hilft, wie es getriggert wird

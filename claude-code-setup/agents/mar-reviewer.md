@@ -265,6 +265,13 @@ These write-backs are NOT optional. They make the entire review system smarter a
 - Keep sub-agent prompts self-contained — they do not share state with each other.
 - If the change is trivial (< 5 lines, config-only, version bump), say so and skip spawning sub-agents — a direct 1-paragraph assessment suffices.
 
+**Sentinel-Datei (C1 Enforcement — PFLICHT):**
+Als LETZTEN Schritt vor deiner Antwort: Schreibe eine JSON-Datei nach `/tmp/agent-writeback-mar-reviewer.json`:
+```json
+{"agent": "mar-reviewer", "timestamp": "[ISO8601]", "findings": "[1-Zeilen-Zusammenfassung: Verdict + kritischster Fund]"}
+```
+Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.
+
 ## Robustness Protocol (PFLICHT)
 
 ### Tool-Fehler
@@ -293,12 +300,5 @@ These write-backs are NOT optional. They make the entire review system smarter a
 ### Eingabe-Validierung
 - Wurden Dateien oder ein Diff angegeben? Wenn nicht → `git diff HEAD` als Fallback.
 - Kein Git-Repository und keine Dateien → "NO INPUT — MAR braucht Dateien oder einen Diff" zurueckgeben.
-
-**Sentinel-Datei (C1 Enforcement — PFLICHT):**
-Als LETZTEN Schritt vor deiner Antwort: Schreibe eine JSON-Datei nach `/tmp/agent-writeback-mar-reviewer.json`:
-```json
-{"agent": "mar-reviewer", "timestamp": "[ISO8601]", "findings": "[1-Zeilen-Zusammenfassung: Verdict + kritischster Fund]"}
-```
-Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.
 
 - Communication with the user: German. All code references, file paths, and technical terms: English.

@@ -146,6 +146,13 @@ Return a structured report in this EXACT format:
 
 Be thorough. Check everything. Miss nothing. The user relies on this report to understand their system health.
 
+**Sentinel-Datei (C1 Enforcement — PFLICHT):**
+Als LETZTEN Schritt vor deiner Antwort: Schreibe eine JSON-Datei nach `/tmp/agent-writeback-env-checker.json`:
+```json
+{"agent": "env-checker", "timestamp": "[ISO8601]", "findings": "[1-Zeilen-Zusammenfassung: Gesamtstatus GRUEN/GELB/ROT + Anzahl Probleme]"}
+```
+Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.
+
 ## Robustness Protocol (PFLICHT)
 
 ### Tool-Fehler
@@ -166,10 +173,3 @@ Be thorough. Check everything. Miss nothing. The user relies on this report to u
 
 ### Eingabe-Validierung
 - Plattform nicht erkannt → Trotzdem generische Checks ausfuehren, "Unbekannte Plattform" melden.
-
-**Sentinel-Datei (C1 Enforcement — PFLICHT):**
-Als LETZTEN Schritt vor deiner Antwort: Schreibe eine JSON-Datei nach `/tmp/agent-writeback-env-checker.json`:
-```json
-{"agent": "env-checker", "timestamp": "[ISO8601]", "findings": "[1-Zeilen-Zusammenfassung: Gesamtstatus GRUEN/GELB/ROT + Anzahl Probleme]"}
-```
-Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.

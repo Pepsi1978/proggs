@@ -72,13 +72,19 @@ Fuer JEDEN Fund:
 **Umsetzungsvorschlag:** [Konkrete Schritte]
 ```
 
-Am Ende: Aktualisiere `.claude/agent-memory/shared/MEMORY.md` unter dem Abschnitt "Forschung & Intelligence" mit neuen Findings.
-Du hast das Write-Tool — lies MEMORY.md zuerst vollstaendig, haenge den neuen Findings-Block unter "Forschung & Intelligence" an, und schreibe die aktualisierte Datei zurueck. Kein manuelles Uebertragen noetig.
+Am Ende: Die Findings werden automatisch via Sentinel-Datei in MEMORY.md unter "Forschung & Intelligence" eingetragen — kein direktes Write-Tool auf MEMORY.md verwenden.
 
-Format pro Finding in MEMORY.md:
+Format pro Finding in MEMORY.md (wird vom writeback-enforcer eingefuegt):
 ```
-- **[DATUM] [Titel]** — Status: OFFEN | Quelle: [Link] | Empfehlung: JA/NEIN
+- **[DATUM] [Titel]** — Status: UMZUSETZEN | Quelle: [Link] | Empfehlung: JA/NEIN
 ```
+
+**Sentinel-Datei (C1 Enforcement — PFLICHT):**
+Als LETZTEN Schritt vor deiner Antwort: Schreibe eine JSON-Datei nach `/tmp/agent-writeback-intelligence-researcher.json`:
+```json
+{"agent": "intelligence-researcher", "timestamp": "[ISO8601]", "findings": "[1-Zeilen-Zusammenfassung: Anzahl Findings + wichtigstes Ergebnis]"}
+```
+Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.
 
 ## Robustness Protocol (PFLICHT)
 
@@ -96,12 +102,5 @@ Format pro Finding in MEMORY.md:
 
 ### Eingabe-Validierung
 - MEMORY.md existiert nicht oder "Forschung & Intelligence"-Sektion fehlt → Normal weiterarbeiten (erster Lauf), Sektion neu anlegen.
-
-**Sentinel-Datei (C1 Enforcement — PFLICHT):**
-Als LETZTEN Schritt vor deiner Antwort: Schreibe eine JSON-Datei nach `/tmp/agent-writeback-intelligence-researcher.json`:
-```json
-{"agent": "intelligence-researcher", "timestamp": "[ISO8601]", "findings": "[1-Zeilen-Zusammenfassung: Anzahl Findings + wichtigstes Ergebnis]"}
-```
-Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.
 
 Communication: German. Links and technical terms: English.

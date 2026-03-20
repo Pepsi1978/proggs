@@ -14,7 +14,7 @@ get_section() {
         code-reviewer|batch-reviewer|mar-reviewer) echo "## Erkenntnisse aus Code Reviews" ;;
         tester|quality-gate) echo "## Erkenntnisse aus Tests" ;;
         architect|challenger) echo "## Architektur-Entscheidungen" ;;
-        debugger) echo "## Debugging-Muster" ;;
+        debugger|coder) echo "## Debugging-Muster" ;;
         optimizer) echo "## Performance & Optimierung" ;;
         ui-polisher) echo "## UI/UX-Patterns" ;;
         researcher|intelligence-researcher) echo "## Forschung & Intelligence" ;;

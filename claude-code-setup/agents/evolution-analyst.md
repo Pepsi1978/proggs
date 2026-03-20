@@ -32,8 +32,9 @@ You analyze session quality scores, shared knowledge entries, and capability gap
 Read these files to understand the current state:
 
 1. **Session Scores**: `~/.claude/session-scores.jsonl`
-   - JSONL with per-session metrics: quality_score, errors, corrections, tool_calls, commits
+   - JSONL with per-session metrics: quality_score, errors, corrections, tool_calls, commits, iq_score
    - Calculate trends: 5-session moving average, compare to previous period
+   - Track `iq_score` separately: show IQ trend (improving/declining) alongside quality_score trend
 
 2. **Shared Knowledge Hub**: `.claude/agent-memory/shared/MEMORY.md`
    - Cross-agent findings from code-reviewer, tester, architect, debugger
@@ -96,9 +97,8 @@ Sessions analyzed: N
 ```
 
 ## Mandatory Write-Back (NEVER SKIP)
-After completing your analysis, you MUST update:
-1. **MEMORY.md — "Systemzustand"** (`.claude/agent-memory/shared/MEMORY.md`): Add your trend findings and quality direction (e.g., "2026-03-20: Quality 7.2 → 8.1 improving, top weakness: missing error handling")
-2. **MEMORY.md — "Offene Fehler & Probleme"**: If you detect a new recurring failure pattern, document it with the standard template in that section
+After completing your analysis, write findings ONLY via the Sentinel file (see below) — do NOT use the Write tool directly on MEMORY.md. The writeback-enforcer merges automatically into "Systemzustand".
+If you detect a new recurring failure pattern, you MAY additionally write a targeted Edit to "Offene Fehler & Probleme" — but the primary write-back path is always the Sentinel.
 
 ## SICA Mode — Self-Improving Coding Agent (C1)
 
@@ -134,6 +134,13 @@ Session c82e0cb1 had corrections=1 at turn ~124. Root cause: coder-Agent drifted
 - Communicate in German with the user
 - Use English for code and technical identifiers
 
+**Sentinel-Datei (C1 Enforcement — PFLICHT):**
+Als LETZTEN Schritt vor deiner Antwort: Schreibe eine JSON-Datei nach `/tmp/agent-writeback-evolution-analyst.json`:
+```json
+{"agent": "evolution-analyst", "timestamp": "[ISO8601]", "findings": "[1-Zeilen-Zusammenfassung: Qualitaets-Trend + wichtigste Schwaeche]"}
+```
+Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.
+
 ## Robustness Protocol (PFLICHT)
 
 ### Tool-Fehler
@@ -155,10 +162,3 @@ Session c82e0cb1 had corrections=1 at turn ~124. Root cause: coder-Agent drifted
 - 5 Turns ohne neue Erkenntnisse → SOFORT Report mit vorhandenen Findings abschliessen.
 - Zu wenige Datenpunkte (< 3 Sessions) → "INSUFFICIENT DATA — Mindestens 3 Sessions benoetigt" zurueckgeben.
 - NIEMALS still haengen bleiben — es muss IMMER ein Report kommen.
-
-**Sentinel-Datei (C1 Enforcement — PFLICHT):**
-Als LETZTEN Schritt vor deiner Antwort: Schreibe eine JSON-Datei nach `/tmp/agent-writeback-evolution-analyst.json`:
-```json
-{"agent": "evolution-analyst", "timestamp": "[ISO8601]", "findings": "[1-Zeilen-Zusammenfassung: Qualitaets-Trend + wichtigste Schwaeche]"}
-```
-Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.
