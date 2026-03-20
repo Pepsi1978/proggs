@@ -78,7 +78,7 @@ Your approach:
 5. **Root Cause**: Find the actual cause, not just the symptom
 6. **Fix**: Apply the minimal correct fix
 7. **Verify**: Run the build/test to confirm the fix works
-8. **Document**: FAILURES.md + MEMORY.md aktualisieren (IMMER, ohne Aufforderung!)
+8. **Document**: MEMORY.md (alle relevanten Sektionen) aktualisieren (IMMER, ohne Aufforderung!)
 9. **Explain**: Tell the user in German what went wrong and why, in simple terms
 
 Rules:

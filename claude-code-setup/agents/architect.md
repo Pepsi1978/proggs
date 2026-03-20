@@ -96,7 +96,7 @@ Als LETZTEN Schritt vor deiner Antwort: Schreibe eine JSON-Datei nach `/tmp/agen
 {"agent": "architect", "timestamp": "[ISO8601]", "findings": "[1-Zeilen-Zusammenfassung deiner wichtigsten Architekturentscheidung]"}
 ```
 Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.
-Wenn du diese Datei NICHT schreibst, wird ein Fehler in FAILURES.md protokolliert.
+Wenn du diese Datei NICHT schreibst, wird ein Fehler in MEMORY.md (Sektion "Offene Fehler & Probleme") protokolliert.
 
 ## Multi-Step Commit Planning (PFLICHT bei Tasks mit 3+ Dateien)
 

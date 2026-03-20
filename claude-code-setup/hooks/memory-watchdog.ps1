@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 # Memory Watchdog — SubagentStop Hook (v1.0)
 # Checks if a senior agent wrote back to MEMORY.md after finishing.
-# If not: logs a warning to FAILURES.md and outputs a notification.
+# If not: logs a warning to MEMORY.md and outputs a notification.
 #
 # Senior agents that MUST write back: code-reviewer, tester, architect, debugger, optimizer
 # Other agents (coder, researcher, etc.) are exempt.
@@ -9,7 +9,7 @@
 param()
 
 $memoryFile = Join-Path $env:USERPROFILE ".claude" "agent-memory" "shared" "MEMORY.md"
-$failuresFile = Join-Path $env:USERPROFILE ".claude" "agent-memory" "shared" "FAILURES.md"
+$whiteboardFile = Join-Path $env:USERPROFILE ".claude" "agent-memory" "shared" "MEMORY.md"
 $counterFile = Join-Path $env:TEMP "claude-writeback-counter.txt"
 
 # Count SubagentStop events since last MEMORY.md write
@@ -53,12 +53,12 @@ if ($missCount -ge 5) {
 - **Status**: AUTO-LOGGED
 "@
 
-    if (Test-Path $failuresFile) {
-        Add-Content -Path $failuresFile -Value $warning -Encoding UTF8
+    if (Test-Path $whiteboardFile) {
+        Add-Content -Path $whiteboardFile -Value $warning -Encoding UTF8
     }
     # Reset counter after logging
     Set-Content -Path $counterFile -Value "0" -Force
-    Write-Output "MEMORY_WATCHDOG: $missCount consecutive misses — logged to FAILURES.md"
+    Write-Output "MEMORY_WATCHDOG: $missCount consecutive misses — logged to MEMORY.md"
 } else {
     Write-Output "MEMORY_WATCHDOG: No write-back ($missCount/5 misses)"
 }

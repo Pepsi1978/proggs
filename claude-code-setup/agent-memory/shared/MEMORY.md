@@ -119,7 +119,7 @@ _Patterns detected across multiple sessions will be logged here automatically._
 - **UPGRADED** architect.md: Multi-Step Commit Planning (SWE-EVO Paper arxiv 2512.18470 — loest Multi-Commit-Blind-Spot)
 - **UPGRADED** debugger.md: Fehlertyp-Klassifikation mit 10 Kategorien (SWE-RL Paper arxiv 2512.18552)
 - **FIXED** FAILURES.md: 3 doppelte Write-Back-Eintraege konsolidiert, Challenger-Findings dokumentiert
-- **UPDATED** intelligence-backlog.md: 6 neue Findings (13-18) aus R8 Zweiter Lauf hinzugefuegt
+- **UPDATED** MEMORY.md (Sektion "Forschung & Intelligence"): 6 neue Findings (13-18) aus R8 Zweiter Lauf hinzugefuegt
 - **CONFIRMED** .NET Runtime 10.0.5 NICHT von CVE-2026-26127/26130 betroffen (R5 falsches SDK→Runtime-Mapping)
 - **CONFIRMED** Alle 15 Tools aktuell, kein Update noetig. Agent Count: 15 (intelligence-researcher neu)
 - **CONFIRMED** boostvolt/claude-code-lsps bereits installiert (R2 hatte als "neu" empfohlen)

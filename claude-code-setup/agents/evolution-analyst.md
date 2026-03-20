@@ -115,7 +115,7 @@ After completing your analysis, you MUST update:
 
 ### Kontext-Schutz
 - `session-scores.jsonl` > 500 Zeilen: Nur die letzten 100 Eintraege lesen (`tail -100`).
-- MEMORY.md/FAILURES.md > 300 Zeilen: Sektionsweise lesen, nicht alles auf einmal laden.
+- MEMORY.md > 300 Zeilen: Sektionsweise lesen, nicht alles auf einmal laden.
 - Suchergebnisse: `head_limit: 50` verwenden.
 
 ### Sub-Agent-Ausfallsicherheit

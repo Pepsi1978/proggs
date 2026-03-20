@@ -34,7 +34,7 @@ Wenn mehrere Agents parallel laufen:
 - Am Ende: Zusammenfassung welche Agents erfolgreich waren und welche nicht
 
 ### 5. Fehlgeschlagene Agents dokumentieren
-Jeden Agent-Crash in `.claude/agent-memory/shared/FAILURES.md` dokumentieren:
+Jeden Agent-Crash in `.claude/agent-memory/shared/MEMORY.md` dokumentieren:
 - Welcher Agent
 - Was er tun sollte
 - Was schiefging

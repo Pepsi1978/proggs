@@ -297,7 +297,7 @@ function validateMetrics(
 				".claude",
 				"agent-memory",
 				"shared",
-				"FAILURES.md",
+				"MEMORY.md",
 			);
 			if (existsSync(failuresPath)) {
 				appendFileSync(failuresPath, warning, "utf-8");

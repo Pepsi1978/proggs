@@ -1,13 +1,13 @@
 #!/bin/bash
-# StopFailure Hook — Logs API errors that terminate sessions to FAILURES.md
+# StopFailure Hook — Logs API errors that terminate sessions to MEMORY.md
 # NEW in Claude Code 2.1.78 — fires on rate limit, auth failure, network errors
 # Wrapped with timeout to prevent blocking session cleanup
 
-FAILURES_FILE="$HOME/.claude/agent-memory/shared/FAILURES.md"
+FAILURES_FILE="$HOME/.claude/agent-memory/shared/MEMORY.md"
 DATE=$(date +%Y-%m-%d)
 TIME=$(date +%H:%M:%S)
 
-# Ensure FAILURES.md exists
+# Ensure MEMORY.md exists
 if [ ! -f "$FAILURES_FILE" ]; then
   exit 0
 fi
@@ -27,7 +27,7 @@ elif echo "$ERROR_CONTEXT" | grep -qi "overloaded\|503\|529"; then
   ERROR_TYPE="api_overloaded"
 fi
 
-# Append to FAILURES.md
+# Append to MEMORY.md
 cat >> "$FAILURES_FILE" << EOF
 
 ### [$DATE] API: Session terminated by $ERROR_TYPE ($TIME)
