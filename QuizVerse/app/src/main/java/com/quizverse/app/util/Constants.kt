@@ -64,6 +64,10 @@ object Constants {
     // --- How many quiz rounds between interstitial ads ---
     const val INTERSTITIAL_ROUND_INTERVAL: Int = 5
 
+    // --- Minimum total play time (ms) before any ads are shown ---
+    // 3.5 hours = 3.5 * 60 * 60 * 1000 = 12_600_000 ms
+    const val ADS_MIN_PLAY_TIME_MS: Long = 12_600_000L
+
     // --- Starting lives for survival mode ---
     const val SURVIVAL_STARTING_LIVES: Int = 3
 

@@ -1,6 +1,7 @@
 package com.quizverse.app
 
 import android.app.Application
+import com.quizverse.app.ads.AdManager
 import com.quizverse.app.data.database.QuizDatabase
 import com.quizverse.app.data.repository.SettingsRepository
 import com.quizverse.app.util.HapticManager
@@ -44,6 +45,8 @@ class QuizVerseApp : Application() {
         // Sync SoundManager and HapticManager enabled state with saved settings
         soundManager.enabled = settingsRepository.soundEnabled.value
         hapticManager.enabled = settingsRepository.vibrationEnabled.value
+        // Initialize AdMob SDK (ads only show after 3.5h play time)
+        AdManager.initialize(this)
     }
 
     override fun onTerminate() {

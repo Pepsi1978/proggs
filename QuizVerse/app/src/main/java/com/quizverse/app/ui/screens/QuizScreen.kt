@@ -154,8 +154,8 @@ fun QuizScreen(
 ) {
     // Build ViewModel via factory so it receives the repository
     val app = LocalContext.current.applicationContext as QuizVerseApp
-    val repository = QuizRepository(app.database)
-    val viewModel: QuizViewModel = viewModel(factory = QuizViewModelFactory(repository))
+    val factory = remember { QuizViewModelFactory(QuizRepository(app.database)) }
+    val viewModel: QuizViewModel = viewModel(factory = factory)
 
     val uiState by viewModel.uiState.collectAsState()
 

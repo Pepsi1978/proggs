@@ -62,12 +62,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.quizverse.app.QuizVerseApp
-import com.quizverse.app.data.repository.QuizRepository
 import com.quizverse.app.ui.navigation.Screen
 import com.quizverse.app.ui.theme.Accent
-import com.quizverse.app.viewmodel.QuizViewModelFactory
 import com.quizverse.app.ui.theme.GlassBorder
 import com.quizverse.app.ui.theme.GlassWhite
 import com.quizverse.app.ui.theme.Gold
@@ -83,8 +80,6 @@ private val GreenSuccess = Color(0xFF4CAF50)
 @Composable
 fun DailyChallengeScreen(navController: NavHostController) {
     val app = LocalContext.current.applicationContext as QuizVerseApp
-    val repository = QuizRepository(app.database)
-    val factory = QuizViewModelFactory(repository)
     val progress by app.database.progressDao().getProgress().collectAsState(initial = null)
     val today = java.time.LocalDate.now().toString()
     val alreadyCompleted = progress?.lastDailyChallengeDate == today

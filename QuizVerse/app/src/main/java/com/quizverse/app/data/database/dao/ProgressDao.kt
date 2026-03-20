@@ -48,6 +48,10 @@ interface ProgressDao {
     )
     suspend fun updateStats(totalAnswered: Int, totalCorrect: Int, totalPlayTime: Long)
 
+    /** Delete all progress data (used for the "Reset Progress" setting). */
+    @Query("DELETE FROM user_progress")
+    suspend fun deleteAll()
+
     /** Record the daily challenge streak and the date it was last completed. */
     @Query(
         "UPDATE user_progress " +

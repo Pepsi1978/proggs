@@ -62,7 +62,11 @@ private fun categoryName(id: Int?): String = when (id) {
     12   -> "Logik"
     13   -> "Hertha BSC"
     14   -> "BVB"
-    else -> "Unbekannt"
+    15   -> "Fußball"
+    16   -> "Gesundheit"
+    17   -> "Politik"
+    null -> "Tages-Challenge"
+    else -> "Quiz"
 }
 
 private fun difficultyName(level: Int): String = when (level) {

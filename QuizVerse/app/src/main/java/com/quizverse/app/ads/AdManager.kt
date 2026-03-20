@@ -100,7 +100,15 @@ object AdManager {
      *
      * @param activity The foreground activity used as the display context.
      */
-    fun showInterstitial(activity: Activity) {
+    /**
+     * Shows an interstitial ad only if the player has accumulated at least
+     * [Constants.ADS_MIN_PLAY_TIME_MS] (3.5 hours) of total play time.
+     * Before that threshold, no ads are shown at all.
+     */
+    fun showInterstitial(activity: Activity, totalPlayTimeMs: Long = 0L) {
+        // No ads before 3.5 hours of total play time
+        if (totalPlayTimeMs < Constants.ADS_MIN_PLAY_TIME_MS) return
+
         roundCount++
         if (roundCount % Constants.INTERSTITIAL_ROUND_INTERVAL != 0) return
 

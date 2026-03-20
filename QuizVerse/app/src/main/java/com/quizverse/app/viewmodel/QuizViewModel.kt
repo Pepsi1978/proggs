@@ -56,6 +56,8 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
     private var currentDifficulty: Int = 1
     private var isSurvivalMode: Boolean = false
     private var isDailyChallenge: Boolean = false
+    /** Timestamp (ms) when the quiz session started, for tracking total play time. */
+    private var sessionStartTimeMs: Long = 0L
 
     // ---- Public API --------------------------------------------------------
 
@@ -75,6 +77,7 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
         currentDifficulty = difficulty
         isSurvivalMode = survival
         isDailyChallenge = (categoryId == 11 && count == Constants.DAILY_QUESTION_COUNT)
+        sessionStartTimeMs = System.currentTimeMillis()
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -252,6 +255,10 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
                 correct    = state.correctAnswers,
                 difficulty = currentDifficulty
             )
+
+            // Update total play time
+            val sessionDurationMs = System.currentTimeMillis() - sessionStartTimeMs
+            repository.addPlayTime(sessionDurationMs)
 
             // Record daily challenge completion so the streak increments
             if (isDailyChallenge) {

@@ -128,6 +128,19 @@ class QuizRepository(private val database: QuizDatabase) {
         progressDao.updateStats(newAnswered, newCorrect, current.totalPlayTime)
     }
 
+    /**
+     * Adds [durationMs] milliseconds to the cumulative play time counter.
+     */
+    suspend fun addPlayTime(durationMs: Long) {
+        val current = progressDao.getProgress().first() ?: return
+        val newPlayTime = current.totalPlayTime + durationMs
+        progressDao.updateStats(
+            current.totalQuestionsAnswered,
+            current.totalCorrectAnswers,
+            newPlayTime
+        )
+    }
+
     // ---- Categories --------------------------------------------------------
 
     /**
@@ -200,6 +213,15 @@ class QuizRepository(private val database: QuizDatabase) {
      */
     suspend fun saveDailyChallengeCompletion(date: String, streak: Int) {
         progressDao.updateDailyChallenge(streak = streak, date = date)
+    }
+
+    /**
+     * Deletes all user progress and re-inserts a blank row.
+     * Used when the player taps "Reset Progress" in settings.
+     */
+    suspend fun resetProgress() {
+        progressDao.deleteAll()
+        progressDao.insertProgress(com.quizverse.app.data.database.entities.UserProgress())
     }
 
     // ---- XP / Level helpers ------------------------------------------------

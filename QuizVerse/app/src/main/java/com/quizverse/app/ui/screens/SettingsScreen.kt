@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.quizverse.app.QuizVerseApp
 import com.quizverse.app.ui.theme.GlassBorder
+import kotlinx.coroutines.launch
 import com.quizverse.app.ui.theme.GlassWhite
 import com.quizverse.app.ui.theme.Gold
 import com.quizverse.app.ui.theme.Primary
@@ -99,7 +100,14 @@ fun SettingsScreen(navController: NavHostController) {
             },
             confirmButton = {
                 TextButton(
-                    onClick = { showResetDialog = false },
+                    onClick = {
+                        showResetDialog = false
+                        // Actually reset all user progress
+                        val repository = com.quizverse.app.data.repository.QuizRepository(app.database)
+                        kotlinx.coroutines.MainScope().launch {
+                            repository.resetProgress()
+                        }
+                    },
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     )
