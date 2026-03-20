@@ -713,6 +713,7 @@ object QuestionSeeder {
             logicQuestionsExpert1() +
             logicQuestionsExpert3() +
             logicQuestionsExpert4() +
+            logicQuestionsExpert5() +
             logicQuestionsMaster1() +
             herthaBscQuestions() +
             herthaBscQuestionsEasy2() +
