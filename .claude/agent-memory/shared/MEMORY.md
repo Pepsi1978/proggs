@@ -1,46 +1,101 @@
-# Shared Knowledge Hub
+# Shared Knowledge Hub — Zentrales Whiteboard
 
-This file is the central knowledge exchange between agents and the self-improve skill.
-**Writers**: code-reviewer, tester, architect, debugger, self-improve
-**Readers**: All agents (quality-gate, optimizer, coder, ui-polisher, batch-reviewer read only)
+Das zentrale Nervensystem des Claude Code Systems. JEDE Komponente die hier arbeitet
+(Agents, Skills, Hooks, MCP-Server, Plugins) MUSS hier lesen und schreiben.
 
-## From Code Reviews (updated by code-reviewer)
-<!-- Recurring patterns, code conventions, common issues found during reviews -->
-_No entries yet — will be populated after first code review with memory: project._
+**Zugriff**: Lesen + Schreiben fuer ALLE Komponenten — keine Ausnahmen.
+**Gepflegt von**: /self-improve (raeumte auf, loest offene Fehler, haelt aktuell)
+**Pfad**: `.claude/agent-memory/shared/MEMORY.md`
 
-## From Tests (updated by tester)
-<!-- Recurring test failures, flaky patterns, missing test infrastructure -->
-_No entries yet._
+---
 
-## From Architect (updated by architect)
-<!-- Major architecture decisions, patterns chosen for specific projects -->
-_No entries yet._
+## Offene Fehler & Probleme (PRIORITAET fuer /self-improve)
+<!-- /self-improve liest diese Sektion ZUERST und MUSS jeden OFFEN-Eintrag fixen. -->
+<!-- PFLICHT-FORMAT (damit /self-improve den Fehler versteht und fixen kann): -->
+<!--   ### DATUM — Quelle: [Komponententyp: Name] — Kurzbeschreibung -->
+<!--   **Quelle:** Welche Komponente (Hook/Agent/MCP-Server/Plugin/Skill + Name) -->
+<!--   **Symptom:** Was ist sichtbar schiefgegangen -->
+<!--   **Ursache:** WARUM ist es passiert (Root Cause, nicht nur das Symptom!) -->
+<!--   **Betroffene Dateien:** Welche Dateien muessen geaendert werden -->
+<!--   **Reproduktion:** Wie kann man den Fehler nachstellen -->
+<!--   **Fix-Vorschlag:** Was muesste konkret geaendert werden -->
+<!--   **Status:** OFFEN | GEFIXT (Datum) -->
+<!-- WICHTIG: Fehler MUESSEN ausfuehrlich genug beschrieben werden, dass ein -->
+<!-- frischer /self-improve Lauf sie ohne zusaetzlichen Kontext fixen kann! -->
 
-## From Debugger (updated by debugger)
-<!-- Root causes that could recur, common bug patterns -->
-_No entries yet._
+_Aktuell keine offenen Fehler._
 
-## From Self-Improve (updated by self-improve skill)
-- Environment: macOS, Claude Code v2.1.76, Opus 4.6 with 1M context (2026-03-14)
-- Languages: Swift, C#, TypeScript, Rust, Go, Kotlin
-- Quality gate: Use `quality-gate` agent for combined test+review+optimize
-- Agents: code-reviewer has `memory: project`, coder has `isolation: worktree`
-- New plugins: xclaude-plugin (iOS/Xcode MCP), apple-platform-build-tools (Xcode builds)
-- Hooks: PostCompact (context summary), SubagentStop (agent result summary)
-- Preferred patterns: MVVM (Swift), Fluent Design (C#), strict mode (TypeScript)
+### 2026-03-20 — Hook: reindex-codebase.ps1 — Stille Indexierungsfehler
+**Problem:** Bun loeste Imports relativ zur Temp-Datei in %TEMP% statt zum mcp-code-search/ Verzeichnis auf. `catch {}` verschluckte den Fehler — Index war 16+ Stunden veraltet.
+**Fix:** Temp-Datei ins mcp-code-search/ Verzeichnis verschoben. Catch-Bloecke loggen jetzt hierher.
+**Status:** GEFIXT (2026-03-20)
+**Regel abgeleitet:** Hooks duerfen NIEMALS Fehler still verschlucken. Jeder catch-Block MUSS ins Whiteboard loggen.
 
-## Recurring Issues (shared — any writer can add)
-<!-- Patterns that keep showing up across reviews, tests, and debugging -->
+---
 
-### 2026-03-20 — Silent hook failures masked broken semantic search for days
-**Source:** reindex-codebase.ps1 (SessionStart hook)
-**Problem:** Bun resolves `import './src/...'` relative to source file, not working directory. Temp file in `%TEMP%` could not find `./src/` — indexing failed silently for 16+ hours. Root cause: `catch {}` swallowed the error.
-**Fix applied:** Temp file now written to `mcp-code-search/` dir. All catch blocks now log errors to this whiteboard section instead of swallowing them.
-**Rule derived:** Hooks MUST NEVER silently swallow errors. Every catch block in a hook must append to this "Recurring Issues" section so `/self-improve` can detect and fix them.
+## Systemzustand (aktuell)
+<!-- Wird von /self-improve und env-checker aktualisiert -->
+<!-- Zeigt den aktuellen Stand des Programmiersystems -->
 
-## Rules & Conventions (shared)
-- No Python for user-facing code
-- Commit format: #NNN - Description (English)
-- Communication: German, code comments: English
-- Cross-platform: Always consider macOS + Windows parity
-- quality-gate MUST run after every completed feature or new project
+- **Plattform:** Windows 11 Home, Claude Code v2.1.79, Opus 4.6 (1M context)
+- **Sprachen:** Swift, C#, TypeScript, Rust, Go, Kotlin
+- **Semantic Search:** index-2.db, 599 Dateien, 10.206 Chunks (Stand: 2026-03-20 12:53)
+- **Ollama:** v0.18.2, nomic-embed-text Modell, Fenster versteckt (nur Tray)
+- **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
+- **Agents:** 15 aktiv (code-reviewer hat memory:project, coder hat isolation:worktree)
+- **Hooks:** 17 Events registriert (auto-sync, disk-guard, safety-gate, reindex, etc.)
+- **Plugins:** 92 Eintraege, 89 aktiv
+- **Preferred Patterns:** MVVM (Swift), Fluent Design (C#), strict mode (TypeScript)
+
+---
+
+## Erkenntnisse aus Code Reviews
+<!-- code-reviewer, mar-reviewer, batch-reviewer schreiben hierher -->
+_Noch keine Eintraege._
+
+## Erkenntnisse aus Tests
+<!-- tester schreibt hierher -->
+_Noch keine Eintraege._
+
+## Architektur-Entscheidungen
+<!-- architect, challenger schreiben hierher -->
+_Noch keine Eintraege._
+
+## Debugging-Muster
+<!-- debugger schreibt hierher -->
+_Noch keine Eintraege._
+
+## Performance & Optimierung
+<!-- optimizer schreibt hierher -->
+_Noch keine Eintraege._
+
+## UI/UX-Patterns
+<!-- ui-polisher schreibt hierher -->
+_Noch keine Eintraege._
+
+## Forschung & Intelligence
+<!-- researcher, intelligence-researcher schreiben hierher -->
+_Noch keine Eintraege._
+
+---
+
+## Regeln & Konventionen
+<!-- Gilt fuer alle Komponenten — von allen lesbar, von /self-improve gepflegt -->
+
+- Kein Python fuer User-Interfaces
+- Commit-Format: #NNN - Beschreibung (Englisch)
+- Kommunikation: Deutsch, Code-Kommentare: Englisch
+- Cross-Platform: Immer macOS + Windows beruecksichtigen
+- quality-gate MUSS nach jedem Feature/Projekt laufen
+- Fehler NIEMALS still verschlucken — immer ins Whiteboard loggen
+- Neue Dateien/Strukturen: Pruefen ob Whiteboard-Eintrag noetig
+- Einziges Repository: Pepsi1978/proggs
+
+### 2026-03-20 13:04 — Hook: reindex-codebase.ps1 — Timeout bei Indexierung
+**Quelle:** Hook: reindex-codebase.ps1 (SessionStart, async)
+**Symptom:** Indexierung fehlgeschlagen mit ExitCode 143 (SIGTERM = Prozess vom System gekillt)
+**Ursache:** Der SessionStart-Hook hat ein 180s Timeout. Wenn die Indexierung laenger dauert (z.B. bei 599+ Dateien und kaltem Ollama-Start), wird der Bun-Prozess nach 180s gekillt. ExitCode 128+15=143 bedeutet SIGTERM. Der Hook lief vermutlich parallel zum manuell gestarteten Reindex, der bereits erfolgreich war.
+**Betroffene Dateien:** `~/.claude/settings.json` (Hook-Timeout), `~/.claude/hooks/reindex-codebase.ps1`
+**Reproduktion:** SessionStart mit veraltetem Index + langsame Ollama-Antwort → Timeout nach 180s
+**Fix-Vorschlag:** Hook-Timeout von 180s auf 300s erhoehen in settings.json. Alternativ: Hook prueft ob bereits eine Indexierung laeuft (Lock-File).
+**Status:** OFFEN

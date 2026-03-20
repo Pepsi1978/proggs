@@ -42,14 +42,7 @@
   2. Code Review → Custom Agent: `code-reviewer` (hat `memory: project` — lernt ueber Sessions)
   3. Verbesserung → Custom Agents: `optimizer` + `ui-polisher`
 - Erst wenn alle Pruefungen bestanden sind, wird committed und gepusht.
-- **Shared Knowledge Hub (ZENTRALES WHITEBOARD — PFLICHT)**:
-  - Datei: `.claude/agent-memory/shared/MEMORY.md` — das ist die EINZIGE zentrale Wissensdatei fuer alle Agenten.
-  - **Lesen**: JEDER Agent und Skill MUSS dieses Whiteboard lesen, wenn er davon profitieren kann. Es ist die erste Anlaufstelle fuer Kontext.
-  - **Schreiben**: JEDER Agent, Skill und Hook MUSS relevante Erkenntnisse ins Whiteboard schreiben — nicht nur Senior-Agenten.
-  - **Fehler-Logging**: Hooks und automatische Prozesse MUESSEN Fehler ins Whiteboard loggen (Sektion "Recurring Issues"). NIEMALS Fehler still verschlucken (`catch {}` ohne Logging ist verboten).
-  - **Neue Dateien/Strukturen**: Bei jeder neuen Datei, neuem Projekt, neuer Architektur-Entscheidung oder neuer Konfiguration MUSS geprueft werden, ob sie ins Whiteboard gehoert. Wenn andere Agenten oder `/self-improve` davon profitieren wuerden → eintragen.
-  - **Keine Fragmentierung**: Es gibt NUR dieses eine Whiteboard. Keine separaten FAILURES.md, PROCEDURES.md oder aehnliche Dateien. Alles gehoert hierhin, organisiert in die bestehenden Sektionen.
-  - Der `/self-improve` Skill nutzt dieses Whiteboard fuer gezielte Verbesserungen und erkennt offene Fehler automatisch.
+- **Shared Knowledge Hub**: Alle Senior-Agenten (code-reviewer, tester, architect, debugger) schreiben Erkenntnisse in `.claude/agent-memory/shared/MEMORY.md`. Alle Agenten lesen dieses Whiteboard. Der `/self-improve` Skill nutzt es fuer gezielte Verbesserungen.
 - Bei neuen Projekten: `architect` Agent + Recherche-Agent **parallel** starten.
 - Bei Bugs: `debugger` Agent nutzen (kann selbst Sub-Agenten fuer konkurrierende Hypothesen spawnen).
 - `coder` Agent hat `isolation: worktree` — mehrere Coder koennen sicher parallel an verschiedenen Dateien arbeiten.
