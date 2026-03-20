@@ -130,8 +130,21 @@ import com.quizverse.app.data.prepopulate.questions.literatureQuestionsMaster4
 import com.quizverse.app.data.prepopulate.questions.literatureQuestionsMaster5
 import com.quizverse.app.data.prepopulate.questions.literatureQuestionsMaster6
 import com.quizverse.app.data.prepopulate.questions.logicQuestions
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsEasy5
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsMedium5
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsHard4
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsHard5
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsExpert2
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsExpert6
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsMaster2
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsMaster3
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsMaster4
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsMaster5
+import com.quizverse.app.data.prepopulate.questions.logicQuestionsMaster6
 import com.quizverse.app.data.prepopulate.questions.mixedQuestions
+import com.quizverse.app.data.prepopulate.questions.mixedQuestionsEasy1
 import com.quizverse.app.data.prepopulate.questions.mixedQuestionsExpert1
+import com.quizverse.app.data.prepopulate.questions.mixedQuestionsMaster1
 import com.quizverse.app.data.prepopulate.questions.musicQuestions
 import com.quizverse.app.data.prepopulate.questions.musicQuestionsEasy
 import com.quizverse.app.data.prepopulate.questions.musicQuestionsEasy2
@@ -345,6 +358,10 @@ import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsExpert5
 import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsExpert6
 import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsMaster1
 import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsMaster2
+import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsMaster3
+import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsMaster4
+import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsMaster5
+import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsMaster6
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestions
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsEasy2
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsEasy3
@@ -699,24 +716,37 @@ object QuestionSeeder {
             literatureQuestionsMaster5() +
             literatureQuestionsMaster6() +
             mixedQuestions() +
+            mixedQuestionsEasy1() +
             mixedQuestionsExpert1() +
+            mixedQuestionsMaster1() +
             logicQuestions() +
             logicQuestionsEasy1() +
             logicQuestionsEasy2() +
             logicQuestionsEasy3() +
             logicQuestionsEasy4() +
+            logicQuestionsEasy5() +
             logicQuestionsMedium1() +
             logicQuestionsMedium2() +
             logicQuestionsMedium3() +
             logicQuestionsMedium4() +
+            logicQuestionsMedium5() +
             logicQuestionsHard1() +
             logicQuestionsHard2() +
             logicQuestionsHard3() +
+            logicQuestionsHard4() +
+            logicQuestionsHard5() +
             logicQuestionsExpert1() +
+            logicQuestionsExpert2() +
             logicQuestionsExpert3() +
             logicQuestionsExpert4() +
             logicQuestionsExpert5() +
+            logicQuestionsExpert6() +
             logicQuestionsMaster1() +
+            logicQuestionsMaster2() +
+            logicQuestionsMaster3() +
+            logicQuestionsMaster4() +
+            logicQuestionsMaster5() +
+            logicQuestionsMaster6() +
             herthaBscQuestions() +
             herthaBscQuestionsEasy2() +
             herthaBscQuestionsEasy3() +
@@ -741,6 +771,10 @@ object QuestionSeeder {
             herthaBscQuestionsExpert6() +
             herthaBscQuestionsMaster1() +
             herthaBscQuestionsMaster2() +
+            herthaBscQuestionsMaster3() +
+            herthaBscQuestionsMaster4() +
+            herthaBscQuestionsMaster5() +
+            herthaBscQuestionsMaster6() +
             dortmundQuestions() +
             dortmundQuestionsEasy2() +
             dortmundQuestionsEasy3() +
