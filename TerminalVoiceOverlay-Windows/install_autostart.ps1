@@ -26,9 +26,13 @@ if ((Test-Path $envSource) -and -not (Test-Path $envTarget)) {
 }
 
 # Verknuepfung im Autostart-Ordner erstellen — startet den Watcher
+# Alte Verknuepfung entfernen falls vorhanden
+$oldLink = [System.IO.Path]::Combine([Environment]::GetFolderPath("Startup"), "TerminalVoiceOverlay.lnk")
+if (Test-Path $oldLink) { Remove-Item $oldLink; Write-Host "Alte Verknuepfung entfernt." -ForegroundColor Yellow }
+
 $startupLink = [System.IO.Path]::Combine(
     [Environment]::GetFolderPath("Startup"),
-    "TerminalVoiceOverlay.lnk"
+    "Spracheingabe - Terminal.lnk"
 )
 
 $shell = New-Object -ComObject WScript.Shell
@@ -36,7 +40,7 @@ $shortcut = $shell.CreateShortcut($startupLink)
 $shortcut.TargetPath = "wscript.exe"
 $shortcut.Arguments = """$watcherPath"""
 $shortcut.WorkingDirectory = $PSScriptRoot
-$shortcut.Description = "TerminalVoiceOverlay Watcher - startet Overlay automatisch neu"
+$shortcut.Description = "Voice Overlay fuer Terminal — Sprache zu Text in PowerShell, CMD, Windows Terminal"
 $shortcut.WindowStyle = 7  # Minimiert
 $shortcut.Save()
 

@@ -26,9 +26,13 @@ if ((Test-Path $envSource) -and -not (Test-Path $envTarget)) {
 }
 
 # Verknuepfung im Autostart-Ordner erstellen — startet den Watcher
+# Alte Verknuepfung entfernen falls vorhanden
+$oldLink = [System.IO.Path]::Combine([Environment]::GetFolderPath("Startup"), "ClaudeVoiceOverlay.lnk")
+if (Test-Path $oldLink) { Remove-Item $oldLink; Write-Host "Alte Verknuepfung entfernt." -ForegroundColor Yellow }
+
 $startupLink = [System.IO.Path]::Combine(
     [Environment]::GetFolderPath("Startup"),
-    "ClaudeVoiceOverlay.lnk"
+    "Spracheingabe - Claude Desktop.lnk"
 )
 
 $shell = New-Object -ComObject WScript.Shell
@@ -36,7 +40,7 @@ $shortcut = $shell.CreateShortcut($startupLink)
 $shortcut.TargetPath = "wscript.exe"
 $shortcut.Arguments = """$watcherPath"""
 $shortcut.WorkingDirectory = $PSScriptRoot
-$shortcut.Description = "ClaudeVoiceOverlay Watcher - startet Overlay automatisch neu"
+$shortcut.Description = "Voice Overlay fuer Claude Desktop und Codex — Sprache zu Text in Electron-Apps"
 $shortcut.WindowStyle = 7  # Minimiert
 $shortcut.Save()
 
