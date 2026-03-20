@@ -242,7 +242,9 @@
 		"auto-verify-iterate",
 		"cross-platform",
 		"tampermonkey-version",
-		"undo-changes"
+		"undo-changes",
+		"android-clean-architecture",
+		"android-ninja"
 	],
 
 	"custom_agents": [
@@ -254,6 +256,7 @@
 		"debugger",
 		"env-checker",
 		"evolution-analyst",
+		"intelligence-researcher",
 		"mar-reviewer",
 		"optimizer",
 		"quality-gate",

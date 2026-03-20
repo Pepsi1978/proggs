@@ -89,6 +89,8 @@ Nach dem Revert dem Benutzer mitteilen:
 
 **Whiteboard**: `.claude/agent-memory/shared/MEMORY.md` (EINZIGE zentrale Wissensdatei)
 
+**Lesen**: Vor dem Revert das Whiteboard lesen fuer bekannte Git/Push-Probleme, laufende Migrationen oder Merge-Freezes.
+
 **Schreiben bei Fehlern**: Wenn Revert oder Push fehlschlaegt, in "Offene Fehler & Probleme" eintragen:
 - Quelle: `undo-changes`
 - Symptom: [Fehlermeldung des git-Befehls]

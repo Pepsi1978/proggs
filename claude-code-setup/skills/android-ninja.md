@@ -270,7 +270,7 @@ Triggers on requests to create Android projects, screens, ViewModels, repositori
 **Lesen**: Vor der Ausfuehrung das Whiteboard lesen fuer bekannte Muster, Arch-Entscheidungen und offene Probleme.
 
 **Schreiben bei Fehlern**: Jeden Build- oder Setup-Fehler in den Abschnitt "Offene Fehler & Probleme" eintragen:
-- Quelle: `android-ninja`
+- Quelle: `android-kotlin-compose`
 - Symptom: [Fehlermeldung]
 - Ursache: [Root Cause]
 - Betroffene Dateien: [Pfade]

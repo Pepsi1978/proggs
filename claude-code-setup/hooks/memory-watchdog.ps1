@@ -47,15 +47,6 @@ Set-Content -Path $counterFile -Value "$missCount" -Force
 # Only alert after 5+ consecutive misses (avoids false positives from coder/researcher agents)
 if ($missCount -ge 5) {
     $date = Get-Date -Format "yyyy-MM-dd HH:mm"
-    $warning = @"
-
-### [$date] Agent: Write-Back nicht erfolgt ($missCount aufeinanderfolgende Agents)
-- **Symptom**: $missCount Agents nacheinander haben MEMORY.md nicht aktualisiert
-- **Root Cause**: Mandatory Write-Back wird von Agents ignoriert
-- **Prevention**: memory-watchdog.ps1 (5-Strike-Regel, SubagentStop)
-- **Status**: AUTO-LOGGED
-"@
-
     # Use section-based insertion (Add-Content to file-end is FORBIDDEN)
     $entry = "### [$date] Agent: Write-Back nicht erfolgt ($missCount aufeinanderfolgende Agents) — Status: AUTO-LOGGED"
     Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry

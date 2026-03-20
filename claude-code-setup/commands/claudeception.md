@@ -17,8 +17,6 @@ allowed-tools:
   - WebSearch
   - WebFetch
   - Skill
-  - AskUserQuestion
-  - TodoWrite
 ---
 
 # Claudeception

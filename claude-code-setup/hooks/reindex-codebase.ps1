@@ -6,6 +6,7 @@
 # v2: Uses whiteboard-insert.ps1 for section-based error logging (Add-Content is FORBIDDEN).
 
 . "$PSScriptRoot/whiteboard-insert.ps1"
+. "$PSScriptRoot/hook-log.ps1"
 
 $rootDir = "$env:USERPROFILE\proggs"
 $dbDir = Join-Path $rootDir ".code-search"

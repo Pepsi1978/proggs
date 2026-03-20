@@ -42,7 +42,18 @@
   2. Code Review → Custom Agent: `code-reviewer` (hat `memory: project` — lernt ueber Sessions)
   3. Verbesserung → Custom Agents: `optimizer` + `ui-polisher`
 - Erst wenn alle Pruefungen bestanden sind, wird committed und gepusht.
-- **Shared Knowledge Hub**: Alle Senior-Agenten (code-reviewer, tester, architect, debugger) schreiben Erkenntnisse in `.claude/agent-memory/shared/MEMORY.md`. Alle Agenten lesen dieses Whiteboard. Der `/self-improve` Skill nutzt es fuer gezielte Verbesserungen.
+- **Shared Knowledge Hub (ZENTRALES WHITEBOARD — PFLICHT)**:
+  - Datei: `.claude/agent-memory/shared/MEMORY.md` — die EINZIGE zentrale Wissensdatei.
+  - **Lesen**: JEDER Agent, Skill, Hook, MCP-Server und Plugin MUSS dieses Whiteboard lesen.
+  - **Schreiben**: JEDER Agent, Skill und Hook MUSS relevante Erkenntnisse reinschreiben.
+  - **Fehler-Logging**: Hooks und automatische Prozesse MUESSEN Fehler ins Whiteboard loggen
+    (Sektion "Offene Fehler & Probleme"). NIEMALS Fehler still verschlucken.
+  - **Fehlerformat**: Quelle, Symptom, Ursache, Betroffene Dateien, Fix-Vorschlag, Status.
+    Detailliert genug dass /self-improve den Fehler ohne Zusatzkontext fixen kann.
+  - **Angeschlossene Systeme**: CLAUDE.md, Feedback-Memories, Session-Scores, Self-Improve-Cache,
+    Claude-Mem Observations — alle im Whiteboard-Header dokumentiert.
+  - **Keine Fragmentierung**: NUR dieses eine Whiteboard. Keine separaten Dateien.
+  - Der `/self-improve` Skill ist der wichtigste Konsument — liest ALLES, fixt ALLE offenen Fehler.
 - Bei neuen Projekten: `architect` Agent + Recherche-Agent **parallel** starten.
 - Bei Bugs: `debugger` Agent nutzen (kann selbst Sub-Agenten fuer konkurrierende Hypothesen spawnen).
 - `coder` Agent hat `isolation: worktree` — mehrere Coder koennen sicher parallel an verschiedenen Dateien arbeiten.
@@ -54,8 +65,8 @@
 
 ## Cross-Platform-Entwicklung & Config-Sync
 - Alle Projekte muessen reibungslos auf macOS und Windows funktionieren.
-- macOS: Swift/AppKit, Windows: C#/WPF, Termux/Android: CLI-Tools (TypeScript, Rust, Go).
-- Bei Cross-Platform-Features immer beide Desktop-Plattformen beruecksichtigen. Termux ist nur fuer CLI/Backend-Tools relevant.
+- macOS: Swift/AppKit, Windows: C#/WPF.
+- Bei Cross-Platform-Features immer beide Desktop-Plattformen beruecksichtigen.
 - Claude Code Konfiguration lebt in `~/proggs/claude-code-setup/`.
 - Bei Aenderungen an Regeln, Agents, Commands oder Hooks: Immer auch nach `~/proggs/claude-code-setup/` kopieren und pushen.
 - UI-Design: Modern, poliert, professionell — muss aussehen wie gekaufte Software aus dem Laden.
@@ -188,12 +199,39 @@ Richtiges Modell fuer die richtige Aufgabe — Opus denkt, Sonnet macht:
 - Im Zweifel: Dem Benutzer den Inhalt zeigen und vor Installation fragen.
 - Wenn Parry (Prompt-Injection-Scanner) laeuft: externen Code damit scannen.
 
-## Status-Meldung nach jeder Aufgabe (KRITISCH)
-- Nach JEDER abgeschlossenen Aufgabe als letzten Satz den Commit/Push-Status melden:
-  - Wenn committed und gepusht: **"Committed und gepusht."**
-  - Wenn nur committed: **"Committed."**
-  - Wenn nichts committed wurde: **"Ich habe weder committed noch gepusht."**
-- Diese Meldung ist IMMER der letzte Satz der Antwort — keine Ausnahmen.
+## Cross-Platform-Pflicht und Status-Meldung (KRITISCH)
+
+### Pflicht-Ablauf nach jeder Aufgabe (alle 3 Schritte MUESSEN passieren)
+1. **Cross-Platform ZUERST umsetzen** — nicht nur pruefen, sondern MACHEN:
+   - **Hooks**: Wurde ein `.ps1` geaendert? → Sofort das `.sh`-Gegenstueck anpassen (und umgekehrt).
+     Nicht "spaeter" oder "naechste Session" — JETZT, vor dem Commit.
+   - **Settings**: Wurde settings.json geaendert? → Aenderung in `settings-reference.json` dokumentieren.
+   - **Agents, Skills, Commands, Rules**: Plattformunabhaengig (Markdown) — automatisch OK.
+   - **Whiteboard**: Plattformuebergreifend ueber Git — automatisch OK.
+2. **Commit** — erst nachdem Cross-Platform erledigt ist.
+3. **Push** — sofort nach dem Commit.
+
+### Status-Meldung (IMMER der letzte Satz — keine Ausnahmen)
+- **"Committed, gepusht und plattformuebergreifend."** — NUR wenn Cross-Platform wirklich umgesetzt
+  wurde (beide Hook-Varianten aktualisiert, settings-reference aktuell, etc.)
+- **"Committed und gepusht."** — nur wenn die Aenderung rein plattformunabhaengig war
+  (z.B. nur Markdown-Dateien, nur Whiteboard, nur CLAUDE.md)
+- **"Committed und gepusht. Cross-Platform: [was fehlt]."** — wenn Cross-Platform noetig war
+  aber nicht vollstaendig umgesetzt werden konnte (z.B. macOS-Hook zu komplex fuer diese Session)
+- **"Ich habe weder committed noch gepusht."** — wenn nichts geaendert wurde.
+
+### WICHTIG: Ehrlichkeit bei "plattformuebergreifend"
+- Das Wort "plattformuebergreifend" am Ende DARF NUR stehen, wenn die Arbeit WIRKLICH gemacht wurde.
+- NIEMALS "plattformuebergreifend" schreiben, wenn das Gegenstueck nicht erstellt/aktualisiert wurde.
+- Im Zweifel: Ehrlich sagen was fehlt. Ein ehrliches "Cross-Platform: .sh fehlt noch" ist besser
+  als ein falsches "plattformuebergreifend".
+
+### Checkliste (vor dem Commit mental durchgehen)
+- [ ] Wurden `.ps1`-Hooks geaendert? → `.sh`-Gegenstueck ebenfalls geaendert?
+- [ ] Wurden `.sh`-Hooks geaendert? → `.ps1`-Gegenstueck ebenfalls geaendert?
+- [ ] Wurde settings.json geaendert? → settings-reference.json aktualisiert?
+- [ ] Neues Projekt erstellt? → Funktioniert es auf beiden Plattformen?
+- [ ] Pfade verwendet? → Sind sie plattformunabhaengig (~/proggs/ statt C:\Users\...)?
 
 ## Commit-Nachrichten
 - Jede Commit-Nachricht beginnt mit einer **fortlaufenden Nummer**: `#NNN - Beschreibung`

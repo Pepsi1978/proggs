@@ -46,7 +46,6 @@ function findProjectsDir(): string {
 }
 
 const PROJECTS_DIR = findProjectsDir();
-const MEMORY_DIR = join(HOME, ".claude", "agent-memory", "shared");
 // v2: Write to MEMORY.md under "Debugging-Muster" instead of separate AUTOPSY.md
 // (complies with "nur ein Whiteboard" rule from Deep-Scan Runde 6)
 const MEMORY_FILE = join(
@@ -84,6 +83,7 @@ interface CorrectionEntry {
 // ---------------------------------------------------------------------------
 
 function findLatestTranscript(): string | null {
+	if (!PROJECTS_DIR) return null;
 	try {
 		const entries = readdirSync(PROJECTS_DIR);
 		let latest = "";

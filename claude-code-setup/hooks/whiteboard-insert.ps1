@@ -11,7 +11,7 @@ function Insert-WhiteboardEntry {
         [string]$Entry
     )
 
-    $memoryFile = Join-Path $env:USERPROFILE "proggs\.claude\agent-memory\shared\MEMORY.md"
+    $memoryFile = Join-Path $env:USERPROFILE "proggs" ".claude" "agent-memory" "shared" "MEMORY.md"
     if (-not (Test-Path $memoryFile)) { return }
 
     $lines = Get-Content $memoryFile -Encoding UTF8 -ErrorAction Stop

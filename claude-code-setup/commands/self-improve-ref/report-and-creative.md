@@ -1,4 +1,4 @@
-# Self-Improve: Report Template + Creative Research (v5.0)
+# Self-Improve: Report Template + Creative Research (v5.15)
 
 ## Report Template (Stufe 3B)
 
@@ -28,6 +28,7 @@
 | R5 Security | Frisch | — |
 | R6 Creative | Frisch | — |
 | R7 Focus | [Frisch/Nicht gestartet] | — |
+| R8 Intelligence | [Status] | [TTL] |
 
 ### Recherche-Ergebnis (Stufe 2)
 | Researcher | Wichtigste Erkenntnis | Aktion |
@@ -68,7 +69,7 @@
 ## Meta-Improve (Stufe 3C) — MANDATORY
 
 1. Self-Analysis: What worked, what was slow/redundant/missing?
-2. Line Count: `wc -l ~/.claude/commands/self-improve.md` — warn if > 300 (main file) or total > 800
+2. Line Count: `wc -l ~/.claude/commands/self-improve.md` — warn if > 600 (main file) or total > 2000
 3. Present EXACTLY 3 suggestions using this format (NEVER auto-apply):
 
 ```

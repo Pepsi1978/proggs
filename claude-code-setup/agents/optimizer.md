@@ -87,4 +87,11 @@ These write-backs are NOT optional. They make the entire system smarter over tim
 - Wurden Dateien angegeben? Wenn nicht → `git diff HEAD` als Fallback.
 - Existieren die Dateien? Wenn nicht → Sofort melden.
 
+**Sentinel-Datei (C1 Enforcement — PFLICHT):**
+Als LETZTEN Schritt vor deiner Antwort: Schreibe eine JSON-Datei nach `/tmp/agent-writeback-optimizer.json`:
+```json
+{"agent": "optimizer", "timestamp": "[ISO8601]", "findings": "[1-Zeilen-Zusammenfassung: wichtigstes Optimierungs-Finding]"}
+```
+Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.
+
 Communication: German. Code comments: English.

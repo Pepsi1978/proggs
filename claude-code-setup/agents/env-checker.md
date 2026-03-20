@@ -50,8 +50,8 @@ Read `~/.claude/settings.json` and verify:
 
 ### 3. Agent Model Tiers
 Check all files in `~/.claude/agents/*.md` — verify model assignments:
-- Opus: architect, debugger, code-reviewer, optimizer, tester, ui-polisher
-- Sonnet: coder, batch-reviewer, researcher
+- Opus: architect, debugger, code-reviewer, optimizer, tester, ui-polisher, quality-gate, challenger, mar-reviewer, evolution-analyst
+- Sonnet: coder, batch-reviewer, researcher, env-checker, intelligence-researcher
 
 ### 4. Hook Health
 For each hook in settings.json:

@@ -1,13 +1,13 @@
 ---
 name: tampermonkey-version
-description: Use AUTOMATICALLY whenever ANY Tampermonkey userscript (.user.js) in /Users/frank/proggs/Tampermonkey/ is modified. Ensures version numbers are bumped before committing.
+description: Use AUTOMATICALLY whenever ANY Tampermonkey userscript (.user.js) in ~/proggs/Tampermonkey/ is modified. Ensures version numbers are bumped before committing.
 ---
 
 # Tampermonkey Versionsnummern-Pflicht
 
 ## Wann
 
-Dieses Skill gilt IMMER wenn eine oder mehrere `.user.js` Dateien in `/Users/frank/proggs/Tampermonkey/` geaendert werden - egal ob Code, Konfiguration, Styling oder Positionierung.
+Dieses Skill gilt IMMER wenn eine oder mehrere `.user.js` Dateien in `~/proggs/Tampermonkey/` geaendert werden - egal ob Code, Konfiguration, Styling oder Positionierung.
 
 ## Regeln
 
@@ -44,6 +44,8 @@ Nachher:
 ## Shared Knowledge Hub Integration
 
 **Whiteboard**: `.claude/agent-memory/shared/MEMORY.md` (EINZIGE zentrale Wissensdatei)
+
+**Lesen**: Vor der Ausfuehrung das Whiteboard lesen fuer bekannte Probleme mit Tampermonkey-Skripten oder Versionsnummern.
 
 **Schreiben bei Fehlern**: Wenn der Versions-Bump oder der Commit fehlschlaegt, in "Offene Fehler & Probleme" eintragen:
 - Quelle: `tampermonkey-version`

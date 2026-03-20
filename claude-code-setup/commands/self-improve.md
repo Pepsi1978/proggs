@@ -3,13 +3,13 @@ name: self-improve
 description: Systematic self-improvement of the Claude Code development environment (~10-30 min, token-intensive). ONLY use when the user explicitly says "/self-improve", "verbessere dich", "optimiere deine Umgebung", "check dein Setup", "update alles", "mach mich besser", "aktualisiere alles", "pruef mein System", "System-Check", or "Umgebung pruefen". NEVER run this proactively or automatically — only on manual user request.
 ---
 
-# Self-Improve v5.15 — Systematic + Creative + Intelligence Environment Optimization
+# Self-Improve v5.16 — Systematic + Creative + Intelligence Environment Optimization
 
 **Before doing ANYTHING, show this overview in German:**
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║  Self-Improve Skill v5.15 — Deine Entwicklungsumgebung      ║
+║  Self-Improve Skill v5.16 — Deine Entwicklungsumgebung      ║
 ║  pruefen, aktualisieren, KREATIV ERFORSCHEN                  ║
 ║  Cross-Platform: macOS + Windows                             ║
 ╠══════════════════════════════════════════════════════════════╣

@@ -4,6 +4,7 @@
 # Platform: Windows (PowerShell)
 
 . "$PSScriptRoot/hook-log.ps1"
+. "$PSScriptRoot/whiteboard-insert.ps1"
 
 $OutputScript = Join-Path $env:USERPROFILE "Desktop" "install-updates.ps1"
 

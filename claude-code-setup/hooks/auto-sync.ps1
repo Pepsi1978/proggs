@@ -4,6 +4,7 @@
 # Platform: Windows (PowerShell 7+)
 
 . "$PSScriptRoot/hook-log.ps1"
+. "$PSScriptRoot/whiteboard-insert.ps1"
 
 # Write to both stdout (AI context) and stderr (user-visible terminal)
 function Write-Status {
@@ -63,6 +64,8 @@ if ($LASTEXITCODE -ne 0) {
     # Restore stash if pull failed
     if ($stashed) { $null = git stash pop 2>&1 }
     Hook-LogError "git pull --rebase failed — merge conflict?"
+    $entry = "### $(Get-Date -Format 'yyyy-MM-dd HH:mm') — Hook: auto-sync.ps1 — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: OFFEN"
+    Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
     Write-Status "Auto-Sync: FEHLER beim Pull (Merge-Konflikt?). Bitte manuell pruefen: cd ~/proggs; git status"
     exit 1
 }
