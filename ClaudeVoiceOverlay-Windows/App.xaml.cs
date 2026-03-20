@@ -1,7 +1,9 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using ClaudeVoiceOverlay.Services;
 using ClaudeVoiceOverlay.Views;
 using Application = System.Windows.Application;
@@ -12,10 +14,15 @@ namespace ClaudeVoiceOverlay
     {
         private NotifyIcon? _trayIcon;
         private OverlayWindow? _overlayWindow;
+        private bool _isShuttingDown;
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // Self-restart on unhandled exceptions (replaces external watcher.vbs)
+            DispatcherUnhandledException += OnUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
 
             Config config;
             try
@@ -39,7 +46,39 @@ namespace ClaudeVoiceOverlay
             // Setup tray icon
             SetupTrayIcon();
 
-            System.Diagnostics.Debug.WriteLine("ClaudeVoiceOverlay gestartet");
+            Console.WriteLine("ClaudeVoiceOverlay gestartet");
+        }
+
+        private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+        {
+            Console.WriteLine($"Unhandled UI exception: {e.Exception.Message}");
+            e.Handled = true;
+            RestartSelf();
+        }
+
+        private void OnDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            Console.WriteLine($"Unhandled domain exception: {(e.ExceptionObject as Exception)?.Message}");
+            RestartSelf();
+        }
+
+        private void RestartSelf()
+        {
+            if (_isShuttingDown) return;
+            _isShuttingDown = true;
+
+            try
+            {
+                var exePath = Environment.ProcessPath;
+                if (exePath != null)
+                {
+                    Console.WriteLine("Restarting after crash...");
+                    Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
+                }
+            }
+            catch { /* best effort */ }
+
+            Environment.Exit(1);
         }
 
         private void SetupTrayIcon()
