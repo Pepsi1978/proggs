@@ -75,6 +75,13 @@ except Exception as e:
 
 blocks = []
 
+# defaultMode: MUST be "bypassPermissions" — BLOCK anything else (user requirement)
+perms = data.get('permissions', {})
+if perms:
+    def_mode = perms.get('defaultMode')
+    if def_mode and def_mode != 'bypassPermissions':
+        blocks.append(f"defaultMode={def_mode} (MUSS 'bypassPermissions' sein — Benutzer-Regel)")
+
 # effortLevel: MUST be "high" — BLOCK anything else (CLAUDE.md requirement)
 eff = data.get('effortLevel')
 if eff and eff != 'high':

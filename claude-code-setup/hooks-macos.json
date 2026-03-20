@@ -166,17 +166,6 @@
 				]
 			}
 		],
-		"PermissionRequest": [
-			{
-				"hooks": [
-					{
-						"type": "prompt",
-						"prompt": "A permission request was triggered. In one sentence, explain what the requested action does and whether it is a standard safe operation in this project's context.",
-						"timeout": 10
-					}
-				]
-			}
-		],
 		"WorktreeCreate": [
 			{
 				"hooks": [

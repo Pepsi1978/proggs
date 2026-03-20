@@ -50,6 +50,15 @@ try {
 
 $blocks = @()
 
+# defaultMode: MUST be "bypassPermissions" — BLOCK anything else (user requirement)
+$perms = $data.permissions
+if ($perms) {
+    $defMode = $perms.defaultMode
+    if ($defMode -and $defMode -ne 'bypassPermissions') {
+        $blocks += "defaultMode=$defMode (MUSS 'bypassPermissions' sein — Benutzer-Regel)"
+    }
+}
+
 # effortLevel: MUST be "high" — BLOCK anything else (CLAUDE.md requirement)
 $eff = $data.effortLevel
 if ($eff -and $eff -ne 'high') {

@@ -428,6 +428,10 @@
       }
     }
   },
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "_comment_defaultMode": "KRITISCH: Darf NIEMALS geaendert werden. Verhindert dass Hooks/Plugins/Compaction den Permission-Modus mid-Session auf acceptEdits zuruecksetzen."
+  },
   "language": "de",
   "alwaysThinkingEnabled": true,
   "effortLevel": "high",

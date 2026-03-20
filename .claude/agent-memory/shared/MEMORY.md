@@ -71,6 +71,12 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 
 <!-- ARCHIV (2026-03-20): Write-Back nicht erfolgt (5 Agents) — erwartetes Verhalten bei Worktree-Coder-Agents ohne direkten Whiteboard-Zugriff. -->
 
+### 2026-03-20 20:35 — Hook: safety-gate.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
+### 2026-03-20 20:36 — Hook: safety-gate.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
+### 2026-03-20 20:36 — Hook: safety-gate.ps1 — Befehl blockiert: git\s+reset\s+--hard
+### 2026-03-20 20:37 — Hook: safety-gate.ps1 — Befehl blockiert: git\s+reset\s+--hard
+### 2026-03-20 20:38 — Hook: safety-gate.ps1 — Befehl blockiert: git\s+reset\s+--hard
+### 2026-03-20 20:38 — Hook: safety-gate.ps1 — Befehl blockiert: git\s+reset\s+--hard
 ---
 
 ## Systemzustand (aktuell — Stand: 2026-03-20 21:15)
