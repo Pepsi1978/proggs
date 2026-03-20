@@ -8,6 +8,11 @@ Das zentrale Nervensystem des Claude Code Systems. JEDE Komponente die hier arbe
 **Pfad**: `.claude/agent-memory/shared/MEMORY.md`
 
 **Angeschlossene Systeme** (MUESSEN von /self-improve ebenfalls gelesen werden):
+- **CLAUDE.md** (WICHTIGSTE DATEI): `~/proggs/CLAUDE.md` + `~/CLAUDE.md` (Sync-Kopie)
+  Enthaelt ALLE Projektregeln, Konventionen und Workflow-Definitionen. Wenn /self-improve
+  neue Regeln aus Fehlern oder Feedback ableitet → gehoeren sie in die CLAUDE.md.
+  Wenn die CLAUDE.md geaendert wird → BEIDE Kopien synchron halten und pushen.
+  Ist plattformuebergreifend — wird auf Windows UND macOS gelesen.
 - **Benutzer-Feedback**: `~/.claude/projects/*/memory/feedback_*.md`
   (Pfad ist plattformabhaengig: Windows=C--Users-barwa, macOS=Users-frank)
   Enthaelt Korrekturen und Praeferenzen des Benutzers. /self-improve MUSS diese lesen
