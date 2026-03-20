@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Threading;
@@ -14,15 +16,80 @@ namespace ClaudeVoiceOverlay
     {
         private NotifyIcon? _trayIcon;
         private OverlayWindow? _overlayWindow;
-        private bool _isShuttingDown;
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
-            // Self-restart on unhandled exceptions (replaces external watcher.vbs)
-            DispatcherUnhandledException += OnUnhandledException;
-            AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
+            if (e.Args.Length > 0 && e.Args[0] == "--run")
+            {
+                // Overlay mode: run the actual UI
+                StartOverlay();
+            }
+            else
+            {
+                // Watchdog mode: launch overlay and monitor it
+                RunWatchdog();
+            }
+        }
+
+        // ── Watchdog mode: invisible process that monitors the overlay ──
+
+        private void RunWatchdog()
+        {
+            // Single-instance check: only one watchdog allowed
+            var mutex = new Mutex(true, "ClaudeVoiceOverlay-Watchdog", out bool created);
+            if (!created)
+            {
+                Console.WriteLine("Watchdog already running, exiting.");
+                Shutdown();
+                return;
+            }
+
+            // No UI for the watchdog — keep alive via explicit shutdown mode
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+            Task.Run(() =>
+            {
+                while (true)
+                {
+                    Console.WriteLine("Watchdog: starting overlay...");
+                    var proc = Process.Start(new ProcessStartInfo
+                    {
+                        FileName = Environment.ProcessPath!,
+                        Arguments = "--run",
+                        UseShellExecute = false
+                    });
+
+                    proc?.WaitForExit();
+                    var exitCode = proc?.ExitCode ?? -1;
+
+                    if (exitCode == 0)
+                    {
+                        // Normal shutdown (user clicked "Beenden") — stop watchdog too
+                        Console.WriteLine("Watchdog: overlay exited normally, stopping.");
+                        Dispatcher.Invoke(() => Shutdown());
+                        GC.KeepAlive(mutex);
+                        return;
+                    }
+
+                    // Crash or kill — wait and restart
+                    Console.WriteLine($"Watchdog: overlay exited with code {exitCode}, restarting in 2s...");
+                    Thread.Sleep(2000);
+                }
+            });
+        }
+
+        // ── Overlay mode: the actual voice overlay with UI ──
+
+        private void StartOverlay()
+        {
+            // Catch unhandled exceptions for logging
+            DispatcherUnhandledException += (_, e) =>
+            {
+                Console.WriteLine($"Unhandled exception: {e.Exception.Message}");
+                e.Handled = false; // Let it crash — watchdog will restart
+            };
 
             Config config;
             try
@@ -36,7 +103,7 @@ namespace ClaudeVoiceOverlay
                     "ClaudeVoiceOverlay — Konfigurationsfehler",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
-                Shutdown();
+                Environment.Exit(1); // Error — watchdog will restart
                 return;
             }
 
@@ -46,46 +113,14 @@ namespace ClaudeVoiceOverlay
             // Setup tray icon
             SetupTrayIcon();
 
-            Console.WriteLine("ClaudeVoiceOverlay gestartet");
-        }
-
-        private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
-        {
-            Console.WriteLine($"Unhandled UI exception: {e.Exception.Message}");
-            e.Handled = true;
-            RestartSelf();
-        }
-
-        private void OnDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
-        {
-            Console.WriteLine($"Unhandled domain exception: {(e.ExceptionObject as Exception)?.Message}");
-            RestartSelf();
-        }
-
-        private void RestartSelf()
-        {
-            if (_isShuttingDown) return;
-            _isShuttingDown = true;
-
-            try
-            {
-                var exePath = Environment.ProcessPath;
-                if (exePath != null)
-                {
-                    Console.WriteLine("Restarting after crash...");
-                    Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
-                }
-            }
-            catch { /* best effort */ }
-
-            Environment.Exit(1);
+            Console.WriteLine("ClaudeVoiceOverlay gestartet (overlay mode)");
         }
 
         private void SetupTrayIcon()
         {
             _trayIcon = new NotifyIcon
             {
-                Text = "ClaudeVoiceOverlay",
+                Text = "Spracheingabe - Claude Desktop",
                 Icon = SystemIcons.Application,
                 Visible = true
             };
@@ -97,7 +132,7 @@ namespace ClaudeVoiceOverlay
             {
                 _trayIcon!.Visible = false;
                 _overlayWindow?.Close();
-                Shutdown();
+                Environment.Exit(0); // Exit code 0 = intentional — watchdog stops
             });
 
             _trayIcon.ContextMenuStrip = menu;
