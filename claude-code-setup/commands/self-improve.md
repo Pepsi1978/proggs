@@ -41,8 +41,11 @@ fuer ALLE Komponenten des Claude Code Systems: Agents, Skills, Hooks, MCP-Server
    - Wiederholte Korrekturen → deuten auf fehlendes automatisches Verhalten hin
    - Auf BEIDEN Plattformen relevant: macOS hat eigenes Memory-Verzeichnis, aber der
      Inhalt muss funktional identisch wirken
-4. **Systemzustand aktualisieren**: Nach Aenderungen die Sektion "Systemzustand" updaten
-5. **Erkenntnisse eintragen**: Alles was fuer andere Agents/Skills nuetzlich ist → reinschreiben
+4. **Claude-Mem Observations lesen**: `~/.claude/homunculus/projects/*/observations.jsonl`
+   enthaelt Cross-Session-Wissen. Pruefen ob relevante Beobachtungen fuer aktuelle Verbesserungen
+   nutzbar sind (z.B. wiederkehrende Probleme die ueber mehrere Sessions beobachtet wurden).
+5. **Systemzustand aktualisieren**: Nach Aenderungen die Sektion "Systemzustand" updaten
+6. **Erkenntnisse eintragen**: Alles was fuer andere Agents/Skills nuetzlich ist → reinschreiben
 6. **Keine separaten Wissens-Dateien**: Es gibt NUR dieses eine Whiteboard fuer System-Wissen.
    Die Benutzer-Feedback-Memories sind die EINZIGE Ausnahme — sie sind an das Whiteboard
    angeschlossen (siehe Header) und werden von /self-improve mitgelesen.

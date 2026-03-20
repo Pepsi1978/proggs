@@ -77,23 +77,23 @@ _Aktuell keine offenen Fehler._
 _Noch keine Eintraege._
 
 ## Erkenntnisse aus Tests
-<!-- tester schreibt hierher -->
+<!-- Writer: tester Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
 ## Architektur-Entscheidungen
-<!-- architect, challenger schreiben hierher -->
+<!-- Writer: architect, challenger Agents | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
 ## Debugging-Muster
-<!-- debugger schreibt hierher -->
+<!-- Writer: debugger Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
 ## Performance & Optimierung
-<!-- optimizer schreibt hierher -->
+<!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
 ## UI/UX-Patterns
-<!-- ui-polisher schreibt hierher -->
+<!-- Writer: ui-polisher Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
 ## Forschung & Intelligence
