@@ -150,13 +150,12 @@ if (Test-Path $hooksDir) {
     }
 }
 
-# CLAUDE.md — use the REPO version (~/proggs/CLAUDE.md) as authoritative source,
-# NOT the setup backup (which may be older if another platform pushed changes).
-# The repo copy is always pulled fresh by git pull above.
-$repoClaude = Join-Path $RepoDir "CLAUDE.md"
-if (Test-Path $repoClaude) {
-    Copy-Item $repoClaude (Join-Path $env:USERPROFILE "CLAUDE.md") -Force
-    $synced += "CLAUDE.md(from-repo)"
+# CLAUDE.md
+$claudeMd = Join-Path $SetupDir "CLAUDE.md"
+if (Test-Path $claudeMd) {
+    Copy-Item $claudeMd (Join-Path $env:USERPROFILE "CLAUDE.md") -Force
+    Copy-Item $claudeMd (Join-Path $RepoDir "CLAUDE.md") -Force
+    $synced += "CLAUDE.md"
 }
 
 # Skills

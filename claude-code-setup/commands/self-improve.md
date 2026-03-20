@@ -77,8 +77,8 @@ fuer ALLE Komponenten des Claude Code Systems: Agents, Skills, Hooks, MCP-Server
 
 ## Thoroughness Detection
 
-- **Standard**: "/self-improve" without extras → Stufe 1 quick, R1+R5+R6+R8 only (cached R2-R4)
-- **Thorough**: "sehr ausfuehrlich", "full check" → Stufe 1 full, ALL 8 researchers (R1-R8)
+- **Standard**: "/self-improve" without extras → Stufe 1 quick, R1+R5+R6 only (cached R2-R4)
+- **Thorough**: "sehr ausfuehrlich", "full check" → Stufe 1 full, ALL 6 researchers
 - **Focus**: "Fokus [topic]" → Thorough + deep-dive into topic
 
 ## Platform Detection (FIRST STEP)
@@ -239,7 +239,7 @@ Wenn eine dieser Pruefungen fehlschlaegt → als KRITISCHER DEFEKT in MEMORY.md 
 
 **Load researcher templates from**: [self-improve-ref/researchers.md](self-improve-ref/researchers.md)
 
-Key changes (accumulated through v5.15):
+Key changes in v5.11:
 - **8 researchers** (R1-R8). R6=Creative, R7=Focus Deep-Dive, R8=Intelligence Researcher (NEW v5.11).
 - **Smart-Cache with per-category TTLs (NEW v5.7)**:
   Cache location: `~/.claude/self-improve-cache/` (NOT in shared memory — prevents contamination).
@@ -251,7 +251,6 @@ Key changes (accumulated through v5.15):
   | R4 Versionen | 3 Tage | Tool-Versionen aendern sich maessig schnell |
   | R5 Security | IMMER frisch | Sicherheit darf nie gecacht werden |
   | R6 Creative | IMMER frisch | Kreativitaet braucht frische Ideen |
-  | R7 Focus | NUR im Focus-Modus | Wird nur bei explizitem Fokus-Thema gestartet |
   | R8 Intelligence | IMMER frisch | Intelligenz-Forschung muss immer aktuell sein |
   Check: `find ~/.claude/self-improve-cache/R{N}_*.md -mtime -{TTL_DAYS} 2>/dev/null`
   If cache file exists and within TTL: skip researcher, use cached data.
@@ -311,7 +310,7 @@ For each of the top 5: fix it in this run. This is not optional.
 **Remaining issues**: List ALL additional unfixed problems at the end of the report under
 "Offene Probleme (nicht in diesem Lauf gefixt)" so the user can decide which to tackle next.
 
-**After improvements**: Update "Systemzustand" in MEMORY.md with new environment knowledge.
+**After improvements**: Update "From Self-Improve" in MEMORY.md with new environment knowledge.
 
 ### 3B: Creative Improvements + Challenger Review (UPGRADED v5.4)
 Implement at least 1 concrete improvement per run: new hooks, agents, rules, configs.
@@ -421,7 +420,7 @@ Ergebnisse von **R8 (Intelligence Researcher)**, der bereits in Stufe 2 parallel
 1. **R8-Ergebnisse lesen**: Die 5+ Findings des Intelligence Researchers auswerten
 2. **Priorisieren**: Welche Findings sind SOFORT umsetzbar vs. langfristig?
 3. **Mindestens 1 Finding SOFORT umsetzen** — nicht "spaeter", JETZT. (z.B. neues Tool installieren, neuen Agent-Prompt verbessern, neues Denkmuster als Rule implementieren)
-4. **Die anderen Findings dem Benutzer praesentieren** und in MEMORY.md unter "Forschung & Intelligence" speichern
+4. **Die anderen Findings dem Benutzer praesentieren** und in MEMORY.md unter "Intelligence Backlog" speichern
 5. **Kompetitive Erkenntnisse** (was Konkurrenz besser macht) als Prioritaet behandeln — hier ist der groesste Hebel
 
 **REGEL**: Wenn R8 abgestuerzt ist (Researcher-Resilienz, v5.9): Stufe 5C darf EINMAL einen
@@ -514,7 +513,7 @@ muessen bei GitHub hinterlegt werden, damit andere Plattformen (Windows, Termux)
 naechsten Session-Start automatisch die neuesten Verbesserungen erhalten.
 
 **Was synchronisiert werden muss:**
-1. Hook-Scripts (*.ps1 + *.sh + *.ts) → `~/proggs/claude-code-setup/hooks/`
+1. Hook-Scripts (*.sh + *.ts) → `~/proggs/claude-code-setup/hooks/`
 2. Agent-Definitionen (*.md) → `~/proggs/claude-code-setup/agents/`
 3. Commands + Unterordner → `~/proggs/claude-code-setup/commands/` (inkl. self-improve-ref/)
 4. Rules → `~/proggs/claude-code-setup/rules/`
@@ -567,7 +566,7 @@ Wenn in Stufe 2 Shell/Terminal-Updates identifiziert wurden:
 4. Erst nach Bestaetigung: Updates einzeln ausfuehren, jeweils mit Statusmeldung
 5. Nach jedem Update: Pruefen ob die neue Version korrekt installiert ist
 
-**Wenn der Benutzer ablehnt**: Updates in MEMORY.md unter "Offene Fehler & Probleme" eintragen (mit Status: DEFERRED).
+**Wenn der Benutzer ablehnt**: Updates in MEMORY.md unter "Pending Admin Actions" eintragen.
 **NIEMALS Shell-Updates ohne Bestaetigung ausfuehren. NIEMALS waehrend andere Aufgaben laufen.**
 
 ## Final Summary
@@ -595,4 +594,4 @@ If < 5 entries: show "Evolution: Noch zu wenig Daten (N/5 Sessions)".
 - **Shell/Terminal-Updates**: Siehe Core Rules oben — IMMER zuletzt, IMMER nach Bestaetigung.
 
 ---
-<!-- Skill Version: v5.16 | Date: 2026-03-20 | Changes: v5.16 — Fixed 3 phantom section references (From Self-Improve→Systemzustand, Intelligence Backlog→Forschung & Intelligence, Pending Admin Actions→Offene Fehler DEFERRED), fixed researcher count (6→8), added R7 to TTL table, fixed sync list (added *.ps1), updated ref file versions to v5.15, fixed Meta-Improve line limit (300→600). Previous: v5.15. -->
+<!-- Skill Version: v5.15 | Date: 2026-03-20 | Changes: v5.15 — Whiteboard as central nervous system: single MEMORY.md, all components read+write, error format enforced (Quelle/Symptom/Ursache/Fix-Vorschlag), connected systems (CLAUDE.md, feedback, session-scores, claude-mem), hooks write to repo copy, IQ-Score Konventionen statt Prozeduren, phantom sections removed. Previous: v5.11. -->

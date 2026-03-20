@@ -39,10 +39,9 @@ Read these files to understand the current state:
    - Cross-agent findings from code-reviewer, tester, architect, debugger
    - Look for recurring patterns that indicate systemic issues
 
-3. **Capability Gaps**: Scan shared MEMORY.md for patterns indicating missing capabilities
-   - Look in "Offene Fehler & Probleme" for recurring issues that no agent handles
-   - Check "Regeln & Konventionen" for rules that are frequently violated
-   - If a capability gap appears 3+ times: propose creating a new agent
+3. **Capability Gap Log**: Check shared MEMORY.md "Capability Gaps" section
+   - Tasks that required missing agents or skills
+   - If frequency >= 3: propose creating a new agent
 
 4. **CLAUDE.md**: `~/CLAUDE.md`
    - Current rules and configuration
