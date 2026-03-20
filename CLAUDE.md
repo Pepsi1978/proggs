@@ -195,6 +195,22 @@ Richtiges Modell fuer die richtige Aufgabe — Opus denkt, Sonnet macht:
   - Wenn nichts committed wurde: **"Ich habe weder committed noch gepusht."**
 - Diese Meldung ist IMMER der letzte Satz der Antwort — keine Ausnahmen.
 
+## Cross-Platform-Pflicht bei jedem Commit (KRITISCH)
+- **Vor jedem Commit+Push** pruefen: Funktioniert diese Aenderung auch auf der anderen Plattform?
+- **Hooks**: Jeder `.ps1`-Hook (Windows) MUSS ein `.sh`-Gegenstueck (macOS) haben und umgekehrt.
+  Wenn ein Hook geaendert oder neu erstellt wird → sofort das Gegenstueck erstellen/aktualisieren.
+  Die Logik muss funktional identisch sein, nur die Syntax unterscheidet sich (PowerShell vs Bash).
+- **Agents, Skills, Commands, Rules**: Diese sind plattformunabhaengig (Markdown) — werden
+  automatisch ueber `~/proggs/claude-code-setup/` synchronisiert. Kein Extra-Aufwand noetig.
+- **Settings**: settings.json ist plattformspezifisch (Pfade unterscheiden sich).
+  Aenderungen an Hooks/Plugins/Env muessen in `settings-reference.json` dokumentiert werden,
+  damit `auto-sync` sie auf der anderen Plattform anwenden kann.
+- **Whiteboard (MEMORY.md)**: Ist plattformuebergreifend — wird ueber Git synchronisiert.
+  Fehler die auf einer Plattform auftreten, sind auf der anderen sichtbar.
+- **Reihenfolge**: Aufgabe erledigen → Cross-Platform pruefen → Commit → Push → Status-Meldung.
+- **Wenn Cross-Platform nicht moeglich** (z.B. plattformspezifischer Fix): Im Commit-Message
+  vermerken: "Windows-only" oder "macOS-only", damit die andere Plattform Bescheid weiss.
+
 ## Commit-Nachrichten
 - Jede Commit-Nachricht beginnt mit einer **fortlaufenden Nummer**: `#NNN - Beschreibung`
 - Die Nummerierung wird **automatisch** anhand bestehender Commits ermittelt

@@ -72,8 +72,8 @@ done
 NEXT_N=$((MAX_N + 1))
 NEW_DB_NAME="index-${NEXT_N}.db"
 
-# Create temp script for bun
-TEMP_SCRIPT=$(mktemp /tmp/reindex-XXXXXXXX.ts)
+# Create temp script in mcp-code-search dir (Bun resolves imports relative to source file)
+TEMP_SCRIPT="$MCP_DIR/reindex-$(head -c 8 /dev/urandom | xxd -p).ts"
 cat > "$TEMP_SCRIPT" << 'REINDEX_EOF'
 import { findCodeFiles, chunkFile } from './src/indexer.ts';
 import { generateEmbeddings } from './src/ollama.ts';
@@ -119,10 +119,31 @@ REINDEX_EOF
 # Run the reindex
 export REINDEX_ROOT="$ROOT_DIR"
 export REINDEX_DB_NAME="$NEW_DB_NAME"
+cleanup_temp() {
+    rm -f "$TEMP_SCRIPT"
+    # Also clean up any orphaned temp files from previous crashed runs
+    rm -f "$MCP_DIR"/reindex-*.ts 2>/dev/null
+}
+trap cleanup_temp EXIT
+
+WHITEBOARD="$ROOT_DIR/.claude/agent-memory/shared/MEMORY.md"
+
 if (cd "$MCP_DIR" && "$BUN_EXE" run "$TEMP_SCRIPT" 2>/dev/null); then
-    # Update stamp file
     date -u +"%Y-%m-%dT%H:%M:%SZ" > "$STAMP_FILE"
     echo "Reindex-Hook: Codebase neu indexiert ($NEW_DB_NAME, pointer-swap)."
-fi
+else
+    EXIT_CODE=$?
+    if [ -f "$WHITEBOARD" ]; then
+        cat >> "$WHITEBOARD" << WBEOF
 
-rm -f "$TEMP_SCRIPT"
+### $(date +"%Y-%m-%d %H:%M") — Hook: reindex-codebase.sh — Indexierung ExitCode $EXIT_CODE
+**Quelle:** Hook: reindex-codebase.sh (SessionStart, async, macOS)
+**Symptom:** Semantische Indexierung fehlgeschlagen mit ExitCode $EXIT_CODE
+**Ursache:** Bun-Prozess beendet mit Code $EXIT_CODE. Moeglich: Timeout, fehlende Abhaengigkeiten, Ollama nicht erreichbar.
+**Betroffene Dateien:** ~/.claude/hooks/reindex-codebase.sh, mcp-code-search/
+**Fix-Vorschlag:** Ollama-Status pruefen (curl localhost:11434), bun install in mcp-code-search/, Hook-Timeout erhoehen.
+**Status:** OFFEN
+WBEOF
+    fi
+    echo "Reindex-Hook: FEHLER — ExitCode $EXIT_CODE. Siehe Shared Whiteboard."
+fi
