@@ -79,6 +79,9 @@ namespace ClaudeVoiceOverlay.Views
             if (config.GeminiAvailable)
                 _geminiClient = new GeminiClient(config.GeminiApiKey!, config.GeminiModel, config.GeminiThinkingLevel);
 
+            // Scan for CDP debug ports in background (non-blocking)
+            AppController.InitCdpInBackground();
+
             // ── Pulse timer: main mic (500 ms, #FF6666 ↔ #E53935) ──
             _pulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _pulseTimer.Tick += (_, _) =>

@@ -10,8 +10,8 @@ namespace ClaudeVoiceOverlay.Services
 {
     /// <summary>
     /// Controls text insertion into Electron apps (Claude Desktop, Codex, Cursor).
-    /// Strategy: CDP (Chrome DevTools Protocol) first → keybd_event fallback.
-    /// CDP gives ~100% reliability; keybd_event works ~50% due to Chromium's dual focus model.
+    /// Strategy: CDP first (if pre-connected) → keybd_event fallback.
+    /// CDP scan happens at startup in background — NEVER blocks paste operations.
     /// </summary>
     public static class AppController
     {
@@ -21,51 +21,66 @@ namespace ClaudeVoiceOverlay.Services
         private const ushort VK_HOME = 0x24;
         private const ushort VK_END = 0x23;
 
-        // CDP client for direct Chromium communication (shared, thread-safe)
         private static readonly CdpClient _cdp = new();
-        private static bool _cdpChecked;
 
         /// <summary>
-        /// Attempts CDP connection on first call, then reuses.
+        /// Call once at startup — scans for CDP in background without blocking UI.
         /// </summary>
-        private static async Task<bool> EnsureCdpAsync()
+        public static void InitCdpInBackground()
         {
-            if (_cdp.IsConnected) return true;
-            if (_cdpChecked) return false; // Already checked, no port available
-
-            var connected = await _cdp.TryConnectAsync();
-            _cdpChecked = true;
-            return connected;
-        }
-
-        /// <summary>
-        /// Resets CDP state so next call re-scans ports.
-        /// Call this when the target app restarts.
-        /// </summary>
-        public static void ResetCdp()
-        {
-            _cdpChecked = false;
+            Task.Run(async () =>
+            {
+                var connected = await _cdp.TryConnectAsync();
+                if (connected)
+                    Console.WriteLine($"AppController: CDP connected on port {_cdp.ActivePort} — using direct text injection");
+                else
+                    Console.WriteLine("AppController: No CDP available — using keybd_event fallback");
+            });
         }
 
         // ── Public API ──
 
         public static void PasteText(string text, IntPtr appHwnd, bool autoEnter = false)
         {
-            // Try CDP first (100% reliable when available)
-            if (TryCdpPaste(text, autoEnter))
-                return;
+            // CDP only if already connected (no blocking scan here!)
+            if (_cdp.IsConnected)
+            {
+                try
+                {
+                    var ok = Task.Run(() => _cdp.InsertTextAsync(text)).GetAwaiter().GetResult();
+                    if (ok)
+                    {
+                        Console.WriteLine("AppController: Pasted via CDP");
+                        if (autoEnter)
+                        {
+                            Thread.Sleep(100);
+                            Task.Run(() => _cdp.SendEnterAsync()).GetAwaiter().GetResult();
+                        }
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"AppController: CDP failed: {ex.Message}");
+                }
+            }
 
-            // Fallback: clipboard + keybd_event (original working approach)
+            // Fallback: clipboard + keybd_event
             PasteViaKeyboard(text, appHwnd, autoEnter);
         }
 
         public static void ClearInput(IntPtr appHwnd)
         {
-            // Try CDP first
-            if (TryCdpClear())
-                return;
+            if (_cdp.IsConnected)
+            {
+                try
+                {
+                    var ok = Task.Run(() => _cdp.ClearInputAsync()).GetAwaiter().GetResult();
+                    if (ok) return;
+                }
+                catch { }
+            }
 
-            // Fallback: keybd_event
             ClearViaKeyboard(appHwnd);
         }
 
@@ -76,78 +91,20 @@ namespace ClaudeVoiceOverlay.Services
 
         public static void PressReturn(IntPtr appHwnd)
         {
-            // Try CDP first
-            if (TryCdpEnter())
-                return;
+            if (_cdp.IsConnected)
+            {
+                try
+                {
+                    var ok = Task.Run(() => _cdp.SendEnterAsync()).GetAwaiter().GetResult();
+                    if (ok) return;
+                }
+                catch { }
+            }
 
-            // Fallback: keybd_event
             PressReturnViaKeyboard(appHwnd);
         }
 
-        // ── CDP Methods (preferred, ~100% reliable) ──
-
-        private static bool TryCdpPaste(string text, bool autoEnter)
-        {
-            try
-            {
-                // Task.Run avoids deadlock: async code must NOT marshal back to UI thread
-                return Task.Run(async () =>
-                {
-                    if (!await EnsureCdpAsync()) return false;
-
-                    var inserted = await _cdp.InsertTextAsync(text);
-                    if (!inserted) return false;
-
-                    if (autoEnter)
-                    {
-                        await Task.Delay(100);
-                        await _cdp.SendEnterAsync();
-                    }
-
-                    Console.WriteLine("AppController: Text inserted via CDP");
-                    return true;
-                }).GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"AppController: CDP paste failed: {ex.Message} — falling back to keyboard");
-                return false;
-            }
-        }
-
-        private static bool TryCdpClear()
-        {
-            try
-            {
-                return Task.Run(async () =>
-                {
-                    if (!await EnsureCdpAsync()) return false;
-                    return await _cdp.ClearInputAsync();
-                }).GetAwaiter().GetResult();
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static bool TryCdpEnter()
-        {
-            try
-            {
-                return Task.Run(async () =>
-                {
-                    if (!await EnsureCdpAsync()) return false;
-                    return await _cdp.SendEnterAsync();
-                }).GetAwaiter().GetResult();
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        // ── Keyboard Fallback (original March 13 code that worked ~50%) ──
+        // ── Keyboard Methods (proven approach from March 13) ──
 
         private static void PasteViaKeyboard(string text, IntPtr appHwnd, bool autoEnter)
         {
@@ -161,9 +118,7 @@ namespace ClaudeVoiceOverlay.Services
 
             BringToForeground(appHwnd);
 
-            bool isCodex = IsCodexProcess(appHwnd);
-
-            if (isCodex)
+            if (IsCodexProcess(appHwnd))
             {
                 Console.WriteLine("AppController: Codex/Cursor mode — Escape → Ctrl+V");
                 SendKey(Win32.VK_ESCAPE);
@@ -172,6 +127,7 @@ namespace ClaudeVoiceOverlay.Services
             }
             else
             {
+                // Claude Desktop: focus render widget, click input field, paste
                 FocusDirectRenderWidget(appHwnd);
                 ClickInputField(appHwnd);
                 SendCtrlV();
@@ -219,6 +175,7 @@ namespace ClaudeVoiceOverlay.Services
             }
             else
             {
+                // Claude Desktop: click input, select all within input, delete
                 FocusDirectRenderWidget(appHwnd);
                 ClickInputField(appHwnd);
                 SendKeyCombo(Win32.VK_CONTROL, VK_A);
@@ -321,6 +278,11 @@ namespace ClaudeVoiceOverlay.Services
 
         // ── Input Field Click (Claude Desktop only) ──
 
+        /// <summary>
+        /// Clicks the input field in Claude Desktop.
+        /// Uses bottom-center position that works across all tabs (Code, Chat, Cowork).
+        /// The input field is always near the bottom of the content area.
+        /// </summary>
         private static void ClickInputField(IntPtr appHwnd)
         {
             if (appHwnd == IntPtr.Zero) return;
@@ -330,12 +292,16 @@ namespace ClaudeVoiceOverlay.Services
             int windowHeight = rect.Bottom - rect.Top;
             if (windowWidth < 100 || windowHeight < 100) return;
 
-            // Claude Desktop: input at ~86% height, 55% width (past sidebar)
-            int clickX = rect.Left + (int)(windowWidth * 0.55);
-            int clickY = rect.Top + (int)(windowHeight * 0.86);
+            // Input field position across ALL tabs:
+            // - Always near the bottom of the window
+            // - Horizontally centered in the content area (right of sidebar)
+            // - Sidebar is ~15-20% of window width on the left
+            // Click at 50% width (center of content), 92% height (bottom area)
+            int clickX = rect.Left + (int)(windowWidth * 0.50);
+            int clickY = rect.Top + (int)(windowHeight * 0.92);
 
             clickX = Math.Clamp(clickX, rect.Left + 50, rect.Right - 50);
-            clickY = Math.Clamp(clickY, rect.Top + 50, rect.Bottom - 50);
+            clickY = Math.Clamp(clickY, rect.Top + 50, rect.Bottom - 30);
 
             Win32.GetCursorPos(out Win32.POINT savedPos);
 
