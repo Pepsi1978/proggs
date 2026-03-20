@@ -147,3 +147,20 @@ Jedes Projekt braucht eine eigene README.md mit:
 - [ ] Build-Skript auf der jeweiligen Plattform getestet/angepasst?
 - [ ] UI sieht auf beiden Plattformen konsistent aus?
 - [ ] Commit-Message erwaehnt Feature-Gleichstand?
+
+## Shared Knowledge Hub Integration
+
+**Whiteboard**: `.claude/agent-memory/shared/MEMORY.md` (EINZIGE zentrale Wissensdatei)
+
+**Lesen**: Vor der Paritaets-Pruefung das Whiteboard lesen fuer bekannte plattformspezifische Probleme und bestehende Architekturentscheidungen.
+
+**Schreiben bei Fehlern**: Wenn plattformspezifische Probleme gefunden werden, in "Offene Fehler & Probleme" eintragen:
+- Quelle: `cross-platform`
+- Plattform: [macOS/Windows]
+- Symptom: [Was funktioniert nicht]
+- Ursache: [Root Cause]
+- Betroffene Dateien: [Pfade]
+- Fix-Vorschlag: [Loesungsidee]
+- Status: OFFEN
+
+**Schreiben bei Erkenntnissen**: Architekturentscheidungen ueber plattformspezifische Ansaetze in "Architektur-Entscheidungen" eintragen (z.B. "Clipboard-Handling: NSPasteboard vs. System.Windows.Clipboard, Entscheidung fuer X wegen Y").

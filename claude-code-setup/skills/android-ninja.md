@@ -254,11 +254,30 @@ Triggers on requests to create Android projects, screens, ViewModels, repositori
 → Check [android-strictmode.md](references/android-strictmode.md) for runtime checks
 
 **Need code coverage reporting?**
-→ Use [android-code-coverage.md](references/android-code-coverage.md) for JaCoCo setup  
-→ Follow [testing.md](references/testing.md) for test strategies  
+→ Use [android-code-coverage.md](references/android-code-coverage.md) for JaCoCo setup
+→ Follow [testing.md](references/testing.md) for test strategies
 → Check [gradle-setup.md](references/gradle-setup.md) for convention plugin integration
 
 **Implementing security features (encryption, biometrics, pinning)?**
-→ Use [android-security.md](references/android-security.md) for comprehensive security guide  
-→ Follow [android-permissions.md](references/android-permissions.md) for runtime permissions  
+→ Use [android-security.md](references/android-security.md) for comprehensive security guide
+→ Follow [android-permissions.md](references/android-permissions.md) for runtime permissions
 → Check [crashlytics.md](references/crashlytics.md) for PII scrubbing and data privacy
+
+## Shared Knowledge Hub Integration
+
+**Whiteboard**: `.claude/agent-memory/shared/MEMORY.md` (EINZIGE zentrale Wissensdatei)
+
+**Lesen**: Vor der Ausfuehrung das Whiteboard lesen fuer bekannte Muster, Arch-Entscheidungen und offene Probleme.
+
+**Schreiben bei Fehlern**: Jeden Build- oder Setup-Fehler in den Abschnitt "Offene Fehler & Probleme" eintragen:
+- Quelle: `android-ninja`
+- Symptom: [Fehlermeldung]
+- Ursache: [Root Cause]
+- Betroffene Dateien: [Pfade]
+- Fix-Vorschlag: [Loesungsidee]
+- Status: OFFEN
+
+**Schreiben bei Erkenntnissen**: Architekturentscheidungen in "Architektur-Entscheidungen" eintragen:
+- Welches Modul-Muster gewaehlt wurde (z.B. feature:api+impl vs. merged)
+- Abweichungen vom Standard-NowInAndroid-Layout und warum
+- Projektspezifische Hilt-/Room-/Compose-Konfigurationen

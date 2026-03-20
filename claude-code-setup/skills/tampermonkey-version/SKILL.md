@@ -40,3 +40,14 @@ Nachher:
 - NIEMALS eine Tampermonkey-Aenderung ohne Versionsupdate committen
 - Wenn mehrere Skripte gleichzeitig geaendert werden, JEDES einzelne Skript erhoehen
 - Das ChatGPT-Skript (chatgpt.user.js) ist die Referenz fuer UI-Positionierung (rightPx: 16 + UI_SHIFT_LEFT_PX: 11.34 = ~27px)
+
+## Shared Knowledge Hub Integration
+
+**Whiteboard**: `.claude/agent-memory/shared/MEMORY.md` (EINZIGE zentrale Wissensdatei)
+
+**Schreiben bei Fehlern**: Wenn der Versions-Bump oder der Commit fehlschlaegt, in "Offene Fehler & Probleme" eintragen:
+- Quelle: `tampermonkey-version`
+- Symptom: [Was hat nicht funktioniert]
+- Betroffene Datei: [Pfad zum .user.js]
+- Fix-Vorschlag: [Manueller Schritt]
+- Status: OFFEN

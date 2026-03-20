@@ -91,3 +91,19 @@ Erst wenn alle Pruefungen bestanden sind:
 - Bei Tampermonkey-Skripten: Versionsnummer MUSS erhoeht sein (tampermonkey-version Skill)
 - Bei Cross-Platform Aenderungen: Beide Plattformen pruefen (cross-platform Skill)
 - Lieber einmal zu viel pruefen als einmal zu wenig
+
+## Shared Knowledge Hub Integration
+
+**Whiteboard**: `.claude/agent-memory/shared/MEMORY.md` (EINZIGE zentrale Wissensdatei)
+
+**Lesen**: Vor Schritt 1 (PRUEFEN) das Whiteboard lesen fuer bekannte Test-Muster, Konventionen und offene Fehler die diesen Bereich betreffen.
+
+**Schreiben bei Fehlern**: Wenn Verifikation nach 3 Runden noch fehlschlaegt, in "Offene Fehler & Probleme" eintragen:
+- Quelle: `auto-verify-iterate`
+- Symptom: [Was schlaegt fehl und wie]
+- Ursache: [Was wurde herausgefunden]
+- Betroffene Dateien: [Pfade]
+- Fix-Vorschlag: [Naechster Schritt]
+- Status: OFFEN
+
+**Schreiben bei Erkenntnissen**: Wenn Verifikation wiederkehrende Muster aufdeckt, in "Erkenntnisse aus Tests" eintragen (z.B. "Build schlaegt immer fehl wenn X nicht gesetzt ist").

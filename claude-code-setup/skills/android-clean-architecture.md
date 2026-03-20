@@ -202,3 +202,22 @@ Use convention plugins in `build-logic/` for consistent configuration:
 - `AndroidHiltConventionPlugin` - Hilt setup
 
 See [gradle-setup.md](references/gradle-setup.md) for complete build configuration.
+
+## Shared Knowledge Hub Integration
+
+**Whiteboard**: `.claude/agent-memory/shared/MEMORY.md` (EINZIGE zentrale Wissensdatei)
+
+**Lesen**: Vor der Ausfuehrung das Whiteboard lesen fuer bekannte Muster, Arch-Entscheidungen und offene Probleme.
+
+**Schreiben bei Fehlern**: Jeden Build- oder Setup-Fehler in den Abschnitt "Offene Fehler & Probleme" eintragen:
+- Quelle: `android-clean-architecture`
+- Symptom: [Fehlermeldung]
+- Ursache: [Root Cause]
+- Betroffene Dateien: [Pfade]
+- Fix-Vorschlag: [Loesungsidee]
+- Status: OFFEN
+
+**Schreiben bei Erkenntnissen**: Architekturentscheidungen in "Architektur-Entscheidungen" eintragen:
+- Welches Modul-Muster gewaehlt wurde (z.B. feature:api+impl vs. merged)
+- Abweichungen vom Standard-NowInAndroid-Layout und warum
+- Projektspezifische Hilt-/Room-Konfigurationen

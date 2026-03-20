@@ -85,6 +85,18 @@ Nach dem Revert dem Benutzer mitteilen:
 - Bei Unsicherheit: Nachfragen welcher Commit gemeint ist
 - Wenn uncommittete Aenderungen vorhanden sind: Erst fragen ob diese gespeichert werden sollen
 
+## Shared Knowledge Hub Integration
+
+**Whiteboard**: `.claude/agent-memory/shared/MEMORY.md` (EINZIGE zentrale Wissensdatei)
+
+**Schreiben bei Fehlern**: Wenn Revert oder Push fehlschlaegt, in "Offene Fehler & Probleme" eintragen:
+- Quelle: `undo-changes`
+- Symptom: [Fehlermeldung des git-Befehls]
+- Commit-Hash: [Betroffener Hash]
+- Ursache: [Was schiefging, z.B. Merge-Konflikt, kein Push-Recht]
+- Fix-Vorschlag: [Manueller Schritt oder Alternative]
+- Status: OFFEN
+
 ## Beispiel
 
 Benutzer sagt: "Mach die letzte Aenderung rueckgaengig"

@@ -254,6 +254,23 @@ When extracting skills, also consider:
 
 3. **Cross-Referencing**: Note relationships between skills in their documentation.
 
+## Shared Knowledge Hub Integration
+
+**Whiteboard**: `.claude/agent-memory/shared/MEMORY.md` (EINZIGE zentrale Wissensdatei)
+
+**Lesen vor der Extraktion**: Whiteboard lesen um sicherzustellen, dass das zu extrahierende Wissen noch nicht in einem anderen Format dokumentiert ist. Verhindert Duplikate zwischen Skills und Whiteboard.
+
+**Schreiben von Erkenntnissen**: Extrahiertes Wissen gehoert in Skills — NICHT ins Whiteboard. Das Whiteboard enthaelt nur:
+- "Offene Fehler & Probleme": Laufende ungeloeste Probleme (Quelle: claudeception, wenn Extraction wegen eines Bugs nicht abgeschlossen werden kann)
+- "Architektur-Entscheidungen": Grundlegende Projekt-Architektur (kein Skill-spezifisches Wissen)
+
+**Schreiben bei Fehler**: Wenn die Skill-Erstellung selbst fehlschlaegt (Datei nicht schreibbar, Skill-Format ungueltig), in "Offene Fehler & Probleme" eintragen:
+- Quelle: `claudeception`
+- Symptom: [Was hat nicht funktioniert]
+- Ziel-Skill: [Name des zu erstellenden Skills]
+- Fix-Vorschlag: [Manueller Schritt]
+- Status: OFFEN
+
 ## Quality Gates
 
 Before finalizing a skill, verify:

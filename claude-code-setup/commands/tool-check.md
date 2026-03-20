@@ -101,11 +101,22 @@ Loop-Agents koennen abstuerzen. Der Gesamt-Scan darf NIEMALS haengenbleiben.
 2. **Weitermachen**: Andere Agents laufen weiter — ein gescheiterter blockiert NICHT den Rest.
 3. **1x Neustart**: Gescheiterten Agent EINMAL neu starten mit kleinerem Scope.
 4. **Bei erneutem Fehler**: Ueberspringen. Im Ergebnis vermerken: "Loop [N] konnte nicht ausgefuehrt werden."
-5. **Dokumentieren**: Absturz in `~/.claude/agent-memory/shared/FAILURES.md` eintragen.
+5. **Dokumentieren**: Absturz in `.claude/agent-memory/shared/MEMORY.md` → Abschnitt "Offene Fehler & Probleme" eintragen.
 
 **Faustregel**: Lieber 3 von 4 Loops als gar kein Ergebnis.
 
 **Fixes** werden immer im Hauptgespraech angewandt (nicht in Subagents).
+
+## Shared Knowledge Hub Integration
+
+**Whiteboard**: `.claude/agent-memory/shared/MEMORY.md` (EINZIGE zentrale Wissensdatei)
+
+**Lesen vor dem Scan**: Whiteboard lesen fuer bekannte offene Fehler, die beim jetzigen Scan-Ziel bereits dokumentiert wurden. So werden Doppelbefunde vermieden und der Fokus auf neue Probleme gelegt.
+
+**Schreiben nach dem Scan**: Wenn wiederkehrende Muster oder bisher undokumentierte Probleme gefunden werden:
+- Neue Bugs/Sicherheitsluecken → in "Offene Fehler & Probleme" eintragen
+- Architekturerkenntnisse → in "Architektur-Entscheidungen" eintragen
+- Erst nach User-Bestaetigung der Findings schreiben, nicht waehrend der Loop-Phase
 
 ## Pre-Scan: Automated Tool Check
 
