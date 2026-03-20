@@ -84,28 +84,7 @@ namespace ClaudeVoiceOverlay.NativeMethods
         [StructLayout(LayoutKind.Explicit)]
         public struct INPUTUNION
         {
-            [FieldOffset(0)] public MOUSEINPUT mi;
             [FieldOffset(0)] public KEYBDINPUT ki;
-            [FieldOffset(0)] public HARDWAREINPUT hi;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct MOUSEINPUT
-        {
-            public int dx;
-            public int dy;
-            public uint mouseData;
-            public uint dwFlags;
-            public uint time;
-            public IntPtr dwExtraInfo;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct HARDWAREINPUT
-        {
-            public uint uMsg;
-            public ushort wParamL;
-            public ushort wParamH;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -198,18 +177,6 @@ namespace ClaudeVoiceOverlay.NativeMethods
 
         public const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
         public const uint MOUSEEVENTF_LEFTUP = 0x0004;
-
-        // ── Mouse Capture ──
-        [DllImport("user32.dll")]
-        public static extern IntPtr SetCapture(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        public static extern bool ReleaseCapture();
-
-        // ── Mouse Messages ──
-        public const int WM_RBUTTONDOWN = 0x0204;
-        public const int WM_MOUSEMOVE   = 0x0200;
-        public const int WM_RBUTTONUP   = 0x0205;
 
         // ── DPI ──
         [DllImport("shcore.dll")]

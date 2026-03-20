@@ -8,11 +8,6 @@ using ClaudeVoiceOverlay.NativeMethods;
 
 namespace ClaudeVoiceOverlay.Services
 {
-    /// <summary>
-    /// Controls text insertion into Electron apps (Claude Desktop, Codex, Cursor).
-    /// Strategy: CDP first (if pre-connected) → keybd_event fallback.
-    /// CDP scan happens at startup in background — NEVER blocks paste operations.
-    /// </summary>
     public static class AppController
     {
         private const byte VK_A = 0x41;
@@ -21,92 +16,7 @@ namespace ClaudeVoiceOverlay.Services
         private const ushort VK_HOME = 0x24;
         private const ushort VK_END = 0x23;
 
-        private static readonly CdpClient _cdp = new();
-
-        /// <summary>
-        /// Call once at startup — scans for CDP in background without blocking UI.
-        /// </summary>
-        public static void InitCdpInBackground()
-        {
-            Task.Run(async () =>
-            {
-                var connected = await _cdp.TryConnectAsync();
-                if (connected)
-                    Console.WriteLine($"AppController: CDP connected on port {_cdp.ActivePort} — using direct text injection");
-                else
-                    Console.WriteLine("AppController: No CDP available — using keybd_event fallback");
-            });
-        }
-
-        // ── Public API ──
-
         public static void PasteText(string text, IntPtr appHwnd, bool autoEnter = false)
-        {
-            // CDP only if already connected (no blocking scan here!)
-            if (_cdp.IsConnected)
-            {
-                try
-                {
-                    var ok = Task.Run(() => _cdp.InsertTextAsync(text)).GetAwaiter().GetResult();
-                    if (ok)
-                    {
-                        Console.WriteLine("AppController: Pasted via CDP");
-                        if (autoEnter)
-                        {
-                            Thread.Sleep(100);
-                            Task.Run(() => _cdp.SendEnterAsync()).GetAwaiter().GetResult();
-                        }
-                        return;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"AppController: CDP failed: {ex.Message}");
-                }
-            }
-
-            // Fallback: clipboard + keybd_event
-            PasteViaKeyboard(text, appHwnd, autoEnter);
-        }
-
-        public static void ClearInput(IntPtr appHwnd)
-        {
-            if (_cdp.IsConnected)
-            {
-                try
-                {
-                    var ok = Task.Run(() => _cdp.ClearInputAsync()).GetAwaiter().GetResult();
-                    if (ok) return;
-                }
-                catch { }
-            }
-
-            ClearViaKeyboard(appHwnd);
-        }
-
-        public static void SendReturn()
-        {
-            SendKey(VK_RETURN);
-        }
-
-        public static void PressReturn(IntPtr appHwnd)
-        {
-            if (_cdp.IsConnected)
-            {
-                try
-                {
-                    var ok = Task.Run(() => _cdp.SendEnterAsync()).GetAwaiter().GetResult();
-                    if (ok) return;
-                }
-                catch { }
-            }
-
-            PressReturnViaKeyboard(appHwnd);
-        }
-
-        // ── Keyboard Methods (proven approach from March 13) ──
-
-        private static void PasteViaKeyboard(string text, IntPtr appHwnd, bool autoEnter)
         {
             string? previousClipboard = null;
             Application.Current.Dispatcher.Invoke(() =>
@@ -118,16 +28,22 @@ namespace ClaudeVoiceOverlay.Services
 
             BringToForeground(appHwnd);
 
-            if (IsCodexProcess(appHwnd))
+            bool isCodex = IsCodexProcess(appHwnd);
+
+            if (isCodex)
             {
-                Console.WriteLine("AppController: Codex/Cursor mode — Escape → Ctrl+V");
+                // Codex has a different Electron window structure:
+                // Chrome_RenderWidgetHostHWND is NOT a child of the main window.
+                // SetFocus on any child window STEALS keyboard focus.
+                // Instead: just Escape (returns focus to input) → Ctrl+V
+                Console.WriteLine("AppController: Codex mode — Escape → Ctrl+V");
                 SendKey(Win32.VK_ESCAPE);
                 Thread.Sleep(200);
                 SendCtrlV();
             }
             else
             {
-                // Claude Desktop: focus render widget, click input field, paste
+                // Claude Desktop: render widget is a direct child — SetFocus + click works
                 FocusDirectRenderWidget(appHwnd);
                 ClickInputField(appHwnd);
                 SendCtrlV();
@@ -149,18 +65,21 @@ namespace ClaudeVoiceOverlay.Services
             }
         }
 
-        private static void ClearViaKeyboard(IntPtr appHwnd)
+        public static void ClearInput(IntPtr appHwnd)
         {
             BringToForeground(appHwnd);
 
             if (IsCodexProcess(appHwnd))
             {
+                // Codex: double-Escape — first closes any popup/autocomplete,
+                // second ensures focus lands in the input field
                 SendKey(Win32.VK_ESCAPE);
                 Thread.Sleep(150);
                 SendKey(Win32.VK_ESCAPE);
                 Thread.Sleep(200);
                 SendKey(VK_END);
                 Thread.Sleep(30);
+                // Ctrl+Shift+Home selects all text from cursor to start within the input
                 byte ctrlScan = (byte)Win32.MapVirtualKey(Win32.VK_CONTROL, Win32.MAPVK_VK_TO_VSC);
                 byte shiftScan = (byte)Win32.MapVirtualKey(Win32.VK_SHIFT, Win32.MAPVK_VK_TO_VSC);
                 byte homeScan = (byte)Win32.MapVirtualKey((uint)VK_HOME, Win32.MAPVK_VK_TO_VSC);
@@ -175,7 +94,7 @@ namespace ClaudeVoiceOverlay.Services
             }
             else
             {
-                // Claude Desktop: click input, select all within input, delete
+                // Claude Desktop: click into input field, then Ctrl+A is safe
                 FocusDirectRenderWidget(appHwnd);
                 ClickInputField(appHwnd);
                 SendKeyCombo(Win32.VK_CONTROL, VK_A);
@@ -184,7 +103,12 @@ namespace ClaudeVoiceOverlay.Services
             }
         }
 
-        private static void PressReturnViaKeyboard(IntPtr appHwnd)
+        public static void SendReturn()
+        {
+            SendKey(VK_RETURN);
+        }
+
+        public static void PressReturn(IntPtr appHwnd)
         {
             BringToForeground(appHwnd);
 
@@ -278,11 +202,6 @@ namespace ClaudeVoiceOverlay.Services
 
         // ── Input Field Click (Claude Desktop only) ──
 
-        /// <summary>
-        /// Clicks the input field in Claude Desktop.
-        /// Uses bottom-center position that works across all tabs (Code, Chat, Cowork).
-        /// The input field is always near the bottom of the content area.
-        /// </summary>
         private static void ClickInputField(IntPtr appHwnd)
         {
             if (appHwnd == IntPtr.Zero) return;
@@ -292,16 +211,12 @@ namespace ClaudeVoiceOverlay.Services
             int windowHeight = rect.Bottom - rect.Top;
             if (windowWidth < 100 || windowHeight < 100) return;
 
-            // Input field position across ALL tabs:
-            // - Always near the bottom of the window
-            // - Horizontally centered in the content area (right of sidebar)
-            // - Sidebar is ~15-20% of window width on the left
-            // Click at 50% width (center of content), 92% height (bottom area)
-            int clickX = rect.Left + (int)(windowWidth * 0.50);
-            int clickY = rect.Top + (int)(windowHeight * 0.92);
+            // Claude Desktop: input at ~86% height, 55% width (past sidebar)
+            int clickX = rect.Left + (int)(windowWidth * 0.55);
+            int clickY = rect.Top + (int)(windowHeight * 0.86);
 
             clickX = Math.Clamp(clickX, rect.Left + 50, rect.Right - 50);
-            clickY = Math.Clamp(clickY, rect.Top + 50, rect.Bottom - 30);
+            clickY = Math.Clamp(clickY, rect.Top + 50, rect.Bottom - 50);
 
             Win32.GetCursorPos(out Win32.POINT savedPos);
 

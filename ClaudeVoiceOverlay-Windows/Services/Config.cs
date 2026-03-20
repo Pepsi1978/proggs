@@ -44,7 +44,7 @@ namespace ClaudeVoiceOverlay.Services
             AudioChannels = GetInt(env, "AUDIO_CHANNELS", 1);
 
             // Ziel-App-Erkennung
-            var processNames = Get(env, "TARGET_PROCESS_NAMES", "Claude,Codex,Cursor");
+            var processNames = Get(env, "TARGET_PROCESS_NAMES", "Claude,Codex");
             TargetProcessNames = processNames.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         }
 

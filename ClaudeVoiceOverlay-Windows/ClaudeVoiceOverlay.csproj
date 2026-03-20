@@ -9,9 +9,6 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>ClaudeVoiceOverlay</RootNamespace>
     <AssemblyName>ClaudeVoiceOverlay</AssemblyName>
-    <Product>Spracheingabe - Claude Desktop</Product>
-    <AssemblyTitle>Spracheingabe - Claude Desktop</AssemblyTitle>
-    <Company>Voice Overlay</Company>
   </PropertyGroup>
 
   <ItemGroup>

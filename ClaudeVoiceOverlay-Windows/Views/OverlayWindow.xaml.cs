@@ -52,13 +52,6 @@ namespace ClaudeVoiceOverlay.Views
         private bool hasPastedText          = false;
         private string? lastRawTranscript   = null;
 
-        // ── Right-click drag state ──
-        private bool _isDragging;
-        private bool _manuallyPositioned;
-        private int _dragStartCursorX, _dragStartCursorY;
-        private double _dragStartLeft, _dragStartTop;
-        private double _dragDpiX, _dragDpiY;
-
         // ── Timers ──
         private readonly DispatcherTimer _pulseTimer;
         private readonly DispatcherTimer _btwPulseTimer;
@@ -78,9 +71,6 @@ namespace ClaudeVoiceOverlay.Views
 
             if (config.GeminiAvailable)
                 _geminiClient = new GeminiClient(config.GeminiApiKey!, config.GeminiModel, config.GeminiThinkingLevel);
-
-            // Scan for CDP debug ports in background (non-blocking)
-            AppController.InitCdpInBackground();
 
             // ── Pulse timer: main mic (500 ms, #FF6666 ↔ #E53935) ──
             _pulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
@@ -172,45 +162,10 @@ namespace ClaudeVoiceOverlay.Views
 
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
-            switch (msg)
+            if (msg == Win32.WM_MOUSEACTIVATE)
             {
-                case Win32.WM_MOUSEACTIVATE:
-                    handled = true;
-                    return (IntPtr)Win32.MA_NOACTIVATE;
-
-                case Win32.WM_RBUTTONDOWN:
-                    if (Win32.GetCursorPos(out var startPt))
-                    {
-                        _isDragging = true;
-                        _dragStartCursorX = startPt.X;
-                        _dragStartCursorY = startPt.Y;
-                        _dragStartLeft = Left;
-                        _dragStartTop = Top;
-                        var src = PresentationSource.FromVisual(this);
-                        _dragDpiX = src?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
-                        _dragDpiY = src?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
-                        Win32.SetCapture(hwnd);
-                    }
-                    handled = true;
-                    break;
-
-                case Win32.WM_MOUSEMOVE:
-                    if (_isDragging && Win32.GetCursorPos(out var movePt))
-                    {
-                        Left = _dragStartLeft + (movePt.X - _dragStartCursorX) / _dragDpiX;
-                        Top  = _dragStartTop  + (movePt.Y - _dragStartCursorY) / _dragDpiY;
-                    }
-                    break;
-
-                case Win32.WM_RBUTTONUP:
-                    if (_isDragging)
-                    {
-                        _isDragging = false;
-                        _manuallyPositioned = true;
-                        Win32.ReleaseCapture();
-                        handled = true;
-                    }
-                    break;
+                handled = true;
+                return (IntPtr)Win32.MA_NOACTIVATE;
             }
             return IntPtr.Zero;
         }
@@ -219,12 +174,9 @@ namespace ClaudeVoiceOverlay.Views
 
         private void OnAppActivated(IntPtr appHwnd)
         {
-            if (!_manuallyPositioned)
-            {
-                var workArea = AppWatcher.GetMonitorWorkArea(appHwnd);
-                Left = workArea.X + workArea.Width - Width - 23;
-                Top  = workArea.Y + (workArea.Height - Height) / 4;
-            }
+            var workArea = AppWatcher.GetMonitorWorkArea(appHwnd);
+            Left = workArea.X + workArea.Width - Width - 23;
+            Top  = workArea.Y + (workArea.Height - Height) / 4;
 
             if (!IsVisible)
             {
@@ -240,7 +192,6 @@ namespace ClaudeVoiceOverlay.Views
 
             if (IsVisible)
             {
-                _manuallyPositioned = false;
                 Hide();
                 Console.WriteLine("Overlay: hidden (app inactive)");
             }
@@ -257,12 +208,14 @@ namespace ClaudeVoiceOverlay.Views
             // Flash X button: gray for 2 s then back to red
             XButton.Background = BtnIdle;
 
-            // Clear input with proper async/await
-            AppController.ClearInput(hwnd);
+            // Run ClearInput on background thread (Thread.Sleep blocks UI thread)
+            await Task.Run(() => AppController.ClearInput(hwnd));
 
-            // Reset X button color after 2 seconds
-            await Task.Delay(2000);
-            XButton.Background = BtnX;
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(2000);
+                Dispatcher.Invoke(() => XButton.Background = BtnX);
+            });
         }
 
         /// <summary>Main mic button — start / stop recording.</summary>
@@ -469,12 +422,12 @@ namespace ClaudeVoiceOverlay.Views
         }
 
         /// <summary>W button — undo Gemini correction, paste raw Whisper text.</summary>
-        private async void BtnWhisperUndo_Click(object sender, RoutedEventArgs e)
+        private void BtnWhisperUndo_Click(object sender, RoutedEventArgs e)
         {
             if (lastRawTranscript == null) return;
 
             AppController.ClearInput(_appWatcher.ActiveAppHwnd);
-            await Task.Delay(100);
+            System.Threading.Thread.Sleep(100);
             AppController.PasteText(lastRawTranscript, _appWatcher.ActiveAppHwnd);
             hasPastedText = true;
             Console.WriteLine($"Whisper raw text inserted: {lastRawTranscript}");
@@ -507,7 +460,7 @@ namespace ClaudeVoiceOverlay.Views
         /// <summary>Enter button — toggle auto-enter.
         /// ON→OFF: button goes dark.
         /// OFF→ON: button goes orange AND fires Return immediately.</summary>
-        private async void BtnAutoEnter_Click(object sender, RoutedEventArgs e)
+        private void BtnAutoEnter_Click(object sender, RoutedEventArgs e)
         {
             if (autoEnterEnabled)
             {
