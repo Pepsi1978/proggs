@@ -336,6 +336,8 @@ import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsExpert3
 import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsExpert4
 import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsExpert5
 import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsExpert6
+import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsMaster1
+import com.quizverse.app.data.prepopulate.questions.herthaBscQuestionsMaster2
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestions
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsEasy2
 import com.quizverse.app.data.prepopulate.questions.dortmundQuestionsEasy3
@@ -719,6 +721,8 @@ object QuestionSeeder {
             herthaBscQuestionsExpert4() +
             herthaBscQuestionsExpert5() +
             herthaBscQuestionsExpert6() +
+            herthaBscQuestionsMaster1() +
+            herthaBscQuestionsMaster2() +
             dortmundQuestions() +
             dortmundQuestionsEasy2() +
             dortmundQuestionsEasy3() +
