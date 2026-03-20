@@ -150,8 +150,18 @@
 		],
 		"boostvolt": ["claude-code-lsps"],
 		"xclaude-plugin-marketplace": ["xclaude-plugin"],
-		"apple-platform-build-tools": ["apple-platform-build-tools"],
 		"claude-reflect-marketplace": ["claude-reflect"]
+	},
+
+	"platform_specific_plugins": {
+		"macos_only": {
+			"apple-platform-build-tools": {
+				"marketplace": "apple-platform-build-tools",
+				"plugin": "apple-platform-build-tools",
+				"reason": "Requires Xcode and Swift - only available on macOS"
+			}
+		},
+		"windows_only": {}
 	},
 
 	"extra_marketplaces": {

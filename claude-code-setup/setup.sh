@@ -224,6 +224,22 @@ for PLUGIN in episodic-memory double-shot-latte superpowers-chrome claude-sessio
     fi
 done
 
+# Platform-specific Plugins (macOS only)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo ""
+    echo -e "  ${BLUE}macOS-spezifische Plugins:${NC}"
+    for PLUGIN_SPEC in "apple-platform-build-tools@apple-platform-build-tools"; do
+        echo -ne "  $PLUGIN_SPEC ... "
+        if claude plugins install "$PLUGIN_SPEC" 2>/dev/null; then
+            echo -e "${GREEN}✓${NC}"
+            INSTALLED=$((INSTALLED + 1))
+        else
+            echo -e "${YELLOW}(bereits installiert oder Fehler)${NC}"
+            SKIPPED=$((SKIPPED + 1))
+        fi
+    done
+fi
+
 echo ""
 echo -e "  ${GREEN}Installiert: $INSTALLED${NC} | Uebersprungen: $SKIPPED"
 

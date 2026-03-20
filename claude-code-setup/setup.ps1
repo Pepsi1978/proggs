@@ -250,6 +250,12 @@ foreach ($plugin in $superpowersPlugins) {
     }
 }
 
+# Platform-specific Plugins (skipped on Windows)
+# apple-platform-build-tools: macOS only (requires Xcode/Swift)
+Write-Host ""
+Write-Host "  Plattformspezifische Plugins:" -ForegroundColor Blue
+Write-Host "  apple-platform-build-tools ... uebersprungen (nur macOS)" -ForegroundColor Yellow
+
 Write-Host ""
 Write-Host "  Installiert: $Installed | Uebersprungen: $Skipped" -ForegroundColor Green
 
