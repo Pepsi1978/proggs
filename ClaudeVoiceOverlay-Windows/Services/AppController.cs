@@ -68,8 +68,10 @@ namespace ClaudeVoiceOverlay.Services
 
             if (isCodex)
             {
-                // Codex/Cursor: Chrome_RenderWidgetHostHWND is NOT a child of the main window.
-                // Escape returns focus to input → Ctrl+V
+                // Codex/Cursor: Electron window structure differs from Claude Desktop.
+                // Chrome_RenderWidgetHostHWND is NOT a child of the main window.
+                // SetFocus on any child window STEALS keyboard focus.
+                // Instead: just Escape (returns focus to input) → Ctrl+V
                 Console.WriteLine("AppController: Codex/Cursor mode — Escape → Ctrl+V");
                 SendInputKeys(Win32.VK_ESCAPE);
                 await Task.Delay(200);
@@ -77,16 +79,10 @@ namespace ClaudeVoiceOverlay.Services
             }
             else
             {
-                // Claude Desktop: hybrid approach for reliable focus across all tabs
-                // Step 1: Win32 focus on Chrome render widget
+                // Claude Desktop: render widget is a direct child — SetFocus + click works
                 FocusDirectRenderWidget(appHwnd);
-                // Step 2: Escape closes any popup and returns focus to input field
-                SendInputKeys(Win32.VK_ESCAPE);
-                await Task.Delay(150);
-                // Step 3: Click the actual input element via UIA (positions cursor)
                 ClickInputField(appHwnd);
-                await Task.Delay(300); // Give Electron time to process click
-                // Step 4: Paste
+                await Task.Delay(200); // Give Electron time to process click and set focus
                 SendInputPaste();
             }
 
@@ -144,14 +140,11 @@ namespace ClaudeVoiceOverlay.Services
             }
             else
             {
-                // Claude Desktop: same approach as Codex — select within input only
-                // NEVER use Ctrl+A: it selects the ENTIRE page (sidebar, sessions, etc.)
+                // Claude Desktop: click into input field, then select within input only.
+                // NEVER use Ctrl+A — it selects the entire Electron page (sidebar, sessions, etc.)
                 FocusDirectRenderWidget(appHwnd);
-                SendInputKeys(Win32.VK_ESCAPE);
-                await Task.Delay(150);
                 ClickInputField(appHwnd);
-                await Task.Delay(200);
-                // End → Ctrl+Shift+Home selects all text within the input field only
+                await Task.Delay(100);
                 SendInputKeys(VK_END);
                 await Task.Delay(30);
                 SendInputModifierCombo(Win32.VK_CONTROL, Win32.VK_SHIFT, VK_HOME);
@@ -179,15 +172,13 @@ namespace ClaudeVoiceOverlay.Services
             if (IsCodexProcess(appHwnd))
             {
                 SendInputKeys(Win32.VK_ESCAPE);
-                await Task.Delay(150);
+                await Task.Delay(100);
             }
             else
             {
                 FocusDirectRenderWidget(appHwnd);
-                SendInputKeys(Win32.VK_ESCAPE);
-                await Task.Delay(150);
                 ClickInputField(appHwnd);
-                await Task.Delay(200);
+                await Task.Delay(100);
             }
 
             SendInputKeys(VK_RETURN);
@@ -321,10 +312,6 @@ namespace ClaudeVoiceOverlay.Services
                 var window = AutomationElement.FromHandle(appHwnd);
                 if (window == null) return false;
 
-                // Get window bounds for position-based scoring
-                var windowRect = window.Current.BoundingRectangle;
-                double windowBottom = windowRect.Y + windowRect.Height;
-
                 // Search for Edit and Document controls (textarea, contenteditable divs)
                 var condition = new OrCondition(
                     new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
@@ -365,17 +352,6 @@ namespace ClaudeVoiceOverlay.Services
                         if (element.Current.IsKeyboardFocusable)
                             score += 1000;
 
-                        // CRITICAL: Prefer elements near the BOTTOM of the window.
-                        // In chat apps (Claude, Codex), the input field is ALWAYS at the bottom.
-                        // The conversation area is large and fills the top/middle.
-                        double elementBottom = rect.Y + rect.Height;
-                        double bottomPercent = (elementBottom - windowRect.Y) / windowRect.Height;
-                        if (bottomPercent > 0.7)
-                            score += 1500; // Near bottom — very likely the input field
-                        else if (bottomPercent > 0.5)
-                            score += 500;
-                        // Top elements get no bonus — likely conversation area or header
-
                         // Prefer moderate height (input fields: 30-200px)
                         // Penalize very tall elements (conversation area: 400px+)
                         if (rect.Height < 200)
@@ -398,7 +374,7 @@ namespace ClaudeVoiceOverlay.Services
 
                         Console.WriteLine($"  UIA: {element.Current.ControlType.ProgrammaticName} " +
                             $"at ({rect.X:F0},{rect.Y:F0}) {rect.Width:F0}x{rect.Height:F0} " +
-                            $"score={score:F0} bottom={bottomPercent:P0} focusable={element.Current.IsKeyboardFocusable}");
+                            $"score={score:F0} focusable={element.Current.IsKeyboardFocusable}");
 
                         if (score > bestScore)
                         {
