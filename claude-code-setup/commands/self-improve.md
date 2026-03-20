@@ -35,8 +35,8 @@ fuer ALLE Komponenten des Claude Code Systems: Agents, Skills, Hooks, MCP-Server
    MUSS in diesem Lauf gefixt oder zumindest adressiert werden
 3. **Systemzustand aktualisieren**: Nach Aenderungen die Sektion "Systemzustand" updaten
 4. **Erkenntnisse eintragen**: Alles was fuer andere Agents/Skills nuetzlich ist → reinschreiben
-5. **Keine separaten Dateien**: Es gibt NUR dieses Whiteboard — keine MEMORY.md (Sektion "Offene Fehler & Probleme"), MEMORY.md,
-   MEMORY.md (Sektion "Forschung & Intelligence") oder andere Fragmente. Alles gehoert ins Whiteboard.
+5. **Keine separaten Dateien**: Es gibt NUR dieses eine Whiteboard. Keine FAILURES.md, keine
+   PROCEDURES.md, keine intelligence-backlog.md — alles gehoert in MEMORY.md.
 
 **Whiteboard-Sektionen:**
 - "Offene Fehler & Probleme" — Fehler aus Hooks, Agents, MCP-Servern, Plugins (PRIORITAET!)
@@ -450,7 +450,7 @@ ausfuehrlichen Laeufen genug Mehrwert.
 
 ### 6A: Aktive Fehlersuche (3 parallele Scans)
 Spawne 3 Agents parallel — jeder sucht an einer anderen Stelle nach Problemen:
-1. **Whiteboard-Scanner**: Lies MEMORY.md (Sektion "Offene Fehler & Probleme") + MEMORY.md + MEMORY.md → Finde ALLE unfixten Probleme, veraltete Eintraege, Widersprueche. Jedes Problem MUSS in diesem Lauf gefixt werden.
+1. **Whiteboard-Scanner**: Lies `.claude/agent-memory/shared/MEMORY.md` komplett → Finde ALLE unfixten Probleme (Status: OFFEN), veraltete Eintraege, Widersprueche. Jedes Problem MUSS in diesem Lauf gefixt werden.
 2. **Umgebungs-Scanner**: Pruefe Hooks (laufen sie?), Agents (stimmen Prompts?), Rules (sind sie aktuell?), Settings (Drift?), session-scorer (liefert er echte Daten?). Finde AKTUELLE Fehler die noch niemand bemerkt hat.
 3. **Zukunfts-Scanner**: Analysiere die letzten 3 Aenderungen in MEMORY.md (Sektion "Offene Fehler & Probleme") — welche NEUEN Fehlertypen koennten in Zukunft auftreten? Fuer jeden potenziellen Fehler: Praeventiven Hook oder Rule vorschlagen.
 
@@ -509,7 +509,7 @@ naechsten Session-Start automatisch die neuesten Verbesserungen erhalten.
 6. **settings-reference.json** → `~/proggs/claude-code-setup/settings-reference.json`
    (Hooks, Plugins, Marketplaces, Env — wird von auto-sync in settings.json gemerged)
 7. **Knowledge-Dateien** → `~/proggs/claude-code-setup/agent-memory/shared/`
-   (MEMORY.md, MEMORY.md (Sektion "Offene Fehler & Probleme"), MEMORY.md — plattformuebergreifendes Wissen)
+   (MEMORY.md — das einzige zentrale Whiteboard, plattformuebergreifendes Wissen)
 
 **Was NICHT synchronisiert wird (maschinenspezifisch):**
 - settings.json direkt (Permissions, LSP-Pfade sind plattformabhaengig)
