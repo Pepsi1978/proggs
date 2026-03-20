@@ -25,27 +25,37 @@ if ((Test-Path $envSource) -and -not (Test-Path $envTarget)) {
     Write-Host ".env nach publish/ kopiert." -ForegroundColor Cyan
 }
 
-# Verknuepfung im Autostart-Ordner erstellen — startet den Watcher
-# Alte Verknuepfung entfernen falls vorhanden
-$oldLink = [System.IO.Path]::Combine([Environment]::GetFolderPath("Startup"), "TerminalVoiceOverlay.lnk")
-if (Test-Path $oldLink) { Remove-Item $oldLink; Write-Host "Alte Verknuepfung entfernt." -ForegroundColor Yellow }
+# Alte Verknuepfung aus Autostart-Ordner entfernen falls vorhanden
+$startup = [Environment]::GetFolderPath("Startup")
+$oldLinks = @("TerminalVoiceOverlay.lnk", "Spracheingabe - Terminal.lnk")
+foreach ($old in $oldLinks) {
+    $oldPath = Join-Path $startup $old
+    if (Test-Path $oldPath) { Remove-Item $oldPath; Write-Host "Alte Verknuepfung entfernt: $old" -ForegroundColor Yellow }
+}
 
-$startupLink = [System.IO.Path]::Combine(
-    [Environment]::GetFolderPath("Startup"),
-    "Spracheingabe - Terminal.lnk"
-)
+# Alte Aufgabe loeschen falls vorhanden
+Unregister-ScheduledTask -TaskName "Spracheingabe - Terminal" -Confirm:$false -ErrorAction SilentlyContinue
 
-$shell = New-Object -ComObject WScript.Shell
-$shortcut = $shell.CreateShortcut($startupLink)
-$shortcut.TargetPath = "wscript.exe"
-$shortcut.Arguments = """$watcherPath"""
-$shortcut.WorkingDirectory = $PSScriptRoot
-$shortcut.Description = "Voice Overlay fuer Terminal — Sprache zu Text in PowerShell, CMD, Windows Terminal"
-$shortcut.WindowStyle = 7  # Minimiert
-$shortcut.Save()
+# Aufgabenplaner-Eintrag erstellen (zeigt korrekten Namen im Autostart)
+$action = New-ScheduledTaskAction `
+    -Execute "wscript.exe" `
+    -Argument """$watcherPath""" `
+    -WorkingDirectory $PSScriptRoot
+$trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+$settings = New-ScheduledTaskSettingsSet `
+    -AllowStartIfOnBatteries `
+    -DontStopIfGoingOnBatteries `
+    -ExecutionTimeLimit ([TimeSpan]::Zero)
+Register-ScheduledTask `
+    -TaskName "Spracheingabe - Terminal" `
+    -Action $action `
+    -Trigger $trigger `
+    -Settings $settings `
+    -Description "Voice Overlay fuer Terminal — Sprache zu Text in PowerShell, CMD, Windows Terminal" | Out-Null
 
 Write-Host "`nAutostart mit Watcher eingerichtet!" -ForegroundColor Green
-Write-Host "Verknuepfung: $startupLink"
+Write-Host "Aufgabe: Spracheingabe - Terminal" -ForegroundColor White
 Write-Host "Watcher: $watcherPath"
 Write-Host "Programm: $exePath"
 Write-Host "`nDer Watcher startet bei der Windows-Anmeldung und haelt das Overlay am Laufen."
+Write-Host "Sichtbar unter: Einstellungen > Apps > Autostart" -ForegroundColor Cyan
