@@ -79,20 +79,19 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-03-20 20:38 — Hook: safety-gate.ps1 — Befehl blockiert: git\s+reset\s+--hard
 ---
 
-## Systemzustand (aktuell — Stand: 2026-03-20 21:15)
+## Systemzustand (aktuell — Stand: 2026-03-20 21:45)
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
 <!-- DATUM im Titel MUSS bei jeder Aktualisierung angepasst werden! -->
 
-- **Plattform:** Windows 11 Home, Claude Code v2.1.80, Opus 4.6 (1M context)
+- **Plattform:** macOS (Apple Silicon), Claude Code v2.1.80, Opus 4.6 (1M context)
 - **Sprachen:** Swift, C#, TypeScript, Rust, Go, Kotlin
 - **Semantic Search:** Aktiv (wird bei jeder Session automatisch aktualisiert via reindex-Hook)
-- **Ollama:** v0.18.2, nomic-embed-text Modell, Fenster versteckt (nur Tray)
 - **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
 - **Agents:** 15 aktiv, alle mit C1 Sentinel-Enforcement (code-reviewer hat memory:project, coder hat isolation:worktree)
-- **Hooks:** 16 Event-Typen (inkl. StopFailure neu), 24 individuelle Hooks — 15 .ps1 (alle deployed), .sh Gegenstuecke im Backup vorhanden (auto-sync bei Session-Start kopiert sie)
+- **Hooks:** 16 Event-Typen, 21 .sh Hook-Dateien deployed + prompt-injection-defender (Python) — alle in settings.json angebunden (writeback-enforcer, memory-watchdog, reindex-codebase, pending-admin-updates, stopfailure-logger)
 - **Plugins:** 90 Eintraege, 87 aktiv (3 deaktiviert: zeroize-audit, xclaude-plugin, apple-platform-build-tools)
-- **Whiteboard-Anbindung:** Alle Hooks nutzen whiteboard-insert.ps1 (sektionsbasiert) — Add-Content ans Dateiende eliminiert
+- **Whiteboard-Anbindung:** Alle Hooks nutzen whiteboard-insert.sh (sektionsbasiert) — echo/append ans Dateiende eliminiert
 - **Session-Scorer:** v3 — schreibt NUR in session-scores.jsonl, NICHT mehr direkt in MEMORY.md
 - **Session-Autopsy:** v2 — schreibt in MEMORY.md "Debugging-Muster" statt separate AUTOPSY.md
 - **Preferred Patterns:** MVVM (Swift), Fluent Design (C#), strict mode (TypeScript)
