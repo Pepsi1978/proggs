@@ -439,7 +439,7 @@ Am Ende jedes Laufs: Berechne und zeige den **IQ-Score** (Intelligence Quotient 
 
 | Dimension | Max | Messung (Qualitaets-gewichtet) |
 |-----------|-----|-------------------------------|
-| Praevention | 20 | Fehler mit ✅ DAUERHAFT Prevention = 2 Pkt, mit ⚠️ FRAGIL = 1 Pkt, ohne = 0 |
+| Praevention | 20 | Fehler mit [OK] DAUERHAFT Prevention = 2 Pkt, mit [!] FRAGIL = 1 Pkt, ohne = 0 |
 | Gedaechtnis | 20 | Abschnitte in MEMORY.md die in letzten 30 Tagen aktualisiert wurden = 2 Pkt/Abschnitt |
 | Konventionen | 20 | Regeln in "Regeln & Konventionen" die in letzten 5 Sessions angewandt wurden = 2 Pkt/Regel |
 | Regeln | 20 | Rules die in letzten 5 Sessions relevant waren = 3 Pkt, nie relevant = 1 Pkt |
@@ -474,10 +474,10 @@ Spawne 3 Agents parallel — jeder sucht an einer anderen Stelle nach Problemen:
 
 ### 6C: Korrektur-Analyse (Aus Benutzer-Korrekturen lernen)
 1. Lies `session-scores.jsonl`: Finde Sessions mit corrections > 3
-2. Lade das Transkript der schlimmsten Session (hoechste correction-Rate)
+2. Analysiere die session-scores Daten — Transkripte sind zu gross zum Laden, nutze stattdessen die Score-Metadaten (corrections, total_turns, tool_calls) um Muster zu erkennen
 3. Extrahiere die 3 haeufigsten Korrektur-TYPEN (z.B. "falsches Ziel", "ungefragt geaendert", "falsche Datei")
 4. Fuer jeden Typ: Pruefe ob eine Rule existiert die das verhindert. Wenn nicht → Rule erstellen.
-5. Trage Erkenntnisse in MEMORY.md unter "Error Learnings" ein
+5. Trage Erkenntnisse in MEMORY.md unter "Debugging-Muster" ein
 
 ### 6D: Regel- und Agent-Audit (Sind Schutzmassnahmen wirksam?)
 1. Lies ALLE Dateien in `~/.claude/rules/` — zaehle Regeln
@@ -490,14 +490,14 @@ Spawne 3 Agents parallel — jeder sucht an einer anderen Stelle nach Problemen:
 1. Pruefe die letzten 5 Fixes in MEMORY.md unter "Offene Fehler & Probleme": Ist der Fix noch wirksam? (Hook existiert? Rule geladen? Config unveraendert?)
 2. Wenn ein Fix nicht mehr wirkt: **Sofort reparieren** und Ursache dokumentieren
 3. **REGEL**: Jeder Fix muss DAUERHAFT sein — keine temporaeren Workarounds.
-4. Trage Dauerhaftigkeits-Status in MEMORY.md unter "Offene Fehler & Probleme" ein: `✅ DAUERHAFT` oder `⚠️ FRAGIL (Grund)`
+4. Trage Dauerhaftigkeits-Status in MEMORY.md unter "Offene Fehler & Probleme" ein: `[OK] DAUERHAFT` oder `[!] FRAGIL (Grund)`
 
 ### 6F: Lern-Extraktion (Was lehrt uns jeder Fehler?)
 Fuer JEDEN neuen Fehler der in diesem Lauf gefunden wurde:
 1. **Root Cause**: Warum ist er passiert? (Nicht das Symptom, die URSACHE)
 2. **Systemische Lektion**: Was sagt dieser Fehler ueber das SYSTEM?
 3. **Praevention**: Konkreter Hook, Rule oder Agent-Aenderung die diesen Fehlertyp FUER IMMER verhindert
-4. Trage Lektion in MEMORY.md unter "Systemische Lektionen" ein
+4. Trage Lektion in MEMORY.md unter "Regeln & Konventionen" ein (als neue Regel)
 
 ## Focus Mode
 
@@ -590,4 +590,4 @@ If < 5 entries: show "Evolution: Noch zu wenig Daten (N/5 Sessions)".
 - **Shell/Terminal-Updates**: Siehe Core Rules oben — IMMER zuletzt, IMMER nach Bestaetigung.
 
 ---
-<!-- Skill Version: v5.11 | Date: 2026-03-19 | Lines: ~395/1000 (main) | Ref files: researchers.md (~230), report-and-creative.md (~181) | Total: ~806/2000 | Changes: v5.11 — Added R8 Intelligence Researcher: 5 research dimensions (Reasoning, Kognitive Werkzeuge, Kompetitive Analyse, Biologische Muster, Selbstverbesserung). Runs ALWAYS (never cached). Stufe 5C refactored to consume R8 results instead of spawning inline researcher (Ansatz C). Fallback: if R8 crashes, 5C may spawn reduced-scope replacement. Previous: v5.10 (Researcher-Resilienz). -->
+<!-- Skill Version: v5.15 | Date: 2026-03-20 | Changes: v5.15 — Whiteboard as central nervous system: single MEMORY.md, all components read+write, error format enforced (Quelle/Symptom/Ursache/Fix-Vorschlag), connected systems (CLAUDE.md, feedback, session-scores, claude-mem), hooks write to repo copy, IQ-Score Konventionen statt Prozeduren, phantom sections removed. Previous: v5.11. -->

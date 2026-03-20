@@ -8,6 +8,8 @@ Das zentrale Nervensystem des Claude Code Systems. JEDE Komponente die hier arbe
 **Pfad**: `.claude/agent-memory/shared/MEMORY.md`
 
 **Angeschlossene Systeme** (MUESSEN von /self-improve ebenfalls gelesen werden):
+_Hinweis: Pfade mit `~/proggs/` liegen im Repo (autoritativ). Pfade mit `~/.claude/` sind lokal
+und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git synchronisiert)._
 - **CLAUDE.md** (WICHTIGSTE DATEI): `~/proggs/CLAUDE.md` + `~/CLAUDE.md` (Sync-Kopie)
   Enthaelt ALLE Projektregeln, Konventionen und Workflow-Definitionen. Wenn /self-improve
   neue Regeln aus Fehlern oder Feedback ableitet → gehoeren sie in die CLAUDE.md.
@@ -70,7 +72,7 @@ _Aktuell keine offenen Fehler._
 
 - **Plattform:** Windows 11 Home, Claude Code v2.1.80, Opus 4.6 (1M context)
 - **Sprachen:** Swift, C#, TypeScript, Rust, Go, Kotlin
-- **Semantic Search:** index-2.db, 599 Dateien, 10.206 Chunks (Stand: 2026-03-20 12:53)
+- **Semantic Search:** Aktiv (wird bei jeder Session automatisch aktualisiert via reindex-Hook)
 - **Ollama:** v0.18.2, nomic-embed-text Modell, Fenster versteckt (nur Tray)
 - **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
 - **Agents:** 15 aktiv (code-reviewer hat memory:project, coder hat isolation:worktree)
@@ -116,7 +118,6 @@ _Noch keine Eintraege._
 - Kein Python fuer User-Interfaces
 - Commit-Format: #NNN - Beschreibung (Englisch)
 - Kommunikation: Deutsch, Code-Kommentare: Englisch
-- Cross-Platform: Immer macOS + Windows beruecksichtigen
 - quality-gate MUSS nach jedem Feature/Projekt laufen
 - Fehler NIEMALS still verschlucken — immer ins Whiteboard loggen
 - Neue Dateien/Strukturen: Pruefen ob Whiteboard-Eintrag noetig

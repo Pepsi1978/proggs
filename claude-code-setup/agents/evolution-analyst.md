@@ -35,7 +35,7 @@ Read these files to understand the current state:
    - JSONL with per-session metrics: quality_score, errors, corrections, tool_calls, commits
    - Calculate trends: 5-session moving average, compare to previous period
 
-2. **Shared Knowledge Hub**: `~/.claude/agent-memory/shared/MEMORY.md`
+2. **Shared Knowledge Hub**: `.claude/agent-memory/shared/MEMORY.md`
    - Cross-agent findings from code-reviewer, tester, architect, debugger
    - Look for recurring patterns that indicate systemic issues
 
