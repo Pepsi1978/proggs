@@ -39,4 +39,23 @@ hook_log_warn() {
     echo "[$ts] WARN  $_HOOK_LOG_NAME: $1" >> "$_HOOK_LOG_FILE" 2>/dev/null || true
 }
 
+# Trap handler for ERR signal — logs the failing command and line number
+_hook_log_trap_handler() {
+    local line_no="$1"
+    local cmd="${BASH_COMMAND}"
+    hook_log_error "command failed at line ${line_no} — ${cmd}"
+}
+
+# Register ERR trap: fires whenever a command exits with non-zero status
+trap '_hook_log_trap_handler $LINENO' ERR
+
+# Register EXIT trap: logs unexpected non-zero exit codes (mirrors PS1's PowerShell.Exiting handler)
+_hook_log_exit_handler() {
+    local exit_code="$?"
+    if [[ "$exit_code" -ne 0 ]]; then
+        hook_log_error "unexpected exit code ${exit_code}"
+    fi
+}
+trap '_hook_log_exit_handler' EXIT
+
 hook_log "started"
