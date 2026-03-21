@@ -8,7 +8,76 @@
 		"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
 		"CLAUDE_CODE_EFFORT_LEVEL": "high",
 		"CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS": "30000",
-		"ENABLE_TOOL_SEARCH": "1"
+		"ENABLE_TOOL_SEARCH": "1",
+		"ENABLE_SECURITY_REMINDER": "0",
+		"ECC_HOOK_PROFILE": "minimal"
+	},
+	"permissions": {
+		"allow": [
+			"Bash",
+			"Read",
+			"Edit",
+			"Write",
+			"Glob",
+			"Grep",
+			"WebFetch",
+			"WebSearch",
+			"Agent",
+			"NotebookEdit",
+			"mcp__plugin_playwright_playwright__browser_click",
+			"mcp__plugin_playwright_playwright__browser_close",
+			"mcp__plugin_playwright_playwright__browser_console_messages",
+			"mcp__plugin_playwright_playwright__browser_drag",
+			"mcp__plugin_playwright_playwright__browser_evaluate",
+			"mcp__plugin_playwright_playwright__browser_file_upload",
+			"mcp__plugin_playwright_playwright__browser_fill_form",
+			"mcp__plugin_playwright_playwright__browser_handle_dialog",
+			"mcp__plugin_playwright_playwright__browser_hover",
+			"mcp__plugin_playwright_playwright__browser_install",
+			"mcp__plugin_playwright_playwright__browser_navigate",
+			"mcp__plugin_playwright_playwright__browser_navigate_back",
+			"mcp__plugin_playwright_playwright__browser_network_requests",
+			"mcp__plugin_playwright_playwright__browser_press_key",
+			"mcp__plugin_playwright_playwright__browser_resize",
+			"mcp__plugin_playwright_playwright__browser_run_code",
+			"mcp__plugin_playwright_playwright__browser_select_option",
+			"mcp__plugin_playwright_playwright__browser_snapshot",
+			"mcp__plugin_playwright_playwright__browser_tabs",
+			"mcp__plugin_playwright_playwright__browser_take_screenshot",
+			"mcp__plugin_playwright_playwright__browser_type",
+			"mcp__plugin_playwright_playwright__browser_wait_for",
+			"mcp__plugin_context7_context7__query-docs",
+			"mcp__plugin_context7_context7__resolve-library-id",
+			"mcp__plugin_episodic-memory_episodic-memory__read",
+			"mcp__plugin_episodic-memory_episodic-memory__search",
+			"mcp__plugin_superpowers-chrome_chrome__use_browser",
+			"mcp__sequential-thinking__sequentialthinking",
+			"mcp__claude_ai_Gmail__gmail_create_draft",
+			"mcp__claude_ai_Gmail__gmail_get_profile",
+			"mcp__claude_ai_Gmail__gmail_list_drafts",
+			"mcp__claude_ai_Gmail__gmail_list_labels",
+			"mcp__claude_ai_Gmail__gmail_read_message",
+			"mcp__claude_ai_Gmail__gmail_read_thread",
+			"mcp__claude_ai_Gmail__gmail_search_messages",
+			"mcp__claude_ai_Google_Calendar__gcal_create_event",
+			"mcp__claude_ai_Google_Calendar__gcal_delete_event",
+			"mcp__claude_ai_Google_Calendar__gcal_find_meeting_times",
+			"mcp__claude_ai_Google_Calendar__gcal_find_my_free_time",
+			"mcp__claude_ai_Google_Calendar__gcal_get_event",
+			"mcp__claude_ai_Google_Calendar__gcal_list_calendars",
+			"mcp__claude_ai_Google_Calendar__gcal_list_events",
+			"mcp__claude_ai_Google_Calendar__gcal_respond_to_event",
+			"mcp__claude_ai_Google_Calendar__gcal_update_event",
+			"mcp__claude_ai_PubMed__convert_article_ids",
+			"mcp__claude_ai_PubMed__find_related_articles",
+			"mcp__claude_ai_PubMed__get_article_metadata",
+			"mcp__claude_ai_PubMed__get_copyright_status",
+			"mcp__claude_ai_PubMed__get_full_text_article",
+			"mcp__claude_ai_PubMed__lookup_article_by_citation",
+			"mcp__claude_ai_PubMed__search_articles",
+			"mcp__claude_ai_Scholar_Gateway__semanticSearch"
+		],
+		"defaultMode": "bypassPermissions"
 	},
 	"enableAllProjectMcpServers": true,
 	"hooks": {
@@ -82,7 +151,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "python \"$USERPROFILE/.claude/hooks/prompt-injection-defender/post-tool-defender.py\"",
+						"command": "python3 \"$USERPROFILE/.claude/hooks/prompt-injection-defender/post-tool-defender.py\"",
 						"timeout": 5
 					}
 				]
@@ -131,13 +200,12 @@
 				]
 			}
 		],
-		"Stop": [],
 		"PreCompact": [
 			{
 				"hooks": [
 					{
 						"type": "prompt",
-						"prompt": "Before context compression: Extract and list any critical information that should survive compaction: (1) Current task status and progress, (2) File paths that were modified, (3) Decisions made by the user, (4) Any pending actions, (5) Key information from `~/proggs/.claude/agent-memory/shared/MEMORY.md` relevant to the current task (especially 'Offene Fehler & Probleme' and 'Regeln & Konventionen'). Format as a concise summary that can be injected after compaction.",
+						"prompt": "Before context compression: Extract and list any critical information that should survive compaction: (1) Current task status and progress, (2) File paths that were modified, (3) Decisions made by the user, (4) Any pending actions, (5) Key information from `.claude/agent-memory/shared/MEMORY.md` relevant to the current task (especially 'Offene Fehler & Probleme' and 'Regeln & Konventionen'). Format as a concise summary that can be injected after compaction.",
 						"timeout": 15
 					}
 				]
@@ -177,7 +245,6 @@
 				]
 			}
 		],
-		"_comment_PermissionRequest": "Intentionally removed — caused permission mode reset (2026-03-20)",
 		"WorktreeCreate": [
 			{
 				"hooks": [
@@ -236,6 +303,16 @@
 				"hooks": [
 					{
 						"type": "command",
+						"command": "bash \"$HOME/.claude/hooks/session-cleanup.sh\"",
+						"timeout": 10,
+						"async": true
+					}
+				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
 						"command": "\"$USERPROFILE/.bun/bin/bun.exe\" run \"$USERPROFILE/.claude/hooks/session-scorer.ts\"",
 						"timeout": 25,
 						"async": true
@@ -246,7 +323,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "\"C:/Users/barwa/.bun/bin/bun.exe\" run \"$USERPROFILE/.claude/hooks/session-autopsy.ts\"",
+						"command": "\"$USERPROFILE/.bun/bin/bun.exe\" run \"$USERPROFILE/.claude/hooks/session-autopsy.ts\"",
 						"timeout": 10,
 						"async": true
 					}
@@ -342,7 +419,6 @@
 		"fpf@context-engineering-kit": true,
 		"claude-code-lsps@boostvolt": true,
 		"xclaude-plugin@xclaude-plugin-marketplace": false,
-		"apple-platform-build-tools@apple-platform-build-tools": false,
 		"claude-reflect@claude-reflect-marketplace": true,
 		"coderabbit@claude-plugins-official": true,
 		"aikido@claude-plugins-official": true,
@@ -423,10 +499,6 @@
 				"repo": "FlineDev/context-kit"
 			}
 		}
-	},
-	"permissions": {
-		"defaultMode": "bypassPermissions",
-		"_comment_defaultMode": "KRITISCH: Darf NIEMALS geaendert werden. Verhindert dass Hooks/Plugins/Compaction den Permission-Modus mid-Session auf acceptEdits zuruecksetzen."
 	},
 	"language": "de",
 	"alwaysThinkingEnabled": true,

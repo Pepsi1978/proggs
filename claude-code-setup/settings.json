@@ -7,9 +7,13 @@
 		"CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "95",
 		"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
 		"CLAUDE_CODE_EFFORT_LEVEL": "high",
-		"CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS": "5000"
+		"CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS": "30000",
+		"ENABLE_TOOL_SEARCH": "1",
+		"ENABLE_SECURITY_REMINDER": "0",
+		"ECC_HOOK_PROFILE": "minimal"
 	},
 	"permissions": {
+		"defaultMode": "bypassPermissions",
 		"allow": [
 			"Bash",
 			"Read",
