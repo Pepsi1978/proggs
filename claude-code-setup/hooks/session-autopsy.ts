@@ -295,6 +295,11 @@ function insertViaWhiteboardInsert(section: string, entry: string): void {
 		return;
 	}
 
+	// Escape strings for safe embedding in shell/PowerShell command strings.
+	// Single quotes in PS1 are escaped by doubling them; in bash by closing+escaping+reopening.
+	const escapedSection = section.replace(/'/g, "''");
+	const escapedEntry = entry.replace(/'/g, "''");
+
 	if (process.platform === "win32") {
 		const script = join(hookDir, "whiteboard-insert.ps1");
 		if (!existsSync(script)) {
@@ -303,12 +308,21 @@ function insertViaWhiteboardInsert(section: string, entry: string): void {
 			);
 			return;
 		}
-		// Pass args as array to execFileSync — no shell expansion, injection-safe
-		execFileSync(
-			"powershell",
-			["-NoProfile", "-File", script, "-Section", section, "-Entry", entry],
-			{ timeout: 5000 },
-		);
+		// Dot-source the library script and call the function directly.
+		// -File would only execute the script body, which contains only function definitions.
+		try {
+			execFileSync(
+				"powershell",
+				[
+					"-NoProfile",
+					"-Command",
+					`. '${script}'; Insert-WhiteboardEntry -Section '${escapedSection}' -Entry '${escapedEntry}'`,
+				],
+				{ timeout: 5000 },
+			);
+		} catch (e) {
+			process.stderr.write(`[session-autopsy] whiteboard write failed: ${e}\n`);
+		}
 	} else {
 		const script = join(hookDir, "whiteboard-insert.sh");
 		if (!existsSync(script)) {
@@ -317,8 +331,22 @@ function insertViaWhiteboardInsert(section: string, entry: string): void {
 			);
 			return;
 		}
-		// Pass args as array — bash receives them as $1 and $2, no shell injection
-		execFileSync("bash", [script, section, entry], { timeout: 5000 });
+		// Source the library script and call the function.
+		// Passing the script directly to bash would only define functions, not call them.
+		const bashSection = section.replace(/'/g, "'\\''");
+		const bashEntry = entry.replace(/'/g, "'\\''");
+		try {
+			execFileSync(
+				"bash",
+				[
+					"-c",
+					`source '${script}' && insert_whiteboard_entry '${bashSection}' '${bashEntry}'`,
+				],
+				{ timeout: 5000 },
+			);
+		} catch (e) {
+			process.stderr.write(`[session-autopsy] whiteboard write failed: ${e}\n`);
+		}
 	}
 }
 

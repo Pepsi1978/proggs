@@ -43,8 +43,10 @@ hook_log "found ${#sentinels[@]} sentinel file(s) — acquiring lock"
 # Fallback: proceed without locking (with a warning) so the hook never silently fails.
 _do_merge() {
     for f in "${sentinels[@]}"; do
-        agent=$(python3 -c "import json; print(json.load(open('$f')).get('agent','unknown'))" 2>/dev/null || echo "unknown")
-        findings=$(python3 -c "import json; print(json.load(open('$f')).get('findings','(no findings)'))" 2>/dev/null || echo "(no findings)")
+        agent=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('agent','unknown'))" "$f" 2>/dev/null || echo "unknown")
+        findings=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('findings','(no findings)'))" "$f" 2>/dev/null || echo "(no findings)")
+        timestamp=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('timestamp',''))" "$f" 2>/dev/null || echo "")
+        section_override=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('section',''))" "$f" 2>/dev/null || echo "")
         ts=$(date +"%Y-%m-%d %H:%M")
         entry="- **[$ts] $agent**: $findings"
         target_section=$(get_section "$agent")
@@ -102,8 +104,12 @@ PYEOF
             hook_log_warn "Python merge failed (exit $py_exit) for agent '$agent'"
         fi
 
-        rm -f "$f"
-        hook_log "merged $agent findings into '$target_section'"
+        if [ $py_exit -eq 0 ]; then
+            rm -f "$f"
+            hook_log "merged $agent findings into '$target_section'"
+        else
+            hook_log_warn "Python merge failed for '$f' — sentinel preserved for retry"
+        fi
         echo "WriteBack-Enforcer: Merged $agent findings into '$target_section'"
     done
 }

@@ -123,19 +123,19 @@ TEMP_FILE="$MCP_DIR/reindex-$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random
 # Escape the root dir path for embedding in the TS heredoc
 ROOT_DIR_ESCAPED="${ROOT_DIR//\\/\/}"
 
-cat > "$TEMP_FILE" << TSEOF
-import { findCodeFiles, chunkFile } from '${MCP_DIR}/src/indexer.ts';
-import { generateEmbeddings } from '${MCP_DIR}/src/ollama.ts';
-import { VectorStore } from '${MCP_DIR}/src/store.ts';
+cat > "$TEMP_FILE" << 'TSEOF'
+import { findCodeFiles, chunkFile } from '__MCP_DIR__/src/indexer.ts';
+import { generateEmbeddings } from '__MCP_DIR__/src/ollama.ts';
+import { VectorStore } from '__MCP_DIR__/src/store.ts';
 import { resolve, join } from 'path';
 import { mkdirSync, existsSync, writeFileSync, readdirSync, unlinkSync } from 'fs';
 
 async function main() {
-  const rootDir = resolve('${ROOT_DIR_ESCAPED}');
+  const rootDir = resolve('__ROOT_DIR__');
   const dbDir = join(rootDir, '.code-search');
   if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
 
-  const newDbName = '${NEW_DB_NAME}';
+  const newDbName = '__NEW_DB_NAME__';
   const newDbPath = join(dbDir, newDbName);
   const store = new VectorStore(newDbPath);
 
@@ -167,6 +167,9 @@ async function main() {
 
 main().catch(e => { console.error(e); process.exit(1); });
 TSEOF
+
+# Replace placeholders with actual shell variable values
+sed -i "s|__MCP_DIR__|${MCP_DIR}|g; s|__ROOT_DIR__|${ROOT_DIR_ESCAPED}|g; s|__NEW_DB_NAME__|${NEW_DB_NAME}|g" "$TEMP_FILE"
 
 # Run the indexer
 cd "$MCP_DIR" && $RUNNER "$TEMP_FILE" 2>/dev/null
