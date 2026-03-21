@@ -258,7 +258,7 @@ When extracting skills, also consider:
 
 **Lesen vor der Extraktion**: Whiteboard lesen um sicherzustellen, dass das zu extrahierende Wissen noch nicht in einem anderen Format dokumentiert ist. Verhindert Duplikate zwischen Skills und Whiteboard.
 
-**Schreiben von Erkenntnissen**: Extrahiertes Wissen gehoert in Skills — NICHT ins Whiteboard. Das Whiteboard enthaelt nur:
+**Schreiben von Erkenntnissen**: Projektspezifisches Wissen gehoert in Skills — NICHT ins Whiteboard. Jedoch: Projektuebergreifende Muster oder systemweite Konventionen die in mehreren Projekten auftauchen → ZUSAETZLICH in "Regeln & Konventionen" in MEMORY.md eintragen. Das Whiteboard enthaelt:
 - "Offene Fehler & Probleme": Laufende ungeloeste Probleme (Quelle: claudeception, wenn Extraction wegen eines Bugs nicht abgeschlossen werden kann)
 - "Architektur-Entscheidungen": Grundlegende Projekt-Architektur (kein Skill-spezifisches Wissen)
 

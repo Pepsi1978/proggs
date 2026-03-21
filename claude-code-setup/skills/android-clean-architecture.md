@@ -210,7 +210,7 @@ See [gradle-setup.md](references/gradle-setup.md) for complete build configurati
 **Lesen**: Vor der Ausfuehrung das Whiteboard lesen fuer bekannte Muster, Arch-Entscheidungen und offene Probleme.
 
 **Schreiben bei Fehlern**: Jeden Build- oder Setup-Fehler in den Abschnitt "Offene Fehler & Probleme" eintragen:
-- Quelle: `android-clean-architecture`
+- Quelle: `android-development`
 - Symptom: [Fehlermeldung]
 - Ursache: [Root Cause]
 - Betroffene Dateien: [Pfade]

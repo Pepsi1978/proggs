@@ -39,29 +39,10 @@ touch "$CACHE_STAMP"
 **Absolute Untergrenze**: Auch bei gueltigem Cache: Alle 14 Tage ALLE Researcher frisch laufen lassen.
 **Thorough-Modus**: Ignoriert Cache komplett — alle Researcher laufen immer frisch.
 
-When a run completes, save a snapshot to memory:
-```markdown
----
-name: reference_last_research_snapshot
-description: Cached research results from last self-improve run — expires after 7 days
-type: reference
----
-Date: [today]
-Expires: [today + 7 days]
-
-## R2 Cache: Plugins
-[summary of plugin findings]
-
-## R3 Cache: Parallelization
-[summary of patterns found]
-
-## R4 Cache: Tool Versions
-[version comparison table]
-
-## Evolution-Analyst Findings (for Stufe 0 — not cached, refreshed every run)
-[quality trend, top weaknesses, capability gaps detected]
-[R6 research direction for next run: what to focus on]
-```
+When a run completes, save a snapshot to the cache directory (`~/.claude/self-improve-cache/`):
+- Write R2, R3, R4 summaries as plain text files (e.g., `r2-plugins.txt`, `r3-parallel.txt`, `r4-versions.txt`)
+- Update the timestamp: `touch ~/.claude/self-improve-cache/.last-cache-time`
+- Do NOT use TTL-based `type: reference` memory entries — these contradict the git-diff cache strategy.
 
 ## Researcher Robustness Preamble (v5.11 — PFLICHT fuer JEDEN Researcher)
 
@@ -91,7 +72,7 @@ Spawn sub-agents to verify: one for changelog, one for settings docs.
 Return only actionable findings with version numbers. Date: [today]."
 ```
 
-### R2 — Plugins & Marketplace (skip if cached < 7 days)
+### R2 — Plugins & Marketplace (skip if no env changes since last cache — git-diff check against ~/.claude/agents/, ~/.claude/hooks/, ~/.claude/rules/; run unconditionally if > 14 days since last run)
 ```
 "Research new Claude Code plugins available in [month+year].
 Search: (1) official plugins (anthropics/claude-plugins-official),
@@ -108,7 +89,7 @@ Installed plugins (DO NOT recommend these):
 Return: plugin name, source, what it does, stars, recommendation."
 ```
 
-### R3 — Parallelization & Automation (skip if cached < 7 days)
+### R3 — Parallelization & Automation (skip if no env changes since last cache — git-diff check against ~/.claude/agents/, ~/.claude/hooks/, ~/.claude/rules/; run unconditionally if > 14 days since last run)
 ```
 "Research Claude Code agent teams, parallelization, automation best practices as of [today].
 Search: (1) Agent Teams patterns, (2) new hook events/types,
@@ -116,7 +97,7 @@ Search: (1) Agent Teams patterns, (2) new hook events/types,
 Spawn sub-agents per topic. Return actionable patterns with code examples."
 ```
 
-### R4 — Tool Versions (skip if cached < 7 days)
+### R4 — Tool Versions (skip if no env changes since last cache — git-diff check against ~/.claude/agents/, ~/.claude/hooks/, ~/.claude/rules/; run unconditionally if > 14 days since last run)
 ```
 "Find latest stable versions of: [tool list with current versions from scan].
 IMPORTANT: Compare against EXACT versions from env-checker scan, not memory.

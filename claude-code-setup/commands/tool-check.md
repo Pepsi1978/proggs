@@ -114,9 +114,9 @@ Loop-Agents koennen abstuerzen. Der Gesamt-Scan darf NIEMALS haengenbleiben.
 **Lesen vor dem Scan**: Whiteboard lesen fuer bekannte offene Fehler, die beim jetzigen Scan-Ziel bereits dokumentiert wurden. So werden Doppelbefunde vermieden und der Fokus auf neue Probleme gelegt.
 
 **Schreiben nach dem Scan**: Wenn wiederkehrende Muster oder bisher undokumentierte Probleme gefunden werden:
-- Neue Bugs/Sicherheitsluecken → in "Offene Fehler & Probleme" eintragen
-- Architekturerkenntnisse → in "Architektur-Entscheidungen" eintragen
-- Erst nach User-Bestaetigung der Findings schreiben, nicht waehrend der Loop-Phase
+- **KRITISCHE Findings** (Kategorie Bug, Sicherheitsluecken) → SOFORT beim Entdecken in "Offene Fehler & Probleme" eintragen, OHNE auf User-Bestaetigung zu warten
+- **Nicht-kritische Findings** (Verbesserung, Kreativ, Optik) → erst nach User-Bestaetigung eintragen
+- Architekturerkenntnisse → in "Architektur-Entscheidungen" eintragen (nach User-Bestaetigung)
 
 ## Pre-Scan: Automated Tool Check
 

@@ -99,6 +99,11 @@ Nach dem Revert dem Benutzer mitteilen:
 - Fix-Vorschlag: [Manueller Schritt oder Alternative]
 - Status: OFFEN
 
+**Schreiben bei Erkenntnissen**: Wenn ein besonderes git-Revert-Muster gut funktioniert hat
+(z.B. Multi-Commit-Revert, schwieriger Merge-Konflikt geloest, ungewoehnliche Revert-Situation),
+eine 1-Zeilen-Notiz via Sentinel in "Debugging-Muster" in MEMORY.md eintragen:
+`{"agent": "undo-changes", "timestamp": "[ISO8601]", "findings": "1-Zeile: was funktioniert hat"}`
+
 ## Beispiel
 
 Benutzer sagt: "Mach die letzte Aenderung rueckgaengig"

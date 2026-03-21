@@ -53,3 +53,8 @@ Nachher:
 - Betroffene Datei: [Pfad zum .user.js]
 - Fix-Vorschlag: [Manueller Schritt]
 - Status: OFFEN
+
+**Schreiben bei Erkenntnissen**: Wenn ein Skript auffaellig haeufige Versions-Bumps hat oder
+ungewoehnliche Muster zeigt (z.B. spezielle Header-Konventionen, plattformabhaengige Logik),
+eine 1-Zeilen-Notiz via Sentinel in "Regeln & Konventionen" in MEMORY.md eintragen:
+`{"agent": "tampermonkey-version", "timestamp": "[ISO8601]", "findings": "1-Zeile: was aufgefallen ist"}`
