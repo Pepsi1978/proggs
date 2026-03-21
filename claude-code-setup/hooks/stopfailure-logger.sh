@@ -3,7 +3,9 @@
 # Triggered by StopFailure hook event (Claude Code v2.1.78+)
 # Uses whiteboard-insert.sh for section-based writing (echo >> is FORBIDDEN!)
 
-source "$(dirname "$0")/whiteboard-insert.sh"
+HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$HOOKS_DIR/hook-log.sh"
+source "$HOOKS_DIR/whiteboard-insert.sh"
 
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M')
 

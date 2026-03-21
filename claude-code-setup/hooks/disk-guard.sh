@@ -3,8 +3,9 @@
 # Hook event: SessionStart
 # Platform: macOS / Linux (bash equivalent of disk-guard.ps1)
 
-source "$(dirname "$0")/hook-log.sh"
-source "$(dirname "$0")/whiteboard-insert.sh"
+HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$HOOKS_DIR/hook-log.sh"
+source "$HOOKS_DIR/whiteboard-insert.sh"
 
 # Read disk usage for the filesystem containing $HOME
 # df -k gives kilobyte blocks; works on both macOS and Linux

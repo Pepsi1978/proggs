@@ -10,7 +10,8 @@ try {
     $freeGB = [math]::Round($drive.Free / 1GB, 1)
     $usedGB = [math]::Round($drive.Used / 1GB, 1)
     $totalGB = [math]::Round(($drive.Free + $drive.Used) / 1GB, 1)
-    $usagePct = [math]::Round(($usedGB / $totalGB) * 100, 0)
+    # Calculate percentage directly from raw bytes to avoid double-rounding via intermediate GB values
+    $usagePct = [math]::Round(($drive.Used / ($drive.Free + $drive.Used)) * 100, 0)
 } catch {
     Hook-LogError "failed to read disk space: $_"
     exit 0

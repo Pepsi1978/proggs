@@ -3,7 +3,8 @@
 # Runs the appropriate code formatter after file edits.
 # Platform: macOS/Linux (bash)
 
-source "$(dirname "$0")/hook-log.sh"
+HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$HOOKS_DIR/hook-log.sh"
 
 # Read JSON input from stdin
 HOOK_INPUT=$(cat)
@@ -11,12 +12,14 @@ if [ -z "$HOOK_INPUT" ]; then
     exit 0
 fi
 
-# Extract file_path from JSON input
+# Extract file_path from JSON input (Edit tool uses file_path, Write tool uses path)
 FILE_PATH=$(echo "$HOOK_INPUT" | python3 -c "
 import sys, json
 try:
     data = json.load(sys.stdin)
-    print(data.get('tool_input', {}).get('file_path', ''))
+    ti = data.get('tool_input', {})
+    fp = ti.get('file_path') or ti.get('path') or ''
+    print(fp)
 except Exception:
     print('')
 " 2>/dev/null)
@@ -45,8 +48,14 @@ case "$EXT" in
         ;;
     cs)
         DIR=$(dirname "$FILE_PATH")
-        # Search up to 3 directory levels for a .csproj file
-        PROJ=$(find "$DIR" -maxdepth 3 -name "*.csproj" 2>/dev/null | head -1)
+        # Search UPWARD for a .csproj file (C# projects contain the file, not the other way around)
+        dir="$DIR"
+        PROJ=""
+        while [ "$dir" != "/" ] && [ "$dir" != "." ]; do
+            PROJ=$(find "$dir" -maxdepth 1 -name "*.csproj" 2>/dev/null | head -1)
+            [ -n "$PROJ" ] && break
+            dir=$(dirname "$dir")
+        done
         if [ -n "$PROJ" ]; then
             PROJ_DIR=$(dirname "$PROJ")
             dotnet format whitespace "$PROJ_DIR" --include "$FILE_PATH" 2>/dev/null

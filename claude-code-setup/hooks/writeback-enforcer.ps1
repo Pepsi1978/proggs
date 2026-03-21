@@ -9,6 +9,8 @@
 # Content: { "agent": "name", "timestamp": "ISO8601", "findings": "one-line summary" }
 # Optional: add "section": "Offene Fehler & Probleme" to route to a specific section.
 
+. "$PSScriptRoot/hook-log.ps1"
+
 $sentinelDir = $env:TEMP
 $sentinelPattern = "agent-writeback-*.json"
 # Write to the REPO copy (~/proggs/.claude/) — authoritative whiteboard
@@ -51,7 +53,7 @@ if ($sentinelFiles.Count -gt 0) {
         $acquired = $mutex.WaitOne(5000)  # 5 second timeout
         if (-not $acquired) {
             Write-Output "WriteBack-Enforcer: mutex timeout — skipping write"
-            exit 1
+            exit 0  # Transient condition — not a real error
         }
 
         # Read the full whiteboard content as array of lines (preserves original line endings)
@@ -116,7 +118,7 @@ if ($sentinelFiles.Count -gt 0) {
                     }
                 } else {
                     # Section not found — append at end as last resort
-                    Write-Error "WriteBack-Enforcer: section '$targetSection' not found for agent '$agentName' — appending at end as last resort"
+                    Hook-LogError "WriteBack-Enforcer: section '$targetSection' not found for agent '$agentName' — appending at end as last resort"
                     $lines += $entry
                 }
 

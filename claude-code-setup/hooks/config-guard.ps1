@@ -30,9 +30,9 @@ if (-not $filePath) {
 }
 if (-not $filePath) { exit 0 }
 
-# Normalize path separators for comparison
+# Normalize path separators for comparison (backslash → forward slash)
 $normalizedPath = $filePath -replace '\\', '/'
-if ($normalizedPath -notmatch '\.claude/settings\.json$' -and $normalizedPath -notmatch '\.claude\\settings\.json$') {
+if ($normalizedPath -notmatch '\.claude/settings\.json$') {
     exit 0
 }
 
@@ -55,14 +55,14 @@ $blocks = @()
 $perms = $data.permissions
 if ($perms) {
     $defMode = $perms.defaultMode
-    if ($defMode -and $defMode -ne 'bypassPermissions') {
+    if ($null -ne $defMode -and $defMode -ne '' -and $defMode -ne 'bypassPermissions') {
         $blocks += "defaultMode=$defMode (MUSS 'bypassPermissions' sein — Benutzer-Regel)"
     }
 }
 
 # effortLevel: MUST be "high" — BLOCK anything else (CLAUDE.md requirement)
 $eff = $data.effortLevel
-if ($eff -and $eff -ne 'high') {
+if ($null -ne $eff -and $eff -ne '' -and $eff -ne 'high') {
     $blocks += "effortLevel=$eff (MUSS 'high' sein — CLAUDE.md-Regel)"
 }
 
@@ -70,19 +70,19 @@ $envData = $data.env
 if ($envData) {
     # CLAUDE_CODE_EFFORT_LEVEL in env
     $envEff = $envData.CLAUDE_CODE_EFFORT_LEVEL
-    if ($envEff -and $envEff -ne 'high') {
+    if ($null -ne $envEff -and $envEff -ne '' -and $envEff -ne 'high') {
         $blocks += "CLAUDE_CODE_EFFORT_LEVEL=$envEff (MUSS 'high' sein)"
     }
 
     # SUBAGENT_MODEL: BLOCK if changed from sonnet (critical for cost/quality)
     $subModel = $envData.CLAUDE_CODE_SUBAGENT_MODEL
-    if ($subModel -and $subModel -ne 'sonnet') {
+    if ($null -ne $subModel -and $subModel -ne '' -and $subModel -ne 'sonnet') {
         $blocks += "CLAUDE_CODE_SUBAGENT_MODEL=$subModel (erwartet: sonnet)"
     }
 
-    # AUTOCOMPACT: BLOCK if below 95
+    # AUTOCOMPACT: BLOCK if below 95 (value "0" is a real value — must not be falsy-skipped)
     $acp = $envData.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE
-    if ($acp -and [int]$acp -lt 95) {
+    if ($null -ne $acp -and $acp -ne '' -and [int]$acp -lt 95) {
         $blocks += "AUTOCOMPACT=$acp (minimum: 95)"
     }
 }

@@ -6,8 +6,9 @@
 # Old DBs are cleaned up on a best-effort basis.
 # v2: Uses whiteboard-insert.sh for section-based error logging (echo >> is FORBIDDEN).
 
-source "$(dirname "$0")/hook-log.sh"
-source "$(dirname "$0")/whiteboard-insert.sh"
+HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$HOOKS_DIR/hook-log.sh"
+source "$HOOKS_DIR/whiteboard-insert.sh"
 
 ROOT_DIR="$HOME/proggs"
 DB_DIR="$ROOT_DIR/.code-search"

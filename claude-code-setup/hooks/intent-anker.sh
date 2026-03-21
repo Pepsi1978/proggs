@@ -7,7 +7,8 @@
 # - intent-tracking.md rule (every ~5 turns: verify alignment)
 # - PreCompact prompt hook (preserve goal during compaction)
 
-source "$(dirname "$0")/hook-log.sh"
+HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$HOOKS_DIR/hook-log.sh"
 
 GOAL_FILE="${TMPDIR:-/tmp}/claude-session-goal.txt"
 COUNTER_FILE="${TMPDIR:-/tmp}/claude-turn-counter.txt"

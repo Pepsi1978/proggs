@@ -24,7 +24,9 @@ if (-not (Test-Path (Join-Path $RepoDir ".git"))) {
     exit 0
 }
 
-Set-Location $RepoDir
+Push-Location $RepoDir -ErrorAction Stop
+
+try {
 
 # Fetch latest from remote
 $null = git fetch --quiet 2>&1
@@ -37,6 +39,12 @@ if ($LASTEXITCODE -ne 0) {
 # Compare local vs remote
 $local = git rev-parse HEAD 2>$null
 $remote = git rev-parse '@{u}' 2>$null
+
+# Guard against no upstream configured (e.g. detached HEAD or new branch)
+if (-not $remote) {
+    Hook-LogWarn "no upstream tracking branch — skipped"
+    exit 0
+}
 
 if ($local -eq $remote) {
     Write-Status "Auto-Sync: Alle Dateien aktuell."
@@ -194,3 +202,7 @@ $syncedStr = $synced -join " "
 Hook-Log "sync complete: $syncedStr"
 Write-Status "Auto-Sync: Lokale Konfiguration aktualisiert: $syncedStr"
 Write-Status "Auto-Sync: Hinweis -- CLAUDE.md und Rules werden erst nach Neustart von Claude Code wirksam."
+
+} finally {
+    Pop-Location
+}

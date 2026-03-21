@@ -4,9 +4,10 @@
 
 param()
 
-$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
-$whiteboardPath = Join-Path $env:USERPROFILE "proggs" ".claude" "agent-memory" "shared" "MEMORY.md"
+. "$PSScriptRoot/hook-log.ps1"
+. "$PSScriptRoot/whiteboard-insert.ps1"
 
+$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
 # Read stdin for error details (Claude Code pipes error info)
 $errorInput = ""
 try {
@@ -38,17 +39,11 @@ $entry = @"
 **Status:** OFFEN
 "@
 
-# Use whiteboard-insert via dot-sourcing (& call-operator does NOT expose functions)
-$inserter = Join-Path $PSScriptRoot "whiteboard-insert.ps1"
-if (Test-Path $inserter) {
-    . $inserter
-    try {
-        Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
-    } catch {
-        Write-Error "[stopfailure-logger] whiteboard-insert failed — error NOT logged to whiteboard. Manual check required."
-    }
-} else {
-    Write-Error "[stopfailure-logger] whiteboard-insert failed — error NOT logged to whiteboard. Manual check required."
+# Write to whiteboard (whiteboard-insert.ps1 already sourced at top)
+try {
+    Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
+} catch {
+    Write-Output "[stopfailure-logger] whiteboard-insert failed — error NOT logged to whiteboard. Manual check required."
 }
 
-Write-Host "StopFailure logged to whiteboard at $timestamp"
+Write-Output "StopFailure logged to whiteboard at $timestamp"

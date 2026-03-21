@@ -13,7 +13,6 @@ param()
 # Write to the REPO copy (~/proggs/.claude/) — this is the authoritative whiteboard
 # that gets committed. The ~/.claude/ copy is kept in sync by the commit workflow.
 $memoryFile = Join-Path $env:USERPROFILE "proggs" ".claude" "agent-memory" "shared" "MEMORY.md"
-$whiteboardFile = $memoryFile
 $counterFile = Join-Path $env:TEMP "claude-writeback-counter.txt"
 
 # Count SubagentStop events since last MEMORY.md write
@@ -33,44 +32,49 @@ for ($retry = 0; $retry -lt 10; $retry++) {
     }
 }
 
-$missCount = 0
-if (Test-Path $counterFile) {
-    $missCount = [int](Get-Content $counterFile -ErrorAction SilentlyContinue)
-}
-
-# Check if MEMORY.md was modified in the last 3 minutes
-$recentWrite = $false
-if (Test-Path $memoryFile) {
-    $lastWrite = (Get-Item $memoryFile).LastWriteTime
-    $threshold = (Get-Date).AddMinutes(-3)
-    if ($lastWrite -gt $threshold) {
-        $recentWrite = $true
+try {
+    $missCount = 0
+    if (Test-Path $counterFile) {
+        $missCount = [int](Get-Content $counterFile -ErrorAction SilentlyContinue)
     }
-}
 
-if ($recentWrite) {
-    # Reset counter — someone wrote to MEMORY.md recently
-    Set-Content -Path $counterFile -Value "0" -Force
+    # Check if MEMORY.md was modified in the last 3 minutes
+    $recentWrite = $false
+    if (Test-Path $memoryFile) {
+        $lastWrite = (Get-Item $memoryFile).LastWriteTime
+        $threshold = (Get-Date).AddMinutes(-3)
+        if ($lastWrite -gt $threshold) {
+            $recentWrite = $true
+        }
+    }
+
+    if ($recentWrite) {
+        # Reset counter — someone wrote to MEMORY.md recently
+        Set-Content -Path $counterFile -Value "0" -Force
+        Write-Output "MEMORY_WATCHDOG: Write-back detected — counter reset"
+        exit 0
+    }
+
+    # Increment miss counter
+    $missCount++
+    Set-Content -Path $counterFile -Value "$missCount" -Force
+
+    # Only alert after 5+ consecutive misses (avoids false positives from coder/researcher agents)
+    if ($missCount -ge 5) {
+        $date = Get-Date -Format "yyyy-MM-dd HH:mm"
+        # Use section-based insertion (Add-Content to file-end is FORBIDDEN)
+        # Standard format: ### date — Hook: name — message
+        $entry = "### $date — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt ($missCount aufeinanderfolgende Agents) — Status: AUTO-LOGGED"
+        Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
+        # Reset counter after logging
+        Set-Content -Path $counterFile -Value "0" -Force
+        Write-Output "MEMORY_WATCHDOG: $missCount consecutive misses — logged to MEMORY.md"
+    } else {
+        Write-Output "MEMORY_WATCHDOG: No write-back ($missCount/5 misses)"
+    }
+} finally {
+    # Always release the lock — even on crash or early exit
     if ($lockAcquired) { Remove-Item $lockFile -Force -ErrorAction SilentlyContinue }
-    Write-Output "MEMORY_WATCHDOG: Write-back detected — counter reset"
-    exit 0
 }
 
-# Increment miss counter
-$missCount++
-Set-Content -Path $counterFile -Value "$missCount" -Force
-if ($lockAcquired) { Remove-Item $lockFile -Force -ErrorAction SilentlyContinue }
-
-# Only alert after 5+ consecutive misses (avoids false positives from coder/researcher agents)
-if ($missCount -ge 5) {
-    $date = Get-Date -Format "yyyy-MM-dd HH:mm"
-    # Use section-based insertion (Add-Content to file-end is FORBIDDEN)
-    $entry = "### [$date] Agent: Write-Back nicht erfolgt ($missCount aufeinanderfolgende Agents) — Status: AUTO-LOGGED"
-    Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
-    # Reset counter after logging
-    Set-Content -Path $counterFile -Value "0" -Force
-    Write-Output "MEMORY_WATCHDOG: $missCount consecutive misses — logged to MEMORY.md"
-} else {
-    Write-Output "MEMORY_WATCHDOG: No write-back ($missCount/5 misses)"
-}
 exit 0

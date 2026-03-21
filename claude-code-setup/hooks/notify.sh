@@ -6,7 +6,8 @@
 # On Linux without osascript, falls back to notify-send if available.
 # Silently succeeds if no notification tool is present — notifications are non-critical.
 
-source "$(dirname "$0")/hook-log.sh"
+HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$HOOKS_DIR/hook-log.sh"
 
 # ---------------------------------------------------------------------------
 # Read JSON from stdin and extract notification message

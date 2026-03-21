@@ -3,7 +3,8 @@
 # Cleans up temp files when Claude Code exits.
 # Platform: macOS/Linux (bash)
 
-source "$(dirname "$0")/hook-log.sh"
+HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$HOOKS_DIR/hook-log.sh"
 
 CLEANED=0
 

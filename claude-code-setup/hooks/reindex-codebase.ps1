@@ -11,7 +11,6 @@
 $rootDir = "$env:USERPROFILE\proggs"
 $dbDir = Join-Path $rootDir ".code-search"
 $stampFile = Join-Path $dbDir ".last-index-time"
-$pointerFile = Join-Path $dbDir "current.txt"
 $mcpDir = Join-Path $rootDir "mcp-code-search"
 # Use tsx (Node.js TypeScript runner) instead of bun — bun doesn't support better-sqlite3
 $tsxExe = "$env:APPDATA\npm\tsx.cmd"
@@ -35,7 +34,13 @@ if ((Test-Path $proggsMcp) -and -not (Test-Path $homeMcp)) {
 # Ensure dependencies are installed (npm for native addon compatibility)
 $nodeModules = Join-Path $mcpDir "node_modules"
 if (-not (Test-Path $nodeModules)) {
-    Start-Process -FilePath "npm" -ArgumentList "install" -WorkingDirectory $mcpDir -NoNewWindow -Wait
+    $npmProc = Start-Process -FilePath "npm" -ArgumentList "install" -WorkingDirectory $mcpDir -NoNewWindow -PassThru
+    if ($npmProc) {
+        $npmProc.WaitForExit(120000)  # 2 minute timeout
+        if ($npmProc.ExitCode -ne 0) {
+            Hook-LogWarn "npm install failed (exit $($npmProc.ExitCode)) — semantic search may not work"
+        }
+    }
 }
 
 # Auto-start Ollama if not running (headless server — no GUI window)
@@ -141,7 +146,14 @@ for (const f of readdirSync(dbDir)) {
     Set-Content -Path $tempFile -Value $script -Encoding UTF8
     try {
         $allArgs = $tsxArgs + @($tempFile)
-        $process = Start-Process -FilePath $tsxExe -ArgumentList $allArgs -WorkingDirectory $mcpDir -NoNewWindow -Wait -PassThru
+        $process = Start-Process -FilePath $tsxExe -ArgumentList $allArgs -WorkingDirectory $mcpDir -NoNewWindow -PassThru
+        if ($process) {
+            $completed = $process.WaitForExit(300000)  # 5 minute timeout
+            if (-not $completed) {
+                $process.Kill()
+                throw "Reindex process killed after 300s timeout"
+            }
+        }
     } finally {
         Remove-Item $tempFile -ErrorAction SilentlyContinue
         # Also clean up any orphaned temp files from previous crashed runs
