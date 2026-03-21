@@ -304,6 +304,7 @@ Write-Host ""
 Write-Host "[8/8] Custom Skills installieren..." -ForegroundColor Yellow
 
 if (Test-Path $SkillsDir) {
+    # Install directory-based skills (contain SKILL.md)
     $skillFolders = Get-ChildItem -Path $SkillsDir -Directory
 
     foreach ($skillFolder in $skillFolders) {
@@ -322,9 +323,56 @@ if (Test-Path $SkillsDir) {
             Write-Host "  X $skillName (SKILL.md fehlt)" -ForegroundColor Red
         }
     }
+
+    # Install flat .md skills (single-file skills like android-clean-architecture.md)
+    $skillFiles = Get-ChildItem -Path $SkillsDir -Filter "*.md" -File
+    foreach ($skillFile in $skillFiles) {
+        $skillName = [System.IO.Path]::GetFileNameWithoutExtension($skillFile.Name)
+        $targetDir = Join-Path $ClaudeSkillsDir $skillName
+        if (-not (Test-Path $targetDir)) {
+            New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+        }
+        Copy-Item $skillFile.FullName -Destination (Join-Path $targetDir "SKILL.md") -Force
+        Write-Host "  OK $skillName (flat .md)" -ForegroundColor Green
+    }
 } else {
     Write-Host "  X Skills-Verzeichnis nicht gefunden: $SkillsDir" -ForegroundColor Red
 }
+
+# ---------------------------------------------------
+# Deploy Hooks
+# ---------------------------------------------------
+Write-Host ""
+Write-Host "=== Deploying Hooks ===" -ForegroundColor Cyan
+$hooksSrc = Join-Path $PSScriptRoot "hooks"
+$hooksDst = Join-Path $env:USERPROFILE ".claude" "hooks"
+if (-not (Test-Path $hooksDst)) { New-Item -ItemType Directory -Path $hooksDst -Force | Out-Null }
+$hookFiles = Get-ChildItem $hooksSrc -File -Recurse
+$hookCount = 0
+foreach ($f in $hookFiles) {
+    $rel = $f.FullName.Substring($hooksSrc.Length + 1)
+    $dst = Join-Path $hooksDst $rel
+    $dstDir = Split-Path $dst -Parent
+    if (-not (Test-Path $dstDir)) { New-Item -ItemType Directory -Path $dstDir -Force | Out-Null }
+    Copy-Item $f.FullName -Destination $dst -Force
+    $hookCount++
+}
+Write-Host "  $hookCount hook files deployed" -ForegroundColor Green
+
+# ---------------------------------------------------
+# Deploy Settings
+# ---------------------------------------------------
+Write-Host ""
+Write-Host "=== Deploying Settings ===" -ForegroundColor Cyan
+$settingsDst = Join-Path $env:USERPROFILE ".claude" "settings.json"
+$settingsSrc = Join-Path $PSScriptRoot "settings-reference.json"
+if (Test-Path $settingsDst) {
+    $backup = "$settingsDst.backup.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+    Copy-Item $settingsDst $backup
+    Write-Host "  Existing settings backed up to: $backup" -ForegroundColor Yellow
+}
+Copy-Item $settingsSrc $settingsDst -Force
+Write-Host "  Settings deployed from settings-reference.json" -ForegroundColor Green
 
 # ---------------------------------------------------
 # Zusammenfassung
@@ -334,8 +382,9 @@ Write-Host "=============================================" -ForegroundColor Blue
 Write-Host "  Setup abgeschlossen!" -ForegroundColor Green
 Write-Host "=============================================" -ForegroundColor Blue
 Write-Host ""
-Write-Host "  Plugins:        32 (26 official + 7 superpowers-marketplace)"
-Write-Host "  Skills:          4 (auto-verify-iterate, cross-platform, tampermonkey-version, undo-changes)"
+Write-Host "  Plugins:        31 (24 official + 7 superpowers-marketplace)"
+Write-Host "  Skills:          6 (auto-verify-iterate, cross-platform, tampermonkey-version, undo-changes, android-clean-architecture, android-ninja)"
+Write-Host "  Hooks:          $hookCount Dateien deployed nach ~/.claude/hooks/"
 Write-Host "  MCP Server:      sequential-thinking"
 Write-Host "  Security:        Parry (Prompt-Injection-Scanner)"
 Write-Host "  Dev-Tools:       Bun, Deno, Rust, Docker, .NET SDK"

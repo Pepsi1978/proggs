@@ -292,7 +292,9 @@ echo ""
 echo -e "${YELLOW}[8/8] Custom Skills installieren...${NC}"
 
 if [ -d "$SKILLS_DIR" ]; then
+    # Install directory-based skills (contain SKILL.md)
     for SKILL_DIR in "$SKILLS_DIR"/*/; do
+        [ -d "$SKILL_DIR" ] || continue
         SKILL_NAME=$(basename "$SKILL_DIR")
         TARGET_DIR="$CLAUDE_SKILLS_DIR/$SKILL_NAME"
 
@@ -305,9 +307,50 @@ if [ -d "$SKILLS_DIR" ]; then
             echo -e "  ${GREEN}✓ $SKILL_NAME (neu installiert)${NC}"
         fi
     done
+
+    # Install flat .md skills (single-file skills like android-clean-architecture.md)
+    for SKILL_FILE in "$SKILLS_DIR"/*.md; do
+        [ -f "$SKILL_FILE" ] || continue
+        SKILL_NAME=$(basename "$SKILL_FILE" .md)
+        TARGET_DIR="$CLAUDE_SKILLS_DIR/$SKILL_NAME"
+        mkdir -p "$TARGET_DIR"
+        cp "$SKILL_FILE" "$TARGET_DIR/SKILL.md"
+        echo -e "  ${GREEN}✓ $SKILL_NAME (flat .md)${NC}"
+    done
 else
     echo -e "  ${RED}✗ Skills-Verzeichnis nicht gefunden: $SKILLS_DIR${NC}"
 fi
+
+# ---------------------------------------------------
+# Deploy Hooks
+# ---------------------------------------------------
+echo -e "\n=== Deploying Hooks ==="
+HOOKS_SRC="$SCRIPT_DIR/hooks"
+HOOKS_DST="$HOME/.claude/hooks"
+mkdir -p "$HOOKS_DST"
+hook_count=0
+while IFS= read -r -d '' f; do
+    rel="${f#$HOOKS_SRC/}"
+    dst="$HOOKS_DST/$rel"
+    mkdir -p "$(dirname "$dst")"
+    cp "$f" "$dst"
+    hook_count=$((hook_count + 1))
+done < <(find "$HOOKS_SRC" -type f -print0)
+echo "  $hook_count hook files deployed"
+
+# ---------------------------------------------------
+# Deploy Settings
+# ---------------------------------------------------
+echo -e "\n=== Deploying Settings ==="
+SETTINGS_DST="$HOME/.claude/settings.json"
+SETTINGS_SRC="$SCRIPT_DIR/settings.json"
+if [ -f "$SETTINGS_DST" ]; then
+    backup="$SETTINGS_DST.backup.$(date +%Y%m%d-%H%M%S)"
+    cp "$SETTINGS_DST" "$backup"
+    echo "  Existing settings backed up to: $backup"
+fi
+cp "$SETTINGS_SRC" "$SETTINGS_DST"
+echo "  Settings deployed"
 
 # ---------------------------------------------------
 # Zusammenfassung
@@ -317,8 +360,9 @@ echo -e "${BLUE}=============================================${NC}"
 echo -e "${GREEN}  Setup abgeschlossen!${NC}"
 echo -e "${BLUE}=============================================${NC}"
 echo ""
-echo "  Plugins:        32 (26 official + 7 superpowers-marketplace)"
-echo "  Skills:          4 (auto-verify-iterate, cross-platform, tampermonkey-version, undo-changes)"
+echo "  Plugins:        32 (24 official + 7 superpowers-marketplace + 1 macOS)"
+echo "  Skills:          6 (auto-verify-iterate, cross-platform, tampermonkey-version, undo-changes, android-clean-architecture, android-ninja)"
+echo "  Hooks:          $hook_count Dateien deployed nach ~/.claude/hooks/"
 echo "  MCP Server:      sequential-thinking"
 echo "  Security:        Parry (Prompt-Injection-Scanner)"
 echo "  Dev-Tools:       Bun, Deno, Rust, Docker, .NET SDK"
