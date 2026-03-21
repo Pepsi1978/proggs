@@ -48,6 +48,15 @@ if [ -f "$repo_mcp" ]; then
     fi
 fi
 
+# Always ensure code-search MCP server dependencies are installed (regardless of new commits)
+mcp_cs_dir="$REPO_DIR/mcp-code-search"
+if [ -d "$mcp_cs_dir" ] && [ ! -d "$mcp_cs_dir/node_modules" ]; then
+    if [ -x /opt/homebrew/bin/bun ]; then
+        (cd "$mcp_cs_dir" && /opt/homebrew/bin/bun install --silent 2>/dev/null) && \
+            hook_log "code-search node_modules installed" || true
+    fi
+fi
+
 if [ "$local_sha" = "$remote_sha" ]; then
     write_status "Auto-Sync: Alle Dateien aktuell."
     exit 0
@@ -202,15 +211,6 @@ repo_mcp="$REPO_DIR/.mcp.json"
 if [ -f "$repo_mcp" ]; then
     cp "$repo_mcp" "$HOME/.mcp.json"
     synced="$synced .mcp.json"
-fi
-
-# Ensure code-search MCP server dependencies are installed
-mcp_cs_dir="$REPO_DIR/mcp-code-search"
-if [ -d "$mcp_cs_dir" ] && [ ! -d "$mcp_cs_dir/node_modules" ]; then
-    if command -v /opt/homebrew/bin/bun >/dev/null 2>&1; then
-        (cd "$mcp_cs_dir" && /opt/homebrew/bin/bun install --silent 2>/dev/null) && \
-            synced="$synced code-search-deps" || true
-    fi
 fi
 
 # .gitignore_global
