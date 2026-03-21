@@ -132,6 +132,7 @@
 			"zeroize-audit",
 			"agentic-actions-auditor"
 		],
+		"_disabled_after_install": ["fp-check"],
 		"thedotmack": ["claude-mem"],
 		"everything-claude-code": ["everything-claude-code"],
 		"compound-engineering-plugin": ["compound-engineering"],
@@ -212,13 +213,19 @@
 		"FlineDev": {
 			"source": "github",
 			"repo": "FlineDev/context-kit"
+		},
+		"trailofbits-curated": {
+			"source": "github",
+			"repo": "trailofbits/skills-curated"
 		}
 	},
 
 	"mcp_servers": {
+		"_comment_paths": "Use absolute paths for commands on macOS (e.g. /opt/homebrew/bin/npx) and Windows (e.g. C:\\Users\\...\\AppData\\Roaming\\npm\\npx.cmd) — never bare command names",
 		"sequential-thinking": {
 			"command": "npx",
-			"args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+			"args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+			"_note": "Replace 'npx' with absolute path: macOS=/opt/homebrew/bin/npx, Windows=C:\\Users\\barwa\\AppData\\Roaming\\npm\\npx.cmd"
 		}
 	},
 

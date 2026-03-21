@@ -298,17 +298,6 @@
 				]
 			}
 		],
-		"PermissionRequest": [
-			{
-				"hooks": [
-					{
-						"type": "prompt",
-						"prompt": "A permission request was triggered. In one sentence, explain what the requested action does and whether it is a standard safe operation in this project's context.",
-						"timeout": 10
-					}
-				]
-			}
-		],
 		"SubagentStop": [
 			{
 				"hooks": [
@@ -368,7 +357,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "bun run ~/.claude/hooks/session-scorer.ts",
+						"command": "~/.bun/bin/bun run ~/.claude/hooks/session-scorer.ts",
 						"timeout": 10,
 						"async": true
 					}
@@ -378,7 +367,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "bun run ~/.claude/hooks/session-autopsy.ts",
+						"command": "~/.bun/bin/bun run ~/.claude/hooks/session-autopsy.ts",
 						"timeout": 10,
 						"async": true
 					}
@@ -408,6 +397,7 @@
 			}
 		]
 	},
+	"_comment_PermissionRequest": "Intentionally removed — caused bypassPermissions mode reset (2026-03-20)",
 	"worktree": {
 		"symlinkDirectories": ["node_modules", ".cache", ".gradle", "build"]
 	},
@@ -437,6 +427,7 @@
 		"playwright@claude-plugins-official": true,
 		"coderabbit@claude-plugins-official": true,
 		"explanatory-output-style@claude-plugins-official": true,
+		"aikido@claude-plugins-official": true,
 		"superpowers-lab@superpowers-marketplace": true,
 		"superpowers-developing-for-claude-code@superpowers-marketplace": true,
 		"elements-of-style@superpowers-marketplace": true,
@@ -497,6 +488,8 @@
 		"tech-stack@context-engineering-kit": true,
 		"mcp@context-engineering-kit": true,
 		"fpf@context-engineering-kit": true,
+		"spec-driven-development@context-engineering-kit": true,
+		"context-kit@FlineDev": true,
 		"claude-code-lsps@boostvolt": true,
 		"xclaude-plugin@xclaude-plugin-marketplace": true,
 		"apple-platform-build-tools@apple-platform-build-tools": true,
@@ -563,6 +556,12 @@
 				"source": "github",
 				"repo": "BayramAnnakov/claude-reflect"
 			}
+		},
+		"FlineDev": {
+			"source": {
+				"source": "github",
+				"repo": "FlineDev/context-kit"
+			}
 		}
 	},
 	"language": "de",
@@ -573,7 +572,7 @@
 	"mcpServers": {
 		"android-adb": {
 			"type": "stdio",
-			"command": "npx",
+			"command": "/opt/homebrew/bin/npx",
 			"args": ["-y", "android-debug-bridge-mcp"]
 		}
 	},

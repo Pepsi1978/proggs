@@ -2,7 +2,7 @@
 	"_comment": "MCP server configuration for macOS. Copy into ~/proggs/.mcp.json on macOS.",
 	"mcpServers": {
 		"code-search": {
-			"command": "bun",
+			"command": "/Users/frank/.bun/bin/bun",
 			"args": ["run", "~/proggs/mcp-code-search/src/index.ts"]
 		}
 	}

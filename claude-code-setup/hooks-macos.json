@@ -213,7 +213,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "bun run ~/.claude/hooks/session-scorer.ts",
+						"command": "~/.bun/bin/bun run ~/.claude/hooks/session-scorer.ts",
 						"timeout": 10,
 						"async": true
 					}
@@ -223,9 +223,20 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "bun run ~/.claude/hooks/session-autopsy.ts",
+						"command": "~/.bun/bin/bun run ~/.claude/hooks/session-autopsy.ts",
 						"timeout": 10,
 						"async": true
+					}
+				]
+			}
+		],
+		"StopFailure": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash ~/.claude/hooks/stopfailure-logger.sh",
+						"timeout": 5
 					}
 				]
 			}
