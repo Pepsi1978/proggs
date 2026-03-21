@@ -271,15 +271,15 @@ encodingPatterns:
     reason: "Unicode escape sequence"
     severity: medium
 
-  - pattern: '[\u200B\u200C\u200D\uFEFF\u00AD]{2,}'
+  - pattern: "[\u200B\u200C\u200D\uFEFF\u00AD]{2,}"
     reason: "Zero-width/invisible characters detected"
     severity: high
 
-  - pattern: '[\u2060\u180E\u2000-\u200F]{3,}'
+  - pattern: "[\u2060\u180E\u2000-\u200F]{3,}"
     reason: "Unicode whitespace manipulation"
     severity: high
 
-  - pattern: '[\u034F\u115F\u1160\u17B4\u17B5]{2,}'
+  - pattern: "[\u034F\u115F\u1160\u17B4\u17B5]{2,}"
     reason: "Unicode combining/filler characters"
     severity: high
 
@@ -302,12 +302,12 @@ encodingPatterns:
 
   # --- Homoglyph Attacks ---
   # Cyrillic characters that look like Latin
-  - pattern: '[\u0430\u0435\u043E\u0440\u0441\u0443\u0445\u0456]{3,}'
+  - pattern: "[\u0430\u0435\u043E\u0440\u0441\u0443\u0445\u0456]{3,}"
     reason: "Cyrillic homoglyphs detected (lookalike letters)"
     severity: high
 
   # Greek characters that look like Latin
-  - pattern: '[\u03B1\u03B5\u03BF\u03C1\u03BD\u03C4]{2,}'
+  - pattern: "[\u03B1\u03B5\u03BF\u03C1\u03BD\u03C4]{2,}"
     reason: "Greek homoglyphs detected"
     severity: high
 

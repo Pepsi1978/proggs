@@ -112,12 +112,20 @@ def _load_yaml(path: Path) -> Dict[str, Any]:
         return {}
 
 
-def extract_text_content(tool_name: str, tool_result: Any) -> str:
+def extract_text_content(tool_name: str, tool_result: Any, depth: int = 0) -> str:
     """Extract text content from tool result based on tool type.
 
     Different tools return results in different formats. This function
     normalizes them into a single string for scanning.
+
+    Args:
+        tool_name: Name of the tool that produced the result
+        tool_result: The raw tool result to extract text from
+        depth: Current recursion depth (max 5 to prevent unbounded recursion)
     """
+    if depth > 5:
+        return ""
+
     if tool_result is None:
         return ""
 
@@ -166,7 +174,7 @@ def extract_text_content(tool_name: str, tool_result: Any) -> str:
         # Handle list of results
         texts = []
         for item in tool_result:
-            extracted = extract_text_content(tool_name, item)
+            extracted = extract_text_content(tool_name, item, depth + 1)
             if extracted:
                 texts.append(extracted)
         return "\n".join(texts)
@@ -313,7 +321,10 @@ def is_trusted_path(tool_name: str, tool_input: Dict[str, Any]) -> bool:
         return _is_trusted_bash_command(tool_input.get("command", ""), trusted_prefixes)
 
     if source_path:
-        normalized = source_path.replace("\\", "/").lower()
+        # Resolve symlinks and .. components before prefix check to prevent
+        # path traversal bypasses like "~/.claude/../../etc/passwd"
+        normalized = os.path.realpath(source_path)
+        normalized = normalized.replace("\\", "/").lower()
         for prefix in trusted_prefixes:
             if normalized.startswith(prefix):
                 return True
@@ -347,11 +358,14 @@ def _is_trusted_bash_command(command: str, trusted_prefixes: list) -> bool:
         "~/proggs",
     ]
 
-    # Commands that only inspect the local environment are safe
+    # Commands that only inspect the local environment are safe.
+    # NOTE: Do NOT add commands that can download/execute external content
+    # (e.g. git, node, python, npm, bun, deno, cargo, go, dotnet, rustc).
     safe_lead_commands = {"env", "echo", "set", "printenv", "which", "where",
                          "type", "command", "uname", "hostname", "whoami",
-                         "git", "node", "python", "rustc", "go", "dotnet",
-                         "claude", "npm", "bun", "deno", "cargo"}
+                         "ls", "cat", "pwd", "cd", "mkdir", "cp", "mv", "rm",
+                         "touch", "head", "tail", "wc", "sort", "uniq", "diff",
+                         "true", "false", "date"}
 
     # Get the first command (before any pipe)
     first_segment = cmd_lower.split("|")[0].strip()
@@ -450,7 +464,7 @@ def main() -> None:
     # Extract text content from tool result
     text = extract_text_content(tool_name, tool_result)
 
-    if not text or len(text) < 10:
+    if not text or len(text) < 4:
         # No content or too short to contain meaningful injection
         sys.exit(0)
 
@@ -479,9 +493,8 @@ def main() -> None:
         output = {"decision": "block", "reason": warning}
         print(json.dumps(output))
 
-        # Log detection to whiteboard
+        # Log detection to whiteboard (reuse high_count computed above)
         date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
-        high_count = sum(1 for d in detections if d[3] == "high")
         brief = f"{len(detections)} pattern(s) matched ({high_count} high-severity) in {source_info}"
         wb_entry = (
             f"### {date_str} — Hook: prompt-injection-defender — "
