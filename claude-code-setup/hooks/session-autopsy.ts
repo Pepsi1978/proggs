@@ -9,19 +9,10 @@
  * Keeps a rolling window of the last 10 autopsy entries.
  */
 
-import {
-	readFileSync,
-	appendFileSync,
-	writeFileSync,
-	readdirSync,
-	statSync,
-	existsSync,
-	mkdirSync,
-	unlinkSync,
-	openSync,
-	closeSync,
-} from "fs";
+import { readFileSync, readdirSync, statSync, existsSync } from "fs";
 import { join } from "path";
+import { execFileSync } from "child_process";
+import { homedir } from "os";
 
 const HOME = process.env.USERPROFILE || process.env.HOME || "";
 
@@ -31,13 +22,21 @@ function findProjectsDir(): string {
 	if (!existsSync(claudeDir)) return "";
 	try {
 		const entries = readdirSync(claudeDir);
+		// Windows: C--Users-barwa or similar
 		for (const entry of entries) {
 			const fullPath = join(claudeDir, entry);
 			if (statSync(fullPath).isDirectory() && entry.startsWith("C--")) {
 				return fullPath;
 			}
 		}
-		// Fallback: first directory
+		// macOS fallback: Users- prefix (e.g. Users-barwa)
+		for (const entry of entries) {
+			const fullPath = join(claudeDir, entry);
+			if (statSync(fullPath).isDirectory() && entry.startsWith("Users-")) {
+				return fullPath;
+			}
+		}
+		// Last resort: first directory
 		for (const entry of entries) {
 			const fullPath = join(claudeDir, entry);
 			if (statSync(fullPath).isDirectory()) return fullPath;
@@ -280,94 +279,47 @@ const RULE_SUGGESTIONS: Record<CorrectionType, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Cross-process file lock helper for MEMORY.md
-// Uses exclusive file creation (wx flag) as a portable lock primitive.
-// Retries up to 50 times with 100ms delay (5 second total timeout).
+// MEMORY.md section-based insertion via whiteboard-insert script.
+// Delegates to whiteboard-insert.ps1 (Windows) or whiteboard-insert.sh (macOS/Linux)
+// so that all locking and section logic lives in one place.
+// Uses execFileSync to avoid shell injection (args passed as array, not interpolated).
 // ---------------------------------------------------------------------------
 
-function withFileLock<T>(lockPath: string, fn: () => T): T {
-	const maxRetries = 50;
-	const retryDelayMs = 100;
-	let fd: number | null = null;
+function insertViaWhiteboardInsert(section: string, entry: string): void {
+	const hookDir = join(homedir(), ".claude", "hooks");
 
-	// Spin-wait until we can exclusively create the lock file
-	for (let attempt = 0; attempt < maxRetries; attempt++) {
-		try {
-			fd = openSync(lockPath, "wx");
-			closeSync(fd);
-			fd = null;
-			break; // Lock acquired
-		} catch (err: any) {
-			if (err.code === "EEXIST") {
-				// Lock held by another process — busy-wait synchronously
-				const deadline = Date.now() + retryDelayMs;
-				while (Date.now() < deadline) {
-					/* spin */
-				}
-			} else {
-				// Unexpected error — proceed without lock rather than crash
-				break;
-			}
-		}
+	if (!existsSync(hookDir)) {
+		process.stderr.write(
+			`[session-autopsy] hooks directory not found at ${hookDir} — entry NOT written.\n`,
+		);
+		return;
 	}
 
-	// Run the critical section
-	try {
-		return fn();
-	} finally {
-		// Always release the lock file
-		try {
-			unlinkSync(lockPath);
-		} catch {
-			// Ignore — lock may already be gone
+	if (process.platform === "win32") {
+		const script = join(hookDir, "whiteboard-insert.ps1");
+		if (!existsSync(script)) {
+			process.stderr.write(
+				`[session-autopsy] whiteboard-insert.ps1 not found — entry NOT written.\n`,
+			);
+			return;
 		}
+		// Pass args as array to execFileSync — no shell expansion, injection-safe
+		execFileSync(
+			"powershell",
+			["-NoProfile", "-File", script, "-Section", section, "-Entry", entry],
+			{ timeout: 5000 },
+		);
+	} else {
+		const script = join(hookDir, "whiteboard-insert.sh");
+		if (!existsSync(script)) {
+			process.stderr.write(
+				`[session-autopsy] whiteboard-insert.sh not found — entry NOT written.\n`,
+			);
+			return;
+		}
+		// Pass args as array — bash receives them as $1 and $2, no shell injection
+		execFileSync("bash", [script, section, entry], { timeout: 5000 });
 	}
-}
-
-// ---------------------------------------------------------------------------
-// MEMORY.md section-based insertion (v2 — replaces AUTOPSY.md)
-// Complies with "nur ein Whiteboard" rule from Deep-Scan Runde 6.
-// Writes condensed autopsy summary to "Debugging-Muster" section.
-// ---------------------------------------------------------------------------
-
-function insertIntoMemorySection(sectionName: string, entry: string): void {
-	if (!existsSync(MEMORY_FILE)) return;
-
-	const lockPath = `${MEMORY_FILE}.lock`;
-	withFileLock(lockPath, () => {
-		const content = readFileSync(MEMORY_FILE, "utf-8");
-		const lines = content.split("\n");
-		const placeholder = "_Noch keine Eintraege._";
-
-		let sectionIdx = -1;
-		for (let i = 0; i < lines.length; i++) {
-			if (lines[i].trimEnd().startsWith(`## ${sectionName}`)) {
-				sectionIdx = i;
-				break;
-			}
-		}
-
-		if (sectionIdx === -1) return;
-
-		let insertIdx = sectionIdx + 1;
-		let placeholderIdx = -1;
-		for (let j = sectionIdx + 1; j < lines.length; j++) {
-			if (lines[j].startsWith("## ") || lines[j].startsWith("---")) break;
-			if (lines[j].trim() === placeholder) {
-				placeholderIdx = j;
-				break;
-			}
-			insertIdx = j + 1;
-		}
-
-		if (placeholderIdx >= 0) {
-			lines[placeholderIdx] = entry;
-		} else {
-			lines.splice(insertIdx, 0, entry);
-		}
-
-		writeFileSync(MEMORY_FILE, lines.join("\n"), "utf-8");
-	});
 }
 
 // ---------------------------------------------------------------------------
@@ -469,7 +421,7 @@ function main(): void {
 				: "0.0";
 		const rule = RULE_SUGGESTIONS[dominant[0] as CorrectionType] || "Unbekannt";
 		const summary = `- **[${date}] Autopsy ${shortId}**: ${stats.corrections.length} Korrekturen (${rate}%), Hauptmuster: ${dominant[0]} (${dominant[1]}x) — Empfehlung: ${rule}`;
-		insertIntoMemorySection("Debugging-Muster", summary);
+		insertViaWhiteboardInsert("Debugging-Muster", summary);
 	} catch {
 		// Never block session exit
 	}

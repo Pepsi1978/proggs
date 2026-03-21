@@ -12,11 +12,19 @@ insert_whiteboard_entry() {
     local entry="$2"
     local memory_file="$HOME/proggs/.claude/agent-memory/shared/MEMORY.md"
     local placeholder="_Noch keine Eintraege._"
+    local lock_file="/tmp/claude-whiteboard.lock"
 
-    [ -f "$memory_file" ] || return 0
+    if [ ! -f "$memory_file" ]; then
+        echo "[whiteboard-insert] WARNING: $memory_file does not exist" >&2
+        return 0
+    fi
 
-    # Use Python3 for reliable in-place multi-line editing (available on macOS and Linux)
-    python3 - "$memory_file" "$section" "$entry" "$placeholder" <<'PYEOF'
+    # Wrap the entire insert operation in flock to prevent concurrent read-modify-write.
+    # Matches the PS1 version's named mutex (Global\ClaudeWhiteboardMutex) with 5s timeout.
+    # On macOS, flock may not be pre-installed. Install via: brew install flock
+    _do_insert() {
+        # Use Python3 for reliable in-place multi-line editing (available on macOS and Linux)
+        python3 - "$memory_file" "$section" "$entry" "$placeholder" <<'PYEOF'
 import sys
 
 memory_file = sys.argv[1]
@@ -57,4 +65,20 @@ else:
 with open(memory_file, 'w', encoding='utf-8') as f:
     f.writelines(lines)
 PYEOF
+    }
+
+    if command -v flock >/dev/null 2>&1; then
+        exec 9>"$lock_file"
+        if flock -w 5 9; then
+            _do_insert
+            flock -u 9
+        else
+            echo "[whiteboard-insert] WARNING: flock timeout after 5s — skipping insert for section '$section'" >&2
+        fi
+        exec 9>&-
+    else
+        # flock not available — proceed without locking (with a warning)
+        echo "[whiteboard-insert] WARNING: flock not found — inserting without lock (install via: brew install flock)" >&2
+        _do_insert
+    fi
 }

@@ -27,10 +27,14 @@ if [ -d "$NODE_CACHE" ]; then
     done < <(find "$NODE_CACHE" -type f -mmin +1440 -print0 2>/dev/null)
 fi
 
-# Clean /tmp/claude-* files (intent-anker, session-goal, etc.)
+# Clean /tmp/claude-* files — but preserve intent-anker state files
 while IFS= read -r -d '' file; do
     rm -f "$file" 2>/dev/null && CLEANED=$((CLEANED + 1)) || true
-done < <(find /tmp -maxdepth 1 -name "claude-*" -type f -print0 2>/dev/null)
+done < <(find "${TMPDIR:-/tmp}" -maxdepth 1 -name "claude-*" -type f \
+    ! -name "claude-session-goal.txt" \
+    ! -name "claude-turn-counter.txt" \
+    ! -name "claude-intent-reminder.txt" \
+    -print0 2>/dev/null)
 
 # Clean /tmp/agent-writeback-* sentinel files older than 2 hours
 while IFS= read -r -d '' file; do

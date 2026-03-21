@@ -6,7 +6,8 @@ _MCP-Server koennen das Whiteboard nicht lesen (kein Dateisystem-Zugriff). Ihre 
 
 **Zugriff**: Lesen + Schreiben fuer ALLE Komponenten — keine Ausnahmen.
 **Gepflegt von**: /self-improve (raeumte auf, loest offene Fehler, haelt aktuell)
-**Pfad**: `.claude/agent-memory/shared/MEMORY.md`
+**Pfad (Windows):** `C:\Users\barwa\.claude\agent-memory\shared\MEMORY.md`
+**Pfad (macOS/Linux):** `~/.claude/agent-memory/shared/MEMORY.md`
 
 **Angeschlossene Systeme** (MUESSEN von /self-improve ebenfalls gelesen werden):
 _Hinweis: Pfade mit `~/proggs/` liegen im Repo (autoritativ). Pfade mit `~/.claude/` sind lokal
@@ -77,14 +78,19 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-03-20 20:37 — Hook: safety-gate.ps1 — Befehl blockiert: git\s+reset\s+--hard
 ### 2026-03-20 20:38 — Hook: safety-gate.ps1 — Befehl blockiert: git\s+reset\s+--hard
 ### 2026-03-20 20:38 — Hook: safety-gate.ps1 — Befehl blockiert: git\s+reset\s+--hard
+### [2026-03-20 21:07] Agent: Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### [2026-03-21 10:30] Agent: Write-Back nicht erfolgt (5 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-03-21 10:44 — Hook: reindex-codebase.ps1 — ExitCode 1: Unbekannter Fehler (ExitCode: 1) — Status: OFFEN
+### 2026-03-21 10:55 — Hook: reindex-codebase.ps1 — ExitCode 1: Unbekannter Fehler (ExitCode: 1) — Status: OFFEN
 ---
 
-## Systemzustand (aktuell — Stand: 2026-03-20 21:45)
+## Systemzustand (aktuell)
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
-<!-- DATUM im Titel MUSS bei jeder Aktualisierung angepasst werden! -->
 
-- **Plattform:** macOS (Apple Silicon), Claude Code v2.1.80, Opus 4.6 (1M context)
+**Stand:** 2026-03-21
+
+- **Plattform:** Windows 11 Home (x64) + macOS (Apple Silicon), Claude Code v2.1.80, Opus 4.6 (1M context)
 - **Sprachen:** Swift, C#, TypeScript, Rust, Go, Kotlin
 - **Semantic Search:** Aktiv (wird bei jeder Session automatisch aktualisiert via reindex-Hook)
 - **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
@@ -97,7 +103,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Session-Scorer:** v3 — schreibt NUR in session-scores.jsonl, NICHT mehr direkt in MEMORY.md
 - **Session-Autopsy:** v2 — schreibt in MEMORY.md "Debugging-Muster" statt separate AUTOPSY.md
 - **Preferred Patterns:** MVVM (Swift), Fluent Design (C#), strict mode (TypeScript)
-- **Self-Improve Skill:** v5.16 — alle Phantom-Referenzen gefixt, R1-R8 TTL komplett
+- **Self-Improve Skill:** v5.17 — Smart-Cache mit git-diff-basierter Invalidierung
 - **Semantic Search:** index-72.db aktiv, 5 alte DBs + 10 WAL/SHM bereinigt (2026-03-20)
 - **Evolution-Analyst (2026-03-20):** 5-Session-Avg 8.42, Trend: STABIL. Kein errors (0/7). Tool-Effizienz 0.87.
 - **Neue Hooks:** StopFailure (v2.1.78) — loggt API-Fehler/Rate-Limits ins Whiteboard
@@ -134,22 +140,22 @@ _Noch keine Eintraege._
 ## Forschung & Intelligence
 <!-- researcher, intelligence-researcher schreiben hierher -->
 
-- **[2026-03-20] SICA: Self-Improving Coding Agent (arxiv 2504.15228)** — Status: OFFEN | Quelle: https://arxiv.org/abs/2504.15228 | Empfehlung: JA sofort
+- **[2026-03-20] SICA: Self-Improving Coding Agent (arxiv 2504.15228)** — Status: UMZUSETZEN | Quelle: https://arxiv.org/abs/2504.15228 | Empfehlung: JA sofort
   Agent bearbeitet seinen eigenen Code via LLM-Reflexion ohne Trainingsgradienten. +17-53% auf SWE-Bench Verified. Kein Meta-Agent/Target-Agent-Trennungskonzept noetig. Umsetzbar als /self-improve v6: Agent analysiert eigene Fehler → editiert eigene Agent-Dateien.
 
 - **[2026-03-20] Live-SWE-Agent: Minimal Scaffold + On-the-Fly Tool Creation** — Status: UMGESETZT (2026-03-20) | Quelle: https://arxiv.org/html/2511.13646v3
   Agent startet nur mit Bash, erschafft dynamisch eigene Werkzeuge. 77.4% SWE-bench Verified — Bestwert unter Open-Source. **UMGESETZT**: coder-Agent hat jetzt "Temporary Tool Creation" Regel — darf Hilfsskripte in /tmp/ erstellen.
 
-- **[2026-03-20] SWE-RL Self-Play: Bug-Inject + Bug-Repair Reinforcement Learning** — Status: OFFEN | Quelle: https://arxiv.org/abs/2512.18552 | Empfehlung: JA spaeter
+- **[2026-03-20] SWE-RL Self-Play: Bug-Inject + Bug-Repair Reinforcement Learning** — Status: EVALUIERT | Quelle: https://arxiv.org/abs/2512.18552 | Empfehlung: JA spaeter
   Agent trainiert sich selbst durch iteratives Bugs-einbauen und reparieren. +10.4 Punkte auf SWE-bench. Als Workflow ohne Training: challenger-Agent injiziert absichtlich Bugs in Code, coder muss reparieren — testet und verstaerkt Robustheit.
 
-- **[2026-03-20] Stronger-MAS: Tester-Coder Debating Mechanism** — Status: OFFEN | Quelle: https://arxiv.org/html/2510.11062v3 | Empfehlung: JA sofort
+- **[2026-03-20] Stronger-MAS: Tester-Coder Debating Mechanism** — Status: UMZUSETZEN | Quelle: https://arxiv.org/html/2510.11062v3 | Empfehlung: JA sofort
   Zwei LLM-Agenten (Tester + Coder) debattieren iterativ: Tester generiert Unit Tests, Coder generiert Code, beide verfeinern bis Einigkeit. Umsetzbar: tester-Agent und coder-Agent in explizitem Debate-Loop (max 3 Runden) — bereits jetzt als Agent-Team machbar.
 
-- **[2026-03-20] OpenSage: Hierarchisches Graph-Memory fuer Agenten** — Status: OFFEN | Quelle: https://arxiv.org/html/2602.16891v2 | Empfehlung: JA spaeter
+- **[2026-03-20] OpenSage: Hierarchisches Graph-Memory fuer Agenten** — Status: EVALUIERT | Quelle: https://arxiv.org/html/2602.16891v2 | Empfehlung: JA spaeter
   Agent verwaltet Sub-Agenten + Toolkits in einem Graph-Gedaechtnis. #1 auf CyberGym, DevOps-Gym, Terminal-Bench 2.0. Erfordert komplexe Infrastruktur. Langfristig: Whiteboard als Graph statt Markdown strukturieren.
 
-- **[2026-03-20] MCP Think Tank: Structured Reasoning + Knowledge Graph** — Status: OFFEN | Quelle: https://playbooks.com/mcp/think-tank | Empfehlung: JA sofort
+- **[2026-03-20] MCP Think Tank: Structured Reasoning + Knowledge Graph** — Status: UMZUSETZEN | Quelle: https://playbooks.com/mcp/think-tank | Empfehlung: JA sofort
   MCP-Server der strukturiertes Reasoning mit persistentem Wissensgraph kombiniert. Sofort installierbar. Wuerde architect + debugger Agents fundamental verbessern — koennen Reasoning-Schritte sichern und wiederverwenden.
 
 - **[2026-03-20] Windsurf SWE-1.5: Proprietary Coding Model 13x Speed** — Status: VERWORFEN | Quelle: https://aipromptsx.com/blog/windsurf-vs-cursor-2026 | Empfehlung: NEIN (proprietaer, nicht adaptierbar)

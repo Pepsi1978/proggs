@@ -45,15 +45,10 @@ if (Test-Path $inserter) {
     try {
         Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
     } catch {
-        # Fallback: direct append (better than losing the error entirely)
-        if (Test-Path $whiteboardPath) {
-            Add-Content -Path $whiteboardPath -Value $entry -Encoding UTF8 -ErrorAction SilentlyContinue
-        }
+        Write-Error "[stopfailure-logger] whiteboard-insert failed — error NOT logged to whiteboard. Manual check required."
     }
 } else {
-    if (Test-Path $whiteboardPath) {
-        Add-Content -Path $whiteboardPath -Value $entry -Encoding UTF8 -ErrorAction SilentlyContinue
-    }
+    Write-Error "[stopfailure-logger] whiteboard-insert failed — error NOT logged to whiteboard. Manual check required."
 }
 
 Write-Host "StopFailure logged to whiteboard at $timestamp"

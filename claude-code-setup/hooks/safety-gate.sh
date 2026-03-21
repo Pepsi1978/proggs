@@ -4,27 +4,7 @@
 # Platform: macOS / Linux (bash)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HOOK_NAME="safety-gate"
-LOG_DIR="$HOME/.claude/logs/hooks"
-LOG_FILE="$LOG_DIR/$(date +%Y-%m-%d).log"
-
-# ---------------------------------------------------------------------------
-# Logging helpers (mirrors hook-log.ps1 behaviour)
-# ---------------------------------------------------------------------------
-_hook_log() {
-    local level="$1"
-    local msg="$2"
-    local ts
-    ts="$(date +%H:%M:%S)"
-    mkdir -p "$LOG_DIR"
-    echo "[$ts] $level $HOOK_NAME: $msg" >> "$LOG_FILE" 2>/dev/null || true
-    # Rotate: delete log files older than 14 days
-    find "$LOG_DIR" -name "*.log" -mtime +14 -delete 2>/dev/null || true
-}
-hook_log()       { _hook_log ""      "$1"; }
-hook_log_error() { _hook_log "ERROR" "$1"; }
-
-# Source whiteboard helper
+source "$SCRIPT_DIR/hook-log.sh"
 # shellcheck source=whiteboard-insert.sh
 source "$SCRIPT_DIR/whiteboard-insert.sh"
 
@@ -46,51 +26,76 @@ if [ -z "$cmd" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Dangerous patterns to block (ERE regex, checked with grep -E)
+# Dangerous patterns to block — split into case-sensitive (ERE) and
+# case-insensitive arrays so we avoid PCRE (?i) which is not valid in ERE.
 # ---------------------------------------------------------------------------
+
+# Case-sensitive block patterns (grep -E)
 declare -a PATTERNS=(
-    'rm[[:space:]]+-rf[[:space:]]+[/~]'               # rm -rf / or ~
+    'rm[[:space:]]+-rf[[:space:]]+[/~]'                     # rm -rf / or ~
     'git[[:space:]]+push[[:space:]]+--force[[:space:]]+.*main'  # force-push to main
-    'git[[:space:]]+reset[[:space:]]+--hard'           # hard reset
-    'git[[:space:]]+restore[[:space:]]+\.'             # git restore . (discard all changes)
-    'git[[:space:]]+branch[[:space:]]+-D'              # git branch -D (force-delete)
-    '(?i)DROP[[:space:]]+TABLE'                        # SQL DROP TABLE (case-insensitive)
-    '(?i)DROP[[:space:]]+DATABASE'                     # SQL DROP DATABASE (case-insensitive)
-    '(?i)TRUNCATE[[:space:]]+TABLE'                    # SQL TRUNCATE TABLE
+    '^\s*git[[:space:]]+reset[[:space:]]+--hard'            # hard reset
+    '^\s*git[[:space:]]+restore[[:space:]]+\.'              # git restore . (discard all changes)
+    '^\s*git[[:space:]]+branch[[:space:]]+-D'               # git branch -D (force-delete)
+    '^\s*git[[:space:]]+init'                               # (#42) block creating new repos — only Pepsi1978/proggs allowed
+    '^\s*gh[[:space:]]+repo[[:space:]]+create'              # (#42) block creating GitHub repos
+    '^\s*git[[:space:]]+remote[[:space:]]+add'              # (#42) block adding new remotes
 )
 
-# Case-insensitive SQL patterns need a separate pass via grep -i
+# Case-insensitive block patterns (grep -iE) — replaces the old PCRE (?i) entries
 declare -a PATTERNS_CI=(
     'DROP[[:space:]]+TABLE'
     'DROP[[:space:]]+DATABASE'
     'TRUNCATE[[:space:]]+TABLE'
 )
 
-# Case-sensitive check
+# Shell update patterns — WARNING only (exit 0), not blocking
+# (#49) Warn when shell tools are updated mid-session (can kill running terminals)
+declare -a SHELL_UPDATE_PATTERNS=(
+    'rustup[[:space:]]+update'
+    'npm[[:space:]]+install[[:space:]]+-g'
+    'pip[[:space:]]+install[[:space:]]+--upgrade'
+)
+
+# Case-sensitive block check
 for pattern in "${PATTERNS[@]}"; do
-    # Skip the (?i) patterns — handled below
-    [[ "$pattern" == '(?i)'* ]] && continue
     if printf '%s' "$cmd" | grep -Eq "$pattern"; then
         short_cmd="${cmd:0:100}"
         hook_log_error "BLOCKED dangerous command: $pattern — cmd: $short_cmd"
         entry="### $(date '+%Y-%m-%d %H:%M') — Hook: safety-gate.sh — Befehl blockiert: $pattern"
-        insert_whiteboard_entry "Offene Fehler & Probleme" "$entry"
+        insert_whiteboard_entry "Offene Fehler & Probleme" "$entry" || true
         printf '{"error":"BLOCKED: Dangerous command detected — %s"}\n' "$pattern"
         exit 2
     fi
 done
 
-# Case-insensitive check (SQL keywords)
+# Case-insensitive block check (SQL keywords)
 for pattern in "${PATTERNS_CI[@]}"; do
     if printf '%s' "$cmd" | grep -Eiq "$pattern"; then
         short_cmd="${cmd:0:100}"
         hook_log_error "BLOCKED dangerous command (ci): $pattern — cmd: $short_cmd"
         entry="### $(date '+%Y-%m-%d %H:%M') — Hook: safety-gate.sh — Befehl blockiert (ci): $pattern"
-        insert_whiteboard_entry "Offene Fehler & Probleme" "$entry"
+        insert_whiteboard_entry "Offene Fehler & Probleme" "$entry" || true
         printf '{"error":"BLOCKED: Dangerous command detected — %s"}\n' "$pattern"
         exit 2
     fi
 done
 
-hook_log "started — command passed all checks"
+# (#49) Shell update warning — allow but warn user
+for pattern in "${SHELL_UPDATE_PATTERNS[@]}"; do
+    if printf '%s' "$cmd" | grep -Eq "$pattern"; then
+        hook_log_warn "Shell-update detected mid-session: $pattern"
+        printf '%s\n' "WARNING (safety-gate): Shell/Tool-Update erkannt. Laut CLAUDE.md-Regel muessen Shell-Updates NACH Abschluss aller Aufgaben erfolgen — sie koennen alle offenen Terminals killen. Bitte erst alle Aufgaben beenden und committen, dann updaten."
+        exit 0  # allow, but user has been warned
+    fi
+done
+
+# (#43) settings.json write-via-Bash warning — allow but warn
+if printf '%s' "$cmd" | grep -Eq '>[[:space:]]*.*settings\.json|echo.*>.*settings\.json|cat.*>.*settings\.json'; then
+    hook_log_warn "Bash command writing to settings.json detected — config-guard will verify afterwards"
+    printf '%s\n' "WARNING (safety-gate): Schreibzugriff auf settings.json per Bash erkannt. config-guard.sh prueft die Datei nach der Aenderung auf geschuetzte Settings (effortLevel, defaultMode, AUTOCOMPACT, SUBAGENT_MODEL)."
+    exit 0  # allow — config-guard PostToolUse will catch violations
+fi
+
+hook_log "command passed all checks"
 exit 0

@@ -3,13 +3,12 @@
 # Checks if a senior agent wrote back to MEMORY.md after finishing.
 # Equivalent of memory-watchdog.ps1 for non-Windows platforms.
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/hook-log.sh"
+source "$SCRIPT_DIR/whiteboard-insert.sh"
+
 MEMORY_FILE="$HOME/proggs/.claude/agent-memory/shared/MEMORY.md"
 COUNTER_FILE="/tmp/claude-writeback-counter.txt"
-
-miss_count=0
-if [ -f "$COUNTER_FILE" ]; then
-    miss_count=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
-fi
 
 # Check if MEMORY.md was modified in the last 3 minutes
 recent_write=false
@@ -28,29 +27,34 @@ fi
 
 if [ "$recent_write" = true ]; then
     echo "0" > "$COUNTER_FILE"
+    hook_log "write-back detected — counter reset"
     echo "MEMORY_WATCHDOG: Write-back detected — counter reset"
     exit 0
 fi
 
-miss_count=$((miss_count + 1))
-echo "$miss_count" > "$COUNTER_FILE"
+# Acquire file lock for atomic read-increment-write to prevent race conditions
+# when multiple SubagentStop hooks run concurrently (parallel agents finishing)
+(
+    flock -w 2 200 || exit 1
+    miss_count=$(cat "$COUNTER_FILE" 2>/dev/null || echo "0")
+    miss_count=$((miss_count + 1))
+    echo "$miss_count" > "$COUNTER_FILE"
+) 200>"$COUNTER_FILE.lock"
 
+miss_count=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
+
+# Only alert after 5+ consecutive misses (avoids false positives from coder/researcher agents)
 if [ "$miss_count" -ge 5 ]; then
     ts=$(date +"%Y-%m-%d %H:%M")
     entry="### [$ts] Agent: Write-Back nicht erfolgt ($miss_count aufeinanderfolgende Agents) — Status: AUTO-LOGGED"
-    # Section-based insertion using whiteboard-insert.sh if available
-    if [ -f "$HOME/.claude/hooks/whiteboard-insert.sh" ]; then
-        source "$HOME/.claude/hooks/whiteboard-insert.sh"
-        insert_whiteboard_entry "Offene Fehler & Probleme" "$entry"
-    else
-        # Fallback: replace first placeholder or append after section header
-        if grep -q "_Noch keine Eintraege._" "$MEMORY_FILE"; then
-            sed -i.bak "0,/_Noch keine Eintraege._/s/_Noch keine Eintraege._/$entry/" "$MEMORY_FILE"
-            rm -f "$MEMORY_FILE.bak"
-        fi
-    fi
+    insert_whiteboard_entry "Offene Fehler & Probleme" "$entry" || true
+    # Reset counter after logging
     echo "0" > "$COUNTER_FILE"
+    hook_log "$miss_count consecutive misses — logged to MEMORY.md"
     echo "MEMORY_WATCHDOG: $miss_count consecutive misses — logged to MEMORY.md"
+else
+    hook_log "no write-back ($miss_count/5 misses)"
+    echo "MEMORY_WATCHDOG: No write-back ($miss_count/5 misses)"
 fi
 
 exit 0

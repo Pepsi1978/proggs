@@ -4,7 +4,9 @@
 # stdout → AI context (system-reminder), stderr → user terminal
 # Platform: macOS / Linux (bash equivalent of auto-sync.ps1)
 
-source "$(dirname "$0")/hook-log.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/hook-log.sh"
+source "$SCRIPT_DIR/whiteboard-insert.sh"
 
 # Write to both stdout (AI context) and stderr (user-visible terminal)
 write_status() {
@@ -62,6 +64,8 @@ if ! git pull --rebase --quiet 2>/dev/null; then
         git stash pop 2>/dev/null || true
     fi
     hook_log_error "git pull --rebase failed — merge conflict?"
+    entry="### $(date '+%Y-%m-%d %H:%M') — Hook: auto-sync.sh — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: OFFEN"
+    insert_whiteboard_entry "Offene Fehler & Probleme" "$entry"
     write_status "Auto-Sync: FEHLER beim Pull (Merge-Konflikt?). Bitte manuell pruefen: cd ~/proggs; git status"
     exit 1
 fi

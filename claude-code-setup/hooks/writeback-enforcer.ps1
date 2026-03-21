@@ -27,10 +27,10 @@ $sectionMap = @{
     "ui-polisher"         = "## UI/UX-Patterns"
     "researcher"          = "## Forschung & Intelligence"
     "intelligence-researcher" = "## Forschung & Intelligence"
-    "evolution-analyst"   = "## Systemzustand (aktuell)"
+    "evolution-analyst"   = "## Systemzustand"
     "quality-gate"        = "## Erkenntnisse aus Tests"
-    "env-checker"         = "## Systemzustand (aktuell)"
-    "coder"               = "## Debugging-Muster"
+    "env-checker"         = "## Systemzustand"
+    "coder"               = "## Erkenntnisse aus Code Reviews"
 }
 
 # Find all sentinel files
@@ -102,6 +102,7 @@ if ($sentinelFiles.Count -gt 0) {
                     }
                 } else {
                     # Section not found — append at end as last resort
+                    Write-Error "WriteBack-Enforcer: section '$targetSection' not found for agent '$agentName' — appending at end as last resort"
                     $lines += $entry
                 }
 

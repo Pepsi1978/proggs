@@ -18,11 +18,12 @@ get_section() {
         code-reviewer|batch-reviewer|mar-reviewer) echo "## Erkenntnisse aus Code Reviews" ;;
         tester|quality-gate) echo "## Erkenntnisse aus Tests" ;;
         architect|challenger) echo "## Architektur-Entscheidungen" ;;
-        debugger|coder) echo "## Debugging-Muster" ;;
+        debugger) echo "## Debugging-Muster" ;;
+        coder) echo "## Erkenntnisse aus Code Reviews" ;;
         optimizer) echo "## Performance & Optimierung" ;;
         ui-polisher) echo "## UI/UX-Patterns" ;;
         researcher|intelligence-researcher) echo "## Forschung & Intelligence" ;;
-        evolution-analyst|env-checker) echo "## Systemzustand (aktuell)" ;;
+        evolution-analyst|env-checker) echo "## Systemzustand" ;;
         *) echo "## Erkenntnisse aus Code Reviews" ;;
     esac
 }
@@ -48,31 +49,57 @@ _do_merge() {
         entry="- **[$ts] $agent**: $findings"
         target_section=$(get_section "$agent")
 
-        # Find the section header line number
-        section_line=$(grep -n "^${target_section}" "$MEMORY_FILE" | head -1 | cut -d: -f1)
+        # Use Python for reliable in-place editing (no BSD/GNU sed incompatibility, no
+        # delimiter issues with slashes in file paths or findings text).
+        python3 - "$MEMORY_FILE" "$target_section" "$entry" "$agent" <<'PYEOF'
+import sys, re
 
-        if [ -n "$section_line" ]; then
-            # Search from section_line to next ## or --- or end of file
-            section_end=$(tail -n +"$((section_line + 1))" "$MEMORY_FILE" | grep -n '^## \|^---' | head -1 | cut -d: -f1)
-            if [ -z "$section_end" ]; then
-                section_end=999999
-            fi
+memory_file    = sys.argv[1]
+target_section = sys.argv[2]  # e.g. "## Erkenntnisse aus Code Reviews"
+entry          = sys.argv[3]
+agent_name     = sys.argv[4]
+placeholder    = "_Noch keine Eintraege._"
 
-            # Check if placeholder exists within this section range
-            placeholder_line=$(tail -n +"$((section_line + 1))" "$MEMORY_FILE" | head -n "$section_end" | grep -n "_Noch keine Eintraege._" | head -1 | cut -d: -f1)
+with open(memory_file, 'r', encoding='utf-8') as fh:
+    lines = fh.readlines()
 
-            if [ -n "$placeholder_line" ]; then
-                actual_line=$((section_line + placeholder_line))
-                sed -i.bak "${actual_line}s/_Noch keine Eintraege._/${entry}/" "$MEMORY_FILE"
-                rm -f "$MEMORY_FILE.bak"
-            else
-                # Insert at end of section (before next section header)
-                actual_insert=$((section_line + section_end))
-                sed -i.bak "${actual_insert}i\\${entry}" "$MEMORY_FILE"
-                rm -f "$MEMORY_FILE.bak"
-            fi
-        else
-            hook_log_warn "section '$target_section' not found for agent '$agent' — skipping"
+# Prefix match so "## Systemzustand (aktuell — Stand: 2026-03-20)" is also found.
+section_idx = -1
+for i, line in enumerate(lines):
+    stripped = line.rstrip()
+    if stripped == target_section or stripped.startswith(target_section):
+        section_idx = i
+        break
+
+if section_idx < 0:
+    print(f"WriteBack-Enforcer [Python]: section '{target_section}' not found for agent '{agent_name}' — appending at end as last resort", file=sys.stderr)
+    # Append at end as last resort so data is never lost
+    lines.append(entry + "\n")
+else:
+    # Scan inside the section to find placeholder or insertion point
+    insert_idx = section_idx + 1
+    placeholder_idx = -1
+    for j in range(section_idx + 1, len(lines)):
+        stripped = lines[j].rstrip()
+        if stripped.startswith("## ") or stripped == "---":
+            break
+        if lines[j].strip() == placeholder:
+            placeholder_idx = j
+            break
+        insert_idx = j + 1
+
+    if placeholder_idx >= 0:
+        lines[placeholder_idx] = entry + "\n"
+    else:
+        lines.insert(insert_idx, entry + "\n")
+
+with open(memory_file, 'w', encoding='utf-8') as fh:
+    fh.writelines(lines)
+PYEOF
+
+        py_exit=$?
+        if [ $py_exit -ne 0 ]; then
+            hook_log_warn "Python merge failed (exit $py_exit) for agent '$agent'"
         fi
 
         rm -f "$f"

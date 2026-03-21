@@ -7,25 +7,9 @@
 #   Block:   {"error":"CONFIG-GUARD: BLOCKIERT — ..."}
 #   OK:      no output (exit 0)
 
-HOOK_NAME="config-guard"
-LOG_DIR="$HOME/.claude/logs/hooks"
-LOG_FILE="$LOG_DIR/$(date +%Y-%m-%d).log"
-
-# ---------------------------------------------------------------------------
-# Logging helpers (mirrors hook-log.ps1 behaviour)
-# ---------------------------------------------------------------------------
-_hook_log() {
-    local level="$1"
-    local msg="$2"
-    local ts
-    ts="$(date +%H:%M:%S)"
-    mkdir -p "$LOG_DIR"
-    echo "[$ts] $level $HOOK_NAME: $msg" >> "$LOG_FILE" 2>/dev/null || true
-    find "$LOG_DIR" -name "*.log" -mtime +14 -delete 2>/dev/null || true
-}
-hook_log()       { _hook_log ""      "$1"; }
-hook_log_error() { _hook_log "ERROR" "$1"; }
-hook_log_warn()  { _hook_log "WARN " "$1"; }
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/hook-log.sh"
+source "$SCRIPT_DIR/whiteboard-insert.sh"
 
 # ---------------------------------------------------------------------------
 # Read JSON from stdin
@@ -75,6 +59,13 @@ except Exception as e:
 
 blocks = []
 
+# defaultMode: MUST be "bypassPermissions" — BLOCK anything else (user requirement)
+perms = data.get('permissions', {})
+if perms:
+    def_mode = perms.get('defaultMode', '')
+    if def_mode and def_mode != 'bypassPermissions':
+        blocks.append(f"defaultMode={def_mode} (MUSS 'bypassPermissions' sein — Benutzer-Regel)")
+
 # effortLevel: MUST be "high" — BLOCK anything else (CLAUDE.md requirement)
 eff = data.get('effortLevel')
 if eff and eff != 'high':
@@ -107,6 +98,9 @@ PYEOF
 
 if [ -n "$violations" ]; then
     hook_log_error "BLOCKED — protected settings changed: $violations"
+    # Log to whiteboard — wrapped in subshell so exit 2 is always reached
+    entry="### $(date '+%Y-%m-%d %H:%M') — Hook: config-guard.sh — Settings-Aenderung blockiert: $violations"
+    insert_whiteboard_entry "Offene Fehler & Probleme" "$entry" || true
     # Output valid JSON for hook compatibility
     # Use python to safely escape the message as JSON string
     json_out="$(python3 -c "import json, sys; print(json.dumps({'error': 'CONFIG-GUARD: BLOCKIERT — Geschuetzte Settings geaendert: ' + sys.argv[1]}))" "$violations" 2>/dev/null)"

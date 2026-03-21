@@ -3,7 +3,6 @@
 # Platform: Windows (PowerShell 7+)
 
 . "$PSScriptRoot/hook-log.ps1"
-. "$PSScriptRoot/whiteboard-insert.ps1"
 
 $cleaned = 0
 
