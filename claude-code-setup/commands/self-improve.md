@@ -3,13 +3,13 @@ name: self-improve
 description: Systematic self-improvement of the Claude Code development environment (~10-30 min, token-intensive). ONLY use when the user explicitly says "/self-improve", "verbessere dich", "optimiere deine Umgebung", "check dein Setup", "update alles", "mach mich besser", "aktualisiere alles", "pruef mein System", "System-Check", or "Umgebung pruefen". NEVER run this proactively or automatically — only on manual user request.
 ---
 
-# Self-Improve v5.17 — Systematic + Creative + Intelligence Environment Optimization
+# Self-Improve v5.19 — Systematic + Creative + Intelligence Environment Optimization
 
 **Before doing ANYTHING, show this overview in German:**
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║  Self-Improve Skill v5.17 — Deine Entwicklungsumgebung      ║
+║  Self-Improve Skill v5.19 — Deine Entwicklungsumgebung      ║
 ║  pruefen, aktualisieren, KREATIV ERFORSCHEN                  ║
 ║  Cross-Platform: macOS + Windows                             ║
 ╠══════════════════════════════════════════════════════════════╣
@@ -23,6 +23,10 @@ description: Systematic self-improvement of the Claude Code development environm
 ║  Danach: GitHub-Sync (Pepsi1978/proggs)                      ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
+
+**Geschaetzte Dauer:** Standard ~10-15 Min | Thorough ~20-30 Min | Focus ~25-35 Min
+Wenn der Lauf nach 25 Minuten noch in Stufe 4+ ist: Warnung an den Benutzer —
+"Der Lauf dauert ungewoehnlich lang. Soll ich restliche Stufen ueberspringen?"
 
 ## Zentrales Whiteboard — Nervensystem des Gesamtsystems (KRITISCH)
 
@@ -69,9 +73,18 @@ _MCP-Server koennen das Whiteboard nicht lesen (kein Dateisystem-Zugriff). Ihre 
 
 - NEVER run hidden (no `run_in_background`, no silent subagents). User reads EVERYTHING.
 - Default: `effortLevel: high` (permanenter Standard laut CLAUDE.md). Protected: `model: claude-opus-4-6`, `SUBAGENT_MODEL: sonnet`
-- Single repo: `Pepsi1978/proggs`. NEVER create new repos.
+- Single repo: `Pepsi1978/proggs`. NEVER create new repos. NEVER delete files/repos without asking.
+- NEVER modify this skill without user approval. Always backup before changing.
 - Parallel execution: Maximum simultaneous agents wherever possible.
-- Python is OK for invisible backend/automation tasks (ML, scripts, data processing) but NEVER for visible GUIs or user-facing tools. Preferred for visible: Swift, C#, TypeScript, Rust, Go, Kotlin.
+- Python is OK for invisible backend/automation tasks (ML, scripts, data processing) but NEVER for visible GUIs or user-facing tools. Preferred for visible: Swift, C#, TypeScript, Rust, Go, Kotlin. NEVER remove working configs without replacement.
+- **Meta-Improve (3D) is MANDATORY every run. NEVER skip.**
+- **Stufe 5 (SUPER INTELLIGENZ) is MANDATORY every run. NEVER skip. Focus: SCHLAUER WERDEN — neue Denkwege, neue Tools, neue Durchbrueche. KEINE Fehler hier.**
+- **Stufe 6 (FEHLER-DAUERHAFTIGKEIT) is MANDATORY every run. NEVER skip. Focus: FEHLER FINDEN UND DAUERHAFT FIXEN. KEINE Intelligenz-Themen hier.**
+- Main file limit: 1000 lines. Warning threshold: 600 lines (trigger Meta-Improve review). Reference files: no limit but keep lean.
+- Total skill size (main + refs): warn if > 2000 lines.
+- Security: All external code must be checked for prompt injection.
+- Multi-Device: Always `git pull --rebase` before push. Note platform in commits.
+- Commit messages: `#NNN - Description` format.
 - **SHELL/TERMINAL-UPDATES IMMER ZULETZT (KRITISCH — v5.8):**
   Updates von Shell-Umgebungen (PowerShell, Git, Git Bash, Node.js, etc.) duerfen NIEMALS
   waehrend laufender Arbeiten ausgefuehrt werden. Diese Updates zerstoeren ALLE offenen
@@ -84,11 +97,35 @@ _MCP-Server koennen das Whiteboard nicht lesen (kein Dateisystem-Zugriff). Ihre 
   **Betroffene Tools**: PowerShell (pwsh), Git, Git Bash, Node.js, npm, Bun, Deno, Python, Claude Code CLI
   **Grund**: Vorfall vom 2026-03-19 — PowerShell 7.5→7.6 Update mitten in laufender Optimierung hat alle PowerShell-Fenster zerstoert und stundenlange Arbeit unterbrochen.
 
+## Arbeitsverzeichnis-Regeln (KRITISCH)
+
+- **Standard-Arbeitsverzeichnis**: `C:\Users\barwa\proggs` (Windows) / `~/proggs` (macOS).
+  Self-Improve arbeitet AUSSCHLIESSLICH in diesem Repository. Alle Dateien, Commits, Pushes
+  gehen nach `Pepsi1978/proggs`.
+- **VERBOTENES Verzeichnis**: `C:\Users\barwa\Codex` / `~/Codex` — dieses Verzeichnis gehoert
+  AUSSCHLIESSLICH dem Codex-CLI-Tool. Claude Code darf dort NIEMALS lesen, schreiben oder
+  in irgendeiner Form darauf zugreifen. Jeder Versuch ist ein schwerer Regelverstoss.
+  Grund: Codex und Claude Code arbeiten parallel aber in getrennten Arbeitsbereichen.
+  Jede Ueberschneidung kann zu Datenverlust und Konflikten fuehren.
+
 ## Thoroughness Detection
 
 - **Standard**: "/self-improve" without extras → Stufe 1 quick, R1+R5+R6+R8 only (cached R2-R4)
 - **Thorough**: "sehr ausfuehrlich", "full check" → Stufe 1 full, ALL 8 researchers (R1-R8)
 - **Focus**: "Fokus [topic]" → Thorough + deep-dive into topic
+
+### Modus-Vergleich (was laeuft wann)
+
+| Stufe | Standard | Thorough | Focus |
+|-------|----------|----------|-------|
+| 0 Meta-Check | ✅ (wenn scores vorhanden) | ✅ | ✅ |
+| 1 Scan | Quick | Full (inkl. Android, Agent-Tiers) | Full + Topic-Vertiefung |
+| 2 Research | R1, R5, R6, R8 (R2-R4 gecacht) | R1-R8 (kein Cache) | R1-R8 + R7 (Focus-Topic) |
+| 3 Improve | Top 5 Fehler fixen | Alle Fehler fixen | Alle + Topic-Vertiefung |
+| 4 Creative | Minimum-Deliverables | Alle 6 Linsen | Alle 6 Linsen + Topic |
+| 5 Intelligence | ✅ (immer) | ✅ (immer) | ✅ (immer) |
+| 6 Durability | 6A, 6B, 6E (Quick) | 6A-6F (komplett) | 6A-6F (komplett) |
+| Geschaetzte Dauer | ~10-15 Min | ~20-30 Min | ~25-35 Min |
 
 ## Platform Detection (FIRST STEP)
 
@@ -138,120 +175,24 @@ Full mode includes: Android deep-scan, agent tiers, language readiness, rules, g
 **Semantic Search Index (v5.14 — parallel mit Stufe 1):**
 Wenn `~/proggs/mcp-code-search/` existiert: Pruefe ob der Index aktuell ist.
 - Pruefe `~/proggs/.code-search/.last-index-time` — wenn aelter als 24h oder nicht vorhanden: Neu indexieren.
-- Indexierung laeuft per Bash parallel zu den anderen Stufe-1-Aufgaben:
+**Indexierung**: Wenn noetig, ausfuehren:
   ```bash
-  cd ~/proggs/mcp-code-search && bun -e "
-    import { findCodeFiles, chunkFile } from './src/indexer.ts';
-    import { generateEmbeddings } from './src/ollama.ts';
-    import { VectorStore } from './src/store.ts';
-    import { resolve, join } from 'path';
-    import { mkdirSync, existsSync, writeFileSync, readdirSync, unlinkSync } from 'fs';
-    const root = resolve(process.env.HOME + '/proggs');
-    const dbDir = join(root, '.code-search');
-    if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
-    // Pointer-based: find next index-N.db number
-    let maxN = 0;
-    for (const f of readdirSync(dbDir)) { const m = f.match(/^index-(\d+)\.db$/); if (m) maxN = Math.max(maxN, +m[1]); }
-    const newName = 'index-' + (maxN+1) + '.db';
-    const files = await findCodeFiles(root);
-    const chunks = []; for (const f of files) chunks.push(...await chunkFile(f, root));
-    const store = new VectorStore(join(dbDir, newName));
-    for (let i = 0; i < chunks.length; i += 32) {
-      const b = chunks.slice(i, i+32);
-      store.insertBatch(b, await generateEmbeddings(b.map(c=>c.content)));
-    }
-    store.close();
-    writeFileSync(join(dbDir, 'current.txt'), newName); // Pointer-swap
-    // Cleanup old DBs (best-effort, skips locked files)
-    for (const f of readdirSync(dbDir)) { if (f.match(/^index-\d+\.db/) && !f.startsWith(newName.replace('.db',''))) try { unlinkSync(join(dbDir,f)); } catch {} }
-    console.log('Indexed: ' + files.length + ' files, ' + chunks.length + ' chunks (' + newName + ')');
-  "
+  bash ~/.claude/scripts/semantic-search-healthcheck.sh --reindex
   ```
 - Im Report melden: "Semantic Index: [N] Dateien, [N] Chunks (aktualisiert/bereits aktuell)"
 - **Voraussetzung**: Ollama muss laufen. Wenn nicht → ueberspringen mit Hinweis.
 
 **Semantic Search Integritaetstest (v5.17 — PFLICHT bei jedem Lauf):**
-Nach dem Indexieren (oder wenn Index bereits aktuell): Vollstaendigen Integritaetstest durchfuehren.
-Prueft 4 Kategorien: Grundfunktion, Pointer-Konsistenz, Aufraeum-Status, Infrastruktur.
-
-**Kategorie 1: Grundfunktion (Ollama → Embedding → DB → Suche)**
+Fuehre den externen Healthcheck aus:
 ```bash
-cd ~/proggs/mcp-code-search && bun -e "
-  import { VectorStore } from './src/store.ts';
-  import { generateEmbedding } from './src/ollama.ts';
-  import { resolve, join } from 'path';
-  import { existsSync, readFileSync } from 'fs';
-  const root = resolve('\$HOME/proggs');
-  const dbDir = join(root, '.code-search');
-  const pointerFile = join(dbDir, 'current.txt');
-  if (!existsSync(pointerFile)) { console.log('FAIL-1A: current.txt fehlt'); process.exit(1); }
-  const dbName = readFileSync(pointerFile, 'utf-8').trim();
-  if (!existsSync(join(dbDir, dbName))) { console.log('FAIL-1B: ' + dbName + ' existiert nicht'); process.exit(1); }
-  const store = new VectorStore(join(dbDir, dbName));
-  const stats = store.stats();
-  if (stats.totalChunks === 0) { console.log('FAIL-1C: Index leer'); process.exit(1); }
-  const emb = await generateEmbedding('test query for health check');
-  if (emb.length !== 768) { console.log('FAIL-1D: Embedding ' + emb.length + ' statt 768 dim'); process.exit(1); }
-  const results = store.search(emb, 3);
-  if (results.length === 0) { console.log('FAIL-1E: Suche 0 Ergebnisse'); process.exit(1); }
-  store.close();
-  console.log('OK-1: ' + stats.totalFiles + ' Dateien, ' + stats.totalChunks + ' Chunks, DB=' + dbName);
-"
+bash ~/.claude/scripts/semantic-search-healthcheck.sh   # macOS/Linux
+pwsh ~/.claude/scripts/semantic-search-healthcheck.ps1  # Windows
 ```
-
-**Kategorie 2: Pointer-Konsistenz (Zeiger zeigt auf die richtige DB?)**
-Pruefe manuell per Bash (kein Bun noetig):
-```bash
-DBDIR=~/proggs/.code-search
-# 2A: current.txt existiert und ist nicht leer
-test -s "$DBDIR/current.txt" && echo "OK-2A" || echo "FAIL-2A: current.txt fehlt oder leer"
-# 2B: Die referenzierte DB-Datei existiert
-POINTER=$(cat "$DBDIR/current.txt" 2>/dev/null)
-test -f "$DBDIR/$POINTER" && echo "OK-2B: $POINTER" || echo "FAIL-2B: $POINTER nicht gefunden"
-# 2C: Keine verwaisten index-N.db Dateien (mehr als 1 = Cleanup hat nicht funktioniert)
-COUNT=$(ls "$DBDIR"/index-*.db 2>/dev/null | wc -l)
-if [ "$COUNT" -le 1 ]; then echo "OK-2C: $COUNT DB-Datei(en)"; else echo "WARN-2C: $COUNT DB-Dateien — Cleanup pruefen"; fi
-# 2D: Keine verwaisten WAL/SHM-Dateien von ALTEN Indexen
-OLD_WAL=$(ls "$DBDIR"/index-*.db-wal "$DBDIR"/index-*.db-shm 2>/dev/null | grep -v "$POINTER" | wc -l)
-if [ "$OLD_WAL" -eq 0 ]; then echo "OK-2D: Keine verwaisten WAL/SHM"; else echo "WARN-2D: $OLD_WAL alte WAL/SHM-Dateien — aufraumen"; fi
-```
-
-**Kategorie 3: Infrastruktur (Hooks, MCP, Konfiguration)**
-Pruefe per Bash:
-```bash
-# 3A: SessionStart-Hook registriert?
-grep -q "reindex-codebase" ~/.claude/settings.json && echo "OK-3A: Hook registriert" || echo "FAIL-3A: Hook fehlt"
-# 3B: MCP-Server in .mcp.json konfiguriert?
-grep -q "code-search" ~/proggs/.mcp.json && echo "OK-3B: MCP konfiguriert" || echo "FAIL-3B: MCP fehlt"
-# 3C: .code-search in .gitignore?
-grep -q "code-search" ~/proggs/.gitignore && echo "OK-3C: .gitignore OK" || echo "FAIL-3C: DB wuerde ins Repo committed!"
-# 3D: node_modules vorhanden?
-test -d ~/proggs/mcp-code-search/node_modules && echo "OK-3D: Dependencies installiert" || echo "FAIL-3D: bun install noetig"
-# 3E: Ollama erreichbar?
-curl -s -o /dev/null -w "%{http_code}" http://localhost:11434/api/tags | grep -q 200 && echo "OK-3E: Ollama laeuft" || echo "WARN-3E: Ollama nicht erreichbar"
-# 3F: nomic-embed-text geladen?
-curl -s http://localhost:11434/api/tags | grep -q "nomic-embed-text" && echo "OK-3F: Modell vorhanden" || echo "FAIL-3F: ollama pull nomic-embed-text noetig"
-```
-
-**Kategorie 4: Parallelitaets-Sicherheit (Race Conditions)**
-Diese Pruefung ist EINMALIG bei der Ersteinrichtung und danach NUR im Thorough-Modus noetig:
-- Pruefe ob der MCP-Server `resolveCurrentDb()` bei JEDEM Tool-Call den Pointer neu liest (nicht cached)
-- Pruefe ob der Reindex-Hook in eine NEUE DB schreibt (nicht in die aktive)
-- Pruefe ob die Cleanup-Logik gesperrte Dateien ueberspringt (try/catch um unlinkSync)
-Wenn eine dieser Pruefungen fehlschlaegt → als KRITISCHER DEFEKT in MEMORY.md unter "Offene Fehler & Probleme" eintragen.
-**Schnelltest:** `grep -c "resolveCurrentDb" ~/proggs/mcp-code-search/src/index.ts` muss >= 2 sein (einmal Definition, mindestens einmal Aufruf in getStore).
-
-**Auswertung aller 4 Kategorien:**
-- Alle OK → ✅ "Semantische Suche: voll funktionsfaehig ([N] Dateien, [N] Chunks)"
-- WARN vorhanden → ⚠️ Melden + Cleanup versuchen (alte DBs loeschen, WAL/SHM aufraumen)
-- FAIL vorhanden → ❌ Melden + Auto-Reparatur versuchen:
-  1. current.txt fehlt → Auto-Discover: hoechste index-N.db finden, Pointer schreiben
-  2. Ollama fehlt → Hinweis an Benutzer
-  3. Modell fehlt → `ollama pull nomic-embed-text` ausfuehren
-  4. DB korrupt → DB loeschen, neu indexieren
-  5. Hook fehlt → Hook-Registrierung in settings.json reparieren
-  6. .gitignore fehlt → `.code-search/` hinzufuegen
-  Jeden Fehler in MEMORY.md unter "Offene Fehler & Probleme" eintragen und Behebungsversuch dokumentieren.
+Prueft 4 Kategorien: Grundfunktion, Pointer-Konsistenz, Infrastruktur, Parallelitaets-Sicherheit.
+- Alle OK → ✅ Melden
+- WARN → ⚠️ Melden + Cleanup versuchen
+- FAIL → ❌ Melden + Auto-Reparatur (Details im Skript-Output)
+Jeden Fehler in MEMORY.md unter "Offene Fehler & Probleme" eintragen.
 
 ## Stufe 2: DEEP-DIVE
 
@@ -305,6 +246,18 @@ dadurch haengenbleiben. Fuer JEDEN Researcher gilt:
    wenn ein Researcher 2+ Mal abgestuerzt ist, dessen Prompt vereinfachen oder aufteilen.
 
 **Faustregel**: Lieber ein Researcher-Ergebnis weniger als ein komplett steckengebliebener Lauf.
+
+### R8: Intelligence Researcher (Stufe 2 — parallel mit R1-R7)
+**Stufe 2 verwendet den dedizierten `intelligence-researcher` Agent** statt eines generischen
+Researcher-Prompts. Der Agent hat:
+- Findings werden in MEMORY.md unter "Forschung & Intelligence" gespeichert, mit Status pro Finding
+- Liest vorherige Findings und sucht gezielt NEUE Ideen (kein Duplicate Research)
+- Output-Format mit expliziter JA/NEIN-Empfehlung pro Finding
+Spawn agent via Agent tool: type=intelligence-researcher, name=r8-intelligence
+
+**Gueltige Status-Werte fuer Forschungs-Findings:**
+`UMZUSETZEN` (jetzt implementieren) | `EVALUIERT` (bewertet, noch nicht entschieden) | `VERWORFEN` (abgelehnt) | `BESTAETIGT` (bereits umgesetzt).
+**NIEMALS `OFFEN` in der Forschungs-Sektion verwenden** — `OFFEN` gehoert ausschliesslich in "Offene Fehler & Probleme".
 
 After researchers return: **mandatory cross-validation table** (Researcher claims vs. scan data).
 For plugin recommendations: **mandatory security review** (spawn researcher per plugin).
@@ -385,18 +338,6 @@ aus 50 Findings herausfiltern was wichtig ist. Format:
 ### 3D: Meta-Improve (MANDATORY)
 Present 3 suggestions for THIS SKILL. Apply only after user approval. Backup first.
 
-### 3E: R8 Intelligence Agent (NEW v5.12)
-**Stufe 2 verwendet jetzt den dedizierten `intelligence-researcher` Agent** statt eines generischen
-Researcher-Prompts. Der Agent hat:
-- Findings werden in MEMORY.md unter "Forschung & Intelligence" gespeichert, mit Status pro Finding
-- Liest vorherige Findings und sucht gezielt NEUE Ideen (kein Duplicate Research)
-- Output-Format mit expliziter JA/NEIN-Empfehlung pro Finding
-Spawn agent via Agent tool: type=intelligence-researcher, name=r8-intelligence
-
-**Gueltige Status-Werte fuer Forschungs-Findings:**
-`UMZUSETZEN` (jetzt implementieren) | `EVALUIERT` (bewertet, noch nicht entschieden) | `VERWORFEN` (abgelehnt) | `BESTAETIGT` (bereits umgesetzt).
-**NIEMALS `OFFEN` in der Forschungs-Sektion verwenden** — `OFFEN` gehoert ausschliesslich in "Offene Fehler & Probleme".
-
 ## Stufe 4: CREATIVE RESEARCH
 
 **Details in**: [self-improve-ref/report-and-creative.md](self-improve-ref/report-and-creative.md)
@@ -404,6 +345,15 @@ Spawn agent via Agent tool: type=intelligence-researcher, name=r8-intelligence
 Core principle: **DISCOVER → EXPLAIN → BUILD → TEACH.**
 Non-Programmer Rule: Plain German, analogies, concrete scenarios.
 6 Thinking Lenses + Performance Benchmark Lens (NEW v5.0).
+
+Die 6+1 Denk-Linsen:
+1. **Biologische Linse** — Wie loest die Natur dieses Problem? (Schwarmintelligenz, Evolution, Immunsystem)
+2. **Oekonmische Linse** — Was kostet es? Was spart es? ROI-Rechnung.
+3. **Sicherheits-Linse** — Was kann schiefgehen? Worst-Case-Analyse.
+4. **Benutzer-Linse** — Was wuerde der Benutzer davon halten? Einfacher? Schneller?
+5. **Zukunfts-Linse** — Wo steht dieses System in 6 Monaten? Skalierbarkeit.
+6. **Eleganz-Linse** — Gibt es eine einfachere Loesung? Weniger Teile, weniger Komplexität.
+7. **Performance-Linse** (Benchmark) — Messbare Verbesserung: tokens, Zeit, Qualitaet.
 
 **Performance Research (The Benchmark — NEW v5.0):**
 Goal: **Maximum quality at minimum token cost at maximum speed.**
@@ -475,6 +425,8 @@ Am Ende jedes Laufs: Berechne und zeige den **IQ-Score** (Intelligence Quotient 
 | **Gesamt** | **100** | **Summe — Qualitaet zaehlt mehr als Quantitaet** |
 
 Zeige: `IQ-Score: XX/100 (vorher: YY → Veraenderung: +/-Z)`
+**Baseline lesen**: Den letzten `iq_score`-Wert aus `session-scores.jsonl` lesen.
+Falls kein `iq_score`-Feld vorhanden: "Erstmessung (kein Vergleichswert)".
 Speichere in `session-scores.jsonl` als neues Feld `iq_score`.
 
 ## Stufe 6: FEHLER-DAUERHAFTIGKEIT (PFLICHT — NIEMALS UEBERSPRINGEN)
@@ -559,34 +511,12 @@ naechsten Session-Start automatisch die neuesten Verbesserungen erhalten.
 - Plugin-Caches (~/.claude/plugins/cache/)
 - Session-Transcripts, session-scores.jsonl
 
+**Sync ausfuehren:**
 ```bash
-cp ~/.claude/rules/*.md ~/proggs/claude-code-setup/rules/
-cp ~/.claude/agents/*.md ~/proggs/claude-code-setup/agents/
-cp ~/.claude/commands/self-improve.md ~/proggs/claude-code-setup/commands/
-cp -r ~/.claude/commands/self-improve-ref/ ~/proggs/claude-code-setup/commands/self-improve-ref/
-# Note: .sh hooks exist in the backup but may not exist locally on Windows
-# auto-sync.ps1 now deploys .sh from backup to local (fixed in Runde 6)
-cp ~/.claude/hooks/*.sh ~/proggs/claude-code-setup/hooks/ 2>/dev/null
-cp ~/.claude/hooks/*.ts ~/proggs/claude-code-setup/hooks/ 2>/dev/null
-cp ~/.claude/hooks/*.ps1 ~/proggs/claude-code-setup/hooks/ 2>/dev/null
-# Subdirectories (z.B. prompt-injection-defender/) ebenfalls kopieren
-cp -r ~/.claude/hooks/prompt-injection-defender/ ~/proggs/claude-code-setup/hooks/prompt-injection-defender/ 2>/dev/null
-cp -r ~/.claude/skills/ ~/proggs/claude-code-setup/skills/ 2>/dev/null
-cp ~/CLAUDE.md ~/proggs/CLAUDE.md
-# Knowledge files (cross-platform shared intelligence)
-mkdir -p ~/proggs/claude-code-setup/agent-memory/shared/
-cp ~/.claude/agent-memory/shared/MEMORY.md ~/proggs/claude-code-setup/agent-memory/shared/
-# Nur MEMORY.md — es gibt keine separaten Dateien mehr (alles konsolidiert)
-# settings-reference.json muss MANUELL aktualisiert werden wenn Hooks/Plugins/Env sich aendern!
-cd ~/proggs && git pull --rebase
-git add claude-code-setup/ CLAUDE.md
-# Re-stage after async formatters may have modified staged files (race condition fix)
-sleep 1 && git add claude-code-setup/ CLAUDE.md
-# Use git status instead of git diff --cached --quiet (more robust against formatter hooks)
-if git status --porcelain claude-code-setup/ CLAUDE.md | grep -q .; then
-  git commit -m "#NNN - Self-improve sync ([Platform])" && git push
-fi
+bash ~/.claude/scripts/self-improve-sync.sh "#NNN - Self-improve sync"   # macOS/Linux
+pwsh ~/.claude/scripts/self-improve-sync.ps1 "#NNN - Self-improve sync"  # Windows
 ```
+Falls die Sync-Skripte nicht existieren: Manuell kopieren (cp-Befehle oben als Fallback).
 
 ## Deferred Shell Updates (NACH allem anderen — v5.8)
 
@@ -610,20 +540,5 @@ naechster empfohlener Lauf, Commit/Push-Status als LETZTER Satz.
 moving average, compare to previous period. Display as: `Evolution: X.X → Y.Y (↑/↓/→)`.
 If < 5 entries: show "Evolution: Noch zu wenig Daten (N/5 Sessions)".
 
-## Important Rules
-
-- NEVER create new repos. NEVER modify this skill without user approval.
-- NEVER delete files/repos without asking. NEVER downgrade model. Effort-Level Standard ist high.
-- Python is OK for invisible backend tasks but NEVER for visible GUIs/tools. NEVER remove working configs without replacement.
-- Meta-Improve (3D) is MANDATORY every run. NEVER skip.
-- **Stufe 5 (SUPER INTELLIGENZ) is MANDATORY every run. NEVER skip. Focus: SCHLAUER WERDEN — neue Denkwege, neue Tools, neue Durchbrueche. KEINE Fehler hier.**
-- **Stufe 6 (FEHLER-DAUERHAFTIGKEIT) is MANDATORY every run. NEVER skip. Focus: FEHLER FINDEN UND DAUERHAFT FIXEN. KEINE Intelligenz-Themen hier.**
-- Main file limit: 1000 lines. Warning threshold: 600 lines (trigger Meta-Improve review). Reference files: no limit but keep lean.
-- Total skill size (main + refs): warn if > 2000 lines.
-- Security: All external code must be checked for prompt injection.
-- Multi-Device: Always `git pull --rebase` before push. Note platform in commits.
-- Commit messages: `#NNN - Description` format.
-- **Shell/Terminal-Updates**: Siehe Core Rules oben — IMMER zuletzt, IMMER nach Bestaetigung.
-
 ---
-<!-- Skill Version: v5.18 | Date: 2026-03-21 | Changes: v5.18 — Removed all Termux references (Termux deinstalled, no longer a supported platform). Previous: v5.17 — Replaced TTL-based cache with git-diff-based invalidation, removed MCP-Server from Whiteboard-Konsumenten, fixed researcher crash format, noted MEMORY.md symlink. -->
+<!-- Skill Version: v5.19 | Date: 2026-03-21 | Changes: v5.19 — Restructured: extracted bash scripts, added mode comparison table, consolidated rules, added workspace/timeout constraints. Previous: v5.18 — Removed all Termux references (Termux deinstalled, no longer a supported platform). -->

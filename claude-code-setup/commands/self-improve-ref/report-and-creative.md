@@ -1,4 +1,4 @@
-# Self-Improve: Report Template + Creative Research (v5.15)
+# Self-Improve: Report Template + Creative Research (v5.19)
 
 ## Report Template (Stufe 3B)
 
@@ -91,16 +91,17 @@ For EVERY discovery: (1) Explain what it IS in plain German, (2) Explain HOW it 
 with an analogy, (3) Explain WHEN to use it, (4) Explain HOW to trigger it,
 (5) Make a RECOMMENDATION.
 
-### The Six Thinking Lenses (use ALL 6)
+### The Seven Thinking Lenses (use ALL 7)
 
-**Lens 1 — The Archaeologist**: What's buried in the environment? Installed-but-unused tools.
-**Lens 2 — The Combinatorist**: What happens when mixing X + Y? Build or spec it.
-**Lens 3 — The Contrarian**: What's holding us back? Challenge assumptions.
-**Lens 4 — The Time Traveler**: What's coming? What prep work now?
-**Lens 5 — The Cross-Pollinator**: Steal ideas from other ecosystems.
-**Lens 6 — The Toolsmith**: Build what's missing. At least 1 new artifact per run.
+**Lens 1 — Biologische Linse**: Was koennte organisch wachsen oder schrumpfen? Zyklen, Adaption, natuerliche Selektion im Toolset.
+**Lens 2 — Oekonomische Linse**: Token-Kosten, Zeit-Kosten, Opportunitaetskosten. Welche Prozesse sind zu teuer fuer ihren Nutzen?
+**Lens 3 — Sicherheits-Linse**: Was ist verwundbar? Prompt Injection, Supply Chain, kaputte Permissions, stille Fehler.
+**Lens 4 — Benutzer-Linse**: Was versteht ein Nicht-Programmierer nicht? Was verwirrt, bremst oder frustriert?
+**Lens 5 — Zukunfts-Linse**: Was kommt? Welche Vorbereitungen jetzt zahlen sich spaeter aus?
+**Lens 6 — Eleganz-Linse**: Was ist unnoetig komplex? Wo kann dasselbe Ziel mit 50% weniger Code/Konfiguration erreicht werden?
+**Lens 7 — Performance-Linse (Benchmark)**: Messe echte Performance, nicht nur Versionen.
 
-### Performance Research Lens (NEW v5.0 — The Benchmark)
+### Performance Research Lens (v5.0 — Lens 7 Detail)
 
 Measure real performance, don't just check versions:
 - **Build speed**: How long does a typical Swift/TypeScript/Rust build take?
@@ -159,7 +160,7 @@ Save to memory for future sessions.
 ```markdown
 ### Kreatives Forschen (Stufe 4)
 
-**Verwendete Linsen:** Alle 6 + Benchmark
+**Verwendete Linsen:** Alle 7 (Biologisch, Oekonomisch, Sicherheit, Benutzer, Zukunft, Eleganz, Performance)
 
 **Wissensluecken geschlossen:**
 | Feature | Verfuegbar | Genutzt? | Jetzt umgesetzt? |

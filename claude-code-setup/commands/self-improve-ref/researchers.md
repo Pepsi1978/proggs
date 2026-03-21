@@ -1,4 +1,4 @@
-# Self-Improve: Researcher Templates (v5.15)
+# Self-Improve: Researcher Templates (v5.19)
 
 ## Research Caching (v5.12 — Git-Diff-basiert statt TTL)
 

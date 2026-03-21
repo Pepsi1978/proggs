@@ -91,7 +91,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Session-Scorer:** v3 — schreibt NUR in session-scores.jsonl, NICHT mehr direkt in MEMORY.md
 - **Session-Autopsy:** v2 — schreibt in MEMORY.md "Debugging-Muster" statt separate AUTOPSY.md
 - **Preferred Patterns:** MVVM (Swift), Fluent Design (C#), strict mode (TypeScript)
-- **Self-Improve Skill:** v5.17 — Smart-Cache mit git-diff-basierter Invalidierung
+- **Self-Improve Skill:** v5.19 — Restructured: bash scripts extracted, mode comparison table, workspace constraints, consolidated rules
 - **Semantic Search:** index-72.db aktiv, 5 alte DBs + 10 WAL/SHM bereinigt (2026-03-20)
 - **Evolution-Analyst (2026-03-20):** 5-Session-Avg 8.42, Trend: STABIL. Kein errors (0/7). Tool-Effizienz 0.87.
 - **Neue Hooks:** StopFailure (v2.1.78) — loggt API-Fehler/Rate-Limits ins Whiteboard
