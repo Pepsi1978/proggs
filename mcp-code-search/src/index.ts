@@ -271,6 +271,21 @@ server.tool(
 	},
 );
 
+// --- Graceful shutdown: close DB on exit ---
+function shutdown() {
+	if (store) {
+		try {
+			store.close();
+		} catch {
+			// best-effort
+		}
+		store = null;
+	}
+	process.exit(0);
+}
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
+
 // --- Start server ---
 const transport = new StdioServerTransport();
 await server.connect(transport);

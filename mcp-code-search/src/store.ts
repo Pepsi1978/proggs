@@ -29,6 +29,8 @@ export class VectorStore {
 		sqliteVec.load(this.db);
 
 		this.db.exec("PRAGMA journal_mode = WAL");
+		this.db.exec("PRAGMA busy_timeout = 5000"); // wait up to 5s if DB is locked
+		this.db.exec("PRAGMA synchronous = NORMAL"); // safe with WAL, faster than FULL
 
 		this.db.exec(`
 			CREATE TABLE IF NOT EXISTS chunks (
@@ -203,7 +205,24 @@ export class VectorStore {
 		};
 	}
 
+	/** Run a quick integrity check. Returns true if DB is healthy. */
+	integrityCheck(): boolean {
+		try {
+			const row = this.db.prepare("PRAGMA integrity_check(1)").get() as
+				| { integrity_check: string }
+				| undefined;
+			return row?.integrity_check === "ok";
+		} catch {
+			return false;
+		}
+	}
+
 	close(): void {
+		try {
+			this.db.exec("PRAGMA optimize");
+		} catch {
+			// best-effort — don't fail on close
+		}
 		this.db.close();
 	}
 }

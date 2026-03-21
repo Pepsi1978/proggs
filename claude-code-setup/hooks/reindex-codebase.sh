@@ -112,14 +112,33 @@ if [ -f "$STAMP_FILE" ] && [ -f "$DB_PATH" ]; then
 fi
 
 # --- Lock: prevent parallel reindex ---
+MAX_LOCK_AGE_SECONDS=1800  # 30 minutes — any worker older than this is considered stuck
+
 if [ -f "$LOCK_FILE" ]; then
     LOCK_PID=$(cat "$LOCK_FILE" 2>/dev/null)
-    if [ "$LOCK_PID" = "pending" ]; then
-        # Lock was just set by another hook instance — worker about to start
+    LOCK_AGE=0
+    if [ "$(uname)" = "Darwin" ]; then
+        LOCK_CREATED=$(stat -f %m "$LOCK_FILE" 2>/dev/null || echo 0)
+    else
+        LOCK_CREATED=$(stat -c %Y "$LOCK_FILE" 2>/dev/null || echo 0)
+    fi
+    NOW=$(date +%s)
+    LOCK_AGE=$(( NOW - LOCK_CREATED ))
+
+    if [ "$LOCK_AGE" -gt "$MAX_LOCK_AGE_SECONDS" ]; then
+        # Lock is older than 30 minutes — worker is definitely stuck
+        if [ -n "$LOCK_PID" ] && [ "$LOCK_PID" != "pending" ] && kill -0 "$LOCK_PID" 2>/dev/null; then
+            kill "$LOCK_PID" 2>/dev/null
+            hook_log_warn "killed stuck worker (PID $LOCK_PID, age ${LOCK_AGE}s) and removed stale lock"
+        else
+            hook_log_warn "removed stale lock file (age ${LOCK_AGE}s, PID $LOCK_PID no longer exists)"
+        fi
+        rm -f "$LOCK_FILE"
+    elif [ "$LOCK_PID" = "pending" ]; then
         hook_log "reindex is pending start — skipping"
         exit 0
     elif [ -n "$LOCK_PID" ] && kill -0 "$LOCK_PID" 2>/dev/null; then
-        hook_log "reindex already running (PID $LOCK_PID) — skipping"
+        hook_log "reindex already running (PID $LOCK_PID, age ${LOCK_AGE}s) — skipping"
         exit 0
     else
         rm -f "$LOCK_FILE"
@@ -150,20 +169,41 @@ echo "pending" > "$LOCK_FILE"
 hook_log "starting incremental reindex (background)"
 
 WORKER_SCRIPT="$DB_DIR/.reindex-worker.sh"
+WORKER_TIMEOUT=1800  # 30 minutes max runtime
 cat > "$WORKER_SCRIPT" << WORKER_EOF
 #!/usr/bin/env bash
 # Auto-generated reindex worker — runs detached from hook process
 echo \$\$ > "$LOCK_FILE"
 
 cd "$MCP_DIR" || exit 1
-"$RUNNER" "$REINDEX_SCRIPT" "$ROOT_DIR" "$DB_PATH" "$STAMP_FILE" > "$LOG_FILE" 2>&1
-EXIT_CODE=\$?
+
+# Run with timeout to prevent stuck workers
+if command -v timeout > /dev/null 2>&1; then
+    timeout "$WORKER_TIMEOUT" "$RUNNER" "$REINDEX_SCRIPT" "$ROOT_DIR" "$DB_PATH" "$STAMP_FILE" > "$LOG_FILE" 2>&1
+    EXIT_CODE=\$?
+    if [ "\$EXIT_CODE" -eq 124 ]; then
+        echo "Reindex TIMED OUT after ${WORKER_TIMEOUT}s" >> "$LOG_FILE"
+    fi
+elif command -v gtimeout > /dev/null 2>&1; then
+    gtimeout "$WORKER_TIMEOUT" "$RUNNER" "$REINDEX_SCRIPT" "$ROOT_DIR" "$DB_PATH" "$STAMP_FILE" > "$LOG_FILE" 2>&1
+    EXIT_CODE=\$?
+    if [ "\$EXIT_CODE" -eq 124 ]; then
+        echo "Reindex TIMED OUT after ${WORKER_TIMEOUT}s" >> "$LOG_FILE"
+    fi
+else
+    # No timeout command available — run without timeout
+    "$RUNNER" "$REINDEX_SCRIPT" "$ROOT_DIR" "$DB_PATH" "$STAMP_FILE" > "$LOG_FILE" 2>&1
+    EXIT_CODE=\$?
+fi
 
 if [ "\$EXIT_CODE" -eq 0 ]; then
-    date -Iseconds > "$STAMP_FILE" 2>/dev/null || date > "$STAMP_FILE"
+    # Atomic stamp write: write to temp, then rename (survives crashes)
+    STAMP_TMP="$STAMP_FILE.tmp.\$\$"
+    date -Iseconds > "\$STAMP_TMP" 2>/dev/null || date > "\$STAMP_TMP"
+    mv "\$STAMP_TMP" "$STAMP_FILE"
 else
     # Log failure but keep existing DB intact (incremental = safe)
-    echo "Reindex failed with exit code \$EXIT_CODE" >> "$LOG_FILE"
+    echo "Reindex failed with exit code \$EXIT_CODE at \$(date -Iseconds 2>/dev/null || date)" >> "$LOG_FILE"
 fi
 
 rm -f "$LOCK_FILE"

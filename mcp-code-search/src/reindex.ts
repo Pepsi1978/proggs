@@ -36,7 +36,13 @@ async function main() {
 
 	const store = new VectorStore(dbPath);
 
-	if (doFullReindex) {
+	// Verify DB integrity before incremental reindex — if corrupt, force full rebuild
+	if (!doFullReindex && !store.integrityCheck()) {
+		console.warn(
+			"DB integrity check FAILED — switching to full reindex to recover",
+		);
+		await fullReindex(store, rootDir);
+	} else if (doFullReindex) {
 		await fullReindex(store, rootDir);
 	} else {
 		await incrementalReindex(store, rootDir, stampFile);
@@ -54,21 +60,30 @@ async function fullReindex(store: VectorStore, rootDir: string) {
 	console.log(`Found ${files.length} files to index`);
 
 	let totalChunks = 0;
+	let filesSkipped = 0;
 	for (const file of files) {
-		const chunks = await chunkFile(file, rootDir);
-		if (chunks.length === 0) continue;
+		try {
+			const chunks = await chunkFile(file, rootDir);
+			if (chunks.length === 0) continue;
 
-		const embeddings = await generateEmbeddings(chunks.map((c) => c.content));
-		store.insertBatch(chunks, embeddings);
-		totalChunks += chunks.length;
+			const embeddings = await generateEmbeddings(chunks.map((c) => c.content));
+			store.insertBatch(chunks, embeddings);
+			totalChunks += chunks.length;
 
-		if (totalChunks % 200 === 0) {
-			console.log(`Progress: ${totalChunks} chunks embedded`);
+			if (totalChunks % 200 === 0) {
+				console.log(`Progress: ${totalChunks} chunks embedded`);
+			}
+		} catch (err) {
+			filesSkipped++;
+			const msg = err instanceof Error ? err.message : String(err);
+			console.error(`  SKIP ${file}: ${msg}`);
 		}
 	}
 
+	const skipMsg =
+		filesSkipped > 0 ? ` (${filesSkipped} skipped due to errors)` : "";
 	console.log(
-		`Full reindex complete: ${files.length} files, ${totalChunks} chunks`,
+		`Full reindex complete: ${files.length} files, ${totalChunks} chunks${skipMsg}`,
 	);
 }
 
@@ -125,33 +140,43 @@ async function incrementalReindex(
 		}
 	}
 
-	// Re-index changed/new files
+	// Re-index changed/new files (per-file error isolation)
 	let totalChunks = 0;
 	let filesProcessed = 0;
+	let filesSkipped = 0;
 	for (const absPath of changedFiles) {
 		const relPath = relative(rootDir, absPath).replace(/\\/g, "/");
 
-		// Delete old chunks for this file (if any)
-		store.deleteByFilePath(relPath);
+		try {
+			// Delete old chunks for this file (if any)
+			store.deleteByFilePath(relPath);
 
-		// Generate new chunks
-		const chunks = await chunkFile(absPath, rootDir);
-		if (chunks.length === 0) continue;
+			// Generate new chunks
+			const chunks = await chunkFile(absPath, rootDir);
+			if (chunks.length === 0) continue;
 
-		// Generate embeddings and insert
-		const embeddings = await generateEmbeddings(chunks.map((c) => c.content));
-		store.insertBatch(chunks, embeddings);
+			// Generate embeddings and insert
+			const embeddings = await generateEmbeddings(chunks.map((c) => c.content));
+			store.insertBatch(chunks, embeddings);
 
-		totalChunks += chunks.length;
-		filesProcessed++;
-		console.log(
-			`  [${filesProcessed}/${changedFiles.length}] ${relPath} (${chunks.length} chunks)`,
-		);
+			totalChunks += chunks.length;
+			filesProcessed++;
+			console.log(
+				`  [${filesProcessed}/${changedFiles.length}] ${relPath} (${chunks.length} chunks)`,
+			);
+		} catch (err) {
+			filesSkipped++;
+			const msg = err instanceof Error ? err.message : String(err);
+			console.error(`  SKIP ${relPath}: ${msg}`);
+			// Continue with remaining files — don't let one bad file abort everything
+		}
 	}
 
 	const stats = store.stats();
+	const skipMsg =
+		filesSkipped > 0 ? ` (${filesSkipped} skipped due to errors)` : "";
 	console.log(
-		`Incremental reindex complete: ${filesProcessed} files updated, ${totalChunks} chunks. ` +
+		`Incremental reindex complete: ${filesProcessed} files updated, ${totalChunks} chunks${skipMsg}. ` +
 			`Total index: ${stats.totalFiles} files, ${stats.totalChunks} chunks.`,
 	);
 }
