@@ -19,6 +19,11 @@ Grundsatz:
 - `claude-code-setup/` ist nur fuer Claude Code gedacht und fuer Codex keine Regelquelle.
 - Wenn Regeltexte an mehreren Stellen im Repository auseinanderlaufen, ist fuer Codex dieser Ordner die massgebliche lokale Referenz.
 
+Git-Sonderregel fuer diesen Ordner:
+- `codex-setup/` ist der einzige Ordner im Repository, in den Codex eigenstaendig committen und pushen darf.
+- Der Zweck ist die plattformuebergreifende Synchronisation von Codex-Regeln zwischen macOS und Windows.
+- Fuer alle anderen Ordner im Repository gilt weiter: kein `git push` ohne ausdrueckliche Benutzeranweisung.
+
 Struktur:
 - `rules/global.md`: dauerhafte globale Regeln fuer Codex auf allen Plattformen
 

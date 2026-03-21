@@ -36,7 +36,9 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
 - Lokale Commits duerfen in `Codex` erstellt werden, wenn sie zur Aufgabe gehoeren.
 - Commits sollen nur aufgabenrelevante Aenderungen enthalten.
 - Fremde oder bereits vorhandene, nicht zur Aufgabe gehoerende Aenderungen duerfen nicht ungefragt mit committed werden.
-- `git push` darf nur dann ausgefuehrt werden, wenn der Benutzer Codex ausdruecklich dazu auffordert.
+- Ausnahme: Fuer Aenderungen innerhalb von `codex-setup/` darf Codex eigenstaendig committen und pushen.
+- Diese Ausnahme gilt nur fuer `codex-setup/`, weil dieser Ordner die plattformuebergreifende Synchronisation von Codex-Regeln zwischen macOS und Windows traegt.
+- Fuer alle anderen Ordner im Repository gilt: `git push` nur nach ausdruecklicher Benutzeranweisung.
 - Vor einem moeglichen Push soll Codex Aenderungen bevorzugt lokal validieren.
 
 ## Startverhalten fuer Codex
