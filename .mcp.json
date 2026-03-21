@@ -10,7 +10,7 @@
 		},
 		"think-tank": {
 			"command": "/opt/homebrew/bin/npx",
-			"args": ["-y", "mcp-think-tank@2.0.7"],
+			"args": ["-y", "mcp-think-tank@2.0.6"],
 			"env": {
 				"MCP_THINK_TANK_STORAGE": "./.think-tank"
 			}
