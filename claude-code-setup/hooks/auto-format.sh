@@ -12,6 +12,12 @@ if [ -z "$HOOK_INPUT" ]; then
     exit 0
 fi
 
+# Guard: if python3 is unavailable, skip formatting (non-critical)
+if ! command -v python3 &>/dev/null; then
+    hook_log_warn "python3 not found — auto-format skipped"
+    exit 0
+fi
+
 # Extract file_path from JSON input (Edit tool uses file_path, Write tool uses path)
 FILE_PATH=$(echo "$HOOK_INPUT" | python3 -c "
 import sys, json

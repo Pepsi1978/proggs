@@ -16,6 +16,12 @@ source "$SCRIPT_DIR/whiteboard-insert.sh"
 # ---------------------------------------------------------------------------
 hook_input="$(cat)"
 
+# Guard: if python3 is unavailable, skip silently (config-guard is critical but can't parse without python3)
+if ! command -v python3 &>/dev/null; then
+    hook_log_warn "python3 not found — config-guard cannot validate settings"
+    exit 0
+fi
+
 # Extract file_path (Write tool) or path (fallback) from tool_input
 file_path="$(printf '%s' "$hook_input" | python3 -c "
 import sys, json

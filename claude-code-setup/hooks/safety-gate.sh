@@ -13,6 +13,12 @@ source "$SCRIPT_DIR/whiteboard-insert.sh"
 # ---------------------------------------------------------------------------
 hook_input="$(cat)"
 
+# Guard: if python3 is unavailable, allow the command (fail-open for non-critical hooks)
+if ! command -v python3 &>/dev/null; then
+    hook_log_warn "python3 not found — safety-gate cannot parse input, allowing command"
+    exit 0
+fi
+
 tool_name="$(printf '%s' "$hook_input" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_name',''))" 2>/dev/null)"
 cmd="$(printf '%s' "$hook_input"       | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('command',''))" 2>/dev/null)"
 

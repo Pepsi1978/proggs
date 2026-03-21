@@ -42,7 +42,12 @@ get_lock_age_minutes() {
     local now
     local mtime
     now=$(date +%s)
-    mtime=$(stat -c %Y "$LOCK_FILE" 2>/dev/null || stat -f %m "$LOCK_FILE" 2>/dev/null)
+    # macOS uses -f format, Linux uses -c format — try BSD first (more common on macOS)
+    if [ "$(uname)" = "Darwin" ]; then
+        mtime=$(stat -f %m "$LOCK_FILE" 2>/dev/null) || mtime=""
+    else
+        mtime=$(stat -c %Y "$LOCK_FILE" 2>/dev/null) || mtime=""
+    fi
     # Fallback: if both stat variants fail, treat mtime as 0 (lock appears very old)
     mtime=${mtime:-0}
     echo $(( (now - mtime) / 60 ))

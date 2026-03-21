@@ -14,7 +14,11 @@ source "$HOOKS_DIR/hook-log.sh"
 # ---------------------------------------------------------------------------
 hook_input="$(cat)"
 
-msg="$(printf '%s' "$hook_input" | python3 -c "
+# Guard: if python3 is unavailable, use fallback message
+if ! command -v python3 &>/dev/null; then
+    msg=""
+else
+    msg="$(printf '%s' "$hook_input" | python3 -c "
 import sys, json
 try:
     d = json.load(sys.stdin)
@@ -22,6 +26,7 @@ try:
 except Exception:
     print('')
 " 2>/dev/null)"
+fi
 
 if [ -z "$msg" ]; then
     msg="Braucht deine Aufmerksamkeit"

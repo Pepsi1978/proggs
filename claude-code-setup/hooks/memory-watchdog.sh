@@ -34,12 +34,19 @@ fi
 
 # Acquire file lock for atomic read-increment-write to prevent race conditions
 # when multiple SubagentStop hooks run concurrently (parallel agents finishing)
-(
-    flock -w 2 200 || exit 1
+if command -v flock &>/dev/null; then
+    (
+        flock -w 2 200 || exit 1
+        miss_count=$(cat "$COUNTER_FILE" 2>/dev/null || echo "0")
+        miss_count=$((miss_count + 1))
+        echo "$miss_count" > "$COUNTER_FILE"
+    ) 200>"$COUNTER_FILE.lock"
+else
+    # flock not available — proceed without locking (race condition possible but non-fatal)
     miss_count=$(cat "$COUNTER_FILE" 2>/dev/null || echo "0")
     miss_count=$((miss_count + 1))
     echo "$miss_count" > "$COUNTER_FILE"
-) 200>"$COUNTER_FILE.lock"
+fi
 
 miss_count=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
 

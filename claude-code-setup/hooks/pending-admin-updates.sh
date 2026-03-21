@@ -10,12 +10,14 @@ source "$SCRIPT_DIR/whiteboard-insert.sh"
 if [ "$(uname)" = "Darwin" ]; then
     # macOS: check brew
     if command -v brew &>/dev/null; then
-        outdated=$(brew outdated 2>/dev/null | head -20)
+        # brew outdated returns exit code 1 when updates exist (not an error!)
+        outdated=$(brew outdated 2>/dev/null | head -20) || true
         if [ -n "$outdated" ]; then
             count=$(echo "$outdated" | wc -l | tr -d ' ')
             update_list=$(echo "$outdated" | tr '\n' ', ' | sed 's/, $//')
             hook_log "found $count brew updates: $update_list"
-            insert_whiteboard_entry "Systemzustand" "- **Pending Admin Updates ($count):** $update_list" || true
+            # whiteboard insert is best-effort — don't fail the hook if section is missing
+            insert_whiteboard_entry "Systemzustand" "- **Pending Admin Updates ($count):** $update_list" 2>/dev/null || true
             echo "Pending-Admin-Updates: $count brew Updates verfuegbar."
         else
             hook_log "no pending brew updates"
@@ -31,7 +33,7 @@ else
         if [ "$updates" -gt 0 ]; then
             update_list=$(apt list --upgradable 2>/dev/null | grep upgradable | awk -F'/' '{print $1}' | tr '\n' ', ' | sed 's/, $//')
             hook_log "found $updates apt updates: $update_list"
-            insert_whiteboard_entry "Systemzustand" "- **Pending Admin Updates ($updates):** $update_list" || true
+            insert_whiteboard_entry "Systemzustand" "- **Pending Admin Updates ($updates):** $update_list" 2>/dev/null || true
             echo "Pending-Admin-Updates: $updates apt Updates verfuegbar."
         else
             hook_log "no pending apt updates"

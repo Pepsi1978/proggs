@@ -73,12 +73,16 @@ fi
 # Restore stashed changes
 if [ "$stashed" = true ]; then
     if ! git stash pop 2>/dev/null; then
-        hook_log_warn "stash pop had conflicts"
+        hook_log_warn "stash pop had conflicts — continuing anyway"
         write_status "Auto-Sync: WARNUNG -- Stash-Restore hatte Konflikte. Bitte manuell pruefen: cd ~/proggs; git stash show"
+        # Don't fail the hook — stash conflicts are non-fatal, the user can resolve later
     else
         write_status "Auto-Sync: Lokale Aenderungen wiederhergestellt."
     fi
 fi
+
+# Ensure clean exit regardless of stash result
+exit 0 2>/dev/null || true
 
 write_status "Auto-Sync: Git Pull erfolgreich."
 

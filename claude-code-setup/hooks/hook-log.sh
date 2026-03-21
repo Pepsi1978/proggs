@@ -54,9 +54,19 @@ _hook_log_trap_handler() {
 trap '_hook_log_trap_handler $LINENO' ERR
 
 # Register EXIT trap: logs unexpected non-zero exit codes (mirrors PS1's PowerShell.Exiting handler)
+# Expected exit codes: 0 = OK, 1 = intentional denial (e.g., resource locked), 2 = intentional block (e.g., safety-gate)
+# Only codes >= 3 are logged as truly unexpected failures.
+_HOOK_EXPECTED_EXIT_CODES=(0 1 2)
 _hook_log_exit_handler() {
     local exit_code="$?"
-    if [[ "$exit_code" -ne 0 ]]; then
+    local expected=false
+    for code in "${_HOOK_EXPECTED_EXIT_CODES[@]}"; do
+        if [[ "$exit_code" -eq "$code" ]]; then
+            expected=true
+            break
+        fi
+    done
+    if [[ "$expected" = false ]]; then
         hook_log_error "unexpected exit code ${exit_code}"
     fi
 }
