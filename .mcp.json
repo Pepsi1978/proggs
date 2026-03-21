@@ -1,15 +1,15 @@
 {
 	"mcpServers": {
 		"code-review-graph": {
-			"command": "uvx",
+			"command": "/opt/homebrew/bin/uvx",
 			"args": ["code-review-graph", "serve"]
 		},
 		"code-search": {
-			"command": "tsx",
+			"command": "/opt/homebrew/bin/tsx",
 			"args": ["./mcp-code-search/src/index.ts"]
 		},
 		"think-tank": {
-			"command": "npx",
+			"command": "/opt/homebrew/bin/npx",
 			"args": ["-y", "mcp-think-tank@2.0.7"],
 			"env": {
 				"MCP_THINK_TANK_STORAGE": "./.think-tank"

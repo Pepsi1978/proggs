@@ -1,9 +1,20 @@
 {
 	"_comment": "MCP server configuration for macOS. Copy into ~/proggs/.mcp.json on macOS.",
 	"mcpServers": {
+		"code-review-graph": {
+			"command": "/opt/homebrew/bin/uvx",
+			"args": ["code-review-graph", "serve"]
+		},
 		"code-search": {
-			"command": "/Users/frank/.bun/bin/bun",
-			"args": ["run", "~/proggs/mcp-code-search/src/index.ts"]
+			"command": "/opt/homebrew/bin/tsx",
+			"args": ["./mcp-code-search/src/index.ts"]
+		},
+		"think-tank": {
+			"command": "/opt/homebrew/bin/npx",
+			"args": ["-y", "mcp-think-tank@2.0.7"],
+			"env": {
+				"MCP_THINK_TANK_STORAGE": "./.think-tank"
+			}
 		}
 	}
 }
