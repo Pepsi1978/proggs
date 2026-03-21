@@ -5,7 +5,7 @@
 # Arguments:
 #   <resource> — e.g., "android-emulator", "port-5000", "gradle-daemon"
 #   <action>   — acquire | release | check
-# Lock files live in /tmp/claude-locks/ — auto-expire after 10 minutes
+# Lock files live in ~/.cache/claude-locks/ — auto-expire after 10 minutes
 
 source "$(dirname "$0")/hook-log.sh"
 
@@ -28,7 +28,8 @@ case "$ACTION" in
         ;;
 esac
 
-LOCK_DIR="${TMPDIR:-/tmp}/claude-locks"
+# Use ~/.cache instead of /tmp to avoid symlink attacks on shared systems
+LOCK_DIR="$HOME/.cache/claude-locks"
 mkdir -p "$LOCK_DIR"
 LOCK_FILE="$LOCK_DIR/${RESOURCE}.lock"
 
@@ -42,6 +43,8 @@ get_lock_age_minutes() {
     local mtime
     now=$(date +%s)
     mtime=$(stat -c %Y "$LOCK_FILE" 2>/dev/null || stat -f %m "$LOCK_FILE" 2>/dev/null)
+    # Fallback: if both stat variants fail, treat mtime as 0 (lock appears very old)
+    mtime=${mtime:-0}
     echo $(( (now - mtime) / 60 ))
 }
 
@@ -54,11 +57,22 @@ case "$ACTION" in
             echo "LOCKED — Resource '$RESOURCE' is held by $owner (${age}min ago). Wait or use a different resource."
             exit 1
         fi
-        # Acquire lock (overwrites stale locks older than 10 minutes)
-        echo "$(hostname)-PID$$-$(date +%H:%M:%S)" > "$LOCK_FILE"
-        hook_log "lock ACQUIRED for '$RESOURCE'"
-        echo "ACQUIRED — Resource '$RESOURCE' locked."
-        exit 0
+        # Atomic lock acquisition using noclobber — prevents TOCTOU race condition.
+        # With noclobber set, the shell refuses to overwrite an existing file via >,
+        # making check-and-create a single atomic operation.
+        set -o noclobber
+        if (echo "$(hostname)-$$-$(date +%H:%M:%S)" > "$LOCK_FILE") 2>/dev/null; then
+            set +o noclobber
+            hook_log "lock ACQUIRED for '$RESOURCE'"
+            echo "ACQUIRED — Resource '$RESOURCE' locked."
+            exit 0
+        else
+            set +o noclobber
+            owner=$(cat "$LOCK_FILE" 2>/dev/null || echo "unknown")
+            hook_log "lock DENIED for '$RESOURCE' — race condition, now held by $owner"
+            echo "LOCKED — Resource '$RESOURCE' was just locked by $owner. Wait or use a different resource."
+            exit 1
+        fi
         ;;
 
     release)

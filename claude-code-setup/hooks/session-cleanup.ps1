@@ -30,6 +30,12 @@ if (Test-Path $nodeCache) {
     }
 }
 
+# Clean up intent-anker files (they persist across sessions otherwise)
+@("claude-session-goal.txt", "claude-turn-counter.txt", "claude-intent-reminder.txt") | ForEach-Object {
+    $f = Join-Path $env:TEMP $_
+    if (Test-Path $f) { Remove-Item $f -Force -ErrorAction SilentlyContinue }
+}
+
 # Clean old agent-writeback sentinel files (prevent accumulation)
 $sentinelPattern = Join-Path $env:TEMP "agent-writeback-*.json"
 Get-ChildItem $sentinelPattern -ErrorAction SilentlyContinue |

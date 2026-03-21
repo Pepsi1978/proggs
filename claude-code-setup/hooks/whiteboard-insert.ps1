@@ -56,12 +56,20 @@ function Insert-WhiteboardEntry {
             }
 
             $newLines = [System.Collections.ArrayList]@($lines)
+            # Split multi-line entries so each line is inserted separately
+            # This prevents a single $Entry containing \n from corrupting the file
+            $entryLines = $Entry -split "`r?`n"
             if ($placeholderIdx -ge 0) {
-                # Replace placeholder
-                $newLines[$placeholderIdx] = $Entry
+                # Replace placeholder with first line, insert remaining lines after it
+                $newLines[$placeholderIdx] = $entryLines[0]
+                for ($j = 1; $j -lt $entryLines.Count; $j++) {
+                    $newLines.Insert($placeholderIdx + $j, $entryLines[$j])
+                }
             } else {
-                # Insert at end of section
-                $newLines.Insert($insertIdx, $Entry)
+                # Insert all lines at end of section
+                for ($j = 0; $j -lt $entryLines.Count; $j++) {
+                    $newLines.Insert($insertIdx + $j, $entryLines[$j])
+                }
             }
             Set-Content -Path $memoryFile -Value $newLines.ToArray() -Encoding UTF8 -ErrorAction Stop
         }

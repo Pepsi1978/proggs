@@ -26,6 +26,18 @@ $turn = 0
 if (Test-Path $CounterFile) {
     try { $turn = [int](Get-Content $CounterFile -Raw).Trim() } catch { $turn = 0 }
 }
+
+# Reset counter if goal file is stale (older than 2 hours = new session)
+# This prevents the counter from carrying over across separate Claude Code sessions
+$goalFile = Join-Path $env:TEMP "claude-session-goal.txt"
+if (Test-Path $goalFile) {
+    $goalAge = (Get-Date) - (Get-Item $goalFile).LastWriteTime
+    if ($goalAge.TotalHours -gt 2) {
+        # Goal is stale — this is a new session, reset counter
+        $turn = 0
+    }
+}
+
 $turn++
 Set-Content -Path $CounterFile -Value $turn -NoNewline
 

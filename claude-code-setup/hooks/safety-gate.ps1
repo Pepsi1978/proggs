@@ -21,22 +21,24 @@ if ($toolName -ne 'Bash') { exit 0 }
 $cmd = $toolInput.command
 if (-not $cmd) { exit 0 }
 
-# Dangerous patterns to block
+# Dangerous patterns to block.
+# NOTE: Patterns are intentionally NOT anchored to line start (no ^\s*).
+# Anchoring to ^ would allow bypassing via: something && git reset --hard
 $dangerous = @(
     'rm\s+-rf\s+[/~]',                # rm -rf / or ~
     'git\s+push\s+--force\s+.*main',  # force push to main
-    '^\s*git\s+reset\s+--hard',          # hard reset (anchored to line start)
-    '^\s*git\s+restore\s+\.',            # git restore . (anchored to line start)
-    '^\s*git\s+branch\s+-D',            # git branch -D (anchored to line start)
+    'git\s+reset\s+--hard',           # hard reset (unanchored — catches: cmd && git reset --hard)
+    'git\s+restore\s+\.',             # git restore . (unanchored — catches chained commands)
+    'git\s+branch\s+-D',              # git branch -D (unanchored — catches chained commands)
     '(?i)DROP\s+TABLE',               # SQL drop table (case-insensitive)
     '(?i)DROP\s+DATABASE',            # SQL drop database (case-insensitive)
     '(?i)TRUNCATE\s+TABLE',           # SQL truncate (case-insensitive)
     'format\s+[A-Z]:',                # format drive
     'del\s+/[sS]\s+/[qQ]\s+C:',      # delete C: drive
     'Remove-Item\s+-Recurse.*C:\\',   # PowerShell recursive delete C:
-    '^\s*git\s+init',                 # (#42) block creating new repos — only Pepsi1978/proggs allowed
-    '^\s*gh\s+repo\s+create',         # (#42) block creating GitHub repos
-    '^\s*git\s+remote\s+add'          # (#42) block adding new remotes — only Pepsi1978/proggs allowed
+    'git\s+init',                     # (#42) block creating new repos — only Pepsi1978/proggs allowed (unanchored)
+    'gh\s+repo\s+create',             # (#42) block creating GitHub repos (unanchored)
+    'git\s+remote\s+add'              # (#42) block adding new remotes — only Pepsi1978/proggs allowed (unanchored)
 )
 
 # Shell update patterns — WARNING only (exit 0), not blocking
@@ -55,7 +57,7 @@ foreach ($pattern in $dangerous) {
             $entry = "### $(Get-Date -Format 'yyyy-MM-dd HH:mm') — Hook: safety-gate.ps1 — Befehl blockiert: $pattern"
             Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
         } catch { }
-        Write-Output "{`"error`":`"BLOCKED: Dangerous command detected — $pattern`"}"
+        @{ error = "BLOCKED: Dangerous command detected — $pattern" } | ConvertTo-Json -Compress | Write-Output
         exit 2
     }
 }
