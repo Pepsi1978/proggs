@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # reindex-codebase.sh — SessionStart Hook (async)
-# Re-indexes the codebase for semantic search if files changed since last index.
-# Uses pointer-based DB switching: writes to index-N.db, then updates current.txt.
-# The old DB stays untouched and available for searches during the entire reindex.
-# Old DBs are cleaned up on a best-effort basis.
-# v2: Uses whiteboard-insert.sh for section-based error logging (echo >> is FORBIDDEN).
+# v3: Complete rewrite for reliability.
+#
+# Key improvements over v2:
+# - Uses a permanent reindex.ts script instead of HEREDOC generation
+# - nohup background process — immune to hook timeout (300s)
+# - Lock file prevents parallel reindex processes
+# - Bash-based cleanup (no more HEREDOC regex bugs)
+# - Cleans up WAL/SHM files from crashed indexers
 
 HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HOOKS_DIR/hook-log.sh"
@@ -13,45 +16,47 @@ source "$HOOKS_DIR/whiteboard-insert.sh"
 ROOT_DIR="$HOME/proggs"
 DB_DIR="$ROOT_DIR/.code-search"
 STAMP_FILE="$DB_DIR/.last-index-time"
-POINTER_FILE="$DB_DIR/current.txt"
+LOCK_FILE="$DB_DIR/.reindex.lock"
 MCP_DIR="$ROOT_DIR/mcp-code-search"
-# Use tsx (Node.js TypeScript runner) on ALL platforms.
-# bun doesn't support better-sqlite3 (native C++ addon) — Bun bug #4290.
-if command -v tsx > /dev/null 2>&1; then
+REINDEX_SCRIPT="$MCP_DIR/src/reindex.ts"
+LOG_FILE="$DB_DIR/.reindex.log"
+
+# Use absolute path for tsx (macOS needs it for hooks/cron)
+if [ -x "/opt/homebrew/bin/tsx" ]; then
+    RUNNER="/opt/homebrew/bin/tsx"
+elif command -v tsx > /dev/null 2>&1; then
     RUNNER="tsx"
-elif command -v npx > /dev/null 2>&1; then
-    RUNNER="npx tsx"
 else
-    echo "Reindex-Hook: tsx nicht gefunden (npm i -g tsx) — Semantic Search deaktiviert."
+    hook_log_warn "tsx not found — semantic search reindex disabled"
     exit 0
 fi
 
-# Exit if the MCP indexer source doesn't exist
-if [ ! -f "$MCP_DIR/src/index.ts" ]; then
+# Exit if the reindex script doesn't exist
+if [ ! -f "$REINDEX_SCRIPT" ]; then
+    hook_log_warn "reindex.ts not found at $REINDEX_SCRIPT"
     exit 0
 fi
 
-# Ensure .mcp.json in home directory is up-to-date (Claude Code reads from working dir)
-HOME_MCP="$HOME/.mcp.json"
+# Ensure .mcp.json in home directory is up-to-date
 PROGGS_MCP="$ROOT_DIR/.mcp.json"
 if [ -f "$PROGGS_MCP" ]; then
-    if ! diff -q "$PROGGS_MCP" "$HOME_MCP" > /dev/null 2>&1; then
-        cp "$PROGGS_MCP" "$HOME_MCP"
+    if ! diff -q "$PROGGS_MCP" "$HOME/.mcp.json" > /dev/null 2>&1; then
+        cp "$PROGGS_MCP" "$HOME/.mcp.json"
     fi
 fi
 
-# Ensure dependencies are installed (npm for native addon compatibility)
-if [ ! -d "$MCP_DIR/node_modules" ]; then
+# Ensure dependencies are installed
+if [ ! -d "$MCP_DIR/node_modules/better-sqlite3" ]; then
+    hook_log "installing mcp-code-search dependencies"
     npm install --prefix "$MCP_DIR" 2>/dev/null
 fi
 
-# Auto-start Ollama if not running
+# --- Check if Ollama is running, start if needed ---
 if ! curl -s --max-time 2 http://localhost:11434/api/tags > /dev/null 2>&1; then
-    # Try to find and start ollama
     OLLAMA_BIN=""
     if command -v ollama > /dev/null 2>&1; then
         OLLAMA_BIN="ollama"
-    elif [ -f "/usr/local/bin/ollama" ]; then
+    elif [ -x "/usr/local/bin/ollama" ]; then
         OLLAMA_BIN="/usr/local/bin/ollama"
     fi
 
@@ -59,9 +64,11 @@ if ! curl -s --max-time 2 http://localhost:11434/api/tags > /dev/null 2>&1; then
         nohup "$OLLAMA_BIN" serve > /dev/null 2>&1 &
         sleep 5
         if ! curl -s --max-time 3 http://localhost:11434/api/tags > /dev/null 2>&1; then
+            hook_log_warn "Ollama failed to start — skipping reindex"
             exit 0
         fi
     else
+        hook_log_warn "Ollama not installed — skipping reindex"
         exit 0
     fi
 fi
@@ -70,17 +77,17 @@ fi
 MODELS_JSON=$(curl -s --max-time 2 http://localhost:11434/api/tags 2>/dev/null)
 if [ $? -eq 0 ] && [ -n "$MODELS_JSON" ]; then
     if ! echo "$MODELS_JSON" | grep -q "nomic-embed-text"; then
-        ollama pull nomic-embed-text 2>/dev/null || hook_log_warn "ollama pull nomic-embed-text failed"
+        ollama pull nomic-embed-text 2>/dev/null || {
+            hook_log_warn "ollama pull nomic-embed-text failed"
+            exit 0
+        }
     fi
 fi
 
-# Check if re-index is needed
-NEEDS_REINDEX=0
-if [ ! -f "$STAMP_FILE" ]; then
-    NEEDS_REINDEX=1
-else
-    STAMP_TIME=$(stat -c %Y "$STAMP_FILE" 2>/dev/null || stat -f %m "$STAMP_FILE" 2>/dev/null)
-    # Find any code file newer than the stamp (exclude common non-code dirs)
+# --- Check if reindex is needed ---
+mkdir -p "$DB_DIR"
+
+if [ -f "$STAMP_FILE" ]; then
     NEWER=$(find "$ROOT_DIR" \
         \( -name "*.ts" -o -name "*.kt" -o -name "*.rs" -o -name "*.go" \
            -o -name "*.cs" -o -name "*.swift" -o -name "*.py" \
@@ -94,113 +101,96 @@ else
         -not -path "*/dist/*" \
         -not -path "*/target/*" \
         -not -path "*/.cache/*" \
+        -not -path "*/.code-search/*" \
         2>/dev/null | head -1)
-    if [ -n "$NEWER" ]; then
-        NEEDS_REINDEX=1
+    if [ -z "$NEWER" ]; then
+        hook_log "index is up to date — skipping reindex"
+        exit 0
     fi
 fi
 
-if [ "$NEEDS_REINDEX" -eq 0 ]; then
-    exit 0
+# --- Lock: prevent parallel reindex ---
+if [ -f "$LOCK_FILE" ]; then
+    LOCK_PID=$(cat "$LOCK_FILE" 2>/dev/null)
+    if [ -n "$LOCK_PID" ] && kill -0 "$LOCK_PID" 2>/dev/null; then
+        hook_log "reindex already running (PID $LOCK_PID) — skipping"
+        exit 0
+    else
+        # Stale lock file — remove it
+        rm -f "$LOCK_FILE"
+        hook_log_warn "removed stale lock file (PID $LOCK_PID no longer exists)"
+    fi
 fi
 
-# Determine next DB filename (index-N.db)
+# --- Determine next DB filename ---
+CURRENT_DB=$(cat "$DB_DIR/current.txt" 2>/dev/null || echo "")
 MAX_N=0
-if [ -d "$DB_DIR" ]; then
-    while IFS= read -r dbfile; do
-        BASENAME=$(basename "$dbfile")
-        if [[ "$BASENAME" =~ ^index-([0-9]+)\.db$ ]]; then
-            N="${BASH_REMATCH[1]}"
-            if [ "$N" -gt "$MAX_N" ]; then
-                MAX_N=$N
-            fi
-        fi
-    done < <(find "$DB_DIR" -maxdepth 1 -name "index-*.db" 2>/dev/null)
-fi
+for dbfile in "$DB_DIR"/index-*.db; do
+    [ -f "$dbfile" ] || continue
+    BASENAME=$(basename "$dbfile")
+    if [[ "$BASENAME" =~ ^index-([0-9]+)\.db$ ]]; then
+        N="${BASH_REMATCH[1]}"
+        [ "$N" -gt "$MAX_N" ] && MAX_N=$N
+    fi
+done
 NEXT_N=$((MAX_N + 1))
 NEW_DB_NAME="index-${NEXT_N}.db"
+NEW_DB_PATH="$DB_DIR/$NEW_DB_NAME"
 
-# Build the TypeScript indexer script
-TEMP_FILE="$MCP_DIR/reindex-$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || date +%s).ts"
-
-# Escape the root dir path for embedding in the TS heredoc
-ROOT_DIR_ESCAPED="${ROOT_DIR//\\/\/}"
-
-cat > "$TEMP_FILE" << 'TSEOF'
-import { findCodeFiles, chunkFile } from '__MCP_DIR__/src/indexer.ts';
-import { generateEmbeddings } from '__MCP_DIR__/src/ollama.ts';
-import { VectorStore } from '__MCP_DIR__/src/store.ts';
-import { resolve, join } from 'path';
-import { mkdirSync, existsSync, writeFileSync, readdirSync, unlinkSync } from 'fs';
-
-async function main() {
-  const rootDir = resolve('__ROOT_DIR__');
-  const dbDir = join(rootDir, '.code-search');
-  if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
-
-  const newDbName = '__NEW_DB_NAME__';
-  const newDbPath = join(dbDir, newDbName);
-  const store = new VectorStore(newDbPath);
-
-  const files = await findCodeFiles(rootDir);
-  const allChunks: any[] = [];
-  for (const file of files) {
-    const chunks = await chunkFile(file, rootDir);
-    allChunks.push(...chunks);
-  }
-
-  const BATCH = 32;
-  for (let i = 0; i < allChunks.length; i += BATCH) {
-    const batch = allChunks.slice(i, i + BATCH);
-    const embeddings = await generateEmbeddings(batch.map((c: any) => c.content));
-    store.insertBatch(batch, embeddings);
-  }
-  store.close();
-
-  // Update pointer — this is the "switch" moment
-  writeFileSync(join(dbDir, 'current.txt'), newDbName);
-
-  // Clean up old DB files (best-effort — skip if locked)
-  for (const f of readdirSync(dbDir)) {
-    if (f.match(/^index-\d+\\.db/) && !f.startsWith(newDbName.replace('.db', ''))) {
-      try { unlinkSync(join(dbDir, f)); } catch {}
-    }
-  }
-}
-
-main().catch(e => { console.error(e); process.exit(1); });
-TSEOF
-
-# Replace placeholders with actual shell variable values
-# macOS sed requires -i '' (empty extension), Linux sed uses -i without argument
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' "s|__MCP_DIR__|${MCP_DIR}|g; s|__ROOT_DIR__|${ROOT_DIR_ESCAPED}|g; s|__NEW_DB_NAME__|${NEW_DB_NAME}|g" "$TEMP_FILE"
-else
-    sed -i "s|__MCP_DIR__|${MCP_DIR}|g; s|__ROOT_DIR__|${ROOT_DIR_ESCAPED}|g; s|__NEW_DB_NAME__|${NEW_DB_NAME}|g" "$TEMP_FILE"
-fi
-
-# Run the indexer
-cd "$MCP_DIR" && $RUNNER "$TEMP_FILE" 2>/dev/null
-EXIT_CODE=$?
-
-# Clean up temp file (and any orphaned ones from previous crashed runs)
-rm -f "$TEMP_FILE"
-find "$MCP_DIR" -maxdepth 1 -name "reindex-*.ts" -delete 2>/dev/null || true
-
-TIMESTAMP=$(date '+%Y-%m-%d %H:%M')
-
-if [ "$EXIT_CODE" -eq 0 ]; then
-    mkdir -p "$DB_DIR"
-    date -Iseconds > "$STAMP_FILE" 2>/dev/null || date > "$STAMP_FILE"
-    echo "Reindex-Hook: Codebase neu indexiert ($NEW_DB_NAME, pointer-swap)."
-else
-    if [ "$EXIT_CODE" -eq 143 ]; then
-        EXIT_INFO="SIGTERM — process killed by 300s timeout"
-    else
-        EXIT_INFO="Unknown error (ExitCode: $EXIT_CODE)"
+# --- Clean up orphaned WAL/SHM files from crashed previous runs ---
+for f in "$DB_DIR"/index-*.db-wal "$DB_DIR"/index-*.db-shm; do
+    [ -f "$f" ] || continue
+    BASE_DB="${f%-*}"  # Remove -wal or -shm suffix
+    # If the base DB exists but is NOT the current one, clean up
+    if [ -f "$BASE_DB" ] && [ "$(basename "$BASE_DB")" != "$CURRENT_DB" ]; then
+        rm -f "$f"
     fi
-    hook_log_error "Indexer failed — ExitCode $EXIT_CODE: $EXIT_INFO"
-    ENTRY="### $TIMESTAMP — Hook: reindex-codebase.sh — ExitCode $EXIT_CODE: $EXIT_INFO — Status: OFFEN"
-    insert_whiteboard_entry "Offene Fehler & Probleme" "$ENTRY"
-    echo "Reindex-Hook: FEHLER — Bun ExitCode $EXIT_CODE. Siehe Shared Whiteboard."
+done
+
+# --- Start reindex as fully detached background process ---
+# Must use nohup + setsid/disown to survive hook process group termination.
+# Claude Code kills the hook's process group after timeout, so a simple ( ... ) &
+# is NOT enough — the subshell would be killed too.
+hook_log "starting reindex (background): $NEW_DB_NAME"
+
+# Write a worker script that runs independently of this hook
+WORKER_SCRIPT="$DB_DIR/.reindex-worker.sh"
+cat > "$WORKER_SCRIPT" << WORKER_EOF
+#!/usr/bin/env bash
+# Auto-generated reindex worker — runs detached from hook process
+echo \$\$ > "$LOCK_FILE"
+
+cd "$MCP_DIR" || exit 1
+"$RUNNER" "$REINDEX_SCRIPT" "$ROOT_DIR" "$NEW_DB_PATH" > "$LOG_FILE" 2>&1
+EXIT_CODE=\$?
+
+if [ "\$EXIT_CODE" -eq 0 ]; then
+    date -Iseconds > "$STAMP_FILE" 2>/dev/null || date > "$STAMP_FILE"
+    # Clean up old DB files (keep only the new one)
+    CURRENT_AFTER=\$(cat "$DB_DIR/current.txt" 2>/dev/null || echo "")
+    for f in "$DB_DIR"/index-*.db "$DB_DIR"/index-*.db-wal "$DB_DIR"/index-*.db-shm; do
+        [ -f "\$f" ] || continue
+        BASENAME=\$(basename "\$f")
+        case "\$BASENAME" in
+            "\${CURRENT_AFTER}"*) continue ;;
+        esac
+        rm -f "\$f" 2>/dev/null || true
+    done
+    # Clean up leftover reindex-*.ts temp files from v2
+    find "$MCP_DIR" -maxdepth 1 -name "reindex-*.ts" ! -name "reindex.ts" -delete 2>/dev/null || true
+else
+    # Failed: remove incomplete DB, keep old one
+    rm -f "$NEW_DB_PATH" "${NEW_DB_PATH}-wal" "${NEW_DB_PATH}-shm" 2>/dev/null || true
 fi
+
+rm -f "$LOCK_FILE"
+rm -f "$WORKER_SCRIPT"
+WORKER_EOF
+chmod +x "$WORKER_SCRIPT"
+
+# Launch fully detached: nohup + redirect all FDs + disown
+nohup bash "$WORKER_SCRIPT" </dev/null >/dev/null 2>&1 &
+disown $! 2>/dev/null || true
+
+# The hook returns immediately — the detached worker handles the rest.
+exit 0
