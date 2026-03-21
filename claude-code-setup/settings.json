@@ -148,6 +148,15 @@
 						"async": true
 					}
 				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "prompt",
+						"prompt": "Semantic Search Health Check: Verify that mcp__code-search__search_status is available by checking if the tool exists in your tool list. If it does NOT exist or fails, tell the user IN GERMAN: 'Semantische Suche ist NICHT verfuegbar. Der MCP-Server code-search laeuft nicht. Moegliche Ursachen: tsx nicht installiert, .mcp.json falsch konfiguriert, oder better-sqlite3 nicht fuer Node.js kompiliert. Fix: npm install -g tsx && cd ~/proggs/mcp-code-search && npm install'. If it IS available, silently proceed — do not mention it.",
+						"timeout": 10
+					}
+				]
 			}
 		],
 		"UserPromptSubmit": [

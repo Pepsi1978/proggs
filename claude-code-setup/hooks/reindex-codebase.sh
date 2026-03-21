@@ -14,26 +14,15 @@ DB_DIR="$ROOT_DIR/.code-search"
 STAMP_FILE="$DB_DIR/.last-index-time"
 POINTER_FILE="$DB_DIR/current.txt"
 MCP_DIR="$ROOT_DIR/mcp-code-search"
-# On macOS, bun:sqlite lacks loadExtension and bun can't use better-sqlite3.
-# Use node (with better-sqlite3) for indexing on macOS, bun on other platforms.
-if [ "$(uname)" = "Darwin" ]; then
-    # macOS: use tsx (TypeScript executor for Node.js)
-    if command -v tsx > /dev/null 2>&1; then
-        RUNNER="tsx"
-    else
-        echo "Reindex-Hook: tsx nicht gefunden (npm i -g tsx) — Semantic Search deaktiviert."
-        exit 0
-    fi
+# Use tsx (Node.js TypeScript runner) on ALL platforms.
+# bun doesn't support better-sqlite3 (native C++ addon) — Bun bug #4290.
+if command -v tsx > /dev/null 2>&1; then
+    RUNNER="tsx"
+elif command -v npx > /dev/null 2>&1; then
+    RUNNER="npx tsx"
 else
-    # Windows/Linux: use bun
-    if command -v bun > /dev/null 2>&1; then
-        RUNNER="$(command -v bun) run"
-    elif [ -f "$HOME/.bun/bin/bun" ]; then
-        RUNNER="$HOME/.bun/bin/bun run"
-    else
-        echo "Reindex-Hook: bun nicht gefunden — Semantic Search deaktiviert."
-        exit 0
-    fi
+    echo "Reindex-Hook: tsx nicht gefunden (npm i -g tsx) — Semantic Search deaktiviert."
+    exit 0
 fi
 
 # Exit if the MCP indexer source doesn't exist
@@ -48,14 +37,9 @@ if [ -f "$PROGGS_MCP" ] && [ ! -f "$HOME_MCP" ]; then
     cp "$PROGGS_MCP" "$HOME_MCP"
 fi
 
-# Ensure bun dependencies are installed
+# Ensure dependencies are installed (npm for native addon compatibility)
 if [ ! -d "$MCP_DIR/node_modules" ]; then
-    # Install deps: prefer bun for speed, fallback to npm
-    if command -v bun > /dev/null 2>&1; then
-        bun install --cwd "$MCP_DIR" 2>/dev/null
-    else
-        npm install --prefix "$MCP_DIR" 2>/dev/null
-    fi
+    npm install --prefix "$MCP_DIR" 2>/dev/null
 fi
 
 # Auto-start Ollama if not running

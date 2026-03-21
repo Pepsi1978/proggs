@@ -5,8 +5,8 @@
 			"args": ["code-review-graph", "serve"]
 		},
 		"code-search": {
-			"command": "bun",
-			"args": ["run", "./mcp-code-search/src/index.ts"]
+			"command": "tsx",
+			"args": ["./mcp-code-search/src/index.ts"]
 		},
 		"think-tank": {
 			"command": "npx",

@@ -13,7 +13,15 @@ $dbDir = Join-Path $rootDir ".code-search"
 $stampFile = Join-Path $dbDir ".last-index-time"
 $pointerFile = Join-Path $dbDir "current.txt"
 $mcpDir = Join-Path $rootDir "mcp-code-search"
-$bunExe = "$env:USERPROFILE\.bun\bin\bun.exe"
+# Use tsx (Node.js TypeScript runner) instead of bun — bun doesn't support better-sqlite3
+$tsxExe = "$env:APPDATA\npm\tsx.cmd"
+if (-not (Test-Path $tsxExe)) {
+    # Fallback: try npx tsx
+    $tsxExe = "npx"
+    $tsxArgs = @("tsx")
+} else {
+    $tsxArgs = @()
+}
 
 if (-not (Test-Path (Join-Path $mcpDir "src\index.ts"))) { exit 0 }
 
@@ -24,10 +32,10 @@ if ((Test-Path $proggsMcp) -and -not (Test-Path $homeMcp)) {
     Copy-Item $proggsMcp $homeMcp
 }
 
-# Ensure bun dependencies are installed
+# Ensure dependencies are installed (npm for native addon compatibility)
 $nodeModules = Join-Path $mcpDir "node_modules"
 if (-not (Test-Path $nodeModules)) {
-    Start-Process -FilePath $bunExe -ArgumentList "install" -WorkingDirectory $mcpDir -NoNewWindow -Wait
+    Start-Process -FilePath "npm" -ArgumentList "install" -WorkingDirectory $mcpDir -NoNewWindow -Wait
 }
 
 # Auto-start Ollama if not running (headless server — no GUI window)
@@ -132,7 +140,8 @@ for (const f of readdirSync(dbDir)) {
     $tempFile = Join-Path $mcpDir "reindex-$([guid]::NewGuid().ToString('N').Substring(0,8)).ts"
     Set-Content -Path $tempFile -Value $script -Encoding UTF8
     try {
-        $process = Start-Process -FilePath $bunExe -ArgumentList "run", $tempFile -WorkingDirectory $mcpDir -NoNewWindow -Wait -PassThru
+        $allArgs = $tsxArgs + @($tempFile)
+        $process = Start-Process -FilePath $tsxExe -ArgumentList $allArgs -WorkingDirectory $mcpDir -NoNewWindow -Wait -PassThru
     } finally {
         Remove-Item $tempFile -ErrorAction SilentlyContinue
         # Also clean up any orphaned temp files from previous crashed runs
