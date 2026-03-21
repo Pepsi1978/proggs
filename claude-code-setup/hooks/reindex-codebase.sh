@@ -31,11 +31,13 @@ if [ ! -f "$MCP_DIR/src/index.ts" ]; then
     exit 0
 fi
 
-# Ensure .mcp.json exists in home directory (Claude Code reads it from working dir)
+# Ensure .mcp.json in home directory is up-to-date (Claude Code reads from working dir)
 HOME_MCP="$HOME/.mcp.json"
 PROGGS_MCP="$ROOT_DIR/.mcp.json"
-if [ -f "$PROGGS_MCP" ] && [ ! -f "$HOME_MCP" ]; then
-    cp "$PROGGS_MCP" "$HOME_MCP"
+if [ -f "$PROGGS_MCP" ]; then
+    if ! diff -q "$PROGGS_MCP" "$HOME_MCP" > /dev/null 2>&1; then
+        cp "$PROGGS_MCP" "$HOME_MCP"
+    fi
 fi
 
 # Ensure dependencies are installed (npm for native addon compatibility)

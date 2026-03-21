@@ -38,6 +38,16 @@ fi
 local_sha=$(git rev-parse HEAD 2>/dev/null)
 remote_sha=$(git rev-parse '@{u}' 2>/dev/null)
 
+# Always sync .mcp.json from repo to home dir (regardless of new commits)
+# Claude Code reads .mcp.json from the working dir (~), not from ~/proggs/
+repo_mcp="$REPO_DIR/.mcp.json"
+if [ -f "$repo_mcp" ]; then
+    if ! diff -q "$repo_mcp" "$HOME/.mcp.json" > /dev/null 2>&1; then
+        cp "$repo_mcp" "$HOME/.mcp.json"
+        hook_log ".mcp.json synced to home dir (was out of date)"
+    fi
+fi
+
 if [ "$local_sha" = "$remote_sha" ]; then
     write_status "Auto-Sync: Alle Dateien aktuell."
     exit 0
@@ -80,9 +90,6 @@ if [ "$stashed" = true ]; then
         write_status "Auto-Sync: Lokale Aenderungen wiederhergestellt."
     fi
 fi
-
-# Ensure clean exit regardless of stash result
-exit 0 2>/dev/null || true
 
 write_status "Auto-Sync: Git Pull erfolgreich."
 
@@ -187,6 +194,14 @@ if [ -d "$skills_dir" ]; then
     if [ "$total_skills" -gt 0 ]; then
         synced="$synced Skills($total_skills)"
     fi
+fi
+
+# .mcp.json — always sync from repo to home directory
+# (Claude Code reads .mcp.json from the working dir, which is ~ on session start)
+repo_mcp="$REPO_DIR/.mcp.json"
+if [ -f "$repo_mcp" ]; then
+    cp "$repo_mcp" "$HOME/.mcp.json"
+    synced="$synced .mcp.json"
 fi
 
 # .gitignore_global
