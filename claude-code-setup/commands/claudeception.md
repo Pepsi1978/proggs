@@ -65,27 +65,19 @@ Before extracting, verify the knowledge meets these criteria:
 
 **Goal:** Find related skills before creating. Decide: update or create new.
 
-```sh
-# Skill directories (project-first, then user-level)
-SKILL_DIRS=(
-  ".claude/skills"
-  "$HOME/.claude/skills"
-  "$HOME/.codex/skills"
-  # Add other tool paths as needed
-)
+Use the Glob and Grep tools (not bash rg commands) to search skill directories:
 
-# List all skills
-rg --files -g 'SKILL.md' "${SKILL_DIRS[@]}" 2>/dev/null
+**Skill directories** (project-first, then user-level):
+- `.claude/skills`
+- `~/.claude/skills`
 
-# Search by keywords
-rg -i "keyword1|keyword2" "${SKILL_DIRS[@]}" 2>/dev/null
+**List all skills**: Use Glob tool with pattern `**/SKILL.md` in each skill directory.
 
-# Search by exact error message
-rg -F "exact error message" "${SKILL_DIRS[@]}" 2>/dev/null
+**Search by keywords**: Use Grep tool with the keyword pattern across the skill directories.
 
-# Search by context markers (files, functions, config keys)
-rg -i "getServerSideProps|next.config.js|prisma.schema" "${SKILL_DIRS[@]}" 2>/dev/null
-```
+**Search by exact error message**: Use Grep tool with the exact string (use fixed-string matching).
+
+**Search by context markers**: Use Grep tool with patterns like `getServerSideProps|next.config.js|prisma.schema` across skill directories.
 
 | Found                                            | Action                                                   |
 |--------------------------------------------------|----------------------------------------------------------|
@@ -122,7 +114,7 @@ Before creating the skill, search the web for current information when:
 **When to search:**
 - The topic involves specific technologies, frameworks, or tools
 - You're uncertain about current best practices
-- The solution might have changed after January 2025 (knowledge cutoff)
+- The solution might have changed after May 2025 (knowledge cutoff)
 - There might be official documentation or community standards
 - You want to verify your understanding is current
 
@@ -217,7 +209,9 @@ Save new skills to the appropriate location:
 - **Project-specific skills**: `.claude/skills/[skill-name]/SKILL.md`
 - **User-wide skills**: `~/.claude/skills/[skill-name]/SKILL.md`
 
-Include any supporting scripts in a `scripts/` subdirectory if the skill benefits from 
+**IMPORTANT**: Use the /skill-creator:skill-creator skill via the Skill tool for creating new skills. Do not write skill files directly with the Write tool — the skill-creator handles formatting, validation, and registration.
+
+Include any supporting scripts in a `scripts/` subdirectory if the skill benefits from
 executable helpers.
 
 ## Retrospective Mode
@@ -331,7 +325,7 @@ description: |
   terminal/server logs instead of browser for actual error messages.
 author: Claude Code
 version: 1.0.0
-date: 2024-01-15
+date: YYYY-MM-DD
 ---
 
 # Next.js Server-Side Error Debugging

@@ -14,7 +14,7 @@ description: Systematic self-improvement of the Claude Code development environm
 ║  Cross-Platform: macOS + Windows                             ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  Stufe 1: SCAN — env-checker Agent (Full/Quick)              ║
-║  Stufe 2: DEEP-DIVE — 8 Researcher + Smart-Cache (TTL)      ║
+║  Stufe 2: DEEP-DIVE — 8 Researcher + Smart-Cache (git-diff) ║
 ║  Stufe 3: IMPROVE — Updates + Report + Meta-Improve          ║
 ║  Stufe 4: CREATIVE — 6 Linsen + Benchmark + Build            ║
 ║  Stufe 5: SUPER INTELLIGENZ — Schlauer denken, nicht nur     ║
@@ -53,10 +53,16 @@ _MCP-Server koennen das Whiteboard nicht lesen (kein Dateisystem-Zugriff). Ihre 
    Die Benutzer-Feedback-Memories sind die EINZIGE Ausnahme — sie sind an das Whiteboard
    angeschlossen (siehe Header) und werden von /self-improve mitgelesen.
 
-**Whiteboard-Sektionen:**
+**Whiteboard-Sektionen (alle 10):**
 - "Offene Fehler & Probleme" — Fehler aus Hooks, Agents, MCP-Servern, Plugins (PRIORITAET!)
 - "Systemzustand" — Aktueller Stand aller Tools, Versionen, Konfigurationen
-- "Erkenntnisse aus Code Reviews/Tests/Architektur/Debugging/Performance/UI/Forschung" — thematisch
+- "Erkenntnisse aus Code Reviews" — thematisch
+- "Erkenntnisse aus Tests" — thematisch
+- "Architektur-Entscheidungen" — thematisch
+- "Debugging-Muster" — thematisch
+- "Performance & Optimierung" — thematisch
+- "UI/UX-Patterns" — thematisch
+- "Forschung & Intelligence" — thematisch
 - "Regeln & Konventionen" — Systemweite Regeln
 
 ## Core Rules
@@ -127,7 +133,7 @@ If `session-scores.jsonl` doesn't exist or has < 3 entries: skip Stufe 0 silentl
 
 Delegate to `env-checker` agent: `mode: quick|full`, `Platform: [detected]`, `Date: [today]`.
 Full mode includes: Android deep-scan, agent tiers, language readiness, rules, git config.
-**Stufe 0, 1 and 2 start SIMULTANEOUSLY.**
+**Stufe 1 and 2 start SIMULTANEOUSLY after Stufe 0 completes.**
 
 **Semantic Search Index (v5.14 — parallel mit Stufe 1):**
 Wenn `~/proggs/mcp-code-search/` existiert: Pruefe ob der Index aktuell ist.
@@ -140,7 +146,7 @@ Wenn `~/proggs/mcp-code-search/` existiert: Pruefe ob der Index aktuell ist.
     import { VectorStore } from './src/store.ts';
     import { resolve, join } from 'path';
     import { mkdirSync, existsSync, writeFileSync, readdirSync, unlinkSync } from 'fs';
-    const root = resolve('\$HOME/proggs');
+    const root = resolve(process.env.HOME + '/proggs');
     const dbDir = join(root, '.code-search');
     if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
     // Pointer-based: find next index-N.db number
@@ -385,7 +391,7 @@ Researcher-Prompts. Der Agent hat:
 - Findings werden in MEMORY.md unter "Forschung & Intelligence" gespeichert, mit Status pro Finding
 - Liest vorherige Findings und sucht gezielt NEUE Ideen (kein Duplicate Research)
 - Output-Format mit expliziter JA/NEIN-Empfehlung pro Finding
-Spawn: `Agent(subagent_type="intelligence-researcher", name="r8-intelligence")`
+Spawn agent via Agent tool: type=intelligence-researcher, name=r8-intelligence
 
 **Gueltige Status-Werte fuer Forschungs-Findings:**
 `UMZUSETZEN` (jetzt implementieren) | `EVALUIERT` (bewertet, noch nicht entschieden) | `VERWORFEN` (abgelehnt) | `BESTAETIGT` (bereits umgesetzt).

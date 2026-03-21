@@ -56,10 +56,10 @@ Wenn ein Feature auf einer Plattform implementiert wird, MUSS es auch auf der an
 
 ### 3. Pfade und Dateisystem
 
-- macOS: Forward Slashes (`/Users/frank/`), Tilde-Expansion (`~/`)
-- Windows: Backslashes (`C:\Users\frank\`), Umgebungsvariablen (`%USERPROFILE%`)
+- macOS: Forward Slashes (`$HOME/`), Tilde-Expansion (`~/`)
+- Windows: Backslashes (`%USERPROFILE%\`), Umgebungsvariablen (`%USERPROFILE%`)
 - Config-Suche macOS: Bundle-Pfad > Projekt-Root > CWD > `~/.config/ProjectName/`
-- Config-Suche Windows: Exe-Pfad > CWD > `%USERPROFILE%` > `%APPDATA%\ProjectName\`
+- Config-Suche Windows: Exe-Pfad > CWD > `%USERPROFILE%\` > `%APPDATA%\ProjectName\`
 - IMMER plattformeigene Path-APIs verwenden: `URL(fileURLWithPath:)` (Swift) bzw. `Path.Combine()` (C#)
 
 ### 4. Prozess-Erkennung

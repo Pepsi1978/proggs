@@ -1,5 +1,5 @@
 ---
-name: android-development
+name: android-clean-architecture
 description: Create production-quality Android applications following Google's official architecture guidance and NowInAndroid best practices. Use when building Android apps with Kotlin, Jetpack Compose, MVVM architecture, Hilt dependency injection, Room database, or multi-module projects. Triggers on requests to create Android projects, screens, ViewModels, repositories, feature modules, or when asked about Android architecture patterns.
 ---
 
@@ -180,11 +180,11 @@ internal class OfflineFirstMyRepository @Inject constructor(
 ```kotlin
 // Gradle version catalog (libs.versions.toml)
 [versions]
-kotlin = "1.9.x"
-compose-bom = "2024.x.x"
-hilt = "2.48"
-room = "2.6.x"
-coroutines = "1.7.x"
+kotlin = "2.3.x"
+compose-bom = "[latest-stable]"
+hilt = "[latest-stable]"
+room = "[latest-stable]"
+coroutines = "[latest-stable]"
 
 [libraries]
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }

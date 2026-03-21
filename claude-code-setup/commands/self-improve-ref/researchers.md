@@ -40,7 +40,7 @@ touch "$CACHE_STAMP"
 **Thorough-Modus**: Ignoriert Cache komplett — alle Researcher laufen immer frisch.
 
 When a run completes, save a snapshot to the cache directory (`~/.claude/self-improve-cache/`):
-- Write R2, R3, R4 summaries as plain text files (e.g., `r2-plugins.txt`, `r3-parallel.txt`, `r4-versions.txt`)
+- Write R2, R3, R4 summaries as markdown files (e.g., `R2_plugins.md`, `R3_parallel.md`, `R4_versions.md`)
 - Update the timestamp: `touch ~/.claude/self-improve-cache/.last-cache-time`
 - Do NOT use TTL-based `type: reference` memory entries — these contradict the git-diff cache strategy.
 
@@ -73,6 +73,9 @@ Return only actionable findings with version numbers. Date: [today]."
 ```
 
 ### R2 — Plugins & Marketplace (skip if no env changes since last cache — git-diff check against ~/.claude/agents/, ~/.claude/hooks/, ~/.claude/rules/; run unconditionally if > 14 days since last run)
+
+**Before spawning R2**: Read `~/.claude/settings.json`, extract all `enabledPlugins` keys, and substitute them into the R2 prompt below in place of `[INSTALLED_PLUGINS_LIST]`.
+
 ```
 "Research new Claude Code plugins available in [month+year].
 Search: (1) official plugins (anthropics/claude-plugins-official),
@@ -84,7 +87,7 @@ SELF-VALIDATION (MANDATORY): Before recommending ANY plugin:
 3. Only recommend plugins that pass BOTH checks
 
 Installed plugins (DO NOT recommend these):
-[PASTE enabledPlugins keys from settings.json]
+[INSTALLED_PLUGINS_LIST]
 
 Return: plugin name, source, what it does, stars, recommendation."
 ```

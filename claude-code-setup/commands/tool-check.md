@@ -55,7 +55,7 @@ You are performing a systematic code health check — an automated pre-scan foll
 ## Available Tools (USE THEM)
 
 Use ALL installed plugins, skills, agents, and MCP servers during analysis:
-- **Serena** for semantic code analysis (symbol navigation, references)
+- **Serena** (if installed) for semantic code analysis (symbol navigation, references)
 - **Context7** for up-to-date library documentation
 - **LSP plugins** for type-checking, diagnostics
 - **WebSearch/WebFetch** for deprecation notices, security advisories
@@ -151,7 +151,7 @@ Each loop collects findings into a shared list. Categories:
 - **Optik** — Visual/UI issue (inconsistency, missing states, polish)
 
 **No duplicates across loops.** Single running counter (Loop 1: #1-#N, Loop 2: #N+1-#M, etc.)
-Numbers in loops MUST match final presentation — NEVER renumber.
+Note: When using parallel agents, each agent may use internal numbering — after merging, assign unified final numbers for presentation. Numbers in the FINAL PRESENTATION must be consistent — never renumber after presenting to the user.
 
 **Loop summaries:**
 - Loop 1 → "Loop 1 abgeschlossen — [N] neue Findings (gesamt: [M]). Starte Loop 2."

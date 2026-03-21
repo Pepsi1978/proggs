@@ -62,6 +62,9 @@ git push origin main
 - Laesst alle anderen Commits intakt
 
 **Variante D: Mehrere Commits rueckgaengig machen**
+
+REQUIRES explicit user confirmation — show which N commits will be reverted and wait for approval.
+
 ```
 git revert HEAD~N..HEAD --no-edit
 git push origin main
