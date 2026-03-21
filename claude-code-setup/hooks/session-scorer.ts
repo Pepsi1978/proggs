@@ -124,7 +124,7 @@ function analyzeTranscript(path: string): SessionMetrics {
 	const errorPattern =
 		/\b(error|failed|exception|ENOENT|EPERM|FATAL|CRASHED)\b/i;
 	const errorExclusions =
-		/error.handling|error.message|error.type|fix.the.error|catch.error|on.error|if.error|no.error/i;
+		/error[-\s.]handling|error[-\s.]message|error[-\s.]type|fix[-\s.]the[-\s.]error|catch[-\s.]error|on[-\s.]error|if[-\s.]error|no[-\s.]error/i;
 
 	for (const line of lines) {
 		try {
@@ -256,6 +256,7 @@ function detectTrends(currentMetrics: SessionMetrics): void {
 
 	if (allScores.length >= 20) {
 		const scores = allScores.map((s) => s.quality_score);
+		if (scores.length < 2) return;
 		const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
 		const stdDev = Math.sqrt(
 			scores.reduce((sum, s) => sum + (s - mean) ** 2, 0) / (scores.length - 1),
@@ -299,7 +300,7 @@ function validateMetrics(
 	return true;
 }
 
-function main() {
+function main(): void {
 	const transcript = findLatestTranscript();
 	if (!transcript) {
 		process.exit(0);

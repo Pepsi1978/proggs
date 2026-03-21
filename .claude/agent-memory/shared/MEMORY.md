@@ -83,11 +83,11 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Semantic Search:** Aktiv (wird bei jeder Session automatisch aktualisiert via reindex-Hook)
 - **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
 - **Agents:** 15 aktiv, alle mit C1 Sentinel-Enforcement (code-reviewer hat memory:project, coder hat isolation:worktree)
-- **Hooks:** 16 Event-Typen, 21 .sh Hook-Dateien deployed + prompt-injection-defender (Python) — alle in settings.json angebunden (writeback-enforcer, memory-watchdog, reindex-codebase, pending-admin-updates, stopfailure-logger)
-- **Plugins:** 90 Eintraege, 87 aktiv (3 deaktiviert: zeroize-audit, xclaude-plugin, apple-platform-build-tools)
+- **Hooks:** 14 Event-Typen, 18 .sh Hook-Dateien deployed + prompt-injection-defender (Python) — alle in settings.json angebunden (writeback-enforcer, memory-watchdog, reindex-codebase, pending-admin-updates, stopfailure-logger)
+- **Plugins:** 89 Eintraege, 86 aktiv (3 deaktiviert: zeroize-audit, fp-check, xclaude-plugin)
 - **Whiteboard-Anbindung:** Alle Hooks nutzen whiteboard-insert.sh (sektionsbasiert) — echo/append ans Dateiende eliminiert
-- **Ollama:** v0.18.2, nomic-embed-text Modell (768 Dim, 274MB), laeuft als brew-Service
-- **File-Locking:** flock v2.41.3 (util-linux via Homebrew), writeback-enforcer nutzt echtes Locking
+- **Ollama:** v0.18.2, nomic-embed-text Modell (768 Dim, 274MB), laeuft als brew-Service (macOS)
+- **File-Locking:** flock v2.41.3 (util-linux via Homebrew), writeback-enforcer nutzt echtes Locking (macOS)
 - **Session-Scorer:** v3 — schreibt NUR in session-scores.jsonl, NICHT mehr direkt in MEMORY.md
 - **Session-Autopsy:** v2 — schreibt in MEMORY.md "Debugging-Muster" statt separate AUTOPSY.md
 - **Preferred Patterns:** MVVM (Swift), Fluent Design (C#), strict mode (TypeScript)
@@ -137,14 +137,14 @@ _Noch keine Eintraege._
 - **[2026-03-20] SWE-RL Self-Play: Bug-Inject + Bug-Repair Reinforcement Learning** — Status: EVALUIERT | Quelle: https://arxiv.org/abs/2512.18552 | Empfehlung: JA spaeter
   Agent trainiert sich selbst durch iteratives Bugs-einbauen und reparieren. +10.4 Punkte auf SWE-bench. Als Workflow ohne Training: challenger-Agent injiziert absichtlich Bugs in Code, coder muss reparieren — testet und verstaerkt Robustheit.
 
-- **[2026-03-20] Stronger-MAS: Tester-Coder Debating Mechanism** — Status: UMZUSETZEN | Quelle: https://arxiv.org/html/2510.11062v3 | Empfehlung: JA sofort
-  Zwei LLM-Agenten (Tester + Coder) debattieren iterativ: Tester generiert Unit Tests, Coder generiert Code, beide verfeinern bis Einigkeit. Umsetzbar: tester-Agent und coder-Agent in explizitem Debate-Loop (max 3 Runden) — bereits jetzt als Agent-Team machbar.
+- **[2026-03-20] Stronger-MAS: Tester-Coder Debating Mechanism** — Status: EVALUIERT | Quelle: https://arxiv.org/html/2510.11062v3 | Empfehlung: JA mit Vorbehalt
+  Zwei LLM-Agenten (Tester + Coder) debattieren iterativ: Tester generiert Unit Tests, Coder generiert Code, beide verfeinern bis Einigkeit. Umsetzbar: tester-Agent und coder-Agent in explizitem Debate-Loop (max 3 Runden) — bereits jetzt als Agent-Team machbar. SICHERHEITSHINWEIS: Terminierungsgrenze noch nicht technisch erzwungen (Challenge 2026-03-20).
 
 - **[2026-03-20] OpenSage: Hierarchisches Graph-Memory fuer Agenten** — Status: EVALUIERT | Quelle: https://arxiv.org/html/2602.16891v2 | Empfehlung: JA spaeter
   Agent verwaltet Sub-Agenten + Toolkits in einem Graph-Gedaechtnis. #1 auf CyberGym, DevOps-Gym, Terminal-Bench 2.0. Erfordert komplexe Infrastruktur. Langfristig: Whiteboard als Graph statt Markdown strukturieren.
 
-- **[2026-03-20] MCP Think Tank: Structured Reasoning + Knowledge Graph** — Status: UMZUSETZEN | Quelle: https://playbooks.com/mcp/think-tank | Empfehlung: JA sofort
-  MCP-Server der strukturiertes Reasoning mit persistentem Wissensgraph kombiniert. Sofort installierbar. Wuerde architect + debugger Agents fundamental verbessern — koennen Reasoning-Schritte sichern und wiederverwenden.
+- **[2026-03-20] MCP Think Tank: Structured Reasoning + Knowledge Graph** — Status: EVALUIERT | Quelle: https://playbooks.com/mcp/think-tank | Empfehlung: PRUEFEN vor Einsatz
+  MCP-Server der strukturiertes Reasoning mit persistentem Wissensgraph kombiniert. Wuerde architect + debugger Agents fundamental verbessern — koennen Reasoning-Schritte sichern und wiederverwenden. SICHERHEITSHINWEIS: playbooks.com kein offizieller Marketplace — Sicherheitspruefung (Prompt Injection, Publisher-Reputation) vor Installation pflicht (Challenge 2026-03-20).
 
 - **[2026-03-20] Windsurf SWE-1.5: Proprietary Coding Model 13x Speed** — Status: VERWORFEN | Quelle: https://aipromptsx.com/blog/windsurf-vs-cursor-2026 | Empfehlung: NEIN (proprietaer, nicht adaptierbar)
   Windsurf trainiert eigenes Modell (SWE-1.5) mit 950 Token/s, near-Claude-Sonnet Qualitaet. Nicht adaptierbar — aber Signal: Spezialisierte Modelle schlagen Generalmodelle auf Coding-Tasks.

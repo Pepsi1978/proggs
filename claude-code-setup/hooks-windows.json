@@ -25,7 +25,7 @@
 					{
 						"type": "command",
 						"command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/reindex-codebase.ps1\"",
-						"timeout": 180,
+						"timeout": 300,
 						"async": true
 					}
 				]
@@ -110,6 +110,18 @@
 				]
 			}
 		],
+		"StopFailure": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/stopfailure-logger.ps1\"",
+						"timeout": 10,
+						"async": true
+					}
+				]
+			}
+		],
 		"PreCompact": [
 			{
 				"hooks": [
@@ -153,13 +165,13 @@
 					},
 					{
 						"type": "command",
-						"command": "pwsh -NoProfile -File C:/Users/barwa/.claude/hooks/memory-watchdog.ps1",
+						"command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/memory-watchdog.ps1\"",
 						"timeout": 10,
 						"async": true
 					},
 					{
 						"type": "command",
-						"command": "pwsh -NoProfile -File C:/Users/barwa/.claude/hooks/writeback-enforcer.ps1",
+						"command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/writeback-enforcer.ps1\"",
 						"timeout": 10,
 						"async": true
 					}
@@ -213,7 +225,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "\"C:/Users/barwa/.bun/bin/bun.exe\" run \"$USERPROFILE/.claude/hooks/session-scorer.ts\"",
+						"command": "\"$USERPROFILE/.bun/bin/bun.exe\" run \"$USERPROFILE/.claude/hooks/session-scorer.ts\"",
 						"timeout": 10,
 						"async": true
 					}
@@ -223,7 +235,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "\"C:/Users/barwa/.bun/bin/bun.exe\" run \"$USERPROFILE/.claude/hooks/session-autopsy.ts\"",
+						"command": "\"$USERPROFILE/.bun/bin/bun.exe\" run \"$USERPROFILE/.claude/hooks/session-autopsy.ts\"",
 						"timeout": 10,
 						"async": true
 					}

@@ -5,6 +5,8 @@
 The original session goal is automatically saved to `/tmp/claude-session-goal.txt` by the intent-anker hook.
 A reminder marker is written every 5 turns to `/tmp/claude-intent-reminder.txt` (by intent-anker.ps1).
 
+> **Cross-platform paths:** On Windows use `$env:TEMP/claude-session-goal.txt`, on macOS/Linux use `/tmp/claude-session-goal.txt`.
+
 When working on a task that spans more than 10 tool calls:
 
 1. **At the start**: Read `/tmp/claude-session-goal.txt` to recall the user's original request
