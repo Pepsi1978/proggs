@@ -68,7 +68,15 @@ Validierung, Automationsskripte und sonstige koordinierende Dateien in `codex-se
 **Fix-Vorschlag:** [...]
 **Status:** OFFEN | GEFIXT (Datum) | DEFERRED
 -->
-_Noch keine Eintraege._
+### 2026-03-22 — Quelle: [mcp-code-search] — search_status meldet Legacy-DB statt aktivem Snapshot
+**Quelle:** mcp-code-search
+**Symptom:** Der direkte code-search-Healthcheck ist gruen, aber `search_status` meldet weiter `.code-search/index.db`, waehrend lokal `current.txt` und `state.json` auf `index-17.db` zeigen.
+**Ursache:** Der MCP-Server liest fuer den Status noch einen anderen DB-Pfad als der lokale Snapshot-Zeiger.
+**Betroffene Dateien:** mcp-code-search/src/*, .code-search/current.txt, .code-search/state.json
+**Reproduktion:** `bash codex-setup/scripts/check-code-search-health.sh --json`
+**Fix-Vorschlag:** mcp-code-search soll den aktiven Snapshot ueber dieselbe DB-State-Quelle lesen wie der lokale Reindex-Zeiger.
+**Status:** OFFEN
+
 
 ---
 
@@ -116,6 +124,8 @@ _Noch keine Eintraege._
 
 - **[2026-03-22 18:18] self-improve**: Bash- und PowerShell-Validierung fuer codex-setup laufen grün. Der code-search-Healthcheck nutzt jetzt einen direkten MCP-Client statt codex exec und prueft tools, search_status und eine echte Suchanfrage ohne Modellrunde.
 
+- **[2026-03-22 18:44] self-improve**: Bash- und PowerShell-Validierung fuer codex-setup laufen grün. Der direkte code-search-MCP-Client hat jetzt einen deterministischen Selbsttest mit temporaerem Fake-MCP-Server, der quoted code-search-Sections, alternative Config-Pfade, env/cwd-Uebergabe und eine echte search_status/search_code-Smoke-Route ohne laufende Codex-Session prueft.
+
 ## Architektur-Entscheidungen
 - **[2026-03-22 10:48] self-improve**: Die Whiteboard-Bruecke arbeitet jetzt fail-closed. Whiteboard-Aufloesung ist nur noch fuer das autoritative Workspace-Ziel `<workspace>/codex-setup/agent-memory/shared/MEMORY.md` erlaubt; Wrapper uebergeben dafuer explizit `--workspace`, und der Validator deckt CWD-Regressionsfaelle ab.
 
@@ -125,6 +135,8 @@ _Noch keine Eintraege._
 - **[2026-03-22 17:41] self-improve**: Der code-search-Status trennt jetzt zwischen Last mode und dem letzten echten Schreibereignis mit Last write mode und Last write at. Der neue plattformuebergreifende Healthcheck in codex-setup/scripts/check-code-search-health.* liest dafuer lokalen Indexzustand und Reindex-Log aus und prueft den MCP zusaetzlich in einer frischen codex exec-Session.
 
 - **[2026-03-22 18:18] self-improve**: Fuer code-search-Diagnosen gibt es jetzt einen direkten MCP-CLI-Client in codex-setup/scripts/code-search-mcp-client.*. Fragen zu semantischer Suche, Indexierung oder Hintergrund-Reindex sollen kuenftig bevorzugt ueber check-code-search-health beantwortet werden statt ueber Erinnerungswissen oder Einzelabfragen.
+
+- **[2026-03-22 18:44] self-improve**: Der direkte code-search-MCP-Client liest seine Konfiguration jetzt bevorzugt ueber Python tomllib und faellt nur noch notfalls auf einen lokalen Minimalparser zurueck. Dadurch funktionieren quoted code-search-Sectionnamen, env/cwd-Werte und alternative Config-Pfade robuster; der Healthcheck normalisiert zusaetzlich DB-Pfade plattformuebergreifend fuer macOS und Windows.
 
 ## Debugging-Muster
 _Noch keine Eintraege._

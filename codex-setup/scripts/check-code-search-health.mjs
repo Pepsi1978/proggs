@@ -15,19 +15,35 @@ function fail(message, details = "") {
 
 function parseArgs(argv) {
 	const options = {
+		configPath: "",
 		workspace: "",
 		query: DEFAULT_QUERY,
 		json: false,
 	};
 
+	const readOptionValue = (index, flag) => {
+		const value = argv[index + 1] ?? "";
+		if (!value || value.startsWith("--")) {
+			fail(`Missing value for ${flag}.`);
+		}
+		return value;
+	};
+
 	for (let index = 0; index < argv.length; index++) {
 		const arg = argv[index];
 		if (arg === "--workspace") {
-			options.workspace = argv[++index] ?? "";
+			options.workspace = readOptionValue(index, arg);
+			index++;
+			continue;
+		}
+		if (arg === "--config") {
+			options.configPath = readOptionValue(index, arg);
+			index++;
 			continue;
 		}
 		if (arg === "--query") {
-			options.query = argv[++index] ?? "";
+			options.query = readOptionValue(index, arg);
+			index++;
 			continue;
 		}
 		if (arg === "--json") {
@@ -37,9 +53,9 @@ function parseArgs(argv) {
 		if (arg === "--help" || arg === "-h") {
 			console.log(
 				[
-					"Usage: check-code-search-health.mjs [--workspace <path>] [--query <text>] [--json]",
+					"Usage: check-code-search-health.mjs [--workspace <path>] [--config <path>] [--query <text>] [--json]",
 					"",
-					"Checks the local code-search index metadata and runs a fresh Codex MCP smoke test.",
+					"Checks the local code-search index metadata and runs a fresh direct MCP smoke test.",
 				].join("\n"),
 			);
 			process.exit(0);
@@ -179,17 +195,13 @@ function parseStatusSnapshot(statusText) {
 	};
 }
 
-function runSmokeTest(repoRoot, workspace, query) {
+function runSmokeTest(repoRoot, workspace, query, configPath = "") {
 	const clientScript = join(repoRoot, "codex-setup", "scripts", "code-search-mcp-client.mjs");
-	const result = run("node", [
-		clientScript,
-		"smoke",
-		"--workspace",
-		workspace,
-		"--query",
-		query,
-		"--json",
-	]);
+	const args = [clientScript, "smoke", "--workspace", workspace, "--query", query, "--json"];
+	if (configPath) {
+		args.push("--config", configPath);
+	}
+	const result = run(process.execPath, args);
 
 	if (result.status !== 0) {
 		fail(
@@ -217,11 +229,14 @@ function buildReport(options) {
 	const scriptDir = fileURLToPath(new URL(".", import.meta.url));
 	const repoRoot = resolve(join(scriptDir, "..", ".."));
 	const workspace = resolveWorkspace(options.workspace, repoRoot);
-	const smoke = runSmokeTest(repoRoot, workspace, options.query);
+	const smoke = runSmokeTest(repoRoot, workspace, options.query, options.configPath);
 	const local = readLocalIndexState(workspace);
 	const mcpSnapshot = parseStatusSnapshot(smoke.statusText);
+	const normalizePath = (value) => (typeof value === "string" ? value.replace(/\\/g, "/") : value);
+	const normalizedMcpDatabasePath = normalizePath(mcpSnapshot.databasePath);
+	const normalizedActiveDb = normalizePath(local.activeDb);
 	const mcpStatusMatchesLocal =
-		(mcpSnapshot.databasePath?.endsWith(`/${local.activeDb}`) ?? false) &&
+		(normalizedMcpDatabasePath?.endsWith(`/${normalizedActiveDb}`) ?? normalizedMcpDatabasePath === normalizedActiveDb) &&
 		(mcpSnapshot.filesIndexed === null || local.totalFiles === null || mcpSnapshot.filesIndexed === local.totalFiles) &&
 		(mcpSnapshot.codeChunks === null || local.totalChunks === null || mcpSnapshot.codeChunks === local.totalChunks);
 	const report = {
@@ -233,6 +248,7 @@ function buildReport(options) {
 		queryOk: smoke.queryOk,
 		queryTopPath: smoke.queryTopPath,
 		toolNames: smoke.toolNames,
+		protocolVersion: smoke.protocolVersion,
 		dbDir: local.dbDir,
 		activeDb: local.activeDb,
 		totalFiles: local.totalFiles,
@@ -268,6 +284,7 @@ function printHumanReport(report) {
 		`code-search health for ${report.workspace}`,
 		`- MCP configured: yes`,
 		`- Direct MCP client: ${report.directClientOk ? "ok" : "failed"}`,
+		`- Protocol version: ${report.protocolVersion ?? "unknown"}`,
 		`- Fresh search_status: ok`,
 		`- Fresh test query: ok`,
 		`- Active DB: ${report.activeDb ?? "unknown"}`,

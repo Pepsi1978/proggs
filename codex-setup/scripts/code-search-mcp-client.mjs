@@ -2,14 +2,14 @@
 
 import { existsSync, readFileSync } from "fs";
 import { spawn, spawnSync } from "child_process";
-import { fileURLToPath } from "url";
 import { homedir } from "os";
-import { join, resolve } from "path";
+import { dirname, isAbsolute, join, resolve } from "path";
 
 const DEFAULT_QUERY = "Oberste Direktive gemeinsame Memory-Datei";
 const DEFAULT_LIMIT = 1;
 const REQUEST_TIMEOUT_MS = 10000;
 const REQUIRED_TOOLS = ["index_codebase", "search_code", "search_status"];
+const PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2024-11-05"];
 
 function fail(message, details = "") {
 	const suffix = details ? `\n${details}` : "";
@@ -33,12 +33,20 @@ function run(command, args, options = {}) {
 function usage() {
 	return [
 		"Usage:",
-		"  code-search-mcp-client.mjs tools [--json]",
-		"  code-search-mcp-client.mjs call <tool> [--args-json <json>] [--json]",
-		"  code-search-mcp-client.mjs smoke [--workspace <path>] [--query <text>] [--limit <n>] [--json]",
+		"  code-search-mcp-client.mjs tools [--config <path>] [--json]",
+		"  code-search-mcp-client.mjs call <tool> [--config <path>] [--args-json <json>] [--json]",
+		"  code-search-mcp-client.mjs smoke [--config <path>] [--workspace <path>] [--query <text>] [--limit <n>] [--json]",
 		"",
 		"Directly connects to the local code-search MCP server without codex exec.",
 	].join("\n");
+}
+
+function readOptionValue(argv, index, flag) {
+	const value = argv[index + 1] ?? "";
+	if (!value || value.startsWith("--")) {
+		fail(`Missing value for ${flag}.`, usage());
+	}
+	return value;
 }
 
 function parseArgs(argv) {
@@ -51,6 +59,7 @@ function parseArgs(argv) {
 	const options = {
 		command,
 		toolName: "",
+		configPath: "",
 		argsJson: "{}",
 		workspace: "",
 		query: DEFAULT_QUERY,
@@ -70,19 +79,28 @@ function parseArgs(argv) {
 	for (; index < argv.length; index++) {
 		const arg = argv[index];
 		if (arg === "--args-json") {
-			options.argsJson = argv[++index] ?? "";
+			options.argsJson = readOptionValue(argv, index, arg);
+			index++;
+			continue;
+		}
+		if (arg === "--config") {
+			options.configPath = readOptionValue(argv, index, arg);
+			index++;
 			continue;
 		}
 		if (arg === "--workspace") {
-			options.workspace = argv[++index] ?? "";
+			options.workspace = readOptionValue(argv, index, arg);
+			index++;
 			continue;
 		}
 		if (arg === "--query") {
-			options.query = argv[++index] ?? "";
+			options.query = readOptionValue(argv, index, arg);
+			index++;
 			continue;
 		}
 		if (arg === "--limit") {
-			const rawValue = argv[++index] ?? "";
+			const rawValue = readOptionValue(argv, index, arg);
+			index++;
 			const parsedLimit = Number.parseInt(rawValue, 10);
 			if (!Number.isFinite(parsedLimit) || parsedLimit <= 0) {
 				fail(`Invalid --limit value: ${rawValue}`);
@@ -108,6 +126,55 @@ function parseArgs(argv) {
 	return options;
 }
 
+function parseTomlInlineTable(rawValue) {
+	const value = rawValue.trim();
+	if (!value.startsWith("{") || !value.endsWith("}")) {
+		throw new Error(`Unsupported TOML inline table: ${value}`);
+	}
+
+	const inner = value.slice(1, -1).trim();
+	if (!inner) {
+		return {};
+	}
+
+	const entries = [];
+	let current = "";
+	let inDoubleQuotes = false;
+	let inSingleQuotes = false;
+
+	for (const char of inner) {
+		if (char === '"' && !inSingleQuotes) {
+			inDoubleQuotes = !inDoubleQuotes;
+		} else if (char === "'" && !inDoubleQuotes) {
+			inSingleQuotes = !inSingleQuotes;
+		}
+
+		if (char === "," && !inDoubleQuotes && !inSingleQuotes) {
+			entries.push(current.trim());
+			current = "";
+			continue;
+		}
+
+		current += char;
+	}
+
+	if (current.trim()) {
+		entries.push(current.trim());
+	}
+
+	const parsed = {};
+	for (const entry of entries) {
+		const match = entry.match(/^([A-Za-z0-9_-]+)\s*=\s*(.+)$/);
+		if (!match) {
+			throw new Error(`Unsupported TOML inline table entry: ${entry}`);
+		}
+
+		parsed[match[1]] = parseTomlString(match[2]);
+	}
+
+	return parsed;
+}
+
 function parseTomlString(rawValue) {
 	const value = rawValue.trim();
 	if (value.startsWith('"')) {
@@ -119,17 +186,95 @@ function parseTomlString(rawValue) {
 	throw new Error(`Unsupported TOML string value: ${value}`);
 }
 
-function parseCodeSearchConfig() {
-	const configPath = join(homedir(), ".codex", "config.toml");
-	if (!existsSync(configPath)) {
-		fail(`Codex config not found: ${configPath}`);
+function sanitizeConfigData(configPath, rawConfig) {
+	if (!rawConfig || typeof rawConfig !== "object") {
+		return null;
 	}
 
+	const configDir = dirname(configPath);
+	const command = typeof rawConfig.command === "string" ? rawConfig.command.trim() : "";
+	const args = Array.isArray(rawConfig.args) ? rawConfig.args : [];
+	const cwd = typeof rawConfig.cwd === "string" ? rawConfig.cwd.trim() : "";
+	const envSource =
+		rawConfig.env && typeof rawConfig.env === "object" && !Array.isArray(rawConfig.env)
+			? rawConfig.env
+			: {};
+	const env = Object.fromEntries(
+		Object.entries(envSource)
+			.filter(([key, value]) => typeof key === "string" && key)
+			.map(([key, value]) => [key, String(value)]),
+	);
+
+	if (!command) {
+		return null;
+	}
+
+	if (!args.every((value) => typeof value === "string")) {
+		fail("The code-search args in config.toml are not a string array.");
+	}
+
+	return {
+		configPath,
+		command,
+		args,
+		cwd: cwd ? (isAbsolute(cwd) ? cwd : resolve(configDir, cwd)) : process.cwd(),
+		env,
+	};
+}
+
+function tryRun(command, args, options = {}) {
+	return spawnSync(command, args, {
+		encoding: "utf8",
+		...options,
+	});
+}
+
+function parseCodeSearchConfigWithPython(configPath) {
+	const pythonScript = [
+		"import json",
+		"import pathlib",
+		"import sys",
+		"import tomllib",
+		"data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))",
+		"server = ((data.get('mcp_servers') or {}).get('code-search') or {})",
+		"print(json.dumps(server))",
+	].join(";");
+	const candidates =
+		process.platform === "win32"
+			? [
+					["py", ["-3", "-c", pythonScript, configPath]],
+					["python", ["-c", pythonScript, configPath]],
+					["python3", ["-c", pythonScript, configPath]],
+				]
+			: [
+					["python3", ["-c", pythonScript, configPath]],
+					["python", ["-c", pythonScript, configPath]],
+				];
+
+	for (const [command, args] of candidates) {
+		const result = tryRun(command, args);
+		if (result.error || result.status !== 0) {
+			continue;
+		}
+
+		try {
+			return sanitizeConfigData(configPath, JSON.parse(result.stdout));
+		} catch {
+			return null;
+		}
+	}
+
+	return null;
+}
+
+function parseCodeSearchConfigFallback(configPath) {
 	const configText = readFileSync(configPath, "utf8");
+	const configDir = dirname(configPath);
 	let inCodeSearchSection = false;
 	let command = "";
 	let args = [];
 	let cwd = "";
+	let env = {};
 
 	for (const rawLine of configText.split(/\r?\n/)) {
 		const line = rawLine.trim();
@@ -139,7 +284,10 @@ function parseCodeSearchConfig() {
 
 		const sectionMatch = line.match(/^\[(.+)\]$/);
 		if (sectionMatch) {
-			inCodeSearchSection = sectionMatch[1] === "mcp_servers.code-search";
+			inCodeSearchSection =
+				sectionMatch[1] === "mcp_servers.code-search" ||
+				sectionMatch[1] === 'mcp_servers."code-search"' ||
+				sectionMatch[1] === "mcp_servers.'code-search'";
 			continue;
 		}
 
@@ -166,6 +314,12 @@ function parseCodeSearchConfig() {
 		const cwdMatch = line.match(/^cwd\s*=\s*(.+)$/);
 		if (cwdMatch) {
 			cwd = parseTomlString(cwdMatch[1]);
+			continue;
+		}
+
+		const envMatch = line.match(/^env\s*=\s*(.+)$/);
+		if (envMatch) {
+			env = parseTomlInlineTable(envMatch[1]);
 		}
 	}
 
@@ -173,12 +327,21 @@ function parseCodeSearchConfig() {
 		fail("The code-search MCP server is not configured in ~/.codex/config.toml.");
 	}
 
-	return {
-		configPath,
+	return sanitizeConfigData(configPath, {
 		command,
 		args,
-		cwd: cwd || process.cwd(),
-	};
+		cwd,
+		env,
+	});
+}
+
+function parseCodeSearchConfig(configPathInput = "") {
+	const configPath = resolve(configPathInput || join(homedir(), ".codex", "config.toml"));
+	if (!existsSync(configPath)) {
+		fail(`Codex config not found: ${configPath}`);
+	}
+
+	return parseCodeSearchConfigWithPython(configPath) ?? parseCodeSearchConfigFallback(configPath);
 }
 
 function resolveWorkspace(input) {
@@ -235,8 +398,16 @@ class CodeSearchMcpClient {
 	}
 
 	async connect() {
+		return this.connectWithProtocol(PROTOCOL_VERSIONS[0]);
+	}
+
+	async connectWithProtocol(protocolVersion) {
 		this.child = spawn(this.config.command, this.config.args, {
 			cwd: this.config.cwd,
+			env: {
+				...process.env,
+				...this.config.env,
+			},
 			stdio: ["pipe", "pipe", "pipe"],
 		});
 
@@ -263,7 +434,7 @@ class CodeSearchMcpClient {
 		});
 
 		const initializeResponse = await this.request("initialize", {
-			protocolVersion: "2025-11-25",
+			protocolVersion,
 			capabilities: {},
 			clientInfo: {
 				name: "codex-setup-code-search-client",
@@ -272,6 +443,7 @@ class CodeSearchMcpClient {
 		});
 
 		this.notify("notifications/initialized");
+		this.protocolVersion = protocolVersion;
 		return initializeResponse;
 	}
 
@@ -384,20 +556,27 @@ class CodeSearchMcpClient {
 	}
 }
 
-async function withClient(handler) {
-	const config = parseCodeSearchConfig();
-	const client = new CodeSearchMcpClient(config);
+async function withClient(handler, options = {}) {
+	const config = parseCodeSearchConfig(options.configPath ?? "");
+	const errors = [];
 
-	try {
-		await client.connect();
-		return await handler(client, config);
-	} catch (error) {
-		const details = error instanceof Error ? error.message : String(error);
-		const stderr = client.stderrBuffer.trim();
-		fail("Direct code-search MCP client failed.", [details, stderr].filter(Boolean).join("\n"));
-	} finally {
-		await client.close();
+	for (const protocolVersion of PROTOCOL_VERSIONS) {
+		const client = new CodeSearchMcpClient(config);
+		try {
+			await client.connectWithProtocol(protocolVersion);
+			return await handler(client, config, protocolVersion);
+		} catch (error) {
+			const details = error instanceof Error ? error.message : String(error);
+			const stderr = client.stderrBuffer.trim();
+			errors.push(
+				[`protocol=${protocolVersion}`, details, stderr].filter(Boolean).join("\n"),
+			);
+		} finally {
+			await client.close();
+		}
 	}
+
+	fail("Direct code-search MCP client failed.", errors.join("\n\n"));
 }
 
 function printTools(result) {
@@ -435,9 +614,10 @@ async function runCommand(options) {
 			const response = await client.listTools();
 			return {
 				configPath: config.configPath,
+				protocolVersion: client.protocolVersion,
 				tools: response.result?.tools ?? [],
 			};
-		});
+		}, options);
 
 		if (options.json) {
 			console.log(JSON.stringify(result, null, "\t"));
@@ -462,11 +642,12 @@ async function runCommand(options) {
 			const response = await client.callTool(options.toolName, parsedArgs);
 			return {
 				configPath: config.configPath,
+				protocolVersion: client.protocolVersion,
 				tool: options.toolName,
 				response,
 				text: textFromToolResult(response),
 			};
-		});
+		}, options);
 
 		if (options.json) {
 			console.log(JSON.stringify(result, null, "\t"));
@@ -502,6 +683,7 @@ async function runCommand(options) {
 
 			return {
 				configPath: config.configPath,
+				protocolVersion: client.protocolVersion,
 				workspace,
 				query: options.query,
 				limit: options.limit,
@@ -513,7 +695,7 @@ async function runCommand(options) {
 				queryText,
 				queryTopPath: queryTopPath || "NONE",
 			};
-		});
+		}, options);
 
 		if (options.json) {
 			console.log(JSON.stringify(result, null, "\t"));

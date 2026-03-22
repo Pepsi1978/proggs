@@ -16,6 +16,7 @@ $RequiredFiles = @(
     "codex-setup\scripts\code-search-mcp-client.mjs",
     "codex-setup\scripts\code-search-mcp-client.sh",
     "codex-setup\scripts\code-search-mcp-client.ps1",
+    "codex-setup\scripts\check-code-search-mcp-client.mjs",
     "codex-setup\scripts\check-code-search-health.mjs",
     "codex-setup\scripts\check-code-search-health.sh",
     "codex-setup\scripts\check-code-search-health.ps1",
@@ -208,6 +209,11 @@ Remove-Item -Recurse -Force $TempWorkspace -ErrorAction SilentlyContinue
 & pwsh -NoProfile -File "codex-setup\scripts\check-openai-docs-mcp.ps1" | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw "openaiDeveloperDocs MCP smoke test failed."
+}
+
+& node "codex-setup/scripts/check-code-search-mcp-client.mjs" | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "direct code-search MCP client self-test failed."
 }
 
 & pwsh -NoProfile -File "codex-setup\scripts\code-search-mcp-client.ps1" tools | Out-Null

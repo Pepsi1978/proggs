@@ -88,6 +88,7 @@ Fuer direkte MCP-Diagnosen ohne `codex exec` gibt es zusaetzlich einen kleinen C
 
 - macOS/Linux: `bash codex-setup/scripts/code-search-mcp-client.sh tools`
 - Windows: `pwsh -NoProfile -File codex-setup/scripts/code-search-mcp-client.ps1 tools`
+- optional bei beiden: `--config <pfad>` fuer eine alternative Codex-Konfiguration
 
 Der Report zeigt in einem Schritt:
 
@@ -98,3 +99,9 @@ Der Report zeigt in einem Schritt:
 - letzten Laufmodus und den Zeitpunkt des letzten erfolgreichen Laufs
 - zusaetzlich `Last write mode` und `Last write at`, damit `noop`-Runs von echten Schreiblaeufen getrennt sichtbar sind
 - explizit, ob der letzte Lauf und der letzte Schreiblauf erfolgreich bzw. inkrementell waren
+
+Zur robusten Verifikation gibt es ausserdem einen deterministischen Direkt-Client-Selbsttest:
+
+- `node codex-setup/scripts/check-code-search-mcp-client.mjs`
+- startet einen temporaeren Fake-MCP-Server mit eigener Test-Konfiguration
+- prueft Konfigurationslesen, MCP-Handshake, Tool-Liste und eine echte `search_status`-/`search_code`-Smoke-Route ohne Abhaengigkeit von einer laufenden Codex-Session

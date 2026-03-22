@@ -45,6 +45,7 @@ required_files=(
   "codex-setup/scripts/code-search-mcp-client.mjs"
   "codex-setup/scripts/code-search-mcp-client.sh"
   "codex-setup/scripts/code-search-mcp-client.ps1"
+  "codex-setup/scripts/check-code-search-mcp-client.mjs"
   "codex-setup/scripts/check-code-search-health.mjs"
   "codex-setup/scripts/check-code-search-health.sh"
   "codex-setup/scripts/check-code-search-health.ps1"
@@ -184,6 +185,7 @@ if command -v pwsh >/dev/null 2>&1; then
 fi
 
 bash "codex-setup/scripts/check-openai-docs-mcp.sh" >/dev/null
+node "codex-setup/scripts/check-code-search-mcp-client.mjs" >/dev/null
 bash "codex-setup/scripts/code-search-mcp-client.sh" tools >/dev/null
 bash "codex-setup/scripts/check-code-search-health.sh" --json >/dev/null
 
