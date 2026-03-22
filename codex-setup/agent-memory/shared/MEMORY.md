@@ -147,3 +147,5 @@ _Noch keine Eintraege._
 - **[2026-03-22 11:31] self-improve**: Validierte `codex-setup/`-Aenderungen sollen kuenftig automatisch committed und nach `origin/main` gepusht werden. Wenn der Sync zusaetzlich `AGENTS.md` oder `.github/workflows/codex-setup-validate.yml` braucht, gehoeren sie in denselben plattformuebergreifenden Sync-Commit.
 
 - **[2026-03-22 11:31] self-improve**: Die letzte Zeile der Abschlussantwort soll kuenftig den Git-Status eindeutig melden: `Committed.` wenn nur committed wurde, oder `Gepusht in <path>, plattformuebergreifend.` wenn der Codex-Setup-Sync auf GitHub liegt.
+
+**[2026-03-22 12:10] self-improve**: Nach jeder erfolgreich abgeschlossenen Session soll Codex kuenftig mindestens einen konkreten `Intelligenzvorschlag` nennen, der direkt aus beobachteter Reibung der Session abgeleitet ist. Geschwindigkeit, weniger Rediscovery, schnellere Starts, bessere Defaults und weniger Wiederholungsarbeit gelten dabei ausdruecklich als Intelligenzgewinne.

@@ -60,6 +60,8 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
 - Wenn Zielkonflikte bestehen, haben Verbesserungen an Denken, Verifikation, Gedaechtnis, MCP-Nutzung, Skills,
   Whiteboard-Kopplung und Arbeitsablaeufen Vorrang vor kosmetischen oder kurzfristigen Optimierungen.
 - Jede Session soll mindestens einen klaren Intelligenzhebel benennen, moeglichst leicht erklaert und direkt freigabefaehig.
+- Nach jeder erfolgreich abgeschlossenen Session soll Codex mindestens einen konkreten `Intelligenzvorschlag` nennen, der aus beobachteter Reibung, Zeitverlust, Unsicherheit oder Wiederholungsarbeit dieser Session abgeleitet ist.
+- Geschwindigkeit ist dabei ausdruecklich Teil von Intelligenz: kuerzere Startpfade, weniger Rediscovery, bessere Defaults, schnellere Tool-Auswahl und weniger unnoetige Pruefschritte zaehlen als echte Intelligenzverbesserungen.
 
 ## Trennung zu Claude Code
 
