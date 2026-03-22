@@ -93,6 +93,8 @@ _Noch keine Eintraege._
 
 - **[2026-03-22 11:20] self-improve**: Auf diesem macOS-Host ist PowerShell 7.6.0 jetzt lokal unter `/opt/homebrew/bin/pwsh` verfuegbar. Kuenftige Codex-Sessions koennen `.ps1`-Validatoren und PowerShell-Paritaetschecks direkt lokal ausfuehren.
 
+- **[2026-03-22 11:54] self-improve**: Fuer schnelle QuizVerse-Android-Starts auf macOS gilt jetzt der feste Emulator-Pfad `/opt/homebrew/share/android-commandlinetools/emulator/emulator`, `adb` liegt unter `/opt/homebrew/share/android-commandlinetools/platform-tools/adb`, das SDK unter `/Users/frank/Library/Android/sdk`, das Projekt unter `/Users/frank/Codex/QuizVerse`, und der bevorzugte AVD ist `Pixel7_API35`.
+
 ---
 
 ## Erkenntnisse aus Code Reviews
