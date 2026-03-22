@@ -14,12 +14,13 @@
 import {
 	readFileSync,
 	appendFileSync,
-	writeFileSync,
 	readdirSync,
 	statSync,
 	existsSync,
 } from "fs";
 import { join } from "path";
+import { execFileSync } from "child_process";
+import { homedir } from "os";
 
 const HOME = process.env.USERPROFILE || process.env.HOME || "";
 if (!HOME) process.exit(0);
@@ -112,10 +113,11 @@ function analyzeTranscript(path: string): SessionMetrics {
 	// v4: Meta-intelligence tracking — did this session improve the system itself?
 	// 0 = no system changes, 1 = minor (memory/CLAUDE.md), 2 = significant (rules/hooks/agents)
 	let metaIntelligenceLevel = 0;
-	// Paths that indicate system self-improvement (case-insensitive matching)
-	const significantPaths = /\/(rules|hooks|agents)\//i;
+	// Paths that indicate system self-improvement — restricted to .claude/ paths
+	// to avoid false positives from project files (e.g. game-rules.md, git-hooks/)
+	const significantPaths = /\/\.claude\/(rules|hooks|agents)\//i;
 	const minorPaths =
-		/\/(memory|MEMORY\.md|CLAUDE\.md|agent-memory|session-scores)/i;
+		/\/\.claude\/.*(memory|MEMORY\.md|agent-memory)|\/CLAUDE\.md$/i;
 
 	// v3: Added ASCII-safe alternatives for umlauts (cross-platform safety)
 	const correctionPatterns = [
@@ -264,7 +266,54 @@ function analyzeTranscript(path: string): SessionMetrics {
 	};
 }
 
-// v4: Intelligence suggestion enforcement — warn if session had >10 turns but no 💡 suggestion
+// v4.1: Direct whiteboard insertion (same approach as session-autopsy.ts)
+// Sentinel files DON'T work at SessionEnd because writeback-enforcer only runs on SubagentStop.
+// Writing directly via whiteboard-insert.sh/ps1 ensures the entry lands immediately.
+function insertViaWhiteboardInsert(section: string, entry: string): void {
+	const hookDir = join(homedir(), ".claude", "hooks");
+	if (!existsSync(hookDir)) return;
+
+	if (process.platform === "win32") {
+		const script = join(hookDir, "whiteboard-insert.ps1");
+		if (!existsSync(script)) return;
+		const escapedSection = section.replace(/'/g, "''");
+		const escapedEntry = entry.replace(/'/g, "''");
+		try {
+			execFileSync(
+				"powershell",
+				[
+					"-NoProfile",
+					"-Command",
+					`. '${script}'; Insert-WhiteboardEntry -Section '${escapedSection}' -Entry '${escapedEntry}'`,
+				],
+				{ timeout: 5000 },
+			);
+		} catch {
+			// Non-fatal — stderr warning is sufficient
+		}
+	} else {
+		const script = join(hookDir, "whiteboard-insert.sh");
+		if (!existsSync(script)) return;
+		const bashSection = section.replace(/'/g, "'\\''");
+		const bashEntry = entry.replace(/'/g, "'\\''");
+		try {
+			execFileSync(
+				"bash",
+				[
+					"-c",
+					`source '${script}' && insert_whiteboard_entry '${bashSection}' '${bashEntry}'`,
+				],
+				{ timeout: 5000 },
+			);
+		} catch {
+			// Non-fatal — stderr warning is sufficient
+		}
+	}
+}
+
+// v4.1: Intelligence suggestion enforcement — warn if session had >10 turns but no 💡 suggestion
+// Fixed: Now writes directly to whiteboard instead of sentinel file (sentinel files are never
+// picked up at SessionEnd because writeback-enforcer only runs on SubagentStop events)
 function checkIntelligenceSuggestion(metrics: SessionMetrics): void {
 	if (metrics.total_turns >= 10 && !metrics.had_intelligence_suggestion) {
 		console.error(
@@ -272,22 +321,12 @@ function checkIntelligenceSuggestion(metrics: SessionMetrics): void {
 				`The Superintelligence directive requires proactive suggestions in every substantial session.`,
 		);
 
-		// Write sentinel file so whiteboard-insert can pick it up
-		const sentinelPath = join(
-			process.env.TMPDIR || process.env.TEMP || "/tmp",
-			"agent-writeback-intelligence-checker.json",
+		// Write directly to whiteboard (not sentinel file — those don't work at SessionEnd)
+		const date = new Date().toISOString().split("T")[0];
+		insertViaWhiteboardInsert(
+			"Meta-Intelligenz & Selbstverbesserung",
+			`- **[${date}] intelligence-checker**: [WARNING] Session ${metrics.session_id.slice(0, 8)} (${metrics.total_turns} Turns) hatte keinen Intelligenz-Vorschlag`,
 		);
-		try {
-			const sentinel = {
-				agent: "intelligence-checker",
-				section: "Meta-Intelligenz & Selbstverbesserung",
-				timestamp: new Date().toISOString(),
-				findings: `[WARNING] Session ${metrics.session_id.slice(0, 8)} (${metrics.total_turns} Turns) hatte keinen Intelligenz-Vorschlag — Superintelligenz-Direktive verlangt proaktive Vorschlaege`,
-			};
-			writeFileSync(sentinelPath, JSON.stringify(sentinel), "utf-8");
-		} catch {
-			// Non-fatal — the stderr warning above is sufficient
-		}
 	}
 
 	// v4: Log meta-intelligence achievements

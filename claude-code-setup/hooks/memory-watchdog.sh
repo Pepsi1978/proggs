@@ -50,8 +50,9 @@ fi
 
 miss_count=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
 
-# Alert after 2+ consecutive misses (was 5 — lowered to catch write-back failures faster)
-if [ "$miss_count" -ge 2 ]; then
+# Alert after 3+ consecutive misses (was 5, briefly 2 — 3 avoids false positives
+# from parallel coder/researcher agents while still catching failures 40% faster)
+if [ "$miss_count" -ge 3 ]; then
     ts=$(date +"%Y-%m-%d %H:%M")
     entry="### [$ts] Agent: Write-Back nicht erfolgt ($miss_count aufeinanderfolgende Agents) — Status: AUTO-LOGGED"
     insert_whiteboard_entry "Offene Fehler & Probleme" "$entry" || true
@@ -60,8 +61,8 @@ if [ "$miss_count" -ge 2 ]; then
     hook_log "$miss_count consecutive misses — logged to MEMORY.md"
     echo "MEMORY_WATCHDOG: $miss_count consecutive misses — logged to MEMORY.md"
 else
-    hook_log "no write-back ($miss_count/2 misses)"
-    echo "MEMORY_WATCHDOG: No write-back ($miss_count/2 misses)"
+    hook_log "no write-back ($miss_count/3 misses)"
+    echo "MEMORY_WATCHDOG: No write-back ($miss_count/3 misses)"
 fi
 
 exit 0

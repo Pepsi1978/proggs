@@ -597,14 +597,27 @@ function detectAndGenerateRules(state: LearningState): string[] {
 		if (count < PATTERN_THRESHOLD) continue;
 
 		// Check if we already generated a rule for this type
-		const existingRule = state.auto_rules_generated.find(
+		const existingRuleIdx = state.auto_rules_generated.findIndex(
 			(r) => r.type === type,
 		);
-		if (existingRule) {
-			// Update trigger count but don't regenerate the rule
-			existingRule.trigger_count = count;
-			existingRule.date = new Date().toISOString().split("T")[0]!;
-			continue;
+		if (existingRuleIdx >= 0) {
+			const existingRule = state.auto_rules_generated[existingRuleIdx]!;
+			// v3.1: Verify the rule file still exists on disk — if deleted (e.g. by
+			// /self-improve or user), remove from state so it can be regenerated
+			const existingFilePath = join(AUTO_RULES_DIR, existingRule.file);
+			if (existsSync(existingFilePath)) {
+				// Rule still exists — just update trigger count
+				existingRule.trigger_count = count;
+				existingRule.date = new Date().toISOString().split("T")[0]!;
+				continue;
+			} else {
+				// Rule was deleted — remove from state to allow regeneration
+				state.auto_rules_generated.splice(existingRuleIdx, 1);
+				process.stderr.write(
+					`[session-autopsy] auto-rule ${existingRule.file} was deleted — removing from state for regeneration\n`,
+				);
+				// Fall through to regenerate the rule below
+			}
 		}
 
 		// Check max auto-rules cap
