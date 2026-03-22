@@ -56,6 +56,25 @@ Der Fix muss diese Eigenschaften haben:
 | **Ueberlebbar** | Uebersteht Plugin-Updates, Config-Aenderungen, System-Upgrades |
 | **Erweiterbar** | Kann fuer zukuenftige aehnliche Faelle erweitert werden (z.B. Service Registry) |
 | **Dokumentiert** | Memory-Eintrag erklaert Ursache, Fix und wie man neue Faelle hinzufuegt |
+| **Schadensfrei** | Der Fix selbst darf KEINE neuen Fehler einfuehren (siehe Schritt 3b) |
+
+### 3b. Fix-Induced-Failure-Pruefung (PFLICHT — VOR dem Commit)
+**Ein Fix der neue Probleme verursacht ist SCHLIMMER als kein Fix.**
+Vor JEDEM Commit eines Bugfixes MUSS geprueft werden:
+
+| Pruefung | Frage | Beispiel |
+|----------|-------|----------|
+| **Abhaengigkeiten** | Was haengt vom geaenderten Code ab? | Launcher-Script aendern → launchd-plist testen |
+| **Fehlszenarien** | Was passiert wenn der Fix-Code selbst fehlschlaegt? | Health-Check crasht → blockiert er die Session? (Muss exit 0 sein!) |
+| **Zustandsaenderungen** | Aendert der Fix einen Systemzustand dauerhaft? | launchd-Agent → was wenn Plugin deinstalliert wird? (Crash-Loop!) |
+| **Race Conditions** | Kann der Fix mit anderem Code kollidieren? | Guard + Plugin-Hook starten Worker → doppelter Start? |
+| **Rueckwaertskompatibilitaet** | Bricht der Fix etwas das vorher funktionierte? | Neue Imports in index.ts → existieren die Module? |
+| **Plattform-Effekte** | Funktioniert der Fix auf macOS UND Windows? | .sh-Hook → braucht es ein .ps1-Gegenstueck? |
+| **Update-Resistenz** | Ueberlebt der Fix das naechste Plugin/CLI/OS-Update? | Hardcoded Pfade → dynamisch aufloesen |
+| **Graceful Degradation** | Was wenn eine Voraussetzung fehlt? | Bun nicht installiert → auf Node.js zurueckfallen, nicht crashen |
+
+**Faustregel**: Der Fix muss die Frage bestehen: "Was ist das Schlimmste das passieren kann
+wenn ich diesen Fix deploye und dann 6 Monate lang nicht hinschaue?"
 
 ### 4. Mehrere Absicherungsschichten (Defense in Depth)
 Nie nur EINE Absicherung. Immer mindestens 2-3 Schichten:
@@ -79,6 +98,16 @@ Nie nur EINE Absicherung. Immer mindestens 2-3 Schichten:
 | Mehrere Schichten | Guard-Hook + Auto-Patcher + Plugin-Patch + Upstream-Issue |
 | Memory | Feedback-Memory mit Muster-Erkennung gespeichert |
 
+## Beispiel: Fix-Induced-Failure vermieden (2026-03-22)
+
+| Pruefung | Problem erkannt | Massnahme |
+|----------|----------------|-----------|
+| Zustandsaenderung | launchd-Agent wuerde bei Plugin-Deinstallation Crash-Loop ausloesen | Launcher wartet geduldig statt exit 1, schlaeft 5min vor Retry |
+| Graceful Degradation | Bun koennte fehlen oder Pfad sich aendern | Multi-Path-Suche + Fallback auf Node.js |
+| Fehlszenario | Health-Check-Hook koennte crashen und Session blockieren | Immer exit 0, set +e, Fallback-Logger |
+| Race Condition | Worker bereits laufend → doppelter Start | Pre-Flight-Check via Health-Endpoint |
+| Rueckwaertskompatibilitaet | Neue Module (db-state.ts) muessen committed sein | Sofort ins Repo committed, nie nur lokal |
+
 ## Was NIEMALS passieren darf
 - ❌ Nur das Symptom fixen ohne Root Cause zu verstehen
 - ❌ Fix der bei naechstem Plugin-Update oder Neustart kaputt geht
@@ -88,3 +117,6 @@ Nie nur EINE Absicherung. Immer mindestens 2-3 Schichten:
 - ❌ Zwischenfehler in der Session ignorieren nur weil sie "danach" gefixt wurden
 - ❌ Session beenden ohne Rueckblick auf Verbesserungsmoeglichkeiten
 - ❌ Stumm arbeiten ohne proaktive Vorschlaege zur Intelligenz-Steigerung
+- ❌ Fix deployen der selbst neue Fehler einfuehrt (Fix-Induced Failure)
+- ❌ Fix ohne die 8-Punkte-Pruefung aus Schritt 3b durchzugehen
+- ❌ Einen Fehler ein ZWEITES Mal machen — jeder Fehler wird genau EINMAL gemacht
