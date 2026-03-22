@@ -84,10 +84,16 @@ Fuer die semantische Suche gibt es einen plattformuebergreifenden Healthcheck:
 - macOS/Linux: `bash codex-setup/scripts/check-code-search-health.sh`
 - Windows: `pwsh -NoProfile -File codex-setup/scripts/check-code-search-health.ps1`
 
+Fuer direkte MCP-Diagnosen ohne `codex exec` gibt es zusaetzlich einen kleinen CLI-Client:
+
+- macOS/Linux: `bash codex-setup/scripts/code-search-mcp-client.sh tools`
+- Windows: `pwsh -NoProfile -File codex-setup/scripts/code-search-mcp-client.ps1 tools`
+
 Der Report zeigt in einem Schritt:
 
-- frischen `search_status`-Smoke-Test in einer neuen `codex exec`-Session
-- frische Testquery gegen den `code-search`-MCP
+- direkten MCP-Handshake gegen `code-search` ohne Modellrunde und ohne `codex exec`
+- frischen `search_status`-Smoke-Test ueber den direkten MCP-Client
+- frische Testquery gegen den `code-search`-MCP ueber denselben Direktpfad
 - aktive DB, Dateianzahl und Chunk-Anzahl
 - letzten Laufmodus und den Zeitpunkt des letzten erfolgreichen Laufs
 - zusaetzlich `Last write mode` und `Last write at`, damit `noop`-Runs von echten Schreiblaeufen getrennt sichtbar sind

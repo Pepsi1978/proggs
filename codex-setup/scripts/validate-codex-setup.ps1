@@ -13,6 +13,9 @@ $RequiredFiles = @(
     "codex-setup\scripts\writeback-enforcer.ps1",
     "codex-setup\scripts\install-self-improve.sh",
     "codex-setup\scripts\install-self-improve.ps1",
+    "codex-setup\scripts\code-search-mcp-client.mjs",
+    "codex-setup\scripts\code-search-mcp-client.sh",
+    "codex-setup\scripts\code-search-mcp-client.ps1",
     "codex-setup\scripts\check-code-search-health.mjs",
     "codex-setup\scripts\check-code-search-health.sh",
     "codex-setup\scripts\check-code-search-health.ps1",
@@ -136,8 +139,20 @@ if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape('check-
     throw "README.md must document the code-search healthcheck script."
 }
 
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape('code-search-mcp-client.sh')) {
+    throw "README.md must document the direct code-search MCP client."
+}
+
 if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape('Last write mode')) {
     throw "README.md must document the last-write status fields."
+}
+
+if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "neue Tools, Plugins oder Agenten") {
+    throw "global.md must require future-proof fixes across new tools and agents."
+}
+
+if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "semantischer Suche, Indexierung, Hintergrund-Reindex") {
+    throw "global.md must route semantic-search questions through the code-search healthcheck."
 }
 
 Get-ChildItem "codex-setup\skills\self-improve\references\agents" -Filter "*.md" | ForEach-Object {
@@ -193,6 +208,11 @@ Remove-Item -Recurse -Force $TempWorkspace -ErrorAction SilentlyContinue
 & pwsh -NoProfile -File "codex-setup\scripts\check-openai-docs-mcp.ps1" | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw "openaiDeveloperDocs MCP smoke test failed."
+}
+
+& pwsh -NoProfile -File "codex-setup\scripts\code-search-mcp-client.ps1" tools | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "direct code-search MCP client failed."
 }
 
 & pwsh -NoProfile -File "codex-setup\scripts\check-code-search-health.ps1" --json | Out-Null

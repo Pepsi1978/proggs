@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 
-import { mkdtempSync, existsSync, readFileSync, rmSync } from "fs";
-import { tmpdir } from "os";
+import { existsSync, readFileSync } from "fs";
 import { join, resolve } from "path";
 import { spawnSync } from "child_process";
 import { fileURLToPath } from "url";
 
 const DEFAULT_QUERY = "Oberste Direktive gemeinsame Memory-Datei";
-const DEFAULT_ATTEMPTS = 2;
 
 function fail(message, details = "") {
 	const suffix = details ? `\n${details}` : "";
@@ -155,112 +153,86 @@ function readLocalIndexState(workspace) {
 	};
 }
 
-function ensureCodeSearchMcpConfigured() {
-	const result = run("codex", ["mcp", "get", "code-search"]);
+function parseStatusSnapshot(statusText) {
+	const readField = (label) => {
+		const match = statusText.match(new RegExp(`^- ${label}:\\s+(.+)$`, "m"));
+		return match ? match[1].trim() : null;
+	};
+
+	const readNumberField = (label) => {
+		const value = readField(label);
+		if (!value) {
+			return null;
+		}
+
+		const parsed = Number.parseInt(value, 10);
+		return Number.isFinite(parsed) ? parsed : null;
+	};
+
+	return {
+		databasePath: readField("Database"),
+		filesIndexed: readNumberField("Files indexed"),
+		codeChunks: readNumberField("Code chunks"),
+		lastMode: readField("Last mode"),
+		lastWriteMode: readField("Last write mode"),
+		lastWriteAt: readField("Last write at"),
+	};
+}
+
+function runSmokeTest(repoRoot, workspace, query) {
+	const clientScript = join(repoRoot, "codex-setup", "scripts", "code-search-mcp-client.mjs");
+	const result = run("node", [
+		clientScript,
+		"smoke",
+		"--workspace",
+		workspace,
+		"--query",
+		query,
+		"--json",
+	]);
+
 	if (result.status !== 0) {
 		fail(
-			"code-search MCP lookup failed.",
+			"Direct code-search MCP smoke test failed.",
 			(result.stderr || result.stdout || "").trim(),
 		);
 	}
 
-	const output = `${result.stdout}${result.stderr}`;
-	if (!output.includes("enabled: true")) {
-		fail("code-search MCP is not enabled.");
-	}
-
-	return output.trim();
-}
-
-function buildSmokePrompt(workspace, query) {
-	const quotedWorkspace = JSON.stringify(workspace);
-	const quotedQuery = JSON.stringify(query);
-
-	return [
-		"Use only the code-search MCP server.",
-		"Do not use web search, shell commands, filesystem reads, or any fallback.",
-		"Do not call index_codebase.",
-		"Only call search_status and search_code.",
-		`Call search_status with directory ${quotedWorkspace}.`,
-		`Call search_code with directory ${quotedWorkspace}, limit 1, query ${quotedQuery}.`,
-		"Reply with exactly one minified JSON object and nothing else.",
-		"Schema:",
-		'{"status_ok":true,"query_ok":true,"query_top_path":"absolute path or NONE"}',
-		"Rules:",
-		"- Set query_top_path to the absolute path of the top hit.",
-		"- If there is no hit, use NONE.",
-	].join("\n");
-}
-
-function runSmokeTest(repoRoot, workspace, query) {
-	const tempDir = mkdtempSync(join(tmpdir(), "code-search-health-"));
-	const messagePath = join(tempDir, "message.txt");
-	let lastFailure = "Fresh Codex exec did not return a parseable JSON response.";
-
 	try {
-		for (let attempt = 1; attempt <= DEFAULT_ATTEMPTS; attempt++) {
-			const prompt = buildSmokePrompt(workspace, query);
-			const result = run("codex", [
-				"exec",
-				"--skip-git-repo-check",
-				"--dangerously-bypass-approvals-and-sandbox",
-				"-C",
-				repoRoot,
-				"-c",
-				'model_reasoning_effort="low"',
-				"-o",
-				messagePath,
-				prompt,
-			]);
-
-			const rawMessage = existsSync(messagePath)
-				? readFileSync(messagePath, "utf8").replace(/\r/g, "").trim()
-				: "";
-			const execOutput = `${result.stdout}${result.stderr}`.trim();
-
-			try {
-				const parsed = JSON.parse(rawMessage);
-				if (typeof parsed?.status_ok === "boolean" && typeof parsed?.query_ok === "boolean") {
-					return {
-						statusOk: parsed.status_ok,
-						queryOk: parsed.query_ok,
-						queryTopPath: String(parsed.query_top_path ?? "").trim(),
-						execOk: result.status === 0,
-					};
-				}
-			} catch {
-				// Retry below.
-			}
-
-			lastFailure = [
-				`Fresh Codex exec returned an unexpected response on attempt ${attempt}.`,
-				rawMessage ? `Message: ${rawMessage}` : "Message: <empty>",
-				execOutput ? `Logs: ${execOutput}` : "Logs: <empty>",
-			].join("\n");
-		}
-	} finally {
-		rmSync(tempDir, { recursive: true, force: true });
+		return JSON.parse(result.stdout);
+	} catch (error) {
+		fail(
+			"Direct code-search MCP smoke test returned invalid JSON.",
+			[
+				error instanceof Error ? error.message : String(error),
+				result.stdout.trim(),
+			]
+				.filter(Boolean)
+				.join("\n"),
+		);
 	}
-
-	fail("code-search MCP smoke test failed.", lastFailure);
 }
 
 function buildReport(options) {
 	const scriptDir = fileURLToPath(new URL(".", import.meta.url));
 	const repoRoot = resolve(join(scriptDir, "..", ".."));
 	const workspace = resolveWorkspace(options.workspace, repoRoot);
-	ensureCodeSearchMcpConfigured();
-
 	const smoke = runSmokeTest(repoRoot, workspace, options.query);
 	const local = readLocalIndexState(workspace);
+	const mcpSnapshot = parseStatusSnapshot(smoke.statusText);
+	const mcpStatusMatchesLocal =
+		(mcpSnapshot.databasePath?.endsWith(`/${local.activeDb}`) ?? false) &&
+		(mcpSnapshot.filesIndexed === null || local.totalFiles === null || mcpSnapshot.filesIndexed === local.totalFiles) &&
+		(mcpSnapshot.codeChunks === null || local.totalChunks === null || mcpSnapshot.codeChunks === local.totalChunks);
 	const report = {
 		workspace,
 		query: options.query,
 		mcpConfigured: true,
-		freshExecOk: smoke.execOk,
+		directClientOk: smoke.toolsOk,
 		searchStatusOk: smoke.statusOk,
 		queryOk: smoke.queryOk,
 		queryTopPath: smoke.queryTopPath,
+		toolNames: smoke.toolNames,
 		dbDir: local.dbDir,
 		activeDb: local.activeDb,
 		totalFiles: local.totalFiles,
@@ -273,9 +245,15 @@ function buildReport(options) {
 		lastWriteAt: local.lastWriteAt,
 		lastWriteSuccessful: local.lastWriteSuccessful,
 		lastWriteIncremental: local.lastWriteIncremental,
+		statusText: smoke.statusText,
+		queryText: smoke.queryText,
+		mcpDatabasePath: mcpSnapshot.databasePath,
+		mcpFilesIndexed: mcpSnapshot.filesIndexed,
+		mcpCodeChunks: mcpSnapshot.codeChunks,
+		mcpStatusMatchesLocal,
 	};
 
-	if (!report.searchStatusOk || !report.queryOk) {
+	if (!report.directClientOk || !report.searchStatusOk || !report.queryOk) {
 		fail(
 			"code-search MCP smoke test reported a failing status.",
 			JSON.stringify(report, null, 2),
@@ -289,6 +267,7 @@ function printHumanReport(report) {
 	const lines = [
 		`code-search health for ${report.workspace}`,
 		`- MCP configured: yes`,
+		`- Direct MCP client: ${report.directClientOk ? "ok" : "failed"}`,
 		`- Fresh search_status: ok`,
 		`- Fresh test query: ok`,
 		`- Active DB: ${report.activeDb ?? "unknown"}`,
@@ -302,7 +281,10 @@ function printHumanReport(report) {
 		`- Last write mode: ${report.lastWriteMode ?? "none"}`,
 		`- Last write successful: ${report.lastWriteSuccessful ? "yes" : "no"}`,
 		`- Last write incremental: ${report.lastWriteIncremental ? "yes" : "no"}`,
+		`- Tools: ${(report.toolNames ?? []).join(", ") || "none"}`,
+		`- MCP status matches local index: ${report.mcpStatusMatchesLocal ? "yes" : "no"}`,
 		`- search_status snapshot: files=${report.totalFiles ?? "unknown"}, chunks=${report.totalChunks ?? "unknown"}, db=${report.activeDb ?? "unknown"}, last_mode=${report.lastMode ?? "none"}, last_write_mode=${report.lastWriteMode ?? "none"}, last_write_at=${report.lastWriteAt ?? "none"}`,
+		`- MCP-reported status: files=${report.mcpFilesIndexed ?? "unknown"}, chunks=${report.mcpCodeChunks ?? "unknown"}, db=${report.mcpDatabasePath ?? "unknown"}`,
 		`- test query top hit: ${report.queryTopPath || "NONE"}`,
 	];
 
