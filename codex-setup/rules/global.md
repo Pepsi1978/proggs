@@ -62,6 +62,8 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
 - Jede Session soll mindestens einen klaren Intelligenzhebel benennen, moeglichst leicht erklaert und direkt freigabefaehig.
 - Nach jeder erfolgreich abgeschlossenen Session soll Codex mindestens einen konkreten `Intelligenzvorschlag` nennen, der aus beobachteter Reibung, Zeitverlust, Unsicherheit oder Wiederholungsarbeit dieser Session abgeleitet ist.
 - Geschwindigkeit ist dabei ausdruecklich Teil von Intelligenz: kuerzere Startpfade, weniger Rediscovery, bessere Defaults, schnellere Tool-Auswahl und weniger unnoetige Pruefschritte zaehlen als echte Intelligenzverbesserungen.
+- Wenn waehrend einer Session ein Fehler, Mismatch oder blinder Fleck sichtbar wird, den Codex selbst robust absichern kann, soll Codex ihn moeglichst noch in derselben Session dauerhaft absichern statt ihn nur zu erklaeren.
+- Solche Fehler sollen nicht still ein zweites Mal passieren: Codex soll eine dauerhafte Gegenmassnahme bauen oder mindestens als expliziten `Intelligenzvorschlag` zur sofortigen Freigabe vorlegen.
 
 ## Trennung zu Claude Code
 
@@ -95,5 +97,6 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
 
 - Zu Beginn jeder Codex-Session soll zuerst diese Regelbasis gelesen werden.
 - Fuer systemische Aufgaben soll danach das Codex-Whiteboard gelesen werden, beginnend mit `## Oberste Direktive`.
+- Die `Oberste Direktive` gilt nicht nur beim Start, sondern waehrend der gesamten Arbeit: auch bei normalen Programmieraufgaben soll Codex laufend mitpruefen, ob sich aus der aktuellen Arbeit ein wiederverwendbarer Schutz, ein Geschwindigkeitsgewinn, ein Workflow-Upgrade oder ein sonstiger Intelligenzgewinn fuer kuenftige Sessions ableiten laesst.
 - Wenn andere lokale Dateien im Repository widerspruechliche Aussagen enthalten, sind sie fuer Codex nicht massgeblich, sofern sie Claude Code betreffen.
 - Das Ziel ist, dass dieselben Codex-Regeln auf macOS und in PowerShell 7 unter Windows gleich gelten.

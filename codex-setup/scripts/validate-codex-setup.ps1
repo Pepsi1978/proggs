@@ -179,4 +179,9 @@ if ($TempMemoryAfterFailure -match "should fail") {
 
 Remove-Item -Recurse -Force $TempWorkspace -ErrorAction SilentlyContinue
 
+& pwsh -NoProfile -File "codex-setup\scripts\check-openai-docs-mcp.ps1" | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "openaiDeveloperDocs MCP smoke test failed."
+}
+
 Write-Host "codex-setup validation passed"

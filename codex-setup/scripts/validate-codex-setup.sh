@@ -172,4 +172,6 @@ if command -v pwsh >/dev/null 2>&1; then
   done < <(find "codex-setup/scripts" -name "*.ps1" -print0)
 fi
 
+bash "codex-setup/scripts/check-openai-docs-mcp.sh" >/dev/null
+
 echo "codex-setup validation passed"

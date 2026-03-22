@@ -110,6 +110,8 @@ _Noch keine Eintraege._
 
 - **[2026-03-22 12:00] self-improve**: `validate-codex-setup.sh` hat jetzt einen `grep`-Fallback, wenn `rg` fehlt. Damit bleibt der Unix-Validator lokal schnell, laeuft aber auch auf GitHub-Ubuntu-Runnern ohne `ripgrep` statt mit Exit 127 auszufallen.
 
+**[2026-03-22 12:29] self-improve**: `openaiDeveloperDocs` war in dieser laufenden Session-Toolumgebung einmal als `unknown MCP server` sichtbar, obwohl `codex mcp list` ihn lokal als `enabled` zeigte. Ein frischer `codex exec`-Smoke-Test konnte den Server jedoch erfolgreich starten und nutzen. Das ist daher ein Runtime-/Session-Mismatch und kein Konfigurationsfehler.
+
 ## Architektur-Entscheidungen
 - **[2026-03-22 10:48] self-improve**: Die Whiteboard-Bruecke arbeitet jetzt fail-closed. Whiteboard-Aufloesung ist nur noch fuer das autoritative Workspace-Ziel `<workspace>/codex-setup/agent-memory/shared/MEMORY.md` erlaubt; Wrapper uebergeben dafuer explizit `--workspace`, und der Validator deckt CWD-Regressionsfaelle ab.
 
@@ -151,3 +153,7 @@ _Noch keine Eintraege._
 **[2026-03-22 12:10] self-improve**: Nach jeder erfolgreich abgeschlossenen Session soll Codex kuenftig mindestens einen konkreten `Intelligenzvorschlag` nennen, der direkt aus beobachteter Reibung der Session abgeleitet ist. Geschwindigkeit, weniger Rediscovery, schnellere Starts, bessere Defaults und weniger Wiederholungsarbeit gelten dabei ausdruecklich als Intelligenzgewinne.
 
 **[2026-03-22 12:14] self-improve**: Die Abschlussantwort soll den Git-Status kuenftig fuer Verstaendlichkeit immer in dieser Reihenfolge melden: zuerst `Committed.` fuer den lokalen Sicherungsstand, danach bei vorhandenem GitHub-Sync als zweite Zeile `Gepusht in <path>, plattformuebergreifend.`.
+
+**[2026-03-22 12:29] self-improve**: Wenn in einer Session ein echter Fehler, Mismatch oder blinder Fleck sichtbar wird, den Codex selbst absichern kann, soll Codex ihn moeglichst noch in derselben Session dauerhaft absichern. Falls das nicht sofort sicher moeglich ist, muss vor Abschluss mindestens ein expliziter `Intelligenzvorschlag` dazu genannt werden.
+
+**[2026-03-22 12:31] self-improve**: Die `Oberste Direktive` soll nicht nur zu Beginn gelesen, sondern waehrend der gesamten Arbeit aktiv mitgefuehrt werden. Auch normale Programmieraufgaben muessen laufend darauf abgeglichen werden, ob sie einen wiederverwendbaren Schutz, einen Geschwindigkeitsgewinn oder einen sonstigen Intelligenzgewinn fuer kuenftige Sessions sichtbar machen.
