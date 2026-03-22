@@ -58,7 +58,7 @@ Der Hintergrundlauf schreibt sein Protokoll nach `<workspace>/.code-search/reind
 
 - **index_codebase**: Indexiert alle Code-Dateien in einem Verzeichnis
 - **search_code**: Semantische Suche per natuerlicher Sprache
-- **search_status**: Zeigt Index-Status (Dateien, Chunks, DB-Pfad)
+- **search_status**: Zeigt Index-Status (Dateien, Chunks, DB-Pfad, letzter Laufmodus sowie letzter echter Schreiblauf mit `Last write mode` und `Last write at`)
 
 ## Unterstuetzte Sprachen
 

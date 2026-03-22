@@ -3,7 +3,7 @@
 // Tools: index_codebase, search_code, search_status
 // Uses pointer-based DB switching so searches stay on a complete index during reindex.
 
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join, resolve } from "path";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -75,6 +75,58 @@ function getStore(rootDir: string): VectorStore {
 	}
 
 	throw new Error(`No usable index database found in ${dbDir}`);
+}
+
+interface LastWriteInfo {
+	lastWriteAt: string | null;
+	lastWriteMode: "full" | "incremental" | null;
+	lastWriteSuccessful: boolean;
+	lastWriteIncremental: boolean;
+}
+
+function readLastWriteInfo(
+	dbDir: string,
+	state: ReturnType<typeof readReindexState>,
+): LastWriteInfo {
+	const logPath = join(dbDir, "reindex.log");
+	let currentCheckAt: string | null = null;
+	let lastWriteAt: string | null = null;
+	let lastWriteMode: LastWriteInfo["lastWriteMode"] = null;
+
+	if (existsSync(logPath)) {
+		const logText = readFileSync(logPath, "utf8");
+		for (const rawLine of logText.split(/\r?\n/)) {
+			const line = rawLine.trim();
+			const checkMatch = line.match(/^\[(.+?)\]\s+Codex auto-reindex check for /);
+			if (checkMatch) {
+				currentCheckAt = checkMatch[1] ?? null;
+				continue;
+			}
+
+			if (line === "Incremental reindex complete.") {
+				lastWriteAt = currentCheckAt;
+				lastWriteMode = "incremental";
+				continue;
+			}
+
+			if (line === "Full reindex complete.") {
+				lastWriteAt = currentCheckAt;
+				lastWriteMode = "full";
+			}
+		}
+	}
+
+	if (!lastWriteMode && state && (state.lastMode === "incremental" || state.lastMode === "full")) {
+		lastWriteAt = state.lastSuccessAt;
+		lastWriteMode = state.lastMode;
+	}
+
+	return {
+		lastWriteAt,
+		lastWriteMode,
+		lastWriteSuccessful: Boolean(lastWriteAt && lastWriteMode),
+		lastWriteIncremental: lastWriteMode === "incremental",
+	};
 }
 
 const server = new McpServer({
@@ -236,9 +288,17 @@ server.tool(
 
 		const stats = vs.stats();
 		const state = readReindexState(dbDir);
-		const extraState = state
-			? `\n- Last successful reindex: ${state.lastSuccessAt}\n- Last mode: ${state.lastMode}`
-			: "";
+		const lastWrite = readLastWriteInfo(dbDir, state);
+		const extraState = [
+			`\n- Last successful reindex: ${state?.lastSuccessAt ?? "none"}`,
+			`- Last mode: ${state?.lastMode ?? "none"}`,
+			`- Last run successful: ${state?.lastSuccessAt ? "yes" : "no"}`,
+			`- Last run incremental: ${state?.lastMode === "incremental" ? "yes" : "no"}`,
+			`- Last write at: ${lastWrite.lastWriteAt ?? "none"}`,
+			`- Last write mode: ${lastWrite.lastWriteMode ?? "none"}`,
+			`- Last write successful: ${lastWrite.lastWriteSuccessful ? "yes" : "no"}`,
+			`- Last write incremental: ${lastWrite.lastWriteIncremental ? "yes" : "no"}`,
+		].join("\n");
 
 		return {
 			content: [
