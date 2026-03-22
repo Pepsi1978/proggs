@@ -130,6 +130,15 @@
 				"hooks": [
 					{
 						"type": "command",
+						"command": "bash ~/.claude/hooks/claude-mem-worker-guard.sh",
+						"timeout": 10
+					}
+				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
 						"command": "bash ~/.claude/hooks/auto-sync.sh",
 						"timeout": 30
 					},
