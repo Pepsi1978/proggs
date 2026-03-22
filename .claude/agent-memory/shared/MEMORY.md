@@ -70,6 +70,15 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 
 <!-- ARCHIV (2026-03-21): safety-gate.ps1 Blockierungen (6x) und Write-Back-Warnungen (2x) — erwartetes Verhalten, kein Fehler. -->
 <!-- ARCHIV (2026-03-21): reindex-codebase.ps1 — ExitCode 1 (6x, 2026-03-21 10:44–11:25) — Timeout von 180s auf 300s erhoeht als Fix; gebuendelt zu einem Eintrag. -->
+
+### 2026-03-21 17:35 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+**Quelle:** Hook: StopFailure (command-type, no API dependency)
+**Symptom:** Session-Turn endete durch API-Fehler
+**Details:** {"tool_name":"test"}
+**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
+**Status:** OFFEN
+### 2026-03-21 17:53 — Hook: safety-gate.sh — Befehl blockiert: rm[[:space:]]+-rf[[:space:]]+[/~]
+### 2026-03-21 17:53 — Hook: safety-gate.sh — Befehl blockiert: rm[[:space:]]+-rf[[:space:]]+[/~]
 ---
 
 ## Systemzustand (aktuell)
@@ -96,6 +105,33 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Evolution-Analyst (2026-03-20):** 5-Session-Avg 8.42, Trend: STABIL. Kein errors (0/7). Tool-Effizienz 0.87.
 - **Neue Hooks:** StopFailure (v2.1.78) — loggt API-Fehler/Rate-Limits ins Whiteboard
 
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
 ---
 
 ## Erkenntnisse aus Code Reviews
