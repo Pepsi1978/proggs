@@ -70,6 +70,8 @@ interface SessionMetrics {
 	iq_score: number; // Filled by /self-improve Stufe 5E, default 0
 	meta_intelligence_score: number; // 0=nothing, 1=memory/docs, 2=rules/hooks/agents
 	had_intelligence_suggestion: boolean; // true if 💡 pattern found in assistant output
+	intelligence_suggestion_count: number; // v5: count of 💡 suggestions (self-observation metric)
+	had_self_observation: boolean; // v5: true if session showed self-observation behavior
 }
 
 function findLatestTranscript(): string | null {
@@ -109,6 +111,20 @@ function analyzeTranscript(path: string): SessionMetrics {
 	let errors = 0;
 	let corrections = 0;
 	let hadIntelligenceSuggestion = false;
+	let intelligenceSuggestionCount = 0;
+	let hadSelfObservation = false;
+
+	// v5: Self-observation patterns — detect when Claude reflected on its own work process
+	const selfObservationPatterns = [
+		/Selbstbeobachtung/i,
+		/self.?observation/i,
+		/bei der Arbeit (aufgefallen|beobachtet|bemerkt)/i,
+		/Intelligenz-Vorschlag \d/i, // numbered suggestions indicate structured self-review
+		/Umweg|Umwege/i,
+		/hätte schneller/i,
+		/haette schneller/i,
+		/resistent fix/i,
+	];
 
 	// v4: Meta-intelligence tracking — did this session improve the system itself?
 	// 0 = no system changes, 1 = minor (memory/CLAUDE.md), 2 = significant (rules/hooks/agents)
@@ -168,13 +184,38 @@ function analyzeTranscript(path: string): SessionMetrics {
 
 				// v4: Check assistant text for intelligence suggestions (💡 pattern)
 				for (const block of content) {
-					if (
-						block.type === "text" &&
-						typeof block.text === "string" &&
-						(block.text.includes("💡") ||
-							block.text.includes("Intelligenz-Vorschlag"))
-					) {
-						hadIntelligenceSuggestion = true;
+					if (block.type === "text" && typeof block.text === "string") {
+						// v5: Count individual intelligence suggestions (💡 or "Intelligenz-Vorschlag N")
+						const bulbMatches = block.text.match(/💡/g);
+						if (bulbMatches) {
+							intelligenceSuggestionCount += bulbMatches.length;
+							hadIntelligenceSuggestion = true;
+						}
+						if (
+							!hadIntelligenceSuggestion &&
+							block.text.includes("Intelligenz-Vorschlag")
+						) {
+							hadIntelligenceSuggestion = true;
+							// Count numbered suggestions like "Intelligenz-Vorschlag 1", "Intelligenz-Vorschlag 2"
+							const numberedMatches = block.text.match(
+								/Intelligenz-Vorschlag\s*\d/g,
+							);
+							if (numberedMatches) {
+								intelligenceSuggestionCount = Math.max(
+									intelligenceSuggestionCount,
+									numberedMatches.length,
+								);
+							}
+						}
+						// v5: Detect self-observation behavior
+						if (!hadSelfObservation) {
+							for (const pattern of selfObservationPatterns) {
+								if (pattern.test(block.text)) {
+									hadSelfObservation = true;
+									break;
+								}
+							}
+						}
 					}
 				}
 
@@ -263,6 +304,8 @@ function analyzeTranscript(path: string): SessionMetrics {
 		iq_score: 0, // Filled by /self-improve, not by the scorer
 		meta_intelligence_score: metaIntelligenceLevel,
 		had_intelligence_suggestion: hadIntelligenceSuggestion,
+		intelligence_suggestion_count: intelligenceSuggestionCount,
+		had_self_observation: hadSelfObservation,
 	};
 }
 
@@ -311,21 +354,40 @@ function insertViaWhiteboardInsert(section: string, entry: string): void {
 	}
 }
 
-// v4.1: Intelligence suggestion enforcement — warn if session had >10 turns but no 💡 suggestion
-// Fixed: Now writes directly to whiteboard instead of sentinel file (sentinel files are never
-// picked up at SessionEnd because writeback-enforcer only runs on SubagentStop events)
+// v5: Intelligence suggestion + self-observation enforcement
+// Checks both directives: #1 Superintelligence (suggestions) and #2 Self-Observation
 function checkIntelligenceSuggestion(metrics: SessionMetrics): void {
+	const date = new Date().toISOString().split("T")[0];
+	const sid = metrics.session_id.slice(0, 8);
+
+	// Check #1: Intelligence suggestions (Superintelligence directive)
 	if (metrics.total_turns >= 10 && !metrics.had_intelligence_suggestion) {
 		console.error(
-			`INTELLIGENCE WARNING: Session had ${metrics.total_turns} turns but no intelligence suggestion (💡). ` +
+			`INTELLIGENCE WARNING: Session ${sid} had ${metrics.total_turns} turns but no intelligence suggestion (💡). ` +
 				`The Superintelligence directive requires proactive suggestions in every substantial session.`,
 		);
-
-		// Write directly to whiteboard (not sentinel file — those don't work at SessionEnd)
-		const date = new Date().toISOString().split("T")[0];
 		insertViaWhiteboardInsert(
 			"Meta-Intelligenz & Selbstverbesserung",
-			`- **[${date}] intelligence-checker**: [WARNING] Session ${metrics.session_id.slice(0, 8)} (${metrics.total_turns} Turns) hatte keinen Intelligenz-Vorschlag`,
+			`- **[${date}] intelligence-checker**: [WARNING] Session ${sid} (${metrics.total_turns} Turns) hatte keinen Intelligenz-Vorschlag`,
+		);
+	}
+
+	// Check #2: Self-observation (second directive) — sessions with >15 turns should show self-observation
+	if (metrics.total_turns >= 15 && !metrics.had_self_observation) {
+		console.error(
+			`SELF-OBSERVATION WARNING: Session ${sid} had ${metrics.total_turns} turns but no self-observation detected. ` +
+				`The #2 directive requires continuous self-observation during work.`,
+		);
+		insertViaWhiteboardInsert(
+			"Meta-Intelligenz & Selbstverbesserung",
+			`- **[${date}] self-observation-checker**: [WARNING] Session ${sid} (${metrics.total_turns} Turns) zeigte keine Selbstbeobachtung`,
+		);
+	}
+
+	// Log positive metrics
+	if (metrics.intelligence_suggestion_count >= 3) {
+		console.error(
+			`EXCELLENT: Session ${sid} produced ${metrics.intelligence_suggestion_count} intelligence suggestions — compound effect in action.`,
 		);
 	}
 
