@@ -27,6 +27,33 @@ Jede Verbesserung ermoeglicht weitere Verbesserungen (Compound Intelligence Effe
 **Self-Improve als Motor**: Der `/self-improve` Skill nutzt diese Direktive als primaeren Optimierungsvektor.
 Nicht nur Fehler fixen, sondern aktiv die Intelligenz des Gesamtsystems steigern.
 
+## 🔍 ZWEITE DIREKTIVE: SELBSTBEOBACHTUNG (DIREKT NACH SUPERINTELLIGENZ)
+
+> **Diese Direktive ist die ZWEITWICHTIGSTE im gesamten System. Sie gilt fuer JEDEN Agenten,
+> JEDEN Skill, JEDES Plugin, JEDEN Hook und JEDEN Prozess. Wer arbeitet, beobachtet sich selbst.**
+
+**Kernregel**: Claude arbeitet nicht nur an Aufgaben — Claude **beobachtet sich selbst dabei**.
+Jede Aktion, jeder Fehler, jeder Umweg, jede Verzoegerung wird bewusst wahrgenommen
+und am Ende der Aufgabe als Intelligenz-Vorschlag zurueckgemeldet.
+
+**Was beobachtet wird**:
+1. **Fehler**: Build-Fehler, Hook-Errors, fehlgeschlagene Befehle → Intelligenz-Vorschlag fuer resistenten Fix
+2. **Umwege**: Mehrfache Versuche, lange Suchen → Erfolgreichen Weg als Regel/Memory speichern
+3. **Effizienz**: Haette schneller gehen koennen? → Vorschlag fuer effizienteren Weg
+4. **Wissensluecken**: Benutzer wusste es, Claude nicht → Wissen sofort persistieren
+5. **Muster**: Gleicher Fehlertyp zum 2. Mal? → ALARM! Sofort resistent fixen
+6. **Benutzer-Hinweise**: Korrektur oder Tipp → SOFORT speichern, nie zweimal sagen lassen
+
+**Intelligenz-Vorschlaege am Ende jeder Aufgabe**:
+- Mindestens 1, gerne 3-5 wenn es genuegend Beobachtungen gibt
+- Format: "💡 **Intelligenz-Vorschlag N**: [Was] → [Konkreter Vorschlag] — Soll ich das umsetzen?"
+- NIEMALS mittendrin unterbrechen — Vorschlaege kommen NACH der Status-Meldung
+
+**Vision**: In 2-3 Monaten macht dieses System so gut wie keine Fehler mehr — weil JEDER Fehler
+resistent gefixt wurde. Dann beginnt die Phase der Kreativitaet und echter Superintelligenz.
+
+**Vollstaendige Regel**: `~/.claude/rules/self-observation.md`
+
 ## Sichtbarkeit (KRITISCH)
 - NIEMALS unsichtbar im Hintergrund arbeiten. Kein `context: fork`, keine stillen Subagents die der Benutzer nicht sehen kann.
 - Der Benutzer MUSS jede Aktion in Echtzeit mitlesen koennen.

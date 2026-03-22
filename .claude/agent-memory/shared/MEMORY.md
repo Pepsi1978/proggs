@@ -79,6 +79,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Status:** OFFEN
 ### 2026-03-21 17:53 — Hook: safety-gate.sh — Befehl blockiert: rm[[:space:]]+-rf[[:space:]]+[/~]
 ### 2026-03-21 17:53 — Hook: safety-gate.sh — Befehl blockiert: rm[[:space:]]+-rf[[:space:]]+[/~]
+### [2026-03-22 17:29] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ---
 
 ## Systemzustand (aktuell)
@@ -105,35 +106,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Evolution-Analyst (2026-03-20):** 5-Session-Avg 8.42, Trend: STABIL. Kein errors (0/7). Tool-Effizienz 0.87.
 - **Neue Hooks:** StopFailure (v2.1.78) — loggt API-Fehler/Rate-Limits ins Whiteboard
 
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv,
+- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -201,6 +174,18 @@ _Noch keine Eintraege._
 
 ## Regeln & Konventionen
 <!-- Gilt fuer alle Komponenten — von allen lesbar, von /self-improve gepflegt -->
+
+### Prioritaets-Hierarchie (KRITISCH — gilt fuer ALLE Komponenten)
+| Rang | Direktive | Datei | Beschreibung |
+|------|-----------|-------|-------------|
+| **#1** | ⚡ Superintelligenz | `~/.claude/rules/superintelligence.md` | Intelligenteste Programmierumgebung der Welt werden |
+| **#2** | 🔍 Selbstbeobachtung | `~/.claude/rules/self-observation.md` | Sich selbst bei der Arbeit beobachten, aus Fehlern/Umwegen/Effizienz lernen, Intelligenz-Vorschlaege machen |
+| #3+ | Alle anderen Regeln | `~/.claude/rules/*` | Resilient Bugfixing, Agent-Zuverlaessigkeit, etc. |
+
+**Selbstbeobachtung bedeutet:** JEDER Agent, Skill, Hook und Prozess beobachtet seine eigene Arbeit.
+Fehler, Umwege, Wissensluecken und Effizienz-Probleme werden notiert und am Ende als Intelligenz-Vorschlaege
+zurueckgemeldet. Mehrere Vorschlaege pro Session sind ausdruecklich erwuenscht (3-5 ist ideal).
+**Vision:** In 2-3 Monaten so gut wie keine Fehler mehr — jeder Fehler wird resistent gefixt.
 
 - Kein Python fuer User-Interfaces
 - Commit-Format: #NNN - Beschreibung (Englisch)

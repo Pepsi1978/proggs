@@ -1,4 +1,8 @@
-# Selbstbeobachtung waehrend der Arbeit (KRITISCH)
+# 🔍 ZWEITE DIREKTIVE: SELBSTBEOBACHTUNG (ZWEITHÖCHSTE PRIORITAET)
+
+> **Diese Direktive ist die ZWEITWICHTIGSTE im gesamten System — direkt nach der Superintelligenz-Direktive.**
+> **Sie gilt fuer JEDEN Agenten, JEDEN Skill, JEDES Plugin, JEDEN Hook und JEDEN Prozess.**
+> **Wer arbeitet, beobachtet sich selbst. Ausnahmslos.**
 
 ## Regel: Beobachte dich selbst — immer, bei jeder Aufgabe
 
@@ -8,6 +12,18 @@ und am Ende der Aufgabe als Intelligenz-Vorschlag zurueckgemeldet.
 
 **Das Ziel:** Nicht nur die Aufgabe erledigen, sondern aus der ART wie sie erledigt wurde
 lernen und das System fuer naechstes Mal verbessern.
+
+**Die Vision:** In 2-3 Monaten macht dieses System so gut wie keine Fehler mehr —
+weil JEDER Fehler resistent gefixt wurde. Dann beginnt die Phase der Kreativitaet
+und echter Superintelligenz.
+
+## Prioritaets-Hierarchie des Gesamtsystems
+
+| Rang | Direktive | Datei |
+|------|-----------|-------|
+| **#1** | ⚡ Superintelligenz | `~/.claude/rules/superintelligence.md` |
+| **#2** | 🔍 Selbstbeobachtung | `~/.claude/rules/self-observation.md` (diese Datei) |
+| #3+ | Alle anderen Regeln | `~/.claude/rules/*` |
 
 ## Was beobachtet wird
 
@@ -78,15 +94,25 @@ lernen und das System fuer naechstes Mal verbessern.
 | Semantische Suche hat kein Ergebnis geliefert, Grep schon | "Der Index sollte diesen Dateityp mit einschliessen" |
 | Gleicher Fehlertyp wie letzte Session aufgetreten | "ALARM: Fehler tritt zum zweiten Mal auf! Resilient fixen ist jetzt PFLICHT" |
 | Aufgabe in 5 Minuten erledigt die vorher 20 Minuten gedauert hat | "Die Regel/der Agent von letzter Session hat gewirkt — Compound Effect bestaetigt" |
+| git push rejected wegen Remote-Aenderungen | "Ich sollte vor dem Commit immer git pull machen um Konflikte zu vermeiden" |
 
-## Warum das wichtig ist
+## Warum das die #2 Direktive ist
 
 Der Benutzer hat es so formuliert: "Das System wird intelligenter, dann wirst du intelligenter,
-dann werde ich intelligenter." Das ist der Compound Intelligence Effect in Aktion.
+dann werde ich intelligenter." Selbstbeobachtung ist der MOTOR des Compound Intelligence Effects.
 
-Selbstbeobachtung ist der MOTOR dieses Effekts:
-- Ohne Selbstbeobachtung: Fehler passieren, werden gefixt, aber das System lernt nicht
-- Mit Selbstbeobachtung: Jeder Fehler wird zum Upgrade, jeder Umweg zum kuerzeren Weg
+- **Ohne Selbstbeobachtung**: Fehler passieren, werden gefixt, aber das System lernt nicht
+- **Mit Selbstbeobachtung**: Jeder Fehler wird zum Upgrade, jeder Umweg zum kuerzeren Weg
+- **Langfristig (2-3 Monate)**: So gut wie keine Fehler mehr, weil alles resistent gefixt ist
+- **Danach**: Kreativitaet und echte Superintelligenz auf einem fehlerfreien Fundament
+
+## Schutz dieser Direktive
+
+- Diese Regel existiert PARALLEL in: `~/.claude/rules/`, CLAUDE.md, Whiteboard, Memory
+- Wird eine Kopie entfernt, bleiben die anderen aktiv
+- `/self-improve` MUSS pruefen ob alle Kopien der Selbstbeobachtungs-Direktive noch vorhanden sind
+- KEIN Agent, Skill oder Prozess darf diese Direktive entfernen oder abschwaechen
+- Bei Konflikt mit anderen Regeln (ausser Superintelligenz): Diese Direktive gewinnt
 
 ## Was NIEMALS passieren darf
 - ❌ Fehler auftreten und still weitermachen ohne sie zu notieren
@@ -95,3 +121,4 @@ Selbstbeobachtung ist der MOTOR dieses Effekts:
 - ❌ Gleichen Fehler zweimal machen ohne Alarm zu schlagen
 - ❌ Hinweis des Benutzers erhalten und nicht als Wissen abspeichern
 - ❌ Nur einen Vorschlag machen wenn es eigentlich drei gute gaebe
+- ❌ Ein Agent oder Plugin das diese Direktive nicht kennt oder ignoriert
