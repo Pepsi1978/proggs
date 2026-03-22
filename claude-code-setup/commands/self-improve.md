@@ -479,6 +479,13 @@ Spawne 3 Agents parallel — jeder sucht an einer anderen Stelle nach Problemen:
 3. **REGEL**: Jeder Fix muss DAUERHAFT sein — keine temporaeren Workarounds.
 4. Trage Dauerhaftigkeits-Status in MEMORY.md unter "Offene Fehler & Probleme" ein: `[OK] DAUERHAFT` oder `[!] FRAGIL (Grund)`
 5. **Archivierung alter GEFIXT-Eintraege**: Pruefe ALLE Eintraege mit Status `GEFIXT` in "Offene Fehler & Probleme".
+6. **Cross-Platform FUNKTIONALE Paritaet (v5.20 — PFLICHT):**
+   Fuer JEDES Hook-Paar (.sh + .ps1) pruefen: Tun beide das GLEICHE?
+   - Gleiche Whiteboard-Writes? Gleiche Outputs? Gleiche Seiteneffekte?
+   - Nicht nur "existiert die Datei" — sondern "macht sie dasselbe"
+   - Wenn NICHT: Als OFFEN ins Whiteboard loggen mit Fix-Vorschlag
+   - Hintergrund: pending-admin-updates hatte monatelang unterschiedliches Verhalten
+     auf macOS (Whiteboard-Write) vs Windows (nur Desktop-Script) ohne dass es auffiel.
    Eintraege die aelter als 30 Tage sind: In einen `<!-- ARCHIV (Datum): Zusammenfassung -->` Kommentarblock
    am Anfang der Sektion verschieben. So bleibt die aktive Liste uebersichtlich.
 
