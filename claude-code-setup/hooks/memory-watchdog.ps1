@@ -59,8 +59,8 @@ try {
     $missCount++
     Set-Content -Path $counterFile -Value "$missCount" -Force
 
-    # Only alert after 5+ consecutive misses (avoids false positives from coder/researcher agents)
-    if ($missCount -ge 5) {
+    # Alert after 2+ consecutive misses (was 5 — lowered to catch write-back failures faster)
+    if ($missCount -ge 2) {
         $date = Get-Date -Format "yyyy-MM-dd HH:mm"
         # Use section-based insertion (Add-Content to file-end is FORBIDDEN)
         # Standard format: ### date — Hook: name — message
@@ -70,7 +70,7 @@ try {
         Set-Content -Path $counterFile -Value "0" -Force
         Write-Output "MEMORY_WATCHDOG: $missCount consecutive misses — logged to MEMORY.md"
     } else {
-        Write-Output "MEMORY_WATCHDOG: No write-back ($missCount/5 misses)"
+        Write-Output "MEMORY_WATCHDOG: No write-back ($missCount/2 misses)"
     }
 } finally {
     # Always release the lock — even on crash or early exit

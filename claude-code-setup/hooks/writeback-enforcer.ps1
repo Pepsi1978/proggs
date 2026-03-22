@@ -39,6 +39,9 @@ $sectionMap = @{
     # K10: failure sentinels from SubagentStop and PostToolUseFailure hooks
     "subagent-failure"    = "## Offene Fehler & Probleme"
     "tool-failure"        = "## Offene Fehler & Probleme"
+    # v4: intelligence checker and learning loop sentinels
+    "intelligence-checker" = "## Meta-Intelligenz & Selbstverbesserung"
+    "learning-loop"       = "## Meta-Intelligenz & Selbstverbesserung"
 }
 
 # Find all sentinel files

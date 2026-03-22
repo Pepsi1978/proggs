@@ -14,6 +14,7 @@
 import {
 	readFileSync,
 	appendFileSync,
+	writeFileSync,
 	readdirSync,
 	statSync,
 	existsSync,
@@ -66,6 +67,8 @@ interface SessionMetrics {
 	corrections: number;
 	quality_score: number;
 	iq_score: number; // Filled by /self-improve Stufe 5E, default 0
+	meta_intelligence_score: number; // 0=nothing, 1=memory/docs, 2=rules/hooks/agents
+	had_intelligence_suggestion: boolean; // true if 💡 pattern found in assistant output
 }
 
 function findLatestTranscript(): string | null {
@@ -104,6 +107,15 @@ function analyzeTranscript(path: string): SessionMetrics {
 	let toolCalls = 0;
 	let errors = 0;
 	let corrections = 0;
+	let hadIntelligenceSuggestion = false;
+
+	// v4: Meta-intelligence tracking — did this session improve the system itself?
+	// 0 = no system changes, 1 = minor (memory/CLAUDE.md), 2 = significant (rules/hooks/agents)
+	let metaIntelligenceLevel = 0;
+	// Paths that indicate system self-improvement (case-insensitive matching)
+	const significantPaths = /\/(rules|hooks|agents)\//i;
+	const minorPaths =
+		/\/(memory|MEMORY\.md|CLAUDE\.md|agent-memory|session-scores)/i;
 
 	// v3: Added ASCII-safe alternatives for umlauts (cross-platform safety)
 	const correctionPatterns = [
@@ -151,8 +163,37 @@ function analyzeTranscript(path: string): SessionMetrics {
 
 			if (entryType === "assistant" && msg) {
 				const content = Array.isArray(msg.content) ? msg.content : [];
+
+				// v4: Check assistant text for intelligence suggestions (💡 pattern)
+				for (const block of content) {
+					if (
+						block.type === "text" &&
+						typeof block.text === "string" &&
+						(block.text.includes("💡") ||
+							block.text.includes("Intelligenz-Vorschlag"))
+					) {
+						hadIntelligenceSuggestion = true;
+					}
+				}
+
 				const toolUseBlocks = content.filter((b: any) => b.type === "tool_use");
 				toolCalls += toolUseBlocks.length;
+
+				// v4: Check tool_use blocks for system self-improvement writes
+				for (const block of toolUseBlocks) {
+					if (
+						(block.name === "Write" || block.name === "Edit") &&
+						block.input &&
+						typeof block.input.file_path === "string"
+					) {
+						const fp = block.input.file_path;
+						if (significantPaths.test(fp)) {
+							metaIntelligenceLevel = 2; // significant: new rule/hook/agent
+						} else if (minorPaths.test(fp) && metaIntelligenceLevel < 1) {
+							metaIntelligenceLevel = 1; // minor: memory/docs update
+						}
+					}
+				}
 			}
 
 			if (entryType === "tool_result" && msg) {
@@ -218,7 +259,44 @@ function analyzeTranscript(path: string): SessionMetrics {
 		corrections,
 		quality_score: score,
 		iq_score: 0, // Filled by /self-improve, not by the scorer
+		meta_intelligence_score: metaIntelligenceLevel,
+		had_intelligence_suggestion: hadIntelligenceSuggestion,
 	};
+}
+
+// v4: Intelligence suggestion enforcement — warn if session had >10 turns but no 💡 suggestion
+function checkIntelligenceSuggestion(metrics: SessionMetrics): void {
+	if (metrics.total_turns >= 10 && !metrics.had_intelligence_suggestion) {
+		console.error(
+			`INTELLIGENCE WARNING: Session had ${metrics.total_turns} turns but no intelligence suggestion (💡). ` +
+				`The Superintelligence directive requires proactive suggestions in every substantial session.`,
+		);
+
+		// Write sentinel file so whiteboard-insert can pick it up
+		const sentinelPath = join(
+			process.env.TMPDIR || process.env.TEMP || "/tmp",
+			"agent-writeback-intelligence-checker.json",
+		);
+		try {
+			const sentinel = {
+				agent: "intelligence-checker",
+				section: "Meta-Intelligenz & Selbstverbesserung",
+				timestamp: new Date().toISOString(),
+				findings: `[WARNING] Session ${metrics.session_id.slice(0, 8)} (${metrics.total_turns} Turns) hatte keinen Intelligenz-Vorschlag — Superintelligenz-Direktive verlangt proaktive Vorschlaege`,
+			};
+			writeFileSync(sentinelPath, JSON.stringify(sentinel), "utf-8");
+		} catch {
+			// Non-fatal — the stderr warning above is sufficient
+		}
+	}
+
+	// v4: Log meta-intelligence achievements
+	if (metrics.meta_intelligence_score >= 2) {
+		console.error(
+			`META-INTELLIGENCE: Session improved the system itself (score: ${metrics.meta_intelligence_score}) — ` +
+				`rules/hooks/agents were modified. This is exponential growth in action.`,
+		);
+	}
 }
 
 // v3: Trend detection writes to stderr (hook log) instead of MEMORY.md.
@@ -331,6 +409,7 @@ function main(): void {
 			}
 		}
 		appendFileSync(SCORES_FILE, JSON.stringify(metrics) + "\n", "utf-8");
+		checkIntelligenceSuggestion(metrics);
 		detectTrends(metrics);
 	} catch {
 		process.exit(0);

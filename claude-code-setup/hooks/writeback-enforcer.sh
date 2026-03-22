@@ -28,6 +28,8 @@ get_section() {
         evolution-analyst|env-checker) echo "## Systemzustand" ;;
         # K10: failure sentinels from SubagentStop and PostToolUseFailure hooks
         subagent-failure|tool-failure) echo "## Offene Fehler & Probleme" ;;
+        # v4: intelligence checker and learning loop sentinels
+        intelligence-checker|learning-loop) echo "## Meta-Intelligenz & Selbstverbesserung" ;;
         *) echo "## Erkenntnisse aus Code Reviews" ;;
     esac
 }
