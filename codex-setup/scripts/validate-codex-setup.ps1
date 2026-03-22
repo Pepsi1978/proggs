@@ -13,6 +13,9 @@ $RequiredFiles = @(
     "codex-setup\scripts\writeback-enforcer.ps1",
     "codex-setup\scripts\install-self-improve.sh",
     "codex-setup\scripts\install-self-improve.ps1",
+    "codex-setup\scripts\check-code-search-health.mjs",
+    "codex-setup\scripts\check-code-search-health.sh",
+    "codex-setup\scripts\check-code-search-health.ps1",
     "codex-setup\skills\self-improve\SKILL.md"
 )
 
@@ -129,6 +132,14 @@ if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape('nach e
     throw "README.md must document the codex-setup auto-push rule."
 }
 
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape('check-code-search-health.sh')) {
+    throw "README.md must document the code-search healthcheck script."
+}
+
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape('Last write mode')) {
+    throw "README.md must document the last-write status fields."
+}
+
 Get-ChildItem "codex-setup\skills\self-improve\references\agents" -Filter "*.md" | ForEach-Object {
     if ((Get-Content $_.FullName -Raw) -notmatch "Oberste Direktive") {
         throw "Missing Oberste Direktive marker in $($_.FullName)"
@@ -182,6 +193,11 @@ Remove-Item -Recurse -Force $TempWorkspace -ErrorAction SilentlyContinue
 & pwsh -NoProfile -File "codex-setup\scripts\check-openai-docs-mcp.ps1" | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw "openaiDeveloperDocs MCP smoke test failed."
+}
+
+& pwsh -NoProfile -File "codex-setup\scripts\check-code-search-health.ps1" --json | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "code-search MCP smoke test failed."
 }
 
 Write-Host "codex-setup validation passed"

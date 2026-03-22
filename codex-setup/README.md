@@ -32,7 +32,7 @@ Wichtigste Trennung:
 
 - `scripts/`
   Plattformuebergreifende Hilfsskripte fuer Whiteboard-Resolver, Whiteboard-Insert, Sentinel-Merge,
-  Skill-Installation und Validierung.
+  Skill-Installation, Validierung und `code-search`-Healthchecks.
 
 - `skills/self-improve/`
   Der Codex-spezifische Self-Improve-Skill fuer diesen Workspace, inklusive Referenzen,
@@ -76,3 +76,19 @@ Der Ordner ist so ausgelegt, dass er separat auf GitHub geprueft werden kann:
 - eigene Whiteboard-Datei
 - eigene Skills und Agenten
 - eigene Bruecken- und Validierungsskripte
+
+## code-search-Healthcheck
+
+Fuer die semantische Suche gibt es einen plattformuebergreifenden Healthcheck:
+
+- macOS/Linux: `bash codex-setup/scripts/check-code-search-health.sh`
+- Windows: `pwsh -NoProfile -File codex-setup/scripts/check-code-search-health.ps1`
+
+Der Report zeigt in einem Schritt:
+
+- frischen `search_status`-Smoke-Test in einer neuen `codex exec`-Session
+- frische Testquery gegen den `code-search`-MCP
+- aktive DB, Dateianzahl und Chunk-Anzahl
+- letzten Laufmodus und den Zeitpunkt des letzten erfolgreichen Laufs
+- zusaetzlich `Last write mode` und `Last write at`, damit `noop`-Runs von echten Schreiblaeufen getrennt sichtbar sind
+- explizit, ob der letzte Lauf und der letzte Schreiblauf erfolgreich bzw. inkrementell waren

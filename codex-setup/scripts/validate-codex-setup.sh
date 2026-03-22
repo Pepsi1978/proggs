@@ -42,6 +42,9 @@ required_files=(
   "codex-setup/scripts/writeback-enforcer.ps1"
   "codex-setup/scripts/install-self-improve.sh"
   "codex-setup/scripts/install-self-improve.ps1"
+  "codex-setup/scripts/check-code-search-health.mjs"
+  "codex-setup/scripts/check-code-search-health.sh"
+  "codex-setup/scripts/check-code-search-health.ps1"
   "codex-setup/skills/self-improve/SKILL.md"
 )
 
@@ -114,6 +117,8 @@ search_fixed "nach erfolgreicher lokaler Validierung eigenstaendig committen und
 search_fixed "zuerst \`Committed.\` sobald der lokale Commit existiert" "codex-setup/rules/global.md"
 search_fixed "als zweite Abschlusszeile \`Gepusht in <path>, plattformuebergreifend.\`" "codex-setup/rules/global.md"
 search_fixed "nach erfolgreicher lokaler Validierung eigenstaendig committen und nach \`origin/main\` pushen soll" "codex-setup/README.md"
+search_fixed "check-code-search-health.sh" "codex-setup/README.md"
+search_fixed "Last write mode" "codex-setup/README.md"
 
 while IFS= read -r -d '' file; do
   search_fixed "Oberste Direktive" "$file"
@@ -173,5 +178,6 @@ if command -v pwsh >/dev/null 2>&1; then
 fi
 
 bash "codex-setup/scripts/check-openai-docs-mcp.sh" >/dev/null
+bash "codex-setup/scripts/check-code-search-health.sh" --json >/dev/null
 
 echo "codex-setup validation passed"

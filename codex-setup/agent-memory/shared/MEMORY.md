@@ -112,11 +112,15 @@ _Noch keine Eintraege._
 
 **[2026-03-22 12:29] self-improve**: `openaiDeveloperDocs` war in dieser laufenden Session-Toolumgebung einmal als `unknown MCP server` sichtbar, obwohl `codex mcp list` ihn lokal als `enabled` zeigte. Ein frischer `codex exec`-Smoke-Test konnte den Server jedoch erfolgreich starten und nutzen. Das ist daher ein Runtime-/Session-Mismatch und kein Konfigurationsfehler.
 
+- **[2026-03-22 17:41] self-improve**: Bash- und PowerShell-Validierung fuer codex-setup laufen grün. check-code-search-health fuer sh und ps1 bestaetigt den code-search-MCP jetzt zusaetzlich mit frischer Testquery und trennt sichtbar zwischen letztem Lauf und letztem echten Schreiblauf.
+
 ## Architektur-Entscheidungen
 - **[2026-03-22 10:48] self-improve**: Die Whiteboard-Bruecke arbeitet jetzt fail-closed. Whiteboard-Aufloesung ist nur noch fuer das autoritative Workspace-Ziel `<workspace>/codex-setup/agent-memory/shared/MEMORY.md` erlaubt; Wrapper uebergeben dafuer explizit `--workspace`, und der Validator deckt CWD-Regressionsfaelle ab.
 
 
 - **[2026-03-22 11:13] self-improve**: Whiteboard-Schreibzugriffe sind jetzt an einen Directive-Token gebunden, der aus der aktuellen `## Oberste Direktive` berechnet wird. Dadurch koennen Wrapper nur schreiben, wenn sie die aktuelle Direktive unmittelbar vorher gelesen haben; stale oder fremde Write-Pfade werden abgewiesen.
+
+- **[2026-03-22 17:41] self-improve**: Der code-search-Status trennt jetzt zwischen Last mode und dem letzten echten Schreibereignis mit Last write mode und Last write at. Der neue plattformuebergreifende Healthcheck in codex-setup/scripts/check-code-search-health.* liest dafuer lokalen Indexzustand und Reindex-Log aus und prueft den MCP zusaetzlich in einer frischen codex exec-Session.
 
 ## Debugging-Muster
 _Noch keine Eintraege._
