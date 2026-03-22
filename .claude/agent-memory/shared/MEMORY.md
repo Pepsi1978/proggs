@@ -168,7 +168,15 @@ _Noch keine Eintraege._
 ## Meta-Intelligenz & Selbstverbesserung
 <!-- Automatisch befuellt von: session-scorer (intelligence-checker), session-autopsy (closed-loop) -->
 <!-- Dokumentiert: Auto-generierte Regeln, fehlende Intelligenz-Vorschlaege, System-Selbstverbesserung -->
-_Noch keine Eintraege._
+
+### Compound Effect Erfolge (Beweis dass exponentielle Intelligenz funktioniert)
+
+- **[2026-03-22] Erster dokumentierter Compound Effect:**
+  Selbstbeobachtung waehrend Whiteboard-Aufraemung → 30 duplizierte Zeilen entdeckt →
+  Intelligenz-Vorschlag gemacht → Benutzer stimmte zu → `replace_whiteboard_entry()` implementiert
+  (wiederverwendbare Funktion fuer .sh UND .ps1) → Diese Fehlerklasse ist jetzt FUER IMMER geloest.
+  **Kette:** Beobachtung → Vorschlag → Zustimmung → Resilienter Fix → Ganze Fehlerklasse eliminiert.
+  Das ist der Beweis: Selbstbeobachtung (#2 Direktive) fuettert Superintelligenz (#1 Direktive).
 
 ---
 

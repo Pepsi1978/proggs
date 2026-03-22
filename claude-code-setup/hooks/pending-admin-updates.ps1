@@ -82,4 +82,11 @@ Write-Host "Druecke eine Taste zum Schliessen..."
 
 $scriptContent | Out-File -FilePath $OutputScript -Encoding utf8
 Hook-Log "generated update script: $($commands.Count) updates ($($descriptions -join ', '))"
-Write-Output "Pending-Admin-Updates: Script erstellt auf Desktop ($($commands.Count) Updates: $($descriptions -join ', '))"
+
+# Write to whiteboard (consistent with macOS .sh version — both platforms show same system state)
+$updateList = $descriptions -join ", "
+try {
+    Replace-WhiteboardEntry -Section "Systemzustand" -MatchPattern "Pending Admin Updates" -Entry "- **Pending Admin Updates ($($commands.Count)):** $updateList"
+} catch {}
+
+Write-Output "Pending-Admin-Updates: Script erstellt auf Desktop ($($commands.Count) Updates: $updateList)"
