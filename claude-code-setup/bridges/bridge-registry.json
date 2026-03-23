@@ -198,5 +198,24 @@
 		"codex_suggestions": "codex-setup/state/implemented-intelligence-suggestions.json",
 		"gemini_fixes": "Gemini-Setup/agent-memory/shared/MEMORY.md",
 		"gemini_suggestions": "Gemini-Setup/state/implemented-intelligence-suggestions.json"
+	},
+	"shared_infrastructure": {
+		"semantic_search": {
+			"setup_guide": "claude-code-setup/SETUP-SEMANTIC-SEARCH-UNIVERSAL.md",
+			"github_url": "https://github.com/Pepsi1978/proggs/blob/main/claude-code-setup/SETUP-SEMANTIC-SEARCH-UNIVERSAL.md",
+			"server_source": "mcp-code-search/src/index.ts",
+			"reindex_script": "mcp-code-search/src/reindex.ts",
+			"mcp_config_macos": "claude-code-setup/mcp-macos.json",
+			"mcp_config_windows": "claude-code-setup/mcp-windows.json",
+			"reindex_hook_macos": "claude-code-setup/hooks/reindex-codebase.sh",
+			"reindex_hook_windows": "claude-code-setup/hooks/reindex-codebase.ps1",
+			"description": "Lokale semantische Code-Suche via Ollama + nomic-embed-text. Universelle Anleitung fuer alle CLIs."
+		},
+		"directives": {
+			"directive_1": "claude-code-setup/bridges/directive-1-superintelligence-universal.md",
+			"directive_2": "claude-code-setup/bridges/directive-2-self-observation-universal.md",
+			"directive_3_rule": "claude-code-setup/rules/resilient-bugfixing.md",
+			"description": "Die 3 Haupt-Direktiven in CLI-neutralem Format."
+		}
 	}
 }
