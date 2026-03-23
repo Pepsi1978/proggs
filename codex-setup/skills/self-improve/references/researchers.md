@@ -129,8 +129,12 @@ Prompt skeleton:
 ```text
 Review environment-level fixes already logged for this CLI.
 Check whether the fixes clearly explain:
+- the surrounding context another CLI would need
+- the visible symptom before the fix
+- the technical root cause
 - what was fixed
 - why it was fixed
+- how the fix was verified
 - which other CLI environments could benefit
 
 Return only gaps, duplicates, or export improvements.

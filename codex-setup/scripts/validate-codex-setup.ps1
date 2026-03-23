@@ -221,6 +221,10 @@ if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "register-environment-f
     throw "README.md must document the environment-fix registration script."
 }
 
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "Starte bitte die Bruecke zu Cloud Code") {
+    throw "README.md must document the direct Cloud Code bridge trigger."
+}
+
 if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "GeminiCLI") {
     throw "README.md must mark Gemini comparison paths as read-only."
 }
@@ -244,8 +248,20 @@ if ($EnvironmentFixes.entries.Count -lt 1) {
     throw "environment-fixes.json must contain at least one fix entry."
 }
 foreach ($entry in $EnvironmentFixes.entries) {
-    if ([string]::IsNullOrWhiteSpace($entry.id) -or [string]::IsNullOrWhiteSpace($entry.what_was_fixed) -or [string]::IsNullOrWhiteSpace($entry.why_it_was_fixed)) {
+    if (
+        [string]::IsNullOrWhiteSpace($entry.id) -or
+        [string]::IsNullOrWhiteSpace($entry.context_for_other_clis) -or
+        [string]::IsNullOrWhiteSpace($entry.symptom_before_fix) -or
+        [string]::IsNullOrWhiteSpace($entry.root_cause) -or
+        [string]::IsNullOrWhiteSpace($entry.what_was_fixed) -or
+        [string]::IsNullOrWhiteSpace($entry.why_it_was_fixed) -or
+        [string]::IsNullOrWhiteSpace($entry.verification) -or
+        [string]::IsNullOrWhiteSpace($entry.portability_notes)
+    ) {
         throw "environment-fixes.json contains an invalid fix entry."
+    }
+    if ($entry.context_for_other_clis.Length -lt 40 -or $entry.symptom_before_fix.Length -lt 40 -or $entry.root_cause.Length -lt 30 -or $entry.verification.Length -lt 30 -or $entry.portability_notes.Length -lt 30) {
+        throw "environment-fixes.json fix entries must contain detailed cross-CLI context."
     }
 }
 
@@ -259,6 +275,9 @@ if (-not $CloudCodeBridge.replacement_requires_confirmation) {
 if ($CloudCodeBridge.trigger_phrases.Count -lt 3) {
     throw "cloud-code-delta-bridge.json must define multiple trigger phrases."
 }
+if ($CloudCodeBridge.trigger_phrases -notcontains "Starte bitte die Bruecke zu Cloud Code") {
+    throw "cloud-code-delta-bridge.json must include the direct Cloud Code bridge trigger."
+}
 
 $EnvironmentFixBridge = Get-Content "codex-setup\bridges\environment-fix-exchange-bridge.json" -Raw | ConvertFrom-Json
 if ($EnvironmentFixBridge.source_label -ne "CLI Environment Fixes") {
@@ -269,6 +288,9 @@ if ($EnvironmentFixBridge.scope -ne "programming-environment-only") {
 }
 if ($EnvironmentFixBridge.trigger_phrases.Count -lt 3) {
     throw "environment-fix-exchange-bridge.json must define multiple trigger phrases."
+}
+if (-not $EnvironmentFixBridge.requires_full_context) {
+    throw "environment-fix-exchange-bridge.json must require full context."
 }
 
 Get-ChildItem "codex-setup\skills\self-improve\references\agents" -Filter "*.md" | ForEach-Object {
@@ -351,7 +373,7 @@ if ($TempAudit.last_reviewed_commit -ne $ClaudeAudit.latest_relevant_commit) {
 Remove-Item $TempAuditState -ErrorAction SilentlyContinue
 
 $TempFixLedger = Join-Path ([System.IO.Path]::GetTempPath()) ("environment-fixes-" + [guid]::NewGuid().ToString() + ".json")
-node "codex-setup/scripts/register-environment-fix.mjs" add --state $TempFixLedger --id "validator-temp-fix" --category "validator" --summary "temporary validator entry" --what "temporary write path" --why "prove the environment-fix ledger writer works" | Out-Null
+node "codex-setup/scripts/register-environment-fix.mjs" add --state $TempFixLedger --id "validator-temp-fix" --category "validator" --summary "temporary validator entry" --context "This temporary validator entry exists only to prove that the environment-fix writer accepts full cross-CLI context." --symptom "Without this smoke test the validator would only know that the file exists, not that the writer can create a detailed entry end to end." --root-cause "The validator needs a write-path proof so schema changes cannot silently break the fix ledger tooling." --what "temporary write path" --why "prove the environment-fix ledger writer works" --verification "The validator reads the temporary ledger back immediately and checks that the written entry id matches the expected smoke-test value." --portability-notes "Other CLIs should keep the same smoke test so a fix ledger is validated as a workflow, not just as a static JSON file." | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw "Environment-fix registration script could not write a temporary entry."
 }

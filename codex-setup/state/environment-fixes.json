@@ -7,8 +7,13 @@
       "source_cli": "Codex",
       "category": "runtime-validation",
       "summary": "OpenAI-Docs-MCP-Smoke-Test resolves the Codex CLI reliably on Windows.",
+      "context_for_other_clis": "This fix belongs to the Codex-side validation path for the official OpenAI docs MCP. The validator starts a fresh Codex CLI process from Windows and must find the locally installed launcher even when Node child processes cannot resolve the bare `codex` command name from PATH alone.",
+      "symptom_before_fix": "The validation path failed with `spawnSync codex ENOENT` although Codex CLI was installed and usable from the interactive shell. Without extra context another CLI would misread this as an MCP outage, while the real failure happened before the MCP test could even start.",
+      "root_cause": "The script assumed that `codex` could always be executed by name. On Windows npm installs CLI launchers frequently as `codex.cmd` under `%APPDATA%\\\\npm`, and Node child-process resolution from inside the validator did not reliably discover that wrapper.",
       "what_was_fixed": "check-openai-docs-mcp.mjs now resolves codex.cmd, codex.exe, or codex.ps1 from %APPDATA% and uses shell execution for Windows launcher files.",
       "why_it_was_fixed": "The smoke test previously failed with ENOENT although Codex CLI was installed via npm on Windows.",
+      "verification": "Verified by rerunning the local validation chain after the launcher-resolution change. The script passes syntax checks and the full codex-setup validators now fail only on real MCP-registration state, not on missing launcher resolution.",
+      "portability_notes": "Any other CLI that spawns its own executable on Windows should not rely on the bare command name. Resolve `.cmd`, `.exe`, and `.ps1` launchers explicitly and use shell execution when wrapper scripts are part of the installation path.",
       "impact": "OpenAI-docs validation no longer depends on fragile PATH assumptions.",
       "portable_to": [
         "Cloud Code",
@@ -25,8 +30,13 @@
       "source_cli": "Codex",
       "category": "mcp-validation",
       "summary": "The code-search config fallback now supports multiline TOML string arrays.",
+      "context_for_other_clis": "This fix affects the direct MCP client used for Codex-side code-search validation. The client prefers Python TOML parsing, but it also contains a local fallback parser so the self-test and diagnostics still work on machines where Python TOML support is missing or unavailable.",
+      "symptom_before_fix": "The deterministic code-search self-test crashed with `Unexpected end of JSON input` when it parsed a fake config whose `args` array was written over multiple lines. In practice this meant the self-test could fail even though the actual MCP protocol code was fine.",
+      "root_cause": "The fallback parser assumed `args = [...]` would always be present on a single line and handed the first line directly to `JSON.parse`. That was incompatible with multiline TOML arrays produced by the local self-test fixture.",
       "what_was_fixed": "code-search-mcp-client.mjs now parses multiline args arrays in its TOML fallback instead of assuming args = [...] fits on one line.",
       "why_it_was_fixed": "The deterministic code-search self-test writes a multiline fake config and previously crashed when Python TOML parsing was unavailable.",
+      "verification": "Verified by running `node codex-setup/scripts/check-code-search-mcp-client.mjs` successfully on Windows and Git Bash after the parser update, followed by full PowerShell and Bash validation passes for `codex-setup`.",
+      "portability_notes": "If another CLI ships a TOML fallback parser for local config inspection, it must support multiline arrays and other formatting used by its own fixtures. A self-test should intentionally exercise the fallback path, not just the preferred parser path.",
       "impact": "The direct code-search MCP client self-test is deterministic on Windows and Git Bash even without Python TOML support.",
       "portable_to": [
         "Cloud Code",
@@ -44,8 +54,13 @@
       "source_cli": "Codex",
       "category": "validator-hardening",
       "summary": "codex-setup validation now separates repo validation from local MCP runtime registration.",
+      "context_for_other_clis": "This fix applies to the setup validators for Codex itself. The repository contains scripts and wrapper checks that should always be validated, but optional live MCP smoke tests depend on whether the local runtime has already registered certain servers like `openaiDeveloperDocs` or `code-search`.",
+      "symptom_before_fix": "A clean local runtime with no MCP registrations caused the full `codex-setup` validation to fail even though the repository scripts, rules, and self-tests were correct. That made the repo look broken when the actual issue was only missing local runtime registration.",
+      "root_cause": "The validator treated live MCP availability as a mandatory prerequisite for repository validation. It did not distinguish between checking repo-owned logic and checking optional runtime-specific integration state.",
       "what_was_fixed": "validate-codex-setup.ps1 and validate-codex-setup.sh still validate scripts and self-tests, but skip live openaiDeveloperDocs and code-search smoke tests when those MCP servers are not configured locally.",
       "why_it_was_fixed": "Repo validation should stay deterministic and should not fail only because a clean Codex runtime has not registered optional MCP servers yet.",
+      "verification": "Verified by rerunning both `validate-codex-setup.ps1` and `validate-codex-setup.sh` in an environment where `codex mcp list` reported no configured servers. Both validators completed successfully while still checking the repo-owned scripts and deterministic self-tests.",
+      "portability_notes": "Other CLIs should separate repository integrity from workstation-specific runtime state. Keep deterministic self-tests mandatory, but gate live integration smokes on whether the relevant external or local services are actually configured in that runtime.",
       "impact": "codex-setup validation remains strict on repo content while still exercising live MCP checks whenever the local runtime is configured.",
       "portable_to": [
         "Cloud Code",
@@ -56,6 +71,34 @@
         "codex-setup/scripts/validate-codex-setup.sh"
       ],
       "created_at": "2026-03-23T11:50:00+01:00",
+      "status": "active"
+    },
+    {
+      "id": "2026-03-23-environment-fix-ledger-full-context",
+      "source_cli": "Codex",
+      "category": "knowledge-hardening",
+      "summary": "Environment-fix entries now require full cross-CLI context instead of short what/why notes.",
+      "context_for_other_clis": "This change hardens the Codex environment-fix ledger itself. Other CLIs such as Cloud Code or Gemini CLI may consume the ledger later without having seen the original session, the original logs, or the local debugging path that produced the fix.",
+      "symptom_before_fix": "Short fix entries with only what and why were technically correct but still too thin for another CLI to reproduce or trust the change. A reader from another environment could miss the real failure mode, the triggering conditions, or the limits of the fix.",
+      "root_cause": "The first version of the ledger schema optimized for compactness, not for cross-CLI transfer. It did not force authors to record the surrounding context, the visible symptom, the technical cause, or the verification path.",
+      "what_was_fixed": "The fix ledger schema, bridge spec, logger, and validators now require context, symptom, root cause, verification, and portability notes in addition to what/why.",
+      "why_it_was_fixed": "Other CLIs need enough standalone context to understand and reuse Codex environment fixes without relying on hidden session memory.",
+      "verification": "Verified by expanding all existing ledger entries to the richer schema, running the registration script successfully, and rerunning both codex-setup validators on PowerShell and Git Bash.",
+      "portability_notes": "Any CLI that wants bidirectional fix exchange should enforce the same rule: a fix entry must be understandable without the original debugging session. Otherwise the ledger becomes a list of headlines instead of a transferable engineering memory.",
+      "impact": "Cross-CLI fix transfer is now based on self-contained engineering context instead of terse summaries.",
+      "portable_to": [
+        "Cloud Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "codex-setup/state/environment-fixes.json",
+        "codex-setup/scripts/register-environment-fix.mjs",
+        "codex-setup/bridges/environment-fix-exchange-bridge.md",
+        "codex-setup/bridges/environment-fix-exchange-bridge.json",
+        "codex-setup/scripts/validate-codex-setup.ps1",
+        "codex-setup/scripts/validate-codex-setup.sh"
+      ],
+      "created_at": "2026-03-23T11:30:46.589Z",
       "status": "active"
     }
   ]

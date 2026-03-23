@@ -82,8 +82,11 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
 ## Read-Only Fremd-Workspaces
 
 - `Gemini-Setup/` in diesem Repository ist fuer Codex read-only.
+- `Gemini-Setup/agent-memory/shared/MEMORY.md` in diesem Repository ist ebenfalls read-only.
 - Der lokale Workspace `C:\Users\barwa\GeminiCLI` ist fuer Codex ebenfalls read-only.
+- `C:\Users\barwa\GeminiCLI\agent-memory\shared\MEMORY.md` ist als Gemini-Fehlerquelle ebenfalls read-only.
 - Codex darf dort lesen, aber niemals schreiben, loeschen oder diese Pfade als operative Codex-Steuerpfade benutzen.
+- Fuer Cloud Code gilt zusaetzlich: `claude-code-setup/agent-memory/shared/MEMORY.md` darf nur read-only als Vergleichsquelle fuer Umgebungsfixes gelesen werden, niemals als Codex-Whiteboard oder Codex-Steuerpfad.
 
 ## Claude-/Cloud-Code-Delta-Sync
 
@@ -98,7 +101,8 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
 ## Codex-Umgebungsfix-Log
 
 - Wenn Codex einen Fehler in seiner eigenen Programmierumgebung, Validierung, MCP-Nutzung, Skill-Logik, Runtime-Helfern oder Regelbasis fixt, soll Codex diesen Fix zusaetzlich in `codex-setup/state/environment-fixes.json` dokumentieren.
-- Jeder solche Eintrag muss mindestens enthalten: was gefixt wurde, warum es gefixt wurde und welche Artefakte betroffen sind.
+- Jeder solche Eintrag muss mindestens enthalten: Kontext fuer andere CLIs, sichtbares Symptom, technische Ursache, was gefixt wurde, warum es gefixt wurde, Verifikation und betroffene Artefakte.
+- Die Beschreibung muss so ausfuehrlich sein, dass andere CLIs den Fix ohne Session-Kontext verstehen und nachbauen koennen.
 - Zum Schreiben soll Codex `codex-setup/scripts/register-environment-fix.*` verwenden.
 - Dieses Log ist nur fuer Umwelt- und Setup-Fixes gedacht, nicht fuer Projektcode oder App-Features.
 - Andere CLI-Umgebungen duerfen dieses Log read-only lesen, damit Cloud Code, Gemini CLI oder spaetere CLIs von Codex-Fixes lernen koennen.
@@ -130,6 +134,7 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
 - Fuer systemische Aufgaben soll danach das Codex-Whiteboard gelesen werden, beginnend mit `## Oberste Direktive`.
 - Die `Oberste Direktive` gilt nicht nur beim Start, sondern waehrend der gesamten Arbeit: auch bei normalen Programmieraufgaben soll Codex laufend mitpruefen, ob sich aus der aktuellen Arbeit ein wiederverwendbarer Schutz, ein Geschwindigkeitsgewinn, ein Workflow-Upgrade oder ein sonstiger Intelligenzgewinn fuer kuenftige Sessions ableiten laesst.
 - Wenn der Benutzer Cloud Code oder Claude Code sagt und es um Regeln, Setup, Hooks, Skills, Agents, Fehlerfixes oder Programmierumgebung geht, soll Codex den Claude-Delta-Audit ausfuehren und die Ergebnisse erst dann portieren.
+- Der Satz `Starte bitte die Bruecke zu Cloud Code` ist ein expliziter deutscher Direkt-Trigger fuer diesen vollstaendigen Claude-Delta-Audit.
 - Wenn der Claude-Delta-Audit echte Ersetzungen bestehender Codex-Regeln oder Codex-Setup-Texte anzeigt, soll Codex vor dem Ueberschreiben warnen und eine kurze Freigabe einholen. Additive Erweiterungen duerfen bevorzugt vorgeschlagen werden.
 - Wenn der Benutzer wissen will, welche Umwelt-Fixes Codex bereits hat oder was andere CLIs von Codex lernen koennen, soll Codex `codex-setup/state/environment-fixes.json` bzw. `register-environment-fix.*` benutzen.
 - Wenn der Benutzer nach semantischer Suche, Indexierung, Hintergrund-Reindex oder `code-search`-Status fragt, soll Codex bevorzugt `codex-setup/scripts/check-code-search-health.*` ausfuehren statt den Zustand nur aus Erinnerung oder Einzelabfragen abzuleiten.

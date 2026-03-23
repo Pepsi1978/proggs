@@ -76,6 +76,7 @@ Wenn erkennbar, zusaetzlich:
 Die Bruecke soll bei deutschen Formulierungen wie diesen aktiviert werden:
 
 - "hol dir die neuesten Informationen von Cloud Code"
+- "Starte bitte die Bruecke zu Cloud Code"
 - "was wurde bei Cloud Code erneuert"
 - "welche Verbesserungen gibt es bei Cloud Code"
 - "welche Regeln sind dort neuer"
@@ -93,6 +94,8 @@ Fuer Codex ist die Referenzimplementierung:
 - `codex-setup/scripts/audit-claude-delta.mjs`
 - `codex-setup/scripts/audit-claude-delta.sh`
 - `codex-setup/scripts/audit-claude-delta.ps1`
+
+Der Satz `Starte bitte die Bruecke zu Cloud Code` soll bei Codex immer direkt diese Referenzimplementierung ausloesen.
 
 Der dazugehoerige State liegt unter:
 

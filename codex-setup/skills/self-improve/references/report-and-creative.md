@@ -40,8 +40,8 @@
 |-----|-------|
 
 ### Environment-Fix-Log
-| Fix-ID | Was | Warum |
-|--------|-----|-------|
+| Fix-ID | Kontext | Was | Warum | Verifikation |
+|--------|---------|-----|-------|-------------|
 
 ### Nicht geaendert
 [Bewusst nicht geaenderte Dinge mit Grund]

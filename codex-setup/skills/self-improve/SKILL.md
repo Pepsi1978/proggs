@@ -44,7 +44,7 @@ Hard rules:
 - `Gemini-Setup/` and `C:\Users\barwa\GeminiCLI` are read-only comparison sources for Codex. Never write or delete there from this skill.
 - If a Claude delta would replace existing Codex rule text or Codex setup behavior, warn first and require explicit approval before replacing it.
 - Prefer additive Codex integration whenever a Claude idea is useful but not identical to the existing Codex rule.
-- If this run fixes a Codex environment issue, log the fix with what/why in `codex-setup/state/environment-fixes.json`.
+- If this run fixes a Codex environment issue, log the fix with full cross-CLI context in `codex-setup/state/environment-fixes.json`.
 
 Read these files as needed:
 - [references/workspace-scan.md](references/workspace-scan.md)
@@ -233,7 +233,8 @@ After repo changes to this skill:
 After each environment-level fix:
 - add or update an entry in `codex-setup/state/environment-fixes.json`
 - use `codex-setup/scripts/register-environment-fix.*`
-- capture both `what was fixed` and `why it was fixed`
+- capture context, symptom, root cause, what was fixed, why it was fixed, verification, and portability notes
+- write the entry as if the next CLI has never seen this session before
 
 ## Stage 4: Creative
 

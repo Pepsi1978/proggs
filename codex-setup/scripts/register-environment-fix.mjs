@@ -23,7 +23,7 @@ function usage() {
   return [
     "Usage:",
     "  register-environment-fix.mjs list [--json] [--state PATH]",
-    "  register-environment-fix.mjs add --id ID --category CATEGORY --summary TEXT --what TEXT --why TEXT [--impact TEXT] [--portable-to CSV] [--artifacts CSV] [--source-cli NAME] [--status STATUS] [--json] [--state PATH]",
+    "  register-environment-fix.mjs add --id ID --category CATEGORY --summary TEXT --context TEXT --symptom TEXT --root-cause TEXT --what TEXT --why TEXT --verification TEXT --portability-notes TEXT [--impact TEXT] [--portable-to CSV] [--artifacts CSV] [--source-cli NAME] [--status STATUS] [--json] [--state PATH]",
   ].join("\n");
 }
 
@@ -71,6 +71,14 @@ function ensureText(value, label) {
   return normalized;
 }
 
+function ensureDetailedText(value, label, minimumLength = 40) {
+  const normalized = ensureText(value, label);
+  if (normalized.length < minimumLength) {
+    throw new Error(`${label} must be at least ${minimumLength} characters so other CLIs get enough context.`);
+  }
+  return normalized;
+}
+
 function readJson(filePath, fallback) {
   if (!fs.existsSync(filePath)) {
     return fallback;
@@ -104,8 +112,28 @@ function buildEntry(args, existingEntry = null) {
     source_cli: ensureText(args["source-cli"] || existingEntry?.source_cli || "Codex", "source-cli"),
     category: ensureText(args.category || existingEntry?.category, "category"),
     summary: ensureText(args.summary || existingEntry?.summary, "summary"),
+    context_for_other_clis: ensureDetailedText(
+      args.context || existingEntry?.context_for_other_clis,
+      "context",
+    ),
+    symptom_before_fix: ensureDetailedText(
+      args.symptom || existingEntry?.symptom_before_fix,
+      "symptom",
+    ),
+    root_cause: ensureDetailedText(
+      args["root-cause"] || existingEntry?.root_cause,
+      "root-cause",
+    ),
     what_was_fixed: ensureText(args.what || existingEntry?.what_was_fixed, "what"),
     why_it_was_fixed: ensureText(args.why || existingEntry?.why_it_was_fixed, "why"),
+    verification: ensureDetailedText(
+      args.verification || existingEntry?.verification,
+      "verification",
+    ),
+    portability_notes: ensureDetailedText(
+      args["portability-notes"] || existingEntry?.portability_notes,
+      "portability-notes",
+    ),
     impact: `${args.impact || existingEntry?.impact || ""}`.trim(),
     portable_to: portableTo,
     artifacts,
@@ -136,8 +164,13 @@ function printList(ledger, asJson) {
     lines.push("");
     lines.push(`${index + 1}. ${entry.id}`);
     lines.push(`   Summary: ${entry.summary}`);
+    lines.push(`   Context: ${entry.context_for_other_clis}`);
+    lines.push(`   Symptom: ${entry.symptom_before_fix}`);
+    lines.push(`   Root cause: ${entry.root_cause}`);
     lines.push(`   What: ${entry.what_was_fixed}`);
     lines.push(`   Why: ${entry.why_it_was_fixed}`);
+    lines.push(`   Verification: ${entry.verification}`);
+    lines.push(`   Portability: ${entry.portability_notes}`);
     if (entry.impact) {
       lines.push(`   Impact: ${entry.impact}`);
     }

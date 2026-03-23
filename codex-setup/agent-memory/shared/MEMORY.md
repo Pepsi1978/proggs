@@ -191,3 +191,7 @@ _Noch keine Eintraege._
 - **[2026-03-23 12:15] self-improve**: claude-code-setup/, CLAUDE.md, Gemini-Setup/ und C:\Users\barwa\GeminiCLI sind fuer Codex nur read-only Vergleichsquellen. Cloud-Code-Fragen zu Regeln, Agenten, Arbeitsprozessen, Setup oder gefixten Umgebungsfehlern sollen zuerst ueber codex-setup/scripts/audit-claude-delta.* laufen und deutsch im Schema A1/B1/C1/D1 berichtet werden.
 
 - **[2026-03-23 12:21] self-improve**: Umwelt-Fixes von Codex werden zusaetzlich in codex-setup/state/environment-fixes.json mit was und warum protokolliert. Andere CLIs duerfen dieses Log read-only lesen, damit Fehlerfixes zwischen Codex, Cloud Code und spaeter Gemini CLI austauschbar werden.
+
+- **[2026-03-23 12:30] self-improve**: Eintraege in codex-setup/state/environment-fixes.json muessen jetzt fuer fremde CLIs voll kontextfaehig sein: Kontext, sichtbares Symptom, technische Ursache, Verifikation und Portierungshinweis sind Pflicht. Kurze what/why-Notizen reichen nicht mehr.
+
+- **[2026-03-23 12:33] self-improve**: Der exakte deutsche Direkt-Trigger fuer den kompletten Cloud-Code-Delta-Audit lautet Starte bitte die Bruecke zu Cloud Code. Als explizite read-only Fremd-Fehlerquellen sind jetzt claude-code-setup/agent-memory/shared/MEMORY.md, Gemini-Setup/agent-memory/shared/MEMORY.md und C:\Users\barwa\GeminiCLI\agent-memory\shared\MEMORY.md vorgemerkt.

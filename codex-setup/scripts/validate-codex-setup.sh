@@ -165,6 +165,7 @@ search_fixed "audit-claude-delta.mjs" "codex-setup/README.md"
 search_fixed "cloud-code-delta-bridge" "codex-setup/README.md"
 search_fixed "environment-fixes.json" "codex-setup/README.md"
 search_fixed "register-environment-fix.mjs" "codex-setup/README.md"
+search_fixed "Starte bitte die Bruecke zu Cloud Code" "codex-setup/README.md"
 search_fixed "GeminiCLI" "codex-setup/README.md"
 search_fixed "neue Tools, Plugins oder Agenten" "codex-setup/rules/global.md"
 search_fixed "semantischer Suche, Indexierung, Hintergrund-Reindex" "codex-setup/rules/global.md"
@@ -176,17 +177,17 @@ node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-se
   exit 1
 }
 
-node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/state/environment-fixes.json','utf8')); if(data.scope!=='programming-environment-only') process.exit(1); if(!Array.isArray(data.entries) || data.entries.length<1) process.exit(1); if(data.entries.some(entry=>!entry.id||!entry.what_was_fixed||!entry.why_it_was_fixed)) process.exit(1);" || {
+node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/state/environment-fixes.json','utf8')); if(data.scope!=='programming-environment-only') process.exit(1); if(!Array.isArray(data.entries) || data.entries.length<1) process.exit(1); if(data.entries.some(entry=>!entry.id||!entry.context_for_other_clis||entry.context_for_other_clis.length<40||!entry.symptom_before_fix||entry.symptom_before_fix.length<40||!entry.root_cause||entry.root_cause.length<30||!entry.what_was_fixed||!entry.why_it_was_fixed||!entry.verification||entry.verification.length<30||!entry.portability_notes||entry.portability_notes.length<30)) process.exit(1);" || {
   echo "environment-fixes.json is invalid." >&2
   exit 1
 }
 
-node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/bridges/cloud-code-delta-bridge.json','utf8')); if(data.source_label!=='Cloud Code') process.exit(1); if(!data.replacement_requires_confirmation) process.exit(1); if(!Array.isArray(data.trigger_phrases) || data.trigger_phrases.length<3) process.exit(1);" || {
+node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/bridges/cloud-code-delta-bridge.json','utf8')); if(data.source_label!=='Cloud Code') process.exit(1); if(!data.replacement_requires_confirmation) process.exit(1); if(!Array.isArray(data.trigger_phrases) || data.trigger_phrases.length<3) process.exit(1); if(!data.trigger_phrases.includes('Starte bitte die Bruecke zu Cloud Code')) process.exit(1);" || {
   echo "cloud-code-delta-bridge.json is invalid." >&2
   exit 1
 }
 
-node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/bridges/environment-fix-exchange-bridge.json','utf8')); if(data.source_label!=='CLI Environment Fixes') process.exit(1); if(data.scope!=='programming-environment-only') process.exit(1); if(!Array.isArray(data.trigger_phrases) || data.trigger_phrases.length<3) process.exit(1);" || {
+node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/bridges/environment-fix-exchange-bridge.json','utf8')); if(data.source_label!=='CLI Environment Fixes') process.exit(1); if(data.scope!=='programming-environment-only') process.exit(1); if(!data.requires_full_context) process.exit(1); if(!Array.isArray(data.trigger_phrases) || data.trigger_phrases.length<3) process.exit(1);" || {
   echo "environment-fix-exchange-bridge.json is invalid." >&2
   exit 1
 }
@@ -264,7 +265,7 @@ node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync(process.a
 }
 temp_fix_ledger="$(mktemp)"
 rm -f "$temp_fix_ledger"
-node "codex-setup/scripts/register-environment-fix.mjs" add --state "$temp_fix_ledger" --id "validator-temp-fix" --category "validator" --summary "temporary validator entry" --what "temporary write path" --why "prove the environment-fix ledger writer works" >/dev/null
+node "codex-setup/scripts/register-environment-fix.mjs" add --state "$temp_fix_ledger" --id "validator-temp-fix" --category "validator" --summary "temporary validator entry" --context "This temporary validator entry exists only to prove that the environment-fix writer accepts full cross-CLI context." --symptom "Without this smoke test the validator would only know that the file exists, not that the writer can create a detailed entry end to end." --root-cause "The validator needs a write-path proof so schema changes cannot silently break the fix ledger tooling." --what "temporary write path" --why "prove the environment-fix ledger writer works" --verification "The validator reads the temporary ledger back immediately and checks that the written entry id matches the expected smoke-test value." --portability-notes "Other CLIs should keep the same smoke test so a fix ledger is validated as a workflow, not just as a static JSON file." >/dev/null
 node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); if(!data.entries || data.entries[0].id!=='validator-temp-fix') process.exit(1);" "$temp_fix_ledger" || {
   echo "Environment-fix registration failed." >&2
   exit 1

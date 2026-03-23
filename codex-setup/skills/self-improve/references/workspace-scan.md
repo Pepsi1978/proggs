@@ -41,7 +41,7 @@ The scan must answer:
 9. Can Claude/Cloud Code setup changes be audited without writing into Claude files?
 10. Does the Claude-delta audit state cleanly track only programming-environment deltas?
 11. Does `codex-setup/bridges/` expose a reusable Cloud-Code bridge spec that other CLIs can read and mirror?
-12. Does Codex log environment-level fixes with `what` and `why` in a machine-readable form that other CLIs can read?
+12. Does Codex log environment-level fixes with enough context, symptom, cause, verification, and portability detail that other CLIs can understand them without session context?
 
 ## Forbidden Operational Sources
 

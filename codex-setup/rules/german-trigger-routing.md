@@ -7,7 +7,9 @@ Es soll nur auf Faehigkeiten zeigen, die Codex hier wirklich besitzt.
 
 - Wenn der Benutzer `Cloud Code` sagt, ist fuer Codex damit `Claude Code` gemeint.
 - `claude-code-setup/` und `CLAUDE.md` sind dabei nur Lese- und Vergleichsquellen.
-- `Gemini-Setup/` und `C:\Users\barwa\GeminiCLI` sind fuer Codex ebenfalls nur Lesequellen.
+- `claude-code-setup/agent-memory/shared/MEMORY.md` ist die aktuell vorgemerkte read-only Cloud-Code-Fehlerquelle.
+- `Gemini-Setup/`, `Gemini-Setup/agent-memory/shared/MEMORY.md` und `C:\Users\barwa\GeminiCLI` sind fuer Codex ebenfalls nur Lesequellen.
+- `C:\Users\barwa\GeminiCLI\agent-memory\shared\MEMORY.md` ist die aktuell vorgemerkte read-only Gemini-Fehlerquelle.
 - Schreibarbeit passiert nur in `codex-setup/`, `AGENTS.md` und bei Bedarf in der Codex-Validierung.
 
 ## Triggergruppen
@@ -29,6 +31,7 @@ Aktion:
 
 - "was ist neuer als bei dir"
 - "uebernimm das von Cloud Code"
+- "Starte bitte die Bruecke zu Cloud Code"
 - "Claude Setup vergleichen"
 - "schau im Cloud Code Repo nach"
 - "welche Regeln sind dort neuer"
@@ -47,6 +50,7 @@ Aktion:
 - dabei Regeln, Agents, Skills, Hooks, Arbeitsprozesse, Trigger, Programmierumgebung und umgebungsbezogene Fehlerfixes auswerten
 - danach Port-Kandidaten als `ADD`, `ADAPT` oder `REPLACE` erklaeren
 - bei `REPLACE` vor Umsetzung warnen und bestaetigen lassen
+- der Satz `Starte bitte die Bruecke zu Cloud Code` ist ein direkter Ausloeser fuer diesen kompletten Ablauf
 
 ### Umgebungsfixe und Fix-Log
 
@@ -60,6 +64,7 @@ Aktion:
 - `codex-setup/state/environment-fixes.json` lesen oder aktualisieren
 - zum Schreiben `codex-setup/scripts/register-environment-fix.*` verwenden
 - nur Regeln, Runtime, MCP, Validierung, Skills, Agenten, Hooks oder Setup loggen, keinen Projektcode
+- beim Schreiben immer Kontext, Symptom, Ursache, Verifikation und Portierungshinweis mit erfassen
 
 ### OpenAI- und Codex-Doku
 

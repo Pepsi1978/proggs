@@ -7,6 +7,7 @@ Ziel:
 - nur Fixes fuer Regeln, Runtime, MCP-Nutzung, Validierung, Skills, Agenten, Hooks und Setup
 - niemals Projekt-Bugs oder App-Features
 - jeden Fix mit `was wurde gefixt` und `warum wurde es gefixt` dokumentieren
+- jeden Fix so genau beschreiben, dass andere CLIs ihn ohne Session-Kontext verstehen koennen
 - so speichern, dass andere CLIs ihn read-only lesen und uebernehmen koennen
 
 ## Pflichtformat
@@ -17,12 +18,23 @@ Jeder Eintrag braucht mindestens:
 - `source_cli`
 - `category`
 - `summary`
+- `context_for_other_clis`
+- `symptom_before_fix`
+- `root_cause`
 - `what_was_fixed`
 - `why_it_was_fixed`
+- `verification`
+- `portability_notes`
 - `portable_to`
 - `artifacts`
 - `created_at`
 - `status`
+
+## Erklaerungstiefe
+
+- Andere CLIs duerfen nie voraussetzen, dass sie dieselbe Session, dieselben Logs oder denselben Fehlerkontext gesehen haben.
+- Deshalb muss jeder Eintrag das Umfeld, das sichtbare Symptom, die technische Ursache, die konkrete Aenderung und die Verifikation in vollstaendigen Saetzen erklaeren.
+- Kurze Notizen wie "Parser gefixt" oder "Windows-Problem geloest" reichen nicht.
 
 ## Sicherheitsregel
 

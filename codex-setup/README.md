@@ -21,6 +21,10 @@ Wichtigste Trennung:
 - `claude-code-setup/` ist Projektinhalt, aber keine Regelquelle fuer Codex.
 - Das Whiteboard von Claude/proggs darf von Codex nicht als operative Wissensquelle genutzt werden.
 - `Gemini-Setup/` im Repo und der lokale Workspace `C:\Users\barwa\GeminiCLI` sind fuer Codex reine Lesequellen. Codex darf dort nichts schreiben und nichts loeschen.
+- Die aktuell vorgemerkten Fremd-Fehlerquellen sind read-only:
+  `claude-code-setup/agent-memory/shared/MEMORY.md`,
+  `Gemini-Setup/agent-memory/shared/MEMORY.md` und
+  `C:\Users\barwa\GeminiCLI\agent-memory\shared\MEMORY.md`.
 
 ## Struktur
 
@@ -53,7 +57,8 @@ Wichtigste Trennung:
 
 - `state/environment-fixes.json`
   Maschinenlesbares Log fuer Codex-Fixes an Regeln, Runtime, Validierung, MCP-Nutzung und Setup.
-  Es dokumentiert immer `was` und `warum`, damit andere CLI-Umgebungen diese Fixes read-only uebernehmen koennen.
+  Es dokumentiert immer `was`, `warum`, Kontext, Symptom, Ursache, Verifikation und Portierungshinweise,
+  damit andere CLI-Umgebungen diese Fixes read-only nachvollziehen und uebernehmen koennen.
 
 - `skills/self-improve/`
   Der Codex-spezifische Self-Improve-Skill fuer diesen Workspace, inklusive Referenzen,
@@ -93,6 +98,10 @@ Installation:
 Wenn Claude/Cloud Code neue Regeln, Hooks, Skills, robuste Fehlerfixes oder Setup-Verbesserungen bekommt,
 nutzt Codex dafuer einen plattformuebergreifenden Delta-Audit:
 
+Der direkte deutsche Kurztrigger dafuer ist:
+
+- `Starte bitte die Bruecke zu Cloud Code`
+
 - macOS/Linux: `bash codex-setup/scripts/audit-claude-delta.sh`
 - Windows: `pwsh -NoProfile -File codex-setup/scripts/audit-claude-delta.ps1`
 - direkt: `node codex-setup/scripts/audit-claude-delta.mjs`
@@ -130,6 +139,7 @@ maschinenlesbarer Eintrag dokumentiert werden:
 
 Dieses Log ist nur fuer Umwelt-/Setup-Fixes gedacht, nicht fuer normalen Projektcode.
 Es soll anderen CLI-Umgebungen wie Cloud Code oder Gemini CLI ermoeglichen, von Codex-Fixes zu lernen.
+Jeder Eintrag muss so ausfuehrlich sein, dass andere CLIs ihn auch ohne den urspruenglichen Session-Kontext verstehen koennen.
 
 Die generische Bruecken-Spezifikation dafuer liegt unter:
 
