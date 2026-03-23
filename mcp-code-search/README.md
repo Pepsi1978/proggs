@@ -47,6 +47,7 @@ Damit die Indexierung bei jedem `codex`-Start automatisch im Hintergrund gepruef
 - `src/reindex.ts`: prueft, ob seit `.last-index-time` relevante Dateien geaendert wurden
 - inkrementelles Reindexing: nur geaenderte, neue oder geloeschte Dateien werden im Index ersetzt
 - bestehende Indexdaten fuer unveraenderte Dateien bleiben erhalten und werden nicht neu eingebettet
+- `index_codebase` nutzt denselben inkrementellen Pfad; ein Full Reindex bleibt nur fuer manuelle Wartung via `reindex.ts --full`
 - atomarer Pointer-Swap ueber `current.txt`: der aktive Snapshot bleibt waehrend jedes Reindex aktiv, und `search_code`/`search_status` lesen zuerst diesen Pointer
 - Startup-Guard gegen stale Runtimes: ein bereits offener Store wird neu gebunden, wenn `current.txt` inzwischen auf einen anderen Snapshot zeigt oder der geladene Pfad nicht mehr aktiv ist
 - `state.json`: speichert den zuletzt erfolgreich aktivierten Index inklusive Zeitstempel und Modus

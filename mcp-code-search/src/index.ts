@@ -159,7 +159,7 @@ const server = new McpServer({
 
 server.tool(
 	"index_codebase",
-	"Full reindex of a local codebase for semantic code search. Clears the existing index and re-indexes all files from scratch. Use this only for first-time indexing or to fix a corrupted index — the SessionStart hook handles incremental updates automatically.",
+	"Incremental reindex of a local codebase for semantic code search. Updates only changed files by default. A full rebuild stays available through the lower-level reindex.ts --full path for explicit maintenance.",
 	{
 		directory: z
 			.string()
@@ -180,7 +180,9 @@ server.tool(
 		const result = await reindexCodebase({
 			rootDir,
 			dbDir: join(rootDir, ".code-search"),
-			forceFullReindex: true,
+			// Inkrementell ist der Standard; ein Full Reindex bleibt nur fuer
+			// explizite Wartungspfade reserviert.
+			forceFullReindex: false,
 		});
 
 		closeCachedStore();

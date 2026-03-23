@@ -224,6 +224,32 @@
       ],
       "created_at": "2026-03-23T22:48:09.159Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-24-code-search-index-codebase-incremental-default",
+      "source_cli": "Codex",
+      "summary": "Code-search indexing now stays incremental by default.",
+      "proposal_text": "💡 Intelligenz-Vorschlag: Der Code-search-Server kann beim Session-Start viel Zeit sparen - Ich stelle index_codebase dauerhaft auf inkrementelle Updates um und lasse Full Reindex nur noch als explizite Wartung ueber reindex.ts --full zu. Soll ich das umsetzen?",
+      "context_for_other_clis": "This improvement applies to the local Codex semantic search workflow. The repo already had an incremental reindex path, but the MCP tool still forced a full rebuild. For a large workspace that wastes time on every session start and should therefore be removed from the default path.",
+      "why_it_was_suggested": "The user wants the semantic search to remain fast across future sessions, and the existing incremental machinery is already present in the codebase.",
+      "why_it_was_implemented": "The default path was still paying the cost of a full rebuild even though the index already knows how to process only changed files.",
+      "how_it_was_implemented": "index_codebase now calls the incremental reindex path by default; the full rebuild path remains available only through the explicit lower-level reindex.ts --full maintenance route.",
+      "bridge_value": "Other CLIs can use the same pattern: keep the normal session-start path incremental and reserve full rebuilds for explicit maintenance commands.",
+      "adoption_guidance": "If another CLI has both a session-start path and a maintenance path, it should keep the session-start path incremental and leave full rebuilds only to explicit maintenance commands so time is not wasted on every start.",
+      "resilience_summary": "The improvement is durable because it changes the default behavior, not just one transient run, and because the lower-level full rebuild path is still available for deliberate maintenance when required.",
+      "future_failure_review": "Dependencies: the MCP tool, the background auto-reindex, and the reindex engine all still use the same underlying index store. Failure scenario: if the incremental path cannot determine changes it still falls back to the necessary initial build path rather than skipping work incorrectly. State change: the tool only changes how much data is reprocessed. Race conditions: low, because the index path is still serialised by the existing reindex workflow. Backward compatibility: manual full rebuild remains available. Platform effects: none beyond the existing cross-platform reindex code. Update resistance: future sessions keep the incremental default even after code churn. Graceful degradation: initial index creation still works when no index exists yet.",
+      "portable_to": [
+        "Cloud Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "mcp-code-search/src/index.ts",
+        "mcp-code-search/src/reindex.ts",
+        "mcp-code-search/src/reindex-core.ts",
+        "mcp-code-search/README.md"
+      ],
+      "created_at": "2026-03-23T23:04:38.848Z",
+      "status": "active"
     }
   ]
 }
