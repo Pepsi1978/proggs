@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
-import { spawnSync } from "child_process";
+import { spawn, spawnSync } from "child_process";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -11,10 +11,12 @@ const DOCS_GUIDE_URL = "https://developers.openai.com/api/docs/guides/tools-conn
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_ATTEMPTS = 2;
 const DEFAULT_RETRY_DELAY_MS = 1000;
+const EARLY_SUCCESS_GRACE_MS = 1500;
 const PROMPT = [
 	"Use only the openaiDeveloperDocs MCP server.",
 	"Do not use web search or any fallback.",
-	"If openaiDeveloperDocs is available in this fresh Codex session, look up the OpenAI models page and reply with exactly AVAILABLE.",
+	"Call list_openai_docs with limit 1.",
+	"If openaiDeveloperDocs is available in this fresh Codex session, reply with exactly AVAILABLE.",
 	"If the MCP server is unavailable, reply with exactly UNAVAILABLE.",
 ].join("\n");
 
@@ -169,6 +171,22 @@ function readMessageFile(filePath) {
 	return readFileSync(filePath, "utf8");
 }
 
+function observedDocsStartup(logText) {
+	return logText.includes("mcp startup: ready:") && logText.includes("openaiDeveloperDocs");
+}
+
+function observedDocsToolDispatch(logText) {
+	return /tool openaiDeveloperDocs\./.test(logText);
+}
+
+function observedUnavailableSignal(logText, smokeResult) {
+	return (
+		smokeResult === "UNAVAILABLE" ||
+		/unknown MCP server/i.test(logText) ||
+		/openaiDeveloperDocs MCP is not enabled/i.test(logText)
+	);
+}
+
 async function checkDocsGuideReachable() {
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), 10000);
@@ -213,7 +231,7 @@ function checkMcpConfig() {
 	}
 }
 
-function runCodexAttempt(repoRoot, options, attempt) {
+async function runCodexAttempt(repoRoot, options, attempt) {
 	const tempDir = mkdtempSync(join(tmpdir(), "check-openai-docs-mcp-"));
 	const outputPath = join(tempDir, "message.txt");
 	const args = [
@@ -229,38 +247,134 @@ function runCodexAttempt(repoRoot, options, attempt) {
 		PROMPT,
 	];
 
-	try {
+	return await new Promise((resolveAttempt) => {
 		const startedAt = Date.now();
-		const result = run(CODEX_COMMAND, args, {
-			timeout: options.timeoutMs,
-			killSignal: "SIGKILL",
+		const child = spawn(CODEX_COMMAND, args, {
+			shell: process.platform === "win32" && /\.(cmd|bat)$/i.test(CODEX_COMMAND),
+			stdio: ["ignore", "pipe", "pipe"],
 		});
-		const durationMs = Date.now() - startedAt;
-		const messageText = readMessageFile(outputPath);
-		const smokeResult = readLastLine(messageText);
-		const logText = `${result.stdout}${result.stderr}`.trim();
-		const timedOut = result.error?.code === "ETIMEDOUT";
-		const available = result.status === 0 && smokeResult === "AVAILABLE";
-		const failureReason = timedOut
-			? `timed out after ${options.timeoutMs} ms`
-			: result.status !== 0
-				? `codex exec exited with status ${result.status}`
-				: smokeResult
-					? `unexpected reply: ${smokeResult}`
-					: "no reply captured";
+		let stdout = "";
+		let stderr = "";
+		let launchError = "";
+		let terminationMode = "";
+		let toolDispatchObservedAt = 0;
 
-		return {
-			attempt,
-			durationMs,
-			timedOut,
-			ok: available,
-			smokeResult,
-			failureReason,
-			logText,
+		const finish = (statusCode) => {
+			const durationMs = Date.now() - startedAt;
+			const messageText = readMessageFile(outputPath);
+			const smokeResult = readLastLine(messageText);
+			const logText = `${stdout}${stderr}`.trim();
+			const startupReady = observedDocsStartup(logText);
+			const toolInvocationObserved = observedDocsToolDispatch(logText);
+			const unavailableSignal = observedUnavailableSignal(logText, smokeResult);
+			const explicitAvailable = smokeResult === "AVAILABLE";
+			const toolPathConfirmed =
+				startupReady &&
+				toolInvocationObserved &&
+				!unavailableSignal &&
+				terminationMode === "early-success";
+			const available = explicitAvailable || toolPathConfirmed;
+			const successMode = explicitAvailable
+				? "explicit-reply"
+				: toolPathConfirmed
+					? "tool-dispatch-before-timeout"
+					: "";
+			const failureReason = available
+				? ""
+				: terminationMode === "timeout"
+					? `timed out after ${options.timeoutMs} ms`
+					: terminationMode === "spawn-error"
+						? `failed to launch codex exec: ${launchError}`
+						: statusCode !== 0
+							? `codex exec exited with status ${statusCode}`
+							: smokeResult
+								? `unexpected reply: ${smokeResult}`
+								: "no reply captured";
+
+			clearTimeout(timeoutHandle);
+			clearInterval(pollHandle);
+			rmSync(tempDir, { recursive: true, force: true });
+
+			resolveAttempt({
+				attempt,
+				durationMs,
+				timedOut: terminationMode === "timeout",
+				ok: available,
+				smokeResult,
+				startupReady,
+				toolInvocationObserved,
+				successMode,
+				failureReason,
+				logText,
+			});
 		};
-	} finally {
-		rmSync(tempDir, { recursive: true, force: true });
-	}
+
+		const stopChild = (mode) => {
+			if (terminationMode) {
+				return;
+			}
+			terminationMode = mode;
+			if (child.exitCode === null && !child.killed) {
+				child.kill("SIGKILL");
+			}
+		};
+
+		const evaluateProgress = () => {
+			if (terminationMode === "timeout" || terminationMode === "spawn-error") {
+				return;
+			}
+
+			const smokeResult = readLastLine(readMessageFile(outputPath));
+			if (smokeResult === "AVAILABLE") {
+				stopChild("early-success");
+				return;
+			}
+
+			const logText = `${stdout}${stderr}`.trim();
+			const startupReady = observedDocsStartup(logText);
+			const toolInvocationObserved = observedDocsToolDispatch(logText);
+			const unavailableSignal = observedUnavailableSignal(logText, smokeResult);
+
+			if (toolInvocationObserved && toolDispatchObservedAt === 0) {
+				toolDispatchObservedAt = Date.now();
+			}
+
+			if (
+				startupReady &&
+				toolInvocationObserved &&
+				!unavailableSignal &&
+				toolDispatchObservedAt > 0 &&
+				Date.now() - toolDispatchObservedAt >= EARLY_SUCCESS_GRACE_MS
+			) {
+				stopChild("early-success");
+			}
+		};
+
+		const timeoutHandle = setTimeout(() => {
+			stopChild("timeout");
+		}, options.timeoutMs);
+
+		const pollHandle = setInterval(evaluateProgress, 250);
+
+		child.stdout.on("data", (chunk) => {
+			stdout += chunk.toString("utf8");
+			evaluateProgress();
+		});
+
+		child.stderr.on("data", (chunk) => {
+			stderr += chunk.toString("utf8");
+			evaluateProgress();
+		});
+
+		child.on("error", (error) => {
+			launchError = error instanceof Error ? error.message : String(error);
+			stopChild("spawn-error");
+		});
+
+		child.on("close", (statusCode) => {
+			finish(typeof statusCode === "number" ? statusCode : -1);
+		});
+	});
 }
 
 function buildReport(repoRoot, options, attemptResults) {
@@ -275,12 +389,16 @@ function buildReport(repoRoot, options, attemptResults) {
 		docsReachable: true,
 		ok: Boolean(success),
 		successAttempt: success?.attempt ?? null,
+		successMode: success?.successMode ?? null,
 		attemptResults: attemptResults.map((attempt) => ({
 			attempt: attempt.attempt,
 			ok: attempt.ok,
 			timedOut: attempt.timedOut,
 			durationMs: attempt.durationMs,
 			smokeResult: attempt.smokeResult || "",
+			startupReady: attempt.startupReady,
+			toolInvocationObserved: attempt.toolInvocationObserved,
+			successMode: attempt.successMode || "",
 			failureReason: attempt.ok ? "" : attempt.failureReason,
 		})),
 	};
@@ -290,8 +408,11 @@ function printHumanSuccess(report) {
 	const attemptLabel = report.successAttempt === 1
 		? "on the first attempt"
 		: `on attempt ${report.successAttempt}/${report.attempts}`;
+	const successLabel = report.successMode === "tool-dispatch-before-timeout"
+		? "reached a real openaiDeveloperDocs tool dispatch before the bounded timeout"
+		: "replied AVAILABLE";
 	console.log(
-		`openaiDeveloperDocs MCP configured, official docs reachable, and fresh Codex exec can use it ${attemptLabel} with a ${report.timeoutMs} ms timeout per attempt`,
+		`openaiDeveloperDocs MCP configured, official docs reachable, and fresh Codex exec ${successLabel} ${attemptLabel} with a ${report.timeoutMs} ms timeout per attempt`,
 	);
 }
 
@@ -322,7 +443,7 @@ await checkDocsGuideReachable();
 
 const attemptResults = [];
 for (let attempt = 1; attempt <= options.attempts; attempt++) {
-	const result = runCodexAttempt(repoRoot, options, attempt);
+	const result = await runCodexAttempt(repoRoot, options, attempt);
 	attemptResults.push(result);
 
 	if (result.ok) {

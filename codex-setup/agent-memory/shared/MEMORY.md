@@ -273,6 +273,8 @@ Optionaler Gesamtueberblick:
 
 [2026-03-23 21:19] self-improve: Direktive-3-Upgrade mit bash/pwsh install-self-improve sowie bash/pwsh validate-codex-setup erfolgreich validiert; neue Validator-Marker sichern Bridge, 5-Schritte-Workflow, 8-Punkte-Review, Plattformregeln und Mirror-Pflicht ab.
 
+- **[2026-03-23 21:32] self-improve**: `bash codex-setup/scripts/check-openai-docs-mcp.sh --timeout-ms 90000`, `bash codex-setup/scripts/validate-codex-setup.sh` und `pwsh -NoProfile -File codex-setup/scripts/validate-codex-setup.ps1` laufen nach der Docs-MCP-Haertung wieder grün. Der frische Smoke bestaetigt jetzt entweder explizit `AVAILABLE` oder den echten `openaiDeveloperDocs`-Toolpfad vor dem Timeout.
+
 ## Architektur-Entscheidungen
 - **[2026-03-22 10:48] self-improve**: Die Whiteboard-Bruecke arbeitet jetzt fail-closed. Whiteboard-Aufloesung ist nur noch fuer das autoritative Workspace-Ziel `<workspace>/codex-setup/agent-memory/shared/MEMORY.md` erlaubt; Wrapper uebergeben dafuer explizit `--workspace`, und der Validator deckt CWD-Regressionsfaelle ab.
 
@@ -322,6 +324,8 @@ All parameters are case-insensitive.-Aufrufe, und \ leitet sein Zielverzeichnis 
 [2026-03-23 20:43] self-improve: Direktive 2 ist jetzt als kanonische Bridge-Datei in codex-setup/bridges verankert und als staerkere Repo-/Runtime-Spiegelung in AGENTS, MEMORY, global.md, self-observation.md und dem Self-Improve-Skill durchgezogen.
 
 [2026-03-23 21:19] self-improve: Direktive 3 ist jetzt als kanonische Bridge-Datei in codex-setup/bridges verankert und als staerkere Repo-/Runtime-Spiegelung in AGENTS, MEMORY, global.md, resilient-bugfixing.md, README und dem Self-Improve-Skill durchgezogen.
+
+- **[2026-03-23 21:32] self-improve**: Der OpenAI-Docs-MCP-Smoke nutzt fuer frische Codex-Sessions jetzt einen leichteren `list_openai_docs`-Pfad und behandelt bestaetigten `openaiDeveloperDocs`-Tool-Dispatch nach gesundem MCP-Startup als gueltigen Erfolgsbeleg. So prueft die Validierung die echte Registry- und Toolroute statt an langsamer Docs-Antwortlatenz falsch rot zu werden.
 
 ## Debugging-Muster
 - **[2026-03-23 13:53] self-improve**: In PowerShell-Skripten muss `param(...)` das erste ausführbare Statement bleiben. Wenn vorher bereits `$ErrorActionPreference` oder anderer Code steht, wird `param` beim Script-Aufruf als normaler Befehl interpretiert und der Bootstrap bricht sofort ab.

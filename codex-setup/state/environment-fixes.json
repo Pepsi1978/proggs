@@ -512,6 +512,40 @@
       ],
       "created_at": "2026-03-23T20:20:32.342Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-23-openai-docs-tool-dispatch-healthcheck",
+      "source_cli": "Codex",
+      "category": "validator-hardening",
+      "summary": "The OpenAI-Docs MCP smoke now proves a fresh docs tool path and exits early instead of waiting for a full docs answer every time.",
+      "context_for_other_clis": "This fix belongs to the Codex-side validation path after the directive-3 sync rebase. A healthy fresh Codex exec started openaiDeveloperDocs, reached the docs tool call, and still failed the bounded smoke because no final AVAILABLE reply arrived before the budget.",
+      "symptom_before_fix": "After rebasing on top of the latest origin/main, pwsh validate-codex-setup.ps1 failed again although the fresh Codex exec showed mcp startup ready for openaiDeveloperDocs and logged a real openaiDeveloperDocs tool invocation. The validator either timed out at 90000 ms or spent the full budget waiting on a healthy but slow docs response.",
+      "root_cause": "The smoke script still treated a completed model reply as the only proof of availability. That conflated docs-answer latency with runtime health, even though fresh MCP startup plus a real openaiDeveloperDocs tool dispatch had already proven that the configured server and tool route were alive.",
+      "what_was_fixed": "check-openai-docs-mcp.mjs now uses a lighter list_openai_docs probe, watches fresh Codex exec output incrementally, and accepts either an explicit AVAILABLE reply or a confirmed docs-tool dispatch after healthy MCP startup.",
+      "why_it_was_fixed": "The validator should prove configuration and real tool reachability, not falsely fail or burn the full timeout on slow docs-answer latency.",
+      "exact_error_text": "Exact symptom text: Fresh Codex exec did not confirm openaiDeveloperDocs availability within the bounded retry window.",
+      "root_cause_why_chain": "Why 1: the validator failed although the fresh session started openaiDeveloperDocs correctly. Why 2: the old success rule waited for a final AVAILABLE reply instead of recognizing that the docs tool had already been dispatched. Why 3: that made a healthy runtime look broken whenever the first docs response was slower than the bounded budget.",
+      "related_error_sources_checked": "Checked the shared Node smoke script, both shell wrappers, and both full validators because the same docs-health assumption drives Bash and PowerShell. Also reran the standalone docs smoke directly so the fix was proven at the narrowest layer before retesting the larger validators.",
+      "wrong_pattern_example": "Wrong pattern: require a full docs answer from a fresh spawned agent even after healthy MCP startup and a real docs-tool dispatch already proved the runtime path is alive.",
+      "right_pattern_example": "Right pattern: prove docs health in layers with config inspection, docs URL reachability, fresh MCP startup, and either an explicit AVAILABLE reply or a confirmed openaiDeveloperDocs tool dispatch with a short grace window for immediate tool errors.",
+      "avoidance_rule": "If a fresh MCP smoke already proves startup and real tool dispatch, then validate that path directly and exit early instead of treating slow downstream content latency as a broken environment.",
+      "resilience_summary": "The fix is defensive because it keeps bounded retries and still fails when startup or tool dispatch never appears, faster because it exits as soon as the healthy docs path is proven, and update-resistant because Bash and PowerShell keep sharing one Node implementation instead of drifting into separate heuristics.",
+      "fix_induced_failure_review": "Dependencies: codex exec startup, the openaiDeveloperDocs MCP registration, docs URL reachability, stdout and stderr parsing, and the wrapper scripts were reviewed together. Failure scenario: if the MCP server is unknown, disabled, or never reaches a real tool call, validation still fails loudly. State change: none outside temporary smoke files. Race risk is bounded by the explicit 1500 ms grace window before early success. Backward compatibility remains because the wrapper interface and validator call sites stay unchanged. Platform effects improve because both macOS Bash and PowerShell now use the same incremental health proof. Graceful degradation is preserved because a real docs outage still aborts validation.",
+      "verification": "Verified with bash codex-setup/scripts/check-openai-docs-mcp.sh --timeout-ms 90000, bash codex-setup/scripts/validate-codex-setup.sh, and pwsh -NoProfile -File codex-setup/scripts/validate-codex-setup.ps1. All three completed successfully on this macOS host after the shared smoke-script hardening.",
+      "portability_notes": "Other CLIs that validate a fresh MCP-backed docs route should distinguish configuration and tool-dispatch health from the latency of the final content answer. Keep the runtime smoke bounded, add a short grace window for immediate tool errors, and share the heuristic in one cross-platform implementation if both Bash and PowerShell wrappers exist.",
+      "impact": "Docs-MCP validation is now both faster on healthy runs and less likely to report a false outage when the server is alive but the first docs answer is slow.",
+      "portable_to": [
+        "Cloud Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "codex-setup/scripts/check-openai-docs-mcp.mjs",
+        "codex-setup/scripts/check-openai-docs-mcp.sh",
+        "codex-setup/scripts/check-openai-docs-mcp.ps1",
+        "codex-setup/README.md"
+      ],
+      "created_at": "2026-03-23T20:33:04.712Z",
+      "status": "active"
     }
   ]
 }

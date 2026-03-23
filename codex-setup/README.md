@@ -348,6 +348,7 @@ Der Check arbeitet bewusst mit begrenzten Zeitfenstern:
 - jede frische `codex exec`-Pruefung hat ein festes Timeout statt potenziell still zu haengen
 - nach einem Timeout oder Fehlschlag folgt genau ein frischer zweiter Versuch
 - ein ueberzogenes Timeout wird abgebrochen statt im Hintergrund weiterzulaufen, damit die Validierung deterministisch bleibt
+- als Erfolg gilt entweder eine explizite `AVAILABLE`-Antwort oder ein bestaetigter `openaiDeveloperDocs`-Tool-Dispatch nach frischem MCP-Startup; so trennt der Smoke echte Registry-/Toolpfad-Gesundheit von langsamer Docs-Antwort
 
 ## code-search-Healthcheck
 
