@@ -1,0 +1,12 @@
+{
+	"version": 1,
+	"scope": "codex-environment-only",
+	"tracked_paths": ["codex-setup/**", "AGENTS.md"],
+	"replace_requires_confirmation": true,
+	"additive_bias": true,
+	"last_reviewed_commit": "03f5bf8",
+	"last_applied_commit": "03f5bf8",
+	"last_reviewed_at": "2026-03-23T13:00:00+01:00",
+	"last_applied_at": "2026-03-23T13:00:00+01:00",
+	"notes": "Bootstrapped during first Claude Code session with Codex delta bridge. Tracks only Codex setup and programming-environment deltas."
+}
