@@ -364,6 +364,39 @@
       "artifacts": [],
       "created_at": "2026-03-23T13:49:40.769Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-23-powershell-macos-bootstrap-validator-parity",
+      "source_cli": "Codex",
+      "category": "powershell-parity",
+      "summary": "PowerShell bootstrap, install, and validator paths now run fail-closed on macOS.",
+      "context_for_other_clis": "This fix belongs to the macOS parity path for Codex setup. The local workspace had already been rebased onto the newer codex-setup state from origin/main, but the PowerShell validator still carried two macOS-specific blind spots that the older Bash path did not expose: relative .ps1 child-script invocations could fail as command-resolution errors without failing the validator, and the PowerShell self-improve installer still assumed a Windows-only USERPROFILE variable.",
+      "symptom_before_fix": "On macOS the PowerShell validation path printed errors such as The module codex-setup could not be loaded while still ending green, and the bootstrap path failed once it tried to install self-improve through PowerShell because Join-Path received a null USERPROFILE. That meant the setup looked validated even though the PowerShell parity path was not actually fail-closed.",
+      "root_cause": "The validator invoked some sibling .ps1 files via relative strings like codex-setup/scripts/... instead of absolute pwsh -File calls, so PowerShell on macOS treated those names as command lookups instead of stable file paths. At the same time install-self-improve.ps1 resolved its target directory only from USERPROFILE, which is empty in this macOS runtime although the real home directory is available through UserProfile APIs or HOME.",
+      "what_was_fixed": "validate-codex-setup.ps1 now runs PowerShell wrapper checks through a single absolute pwsh -File helper, and install-self-improve.ps1 resolves the user home directory through UserProfile/HOME fallback.",
+      "why_it_was_fixed": "The macOS host showed that PowerShell parity could look green while wrapper calls or installer path resolution were actually broken.",
+      "exact_error_text": "Exact symptom texts: PowerShell printed \"The module 'codex-setup' could not be loaded\" during validator self-tests, and install-self-improve.ps1 hit \"Cannot bind argument to parameter 'Path' because it is null.\"",
+      "root_cause_why_chain": "Why 1: the PowerShell validator did not fail when some wrapper scripts were not actually executed on macOS. Why 2: the script used path strings that were valid enough on Windows but ambiguous on macOS PowerShell command resolution, and it lacked a single checked helper for fail-closed wrapper execution. Why 3: the PowerShell side had not been hardened against cross-platform path semantics and home-directory resolution with the same rigor as the Bash side.",
+      "related_error_sources_checked": "Checked the same error class across bootstrap-codex-setup.ps1, bootstrap-report.ps1, the OpenAI-docs and code-search PowerShell wrappers, and the self-improve installer because they belong to the same PowerShell parity surface. Also rechecked both full validators and the direct PowerShell installer path on macOS after the fix.",
+      "wrong_pattern_example": "Wrong pattern: invoke sibling .ps1 files through relative command strings and derive ~/.codex paths only from USERPROFILE.",
+      "right_pattern_example": "Right pattern: launch sibling PowerShell scripts through explicit absolute pwsh -File calls and resolve the user home directory through platform-aware fallbacks.",
+      "avoidance_rule": "If a Codex PowerShell validator or bootstrapper launches sibling scripts or targets the user home directory, then always use absolute pwsh -File execution and a platform-aware home fallback instead of Windows-only assumptions.",
+      "resilience_summary": "The fix is defensive because it centralizes PowerShell wrapper execution behind one checked helper, fail-closed because wrapper launch errors now stop validation immediately, portable because home-directory resolution no longer depends on Windows-only USERPROFILE, and update-resistant because future PowerShell wrapper calls can reuse the same absolute-path invocation pattern.",
+      "fix_induced_failure_review": "Dependencies: PowerShell child-process launching, local wrapper scripts, and installer path resolution were reviewed together. Failure scenario: if a wrapper script is missing or exits non-zero, validation now stops loudly instead of drifting green. State changes: only the normal local self-improve deployment path is touched. Race conditions are negligible because the helper is synchronous. Backward compatibility remains because Windows PowerShell still accepts the absolute pwsh -File path. Platform effects improve because macOS now uses the same fail-closed path. Graceful degradation is preserved because failures abort validation before any false success is reported.",
+      "verification": "Verified by rerunning bash codex-setup/scripts/validate-codex-setup.sh, pwsh -NoProfile -File codex-setup/scripts/install-self-improve.ps1, and pwsh -NoProfile -File codex-setup/scripts/validate-codex-setup.ps1 on macOS after the changes. All three now complete successfully, and the earlier module-resolution / null-USERPROFILE failures no longer appear.",
+      "portability_notes": "Any CLI that validates sibling PowerShell scripts on macOS or Linux should launch them through explicit absolute pwsh -File calls and should resolve the user home directory through platform APIs plus HOME fallback instead of assuming USERPROFILE exists outside Windows.",
+      "impact": "The PowerShell parity path on macOS now fails only on real setup regressions instead of masking wrapper-launch and home-resolution bugs.",
+      "portable_to": [
+        "Cloud Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "codex-setup/scripts/validate-codex-setup.ps1",
+        "codex-setup/scripts/install-self-improve.ps1"
+      ],
+      "created_at": "2026-03-23T18:05:20.426Z",
+      "status": "active",
+      "updated_at": "2026-03-23T18:06:16.808Z"
     }
   ]
 }

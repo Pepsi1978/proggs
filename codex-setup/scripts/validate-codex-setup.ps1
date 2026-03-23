@@ -1,3 +1,6 @@
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = (Resolve-Path (Join-Path $ScriptDir "..\..")).Path
 Set-Location $RepoRoot
@@ -14,6 +17,24 @@ function Test-CodexMcpServer {
     }
 
     return (($output -join "`n") -match [regex]::Escape($Name))
+}
+
+function Invoke-CheckedPwshScript {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RelativePath,
+
+        [string[]]$Arguments = @(),
+
+        [Parameter(Mandatory = $true)]
+        [string]$FailureMessage
+    )
+
+    $ScriptPath = Join-Path $RepoRoot ($RelativePath -replace "/", "\")
+    & pwsh -NoProfile -File $ScriptPath @Arguments | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw $FailureMessage
+    }
 }
 
 $RequiredFiles = @(
@@ -791,7 +812,10 @@ Get-ChildItem "codex-setup/scripts" -Filter "*.ps1" | ForEach-Object {
     [void][scriptblock]::Create((Get-Content $_.FullName -Raw))
 }
 
-& "codex-setup\scripts\bootstrap-codex-setup.ps1" -SkipValidate | Out-Null
+Invoke-CheckedPwshScript `
+    -RelativePath "codex-setup/scripts/bootstrap-codex-setup.ps1" `
+    -Arguments @("-SkipValidate") `
+    -FailureMessage "PowerShell bootstrap script failed."
 
 $BootstrapReportJson = node "codex-setup/scripts/bootstrap-report.mjs" --json
 if ($LASTEXITCODE -ne 0) {
@@ -808,7 +832,10 @@ if (
 ) {
     throw "bootstrap-report.mjs must expose Codex, Cloud Code, and Gemini CLI address groups."
 }
-& "codex-setup\scripts\bootstrap-report.ps1" --cli Codex | Out-Null
+Invoke-CheckedPwshScript `
+    -RelativePath "codex-setup/scripts/bootstrap-report.ps1" `
+    -Arguments @("--cli", "Codex") `
+    -FailureMessage "PowerShell bootstrap report failed."
 
 $TempToken = (node (Join-Path $RepoRoot "codex-setup\scripts\whiteboard-bridge.mjs") directive-token --workspace $TempWorkspace | Select-Object -Last 1).Trim()
 node (Join-Path $RepoRoot "codex-setup\scripts\whiteboard-bridge.mjs") insert --workspace $TempWorkspace --directive-token $TempToken --section "Systemzustand" --entry "- **[2099-01-01 00:00] validator**: bridge mutation smoke test" | Out-Null
@@ -836,10 +863,9 @@ if ($TempMemoryAfterFailure -match "should fail") {
 Remove-Item -Recurse -Force $TempWorkspace -ErrorAction SilentlyContinue
 
 if (Test-CodexMcpServer "openaiDeveloperDocs") {
-    & pwsh -NoProfile -File "codex-setup\scripts\check-openai-docs-mcp.ps1" | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "openaiDeveloperDocs MCP smoke test failed."
-    }
+    Invoke-CheckedPwshScript `
+        -RelativePath "codex-setup/scripts/check-openai-docs-mcp.ps1" `
+        -FailureMessage "openaiDeveloperDocs MCP smoke test failed."
 } else {
     Write-Host "Skipping openaiDeveloperDocs MCP smoke test: server not configured in this Codex runtime."
 }
@@ -908,10 +934,10 @@ if ($TempSuggestions.entries[0].id -ne "validator-intelligence-suggestion") {
 }
 Remove-Item $TempSuggestionLedger -ErrorAction SilentlyContinue
 
-& pwsh -NoProfile -File "codex-setup\scripts\audit-claude-delta.ps1" --json | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    throw "Claude delta audit PowerShell wrapper failed."
-}
+Invoke-CheckedPwshScript `
+    -RelativePath "codex-setup/scripts/audit-claude-delta.ps1" `
+    -Arguments @("--json") `
+    -FailureMessage "Claude delta audit PowerShell wrapper failed."
 
 $GeminiAuditJson = node "codex-setup/scripts/audit-gemini-delta.mjs" --json
 if ($LASTEXITCODE -ne 0) {
@@ -944,10 +970,10 @@ if ($TempGeminiAudit.last_reviewed_commit -ne $GeminiAudit.latest_relevant_commi
 }
 Remove-Item $TempGeminiState -ErrorAction SilentlyContinue
 
-& pwsh -NoProfile -File "codex-setup\scripts\audit-gemini-delta.ps1" --json | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    throw "Gemini delta audit PowerShell wrapper failed."
-}
+Invoke-CheckedPwshScript `
+    -RelativePath "codex-setup/scripts/audit-gemini-delta.ps1" `
+    -Arguments @("--json") `
+    -FailureMessage "Gemini delta audit PowerShell wrapper failed."
 
 & node "codex-setup/scripts/check-code-search-mcp-client.mjs" | Out-Null
 if ($LASTEXITCODE -ne 0) {
@@ -955,15 +981,15 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if (Test-CodexMcpServer "code-search") {
-    & pwsh -NoProfile -File "codex-setup\scripts\code-search-mcp-client.ps1" tools | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "direct code-search MCP client failed."
-    }
+    Invoke-CheckedPwshScript `
+        -RelativePath "codex-setup/scripts/code-search-mcp-client.ps1" `
+        -Arguments @("tools") `
+        -FailureMessage "direct code-search MCP client failed."
 
-    & pwsh -NoProfile -File "codex-setup\scripts\check-code-search-health.ps1" --json | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "code-search MCP smoke test failed."
-    }
+    Invoke-CheckedPwshScript `
+        -RelativePath "codex-setup/scripts/check-code-search-health.ps1" `
+        -Arguments @("--json") `
+        -FailureMessage "code-search MCP smoke test failed."
 } else {
     Write-Host "Skipping code-search MCP runtime smoke tests: server not configured in this Codex runtime."
 }

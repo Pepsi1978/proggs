@@ -1,8 +1,18 @@
+$ErrorActionPreference = "Stop"
+
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = Resolve-Path (Join-Path $ScriptDir "..\..")
 $SourceDir = Join-Path $RepoRoot "codex-setup\skills\self-improve"
-$TargetDir = Join-Path $env:USERPROFILE ".codex\skills\self-improve"
-$CacheDir = Join-Path $env:USERPROFILE ".codex\self-improve-cache"
+$UserHome = [Environment]::GetFolderPath("UserProfile")
+if (-not $UserHome) {
+    $UserHome = $env:HOME
+}
+if (-not $UserHome) {
+    throw "install-self-improve.ps1 could not resolve the user home directory."
+}
+
+$TargetDir = Join-Path $UserHome ".codex\skills\self-improve"
+$CacheDir = Join-Path $UserHome ".codex\self-improve-cache"
 
 New-Item -ItemType Directory -Force -Path $TargetDir | Out-Null
 New-Item -ItemType Directory -Force -Path $CacheDir | Out-Null

@@ -198,6 +198,20 @@ _Noch keine Eintraege._
 
 - **[2026-03-23 12:15] self-improve**: pwsh -NoProfile -File .\\codex-setup\\scripts\\validate-codex-setup.ps1 und ash codex-setup/scripts/validate-codex-setup.sh laufen grün; check-code-search-mcp-client.mjs ist durch den reparierten TOML-Fallback wieder deterministisch. OpenAI-Docs- und code-search-Live-Smoketests werden sauber uebersprungen, wenn die Server lokal nicht registriert sind.
 
+- **[2026-03-23 19:04] self-improve**: Nach Rebase auf origin/main laufen bash codex-setup/scripts/bootstrap-codex-setup.sh, pwsh -NoProfile -File codex-setup/scripts/install-self-improve.ps1, bash codex-setup/scripts/validate-codex-setup.sh und pwsh -NoProfile -File codex-setup/scripts/validate-codex-setup.ps1 auf macOS gruen. Die neue Bootstrap-Report-Bruecke ist lokal nutzbar.
+
+- **[2026-03-23 19:04] self-improve**: Nach Rebase auf \ laufen \Codex bootstrap startet im Workspace /Users/frank/Codex
+[1/2] Installiere self-improve lokal nach ~/.codex/skills ...
+Installed Codex self-improve skill to /Users/frank/.codex/skills/self-improve
+[2/2] Validiere codex-setup ...
+codex-setup validation passed
+Bootstrap abgeschlossen.
+Naechste direkte Bruecken-Trigger:
+- Starte bitte die Bruecke zu Cloud Code
+- Starte bitte die Bruecke zu Gemini CLI
+Optionaler Gesamtueberblick:
+- bash codex-setup/scripts/bootstrap-report.sh, \Installed Codex self-improve skill to /Users/frank/.codex/skills/self-improve, \codex-setup validation passed und \codex-setup validation passed auf macOS grün. Die neue Bootstrap-Report-Bruecke ist lokal nutzbar.
+
 ## Architektur-Entscheidungen
 - **[2026-03-22 10:48] self-improve**: Die Whiteboard-Bruecke arbeitet jetzt fail-closed. Whiteboard-Aufloesung ist nur noch fuer das autoritative Workspace-Ziel `<workspace>/codex-setup/agent-memory/shared/MEMORY.md` erlaubt; Wrapper uebergeben dafuer explizit `--workspace`, und der Validator deckt CWD-Regressionsfaelle ab.
 
@@ -219,6 +233,28 @@ _Noch keine Eintraege._
 - **[2026-03-23 13:48] self-improve**: Frische Rechner sollen Codex-Setup jetzt ueber `codex-setup/scripts/bootstrap-codex-setup.{ps1,sh}` bootstrapen. Die Bootstrap-Adressen sind zusaetzlich in `codex-setup/bridges/bridge-registry.json`, den Delta-Bruecken und der Intelligence-Exchange-Bruecke dokumentiert, damit Cloud Code und Gemini CLI dieselbe Struktur spaeter read-only nachziehen koennen.
 
 - **[2026-03-23 14:00] self-improve**: `codex-setup/scripts/bootstrap-report.{mjs,ps1,sh}` liefert jetzt einen registry-getriebenen Gesamtueberblick ueber Bootstrap-, Ledger- und Bridge-Adressen fuer Codex, Cloud Code und Gemini CLI. Der Report liest seine Struktur aus `bridge-registry.json` und den bestehenden Bridge-JSONs statt neue Adressinseln aufzubauen.
+
+- **[2026-03-23 19:04] self-improve**: validate-codex-setup.ps1 startet PowerShell-Untertests jetzt fail-closed ueber absolute pwsh -File-Aufrufe, und install-self-improve.ps1 leitet sein Zielverzeichnis plattformtauglich ueber UserProfile/HOME ab. Damit werden macOS-Pfad- und Home-Aufloesungen nicht mehr stillschweigend als gruen fehlinterpretiert.
+
+- **[2026-03-23 19:04] self-improve**: \ startet PowerShell-Untertests jetzt fail-closed ueber absolute \
+Usage: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+                  [-Command { - | <script-block> [-args <arg-array>]
+                                | <string> [<CommandParameters>] } ]
+                  [-CommandWithArgs <string> [<CommandParameters>]
+                  [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+                  [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+                  [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+                  [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+                  [-NoProfileLoadTime] [-OutputFormat {Text | XML}]
+                  [-SettingsFile <filePath>] [-SSHServerMode] [-STA]
+                  [-Version] [-WindowStyle <style>]
+                  [-WorkingDirectory <directoryPath>]
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.-Aufrufe, und \ leitet sein Zielverzeichnis plattformtauglich ueber UserProfile/HOME ab. Damit werden macOS-Pfad- und Home-Aufloesungen nicht mehr stillschweigend als grün fehlinterpretiert.
 
 ## Debugging-Muster
 - **[2026-03-23 13:53] self-improve**: In PowerShell-Skripten muss `param(...)` das erste ausführbare Statement bleiben. Wenn vorher bereits `$ErrorActionPreference` oder anderer Code steht, wird `param` beim Script-Aufruf als normaler Befehl interpretiert und der Bootstrap bricht sofort ab.
