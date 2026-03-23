@@ -23,6 +23,7 @@ Folgende Tools sind auf diesem Windows-System installiert und verifiziert:
 - **Node.js**: v24.14.0
 - **npm**: 11.12.0
 - **Git**: 2.53.0.windows.2
-- **PowerShell**: 7.4.x (PowerShell Core)
+- **PowerShell (pwsh)**: 7.6.0 (installiert)
+- **PowerShell (Standard)**: 5.1 (aktuelle Session)
 
 *Hinweis: Docker und VS Code konnten nicht über die Standard-CLI-Befehle im aktuellen Pfad gefunden werden.*
