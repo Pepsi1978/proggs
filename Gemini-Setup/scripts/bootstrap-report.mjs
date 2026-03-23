@@ -19,7 +19,7 @@ function buildReport() {
     source_cli: "Gemini CLI",
     registry_path: BRIDGE_REGISTRY_REPO_PATH,
     self: registry.self_registration["Gemini CLI"],
-    ledgers: registry.ledgers,
+    ledgers: registry.ledger_addresses || registry.ledgers,
     bridges: {
       codex_delta: codexContext
     }
@@ -40,8 +40,8 @@ function main() {
     console.log(`Lokal: ${report.self.local_path}`);
     console.log(`Status: ${report.self.status}`);
     console.log("\n--- Ledgers ---");
-    console.log(`Environment Fixes: ${report.ledgers.environment_fixes}`);
-    console.log(`Intelligence Suggestions: ${report.ledgers.implemented_intelligence_suggestions}`);
+    console.log(`Gemini Fixes: ${report.ledgers.gemini_fixes}`);
+    console.log(`Gemini Suggestions: ${report.ledgers.gemini_suggestions}`);
     console.log("\n--- Active Bridges ---");
     console.log(`Bridge: codex-delta`);
     console.log(`  Quelle: ${report.bridges.codex_delta.sourceLabel}`);

@@ -52,6 +52,9 @@ for file in "${required_files[@]}"; do
   fi
 done
 
+echo "[5/6] Führe AGENTS.md Konsistenz-Check aus..."
+node Gemini-Setup/scripts/sync-agents-rules.mjs
+
 if [[ $missing -eq 0 ]]; then
   echo "---"
   echo "🚀 Alle Gemini-Setup-Komponenten sind vorhanden."

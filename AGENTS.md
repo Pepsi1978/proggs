@@ -1,3 +1,9 @@
+# Workspace Orchestration Instructions
+
+Diese Datei enthält die zentralen Anweisungen für alle AI-Agents in diesem Repository.
+
+---
+
 # Codex Workspace Instructions
 
 - Read `<workspace>/codex-setup/agent-memory/shared/MEMORY.md` before system-level or setup-level work.
@@ -12,14 +18,10 @@
 - Keep directive 3 operational instead of cosmetic: do 3x `Warum?`, inspect the same error class, same component, and same dependency surfaces, require a self-healing defensive fix, run the full 8-point fix-induced-failure review before commit, prefer defense in depth, and persist the lesson in `codex-setup/state/environment-fixes.json`.
 - Keep the `Oberste Direktive` active while working, not just at the start: even during normal coding tasks, continuously check whether the work reveals a reusable improvement, a new safeguard, a speedup, or an intelligence gain for future sessions.
 - Treat every good fix as a candidate to eliminate an entire class of future problems instead of only solving the local symptom once.
-<<<<<<< HEAD
 - Preserve Direktive 1 in at least two places that survive different failure modes: the repo whiteboard under `<workspace>/codex-setup/agent-memory/shared/MEMORY.md` and the deployed local self-improve skill under `~/.codex/skills/self-improve/`. If either mirror drifts, restore it.
 - Preserve Direktive 2 in those same two places so self-observation survives both repo drift and local runtime drift.
 - Preserve Direktive 3 in those same two places so resilient bugfixing survives both repo drift and local runtime drift.
-- Cross-tool learning is part of the directive: Cloud Code, Codex CLI, and Gemini CLI may read each other's environment improvements through read-only bridges, but Codex still writes only in its own workspace after explicit approval where required.
-=======
 - Cross-tool learning is part of the directive: Claude Code, Codex CLI, and Gemini CLI may read each other's environment improvements through read-only bridges, but Codex still writes only in its own workspace after explicit approval where required.
->>>>>>> 1ea48d5 (feat(gemini): complete system hardening, bridges, whiteboard and git-rebase policy)
 - Treat `<workspace>/codex-setup/agent-memory/shared/MEMORY.md` as the only operational whiteboard for Codex in this workspace.
 - Never use `proggs`, `claude-code-setup/`, `~/.claude/...`, or Claude whiteboards as Codex memory or control paths.
 - `claude-code-setup/`, `CLAUDE.md`, and `claude-code-setup/agent-memory/shared/MEMORY.md` may be read only as comparison sources when the task is explicitly about Claude/Claude Code setup deltas or environment fixes; they are never Codex control files.
@@ -45,3 +47,18 @@
 - If an MCP tool call says `unknown MCP server` but `codex mcp list` shows that server as enabled, treat it as a stale runtime/session MCP registry mismatch rather than a bad config, say so explicitly, and recommend a fresh Codex restart or fresh `codex exec` smoke test.
 - Always use the OpenAI developer documentation MCP server if you need to work with the OpenAI API, ChatGPT Apps SDK, Codex, or related docs without me having to explicitly ask.
 - Prefer `openaiDeveloperDocs` for official OpenAI documentation and `code-search` for local codebase exploration.
+
+---
+
+# Gemini CLI Instructions
+
+- **Sprache:** Kommuniziere AUSSCHLIESSLICH auf DEUTSCH.
+- **Wahrheit:** Das einzige operative Whiteboard ist `Gemini-Setup/agent-memory/shared/MEMORY.md`. Lies die `## Oberste Direktive` vor jeder systemischen Aufgabe.
+- **Direktiven:** Gemini folgt drei Haupt-Direktiven:
+    1. **Superintelligenz:** Exponentielles Wachstum durch Compound Effect.
+    2. **Selbstbeobachtung:** Wer arbeitet, beobachtet sich selbst (💡 Vorschläge am Ende).
+    3. **Resilient Bugfixing:** Ein Fehler wird genau EINMAL gemacht. 8-Punkte Fix-Induced-Failure Prüfung ist PFLICHT.
+- **Brücken:** Nutze `audit-codex-delta.mjs` und `audit-claude-delta.mjs` für Cross-Tool-Lernen.
+- **Git:** Autonome Pushes sind NUR für `Gemini-Setup/` erlaubt (nach obligatorischem Rebase). Für alle anderen Verzeichnisse ist eine explizite Benutzeranweisung PFLICHT.
+- **Validierung:** Nutze `validate-gemini-setup.sh` und `check-code-search-health.mjs` zur Systemprüfung.
+- **Orchestrierung:** Nutze `Gemini-Setup/bridges/bridge-registry.json` als Map für alle Brücken und Ledger.

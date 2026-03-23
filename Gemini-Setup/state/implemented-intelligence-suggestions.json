@@ -1,20 +1,14 @@
 {
-<<<<<<< HEAD
 	"version": 1,
 	"source_cli": "Gemini CLI",
 	"description": "Log of implemented intelligence suggestions in the Gemini CLI programming environment. Other CLIs may read this file to learn from implemented improvements.",
-	"entries": []
-=======
-  "version": 1,
-  "cli": "Gemini CLI",
-  "suggestions": [
-    {
-      "id": "init-mac-setup",
-      "title": "macOS Initialisierung",
-      "status": "GEFIXT",
-      "date": "2026-03-23",
-      "details": "Alle hartkodierten Pfade von Windows auf macOS korrigiert."
-    }
-  ]
->>>>>>> 1ea48d5 (feat(gemini): complete system hardening, bridges, whiteboard and git-rebase policy)
+	"entries": [
+		{
+			"id": "init-mac-setup",
+			"title": "macOS Initialisierung",
+			"status": "GEFIXT",
+			"date": "2026-03-23",
+			"details": "Alle hartkodierten Pfade von Windows auf macOS korrigiert."
+		}
+	]
 }

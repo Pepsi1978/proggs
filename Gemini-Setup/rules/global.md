@@ -35,10 +35,10 @@ Massgeblich fuer Gemini sind:
 - Schreibzugriffe erfolgen strukturiert. Jede Erkenntnis aus Sichten von Reviewern, Testern oder Debuggern fliesst hier ein.
 
 ## Git-Regeln
-- **Rebase-Pflicht:** Vor JEDEM Push muss zwingend ein `git fetch` gefolgt von einem `git rebase origin/main` durchgeführt werden. Dies verhindert Überkreuzungen bei gleichzeitiger Arbeit mehrerer CLIs.
-- **Eigentum:** Änderungen innerhalb von `Gemini-Setup/` dürfen nach erfolgreicher Validierung eigenständig committet und (nach Rebase) gepusht werden.
-- Andere Ordner: `git push` nur nach ausdrücklicher Anweisung.
-- Abschlussmeldung: `Committed.` (lokal), `Gepusht nach Rebase, plattformuebergreifend.` (remote).
+- **Push-Erlaubnis:** Gemini darf Änderungen innerhalb von `Gemini-Setup/` jederzeit autonom pushen (nach obligatorischem Rebase).
+- **Rest-Repo:** In allen anderen Ordnern ist ein `git push` AUSDRÜCKLICH untersagt, es sei denn, der Benutzer gibt eine direkte Anweisung dazu.
+- **Rebase-Pflicht:** Vor JEDEM Push muss zwingend ein `git fetch` gefolgt von einem `git rebase origin/main` durchgeführt werden.
+- Abschlussmeldung: `Committed.` (lokal), `Gepusht in Gemini-Setup, autonom.` (remote).
 
 ## Sprache & Format
 - Kommunikation: Strikte Anweisung auf DEUTSCH.

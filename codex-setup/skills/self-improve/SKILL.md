@@ -13,13 +13,8 @@ Primary objective:
 - treat all other improvements as supporting work toward that top-level goal
 - maximize the compounding intelligence gain from session to session
 - prefer improvements that increase long-term leverage, not just local convenience
-<<<<<<< HEAD
 - use self-observation as directive 2 under the `## Oberste Direktive`: every process, automation, and action must observe itself while working
-- absorb useful Claude/Cloud Code setup improvements without losing Codex-specific strengths
-=======
-- use self-observation as the second directive under the `## Oberste Direktive`
 - absorb useful Claude/Claude Code setup improvements without losing Codex-specific strengths
->>>>>>> 1ea48d5 (feat(gemini): complete system hardening, bridges, whiteboard and git-rebase policy)
 - grow all 8 intelligence dimensions together: breadth, depth, speed, quality, autonomy, foresight, creativity, and meta-intelligence
 
 Mission:
@@ -49,14 +44,10 @@ Hard rules:
 - The only authoritative whiteboard is `<workspace>/codex-setup/agent-memory/shared/MEMORY.md`.
 - The Git source-of-truth for this skill is `<workspace>/codex-setup/skills/self-improve/`.
 - The local deployment target is `~/.codex/skills/self-improve/`.
-<<<<<<< HEAD
 - Direktive 1 must remain mirrored in both the repo whiteboard and the deployed local self-improve skill so it survives both repo churn and local runtime drift.
 - Direktive 2 must remain mirrored in those same two places so self-observation survives both repo drift and local runtime drift.
 - Direktive 3 must remain mirrored in those same two places so resilient bugfixing survives both repo drift and local runtime drift.
-- `claude-code-setup/` and `CLAUDE.md` are read-only comparison sources when the task is explicitly about Claude or Cloud Code deltas.
-=======
 - `claude-code-setup/` and `CLAUDE.md` are read-only comparison sources when the task is explicitly about Claude or Claude Code deltas.
->>>>>>> 1ea48d5 (feat(gemini): complete system hardening, bridges, whiteboard and git-rebase policy)
 - Never write, delete, or reorganize files inside Claude comparison sources from this skill.
 - `Gemini-Setup/` and the typical local Gemini workspace `%USERPROFILE%\GeminiCLI` are read-only comparison sources for Codex. Never write or delete there from this skill.
 - If a Claude delta would replace existing Codex rule text or Codex setup behavior, warn first and require explicit approval before replacing it.
@@ -310,7 +301,7 @@ After each implemented intelligence suggestion:
 
 Use [references/report-and-creative.md](references/report-and-creative.md).
 
-Minimum deliverables:
+Deliverables:
 - 1 artifact or concrete implementation
 - 3 action proposals in plain German
 - 3 simple intelligence opportunities that the user can approve immediately

@@ -8,6 +8,14 @@
 		"foreign_sources_read_only": true,
 		"implemented_intelligence_must_be_resilient": true
 	},
+	"self_registration": {
+		"Gemini CLI": {
+			"repo_path": "Gemini-Setup/bridges/bridge-registry.json",
+			"local_path": "/Users/frank/GeminiCLI/Gemini-Setup/bridges/bridge-registry.json",
+			"write_policy": "read-write-own-workspace",
+			"status": "active"
+		}
+	},
 	"bridges": {
 		"claude-code-delta": {
 			"spec": "Gemini-Setup/bridges/claude-code-delta-bridge.md",

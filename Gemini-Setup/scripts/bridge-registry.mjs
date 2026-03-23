@@ -37,9 +37,16 @@ export function loadBridgeContext(bridgeId) {
     throw new Error(`Unknown bridge id: ${bridgeId}`);
   }
 
-  const jsonFile = bridgeEntry.bridge_files.find(f => f.endsWith(".json"));
+  // Schema-Verschmelzung: Unterstütze sowohl 'bridge_files' als auch 'spec'/'state'
+  const bridgeFiles = bridgeEntry.bridge_files || [
+    bridgeEntry.spec,
+    bridgeEntry.state,
+    ...(bridgeEntry.sources || [])
+  ].filter(Boolean);
+
+  const jsonFile = bridgeFiles.find(f => f && f.endsWith(".json"));
   if (!jsonFile) {
-    throw new Error(`Bridge entry for ${bridgeId} is missing a .json file in bridge_files.`);
+    throw new Error(`Bridge entry for ${bridgeId} is missing a .json file.`);
   }
   const bridgeJsonPath = resolveRepoPath(jsonFile);
   const bridgeJson = readJson(bridgeJsonPath, {});
@@ -48,10 +55,10 @@ export function loadBridgeContext(bridgeId) {
     registry,
     bridgeEntry,
     bridgeJson,
-    bridgeFiles: bridgeEntry.bridge_files || [],
-    statePath: resolveRepoPath(bridgeEntry.state_file || bridgeJson.state_file),
+    bridgeFiles,
+    statePath: resolveRepoPath(bridgeEntry.state || bridgeJson.state_file),
     sourceLabel: bridgeEntry.source_label || bridgeJson.source_label || bridgeId,
-    sourcePaths: bridgeEntry.source_paths || bridgeJson.tracked_paths || [],
+    sourcePaths: bridgeEntry.sources || bridgeEntry.source_paths || bridgeJson.tracked_paths || [],
     triggerPhrases: bridgeEntry.trigger_phrases || bridgeJson.trigger_phrases || []
   };
 }
