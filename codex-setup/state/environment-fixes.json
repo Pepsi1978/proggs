@@ -578,6 +578,39 @@
       ],
       "created_at": "2026-03-23T22:33:27.959Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-23-code-search-startup-guard-stale-runtime-rebind",
+      "source_cli": "Codex",
+      "category": "search-runtime",
+      "summary": "code-search now rebinds a stale cached store when the active snapshot changes",
+      "context_for_other_clis": "This fix affects the local Codex code-search MCP server during future sessions. A long-lived runtime can keep an open SQLite connection even after the active snapshot has moved or the loaded store has become stale, so the server needs an explicit guard before serving search requests.",
+      "symptom_before_fix": "A previously started code-search runtime could keep serving an old open store after the active pointer changed or the underlying DB path no longer matched the live snapshot, even though fresh sessions and the health check were already correct.",
+      "root_cause": "The MCP server cached the VectorStore across requests and relied on candidate order alone. That was sufficient for fresh startup paths, but a stale runtime could still hold a connection that should be discarded before the next query.",
+      "what_was_fixed": "stale cached store guard",
+      "why_it_was_fixed": "make future sessions self-heal when the runtime and active snapshot drift apart",
+      "exact_error_text": "A long-lived code-search process could continue serving a cached store whose database path no longer matched the active snapshot, so a fresh rebinding step was needed before queries.",
+      "root_cause_why_chain": "Why 1: the server cached the open SQLite store between requests. Why 2: candidate order alone does not force a stale live connection to be dropped unless the runtime explicitly checks for drift. Why 3: without an explicit guard, a future session can keep serving the wrong store even though the on-disk snapshot has already advanced.",
+      "related_error_sources_checked": "Checked the same drift surface in search_code, search_status, cached store reuse, and the active-snapshot resolver because all of them can observe the same runtime-vs-snapshot mismatch.",
+      "wrong_pattern_example": "Wrong pattern: trust a cached DB connection forever once it has opened successfully.",
+      "right_pattern_example": "Right pattern: compare the cached path against the current active snapshot before each query and drop the connection when they diverge.",
+      "avoidance_rule": "If a code-search runtime caches a DB connection, then always compare it against the current active snapshot and reopen on mismatch before serving requests.",
+      "resilience_summary": "The fix is defensive because it drops stale connections before use, update-resilient because the guard runs whenever a request reaches the server, extensible because the same check can protect new query paths, documented in the ledger, and damage-free because it only changes store selection.",
+      "fix_induced_failure_review": "Dependencies: the cached VectorStore, the active snapshot resolver, and the request handlers were reviewed together. Failure scenario: if the guard itself fails, the server still falls back to the normal open-on-demand path. State changes: the fix only closes and reopens the store. Race conditions: low, but the guard runs before each request so drift is corrected early. Backward compatibility: healthy fresh sessions behave the same. Platform effects: the guard is platform-neutral. Update resistance: future snapshot switches and future long-lived sessions are both covered. Graceful degradation: if the preferred snapshot cannot be resolved, the server can still fall back to the best available database.",
+      "verification": "Verified by code review plus fresh health and smoke runs after the cached-store guard was added; the active snapshot is still reported as index-17.db and the code-search smoke query returns a real semantic hit.",
+      "portability_notes": "Any other CLI that keeps a cached search index open across requests should compare the cached path against the current active snapshot before reuse and close stale handles proactively.",
+      "impact": "Long-lived code-search runtimes now self-heal stale connections instead of serving them indefinitely.",
+      "portable_to": [
+        "Cloud Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "mcp-code-search/src/index.ts",
+        "mcp-code-search/src/db-state.ts",
+        "mcp-code-search/README.md"
+      ],
+      "created_at": "2026-03-23T22:48:09.160Z",
+      "status": "active"
     }
   ]
 }

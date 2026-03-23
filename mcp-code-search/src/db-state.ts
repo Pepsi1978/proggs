@@ -82,6 +82,15 @@ export function listDbCandidates(dbDir: string): DbCandidate[] {
 }
 
 /**
+ * Resolve the active database path that should be used right now.
+ * Returns the best known snapshot path or null if no usable index exists.
+ */
+export function resolvePreferredDbPath(dbDir: string): string | null {
+	const candidates = listDbCandidates(dbDir);
+	return candidates[0]?.path ?? null;
+}
+
+/**
  * Read the reindex state from the .code-search directory.
  * Returns null if no state file exists.
  */

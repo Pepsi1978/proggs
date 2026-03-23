@@ -196,7 +196,7 @@ Alle acht Dimensionen muessen wachsen. Schnell schlechter Code ist nicht intelli
 **Betroffene Dateien:** mcp-code-search/src/*, .code-search/current.txt, .code-search/state.json
 **Reproduktion:** `bash codex-setup/scripts/check-code-search-health.sh --json`
 **Fix-Vorschlag:** mcp-code-search soll den aktiven Snapshot ueber dieselbe DB-State-Quelle lesen wie der lokale Reindex-Zeiger.
-**Status:** OFFEN
+**Status:** GEFIXT (2026-03-23)
 
 
 ### 2026-03-23 — Quelle: [mcp-code-search] — Aktiver Snapshot gewinnt vor Legacy-DB

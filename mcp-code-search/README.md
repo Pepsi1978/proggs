@@ -48,6 +48,7 @@ Damit die Indexierung bei jedem `codex`-Start automatisch im Hintergrund gepruef
 - inkrementelles Reindexing: nur geaenderte, neue oder geloeschte Dateien werden im Index ersetzt
 - bestehende Indexdaten fuer unveraenderte Dateien bleiben erhalten und werden nicht neu eingebettet
 - atomarer Pointer-Swap ueber `current.txt`: der aktive Snapshot bleibt waehrend jedes Reindex aktiv, und `search_code`/`search_status` lesen zuerst diesen Pointer
+- Startup-Guard gegen stale Runtimes: ein bereits offener Store wird neu gebunden, wenn `current.txt` inzwischen auf einen anderen Snapshot zeigt oder der geladene Pfad nicht mehr aktiv ist
 - `state.json`: speichert den zuletzt erfolgreich aktivierten Index inklusive Zeitstempel und Modus
 - `scripts/codex-auto-reindex.sh`: startet den Reindex-Check asynchron fuer das aktuelle Workspace-Root
 - `~/.local/bin/codex`: triggert dieses Skript automatisch vor dem eigentlichen Codex-Start

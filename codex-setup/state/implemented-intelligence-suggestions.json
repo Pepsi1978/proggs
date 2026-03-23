@@ -199,6 +199,31 @@
       ],
       "created_at": "2026-03-23T14:00:21.951Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-23-code-search-startup-guard-stale-runtime-rebind",
+      "source_cli": "Codex",
+      "summary": "Code-search runtimes now rebind stale cached stores before serving queries.",
+      "proposal_text": "💡 Intelligenz-Vorschlag: Der Code-search-Server kann sich bei einer alten Verbindung noch selbst korrigieren — Ich baue einen Startup-Guard ein, der den gecachten Store gegen den aktiven Snapshot prueft und bei Mismatch automatisch neu bindet. Soll ich das umsetzen?",
+      "context_for_other_clis": "This improvement applies to the local Codex semantic search runtime. Fresh sessions were already picking the right active snapshot, but a long-lived runtime could still keep a cached store around, so the server should explicitly rebind stale handles before serving requests.",
+      "why_it_was_suggested": "The earlier fix made the candidate order correct, but a future session can still benefit from an explicit runtime guard that catches stale cached connections instead of relying only on initial selection.",
+      "why_it_was_implemented": "The user approved the guard, and Codex should persist the improvement so later sessions can reuse the same self-healing behavior without rediscovering the stale-runtime edge case.",
+      "how_it_was_implemented": "The MCP server now compares the cached VectorStore path against the current preferred snapshot path before serving a request and closes the store when the live runtime has drifted from the active snapshot.",
+      "bridge_value": "Other CLIs can copy the pattern for any cached search or index runtime that serves long-lived requests over a snapshot file.",
+      "adoption_guidance": "If another CLI keeps a cached database handle, it should compare that handle against the current active snapshot and reopen on mismatch instead of trusting the initial startup path forever.",
+      "resilience_summary": "The improvement is durable because it is not just a documentation note: the runtime guard now rebinds stale handles, survives future snapshot changes, and reduces the chance that an old session silently serves the wrong index.",
+      "future_failure_review": "Dependencies: the cached store, the active snapshot resolver, and the query handlers must stay aligned. Failure scenario: if the guard cannot resolve a preferred snapshot, the server still falls back to the next usable store. State change: the guard only closes and reopens an index connection. Race conditions: low, because the guard runs immediately before request handling. Backward compatibility: fresh sessions keep the same behavior. Platform effects: none beyond the same DB runtime on macOS and Windows. Update resistance: the guard continues to work after future snapshot swaps. Graceful degradation: a missing preferred snapshot still allows a best-effort fallback.",
+      "portable_to": [
+        "Cloud Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "mcp-code-search/src/index.ts",
+        "mcp-code-search/src/db-state.ts",
+        "mcp-code-search/README.md"
+      ],
+      "created_at": "2026-03-23T22:48:09.159Z",
+      "status": "active"
     }
   ]
 }

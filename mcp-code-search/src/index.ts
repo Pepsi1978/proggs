@@ -10,7 +10,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-import { ensureDbDir, listDbCandidates, readReindexState } from "./db-state.js";
+import {
+	ensureDbDir,
+	listDbCandidates,
+	readReindexState,
+	resolvePreferredDbPath,
+} from "./db-state.js";
 import { checkOllama, generateEmbedding } from "./ollama.js";
 import { reindexCodebase } from "./reindex-core.js";
 import { VectorStore } from "./store.js";
@@ -38,9 +43,27 @@ function closeCachedStore(): void {
 	currentDbPath = null;
 }
 
+function ensureCachedStoreMatchesActiveSnapshot(rootDir: string): void {
+	const dbDir = join(rootDir, ".code-search");
+	ensureDbDir(dbDir);
+
+	const preferredDbPath = resolvePreferredDbPath(dbDir);
+	if (!store || !currentDbPath) {
+		return;
+	}
+
+	if (!preferredDbPath || currentDbPath !== preferredDbPath) {
+		console.warn(
+			`code-search: stale store detected (${currentDbPath}); reloading active snapshot ${preferredDbPath ?? "none"}`,
+		);
+		closeCachedStore();
+	}
+}
+
 function getStore(rootDir: string): VectorStore {
 	const dbDir = join(rootDir, ".code-search");
 	ensureDbDir(dbDir);
+	ensureCachedStoreMatchesActiveSnapshot(rootDir);
 
 	let lastError: unknown = null;
 
