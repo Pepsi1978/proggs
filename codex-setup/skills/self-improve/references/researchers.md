@@ -19,6 +19,7 @@ Use fresh research whenever:
 - `~/.codex/config.toml` changed
 - local skill files changed
 - MCP registrations changed
+- Claude/Cloud Code setup was changed and Codex may need a new delta pass
 
 ## R1 — Codex and OpenAI Updates
 
@@ -109,4 +110,28 @@ Find approaches that make this Codex setup fundamentally smarter:
 
 Return at least 5 findings, prioritized by immediacy.
 Treat this as the top-level mission of the whole skill, not as a side activity.
+```
+
+## R9 — Claude Delta Monitor
+
+Prompt skeleton:
+```text
+Review recent changes in CLAUDE.md and claude-code-setup that affect setup, rules,
+skills, hooks, agents, validation, or programming environment only.
+Classify each candidate for Codex as ADD, ADAPT, or REPLACE.
+If a candidate would replace existing Codex rule text or behavior, mark it approval-required.
+Prefer additive Codex integration when both old and new logic are useful.
+```
+
+## R10 — Environment Fix Exchange
+
+Prompt skeleton:
+```text
+Review environment-level fixes already logged for this CLI.
+Check whether the fixes clearly explain:
+- what was fixed
+- why it was fixed
+- which other CLI environments could benefit
+
+Return only gaps, duplicates, or export improvements.
 ```

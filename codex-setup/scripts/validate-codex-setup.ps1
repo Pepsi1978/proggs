@@ -2,10 +2,33 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = (Resolve-Path (Join-Path $ScriptDir "..\..")).Path
 Set-Location $RepoRoot
 
+function Test-CodexMcpServer {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    $output = & codex mcp list 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        return $false
+    }
+
+    return (($output -join "`n") -match [regex]::Escape($Name))
+}
+
 $RequiredFiles = @(
     "AGENTS.md",
     "codex-setup\rules\global.md",
+    "codex-setup\rules\self-observation.md",
+    "codex-setup\rules\german-trigger-routing.md",
+    "codex-setup\rules\claude-delta-sync.md",
     "codex-setup\agent-memory\shared\MEMORY.md",
+    "codex-setup\state\claude-delta-state.json",
+    "codex-setup\state\environment-fixes.json",
+    "codex-setup\bridges\cloud-code-delta-bridge.md",
+    "codex-setup\bridges\cloud-code-delta-bridge.json",
+    "codex-setup\bridges\environment-fix-exchange-bridge.md",
+    "codex-setup\bridges\environment-fix-exchange-bridge.json",
     "codex-setup\scripts\whiteboard-bridge.mjs",
     "codex-setup\scripts\whiteboard-insert.sh",
     "codex-setup\scripts\whiteboard-insert.ps1",
@@ -23,6 +46,13 @@ $RequiredFiles = @(
     "codex-setup\scripts\check-code-search-health.mjs",
     "codex-setup\scripts\check-code-search-health.sh",
     "codex-setup\scripts\check-code-search-health.ps1",
+    "codex-setup\scripts\audit-claude-delta.mjs",
+    "codex-setup\scripts\audit-claude-delta.sh",
+    "codex-setup\scripts\audit-claude-delta.ps1",
+    "codex-setup\scripts\register-environment-fix.mjs",
+    "codex-setup\scripts\register-environment-fix.sh",
+    "codex-setup\scripts\register-environment-fix.ps1",
+    "codex-setup\skills\self-improve\references\claude-delta-sync.md",
     "codex-setup\skills\self-improve\SKILL.md"
 )
 
@@ -94,8 +124,12 @@ $DirectiveFiles = @(
     "AGENTS.md",
     "codex-setup\README.md",
     "codex-setup\rules\global.md",
+    "codex-setup\rules\self-observation.md",
+    "codex-setup\rules\german-trigger-routing.md",
+    "codex-setup\rules\claude-delta-sync.md",
     "codex-setup\agent-memory\shared\MEMORY.md",
     "codex-setup\skills\self-improve\SKILL.md",
+    "codex-setup\skills\self-improve\references\claude-delta-sync.md",
     "codex-setup\skills\self-improve\references\report-and-creative.md",
     "codex-setup\skills\self-improve\references\whiteboard-bridge.md",
     "codex-setup\skills\self-improve\references\workspace-scan.md"
@@ -109,6 +143,10 @@ foreach ($file in $DirectiveFiles) {
 
 if ((Get-Content "AGENTS.md" -Raw) -notmatch "OpenAI developer documentation MCP server") {
     throw "AGENTS.md must instruct Codex to use the OpenAI Docs MCP server."
+}
+
+if ((Get-Content "AGENTS.md" -Raw) -notmatch "GeminiCLI") {
+    throw "AGENTS.md must mark Gemini comparison paths as read-only."
 }
 
 if ((Get-Content "AGENTS.md" -Raw) -notmatch [regex]::Escape('automatically create a focused commit and push it to `origin/main`')) {
@@ -157,6 +195,80 @@ if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "neue Tools, Plug
 
 if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "semantischer Suche, Indexierung, Hintergrund-Reindex") {
     throw "global.md must route semantic-search questions through the code-search healthcheck."
+}
+
+if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "Read-Only Fremd-Workspaces") {
+    throw "global.md must document read-only foreign workspaces."
+}
+
+if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "GeminiCLI") {
+    throw "global.md must mark Gemini comparison paths as read-only."
+}
+
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "audit-claude-delta.mjs") {
+    throw "README.md must document the Claude delta audit."
+}
+
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "cloud-code-delta-bridge") {
+    throw "README.md must document the reusable Cloud Code bridge."
+}
+
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "environment-fixes.json") {
+    throw "README.md must document the environment-fix ledger."
+}
+
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "register-environment-fix.mjs") {
+    throw "README.md must document the environment-fix registration script."
+}
+
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "GeminiCLI") {
+    throw "README.md must mark Gemini comparison paths as read-only."
+}
+
+$ClaudeDeltaState = Get-Content "codex-setup\state\claude-delta-state.json" -Raw | ConvertFrom-Json
+if ($ClaudeDeltaState.scope -ne "claude-environment-only") {
+    throw "claude-delta-state.json must track only Claude environment deltas."
+}
+if (-not $ClaudeDeltaState.replace_requires_confirmation) {
+    throw "claude-delta-state.json must require approval for replacements."
+}
+if ($ClaudeDeltaState.tracked_paths -notcontains "CLAUDE.md") {
+    throw "claude-delta-state.json must track CLAUDE.md."
+}
+
+$EnvironmentFixes = Get-Content "codex-setup\state\environment-fixes.json" -Raw | ConvertFrom-Json
+if ($EnvironmentFixes.scope -ne "programming-environment-only") {
+    throw "environment-fixes.json must track programming-environment fixes only."
+}
+if ($EnvironmentFixes.entries.Count -lt 1) {
+    throw "environment-fixes.json must contain at least one fix entry."
+}
+foreach ($entry in $EnvironmentFixes.entries) {
+    if ([string]::IsNullOrWhiteSpace($entry.id) -or [string]::IsNullOrWhiteSpace($entry.what_was_fixed) -or [string]::IsNullOrWhiteSpace($entry.why_it_was_fixed)) {
+        throw "environment-fixes.json contains an invalid fix entry."
+    }
+}
+
+$CloudCodeBridge = Get-Content "codex-setup\bridges\cloud-code-delta-bridge.json" -Raw | ConvertFrom-Json
+if ($CloudCodeBridge.source_label -ne "Cloud Code") {
+    throw "cloud-code-delta-bridge.json must identify Cloud Code as the source label."
+}
+if (-not $CloudCodeBridge.replacement_requires_confirmation) {
+    throw "cloud-code-delta-bridge.json must require approval for replacements."
+}
+if ($CloudCodeBridge.trigger_phrases.Count -lt 3) {
+    throw "cloud-code-delta-bridge.json must define multiple trigger phrases."
+}
+
+$EnvironmentFixBridge = Get-Content "codex-setup\bridges\environment-fix-exchange-bridge.json" -Raw | ConvertFrom-Json
+if ($EnvironmentFixBridge.source_label -ne "CLI Environment Fixes") {
+    throw "environment-fix-exchange-bridge.json must describe CLI environment fixes."
+}
+if ($EnvironmentFixBridge.scope -ne "programming-environment-only") {
+    throw "environment-fix-exchange-bridge.json must stay environment-only."
+}
+if ($EnvironmentFixBridge.trigger_phrases.Count -lt 3) {
+    throw "environment-fix-exchange-bridge.json must define multiple trigger phrases."
 }
 
 Get-ChildItem "codex-setup\skills\self-improve\references\agents" -Filter "*.md" | ForEach-Object {
@@ -209,9 +321,49 @@ if ($TempMemoryAfterFailure -match "should fail") {
 
 Remove-Item -Recurse -Force $TempWorkspace -ErrorAction SilentlyContinue
 
-& pwsh -NoProfile -File "codex-setup\scripts\check-openai-docs-mcp.ps1" | Out-Null
+if (Test-CodexMcpServer "openaiDeveloperDocs") {
+    & pwsh -NoProfile -File "codex-setup\scripts\check-openai-docs-mcp.ps1" | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "openaiDeveloperDocs MCP smoke test failed."
+    }
+} else {
+    Write-Host "Skipping openaiDeveloperDocs MCP smoke test: server not configured in this Codex runtime."
+}
+
+$ClaudeAuditJson = node "codex-setup/scripts/audit-claude-delta.mjs" --json
 if ($LASTEXITCODE -ne 0) {
-    throw "openaiDeveloperDocs MCP smoke test failed."
+    throw "Claude delta audit failed."
+}
+$ClaudeAudit = ($ClaudeAuditJson -join "`n") | ConvertFrom-Json
+if (-not $ClaudeAudit.latest_relevant_commit) {
+    throw "Claude delta audit did not report a latest relevant commit."
+}
+
+$TempAuditState = Join-Path ([System.IO.Path]::GetTempPath()) ("claude-delta-state-" + [guid]::NewGuid().ToString() + ".json")
+node "codex-setup/scripts/audit-claude-delta.mjs" mark-reviewed --state $TempAuditState --commit $ClaudeAudit.latest_relevant_commit | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "Claude delta audit could not write a temporary reviewed state."
+}
+$TempAudit = Get-Content $TempAuditState -Raw | ConvertFrom-Json
+if ($TempAudit.last_reviewed_commit -ne $ClaudeAudit.latest_relevant_commit) {
+    throw "Claude delta audit stored the wrong reviewed commit."
+}
+Remove-Item $TempAuditState -ErrorAction SilentlyContinue
+
+$TempFixLedger = Join-Path ([System.IO.Path]::GetTempPath()) ("environment-fixes-" + [guid]::NewGuid().ToString() + ".json")
+node "codex-setup/scripts/register-environment-fix.mjs" add --state $TempFixLedger --id "validator-temp-fix" --category "validator" --summary "temporary validator entry" --what "temporary write path" --why "prove the environment-fix ledger writer works" | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "Environment-fix registration script could not write a temporary entry."
+}
+$TempFixes = Get-Content $TempFixLedger -Raw | ConvertFrom-Json
+if ($TempFixes.entries[0].id -ne "validator-temp-fix") {
+    throw "Environment-fix registration stored the wrong entry."
+}
+Remove-Item $TempFixLedger -ErrorAction SilentlyContinue
+
+& pwsh -NoProfile -File "codex-setup\scripts\audit-claude-delta.ps1" --json | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "Claude delta audit PowerShell wrapper failed."
 }
 
 & node "codex-setup/scripts/check-code-search-mcp-client.mjs" | Out-Null
@@ -219,14 +371,18 @@ if ($LASTEXITCODE -ne 0) {
     throw "direct code-search MCP client self-test failed."
 }
 
-& pwsh -NoProfile -File "codex-setup\scripts\code-search-mcp-client.ps1" tools | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    throw "direct code-search MCP client failed."
-}
+if (Test-CodexMcpServer "code-search") {
+    & pwsh -NoProfile -File "codex-setup\scripts\code-search-mcp-client.ps1" tools | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "direct code-search MCP client failed."
+    }
 
-& pwsh -NoProfile -File "codex-setup\scripts\check-code-search-health.ps1" --json | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    throw "code-search MCP smoke test failed."
+    & pwsh -NoProfile -File "codex-setup\scripts\check-code-search-health.ps1" --json | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "code-search MCP smoke test failed."
+    }
+} else {
+    Write-Host "Skipping code-search MCP runtime smoke tests: server not configured in this Codex runtime."
 }
 
 Write-Host "codex-setup validation passed"

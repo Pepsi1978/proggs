@@ -2,9 +2,14 @@
 
 - Read `/Users/frank/Codex/codex-setup/agent-memory/shared/MEMORY.md` before system-level or setup-level work.
 - Read `## Oberste Direktive` first and align your work to it before changing code, config, automation, MCP wiring, or memory.
+- Treat Codex self-observation as the second directive under `## Oberste Direktive`: observe errors, detours, speed losses, user corrections, and reusable improvements while working, then turn them into end-of-session intelligence proposals or safeguards.
 - Keep the `Oberste Direktive` active while working, not just at the start: even during normal coding tasks, continuously check whether the work reveals a reusable improvement, a new safeguard, a speedup, or an intelligence gain for future sessions.
 - Treat `/Users/frank/Codex/codex-setup/agent-memory/shared/MEMORY.md` as the only operational whiteboard for Codex in this workspace.
 - Never use `proggs`, `claude-code-setup/`, `~/.claude/...`, or Claude whiteboards as Codex memory or control paths.
+- `claude-code-setup/` and `CLAUDE.md` may be read only as comparison sources when the task is explicitly about Claude/Cloud Code setup deltas; they are never Codex control files.
+- `Gemini-Setup/` in this repository and the local Gemini workspace `C:\Users\barwa\GeminiCLI` are strictly read-only for Codex. They may be inspected for comparison, but Codex must never write, delete, or use them as operational Codex control paths.
+- When the user asks about Cloud Code or Claude Code rules, setup, hooks, skills, or programming-environment changes, run `codex-setup/scripts/audit-claude-delta.*` first and use it as the primary comparison path.
+- If the Claude-delta audit indicates a real replacement of an existing Codex rule, prompt, or setup behavior, warn first and get explicit approval before replacing text or behavior. If the semantics differ but both ideas are useful, prefer an additive Codex rule instead of overwriting the old one.
 - When writing Codex findings to the whiteboard, use `codex-setup/scripts/whiteboard-insert.*` or `codex-setup/scripts/writeback-enforcer.*`; do not append directly to `MEMORY.md`.
 - For validated `codex-setup/` changes, automatically create a focused commit and push it to `origin/main` without waiting for another user prompt.
 - If a `codex-setup/` sync also needs `AGENTS.md` or `.github/workflows/codex-setup-validate.yml`, include those files in the same Codex-setup sync commit.

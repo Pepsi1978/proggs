@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "bridge_name": "cloud-code-delta",
+  "source_label": "Cloud Code",
+  "source_resolved_as": "Claude Code",
+  "language": "de",
+  "tracked_paths": [
+    "CLAUDE.md",
+    "claude-code-setup/**"
+  ],
+  "target_scope": "setup-and-programming-environment-only",
+  "include_fixed_errors": true,
+  "include_bugfix_logic": true,
+  "read_only_sources": [
+    "CLAUDE.md",
+    "claude-code-setup/**"
+  ],
+  "classifications": [
+    "ADD",
+    "ADAPT",
+    "REPLACE"
+  ],
+  "replacement_requires_confirmation": true,
+  "additive_bias": true,
+  "report_groups": [
+    {
+      "code": "A",
+      "title": "Regeln und Prompts"
+    },
+    {
+      "code": "B",
+      "title": "Agenten, Skills und Arbeitsprozesse"
+    },
+    {
+      "code": "C",
+      "title": "Skripte, Hooks und Validierung"
+    },
+    {
+      "code": "D",
+      "title": "Runtime und Konfiguration"
+    }
+  ],
+  "trigger_phrases": [
+    "hol dir die neuesten Informationen von Cloud Code",
+    "was wurde bei Cloud Code erneuert",
+    "welche Verbesserungen gibt es bei Cloud Code",
+    "welche Regeln sind dort neuer",
+    "welche Agenten oder Arbeitsprozesse sind dort neuer",
+    "welche Fehler wurden bei Cloud Code gefixt",
+    "welche robuste Fixlogik gibt es bei Cloud Code",
+    "was davon ist fuer Codex sinnvoll",
+    "schau im Codex Setup Ordner nach dieser Bruecke",
+    "baue diese Bruecke auch fuer Gemini CLI"
+  ],
+  "reference_implementation": [
+    "codex-setup/scripts/audit-claude-delta.mjs",
+    "codex-setup/scripts/audit-claude-delta.sh",
+    "codex-setup/scripts/audit-claude-delta.ps1"
+  ],
+  "state_file": "codex-setup/state/claude-delta-state.json"
+}

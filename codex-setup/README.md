@@ -20,11 +20,24 @@ Wichtigste Trennung:
 - `codex-setup/` ist fuer Codex die massgebliche Regel-, Skill- und Whiteboard-Basis.
 - `claude-code-setup/` ist Projektinhalt, aber keine Regelquelle fuer Codex.
 - Das Whiteboard von Claude/proggs darf von Codex nicht als operative Wissensquelle genutzt werden.
+- `Gemini-Setup/` im Repo und der lokale Workspace `C:\Users\barwa\GeminiCLI` sind fuer Codex reine Lesequellen. Codex darf dort nichts schreiben und nichts loeschen.
 
 ## Struktur
 
 - `rules/global.md`
   Globale, plattformuebergreifende Codex-Regeln.
+
+- `rules/self-observation.md`
+  Die zweite Codex-Systemdirektive. Macht Selbstbeobachtung fuer Codex,
+  Fehlerlernen und Intelligenzvorschlaege explizit und dauerhaft.
+
+- `rules/german-trigger-routing.md`
+  Deutsches Trigger- und Routing-Regelwerk fuer Codex-Setup-, Skill- und
+  Claude-Delta-Anfragen.
+
+- `rules/claude-delta-sync.md`
+  Regelwerk fuer den sicheren Transfer von sinnvollen Claude/Cloud-Code-
+  Umgebungsverbesserungen nach Codex, inklusive Warnpflicht vor Ersetzungen.
 
 - `agent-memory/shared/MEMORY.md`
   Das eigene Codex-Whiteboard. Nur dieses Whiteboard ist fuer Codex autoritativ.
@@ -32,7 +45,15 @@ Wichtigste Trennung:
 
 - `scripts/`
   Plattformuebergreifende Hilfsskripte fuer Whiteboard-Resolver, Whiteboard-Insert, Sentinel-Merge,
-  Skill-Installation, Validierung und `code-search`-Healthchecks.
+  Skill-Installation, Validierung, `code-search`-Healthchecks und Claude-Delta-Audits.
+
+- `bridges/`
+  Wiederverwendbare Bruecken-Spezifikationen fuer andere CLI-Umgebungen.
+  Hier liegen die generische Cloud-Code-Delta-Bruecke und die Environment-Fix-Exchange-Bruecke als Referenz fuer weitere Setups.
+
+- `state/environment-fixes.json`
+  Maschinenlesbares Log fuer Codex-Fixes an Regeln, Runtime, Validierung, MCP-Nutzung und Setup.
+  Es dokumentiert immer `was` und `warum`, damit andere CLI-Umgebungen diese Fixes read-only uebernehmen koennen.
 
 - `skills/self-improve/`
   Der Codex-spezifische Self-Improve-Skill fuer diesen Workspace, inklusive Referenzen,
@@ -49,6 +70,10 @@ Whiteboard-Regeln:
 - `~/proggs/.../MEMORY.md` ist fuer Claude Code reserviert und fuer Codex tabu.
 - Angebundene Skills, Agenten, Researcher, MCP-auswertende Workflows und Hilfsskripte sollen vor ihrer eigentlichen Arbeit
   zuerst die Whiteboard-Sektion `## Oberste Direktive` mitlesen und ihr folgen.
+- Unterhalb der `## Oberste Direktive` gilt fuer Codex zusaetzlich die zweite Direktive
+  `self-observation`: Codex soll waehrend der Arbeit seine eigenen Fehler, Umwege,
+  Geschwindigkeitsverluste und Benutzerkorrekturen beobachten und daraus Schutzmassnahmen
+  oder Intelligenzvorschlaege fuer kuenftige Sessions ableiten.
 - Whiteboard-Schreibzugriffe laufen sektionsbasiert ueber `codex-setup/scripts/whiteboard-insert.*`
   oder `codex-setup/scripts/writeback-enforcer.*`.
 - Agents/Researcher schreiben Sentinel-JSON-Dateien; die Merge-Logik fuehrt sie in das Codex-Whiteboard zusammen.
@@ -63,6 +88,54 @@ Installation:
 - macOS/Linux: `bash codex-setup/scripts/install-self-improve.sh`
 - Windows: `pwsh -File codex-setup/scripts/install-self-improve.ps1`
 
+## Claude-Delta-Audit
+
+Wenn Claude/Cloud Code neue Regeln, Hooks, Skills, robuste Fehlerfixes oder Setup-Verbesserungen bekommt,
+nutzt Codex dafuer einen plattformuebergreifenden Delta-Audit:
+
+- macOS/Linux: `bash codex-setup/scripts/audit-claude-delta.sh`
+- Windows: `pwsh -NoProfile -File codex-setup/scripts/audit-claude-delta.ps1`
+- direkt: `node codex-setup/scripts/audit-claude-delta.mjs`
+
+Der Audit betrachtet absichtlich nur Programmierumgebung und Setup:
+
+- `CLAUDE.md`
+- `claude-code-setup/**`
+
+Dabei sind auch umgebungsbezogene Fehlerfixes, Guardrails und Haertungslogik in Scope,
+solange sie nicht normalen Projektcode betreffen.
+
+Er ignoriert Projektcode und klassifiziert Port-Kandidaten als:
+
+- `ADD`: neue, additive Codex-Idee
+- `ADAPT`: sinnvoll, aber fuer Codex zu uebersetzen
+- `REPLACE`: potenzielle Ersetzung bestehender Codex-Regeln oder -Verhaltensweisen
+
+Fuer `REPLACE` gilt: erst warnen, dann ausdruecklich bestaetigen lassen.
+Wenn zwei Regeln nicht identisch sind, aber beide nuetzlich wirken, ist ein additiver Codex-Port dem Ueberschreiben vorzuziehen.
+
+Die generische Bruecken-Spezifikation fuer andere CLI-Umgebungen liegt zusaetzlich unter:
+
+- `codex-setup/bridges/cloud-code-delta-bridge.md`
+- `codex-setup/bridges/cloud-code-delta-bridge.json`
+
+## Environment-Fix-Log
+
+Wenn Codex einen Fehler in seiner eigenen Programmierumgebung fixt, soll dieser Fix zusaetzlich als
+maschinenlesbarer Eintrag dokumentiert werden:
+
+- Datei: `codex-setup/state/environment-fixes.json`
+- Schreiben: `node codex-setup/scripts/register-environment-fix.mjs add ...`
+- Wrapper: `register-environment-fix.sh` und `register-environment-fix.ps1`
+
+Dieses Log ist nur fuer Umwelt-/Setup-Fixes gedacht, nicht fuer normalen Projektcode.
+Es soll anderen CLI-Umgebungen wie Cloud Code oder Gemini CLI ermoeglichen, von Codex-Fixes zu lernen.
+
+Die generische Bruecken-Spezifikation dafuer liegt unter:
+
+- `codex-setup/bridges/environment-fix-exchange-bridge.md`
+- `codex-setup/bridges/environment-fix-exchange-bridge.json`
+
 ## Git-Regel fuer diesen Ordner
 
 - `codex-setup/` ist der einzige Ordner im Repository, den Codex nach erfolgreicher lokaler Validierung eigenstaendig committen und nach `origin/main` pushen soll.
@@ -76,6 +149,7 @@ Der Ordner ist so ausgelegt, dass er separat auf GitHub geprueft werden kann:
 - eigene Whiteboard-Datei
 - eigene Skills und Agenten
 - eigene Bruecken- und Validierungsskripte
+- eigener Claude-Delta-Audit fuer umgebungsbezogene Port-Kandidaten
 
 ## OpenAI-Docs-MCP-Check
 

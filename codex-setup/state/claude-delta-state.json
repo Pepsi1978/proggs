@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "scope": "claude-environment-only",
+  "tracked_paths": [
+    "CLAUDE.md",
+    "claude-code-setup/**"
+  ],
+  "replace_requires_confirmation": true,
+  "additive_bias": true,
+  "last_reviewed_commit": "b0b5021f00488719ffdfda9a406590acac5bf04c",
+  "last_applied_commit": "b0b5021f00488719ffdfda9a406590acac5bf04c",
+  "last_reviewed_at": "2026-03-23T11:14:44.259Z",
+  "last_applied_at": "2026-03-23T11:14:44.259Z",
+  "notes": "Bootstrapped after the first Codex-side Claude delta sync. Tracks only setup and programming-environment deltas."
+}

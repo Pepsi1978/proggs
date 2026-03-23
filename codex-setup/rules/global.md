@@ -15,6 +15,9 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
 - Fuer Codex ist `codex-setup/` die einzige synchronisierte Regel- und Skill-Basis in diesem Repository.
 - Innerhalb von `codex-setup/` sind fuer Codex besonders massgeblich:
   - `codex-setup/rules/global.md`
+  - `codex-setup/rules/self-observation.md`
+  - `codex-setup/rules/german-trigger-routing.md`
+  - `codex-setup/rules/claude-delta-sync.md`
   - `codex-setup/agent-memory/shared/MEMORY.md`
   - `codex-setup/skills/self-improve/`
   - `codex-setup/scripts/`
@@ -57,6 +60,9 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
   von Session zu Session zu steigern.
 - Die Zielrichtung ist nicht nur lineare Verbesserung, sondern moeglichst kumulative und exponentielle Hebelwirkung.
 - Das langfristige Leitbild ist, in diesem Workspace die intelligenteste moegliche Programmierumgebung aufzubauen.
+- Direktive Nummer 2 unterhalb dieser `Oberste Direktive` ist Codex-Selbstbeobachtung:
+  Codex soll waehrend der Arbeit seine eigenen Fehler, Umwege, Benutzerkorrekturen und Zeitverluste aktiv beobachten
+  und daraus am Ende der Session Schutzmassnahmen, Regelideen oder Intelligenzvorschlaege ableiten.
 - Wenn Zielkonflikte bestehen, haben Verbesserungen an Denken, Verifikation, Gedaechtnis, MCP-Nutzung, Skills,
   Whiteboard-Kopplung und Arbeitsablaeufen Vorrang vor kosmetischen oder kurzfristigen Optimierungen.
 - Jede Session soll mindestens einen klaren Intelligenzhebel benennen, moeglichst leicht erklaert und direkt freigabefaehig.
@@ -70,8 +76,32 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
 
 - Codex ignoriert `claude-code-setup/` grundsaetzlich.
 - Codex nutzt daraus keine Regeln, Hooks, Settings, MCP-Konfigurationen oder Workflow-Vorgaben.
-- Eine Ausnahme gilt nur dann, wenn der Benutzer ausdruecklich eine Aufgabe an genau diesem Ordner verlangt. Dann ist er Projektinhalt, nicht Regelquelle.
+- Eine Ausnahme gilt nur dann, wenn der Benutzer ausdruecklich eine Aufgabe an genau diesem Ordner verlangt oder wenn Codex einen expliziten Claude-/Cloud-Code-Delta-Audit fuer die Programmierumgebung ausfuehrt. Dann ist er Vergleichsquelle oder Projektinhalt, nicht direkte Regelquelle.
 - Gleiches gilt fuer `.claude/agent-memory/shared/MEMORY.md`: Projektinhalt oder Legacy-Artefakt, aber kein Codex-Whiteboard.
+
+## Read-Only Fremd-Workspaces
+
+- `Gemini-Setup/` in diesem Repository ist fuer Codex read-only.
+- Der lokale Workspace `C:\Users\barwa\GeminiCLI` ist fuer Codex ebenfalls read-only.
+- Codex darf dort lesen, aber niemals schreiben, loeschen oder diese Pfade als operative Codex-Steuerpfade benutzen.
+
+## Claude-/Cloud-Code-Delta-Sync
+
+- Wenn der Benutzer nach neueren Regeln, Hooks, Skills, Agenten, Fehlerfixes oder Setup-Ideen aus Claude Code fragt, soll Codex zuerst `codex-setup/scripts/audit-claude-delta.*` ausfuehren.
+- Dieser Audit betrachtet nur Programmierumgebung und Setup, nicht normalen Projektcode.
+- Port-Kandidaten sollen als `ADD`, `ADAPT` oder `REPLACE` klassifiziert werden.
+- Umgebungsbezogene Fehlerfixes und Haertungslogik aus Claude Code sollen dabei ebenfalls als uebernehmbare Port-Kandidaten sichtbar gemacht werden.
+- `REPLACE` bedeutet: bestehende Codex-Regel, Prompt-Logik oder Setup-Verhalten wuerde ganz oder teilweise ersetzt werden. Dafuer ist vor der Umsetzung eine ausdrueckliche Benutzerfreigabe noetig.
+- Wenn eine Claude-Idee nicht identisch zu einer bestehenden Codex-Regel ist, aber dennoch nuetzlich wirkt, soll Codex additive Integration bevorzugen statt alte Intelligenz wegzuschreiben.
+- Die deutsche Triggerbasis fuer solche Faelle lebt in `codex-setup/rules/german-trigger-routing.md`.
+
+## Codex-Umgebungsfix-Log
+
+- Wenn Codex einen Fehler in seiner eigenen Programmierumgebung, Validierung, MCP-Nutzung, Skill-Logik, Runtime-Helfern oder Regelbasis fixt, soll Codex diesen Fix zusaetzlich in `codex-setup/state/environment-fixes.json` dokumentieren.
+- Jeder solche Eintrag muss mindestens enthalten: was gefixt wurde, warum es gefixt wurde und welche Artefakte betroffen sind.
+- Zum Schreiben soll Codex `codex-setup/scripts/register-environment-fix.*` verwenden.
+- Dieses Log ist nur fuer Umwelt- und Setup-Fixes gedacht, nicht fuer Projektcode oder App-Features.
+- Andere CLI-Umgebungen duerfen dieses Log read-only lesen, damit Cloud Code, Gemini CLI oder spaetere CLIs von Codex-Fixes lernen koennen.
 
 ## Codex Skills und Agents
 
@@ -99,6 +129,9 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
 - Zu Beginn jeder Codex-Session soll zuerst diese Regelbasis gelesen werden.
 - Fuer systemische Aufgaben soll danach das Codex-Whiteboard gelesen werden, beginnend mit `## Oberste Direktive`.
 - Die `Oberste Direktive` gilt nicht nur beim Start, sondern waehrend der gesamten Arbeit: auch bei normalen Programmieraufgaben soll Codex laufend mitpruefen, ob sich aus der aktuellen Arbeit ein wiederverwendbarer Schutz, ein Geschwindigkeitsgewinn, ein Workflow-Upgrade oder ein sonstiger Intelligenzgewinn fuer kuenftige Sessions ableiten laesst.
+- Wenn der Benutzer Cloud Code oder Claude Code sagt und es um Regeln, Setup, Hooks, Skills, Agents, Fehlerfixes oder Programmierumgebung geht, soll Codex den Claude-Delta-Audit ausfuehren und die Ergebnisse erst dann portieren.
+- Wenn der Claude-Delta-Audit echte Ersetzungen bestehender Codex-Regeln oder Codex-Setup-Texte anzeigt, soll Codex vor dem Ueberschreiben warnen und eine kurze Freigabe einholen. Additive Erweiterungen duerfen bevorzugt vorgeschlagen werden.
+- Wenn der Benutzer wissen will, welche Umwelt-Fixes Codex bereits hat oder was andere CLIs von Codex lernen koennen, soll Codex `codex-setup/state/environment-fixes.json` bzw. `register-environment-fix.*` benutzen.
 - Wenn der Benutzer nach semantischer Suche, Indexierung, Hintergrund-Reindex oder `code-search`-Status fragt, soll Codex bevorzugt `codex-setup/scripts/check-code-search-health.*` ausfuehren statt den Zustand nur aus Erinnerung oder Einzelabfragen abzuleiten.
 - Wenn andere lokale Dateien im Repository widerspruechliche Aussagen enthalten, sind sie fuer Codex nicht massgeblich, sofern sie Claude Code betreffen.
 - Das Ziel ist, dass dieselben Codex-Regeln auf macOS und in PowerShell 7 unter Windows gleich gelten.

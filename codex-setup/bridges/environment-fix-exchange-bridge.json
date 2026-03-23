@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "bridge_name": "environment-fix-exchange",
+  "source_label": "CLI Environment Fixes",
+  "language": "de",
+  "scope": "programming-environment-only",
+  "entry_schema": [
+    "id",
+    "source_cli",
+    "category",
+    "summary",
+    "what_was_fixed",
+    "why_it_was_fixed",
+    "portable_to",
+    "artifacts",
+    "created_at",
+    "status"
+  ],
+  "write_scope": [
+    "own setup folder only"
+  ],
+  "read_only_consumers": [
+    "Cloud Code",
+    "Gemini CLI",
+    "other CLI environments"
+  ],
+  "trigger_phrases": [
+    "logge diesen Umgebungsfix",
+    "welche Fehler hast du in deiner Umgebung gefixt",
+    "warum hast du diesen Umgebungsfehler gefixt",
+    "was kann Cloud Code von deinen Fixes lernen",
+    "was kann Gemini CLI von deinen Fixes lernen"
+  ],
+  "reference_implementation": [
+    "codex-setup/state/environment-fixes.json",
+    "codex-setup/scripts/register-environment-fix.mjs",
+    "codex-setup/scripts/register-environment-fix.sh",
+    "codex-setup/scripts/register-environment-fix.ps1"
+  ]
+}

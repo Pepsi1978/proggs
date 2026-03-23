@@ -91,6 +91,7 @@ function run(command, args, options = {}) {
 	const result = spawnSync(command, args, {
 		encoding: "utf8",
 		maxBuffer: 4 * 1024 * 1024,
+		shell: process.platform === "win32" && /\.(cmd|bat)$/i.test(command),
 		...options,
 	});
 
@@ -99,6 +100,52 @@ function run(command, args, options = {}) {
 	}
 
 	return result;
+}
+
+function resolveCodexCommand() {
+	const candidates = [];
+
+	if (process.env.CODEX_CLI_BIN) {
+		candidates.push(process.env.CODEX_CLI_BIN);
+	}
+	if (process.env.CODEX_BIN) {
+		candidates.push(process.env.CODEX_BIN);
+	}
+
+	if (process.platform === "win32" && process.env.APPDATA) {
+		candidates.push(join(process.env.APPDATA, "npm", "codex.cmd"));
+		candidates.push(join(process.env.APPDATA, "npm", "codex.exe"));
+		candidates.push(join(process.env.APPDATA, "npm", "codex.ps1"));
+	}
+
+	candidates.push("codex");
+
+	for (const candidate of candidates) {
+		if (!candidate) continue;
+		if (candidate === "codex") continue;
+		if (existsSync(candidate)) {
+			return candidate;
+		}
+	}
+
+	if (process.platform === "win32") {
+		const whereResult = spawnSync("where.exe", ["codex"], {
+			encoding: "utf8",
+			maxBuffer: 1024 * 1024,
+		});
+		if (whereResult.status === 0) {
+			const resolved = whereResult.stdout
+				.replace(/\r/g, "")
+				.split("\n")
+				.map((line) => line.trim())
+				.find(Boolean);
+			if (resolved) {
+				return resolved;
+			}
+		}
+	}
+
+	return "codex";
 }
 
 function sleep(ms) {
@@ -149,7 +196,7 @@ async function checkDocsGuideReachable() {
 }
 
 function checkMcpConfig() {
-	const result = run("codex", ["mcp", "get", "openaiDeveloperDocs"]);
+	const result = run(CODEX_COMMAND, ["mcp", "get", "openaiDeveloperDocs"]);
 	if (result.status !== 0) {
 		fail(
 			"Failed to inspect openaiDeveloperDocs MCP configuration.",
@@ -184,7 +231,7 @@ function runCodexAttempt(repoRoot, options, attempt) {
 
 	try {
 		const startedAt = Date.now();
-		const result = run("codex", args, {
+		const result = run(CODEX_COMMAND, args, {
 			timeout: options.timeoutMs,
 			killSignal: "SIGKILL",
 		});
@@ -268,6 +315,7 @@ function printFailure(report, attemptResults) {
 const options = parseArgs(process.argv.slice(2));
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(join(scriptDir, "..", ".."));
+const CODEX_COMMAND = resolveCodexCommand();
 
 checkMcpConfig();
 await checkDocsGuideReachable();

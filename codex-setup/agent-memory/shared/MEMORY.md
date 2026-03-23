@@ -103,6 +103,8 @@ Validierung, Automationsskripte und sonstige koordinierende Dateien in `codex-se
 
 - **[2026-03-22 11:54] self-improve**: Fuer schnelle QuizVerse-Android-Starts auf macOS gilt jetzt der feste Emulator-Pfad `/opt/homebrew/share/android-commandlinetools/emulator/emulator`, `adb` liegt unter `/opt/homebrew/share/android-commandlinetools/platform-tools/adb`, das SDK unter `/Users/frank/Library/Android/sdk`, das Projekt unter `/Users/frank/Codex/QuizVerse`, und der bevorzugte AVD ist `Pixel7_API35`.
 
+- **[2026-03-23 12:15] self-improve**: Codex hat jetzt self-observation als zweite Direktive, eine wiederverwendbare Cloud Code-Bruecke in codex-setup/bridges/ und einen Claude-Delta-Audit fuer Regeln, Agenten, Prozesse, Setup-Verbesserungen sowie umgebungsbezogene Fehlerfixes.
+
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -128,6 +130,8 @@ _Noch keine Eintraege._
 
 - **[2026-03-22 19:09] self-improve**: Der OpenAI-Docs-MCP-Smoke-Test laeuft jetzt mit hartem 30-Sekunden-Timeout pro `codex exec`-Versuch und genau einem frischen Retry. In der Realprobe ist Versuch 1 sauber per Timeout abgebrochen und Versuch 2 danach erfolgreich mit `AVAILABLE` durchgelaufen; Bash- und PowerShell-Validierung fuer codex-setup bleiben grün.
 
+- **[2026-03-23 12:15] self-improve**: pwsh -NoProfile -File .\\codex-setup\\scripts\\validate-codex-setup.ps1 und ash codex-setup/scripts/validate-codex-setup.sh laufen grün; check-code-search-mcp-client.mjs ist durch den reparierten TOML-Fallback wieder deterministisch. OpenAI-Docs- und code-search-Live-Smoketests werden sauber uebersprungen, wenn die Server lokal nicht registriert sind.
+
 ## Architektur-Entscheidungen
 - **[2026-03-22 10:48] self-improve**: Die Whiteboard-Bruecke arbeitet jetzt fail-closed. Whiteboard-Aufloesung ist nur noch fuer das autoritative Workspace-Ziel `<workspace>/codex-setup/agent-memory/shared/MEMORY.md` erlaubt; Wrapper uebergeben dafuer explizit `--workspace`, und der Validator deckt CWD-Regressionsfaelle ab.
 
@@ -141,6 +145,8 @@ _Noch keine Eintraege._
 - **[2026-03-22 18:44] self-improve**: Der direkte code-search-MCP-Client liest seine Konfiguration jetzt bevorzugt ueber Python tomllib und faellt nur noch notfalls auf einen lokalen Minimalparser zurueck. Dadurch funktionieren quoted code-search-Sectionnamen, env/cwd-Werte und alternative Config-Pfade robuster; der Healthcheck normalisiert zusaetzlich DB-Pfade plattformuebergreifend fuer macOS und Windows.
 
 - **[2026-03-22 19:09] self-improve**: Der OpenAI-Docs-MCP-Check nutzt jetzt einen gemeinsamen Node-Kern in `codex-setup/scripts/check-openai-docs-mcp.mjs`, waehrend `.sh` und `.ps1` nur noch Wrapper sind. Fuer einen Freigabe- und Validierungspfad wird ein ueberzogenes Timeout bewusst abgebrochen statt im Hintergrund weiterlaufen gelassen; danach folgt hoechstens ein frischer zweiter Versuch, damit das Ergebnis deterministisch und trotzdem fehlertolerant bleibt.
+
+- **[2026-03-23 12:15] self-improve**: Der Cloud-Code-Transfer folgt jetzt strikt ADD / ADAPT / REPLACE; REPLACE braucht Freigabe, additive Integration bleibt Standard und lokale MCP-Live-Smoketests in der Validatorik laufen nur noch bei wirklich registrierten Servern.
 
 ## Debugging-Muster
 _Noch keine Eintraege._
@@ -181,3 +187,7 @@ _Noch keine Eintraege._
 **[2026-03-22 12:29] self-improve**: Wenn in einer Session ein echter Fehler, Mismatch oder blinder Fleck sichtbar wird, den Codex selbst absichern kann, soll Codex ihn moeglichst noch in derselben Session dauerhaft absichern. Falls das nicht sofort sicher moeglich ist, muss vor Abschluss mindestens ein expliziter `Intelligenzvorschlag` dazu genannt werden.
 
 **[2026-03-22 12:31] self-improve**: Die `Oberste Direktive` soll nicht nur zu Beginn gelesen, sondern waehrend der gesamten Arbeit aktiv mitgefuehrt werden. Auch normale Programmieraufgaben muessen laufend darauf abgeglichen werden, ob sie einen wiederverwendbaren Schutz, einen Geschwindigkeitsgewinn oder einen sonstigen Intelligenzgewinn fuer kuenftige Sessions sichtbar machen.
+
+- **[2026-03-23 12:15] self-improve**: claude-code-setup/, CLAUDE.md, Gemini-Setup/ und C:\Users\barwa\GeminiCLI sind fuer Codex nur read-only Vergleichsquellen. Cloud-Code-Fragen zu Regeln, Agenten, Arbeitsprozessen, Setup oder gefixten Umgebungsfehlern sollen zuerst ueber codex-setup/scripts/audit-claude-delta.* laufen und deutsch im Schema A1/B1/C1/D1 berichtet werden.
+
+- **[2026-03-23 12:21] self-improve**: Umwelt-Fixes von Codex werden zusaetzlich in codex-setup/state/environment-fixes.json mit was und warum protokolliert. Andere CLIs duerfen dieses Log read-only lesen, damit Fehlerfixes zwischen Codex, Cloud Code und spaeter Gemini CLI austauschbar werden.

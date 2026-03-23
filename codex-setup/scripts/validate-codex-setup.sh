@@ -31,10 +31,32 @@ else
   }
 fi
 
+normalize_native_path() {
+  node -e "let value=(process.argv[1]||'').replace(/\\\\/g,'/'); value=value.replace(/^([A-Za-z]):/, (_,drive)=>'/' + drive.toLowerCase()); console.log(value);" "$1"
+}
+
+has_mcp_server() {
+  local name="$1"
+  local output
+  if ! output="$(codex mcp list 2>&1)"; then
+    return 1
+  fi
+  grep -F -- "$name" <<<"$output" >/dev/null
+}
+
 required_files=(
   "AGENTS.md"
   "codex-setup/rules/global.md"
+  "codex-setup/rules/self-observation.md"
+  "codex-setup/rules/german-trigger-routing.md"
+  "codex-setup/rules/claude-delta-sync.md"
   "codex-setup/agent-memory/shared/MEMORY.md"
+  "codex-setup/state/claude-delta-state.json"
+  "codex-setup/state/environment-fixes.json"
+  "codex-setup/bridges/cloud-code-delta-bridge.md"
+  "codex-setup/bridges/cloud-code-delta-bridge.json"
+  "codex-setup/bridges/environment-fix-exchange-bridge.md"
+  "codex-setup/bridges/environment-fix-exchange-bridge.json"
   "codex-setup/scripts/whiteboard-bridge.mjs"
   "codex-setup/scripts/whiteboard-insert.sh"
   "codex-setup/scripts/whiteboard-insert.ps1"
@@ -52,6 +74,13 @@ required_files=(
   "codex-setup/scripts/check-code-search-health.mjs"
   "codex-setup/scripts/check-code-search-health.sh"
   "codex-setup/scripts/check-code-search-health.ps1"
+  "codex-setup/scripts/audit-claude-delta.mjs"
+  "codex-setup/scripts/audit-claude-delta.sh"
+  "codex-setup/scripts/audit-claude-delta.ps1"
+  "codex-setup/scripts/register-environment-fix.mjs"
+  "codex-setup/scripts/register-environment-fix.sh"
+  "codex-setup/scripts/register-environment-fix.ps1"
+  "codex-setup/skills/self-improve/references/claude-delta-sync.md"
   "codex-setup/skills/self-improve/SKILL.md"
 )
 
@@ -59,8 +88,8 @@ for file in "${required_files[@]}"; do
   [[ -f "$file" ]] || { echo "Missing required file: $file" >&2; exit 1; }
 done
 
-expected_memory="$REPO_ROOT/codex-setup/agent-memory/shared/MEMORY.md"
-resolved_memory="$(node "codex-setup/scripts/whiteboard-bridge.mjs" resolve-memory --workspace "$REPO_ROOT")"
+expected_memory="$(normalize_native_path "$REPO_ROOT/codex-setup/agent-memory/shared/MEMORY.md")"
+resolved_memory="$(normalize_native_path "$(node "codex-setup/scripts/whiteboard-bridge.mjs" resolve-memory --workspace "$REPO_ROOT")")"
 [[ "$resolved_memory" == "$expected_memory" ]] || {
   echo "whiteboard-bridge resolved unexpected memory path: $resolved_memory" >&2
   exit 1
@@ -108,8 +137,12 @@ for file in \
   "AGENTS.md" \
   "codex-setup/README.md" \
   "codex-setup/rules/global.md" \
+  "codex-setup/rules/self-observation.md" \
+  "codex-setup/rules/german-trigger-routing.md" \
+  "codex-setup/rules/claude-delta-sync.md" \
   "codex-setup/agent-memory/shared/MEMORY.md" \
   "codex-setup/skills/self-improve/SKILL.md" \
+  "codex-setup/skills/self-improve/references/claude-delta-sync.md" \
   "codex-setup/skills/self-improve/references/report-and-creative.md" \
   "codex-setup/skills/self-improve/references/whiteboard-bridge.md" \
   "codex-setup/skills/self-improve/references/workspace-scan.md"; do
@@ -117,6 +150,7 @@ for file in \
 done
 
 search_fixed "OpenAI developer documentation MCP server" "AGENTS.md"
+search_fixed "GeminiCLI" "AGENTS.md"
 search_fixed "automatically create a focused commit and push it to \`origin/main\`" "AGENTS.md"
 search_fixed "always start with \`Committed.\`" "AGENTS.md"
 search_fixed "add a second final line \`Gepusht in <path>, plattformuebergreifend.\`" "AGENTS.md"
@@ -127,8 +161,35 @@ search_fixed "nach erfolgreicher lokaler Validierung eigenstaendig committen und
 search_fixed "check-code-search-health.sh" "codex-setup/README.md"
 search_fixed "code-search-mcp-client.sh" "codex-setup/README.md"
 search_fixed "Last write mode" "codex-setup/README.md"
+search_fixed "audit-claude-delta.mjs" "codex-setup/README.md"
+search_fixed "cloud-code-delta-bridge" "codex-setup/README.md"
+search_fixed "environment-fixes.json" "codex-setup/README.md"
+search_fixed "register-environment-fix.mjs" "codex-setup/README.md"
+search_fixed "GeminiCLI" "codex-setup/README.md"
 search_fixed "neue Tools, Plugins oder Agenten" "codex-setup/rules/global.md"
 search_fixed "semantischer Suche, Indexierung, Hintergrund-Reindex" "codex-setup/rules/global.md"
+search_fixed "Read-Only Fremd-Workspaces" "codex-setup/rules/global.md"
+search_fixed "GeminiCLI" "codex-setup/rules/global.md"
+
+node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/state/claude-delta-state.json','utf8')); if(data.scope!=='claude-environment-only') process.exit(1); if(!data.replace_requires_confirmation) process.exit(1); if(!data.tracked_paths.includes('CLAUDE.md')) process.exit(1);" || {
+  echo "claude-delta-state.json is invalid." >&2
+  exit 1
+}
+
+node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/state/environment-fixes.json','utf8')); if(data.scope!=='programming-environment-only') process.exit(1); if(!Array.isArray(data.entries) || data.entries.length<1) process.exit(1); if(data.entries.some(entry=>!entry.id||!entry.what_was_fixed||!entry.why_it_was_fixed)) process.exit(1);" || {
+  echo "environment-fixes.json is invalid." >&2
+  exit 1
+}
+
+node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/bridges/cloud-code-delta-bridge.json','utf8')); if(data.source_label!=='Cloud Code') process.exit(1); if(!data.replacement_requires_confirmation) process.exit(1); if(!Array.isArray(data.trigger_phrases) || data.trigger_phrases.length<3) process.exit(1);" || {
+  echo "cloud-code-delta-bridge.json is invalid." >&2
+  exit 1
+}
+
+node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/bridges/environment-fix-exchange-bridge.json','utf8')); if(data.source_label!=='CLI Environment Fixes') process.exit(1); if(data.scope!=='programming-environment-only') process.exit(1); if(!Array.isArray(data.trigger_phrases) || data.trigger_phrases.length<3) process.exit(1);" || {
+  echo "environment-fix-exchange-bridge.json is invalid." >&2
+  exit 1
+}
 
 while IFS= read -r -d '' file; do
   search_fixed "Oberste Direktive" "$file"
@@ -187,9 +248,34 @@ if command -v pwsh >/dev/null 2>&1; then
   done < <(find "codex-setup/scripts" -name "*.ps1" -print0)
 fi
 
-bash "codex-setup/scripts/check-openai-docs-mcp.sh" >/dev/null
+if has_mcp_server "openaiDeveloperDocs"; then
+  bash "codex-setup/scripts/check-openai-docs-mcp.sh" >/dev/null
+else
+  echo "Skipping openaiDeveloperDocs MCP smoke test: server not configured in this Codex runtime."
+fi
+audit_json="$(node "codex-setup/scripts/audit-claude-delta.mjs" --json)"
+audit_latest="$(node -e "const data=JSON.parse(process.argv[1]); if(!data.latest_relevant_commit) process.exit(1); console.log(data.latest_relevant_commit);" "$audit_json")"
+temp_audit_state="$(mktemp)"
+rm -f "$temp_audit_state"
+node "codex-setup/scripts/audit-claude-delta.mjs" mark-reviewed --state "$temp_audit_state" --commit "$audit_latest" >/dev/null
+node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); if(data.last_reviewed_commit!==process.argv[2]) process.exit(1);" "$temp_audit_state" "$audit_latest" || {
+  echo "Claude delta audit failed to store a reviewed commit." >&2
+  exit 1
+}
+temp_fix_ledger="$(mktemp)"
+rm -f "$temp_fix_ledger"
+node "codex-setup/scripts/register-environment-fix.mjs" add --state "$temp_fix_ledger" --id "validator-temp-fix" --category "validator" --summary "temporary validator entry" --what "temporary write path" --why "prove the environment-fix ledger writer works" >/dev/null
+node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); if(!data.entries || data.entries[0].id!=='validator-temp-fix') process.exit(1);" "$temp_fix_ledger" || {
+  echo "Environment-fix registration failed." >&2
+  exit 1
+}
+bash "codex-setup/scripts/audit-claude-delta.sh" --json >/dev/null
 node "codex-setup/scripts/check-code-search-mcp-client.mjs" >/dev/null
-bash "codex-setup/scripts/code-search-mcp-client.sh" tools >/dev/null
-bash "codex-setup/scripts/check-code-search-health.sh" --json >/dev/null
+if has_mcp_server "code-search"; then
+  bash "codex-setup/scripts/code-search-mcp-client.sh" tools >/dev/null
+  bash "codex-setup/scripts/check-code-search-health.sh" --json >/dev/null
+else
+  echo "Skipping code-search MCP runtime smoke tests: server not configured in this Codex runtime."
+fi
 
 echo "codex-setup validation passed"

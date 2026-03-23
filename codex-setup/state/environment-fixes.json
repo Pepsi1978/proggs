@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "scope": "programming-environment-only",
+  "entries": [
+    {
+      "id": "2026-03-23-openai-docs-check-codex-command-resolution-win",
+      "source_cli": "Codex",
+      "category": "runtime-validation",
+      "summary": "OpenAI-Docs-MCP-Smoke-Test resolves the Codex CLI reliably on Windows.",
+      "what_was_fixed": "check-openai-docs-mcp.mjs now resolves codex.cmd, codex.exe, or codex.ps1 from %APPDATA% and uses shell execution for Windows launcher files.",
+      "why_it_was_fixed": "The smoke test previously failed with ENOENT although Codex CLI was installed via npm on Windows.",
+      "impact": "OpenAI-docs validation no longer depends on fragile PATH assumptions.",
+      "portable_to": [
+        "Cloud Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "codex-setup/scripts/check-openai-docs-mcp.mjs"
+      ],
+      "created_at": "2026-03-23T11:00:00+01:00",
+      "status": "active"
+    },
+    {
+      "id": "2026-03-23-code-search-multiline-toml-args",
+      "source_cli": "Codex",
+      "category": "mcp-validation",
+      "summary": "The code-search config fallback now supports multiline TOML string arrays.",
+      "what_was_fixed": "code-search-mcp-client.mjs now parses multiline args arrays in its TOML fallback instead of assuming args = [...] fits on one line.",
+      "why_it_was_fixed": "The deterministic code-search self-test writes a multiline fake config and previously crashed when Python TOML parsing was unavailable.",
+      "impact": "The direct code-search MCP client self-test is deterministic on Windows and Git Bash even without Python TOML support.",
+      "portable_to": [
+        "Cloud Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "codex-setup/scripts/code-search-mcp-client.mjs",
+        "codex-setup/scripts/check-code-search-mcp-client.mjs"
+      ],
+      "created_at": "2026-03-23T11:40:00+01:00",
+      "status": "active"
+    },
+    {
+      "id": "2026-03-23-conditional-mcp-runtime-smokes",
+      "source_cli": "Codex",
+      "category": "validator-hardening",
+      "summary": "codex-setup validation now separates repo validation from local MCP runtime registration.",
+      "what_was_fixed": "validate-codex-setup.ps1 and validate-codex-setup.sh still validate scripts and self-tests, but skip live openaiDeveloperDocs and code-search smoke tests when those MCP servers are not configured locally.",
+      "why_it_was_fixed": "Repo validation should stay deterministic and should not fail only because a clean Codex runtime has not registered optional MCP servers yet.",
+      "impact": "codex-setup validation remains strict on repo content while still exercising live MCP checks whenever the local runtime is configured.",
+      "portable_to": [
+        "Cloud Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "codex-setup/scripts/validate-codex-setup.ps1",
+        "codex-setup/scripts/validate-codex-setup.sh"
+      ],
+      "created_at": "2026-03-23T11:50:00+01:00",
+      "status": "active"
+    }
+  ]
+}

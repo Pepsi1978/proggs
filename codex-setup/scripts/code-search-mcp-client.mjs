@@ -186,6 +186,42 @@ function parseTomlString(rawValue) {
 	throw new Error(`Unsupported TOML string value: ${value}`);
 }
 
+function parseTomlStringArray(initialValue, lines, startIndex) {
+	let value = initialValue.trim();
+	let endIndex = startIndex;
+
+	if (value.startsWith("[") && !value.includes("]")) {
+		const fragments = [value];
+		while (endIndex + 1 < lines.length) {
+			endIndex += 1;
+			const nextLine = lines[endIndex].trim();
+			if (!nextLine || nextLine.startsWith("#")) {
+				continue;
+			}
+			fragments.push(nextLine);
+			if (nextLine.includes("]")) {
+				break;
+			}
+		}
+		value = fragments.join(" ");
+	}
+
+	if (!value.startsWith("[") || !value.includes("]")) {
+		throw new Error(`Unsupported TOML string array: ${initialValue}`);
+	}
+
+	const normalized = value.replace(/,\s*\]/g, "]");
+	const parsed = JSON.parse(normalized);
+	if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === "string")) {
+		fail("The code-search args in config.toml are not a string array.");
+	}
+
+	return {
+		value: parsed,
+		endIndex,
+	};
+}
+
 function sanitizeConfigData(configPath, rawConfig) {
 	if (!rawConfig || typeof rawConfig !== "object") {
 		return null;
@@ -270,13 +306,15 @@ function parseCodeSearchConfigWithPython(configPath) {
 function parseCodeSearchConfigFallback(configPath) {
 	const configText = readFileSync(configPath, "utf8");
 	const configDir = dirname(configPath);
+	const lines = configText.split(/\r?\n/);
 	let inCodeSearchSection = false;
 	let command = "";
 	let args = [];
 	let cwd = "";
 	let env = {};
 
-	for (const rawLine of configText.split(/\r?\n/)) {
+	for (let index = 0; index < lines.length; index++) {
+		const rawLine = lines[index];
 		const line = rawLine.trim();
 		if (!line || line.startsWith("#")) {
 			continue;
@@ -303,11 +341,9 @@ function parseCodeSearchConfigFallback(configPath) {
 
 		const argsMatch = line.match(/^args\s*=\s*(.+)$/);
 		if (argsMatch) {
-			const parsedArgs = JSON.parse(argsMatch[1]);
-			if (!Array.isArray(parsedArgs) || !parsedArgs.every((value) => typeof value === "string")) {
-				fail("The code-search args in config.toml are not a string array.");
-			}
-			args = parsedArgs;
+			const parsedArgs = parseTomlStringArray(argsMatch[1], lines, index);
+			args = parsedArgs.value;
+			index = parsedArgs.endIndex;
 			continue;
 		}
 

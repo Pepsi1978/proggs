@@ -10,8 +10,11 @@
 | Dateien geaendert | [N] |
 | Skripte validiert | [N] |
 | Whiteboard-Eintraege | [N] |
+| Environment fixes logged | [N] |
 | Skill-Deployment | [Status] |
 | MCP geprueft | [Ja/Nein] |
+| Selbstbeobachtung aktiv | [Ja/Nein] |
+| Claude-Delta-Audit | [Nicht noetig / Geprueft / Portiert] |
 
 ### Scan-Ergebnis
 [Kurzfassung von Stage 1]
@@ -22,6 +25,12 @@
 ### Oberste Direktive
 [Kurz bestaetigen, dass die Oberste Direktive gelesen wurde und welche Auswirkung sie in dieser Session hatte]
 
+### Selbstbeobachtung
+[Kurz: welche Reibung, Fehler, Umwege oder Benutzerhinweise wurden fuer Codex nutzbar gemacht]
+
+### Claude-Delta-Status
+[Wenn benutzt: welche Kandidaten waren ADD, ADAPT oder REPLACE]
+
 ### Recherche-Ergebnis
 | Researcher | Wichtigste Erkenntnis | Aktion |
 |------------|----------------------|--------|
@@ -29,6 +38,10 @@
 ### Updates angewandt
 | Was | Warum |
 |-----|-------|
+
+### Environment-Fix-Log
+| Fix-ID | Was | Warum |
+|--------|-----|-------|
 
 ### Nicht geaendert
 [Bewusst nicht geaenderte Dinge mit Grund]
@@ -58,6 +71,7 @@ Always produce exactly 3 suggestions in this format:
 
 Never auto-apply these three suggestions without user approval.
 These suggestions should be easy to understand and focused on the strongest next intelligence gain.
+If one suggestion would replace existing Codex rules or behavior, say so explicitly.
 
 ## Creative Minimum
 
