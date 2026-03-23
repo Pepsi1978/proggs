@@ -22,7 +22,7 @@ Gemini-Dateien sind fuer Codex bei diesem Prozess strikt read-only.
 
 1. `codex-setup/scripts/audit-gemini-delta.*` ausfuehren
 2. nur umgebungsbezogene Aenderungen betrachten
-3. neue Regeln, Prozesse, Memory-Muster und umgebungsbezogene Fehlerfixes oder Haertungslogik erfassen
+3. neue Regeln, Prozesse, Memory-Muster, umgebungsbezogene Fehlerfixes, Haertungslogik und vorhandene Ledger fuer umgesetzte Intelligenzvorschlaege erfassen
 4. Port-Kandidaten fuer Codex als `ADD`, `ADAPT` oder `REPLACE` klassifizieren
 5. nur in `codex-setup/`, `AGENTS.md` oder Codex-Validierung weiterarbeiten
 
@@ -51,6 +51,12 @@ Gemini-Dateien sind fuer Codex bei diesem Prozess strikt read-only.
 - Gemeint sind nicht Projekt-Bugfixes, sondern nur Verbesserungen der Programmierumgebung.
 - Solche Kandidaten sollen im Delta-Bericht sichtbar als Bugfix- oder Haertungssignal markiert werden.
 
+## Ledger fuer umgesetzte Intelligenzvorschlaege
+
+- Falls Gemini CLI spaeter einen eigenen Ledger fuer umgesetzte `Intelligenzvorschlaege` veroeffentlicht, soll Codex diesen Ledger read-only als weitere Delta-Quelle behandeln.
+- Die erwarteten Zieladressen fuer Repo und lokalen Gemini-Workspace werden in `codex-setup/bridges/gemini-cli-delta-bridge.*` und `codex-setup/bridges/intelligence-suggestion-exchange-bridge.*` vorgemerkt.
+- Die Existenz oder Nichtexistenz dieser Quelle aendert nichts an der Proposal-only-Regel.
+
 ## State und Nachverfolgung
 
 - Der Audit nutzt `codex-setup/state/gemini-delta-state.json` als Codex-eigenen Merker fuer zuletzt gepruefte Gemini-Setup-Commits.
@@ -60,6 +66,7 @@ Gemini-Dateien sind fuer Codex bei diesem Prozess strikt read-only.
 ## Wiederverwendbare Bruecke
 
 - Die von anderen CLIs lesbare Bruecken-Spezifikation liegt unter `codex-setup/bridges/gemini-cli-delta-bridge.*`.
+- Die generische Exchange-Bruecke fuer bereits umgesetzte `Intelligenzvorschlaege` liegt unter `codex-setup/bridges/intelligence-suggestion-exchange-bridge.*`.
 
 ## Ziel
 

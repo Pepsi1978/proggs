@@ -59,17 +59,24 @@ Wichtigste Trennung:
 
 - `scripts/`
   Plattformuebergreifende Hilfsskripte fuer Whiteboard-Resolver, Whiteboard-Insert, Sentinel-Merge,
-  Skill-Installation, Validierung, `code-search`-Healthchecks sowie Claude- und Gemini-Delta-Audits.
+  Skill-Installation, Validierung, `code-search`-Healthchecks, gefuehrte Umgebungsfix-Erfassung,
+  Intelligenzvorschlag-Logging sowie Claude- und Gemini-Delta-Audits.
 
 - `bridges/`
   Wiederverwendbare Bruecken-Spezifikationen fuer andere CLI-Umgebungen.
   Hier liegen die generische Cloud-Code-Delta-Bruecke, die Gemini-CLI-Delta-Bruecke
-  und die Environment-Fix-Exchange-Bruecke als Referenz fuer weitere Setups.
+  sowie die Exchange-Bruecken fuer Umwelt-Fixes und umgesetzte Intelligenzvorschlaege
+  als Referenz fuer weitere Setups.
 
 - `state/environment-fixes.json`
   Maschinenlesbares Log fuer Codex-Fixes an Regeln, Runtime, Validierung, MCP-Nutzung und Setup.
   Es dokumentiert immer `was`, `warum`, Kontext, Symptom, Ursache, Verifikation und Portierungshinweise,
   damit andere CLI-Umgebungen diese Fixes read-only nachvollziehen und uebernehmen koennen.
+
+- `state/implemented-intelligence-suggestions.json`
+  Maschinenlesbares Log fuer bereits umgesetzte `Intelligenzvorschlaege` in der Codex-Programmierumgebung.
+  Es dokumentiert den urspruenglichen Vorschlag, den Kontext, den Umsetzungsgrund, die konkrete Umsetzung
+  und den Brueckenwert fuer andere CLIs.
 
 - `skills/self-improve/`
   Der Codex-spezifische Self-Improve-Skill fuer diesen Workspace, inklusive Referenzen,
@@ -90,6 +97,7 @@ Whiteboard-Regeln:
   `self-observation`: Codex soll waehrend der Arbeit seine eigenen Fehler, Umwege,
   Effizienzverluste, Wissensluecken, wiederkehrenden Muster und Benutzerkorrekturen beobachten
   und daraus Schutzmassnahmen oder Intelligenzvorschlaege fuer kuenftige Sessions ableiten.
+- Benutzerseitig sollen diese Vorschlaege sichtbar als `💡 Intelligenz-Vorschlag: ...` erscheinen.
 - Unterhalb davon gilt die dritte Direktive `resilient-bugfixing` fuer Umgebungsfehler:
   Root Cause statt Symptom fixen, verwandte Fehlerquellen mitpruefen, defense in depth aufbauen
   und den Fix so dokumentieren, dass derselbe Fehler nicht erneut gelernt werden muss.
@@ -131,7 +139,9 @@ Der Audit betrachtet absichtlich nur Programmierumgebung und Setup:
 - `claude-code-setup/**`
 
 Dabei sind auch umgebungsbezogene Fehlerfixes, Guardrails und Haertungslogik in Scope,
-solange sie nicht normalen Projektcode betreffen.
+solange sie nicht normalen Projektcode betreffen. Falls Cloud Code spaeter einen eigenen Ledger
+fuer umgesetzte `Intelligenzvorschlaege` veroeffentlicht, soll diese Bruecke auch diese Quelle
+read-only auswerten und ihre Adresse mitberichten.
 
 Er ignoriert Projektcode und klassifiziert Port-Kandidaten als:
 
@@ -174,7 +184,9 @@ Der Audit betrachtet absichtlich nur Programmierumgebung und Setup:
 - optional read-only als Zusatzquelle: `C:\Users\barwa\GeminiCLI\agent-memory\shared\MEMORY.md`
 
 Dabei sind auch umgebungsbezogene Fehlerfixes, Memory-Muster, Guardrails und Haertungslogik in Scope,
-solange sie nicht normalen Projektcode betreffen.
+solange sie nicht normalen Projektcode betreffen. Falls Gemini CLI spaeter einen eigenen Ledger
+fuer umgesetzte `Intelligenzvorschlaege` veroeffentlicht, soll diese Bruecke auch diese Quelle
+read-only auswerten und ihre Adresse mitberichten.
 
 Er ignoriert Projektcode und klassifiziert Port-Kandidaten als:
 
@@ -202,6 +214,7 @@ maschinenlesbarer Eintrag dokumentiert werden:
 - Datei: `codex-setup/state/environment-fixes.json`
 - Schreiben: `node codex-setup/scripts/register-environment-fix.mjs add ...`
 - Wrapper: `register-environment-fix.sh` und `register-environment-fix.ps1`
+- Gefuehrte Erfassung: `new-environment-fix.sh` und `new-environment-fix.ps1`
 
 Dieses Log ist nur fuer Umwelt-/Setup-Fixes gedacht, nicht fuer normalen Projektcode.
 Es soll anderen CLI-Umgebungen wie Cloud Code oder Gemini CLI ermoeglichen, von Codex-Fixes zu lernen.
@@ -213,6 +226,26 @@ Die generische Bruecken-Spezifikation dafuer liegt unter:
 
 - `codex-setup/bridges/environment-fix-exchange-bridge.md`
 - `codex-setup/bridges/environment-fix-exchange-bridge.json`
+
+## Log fuer umgesetzte Intelligenzvorschlaege
+
+Wenn Codex einen eigenen `Intelligenzvorschlag` wirklich umsetzt, soll diese Umsetzung zusaetzlich
+maschinenlesbar dokumentiert werden:
+
+- Datei: `codex-setup/state/implemented-intelligence-suggestions.json`
+- Schreiben: `node codex-setup/scripts/register-intelligence-suggestion.mjs add ...`
+- Wrapper: `register-intelligence-suggestion.sh` und `register-intelligence-suggestion.ps1`
+
+Dieses Log ist nur fuer bereits umgesetzte Verbesserungen der Programmierumgebung gedacht.
+Es soll anderen CLI-Umgebungen wie Cloud Code oder Gemini CLI ermoeglichen, nicht nur Fehlerfixes,
+sondern auch bereits umgesetzte Verbesserungsideen von Codex zu lesen und nachzuvollziehen.
+Jeder Eintrag muss so ausfuehrlich sein, dass andere CLIs ihn auch ohne den urspruenglichen
+Session-Kontext verstehen koennen.
+
+Die generische Bruecken-Spezifikation dafuer liegt unter:
+
+- `codex-setup/bridges/intelligence-suggestion-exchange-bridge.md`
+- `codex-setup/bridges/intelligence-suggestion-exchange-bridge.json`
 
 ## Git-Regel fuer diesen Ordner
 

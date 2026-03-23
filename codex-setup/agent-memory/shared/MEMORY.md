@@ -268,3 +268,5 @@ _Noch keine Eintraege._
 - **[2026-03-23 13:40] codex-setup**: Direktive 2 `Selbstbeobachtung` ist jetzt als staerkere Pflichtregel verankert: 6 Beobachtungskategorien, Hintergrundbeobachtung ohne Mid-Task-Unterbrechung, End-of-task-Rueckmeldung nach Status-Meldung und sofortige Persistenz fuer Wissensluecken sowie Benutzer-Korrekturen.
 
 - **[2026-03-23 14:10] codex-setup**: Direktive 3 `Resilient Bugfixing` ist jetzt als eigene Pflichtregel verankert. Umgebungsfixes muessen ab jetzt 3x-Why, verwandte Fehlerquellen, Defense in Depth, Fix-Induced-Failure-Review und die reichere Fix-Datenbank-Dokumentation durchlaufen, damit derselbe Fehler nicht erneut gelernt wird.
+
+- **[2026-03-23 15:05] codex-setup**: Codex loggt jetzt umgesetzte Intelligenzvorschlaege in codex-setup/state/implemented-intelligence-suggestions.json, nutzt new-environment-fix.* fuer gefuehrte Umgebungsfix-Erfassung und zeigt neue Vorschlaege fuer den Benutzer im sichtbaren Format 💡 Intelligenz-Vorschlag: ... an. Cloud-Code- und Gemini-Bruecken tragen zusaetzlich bereits die erwarteten Fremd-Adressen fuer entsprechende Ledger vorab mit.

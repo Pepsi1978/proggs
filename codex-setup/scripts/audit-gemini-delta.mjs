@@ -110,6 +110,8 @@ function isPortableSourcePath(sourcePath) {
   if (!sourcePath.startsWith("Gemini-Setup/")) return false;
 
   return (
+    sourcePath ===
+      "Gemini-Setup/state/implemented-intelligence-suggestions.json" ||
     /^Gemini-Setup\/rules\/.+\.md$/u.test(sourcePath) ||
     /^Gemini-Setup\/agents\/.+\.md$/u.test(sourcePath) ||
     /^Gemini-Setup\/commands\/.+/u.test(sourcePath) ||
@@ -143,6 +145,21 @@ function classifyPath(sourcePath) {
       target_hints: [
         "codex-setup/agent-memory/shared/MEMORY.md",
         "codex-setup/state/environment-fixes.json",
+        "codex-setup/state/implemented-intelligence-suggestions.json",
+        "codex-setup/rules/global.md",
+      ],
+    };
+  }
+
+  if (
+    sourcePath ===
+    "Gemini-Setup/state/implemented-intelligence-suggestions.json"
+  ) {
+    return {
+      category: "implemented-intelligence-ledger",
+      target_hints: [
+        "codex-setup/state/implemented-intelligence-suggestions.json",
+        "codex-setup/bridges/intelligence-suggestion-exchange-bridge.json",
         "codex-setup/rules/global.md",
       ],
     };
@@ -493,10 +510,16 @@ function formatTextReport(result) {
     },
     {
       code: "C",
-      title: "Skripte, Memory-Muster und Validierung",
+      title: "Skripte, Memory-Muster, Ledgers und Validierung",
       match: (candidate) =>
         candidate.categories.some((category) =>
-          ["hook", "script", "setup-doc", "memory-pattern"].includes(category),
+          [
+            "hook",
+            "script",
+            "setup-doc",
+            "memory-pattern",
+            "implemented-intelligence-ledger",
+          ].includes(category),
         ),
     },
     {

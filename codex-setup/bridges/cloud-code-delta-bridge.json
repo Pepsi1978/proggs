@@ -11,9 +11,11 @@
   "target_scope": "setup-and-programming-environment-only",
   "include_fixed_errors": true,
   "include_bugfix_logic": true,
+  "include_implemented_intelligence_suggestions": true,
   "read_only_sources": [
     "CLAUDE.md",
-    "claude-code-setup/**"
+    "claude-code-setup/**",
+    "claude-code-setup/state/implemented-intelligence-suggestions.json"
   ],
   "classifications": [
     "ADD",
@@ -59,5 +61,28 @@
     "codex-setup/scripts/audit-claude-delta.sh",
     "codex-setup/scripts/audit-claude-delta.ps1"
   ],
-  "state_file": "codex-setup/state/claude-delta-state.json"
+  "state_file": "codex-setup/state/claude-delta-state.json",
+  "exchange_ledgers": {
+    "environment_fixes": {
+      "codex": "codex-setup/state/environment-fixes.json",
+      "cloud_code_read_only_source": "claude-code-setup/agent-memory/shared/MEMORY.md"
+    },
+    "implemented_intelligence_suggestions": {
+      "codex": {
+        "repo_path": "codex-setup/state/implemented-intelligence-suggestions.json",
+        "github_url": "https://github.com/Pepsi1978/proggs/blob/main/codex-setup/state/implemented-intelligence-suggestions.json"
+      },
+      "cloud_code_expected": {
+        "repo_path": "claude-code-setup/state/implemented-intelligence-suggestions.json",
+        "github_url": "https://github.com/Pepsi1978/proggs/blob/main/claude-code-setup/state/implemented-intelligence-suggestions.json",
+        "status": "awaiting-foreign-registration"
+      },
+      "gemini_expected": {
+        "repo_path": "Gemini-Setup/state/implemented-intelligence-suggestions.json",
+        "github_url": "https://github.com/Pepsi1978/proggs/blob/main/Gemini-Setup/state/implemented-intelligence-suggestions.json",
+        "local_path": "C:/Users/barwa/GeminiCLI/state/implemented-intelligence-suggestions.json",
+        "status": "awaiting-foreign-registration"
+      }
+    }
+  }
 }

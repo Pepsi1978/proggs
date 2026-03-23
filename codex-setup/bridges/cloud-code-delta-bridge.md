@@ -6,6 +6,7 @@ Ziel:
 
 - neue Regeln, Agents, Skills, Hooks, Arbeitsprozesse und Setup-Ideen aus `Cloud Code`
 - umgebungsbezogene Fehlerfixes, Haertungen und zukunftsfaehige Fixlogik aus `Cloud Code`
+- spaeter auch bereits umgesetzte `Intelligenzvorschlaege` aus einem optionalen Cloud-Code-Ledger
 - sauber, deutsch und approval-faehig auflisten
 - nur die Programmierumgebung betrachten, nicht normalen Projektcode
 - in den jeweils eigenen Ziel-Workspace portieren, ohne die Quellumgebung zu beschreiben
@@ -21,6 +22,7 @@ Read-only Quellen:
 
 - `CLAUDE.md`
 - `claude-code-setup/**`
+- optional spaeter: `claude-code-setup/state/implemented-intelligence-suggestions.json`
 
 Andere CLIs duerfen dieselbe Bruecke nutzen, muessen diese Quellen aber ebenfalls read-only behandeln.
 
@@ -32,6 +34,17 @@ Beispiele:
 
 - Codex schreibt nur in `codex-setup/`, `AGENTS.md` und eigene Validierung
 - Gemini CLI soll spaeter nur in seine eigene Setup-Basis und seinen eigenen Workspace schreiben
+
+## Exchange-Ledger-Adressen
+
+- Codex-Ledger fuer umgesetzte Vorschlaege:
+  `codex-setup/state/implemented-intelligence-suggestions.json`
+- Erwartete Cloud-Code-Adresse:
+  `claude-code-setup/state/implemented-intelligence-suggestions.json`
+- Erwartete Gemini-Adresse fuer spaetere Fremd-Ports:
+  `Gemini-Setup/state/implemented-intelligence-suggestions.json`
+
+Andere CLIs sollen dieselbe Dateiart im eigenen Setup anlegen und ihre Adresse in der eigenen Bruecke mit veroeffentlichen.
 
 ## Pflichtklassifikation
 

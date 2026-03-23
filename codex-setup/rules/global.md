@@ -21,6 +21,7 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
   - `codex-setup/rules/claude-delta-sync.md`
   - `codex-setup/rules/gemini-delta-sync.md`
   - `codex-setup/agent-memory/shared/MEMORY.md`
+  - `codex-setup/state/implemented-intelligence-suggestions.json`
   - `codex-setup/skills/self-improve/`
   - `codex-setup/scripts/`
 - Lokale Runtime-Ziele unter `~/.codex/` sind Deployment-Ziele, nicht die Git-Source-of-Truth.
@@ -82,7 +83,7 @@ Alle acht Dimensionen sollen wachsen. Einseitige Optimierung reicht nicht.
 
 - Codex soll in jeder Session aktiv nach echten Verbesserungsmoeglichkeiten suchen, nicht erst auf ausdrueckliche Nachfrage.
 - Wenn waehrend der Arbeit ein ineffizienter Workflow, ein fehlender Schutz, ein noetiger Agent, ein besserer Skill, ein Port-Kandidat oder ein intelligenterer Prozess sichtbar wird, soll Codex daraus am Ende einen konkreten `Intelligenzvorschlag` ableiten.
-- Vorschlagsformat: `Intelligenz-Vorschlag: [Was verbessert werden kann] — [Konkreter Vorschlag] — Soll ich das umsetzen?`
+- Benutzerformat: `💡 Intelligenz-Vorschlag: [Was verbessert werden kann] — [Konkreter Vorschlag] — Soll ich das umsetzen?`
 - Vorschlaege gehoeren an das Ende der Aufgabe, nicht mitten in die Ausfuehrung.
 - Der Vorschlag kommt nach der eigentlichen Status- oder Ergebnis-Meldung.
 - Nur echter Mehrwert zaehlt; banale Vorschlaege sollen unterbleiben.
@@ -189,8 +190,18 @@ Alle acht Dimensionen sollen wachsen. Einseitige Optimierung reicht nicht.
 - Neue oder aktualisierte Eintraege muessen zusaetzlich enthalten: exakten oder wiedererkennbaren Fehlertext, eine Why-Chain, gepruefte verwandte Fehlerquellen, falsches und richtiges Muster, eine klare Vermeidungsregel, eine Resilienz-Zusammenfassung und ein Fix-Induced-Failure-Review.
 - Die Beschreibung muss so ausfuehrlich sein, dass andere CLIs den Fix ohne Session-Kontext verstehen und nachbauen koennen.
 - Zum Schreiben soll Codex `codex-setup/scripts/register-environment-fix.*` verwenden.
+- Fuer gefuehrte Erfassung ohne lange Flag-Liste soll Codex bevorzugt `codex-setup/scripts/new-environment-fix.*` nutzen.
 - Dieses Log ist nur fuer Umwelt- und Setup-Fixes gedacht, nicht fuer Projektcode oder App-Features.
 - Andere CLI-Umgebungen duerfen dieses Log read-only lesen, damit Cloud Code, Gemini CLI oder spaetere CLIs von Codex-Fixes lernen koennen.
+
+## Codex-Log fuer umgesetzte Intelligenzvorschlaege
+
+- Wenn Codex einen eigenen `Intelligenzvorschlag` wirklich umsetzt, soll Codex diese Umsetzung zusaetzlich in `codex-setup/state/implemented-intelligence-suggestions.json` dokumentieren.
+- Jeder Eintrag muss mindestens enthalten: den urspruenglichen Vorschlag, Kontext fuer andere CLIs, warum der Vorschlag entstanden ist, warum er umgesetzt wurde, wie er konkret umgesetzt wurde und welchen Brueckenwert andere CLIs daraus ziehen koennen.
+- Zum Schreiben soll Codex `codex-setup/scripts/register-intelligence-suggestion.*` verwenden.
+- Dieses Log ist nur fuer umgesetzte Verbesserungen der Programmierumgebung gedacht, nicht fuer normale Projektarbeit.
+- Andere CLI-Umgebungen duerfen dieses Log read-only lesen, damit Cloud Code, Gemini CLI oder spaetere CLIs dieselben Verbesserungsideen schneller uebernehmen koennen.
+- Die wiederverwendbare Bruecken-Spezifikation dafuer liegt unter `codex-setup/bridges/intelligence-suggestion-exchange-bridge.*`.
 
 ## Codex Skills und Agents
 
@@ -226,6 +237,7 @@ Alle acht Dimensionen sollen wachsen. Einseitige Optimierung reicht nicht.
 - Wenn der Claude-Delta-Audit echte Ersetzungen bestehender Codex-Regeln oder Codex-Setup-Texte anzeigt, soll Codex vor dem Ueberschreiben warnen und eine kurze Freigabe einholen. Additive Erweiterungen duerfen bevorzugt vorgeschlagen werden.
 - Dasselbe gilt fuer den Gemini-Delta-Audit.
 - Wenn der Benutzer wissen will, welche Umwelt-Fixes Codex bereits hat oder was andere CLIs von Codex lernen koennen, soll Codex `codex-setup/state/environment-fixes.json` bzw. `register-environment-fix.*` benutzen.
+- Wenn der Benutzer wissen will, welche `Intelligenzvorschlaege` Codex bereits umgesetzt hat oder was andere CLIs daraus lernen koennen, soll Codex `codex-setup/state/implemented-intelligence-suggestions.json` bzw. `register-intelligence-suggestion.*` benutzen.
 - Wenn der Benutzer nach semantischer Suche, Indexierung, Hintergrund-Reindex oder `code-search`-Status fragt, soll Codex bevorzugt `codex-setup/scripts/check-code-search-health.*` ausfuehren statt den Zustand nur aus Erinnerung oder Einzelabfragen abzuleiten.
 - Wenn andere lokale Dateien im Repository widerspruechliche Aussagen enthalten, sind sie fuer Codex nicht massgeblich, sofern sie Claude Code betreffen.
 - Das Ziel ist, dass dieselben Codex-Regeln auf macOS und in PowerShell 7 unter Windows gleich gelten.

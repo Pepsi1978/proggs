@@ -47,7 +47,7 @@ Aktion:
 
 Aktion:
 - zuerst `codex-setup/scripts/audit-claude-delta.*` ausfuehren
-- dabei Regeln, Agents, Skills, Hooks, Arbeitsprozesse, Trigger, Programmierumgebung und umgebungsbezogene Fehlerfixes auswerten
+- dabei Regeln, Agents, Skills, Hooks, Arbeitsprozesse, Trigger, Programmierumgebung, umgebungsbezogene Fehlerfixes und vorhandene Ledger fuer umgesetzte Intelligenzvorschlaege auswerten
 - danach Port-Kandidaten als `ADD`, `ADAPT` oder `REPLACE` erklaeren
 - auch `ADD` und `ADAPT` nur als Vorschlag berichten, niemals autonom umsetzen
 - bei `REPLACE` vor Umsetzung warnen und bestaetigen lassen
@@ -65,7 +65,7 @@ Aktion:
 
 Aktion:
 - zuerst `codex-setup/scripts/audit-gemini-delta.*` ausfuehren
-- dabei Regeln, Memory-Muster, Agents, Skills, Arbeitsprozesse, Trigger, Programmierumgebung und umgebungsbezogene Fehlerfixes auswerten
+- dabei Regeln, Memory-Muster, Agents, Skills, Arbeitsprozesse, Trigger, Programmierumgebung, umgebungsbezogene Fehlerfixes und vorhandene Ledger fuer umgesetzte Intelligenzvorschlaege auswerten
 - danach Port-Kandidaten als `ADD`, `ADAPT` oder `REPLACE` erklaeren
 - auch `ADD` und `ADAPT` nur als Vorschlag berichten, niemals autonom umsetzen
 - bei `REPLACE` vor Umsetzung warnen und bestaetigen lassen
@@ -81,9 +81,22 @@ Aktion:
 
 Aktion:
 - `codex-setup/state/environment-fixes.json` lesen oder aktualisieren
-- zum Schreiben `codex-setup/scripts/register-environment-fix.*` verwenden
+- zum Schreiben `codex-setup/scripts/register-environment-fix.*` oder den Helper `codex-setup/scripts/new-environment-fix.*` verwenden
 - nur Regeln, Runtime, MCP, Validierung, Skills, Agenten, Hooks oder Setup loggen, keinen Projektcode
 - beim Schreiben immer Kontext, Symptom, Ursache, Why-Chain, verwandte Fehlerquellen, falsches und richtiges Muster, Vermeidungsregel, Resilienz-Zusammenfassung, Failure-Review, Verifikation und Portierungshinweis mit erfassen
+
+### Umgesetzte Intelligenzvorschlaege
+
+- "welche Intelligenzvorschlaege hast du umgesetzt"
+- "wo ist deine Intelligenzvorschlag-Liste"
+- "was koennen Cloud Code oder Gemini CLI von deinen Intelligenzvorschlaegen lernen"
+- "logge diesen umgesetzten Intelligenzvorschlag"
+
+Aktion:
+- `codex-setup/state/implemented-intelligence-suggestions.json` lesen oder aktualisieren
+- zum Schreiben `codex-setup/scripts/register-intelligence-suggestion.*` verwenden
+- immer den urspruenglichen Vorschlag, Kontext, Umsetzungsgrund, konkrete Umsetzung und Portierungshinweise fuer andere CLIs erfassen
+- bei Brueckenfragen die bekannten Ledger-Adressen fuer Codex, Cloud Code und Gemini CLI mitberichten
 
 ### OpenAI- und Codex-Doku
 

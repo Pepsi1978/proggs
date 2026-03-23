@@ -6,6 +6,7 @@ Ziel:
 
 - neue Regeln, Setup-Ideen, Arbeitsprozesse und Umgebungsverbesserungen aus `Gemini CLI`
 - umgebungsbezogene Fehlerfixes, Memory-Muster und Haertungen aus `Gemini CLI`
+- spaeter auch bereits umgesetzte `Intelligenzvorschlaege` aus einem optionalen Gemini-Ledger
 - sauber, deutsch und approval-faehig auflisten
 - nur die Programmierumgebung betrachten, nicht normalen Projektcode
 
@@ -16,6 +17,8 @@ Read-only Quellen:
 - `Gemini-Setup/**`
 - `Gemini-Setup/agent-memory/shared/MEMORY.md`
 - `C:\Users\barwa\GeminiCLI\agent-memory\shared\MEMORY.md`
+- optional spaeter: `Gemini-Setup/state/implemented-intelligence-suggestions.json`
+- optional lokal spaeter: `C:\Users\barwa\GeminiCLI\state\implemented-intelligence-suggestions.json`
 
 ## Zielseite
 
@@ -24,6 +27,19 @@ Codex schreibt nur in seine eigene Setup-Basis:
 - `codex-setup/`
 - `AGENTS.md`
 - Codex-Validierung
+
+## Exchange-Ledger-Adressen
+
+- Codex-Ledger fuer umgesetzte Vorschlaege:
+  `codex-setup/state/implemented-intelligence-suggestions.json`
+- Erwartete Gemini-Repo-Adresse:
+  `Gemini-Setup/state/implemented-intelligence-suggestions.json`
+- Erwartete Gemini-Workspace-Adresse:
+  `C:\Users\barwa\GeminiCLI\state\implemented-intelligence-suggestions.json`
+- Erwartete Cloud-Code-Adresse fuer spaetere Fremd-Ports:
+  `claude-code-setup/state/implemented-intelligence-suggestions.json`
+
+Andere CLIs sollen dieselbe Dateiart im eigenen Setup anlegen und ihre Adresse in der eigenen Bruecke mit veroeffentlichen.
 
 ## Pflichtklassifikation
 

@@ -21,7 +21,7 @@ Claude-Dateien sind fuer Codex bei diesem Prozess strikt read-only.
 
 1. `codex-setup/scripts/audit-claude-delta.*` ausfuehren
 2. nur umgebungsbezogene Aenderungen betrachten
-3. neue Regeln, Agenten, Prozesse und auch umgebungsbezogene Fehlerfixes oder Haertungslogik erfassen
+3. neue Regeln, Agenten, Prozesse, umgebungsbezogene Fehlerfixes, Haertungslogik und vorhandene Ledger fuer umgesetzte Intelligenzvorschlaege erfassen
 4. Port-Kandidaten fuer Codex als `ADD`, `ADAPT` oder `REPLACE` klassifizieren
 5. nur in `codex-setup/`, `AGENTS.md` oder Codex-Validierung weiterarbeiten
 
@@ -56,6 +56,12 @@ Claude-Dateien sind fuer Codex bei diesem Prozess strikt read-only.
 - Solche Kandidaten sollen im Delta-Bericht sichtbar als Bugfix- oder Haertungssignal markiert werden.
 - Ziel ist, dass Codex von bereits bewaehrten Cloud-Code-Fixes profitiert und denselben Fehler moeglichst nicht erneut selbst lernen muss.
 
+## Ledger fuer umgesetzte Intelligenzvorschlaege
+
+- Falls Cloud Code spaeter einen eigenen Ledger fuer umgesetzte `Intelligenzvorschlaege` veroeffentlicht, soll Codex diesen Ledger read-only als weitere Delta-Quelle behandeln.
+- Die erwartete Zieladresse fuer diese Fremdquelle wird in `codex-setup/bridges/cloud-code-delta-bridge.*` und `codex-setup/bridges/intelligence-suggestion-exchange-bridge.*` vorgemerkt.
+- Die Existenz oder Nichtexistenz dieser Quelle aendert nichts an der Proposal-only-Regel.
+
 ## State und Nachverfolgung
 
 - Der Audit nutzt `codex-setup/state/claude-delta-state.json` als Codex-eigenen Merker fuer zuletzt gepruefte Claude-Setup-Commits.
@@ -65,6 +71,7 @@ Claude-Dateien sind fuer Codex bei diesem Prozess strikt read-only.
 ## Wiederverwendbare Bruecke
 
 - Die generische, von anderen CLIs lesbare Bruecken-Spezifikation liegt unter `codex-setup/bridges/cloud-code-delta-bridge.*`.
+- Die generische Exchange-Bruecke fuer bereits umgesetzte `Intelligenzvorschlaege` liegt unter `codex-setup/bridges/intelligence-suggestion-exchange-bridge.*`.
 - Andere CLI-Umgebungen sollen daraus dieselbe Klassifikation, dieselbe Warnlogik und dieselbe deutsche Berichtstruktur uebernehmen, aber nur in ihre eigenen Ziel-Workspaces schreiben.
 
 ## Ziel

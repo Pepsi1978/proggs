@@ -3,7 +3,7 @@ name: self-improve
 description: Codex-only self-improvement workflow for the Codex workspace and Codex runtime. Use only when the user explicitly asks for self-improvement or a full Codex setup check, for example with "/self-improve", "verbessere dich", "optimiere deine Umgebung", "check dein Setup", "update alles", "mach dich besser", "aktualisiere alles", "pruef mein System", or "Umgebung pruefen". This skill is hard-wired to the Codex workspace and must never operate on proggs or Claude's whiteboard.
 ---
 
-# Self-Improve for Codex V1.2.0
+# Self-Improve for Codex V1.3.0
 
 This is the Codex-native self-improve workflow for this repository.
 
@@ -48,6 +48,7 @@ Hard rules:
 - Prefer additive Codex integration whenever a Claude idea is useful but not identical to the existing Codex rule.
 - If this run fixes a Codex environment issue, log the fix with full cross-CLI context in `codex-setup/state/environment-fixes.json`.
 - If this run fixes a Codex environment bug, follow the resilient-bugfixing workflow instead of shipping a one-off patch.
+- If this run implements a Codex `Intelligenzvorschlag`, also log that implementation in `codex-setup/state/implemented-intelligence-suggestions.json`.
 
 Read these files as needed:
 - [references/workspace-scan.md](references/workspace-scan.md)
@@ -143,7 +144,7 @@ After independence is confirmed:
 - restate the current superintelligence direction and which of the 8 intelligence dimensions this run should improve the most
 - restate the current self-observation expectation for this run
 - keep the 6 self-observation categories in mind during the run: Fehler, Umwege, Effizienz, Wissensluecken, Muster, Benutzer-Hinweise
-- restate the expected end-of-session suggestion format: `Intelligenz-Vorschlag: [Was verbessert werden kann] — [Konkreter Vorschlag] — Soll ich das umsetzen?`
+- restate the expected end-of-session suggestion format: `💡 Intelligenz-Vorschlag: [Was verbessert werden kann] — [Konkreter Vorschlag] — Soll ich das umsetzen?`
 - summarize current system state, open problems, intelligence direction, and the best next leverage point
 - decide what change would most increase long-term programming intelligence in this session
 
@@ -195,8 +196,12 @@ Minimum scan targets:
 - `codex-setup/state/claude-delta-state.json`
 - `codex-setup/state/gemini-delta-state.json`
 - `codex-setup/state/environment-fixes.json`
+- `codex-setup/state/implemented-intelligence-suggestions.json`
 - `codex-setup/scripts/register-environment-fix.*`
 - `codex-setup/bridges/environment-fix-exchange-bridge.*`
+- `codex-setup/scripts/new-environment-fix.*`
+- `codex-setup/scripts/register-intelligence-suggestion.*`
+- `codex-setup/bridges/intelligence-suggestion-exchange-bridge.*`
 
 Use [references/workspace-scan.md](references/workspace-scan.md).
 
@@ -262,9 +267,15 @@ After repo changes to this skill:
 
 After each environment-level fix:
 - add or update an entry in `codex-setup/state/environment-fixes.json`
-- use `codex-setup/scripts/register-environment-fix.*`
+- use `codex-setup/scripts/register-environment-fix.*` or `codex-setup/scripts/new-environment-fix.*`
 - capture context, symptom, root cause, what was fixed, why it was fixed, verification, portability notes, why-chain, related surfaces, wrong/right pattern, avoidance rule, resilience summary, and failure review
 - write the entry as if the next CLI has never seen this session before
+
+After each implemented intelligence suggestion:
+- add or update an entry in `codex-setup/state/implemented-intelligence-suggestions.json`
+- use `codex-setup/scripts/register-intelligence-suggestion.*`
+- capture the original proposal, the context, why the proposal existed, why it was implemented, how it was implemented, and what another CLI should learn from it
+- include bridge-relevant addresses or adoption guidance when the implementation affects Cloud Code, Gemini CLI, or future CLI bridges
 
 ## Stage 4: Creative
 

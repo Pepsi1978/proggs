@@ -111,6 +111,9 @@ function isPortableSourcePath(sourcePath) {
   if (!sourcePath.startsWith("claude-code-setup/")) return false;
 
   return (
+    sourcePath === "claude-code-setup/agent-memory/shared/MEMORY.md" ||
+    sourcePath ===
+      "claude-code-setup/state/implemented-intelligence-suggestions.json" ||
     /^claude-code-setup\/rules\/.+\.md$/u.test(sourcePath) ||
     /^claude-code-setup\/agents\/.+\.md$/u.test(sourcePath) ||
     /^claude-code-setup\/commands\/.+/u.test(sourcePath) ||
@@ -147,6 +150,32 @@ function classifyPath(sourcePath) {
     return {
       category: "rule",
       target_hints: [`codex-setup/rules/${mappedName}.md`],
+    };
+  }
+
+  if (sourcePath === "claude-code-setup/agent-memory/shared/MEMORY.md") {
+    return {
+      category: "memory-pattern",
+      target_hints: [
+        "codex-setup/agent-memory/shared/MEMORY.md",
+        "codex-setup/state/environment-fixes.json",
+        "codex-setup/state/implemented-intelligence-suggestions.json",
+        "codex-setup/rules/global.md",
+      ],
+    };
+  }
+
+  if (
+    sourcePath ===
+    "claude-code-setup/state/implemented-intelligence-suggestions.json"
+  ) {
+    return {
+      category: "implemented-intelligence-ledger",
+      target_hints: [
+        "codex-setup/state/implemented-intelligence-suggestions.json",
+        "codex-setup/bridges/intelligence-suggestion-exchange-bridge.json",
+        "codex-setup/rules/global.md",
+      ],
     };
   }
 
@@ -495,10 +524,16 @@ function formatTextReport(result) {
     },
     {
       code: "C",
-      title: "Skripte, Hooks und Validierung",
+      title: "Skripte, Hooks, Ledgers und Validierung",
       match: (candidate) =>
         candidate.categories.some((category) =>
-          ["hook", "script", "setup-doc"].includes(category),
+          [
+            "hook",
+            "script",
+            "setup-doc",
+            "memory-pattern",
+            "implemented-intelligence-ledger",
+          ].includes(category),
         ),
     },
     {
