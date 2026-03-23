@@ -408,7 +408,12 @@
 		]
 	},
 	"worktree": {
-		"symlinkDirectories": ["node_modules", ".cache", ".gradle", "build"]
+		"symlinkDirectories": [
+			"node_modules",
+			".cache",
+			".gradle",
+			"build"
+		]
 	},
 	"enabledPlugins": {
 		"swift-lsp@claude-plugins-official": true,
@@ -499,7 +504,10 @@
 		"fpf@context-engineering-kit": true,
 		"xclaude-plugin@xclaude-plugin-marketplace": true,
 		"apple-platform-build-tools@apple-platform-build-tools": true,
-		"claude-reflect@claude-reflect-marketplace": true
+		"claude-reflect@claude-reflect-marketplace": true,
+		"spec-driven-development@context-engineering-kit": true,
+		"claude-code-lsps@boostvolt": true,
+		"context-kit@FlineDev": true
 	},
 	"extraKnownMarketplaces": {
 		"superpowers-marketplace": {
@@ -556,6 +564,24 @@
 				"source": "github",
 				"repo": "BayramAnnakov/claude-reflect"
 			}
+		},
+		"boostvolt": {
+			"source": {
+				"source": "github",
+				"repo": "boostvolt/claude-code-lsps"
+			}
+		},
+		"trailofbits/skills-curated": {
+			"source": {
+				"source": "github",
+				"repo": "trailofbits/skills-curated"
+			}
+		},
+		"FlineDev": {
+			"source": {
+				"source": "github",
+				"repo": "FlineDev/context-kit"
+			}
 		}
 	},
 	"language": "de",
@@ -568,7 +594,10 @@
 		"android-adb": {
 			"type": "stdio",
 			"command": "/opt/homebrew/bin/npx",
-			"args": ["-y", "android-debug-bridge-mcp"]
+			"args": [
+				"-y",
+				"android-debug-bridge-mcp"
+			]
 		}
 	}
 }

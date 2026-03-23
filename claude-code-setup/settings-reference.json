@@ -523,7 +523,8 @@
     "coderabbit@claude-plugins-official": true,
     "aikido@claude-plugins-official": true,
     "spec-driven-development@context-engineering-kit": true,
-    "context-kit@FlineDev": true
+    "context-kit@FlineDev": true,
+    "second-opinion@trailofbits": true
   },
   "extraKnownMarketplaces": {
     "superpowers-marketplace": {
