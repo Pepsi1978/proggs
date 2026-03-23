@@ -20,6 +20,7 @@ $RequiredFiles = @(
     "AGENTS.md",
     "codex-setup\rules\global.md",
     "codex-setup\rules\self-observation.md",
+    "codex-setup\rules\resilient-bugfixing.md",
     "codex-setup\rules\german-trigger-routing.md",
     "codex-setup\rules\claude-delta-sync.md",
     "codex-setup\rules\gemini-delta-sync.md",
@@ -61,6 +62,7 @@ $RequiredFiles = @(
     "codex-setup\scripts\register-environment-fix.ps1",
     "codex-setup\skills\self-improve\references\claude-delta-sync.md",
     "codex-setup\skills\self-improve\references\gemini-delta-sync.md",
+    "codex-setup\skills\self-improve\references\resilient-bugfixing.md",
     "codex-setup\skills\self-improve\references\agents\gemini-delta-scanner.md",
     "codex-setup\skills\self-improve\SKILL.md"
 )
@@ -134,6 +136,7 @@ $DirectiveFiles = @(
     "codex-setup\README.md",
     "codex-setup\rules\global.md",
     "codex-setup\rules\self-observation.md",
+    "codex-setup\rules\resilient-bugfixing.md",
     "codex-setup\rules\german-trigger-routing.md",
     "codex-setup\rules\claude-delta-sync.md",
     "codex-setup\rules\gemini-delta-sync.md",
@@ -141,6 +144,7 @@ $DirectiveFiles = @(
     "codex-setup\skills\self-improve\SKILL.md",
     "codex-setup\skills\self-improve\references\claude-delta-sync.md",
     "codex-setup\skills\self-improve\references\gemini-delta-sync.md",
+    "codex-setup\skills\self-improve\references\resilient-bugfixing.md",
     "codex-setup\skills\self-improve\references\report-and-creative.md",
     "codex-setup\skills\self-improve\references\whiteboard-bridge.md",
     "codex-setup\skills\self-improve\references\workspace-scan.md"
@@ -174,6 +178,10 @@ if ((Get-Content "AGENTS.md" -Raw) -notmatch "Intelligenz-Vorschlag:") {
 
 if ((Get-Content "AGENTS.md" -Raw) -notmatch "every agent, skill, plugin, hook, and process") {
     throw "AGENTS.md must apply self-observation to every agent, skill, plugin, hook, and process."
+}
+
+if ((Get-Content "AGENTS.md" -Raw) -notmatch "resilient bugfixing as directive 3") {
+    throw "AGENTS.md must include resilient bugfixing as directive 3."
 }
 
 if ((Get-Content "AGENTS.md" -Raw) -notmatch [regex]::Escape('automatically create a focused commit and push it to `origin/main`')) {
@@ -244,6 +252,26 @@ if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "Intelligenz-Vors
     throw "global.md must define the intelligence proposal format."
 }
 
+if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "Direktive 3: Resilient Bugfixing") {
+    throw "global.md must define resilient bugfixing as directive 3."
+}
+
+if ((Get-Content "codex-setup\rules\resilient-bugfixing.md" -Raw) -notmatch '3x `Warum\?`') {
+    throw "resilient-bugfixing.md must require 3x Warum."
+}
+
+if ((Get-Content "codex-setup\rules\resilient-bugfixing.md" -Raw) -notmatch "Fix-Induced-Failure-Pruefung") {
+    throw "resilient-bugfixing.md must define the fix-induced-failure review."
+}
+
+if ((Get-Content "codex-setup\rules\resilient-bugfixing.md" -Raw) -notmatch "Defense in Depth") {
+    throw "resilient-bugfixing.md must define defense in depth."
+}
+
+if ((Get-Content "codex-setup\rules\resilient-bugfixing.md" -Raw) -notmatch 'Jeder Umgebungsfix gehoert in `codex-setup/state/environment-fixes.json`') {
+    throw "resilient-bugfixing.md must require fix-ledger documentation."
+}
+
 if ((Get-Content "codex-setup\rules\self-observation.md" -Raw) -notmatch "Die 6 Beobachtungskategorien") {
     throw "self-observation.md must define the 6 observation categories."
 }
@@ -300,6 +328,10 @@ if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "8 Intelligenz-Dimensio
     throw "README.md must document the 8 intelligence dimensions."
 }
 
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "resilient-bugfixing") {
+    throw "README.md must document resilient bugfixing."
+}
+
 $ClaudeDeltaState = Get-Content "codex-setup\state\claude-delta-state.json" -Raw | ConvertFrom-Json
 if ($ClaudeDeltaState.scope -ne "claude-environment-only") {
     throw "claude-delta-state.json must track only Claude environment deltas."
@@ -326,12 +358,20 @@ foreach ($entry in $EnvironmentFixes.entries) {
         [string]::IsNullOrWhiteSpace($entry.root_cause) -or
         [string]::IsNullOrWhiteSpace($entry.what_was_fixed) -or
         [string]::IsNullOrWhiteSpace($entry.why_it_was_fixed) -or
+        [string]::IsNullOrWhiteSpace($entry.exact_error_text) -or
+        [string]::IsNullOrWhiteSpace($entry.root_cause_why_chain) -or
+        [string]::IsNullOrWhiteSpace($entry.related_error_sources_checked) -or
+        [string]::IsNullOrWhiteSpace($entry.wrong_pattern_example) -or
+        [string]::IsNullOrWhiteSpace($entry.right_pattern_example) -or
+        [string]::IsNullOrWhiteSpace($entry.avoidance_rule) -or
+        [string]::IsNullOrWhiteSpace($entry.resilience_summary) -or
+        [string]::IsNullOrWhiteSpace($entry.fix_induced_failure_review) -or
         [string]::IsNullOrWhiteSpace($entry.verification) -or
         [string]::IsNullOrWhiteSpace($entry.portability_notes)
     ) {
         throw "environment-fixes.json contains an invalid fix entry."
     }
-    if ($entry.context_for_other_clis.Length -lt 40 -or $entry.symptom_before_fix.Length -lt 40 -or $entry.root_cause.Length -lt 30 -or $entry.verification.Length -lt 30 -or $entry.portability_notes.Length -lt 30) {
+    if ($entry.context_for_other_clis.Length -lt 40 -or $entry.symptom_before_fix.Length -lt 40 -or $entry.root_cause.Length -lt 30 -or $entry.exact_error_text.Length -lt 20 -or $entry.root_cause_why_chain.Length -lt 40 -or $entry.related_error_sources_checked.Length -lt 40 -or $entry.avoidance_rule.Length -lt 25 -or $entry.resilience_summary.Length -lt 40 -or $entry.fix_induced_failure_review.Length -lt 40 -or $entry.verification.Length -lt 30 -or $entry.portability_notes.Length -lt 30) {
         throw "environment-fixes.json fix entries must contain detailed cross-CLI context."
     }
 }
@@ -381,6 +421,10 @@ if ($EnvironmentFixBridge.trigger_phrases.Count -lt 3) {
 }
 if (-not $EnvironmentFixBridge.requires_full_context) {
     throw "environment-fix-exchange-bridge.json must require full context."
+}
+
+if (-not $EnvironmentFixBridge.requires_resilient_bugfix_fields) {
+    throw "environment-fix-exchange-bridge.json must require resilient bugfix fields."
 }
 
 $GeminiDeltaState = Get-Content "codex-setup\state\gemini-delta-state.json" -Raw | ConvertFrom-Json
@@ -488,7 +532,7 @@ if ($TempAudit.last_reviewed_commit -ne $ClaudeAudit.latest_relevant_commit) {
 Remove-Item $TempAuditState -ErrorAction SilentlyContinue
 
 $TempFixLedger = Join-Path ([System.IO.Path]::GetTempPath()) ("environment-fixes-" + [guid]::NewGuid().ToString() + ".json")
-node "codex-setup/scripts/register-environment-fix.mjs" add --state $TempFixLedger --id "validator-temp-fix" --category "validator" --summary "temporary validator entry" --context "This temporary validator entry exists only to prove that the environment-fix writer accepts full cross-CLI context." --symptom "Without this smoke test the validator would only know that the file exists, not that the writer can create a detailed entry end to end." --root-cause "The validator needs a write-path proof so schema changes cannot silently break the fix ledger tooling." --what "temporary write path" --why "prove the environment-fix ledger writer works" --verification "The validator reads the temporary ledger back immediately and checks that the written entry id matches the expected smoke-test value." --portability-notes "Other CLIs should keep the same smoke test so a fix ledger is validated as a workflow, not just as a static JSON file." | Out-Null
+node "codex-setup/scripts/register-environment-fix.mjs" add --state $TempFixLedger --id "validator-temp-fix" --category "validator" --summary "temporary validator entry" --context "This temporary validator entry exists only to prove that the environment-fix writer accepts full cross-CLI context." --symptom "Without this smoke test the validator would only know that the file exists, not that the writer can create a detailed entry end to end." --root-cause "The validator needs a write-path proof so schema changes cannot silently break the fix ledger tooling." --what "temporary write path" --why "prove the environment-fix ledger writer works" --exact-error "Validator smoke path would otherwise miss schema-level regressions." --why-chain "Why 1: a file can exist while the writer is still broken. Why 2: schema evolution can silently desynchronize the writer and validator. Why 3: without an end-to-end write test the regression would only surface later in a real session." --related-checks "Checked the write path, JSON serialization path, required-field enforcement, and post-write readback path because all of them belong to the same fix-ledger workflow." --wrong-pattern "Only validate that the ledger file exists or can be parsed." --right-pattern "Create a temporary ledger entry end to end and verify that the persisted id matches the expected smoke-test value." --avoidance-rule "If a fix ledger schema changes, then always run an end-to-end temporary write test instead of validating only file existence or JSON syntax." --resilience-summary "This smoke test is defensive because it checks the workflow instead of one file, update-resilient because it runs after future schema changes, and documented because the validator itself carries the expectation forward." --failure-review "Dependencies: writer and validator must stay aligned. Failure scenario: if the writer breaks the validator must fail loudly. State change: only a temporary file is touched. Race risk is negligible in the temp path. Compatibility remains intact because the smoke uses the same CLI. Platform effects are covered by PowerShell and Bash validators. Update resistance comes from rerunning the same smoke after future schema changes. Graceful degradation is preserved because failure only aborts validation, not the workspace." --verification "The validator reads the temporary ledger back immediately and checks that the written entry id matches the expected smoke-test value." --portability-notes "Other CLIs should keep the same smoke test so a fix ledger is validated as a workflow, not just as a static JSON file." | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw "Environment-fix registration script could not write a temporary entry."
 }

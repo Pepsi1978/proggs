@@ -36,6 +36,11 @@ Wichtigste Trennung:
   Die zweite Codex-Systemdirektive. Macht Selbstbeobachtung fuer Codex,
   Fehlerlernen und Intelligenzvorschlaege explizit und dauerhaft.
 
+- `rules/resilient-bugfixing.md`
+  Die dritte Codex-Systemdirektive. Macht zukunftssicheres Bugfixing fuer
+  Umgebungsfehler verbindlich, inklusive Root-Cause-Suche, Fehlerklassen-Haertung
+  und Dokumentationspflicht.
+
 - `rules/german-trigger-routing.md`
   Deutsches Trigger- und Routing-Regelwerk fuer Codex-Setup-, Skill- und
   Claude-Delta-Anfragen.
@@ -85,6 +90,9 @@ Whiteboard-Regeln:
   `self-observation`: Codex soll waehrend der Arbeit seine eigenen Fehler, Umwege,
   Effizienzverluste, Wissensluecken, wiederkehrenden Muster und Benutzerkorrekturen beobachten
   und daraus Schutzmassnahmen oder Intelligenzvorschlaege fuer kuenftige Sessions ableiten.
+- Unterhalb davon gilt die dritte Direktive `resilient-bugfixing` fuer Umgebungsfehler:
+  Root Cause statt Symptom fixen, verwandte Fehlerquellen mitpruefen, defense in depth aufbauen
+  und den Fix so dokumentieren, dass derselbe Fehler nicht erneut gelernt werden muss.
 - Diese zweite Direktive gilt fuer jeden Agenten, Skill, Hook, jedes Plugin und jeden Prozess.
 - Beobachtungen werden waehrend der Arbeit gesammelt, aber erst am Ende der Aufgabe nach der Status-Meldung gebuendelt zurueckgegeben.
 - Die `## Oberste Direktive` verfolgt ausdruecklich einen Compound-Intelligence-Ansatz:
@@ -198,6 +206,8 @@ maschinenlesbarer Eintrag dokumentiert werden:
 Dieses Log ist nur fuer Umwelt-/Setup-Fixes gedacht, nicht fuer normalen Projektcode.
 Es soll anderen CLI-Umgebungen wie Cloud Code oder Gemini CLI ermoeglichen, von Codex-Fixes zu lernen.
 Jeder Eintrag muss so ausfuehrlich sein, dass andere CLIs ihn auch ohne den urspruenglichen Session-Kontext verstehen koennen.
+Neue oder aktualisierte Eintraege muessen zusaetzlich Why-Chain, verwandte Fehlerquellen,
+falsches und richtiges Muster, eine klare Vermeidungsregel sowie eine Resilienz- und Failure-Review enthalten.
 
 Die generische Bruecken-Spezifikation dafuer liegt unter:
 

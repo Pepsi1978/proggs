@@ -98,6 +98,14 @@ Alle acht Dimensionen sollen wachsen, nicht nur einzelne davon.
 - Wenn der Benutzer etwas korrigiert oder neues Setup-Wissen liefert, soll dieses Wissen sofort dauerhaft abgesichert werden.
 - Wenn derselbe Fehlertyp erneut auftaucht, soll die ganze Fehlerklasse adressiert werden, nicht nur die einzelne Instanz.
 
+### Direktive 3: Resilient Bugfixing
+
+- Diese Direktive gilt fuer Umgebungsfehler in Hooks, Regeln, Settings, MCP-Nutzung, Validierung, Skripten, Agents und Skills.
+- Vor jedem Umgebungsfix gilt: 3x `Warum?`, gleiche Fehlerklasse pruefen, gleiche Komponente pruefen, gleiche Abhaengigkeiten pruefen.
+- Ein Fix ist erst fertig, wenn er defensiv, update-resistent, moeglichst selbstheilend, erweiterbar und dokumentiert ist.
+- Vor Abschluss eines Umgebungsfixes soll eine Fix-Induced-Failure-Pruefung mit Abhaengigkeiten, Fehlszenarien, Zustandsaenderungen, Race Conditions, Rueckwaertskompatibilitaet, Plattform-Effekten, Update-Resistenz und Graceful Degradation mitgedacht werden.
+- Jeder Umgebungsfix gehoert in die Fix-Datenbank, damit derselbe Fehler nicht erneut gelernt werden muss.
+
 ### Cross-Tool-Lernen
 
 - Cloud Code, Codex CLI und Gemini CLI arbeiten in dieselbe Richtung.
@@ -258,3 +266,5 @@ _Noch keine Eintraege._
 - **[2026-03-23 13:20] codex-setup**: Die Oberste Direktive wurde auf die staerkere Superintelligenz-Fassung umgestellt: 8 Intelligenz-Dimensionen, Compound-Improvement, exakter `Intelligenz-Vorschlag`-Stil und read-only Cross-Tool-Lernen sind jetzt als dauerhafte Codex-Steuerlogik verankert und validator-abgesichert.
 
 - **[2026-03-23 13:40] codex-setup**: Direktive 2 `Selbstbeobachtung` ist jetzt als staerkere Pflichtregel verankert: 6 Beobachtungskategorien, Hintergrundbeobachtung ohne Mid-Task-Unterbrechung, End-of-task-Rueckmeldung nach Status-Meldung und sofortige Persistenz fuer Wissensluecken sowie Benutzer-Korrekturen.
+
+- **[2026-03-23 14:10] codex-setup**: Direktive 3 `Resilient Bugfixing` ist jetzt als eigene Pflichtregel verankert. Umgebungsfixes muessen ab jetzt 3x-Why, verwandte Fehlerquellen, Defense in Depth, Fix-Induced-Failure-Review und die reichere Fix-Datenbank-Dokumentation durchlaufen, damit derselbe Fehler nicht erneut gelernt wird.

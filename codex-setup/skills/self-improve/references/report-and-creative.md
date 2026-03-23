@@ -52,6 +52,9 @@
 | Fix-ID | Kontext | Was | Warum | Verifikation |
 |--------|---------|-----|-------|-------------|
 
+### Resilient Bugfixing
+[Wenn ein Umgebungsfix Teil der Session war: Root Cause, Why-Chain, verwandte Fehlerquellen, Resilienz und Failure-Review kurz bestaetigen]
+
 ### Nicht geaendert
 [Bewusst nicht geaenderte Dinge mit Grund]
 

@@ -14,7 +14,7 @@ const DEFAULT_LEDGER_PATH = path.join(
   "environment-fixes.json",
 );
 const DEFAULT_LEDGER = {
-  version: 1,
+  version: 2,
   scope: "programming-environment-only",
   entries: [],
 };
@@ -23,7 +23,7 @@ function usage() {
   return [
     "Usage:",
     "  register-environment-fix.mjs list [--json] [--state PATH]",
-    "  register-environment-fix.mjs add --id ID --category CATEGORY --summary TEXT --context TEXT --symptom TEXT --root-cause TEXT --what TEXT --why TEXT --verification TEXT --portability-notes TEXT [--impact TEXT] [--portable-to CSV] [--artifacts CSV] [--source-cli NAME] [--status STATUS] [--json] [--state PATH]",
+    "  register-environment-fix.mjs add --id ID --category CATEGORY --summary TEXT --context TEXT --symptom TEXT --root-cause TEXT --what TEXT --why TEXT --exact-error TEXT --why-chain TEXT --related-checks TEXT --wrong-pattern TEXT --right-pattern TEXT --avoidance-rule TEXT --resilience-summary TEXT --failure-review TEXT --verification TEXT --portability-notes TEXT [--impact TEXT] [--portable-to CSV] [--artifacts CSV] [--source-cli NAME] [--status STATUS] [--json] [--state PATH]",
   ].join("\n");
 }
 
@@ -126,6 +126,44 @@ function buildEntry(args, existingEntry = null) {
     ),
     what_was_fixed: ensureText(args.what || existingEntry?.what_was_fixed, "what"),
     why_it_was_fixed: ensureText(args.why || existingEntry?.why_it_was_fixed, "why"),
+    exact_error_text: ensureDetailedText(
+      args["exact-error"] || existingEntry?.exact_error_text,
+      "exact-error",
+      20,
+    ),
+    root_cause_why_chain: ensureDetailedText(
+      args["why-chain"] || existingEntry?.root_cause_why_chain,
+      "why-chain",
+      40,
+    ),
+    related_error_sources_checked: ensureDetailedText(
+      args["related-checks"] || existingEntry?.related_error_sources_checked,
+      "related-checks",
+      40,
+    ),
+    wrong_pattern_example: ensureText(
+      args["wrong-pattern"] || existingEntry?.wrong_pattern_example,
+      "wrong-pattern",
+    ),
+    right_pattern_example: ensureText(
+      args["right-pattern"] || existingEntry?.right_pattern_example,
+      "right-pattern",
+    ),
+    avoidance_rule: ensureDetailedText(
+      args["avoidance-rule"] || existingEntry?.avoidance_rule,
+      "avoidance-rule",
+      25,
+    ),
+    resilience_summary: ensureDetailedText(
+      args["resilience-summary"] || existingEntry?.resilience_summary,
+      "resilience-summary",
+      40,
+    ),
+    fix_induced_failure_review: ensureDetailedText(
+      args["failure-review"] || existingEntry?.fix_induced_failure_review,
+      "failure-review",
+      40,
+    ),
     verification: ensureDetailedText(
       args.verification || existingEntry?.verification,
       "verification",
@@ -169,6 +207,14 @@ function printList(ledger, asJson) {
     lines.push(`   Root cause: ${entry.root_cause}`);
     lines.push(`   What: ${entry.what_was_fixed}`);
     lines.push(`   Why: ${entry.why_it_was_fixed}`);
+    lines.push(`   Exact error: ${entry.exact_error_text}`);
+    lines.push(`   Why chain: ${entry.root_cause_why_chain}`);
+    lines.push(`   Related checks: ${entry.related_error_sources_checked}`);
+    lines.push(`   Wrong pattern: ${entry.wrong_pattern_example}`);
+    lines.push(`   Right pattern: ${entry.right_pattern_example}`);
+    lines.push(`   Avoidance rule: ${entry.avoidance_rule}`);
+    lines.push(`   Resilience: ${entry.resilience_summary}`);
+    lines.push(`   Failure review: ${entry.fix_induced_failure_review}`);
     lines.push(`   Verification: ${entry.verification}`);
     lines.push(`   Portability: ${entry.portability_notes}`);
     if (entry.impact) {

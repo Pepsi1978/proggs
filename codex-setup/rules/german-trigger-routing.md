@@ -83,7 +83,7 @@ Aktion:
 - `codex-setup/state/environment-fixes.json` lesen oder aktualisieren
 - zum Schreiben `codex-setup/scripts/register-environment-fix.*` verwenden
 - nur Regeln, Runtime, MCP, Validierung, Skills, Agenten, Hooks oder Setup loggen, keinen Projektcode
-- beim Schreiben immer Kontext, Symptom, Ursache, Verifikation und Portierungshinweis mit erfassen
+- beim Schreiben immer Kontext, Symptom, Ursache, Why-Chain, verwandte Fehlerquellen, falsches und richtiges Muster, Vermeidungsregel, Resilienz-Zusammenfassung, Failure-Review, Verifikation und Portierungshinweis mit erfassen
 
 ### OpenAI- und Codex-Doku
 

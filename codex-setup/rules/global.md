@@ -16,6 +16,7 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
 - Innerhalb von `codex-setup/` sind fuer Codex besonders massgeblich:
   - `codex-setup/rules/global.md`
   - `codex-setup/rules/self-observation.md`
+  - `codex-setup/rules/resilient-bugfixing.md`
   - `codex-setup/rules/german-trigger-routing.md`
   - `codex-setup/rules/claude-delta-sync.md`
   - `codex-setup/rules/gemini-delta-sync.md`
@@ -112,6 +113,17 @@ Alle acht Dimensionen sollen wachsen. Einseitige Optimierung reicht nicht.
 - Wenn der Benutzer etwas korrigiert oder neues Setup-Wissen liefert, soll dieses Wissen sofort dauerhaft abgesichert werden.
 - Wenn derselbe Fehlertyp erneut auftaucht, soll Codex nicht nur den Einzelfall fixen, sondern die ganze Fehlerklasse absichern.
 
+### Direktive 3: Resilient Bugfixing
+
+- Direktive Nummer 3 unterhalb dieser `Oberste Direktive` ist resilientes Bugfixing fuer Umgebungsfehler.
+- Sie gilt nur fuer Fehler in Hooks, Regeln, Settings, MCP-Nutzung, Validierung, Skripten, Agents und Skills, nicht fuer normale Projekt- oder App-Bugs.
+- Vor jedem Umgebungsfix soll Codex die Root Cause mit mindestens 3x `Warum?` herausarbeiten statt nur das Symptom zu entfernen.
+- Vor der Implementierung sollen gleiche Fehlerklasse, gleiche Komponente und gleiche Abhaengigkeiten mitgeprueft werden.
+- Ein Fix ist erst fertig, wenn er defensiv, update-resistent, erweiterbar, dokumentiert und moeglichst selbstheilend ausgelegt ist.
+- Vor dem Abschluss soll Codex eine Fix-Induced-Failure-Pruefung durchgehen: Abhaengigkeiten, Fehlszenarien, Zustandsaenderungen, Race Conditions, Rueckwaertskompatibilitaet, Plattform-Effekte, Update-Resistenz und Graceful Degradation.
+- Gute Umgebungsfixes sollen defense in depth aufbauen statt nur eine einzelne Schutzschicht zu setzen.
+- Jeder Umgebungsfix gehoert in `codex-setup/state/environment-fixes.json`, damit derselbe Fehler nicht erneut gelernt werden muss.
+
 ### Cross-Tool-Lernen
 
 - Cloud Code, Codex CLI und Gemini CLI arbeiten in dieselbe Richtung und duerfen ueber read-only Bruecken voneinander lernen.
@@ -174,6 +186,7 @@ Alle acht Dimensionen sollen wachsen. Einseitige Optimierung reicht nicht.
 
 - Wenn Codex einen Fehler in seiner eigenen Programmierumgebung, Validierung, MCP-Nutzung, Skill-Logik, Runtime-Helfern oder Regelbasis fixt, soll Codex diesen Fix zusaetzlich in `codex-setup/state/environment-fixes.json` dokumentieren.
 - Jeder solche Eintrag muss mindestens enthalten: Kontext fuer andere CLIs, sichtbares Symptom, technische Ursache, was gefixt wurde, warum es gefixt wurde, Verifikation und betroffene Artefakte.
+- Neue oder aktualisierte Eintraege muessen zusaetzlich enthalten: exakten oder wiedererkennbaren Fehlertext, eine Why-Chain, gepruefte verwandte Fehlerquellen, falsches und richtiges Muster, eine klare Vermeidungsregel, eine Resilienz-Zusammenfassung und ein Fix-Induced-Failure-Review.
 - Die Beschreibung muss so ausfuehrlich sein, dass andere CLIs den Fix ohne Session-Kontext verstehen und nachbauen koennen.
 - Zum Schreiben soll Codex `codex-setup/scripts/register-environment-fix.*` verwenden.
 - Dieses Log ist nur fuer Umwelt- und Setup-Fixes gedacht, nicht fuer Projektcode oder App-Features.

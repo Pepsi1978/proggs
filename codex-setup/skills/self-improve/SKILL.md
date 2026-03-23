@@ -47,6 +47,7 @@ Hard rules:
 - If a Claude delta would replace existing Codex rule text or Codex setup behavior, warn first and require explicit approval before replacing it.
 - Prefer additive Codex integration whenever a Claude idea is useful but not identical to the existing Codex rule.
 - If this run fixes a Codex environment issue, log the fix with full cross-CLI context in `codex-setup/state/environment-fixes.json`.
+- If this run fixes a Codex environment bug, follow the resilient-bugfixing workflow instead of shipping a one-off patch.
 
 Read these files as needed:
 - [references/workspace-scan.md](references/workspace-scan.md)
@@ -55,6 +56,7 @@ Read these files as needed:
 - [references/report-and-creative.md](references/report-and-creative.md)
 - [references/claude-delta-sync.md](references/claude-delta-sync.md)
 - [references/gemini-delta-sync.md](references/gemini-delta-sync.md)
+- [references/resilient-bugfixing.md](references/resilient-bugfixing.md)
 - Agent prompts under [references/agents/](references/agents)
 
 ## Mandatory Opening
@@ -184,6 +186,7 @@ Minimum scan targets:
 - `~/.codex/log/` if relevant for current failures
 - repo-local wrappers or launch scripts that affect Codex
 - `codex-setup/rules/self-observation.md`
+- `codex-setup/rules/resilient-bugfixing.md`
 - `codex-setup/rules/german-trigger-routing.md`
 - `codex-setup/rules/claude-delta-sync.md`
 - `codex-setup/rules/gemini-delta-sync.md`
@@ -203,6 +206,7 @@ Always verify:
 - the whiteboard contains `## Oberste Direktive`
 - the self-observation directive is propagated where it should be
 - the 6 self-observation categories are still visible in the controlling Codex files
+- resilient-bugfixing is visible for environment-level fixes and not confused with normal project bugfixing
 - whiteboard bridge scripts exist and work
 - local skill deployment target exists or can be created
 - MCP registrations relevant to this workspace
@@ -259,7 +263,7 @@ After repo changes to this skill:
 After each environment-level fix:
 - add or update an entry in `codex-setup/state/environment-fixes.json`
 - use `codex-setup/scripts/register-environment-fix.*`
-- capture context, symptom, root cause, what was fixed, why it was fixed, verification, and portability notes
+- capture context, symptom, root cause, what was fixed, why it was fixed, verification, portability notes, why-chain, related surfaces, wrong/right pattern, avoidance rule, resilience summary, and failure review
 - write the entry as if the next CLI has never seen this session before
 
 ## Stage 4: Creative

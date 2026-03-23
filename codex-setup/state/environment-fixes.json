@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "scope": "programming-environment-only",
   "entries": [
     {
@@ -23,7 +23,15 @@
         "codex-setup/scripts/check-openai-docs-mcp.mjs"
       ],
       "created_at": "2026-03-23T11:00:00+01:00",
-      "status": "active"
+      "status": "active",
+      "exact_error_text": "Exact symptom text: `spawnSync codex ENOENT` during the OpenAI-Docs MCP smoke test on Windows.",
+      "root_cause_why_chain": "Why 1: the validation process could not start the Codex CLI by its bare command name. Why 2: on Windows the installed launcher often exists as `codex.cmd`, `codex.exe`, or `codex.ps1` under the npm bin directory, and Node child-process lookup did not reliably find that wrapper. Why 3: the validator relied on platform-default command discovery instead of resolving the intended launcher explicitly.",
+      "related_error_sources_checked": "Checked the same error class on other validator and wrapper paths that spawn the Codex CLI, the same component category of Windows launcher resolution, and the same dependency surface of npm-installed command wrappers and shell execution behavior.",
+      "wrong_pattern_example": "Wrong pattern: spawn the bare `codex` command and assume PATH lookup works identically on Windows and macOS.",
+      "right_pattern_example": "Right pattern: resolve `codex.cmd`, `codex.exe`, or `codex.ps1` explicitly on Windows and use shell execution for wrapper launchers when required.",
+      "avoidance_rule": "If a Codex-side validator or helper spawns a CLI on Windows, then always resolve supported launcher files explicitly instead of relying on bare command lookup.",
+      "resilience_summary": "The fix is defensive because it checks multiple launcher variants, survivable because it re-resolves the launcher at runtime instead of hardcoding one fragile path, extensible because new launcher variants can be added in one resolver, documented in the ledger, and damage-free because a failure remains a validation failure rather than a workspace mutation.",
+      "fix_induced_failure_review": "Dependencies: Windows launcher resolution and shell execution behavior were reviewed. Failure scenario: if resolution still fails, validation stops cleanly without mutating setup state. State changes: none beyond process launch. Race conditions: negligible because resolution happens per process start. Backward compatibility: macOS and non-Windows resolution remain unchanged. Platform effects: Windows wrapper launchers are now handled explicitly while other platforms keep the simpler path. Update resistance: runtime resolution survives npm path changes better than a hardcoded assumption. Graceful degradation: the validator fails clearly instead of misreporting an MCP outage."
     },
     {
       "id": "2026-03-23-code-search-multiline-toml-args",
@@ -47,7 +55,15 @@
         "codex-setup/scripts/check-code-search-mcp-client.mjs"
       ],
       "created_at": "2026-03-23T11:40:00+01:00",
-      "status": "active"
+      "status": "active",
+      "exact_error_text": "Exact symptom text: `Unexpected end of JSON input` while the deterministic code-search self-test parsed a multiline TOML args array.",
+      "root_cause_why_chain": "Why 1: the fallback parser crashed when it saw a multiline args array. Why 2: it tried to feed only the first line of the TOML array into `JSON.parse`. Why 3: the implementation assumed a one-line array shape instead of handling the full formatting that the fixture and real configs could produce.",
+      "related_error_sources_checked": "Checked the same parsing error class for other multiline TOML values, the same component surface in the fallback parser used when Python TOML support is unavailable, and the dependency surface of the deterministic self-test that intentionally exercises fallback behavior.",
+      "wrong_pattern_example": "Wrong pattern: assume `args = [...]` always exists on one line and parse only that line.",
+      "right_pattern_example": "Right pattern: collect and normalize multiline TOML array content before parsing so the fallback path accepts the same structures as the preferred parser path.",
+      "avoidance_rule": "If a local fallback parser reads configuration that may be formatted over multiple lines, then always parse the full logical structure instead of assuming one-line input.",
+      "resilience_summary": "The fix is defensive because it covers the broader multiline error class, survivable because it keeps the fallback parser useful when Python TOML support is unavailable, extensible because the parser logic now matches a wider family of TOML shapes, documented in the ledger, and damage-free because it only broadens accepted config syntax.",
+      "fix_induced_failure_review": "Dependencies: the direct MCP client, fallback parser, and self-test were reviewed together. Failure scenario: if fallback parsing still fails, the self-test reports the config path clearly. State changes: none. Race conditions: none because parsing is local and synchronous. Backward compatibility: single-line arrays remain valid. Platform effects: Windows and Git Bash benefit directly because the fallback path matters most there. Update resistance: the parser is now less sensitive to formatting drift. Graceful degradation: when the preferred parser is unavailable, the fallback remains usable instead of crashing."
     },
     {
       "id": "2026-03-23-conditional-mcp-runtime-smokes",
@@ -71,7 +87,15 @@
         "codex-setup/scripts/validate-codex-setup.sh"
       ],
       "created_at": "2026-03-23T11:50:00+01:00",
-      "status": "active"
+      "status": "active",
+      "exact_error_text": "Exact symptom text: full codex-setup validation failed in a clean runtime because optional MCP servers were not configured locally.",
+      "root_cause_why_chain": "Why 1: the validator failed when optional MCP registrations were missing. Why 2: live integration smokes were treated as mandatory for repository validation. Why 3: the validation design did not separate repo-owned integrity checks from runtime-specific optional integration state.",
+      "related_error_sources_checked": "Checked the same error class on both openaiDeveloperDocs and code-search live smokes, the same validator component on PowerShell and Bash, and the dependency surface of local MCP runtime registration versus repository-owned scripts.",
+      "wrong_pattern_example": "Wrong pattern: fail the whole repository validator whenever an optional live MCP integration is not configured on the current machine.",
+      "right_pattern_example": "Right pattern: keep deterministic repo self-tests mandatory, but gate optional live MCP smokes on whether the relevant server is actually registered in the local runtime.",
+      "avoidance_rule": "If a validator mixes repository checks with optional live integrations, then always separate deterministic repo integrity from machine-specific runtime state.",
+      "resilience_summary": "The fix is defensive because it distinguishes two failure classes, survivable because clean machines now validate without false negatives, extensible because more optional integrations can reuse the same gating model, documented in the ledger, and damage-free because the validator remains strict on repo-owned logic.",
+      "fix_induced_failure_review": "Dependencies: validator scripts and MCP registration checks were reviewed together. Failure scenario: if the gating logic fails, validation still reports the repo-owned checks separately. State changes: none. Race conditions: minimal because MCP list reads are local snapshots. Backward compatibility: configured runtimes still execute live smokes. Platform effects: both PowerShell and Bash validators follow the same logic. Update resistance: future MCP additions can use the same conditional pattern. Graceful degradation: missing registrations now skip only optional smokes instead of failing the whole validation chain."
     },
     {
       "id": "2026-03-23-environment-fix-ledger-full-context",
@@ -99,7 +123,15 @@
         "codex-setup/scripts/validate-codex-setup.sh"
       ],
       "created_at": "2026-03-23T11:30:46.589Z",
-      "status": "active"
+      "status": "active",
+      "exact_error_text": "Exact symptom text: fix entries were technically valid but too thin, for example short what/why notes that left another CLI without enough context to trust or reuse the fix.",
+      "root_cause_why_chain": "Why 1: other CLIs could not reliably reuse the fix entries. Why 2: the ledger only required compact what/why-style notes. Why 3: the original schema optimized for brevity instead of cross-session and cross-CLI transfer fidelity.",
+      "related_error_sources_checked": "Checked the same knowledge-loss problem in the ledger schema, the register-environment-fix writer, the bridge specification, and both validators because all of them define or depend on the same documentation contract.",
+      "wrong_pattern_example": "Wrong pattern: store only a short headline such as \"Parser fixed\" or \"Windows issue resolved\" in the environment-fix ledger.",
+      "right_pattern_example": "Right pattern: require a self-contained fix entry with context, symptom, root cause, verification, portability notes, and enough explanation for another CLI to act without the original session.",
+      "avoidance_rule": "If a fix is meant to survive across sessions or CLIs, then always record the full engineering context instead of a terse headline.",
+      "resilience_summary": "The fix is defensive because it hardens the schema itself, survivable because future entries now carry enough context to survive team and session changes, extensible because new fields can build on the richer schema, documented by design, and damage-free because it increases information instead of changing runtime behavior.",
+      "fix_induced_failure_review": "Dependencies: the ledger file, writer, bridge specification, and validators were reviewed together. Failure scenario: if the richer schema is not honored the validators fail. State changes: only structured documentation changes. Race conditions: none. Backward compatibility: historical entries were expanded rather than discarded. Platform effects: none on runtime behavior, but all CLIs benefit from the richer transfer format. Update resistance: schema-backed validation keeps the richer contract alive. Graceful degradation: if a required field is missing, the writer or validator stops instead of silently storing weak documentation."
     },
     {
       "id": "2026-03-23-bridge-proposal-guard-and-gemini-delta",
@@ -138,7 +170,15 @@
         "codex-setup/skills/self-improve/references/gemini-delta-sync.md"
       ],
       "created_at": "2026-03-23T11:59:39.641Z",
-      "status": "active"
+      "status": "active",
+      "exact_error_text": "Exact symptom text: additive bridge findings could still be misread as implementation-ready, and the Gemini bridge was not yet enforced end to end across trigger, validation, and control files.",
+      "root_cause_why_chain": "Why 1: bridge deltas could drift into silent implementation behavior. Why 2: proposal-only handling was not a first-class invariant across all control files. Why 3: the original bridge design focused on classification semantics more than on validator-backed approval discipline and complete Gemini-path integration.",
+      "related_error_sources_checked": "Checked the same approval-drift risk across AGENTS, global rules, trigger routing, bridge specs, self-improve references, audit wrappers, and validator coverage because all of them participate in bridge execution.",
+      "wrong_pattern_example": "Wrong pattern: classify a foreign setup delta as ADD or ADAPT and treat it as implementation-ready without a stable review gate.",
+      "right_pattern_example": "Right pattern: keep foreign bridges read-only, classify deltas, report them as grouped A1/B1/C1/D1 proposals, and wait for explicit approval before any Codex-side implementation.",
+      "avoidance_rule": "If a bridge imports environment intelligence from another CLI, then always keep the source read-only and the result proposal-only until the user approves the port.",
+      "resilience_summary": "The fix is defensive because it blocks silent imports, survivable because validator-backed trigger and state checks keep the bridge contract durable, extensible because future CLI bridges can follow the same pattern, documented in the ledger, and damage-free because it only narrows unsafe autonomy.",
+      "fix_induced_failure_review": "Dependencies: bridge scripts, trigger routing, state files, and validators were reviewed together. Failure scenario: a broken bridge should fail as a proposal path, not mutate Codex silently. State changes: only Codex-side bridge state and docs are touched. Race conditions: low because audits run on demand. Backward compatibility: existing Cloud bridge behavior remains but is safer. Platform effects: wrappers exist for PowerShell and Bash. Update resistance: proposal-only flags and validator checks survive later bridge growth. Graceful degradation: if a bridge cannot run, Codex simply cannot propose deltas instead of importing bad state."
     },
     {
       "id": "2026-03-23-superintelligence-directive-upgrade",
@@ -170,7 +210,15 @@
         "codex-setup/scripts/validate-codex-setup.sh"
       ],
       "created_at": "2026-03-23T12:08:11.520Z",
-      "status": "active"
+      "status": "active",
+      "exact_error_text": "Exact symptom text: the superintelligence directive existed only in a weaker summary form and could drift because crucial strategic markers were not explicit across the control files.",
+      "root_cause_why_chain": "Why 1: the top directive was semantically weaker than the user intended. Why 2: core ideas such as the 8 intelligence dimensions and the exact proposal format were distributed across shorter summaries. Why 3: the directive had evolved incrementally without a validator-backed contract that preserved its full strategic wording.",
+      "related_error_sources_checked": "Checked the same drift risk across the whiteboard, global rules, AGENTS, README, self-improve skill, and the validators because all of them carry or enforce the top directive.",
+      "wrong_pattern_example": "Wrong pattern: keep the top directive as loosely related ambition bullets spread across multiple files.",
+      "right_pattern_example": "Right pattern: define a stronger top directive, propagate it across the controlling files, and let the validators assert its key markers so later edits cannot silently weaken it.",
+      "avoidance_rule": "If a top-level directive controls long-term behavior, then always encode it as a validator-backed contract instead of a loose aspiration paragraph.",
+      "resilience_summary": "The fix is defensive because it reduces semantic drift, survivable because the same contract now appears across memory, rules, and validators, extensible because later directives can build on the same pattern, documented in the ledger, and damage-free because it strengthens coordination rather than mutating runtime state.",
+      "fix_induced_failure_review": "Dependencies: the whiteboard, rule files, AGENTS, self-improve skill, and validators were reviewed together. Failure scenario: if a marker is lost the validator now fails. State changes: directive wording and guardrails only. Race conditions: none. Backward compatibility: existing workflows remain but become more explicit. Platform effects: none beyond shared validation. Update resistance: key markers are now asserted automatically. Graceful degradation: if a file drifts the validator fails instead of letting strategic intent silently erode."
     },
     {
       "id": "2026-03-23-self-observation-directive-upgrade",
@@ -202,6 +250,61 @@
         "codex-setup/scripts/validate-codex-setup.sh"
       ],
       "created_at": "2026-03-23T12:11:54.057Z",
+      "status": "active",
+      "exact_error_text": "Exact symptom text: self-observation was already present but still too compressed, with only 5 categories and weaker requirements for persistence and end-of-task reporting.",
+      "root_cause_why_chain": "Why 1: the second directive could still be interpreted too softly. Why 2: important categories such as knowledge gaps and the all-components scope were not fully explicit. Why 3: the rule had grown from shorter summaries and lacked stronger validator-backed wording across all controlling files.",
+      "related_error_sources_checked": "Checked the same softness risk across the rule file, AGENTS, memory, README, self-improve workflow, report template, workspace scan, and validators because all of them shape how self-observation is executed.",
+      "wrong_pattern_example": "Wrong pattern: treat self-observation as a vague reflection habit with partial categories and no hard persistence rule for user corrections.",
+      "right_pattern_example": "Right pattern: define explicit categories, cover every working component, collect observations during work, and report them only at the end with immediate persistence for user corrections and knowledge gaps.",
+      "avoidance_rule": "If a directive is meant to guide behavior during every task, then always spell out its categories, timing, scope, and persistence obligations instead of leaving them implicit.",
+      "resilience_summary": "The fix is defensive because it closes interpretation gaps, survivable because the same rule now lives in all control files and validators, extensible because more observation logic can build on the 6 categories, documented in the ledger, and damage-free because it changes guidance rather than runtime state.",
+      "fix_induced_failure_review": "Dependencies: the rule, AGENTS, memory, self-improve workflow, and validators were reviewed together. Failure scenario: if the rule weakens, validation catches the missing markers. State changes: only directive and template text. Race conditions: none. Backward compatibility: existing observation habits still work but are now stricter. Platform effects: none beyond shared enforcement. Update resistance: the categories and timing are now validator-backed. Graceful degradation: if a marker drifts the validator fails instead of silently accepting a weaker second directive."
+    },
+    {
+      "id": "2026-03-23-resilient-bugfixing-directive-upgrade",
+      "source_cli": "Codex",
+      "category": "directive-hardening",
+      "summary": "Codex now enforces resilient bugfixing as directive 3 for environment-level bugs and the fix ledger itself carries future-proof bugfix fields.",
+      "context_for_other_clis": "This fix applies to the Codex programming environment itself, not to normal user project bugs. The user introduced a third top-level directive: every bug in hooks, rules, settings, MCP integrations, validation, scripts, agents, or skills must be fixed in a way that prevents the same environment bug from returning in later sessions, on other platforms, or after later updates. To make that directive real, the setup needed both a rule and a stronger documentation schema so future bugfixes could not regress into shallow symptom patches.",
+      "symptom_before_fix": "Before this upgrade Codex had strong top-level direction and stronger self-observation, but its bugfix process for environment issues was still distributed across shorter hardening bullets. The setup did not yet force a dedicated 3x-Why root-cause pass, a related-surface check, a future-proofing review, a fix-induced-failure review, or richer ledger fields such as wrong/right pattern and avoidance rule. That meant a future environment fix could still be correct in the moment but too shallow to survive the next update or to teach another CLI the full lesson.",
+      "root_cause": "The environment had already learned to observe errors and to document fixes, but it did not yet treat resilient bugfixing as its own validator-backed directive. Because the process details lived only implicitly inside general hardening language, the workflow could drift back toward symptom fixes, incomplete documentation, or one-off patches. The deeper cause was a missing dedicated control contract for environment bugfixes and a missing schema layer that encoded the full resilient-bugfixing discipline.",
+      "what_was_fixed": "Codex now has a dedicated rule file codex-setup/rules/resilient-bugfixing.md, propagation into AGENTS, global rules, README, whiteboard memory, and the self-improve workflow, plus stronger environment-fix bridge and ledger schemas. Future environment fixes now have to carry exact error text, a why-chain, related error sources checked, wrong and right pattern examples, an explicit avoidance rule, a resilience summary, and a fix-induced-failure review. The PowerShell and Bash validators now enforce that directive and schema so the process cannot silently weaken later.",
+      "why_it_was_fixed": "The user wants every environment bug to be made exactly once. That requires more than a good intention: it requires a forced workflow that starts from root cause, checks the whole error class, stress-tests the fix for platform and update durability, and documents the lesson so later sessions and other CLIs do not relearn the same bug.",
+      "exact_error_text": "There was no single runtime stack trace for this directive upgrade; the real failure mode was strategic and procedural: environment bugfixes could still regress into shallow, non-resistant patches because no dedicated directive or schema enforced resilient bugfixing end to end.",
+      "root_cause_why_chain": "Why 1: an environment fix could still stop too early after the visible symptom disappeared. Why 2: the setup did not yet force the author to walk through root cause, related surfaces, future-proofing, and failure review as a dedicated process. Why 3: resilient bugfixing was present only as scattered hardening intent, not as its own directive with validator-backed documentation requirements.",
+      "related_error_sources_checked": "Checked the same drift risk across global rules, AGENTS, README, whiteboard memory, self-improve workflow, environment-fix bridge specs, the register-environment-fix writer, and both validators because all of them either steer environment bugfixing or store the resulting fix knowledge. Also checked that the richer ledger schema could still be written and validated from both PowerShell and Git Bash.",
+      "wrong_pattern_example": "Wrong pattern: see an environment bug, patch the visible symptom, skip a formal related-surface review, and log only a broad summary such as what changed and why it seemed useful.",
+      "right_pattern_example": "Right pattern: treat the environment bug as directive-3 work, ask 3x Warum, inspect the same error class and dependency surfaces, build a future-proof fix with defense in depth, run a fix-induced-failure review, and document the result with exact error text, why-chain, pattern examples, and a clear avoidance rule.",
+      "avoidance_rule": "If a bug lives in the programming environment itself, then always treat it as resilient-bugfixing work and do not close it after a local symptom patch. Instead, force root-cause analysis, related-surface review, future-proofing, failure review, and rich ledger documentation before considering the fix complete.",
+      "resilience_summary": "This directive upgrade is defensive because it blocks shallow symptom fixes, self-healing at the process level because validators now reassert the stronger contract in later sessions, survivable because the same rule and schema are enforced across PowerShell and Bash, extensible because future environment bugfixes can reuse the same ledger shape and rule, documented in both the ledger and whiteboard, and damage-free because it strengthens the process without mutating foreign workspaces or user projects.",
+      "fix_induced_failure_review": "Dependencies: the rule files, self-improve workflow, fix writer, fix bridge, and validators were reviewed together. Failure scenario: if a future edit weakens the directive or schema, validation now fails instead of silently accepting a weaker process. State changes: only Codex-side setup files and the Codex fix ledger changed. Race conditions: negligible because this is configuration and validation logic, not a concurrent service. Backward compatibility: existing environment fixes were backfilled rather than discarded. Platform effects: PowerShell and Bash validators were both upgraded so the process remains symmetric across Windows and Unix-like flows. Update resistance: validator checks and richer schema keep the directive alive across later changes. Graceful degradation: if a future fix author omits resilient fields, the writer or validator fails loudly instead of storing weak bugfix knowledge.",
+      "verification": "Verified by syntax-checking the updated fix writer, reinstalling the self-improve skill, rerunning both full codex-setup validators in PowerShell and Git Bash, and confirming that the existing environment-fix ledger entries were backfilled to the richer resilient-bugfixing schema. The validators now assert directive-3 markers, the dedicated rule file, and the richer fix-entry contract.",
+      "portability_notes": "Other CLI environments should separate project bugfixing from environment bugfixing and give environment bugfixes a stronger process. The durable pattern is: dedicated directive, 3x-Why root-cause analysis, related-surface review, defense in depth, failure review, and a transferable fix ledger schema that records the exact lesson instead of only the final patch. Without that structure, the same environment bugs will be relearned after updates or platform changes.",
+      "impact": "Codex now treats environment bugfixes as one-time lessons that should remove an entire class of recurring setup failures instead of only clearing the visible symptom in the current session.",
+      "portable_to": [
+        "Cloud Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "AGENTS.md",
+        "codex-setup/README.md",
+        "codex-setup/rules/global.md",
+        "codex-setup/rules/self-observation.md",
+        "codex-setup/rules/resilient-bugfixing.md",
+        "codex-setup/rules/german-trigger-routing.md",
+        "codex-setup/agent-memory/shared/MEMORY.md",
+        "codex-setup/skills/self-improve/SKILL.md",
+        "codex-setup/skills/self-improve/references/report-and-creative.md",
+        "codex-setup/skills/self-improve/references/workspace-scan.md",
+        "codex-setup/skills/self-improve/references/resilient-bugfixing.md",
+        "codex-setup/bridges/environment-fix-exchange-bridge.md",
+        "codex-setup/bridges/environment-fix-exchange-bridge.json",
+        "codex-setup/scripts/register-environment-fix.mjs",
+        "codex-setup/scripts/validate-codex-setup.ps1",
+        "codex-setup/scripts/validate-codex-setup.sh",
+        "codex-setup/state/environment-fixes.json"
+      ],
+      "created_at": "2026-03-23T12:24:45.354Z",
       "status": "active"
     }
   ]

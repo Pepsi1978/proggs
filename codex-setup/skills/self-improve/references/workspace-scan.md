@@ -9,6 +9,7 @@ Always inspect:
 - `codex-setup/README.md`
 - `codex-setup/rules/global.md`
 - `codex-setup/rules/self-observation.md`
+- `codex-setup/rules/resilient-bugfixing.md`
 - `codex-setup/rules/german-trigger-routing.md`
 - `codex-setup/rules/claude-delta-sync.md`
 - `codex-setup/rules/gemini-delta-sync.md`
@@ -44,11 +45,12 @@ The scan must answer:
 9. Are the 8 intelligence dimensions and the compounding-superintelligence direction visible in the controlling Codex files?
 10. Are the 6 self-observation categories visible and propagated in the controlling Codex files?
 11. Does self-observation still require end-of-task reporting instead of mid-task interruption?
-12. Can Claude/Cloud Code setup changes be audited without writing into Claude files?
-13. Does the Claude-delta audit state cleanly track only programming-environment deltas?
-14. Does `codex-setup/bridges/` expose a reusable Cloud-Code bridge spec that other CLIs can read and mirror?
-15. Does Codex log environment-level fixes with enough context, symptom, cause, verification, and portability detail that other CLIs can understand them without session context?
-16. Can Gemini CLI setup and memory changes be audited without writing into Gemini files?
+12. Is resilient bugfixing visible as directive 3 for environment-level fixes?
+13. Can Claude/Cloud Code setup changes be audited without writing into Claude files?
+14. Does the Claude-delta audit state cleanly track only programming-environment deltas?
+15. Does `codex-setup/bridges/` expose a reusable Cloud-Code bridge spec that other CLIs can read and mirror?
+16. Does Codex log environment-level fixes with enough context, symptom, cause, verification, and portability detail that other CLIs can understand them without session context?
+17. Can Gemini CLI setup and memory changes be audited without writing into Gemini files?
 
 ## Forbidden Operational Sources
 

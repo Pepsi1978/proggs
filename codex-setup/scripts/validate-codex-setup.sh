@@ -48,6 +48,7 @@ required_files=(
   "AGENTS.md"
   "codex-setup/rules/global.md"
   "codex-setup/rules/self-observation.md"
+  "codex-setup/rules/resilient-bugfixing.md"
   "codex-setup/rules/german-trigger-routing.md"
   "codex-setup/rules/claude-delta-sync.md"
   "codex-setup/rules/gemini-delta-sync.md"
@@ -89,6 +90,7 @@ required_files=(
   "codex-setup/scripts/register-environment-fix.ps1"
   "codex-setup/skills/self-improve/references/claude-delta-sync.md"
   "codex-setup/skills/self-improve/references/gemini-delta-sync.md"
+  "codex-setup/skills/self-improve/references/resilient-bugfixing.md"
   "codex-setup/skills/self-improve/references/agents/gemini-delta-scanner.md"
   "codex-setup/skills/self-improve/SKILL.md"
 )
@@ -147,6 +149,7 @@ for file in \
   "codex-setup/README.md" \
   "codex-setup/rules/global.md" \
   "codex-setup/rules/self-observation.md" \
+  "codex-setup/rules/resilient-bugfixing.md" \
   "codex-setup/rules/german-trigger-routing.md" \
   "codex-setup/rules/claude-delta-sync.md" \
   "codex-setup/rules/gemini-delta-sync.md" \
@@ -154,6 +157,7 @@ for file in \
   "codex-setup/skills/self-improve/SKILL.md" \
   "codex-setup/skills/self-improve/references/claude-delta-sync.md" \
   "codex-setup/skills/self-improve/references/gemini-delta-sync.md" \
+  "codex-setup/skills/self-improve/references/resilient-bugfixing.md" \
   "codex-setup/skills/self-improve/references/report-and-creative.md" \
   "codex-setup/skills/self-improve/references/whiteboard-bridge.md" \
   "codex-setup/skills/self-improve/references/workspace-scan.md"; do
@@ -166,6 +170,7 @@ search_fixed "proposal-only" "AGENTS.md"
 search_fixed "8 intelligence dimensions" "AGENTS.md"
 search_fixed "Intelligenz-Vorschlag:" "AGENTS.md"
 search_fixed "every agent, skill, plugin, hook, and process" "AGENTS.md"
+search_fixed "resilient bugfixing as directive 3" "AGENTS.md"
 search_fixed "automatically create a focused commit and push it to \`origin/main\`" "AGENTS.md"
 search_fixed "always start with \`Committed.\`" "AGENTS.md"
 search_fixed "add a second final line \`Gepusht in <path>, plattformuebergreifend.\`" "AGENTS.md"
@@ -185,6 +190,7 @@ search_fixed "Starte bitte die Bruecke zu Cloud Code" "codex-setup/README.md"
 search_fixed "Starte bitte die Bruecke zu Gemini CLI" "codex-setup/README.md"
 search_fixed "GeminiCLI" "codex-setup/README.md"
 search_fixed "8 Intelligenz-Dimensionen" "codex-setup/README.md"
+search_fixed "resilient-bugfixing" "codex-setup/README.md"
 search_fixed "neue Tools, Plugins oder Agenten" "codex-setup/rules/global.md"
 search_fixed "semantischer Suche, Indexierung, Hintergrund-Reindex" "codex-setup/rules/global.md"
 search_fixed "Read-Only Fremd-Workspaces" "codex-setup/rules/global.md"
@@ -192,18 +198,23 @@ search_fixed "GeminiCLI" "codex-setup/rules/global.md"
 search_fixed "Die 8 Intelligenz-Dimensionen" "codex-setup/rules/global.md"
 search_fixed "Cross-Tool-Lernen" "codex-setup/rules/global.md"
 search_fixed "Intelligenz-Vorschlag:" "codex-setup/rules/global.md"
+search_fixed "Direktive 3: Resilient Bugfixing" "codex-setup/rules/global.md"
 search_fixed "Die 6 Beobachtungskategorien" "codex-setup/rules/self-observation.md"
 search_fixed "### 4. Wissensluecken" "codex-setup/rules/self-observation.md"
 search_fixed "### 6. Benutzer-Hinweise" "codex-setup/rules/self-observation.md"
 search_fixed "Rueckmeldung: immer am Ende der Aufgabe und nach der Status-Meldung" "codex-setup/rules/self-observation.md"
 search_fixed "jeden Agenten, jeden Skill, jedes Plugin, jeden Hook und jeden Prozess" "codex-setup/rules/self-observation.md"
+search_fixed '3x `Warum?`' "codex-setup/rules/resilient-bugfixing.md"
+search_fixed "Fix-Induced-Failure-Pruefung" "codex-setup/rules/resilient-bugfixing.md"
+search_fixed "Defense in Depth" "codex-setup/rules/resilient-bugfixing.md"
+search_fixed "Jeder Umgebungsfix gehoert in \`codex-setup/state/environment-fixes.json\`" "codex-setup/rules/resilient-bugfixing.md"
 
 node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/state/claude-delta-state.json','utf8')); if(data.scope!=='claude-environment-only') process.exit(1); if(!data.replace_requires_confirmation) process.exit(1); if(!data.tracked_paths.includes('CLAUDE.md')) process.exit(1);" || {
   echo "claude-delta-state.json is invalid." >&2
   exit 1
 }
 
-node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/state/environment-fixes.json','utf8')); if(data.scope!=='programming-environment-only') process.exit(1); if(!Array.isArray(data.entries) || data.entries.length<1) process.exit(1); if(data.entries.some(entry=>!entry.id||!entry.context_for_other_clis||entry.context_for_other_clis.length<40||!entry.symptom_before_fix||entry.symptom_before_fix.length<40||!entry.root_cause||entry.root_cause.length<30||!entry.what_was_fixed||!entry.why_it_was_fixed||!entry.verification||entry.verification.length<30||!entry.portability_notes||entry.portability_notes.length<30)) process.exit(1);" || {
+node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/state/environment-fixes.json','utf8')); if(data.scope!=='programming-environment-only') process.exit(1); if(!Array.isArray(data.entries) || data.entries.length<1) process.exit(1); if(data.entries.some(entry=>!entry.id||!entry.context_for_other_clis||entry.context_for_other_clis.length<40||!entry.symptom_before_fix||entry.symptom_before_fix.length<40||!entry.root_cause||entry.root_cause.length<30||!entry.what_was_fixed||!entry.why_it_was_fixed||!entry.exact_error_text||entry.exact_error_text.length<20||!entry.root_cause_why_chain||entry.root_cause_why_chain.length<40||!entry.related_error_sources_checked||entry.related_error_sources_checked.length<40||!entry.wrong_pattern_example||!entry.right_pattern_example||!entry.avoidance_rule||entry.avoidance_rule.length<25||!entry.resilience_summary||entry.resilience_summary.length<40||!entry.fix_induced_failure_review||entry.fix_induced_failure_review.length<40||!entry.verification||entry.verification.length<30||!entry.portability_notes||entry.portability_notes.length<30)) process.exit(1);" || {
   echo "environment-fixes.json is invalid." >&2
   exit 1
 }
@@ -212,6 +223,7 @@ search_fixed "Die 8 Intelligenz-Dimensionen" "codex-setup/agent-memory/shared/ME
 search_fixed "Cross-Tool-Lernen" "codex-setup/agent-memory/shared/MEMORY.md"
 search_fixed "Intelligenz-Vorschlag:" "codex-setup/agent-memory/shared/MEMORY.md"
 search_fixed "Effizienzverluste, Wissensluecken, wiederkehrenden Muster" "codex-setup/agent-memory/shared/MEMORY.md"
+search_fixed "Direktive 3: Resilient Bugfixing" "codex-setup/agent-memory/shared/MEMORY.md"
 
 node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/bridges/cloud-code-delta-bridge.json','utf8')); if(data.source_label!=='Cloud Code') process.exit(1); if(!data.replacement_requires_confirmation) process.exit(1); if(!Array.isArray(data.trigger_phrases) || data.trigger_phrases.length<3) process.exit(1); if(!data.trigger_phrases.includes('Starte bitte die Bruecke zu Cloud Code')) process.exit(1);" || {
   echo "cloud-code-delta-bridge.json is invalid." >&2
@@ -225,6 +237,11 @@ node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-se
 
 node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/bridges/environment-fix-exchange-bridge.json','utf8')); if(data.source_label!=='CLI Environment Fixes') process.exit(1); if(data.scope!=='programming-environment-only') process.exit(1); if(!data.requires_full_context) process.exit(1); if(!Array.isArray(data.trigger_phrases) || data.trigger_phrases.length<3) process.exit(1);" || {
   echo "environment-fix-exchange-bridge.json is invalid." >&2
+  exit 1
+}
+
+node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('codex-setup/bridges/environment-fix-exchange-bridge.json','utf8')); if(!data.requires_resilient_bugfix_fields) process.exit(1);" || {
+  echo "environment-fix-exchange-bridge.json must require resilient bugfix fields." >&2
   exit 1
 }
 
@@ -311,7 +328,7 @@ node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync(process.a
 }
 temp_fix_ledger="$(mktemp)"
 rm -f "$temp_fix_ledger"
-node "codex-setup/scripts/register-environment-fix.mjs" add --state "$temp_fix_ledger" --id "validator-temp-fix" --category "validator" --summary "temporary validator entry" --context "This temporary validator entry exists only to prove that the environment-fix writer accepts full cross-CLI context." --symptom "Without this smoke test the validator would only know that the file exists, not that the writer can create a detailed entry end to end." --root-cause "The validator needs a write-path proof so schema changes cannot silently break the fix ledger tooling." --what "temporary write path" --why "prove the environment-fix ledger writer works" --verification "The validator reads the temporary ledger back immediately and checks that the written entry id matches the expected smoke-test value." --portability-notes "Other CLIs should keep the same smoke test so a fix ledger is validated as a workflow, not just as a static JSON file." >/dev/null
+node "codex-setup/scripts/register-environment-fix.mjs" add --state "$temp_fix_ledger" --id "validator-temp-fix" --category "validator" --summary "temporary validator entry" --context "This temporary validator entry exists only to prove that the environment-fix writer accepts full cross-CLI context." --symptom "Without this smoke test the validator would only know that the file exists, not that the writer can create a detailed entry end to end." --root-cause "The validator needs a write-path proof so schema changes cannot silently break the fix ledger tooling." --what "temporary write path" --why "prove the environment-fix ledger writer works" --exact-error "Validator smoke path would otherwise miss schema-level regressions." --why-chain "Why 1: a file can exist while the writer is still broken. Why 2: schema evolution can silently desynchronize the writer and validator. Why 3: without an end-to-end write test the regression would only surface later in a real session." --related-checks "Checked the write path, JSON serialization path, required-field enforcement, and post-write readback path because all of them belong to the same fix-ledger workflow." --wrong-pattern "Only validate that the ledger file exists or can be parsed." --right-pattern "Create a temporary ledger entry end to end and verify that the persisted id matches the expected smoke-test value." --avoidance-rule "If a fix ledger schema changes, then always run an end-to-end temporary write test instead of validating only file existence or JSON syntax." --resilience-summary "This smoke test is defensive because it checks the workflow instead of one file, update-resilient because it runs after future schema changes, and documented because the validator itself carries the expectation forward." --failure-review "Dependencies: writer and validator must stay aligned. Failure scenario: if the writer breaks the validator must fail loudly. State change: only a temporary file is touched. Race risk is negligible in the temp path. Compatibility remains intact because the smoke uses the same CLI. Platform effects are covered by PowerShell and Bash validators. Update resistance comes from rerunning the same smoke after future schema changes. Graceful degradation is preserved because failure only aborts validation, not the workspace." --verification "The validator reads the temporary ledger back immediately and checks that the written entry id matches the expected smoke-test value." --portability-notes "Other CLIs should keep the same smoke test so a fix ledger is validated as a workflow, not just as a static JSON file." >/dev/null
 node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); if(!data.entries || data.entries[0].id!=='validator-temp-fix') process.exit(1);" "$temp_fix_ledger" || {
   echo "Environment-fix registration failed." >&2
   exit 1
