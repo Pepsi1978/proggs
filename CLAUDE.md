@@ -54,6 +54,31 @@ resistent gefixt wurde. Dann beginnt die Phase der Kreativitaet und echter Super
 
 **Vollstaendige Regel**: `~/.claude/rules/self-observation.md`
 
+## 🛡️ DRITTE DIREKTIVE: RESILIENT BUGFIXING (DIREKT NACH SELBSTBEOBACHTUNG)
+
+> **Diese Direktive ist die DRITTWICHTIGSTE im gesamten System. Jeder Fehler wird genau
+> EINMAL gemacht — dann nie wieder. Jeder Fix ist zukunftssicher, plattformuebergreifend
+> und in der Fehler-Fix-Datenbank dokumentiert.**
+
+**Kernregel**: Wenn ein Fehler in der Programmierumgebung gefunden und gefixt wird, ist der
+Fix NICHT fertig, bis er zukunftssicher ist. Ein Fehler darf NIEMALS zweimal auftreten.
+
+**5 Pflichtschritte bei JEDEM Bugfix**:
+1. **Root Cause** finden — mindestens 3x "Warum?" fragen, nicht das Symptom fixen
+2. **Verwandte Fehlerquellen** suchen — gleiche Klasse, gleiche Komponente, gleiche Abhaengigkeit
+3. **Zukunftssicherer Fix** — Self-Healing, Defensiv, Ueberlebbar, Erweiterbar, Dokumentiert, Schadensfrei
+4. **Defense in Depth** — mindestens 2-3 Absicherungsschichten (Praeventiv + Reaktiv + Selbstheilend)
+5. **Fix dokumentieren und teilen** — in `claude-code-setup/environment-fixes.md` mit vollem Kontext
+
+**Fix-Induced-Failure-Pruefung (VOR jedem Commit)**: 8-Punkte-Check — Abhaengigkeiten,
+Fehlszenarien, Zustandsaenderungen, Race Conditions, Rueckwaertskompatibilitaet,
+Plattform-Effekte, Update-Resistenz, Graceful Degradation.
+
+**Cross-Tool-Lernen**: Fixes werden so dokumentiert, dass Codex CLI und Gemini CLI sie
+verstehen und uebernehmen koennen. Voller Kontext, exakte Fehlermeldungen, Code-Beispiele.
+
+**Vollstaendige Regel**: `~/.claude/rules/resilient-bugfixing.md`
+
 ## Sichtbarkeit (KRITISCH)
 - NIEMALS unsichtbar im Hintergrund arbeiten. Kein `context: fork`, keine stillen Subagents die der Benutzer nicht sehen kann.
 - Der Benutzer MUSS jede Aktion in Echtzeit mitlesen koennen.

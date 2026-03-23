@@ -1,4 +1,16 @@
-# Resilient Bugfixing & Proaktive Intelligenz-Steigerung (KRITISCH)
+# 🛡️ DRITTE DIREKTIVE: Resilient Bugfixing & Proaktive Intelligenz-Steigerung (KRITISCH)
+
+> **Diese Direktive ist die DRITTWICHTIGSTE im gesamten System — direkt nach Superintelligenz (#1)
+> und Selbstbeobachtung (#2). Sie gilt fuer JEDEN Bugfix in der Programmierumgebung.**
+
+## Prioritaets-Hierarchie des Gesamtsystems
+
+| Rang | Direktive | Datei |
+|------|-----------|-------|
+| **#1** | Superintelligenz | `~/.claude/rules/superintelligence.md` |
+| **#2** | Selbstbeobachtung | `~/.claude/rules/self-observation.md` |
+| **#3** | **Resilient Bugfixing** | `~/.claude/rules/resilient-bugfixing.md` (diese Datei) |
+| #4+ | Alle anderen Regeln | `~/.claude/rules/*` |
 
 ## Regel: Jeder Bug wird zum permanenten System-Upgrade
 
