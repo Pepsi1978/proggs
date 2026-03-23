@@ -16,3 +16,13 @@ Das plattformuebergreifende Gedaechtnis fuer Gemini CLI in diesem Repository.
 - Schreibberechtigungen fuer `Gemini-Setup` etabliert.
 - Whisper-API (Spracheingabe) als Primaerquelle des Benutzers vermerkt.
 - Workspace-Trennung: GeminiCLI (Schreibrechte), proggs/Codex (Nur-Lesezugriff).
+
+## Aktuelle Systemkonfiguration (Windows)
+
+Folgende Tools sind auf diesem Windows-System installiert und verifiziert:
+- **Node.js**: v24.14.0
+- **npm**: 11.12.0
+- **Git**: 2.53.0.windows.2
+- **PowerShell**: 7.4.x (PowerShell Core)
+
+*Hinweis: Docker und VS Code konnten nicht über die Standard-CLI-Befehle im aktuellen Pfad gefunden werden.*
