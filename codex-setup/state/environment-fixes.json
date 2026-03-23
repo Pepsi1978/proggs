@@ -335,6 +335,35 @@
       "artifacts": [],
       "created_at": "2026-03-23T13:31:51.168Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-23-powershell-bootstrap-param-order",
+      "source_cli": "Codex",
+      "category": "bootstrap",
+      "summary": "PowerShell-Bootstrap repariert: `param(...)` muss am Dateianfang stehen, damit frische Rechner den Setup-Einstieg wirklich ausfuehren koennen.",
+      "context_for_other_clis": "Dieser Fehler trat waehrend der ersten End-to-End-Validierung der neuen Frische-Rechner-Bootstrap-Skripte auf. Die PowerShell-Validierung ruft `codex-setup/scripts/bootstrap-codex-setup.ps1 -SkipValidate` als Smoke-Test auf, damit frische Rechner spaeter denselben Bootstrap-Pfad reproduzierbar nutzen koennen. Noch bevor install-self-improve oder weitere Validierungsschritte liefen, brach der Bootstrap unmittelbar beim Laden des Skripts ab.",
+      "symptom_before_fix": "Der neue PowerShell-Bootstrap startete nicht. Die Validierung fiel sofort beim Aufruf von `bootstrap-codex-setup.ps1` aus, obwohl die restliche Setup-Struktur korrekt war.",
+      "root_cause": "Die Datei war als PowerShell-Skript syntaktisch fast richtig, aber `param(...)` stand nicht am Anfang des Skripts. In PowerShell muss der `param`-Block das erste ausführbare Element sein. Wenn vorher bereits ein Statement wie `$ErrorActionPreference = \"Stop\"` steht, interpretiert PowerShell `param` beim Script-Start als normalen Befehl statt als Parameterdeklaration.",
+      "what_was_fixed": "Den `param(...)`-Block in `codex-setup/scripts/bootstrap-codex-setup.ps1` an die erste zulässige Stelle verschoben und danach den Bootstrap-Smoke erneut validiert.",
+      "why_it_was_fixed": "Damit der neue Frische-Rechner-Bootstrap unter PowerShell nicht nur auf dem Papier existiert, sondern wirklich aufrufbar ist und andere CLIs aus dem Fix dieselbe Sprachregel ableiten koennen.",
+      "exact_error_text": "param: C:\\Users\\barwa\\Codex\\codex-setup\\scripts\\bootstrap-codex-setup.ps1:3 The term 'param' is not recognized as a name of a cmdlet, function, script file, or executable program.",
+      "root_cause_why_chain": "Warum 1: Der Bootstrap lief nicht an, weil PowerShell den `param`-Block nicht als Parameterdeklaration erkannte. Warum 2: PowerShell erkannte ihn nicht, weil vorher bereits `$ErrorActionPreference = \"Stop\"` als ausführbares Statement stand. Warum 3: Beim Erstellen des Skripts wurde die Reihenfolge aus allgemeinen Skriptgewohnheiten übernommen, statt die PowerShell-Regel einzuhalten, dass `param(...)` an den Anfang des Skripts gehoert.",
+      "related_error_sources_checked": "Geprueft wurden die neue PowerShell-Bootstrap-Datei selbst, die PowerShell-Validierung mit Bootstrap-Smoke, die Git-Bash-Validierung fuer die Shell-Paritaet sowie die Frage, ob weitere neue PowerShell-Dateien denselben Musterfehler enthalten. Der konkrete Fehler trat nur im neuen Bootstrap-Skript auf; die allgemeine Vermeidungsregel gilt aber fuer kuenftige `.ps1`-Skripte im gesamten Codex-Setup.",
+      "wrong_pattern_example": "In einer neuen `.ps1`-Datei zuerst globale Initialisierung wie `$ErrorActionPreference = \"Stop\"` schreiben und den `param(...)`-Block erst danach einfuegen.",
+      "right_pattern_example": "In einer `.ps1`-Datei immer zuerst `param(...)` deklarieren und erst danach `$ErrorActionPreference`, Variablen, Funktionsdefinitionen oder sonstige ausführbare Initialisierung setzen.",
+      "avoidance_rule": "Wenn ein PowerShell-Skript Parameter annimmt, dann muss `param(...)` immer das erste ausführbare Statement der Datei sein statt nach Initialisierungscode oder globalen Zuweisungen zu kommen.",
+      "resilience_summary": "Der Fix ist widerstandsfaehig, weil nicht nur die fehlerhafte Zeilenreihenfolge korrigiert wurde, sondern der Bootstrap-Pfad jetzt auch aktiv von der PowerShell-Validierung ausgefuehrt wird. Dadurch wuerde derselbe Fehler bei spaeteren Aenderungen sofort wieder auffallen, statt erst auf einem neuen Rechner im echten Einsatz sichtbar zu werden.",
+      "fix_induced_failure_review": "Abhaengigkeiten: Die PowerShell-Validierung, das Bootstrap-Skript und spaetere Aufrufer muessen denselben Einstiegspunkt nutzen. Fehlszenario: Wenn erneut Code vor `param(...)` landet, muss die Validierung sofort fehlschlagen. Zustandsaenderung: Der Bootstrap installiert self-improve lokal, veraendert aber keine Fremd-Workspaces. Race Conditions sind gering, weil der Smoke sequentiell laeuft. Rueckwaertskompatibilitaet bleibt erhalten, da nur die interne Zeilenreihenfolge geaendert wurde. Plattform-Effekt: Der Fehler ist PowerShell-spezifisch und betrifft damit vor allem Windows bzw. pwsh-Aufrufe. Update-Resistenz entsteht durch den dauerhaften Bootstrap-Smoke. Graceful Degradation bleibt erhalten, weil der Fehler nun frueh in der Validierung statt spaet in einer realen Session sichtbar wird.",
+      "verification": "Nach der Korrektur lief `pwsh -NoProfile -File .\\\\codex-setup\\\\scripts\\\\validate-codex-setup.ps1` grün durch, der eingebaute Bootstrap-Smoke fuehrte `bootstrap-codex-setup.ps1 -SkipValidate` erfolgreich aus und die anschliessende Git-Bash-Validierung lief ebenfalls grün.",
+      "portability_notes": "Andere CLIs mit PowerShell-Komponenten sollten dieselbe Vermeidungsregel in ihre Skriptkonventionen und Bootstrap-Smokes uebernehmen. Der Fehler ist leicht wiederholbar, wenn neue `.ps1`-Bootstrap- oder Wrapper-Skripte aus allgemeinem Skriptstil heraus gebaut werden, ohne die besondere Position von `param(...)` zu beachten.",
+      "impact": "",
+      "portable_to": [
+        "Cloud Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [],
+      "created_at": "2026-03-23T13:49:40.769Z",
+      "status": "active"
     }
   ]
 }

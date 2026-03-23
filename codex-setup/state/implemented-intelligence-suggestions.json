@@ -126,6 +126,40 @@
       ],
       "created_at": "2026-03-23T13:21:39.323Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-23-fresh-machine-bootstrap-and-cross-cli-bridge-exposure",
+      "source_cli": "Codex",
+      "summary": "Codex besitzt jetzt reproduzierbare Bootstrap-Skripte fuer frische Rechner und veroeffentlicht ihre Adressen in Registry und Bruecken fuer andere CLIs.",
+      "proposal_text": "💡 Intelligenz-Vorschlag: Neue Rechner muessen aktuell Clone, Skill-Deployment und Validierung in der richtigen Reihenfolge ausfuehren — Baue `bootstrap-codex-setup.ps1` und `bootstrap-codex-setup.sh`, verankere ihre Adressen in Registry und Delta-Bruecken und gib dieselbe Aufgabe an Cloud Code und Gemini CLI weiter — Soll ich das umsetzen?",
+      "context_for_other_clis": "Diese Umsetzung entstand in einer Session, in der Codex bereits Regeln, Bruecken, Ledger und Trigger fuer Cloud Code und Gemini CLI aufgebaut hatte, der Benutzer die Umgebung aber noch auf weiteren Rechnern neu installieren will. Ohne einen einzigen klaren Bootstrap-Einstieg muesste ein frischer Rechner weiterhin wissen, dass zuerst das Repo geklont, dann self-improve installiert und danach validiert werden muss. Gleichzeitig sollten Cloud Code und Gemini CLI dieselbe Reproduzierbarkeits-Idee spaeter uebernehmen koennen, ohne dass man sich die passenden Pfade und GitHub-Adressen erneut zusammensuchen muss.",
+      "why_it_was_suggested": "Die vorherige Lage war funktional, aber noch zu handbuchartig: README und Sessionwissen beschrieben zwar die notwendigen Schritte, doch es gab keinen robusten Ein-Kommando-Einstieg fuer neue Rechner und keine zentrale Bridge-Metadatenlage fuer erwartete Peer-Bootstrap-Adressen.",
+      "why_it_was_implemented": "Der Benutzer hat die Umsetzung direkt freigegeben und ausdruecklich verlangt, dass dieselbe Information auch fuer andere CLIs in den Bruecken sichtbar wird. Damit wurde aus einem lokalen Komfortvorschlag eine echte Cross-CLI-Reproduzierbarkeitsmassnahme fuer heutige und spaetere Neuinstallationen.",
+      "how_it_was_implemented": "Codex hat die neuen Skripte `codex-setup/scripts/bootstrap-codex-setup.ps1` und `codex-setup/scripts/bootstrap-codex-setup.sh` gebaut. Beide leiten frische Rechner durch den standardisierten Ablauf Repo-Kontext pruefen, self-improve installieren und codex-setup validieren, mit optionalen Skip-Schaltern fuer Teilpfade. Danach wurden `codex-setup/README.md`, `codex-setup/bridges/bridge-registry.json`, die Cloud- und Gemini-Delta-Bruecken sowie die Intelligence-Suggestion-Exchange-Bruecke um exakte Bootstrap-Adressen fuer Codex, erwartete Cloud-Code-Skripte und erwartete Gemini-Repo- und Workspace-Skripte erweitert. Die Validatoren pruefen jetzt zusaetzlich, dass diese Artefakte existieren, in der Dokumentation auftauchen, in den Bridge-JSONs praesent sind und sogar im Audit-JSON mit ausgegeben werden.",
+      "bridge_value": "Andere CLIs koennen jetzt nicht nur Ideen, Regeln und Fixes uebernehmen, sondern auch einen konkreten, reproduzierbaren Einstiegsweg fuer frische Rechner. Weil die Bootstrap-Adressen in Registry, Delta-Bruecken und Intelligence-Exchange dokumentiert sind, bleibt diese Information auch ohne Sessionkontext transportierbar und fuer spaetere Audits sichtbar.",
+      "adoption_guidance": "Wenn Cloud Code oder Gemini CLI dieselbe Faehigkeit uebernehmen, sollten sie zuerst eigene Bootstrap-Skripte in ihrer eigenen Setup-Basis anlegen, dann deren Repo-, GitHub- und falls noetig lokale Workspace-Adressen in ihre bridge-registry.json und ihre Delta-Bruecke eintragen und schliesslich einen Validator-Smoke fuer den Bootstrap-Weg hinzufuegen. Andere CLIs bleiben fuer Codex dabei strikt read-only.",
+      "resilience_summary": "Die Umsetzung ist widerstandsfaehig, weil nicht nur zwei Skripte hinzugekommen sind, sondern README, Registry, Delta-Bruecken, Intelligence-Exchange, Whiteboard und beide Validatoren gemeinsam nachgezogen wurden. Dadurch gibt es keinen einzelnen stillen Wissenspunkt mehr, an dem die Bootstrap-Logik verloren gehen koennte, und künftige Drift zwischen Skript, Dokumentation und Bridge-Metadaten wird aktiv erkannt.",
+      "future_failure_review": "Geprueft wurden mehrere moegliche Rueckfaelle: Bootstrap-Skripte vorhanden aber nirgends dokumentiert, Dokumentation vorhanden aber nicht im Audit sichtbar, Registry kennt die Skripte aber die Delta-Bruecken nicht, oder ein frischer Rechner fuehrt nur Teilpfade aus und verliert den roten Faden. Die Validatoren decken deshalb Existenz, Doku, JSON-Metadaten, Audit-Ausgabe und den direkten Bootstrap-Aufruf ab. Graceful Degradation bleibt erhalten, weil die Skripte Teilpfade explizit ueberspringen koennen, statt unkontrolliert abzubrechen.",
+      "portable_to": [
+        "Cloud Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "codex-setup/scripts/bootstrap-codex-setup.ps1",
+        "codex-setup/scripts/bootstrap-codex-setup.sh",
+        "codex-setup/README.md",
+        "codex-setup/bridges/bridge-registry.json",
+        "codex-setup/bridges/cloud-code-delta-bridge.json",
+        "codex-setup/bridges/cloud-code-delta-bridge.md",
+        "codex-setup/bridges/gemini-cli-delta-bridge.json",
+        "codex-setup/bridges/gemini-cli-delta-bridge.md",
+        "codex-setup/bridges/intelligence-suggestion-exchange-bridge.json",
+        "codex-setup/bridges/intelligence-suggestion-exchange-bridge.md",
+        "codex-setup/scripts/validate-codex-setup.ps1",
+        "codex-setup/scripts/validate-codex-setup.sh"
+      ],
+      "created_at": "2026-03-23T13:48:22.635Z",
+      "status": "active"
     }
   ]
 }

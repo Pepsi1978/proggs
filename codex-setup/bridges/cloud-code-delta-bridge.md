@@ -46,6 +46,23 @@ Beispiele:
 
 Andere CLIs sollen dieselbe Dateiart im eigenen Setup anlegen und ihre Adresse in der eigenen Bruecke mit veroeffentlichen.
 
+## Bootstrap fuer frische Rechner
+
+- Codex-Referenz:
+  `codex-setup/scripts/bootstrap-codex-setup.sh`
+  und
+  `codex-setup/scripts/bootstrap-codex-setup.ps1`
+- Erwartete Cloud-Code-Adresse:
+  `claude-code-setup/scripts/bootstrap-claude-code-setup.sh`
+  und
+  `claude-code-setup/scripts/bootstrap-claude-code-setup.ps1`
+- Erwartete Gemini-Adresse:
+  `Gemini-Setup/scripts/bootstrap-gemini-setup.sh`
+  und
+  `Gemini-Setup/scripts/bootstrap-gemini-setup.ps1`
+
+Andere CLIs sollen fuer frische Rechner eigene Bootstrap-Skripte anlegen und deren genaue Adressen sowohl in der Registry als auch in der Delta-Bruecke mit veroeffentlichen.
+
 ## Bridge-Registry
 
 - Zentrale Codex-Registry:

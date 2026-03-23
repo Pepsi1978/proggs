@@ -59,7 +59,7 @@ Wichtigste Trennung:
 
 - `scripts/`
   Plattformuebergreifende Hilfsskripte fuer Whiteboard-Resolver, Whiteboard-Insert, Sentinel-Merge,
-  Skill-Installation, Validierung, `code-search`-Healthchecks, gefuehrte Umgebungsfix-Erfassung,
+  Skill-Installation, Bootstrap fuer frische Rechner, Validierung, `code-search`-Healthchecks, gefuehrte Umgebungsfix-Erfassung,
   Intelligenzvorschlag-Logging sowie Claude- und Gemini-Delta-Audits.
 
 - `bridges/`
@@ -127,14 +127,17 @@ Installation:
 Wenn Codex auf einem neuen Rechner diese Bruecken und Direktiven noch nicht kennt, reicht die Repo-Basis:
 
 1. Repository klonen und im Repo-Root arbeiten.
-2. Optional den Skill lokal deployen:
-   `bash codex-setup/scripts/install-self-improve.sh` oder
-   `pwsh -File codex-setup/scripts/install-self-improve.ps1`
-3. Setup validieren:
+2. Den Bootstrap ausfuehren:
+   `bash codex-setup/scripts/bootstrap-codex-setup.sh` oder
+   `pwsh -NoProfile -File codex-setup/scripts/bootstrap-codex-setup.ps1`
+3. Optional einzelne Schritte separat ausfuehren:
+   `bash codex-setup/scripts/install-self-improve.sh`,
+   `pwsh -File codex-setup/scripts/install-self-improve.ps1`,
    `bash codex-setup/scripts/validate-codex-setup.sh` oder
    `pwsh -NoProfile -File codex-setup/scripts/validate-codex-setup.ps1`
 
 Alle wichtigen Regeln, Bruecken, Ledger und Trigger liegen bewusst in `codex-setup/` und `AGENTS.md` im Git-Repo, nicht nur in lokalem Session-Wissen.
+Die Bootstrap-Skripte sind Teil der Codex-Referenzimplementierung und sollen fuer andere CLIs spaeter ebenfalls als eigene, read-only dokumentierte Setup-Einstiegspfade veroeffentlicht werden.
 
 ## Claude-Delta-Audit
 

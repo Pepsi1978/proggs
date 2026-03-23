@@ -102,6 +102,45 @@
         "github_url": "https://github.com/Pepsi1978/proggs/blob/main/claude-code-setup/state/implemented-intelligence-suggestions.json",
         "status": "awaiting-foreign-registration"
       }
+    },
+    "bootstrap_setup": {
+      "codex": {
+        "repo_scripts": [
+          "codex-setup/scripts/bootstrap-codex-setup.sh",
+          "codex-setup/scripts/bootstrap-codex-setup.ps1"
+        ],
+        "github_urls": [
+          "https://github.com/Pepsi1978/proggs/blob/main/codex-setup/scripts/bootstrap-codex-setup.sh",
+          "https://github.com/Pepsi1978/proggs/blob/main/codex-setup/scripts/bootstrap-codex-setup.ps1"
+        ]
+      },
+      "gemini_expected": {
+        "repo_scripts": [
+          "Gemini-Setup/scripts/bootstrap-gemini-setup.sh",
+          "Gemini-Setup/scripts/bootstrap-gemini-setup.ps1"
+        ],
+        "local_scripts": [
+          "%USERPROFILE%/GeminiCLI/scripts/bootstrap-gemini-setup.sh",
+          "%USERPROFILE%/GeminiCLI/scripts/bootstrap-gemini-setup.ps1"
+        ],
+        "github_urls": [
+          "https://github.com/Pepsi1978/proggs/blob/main/Gemini-Setup/scripts/bootstrap-gemini-setup.sh",
+          "https://github.com/Pepsi1978/proggs/blob/main/Gemini-Setup/scripts/bootstrap-gemini-setup.ps1"
+        ],
+        "status": "awaiting-foreign-registration"
+      },
+      "cloud_code_expected": {
+        "repo_scripts": [
+          "claude-code-setup/scripts/bootstrap-claude-code-setup.sh",
+          "claude-code-setup/scripts/bootstrap-claude-code-setup.ps1"
+        ],
+        "github_urls": [
+          "https://github.com/Pepsi1978/proggs/blob/main/claude-code-setup/scripts/bootstrap-claude-code-setup.sh",
+          "https://github.com/Pepsi1978/proggs/blob/main/claude-code-setup/scripts/bootstrap-claude-code-setup.ps1"
+        ],
+        "status": "awaiting-foreign-registration"
+      },
+      "adoption_note": "Gemini CLI und Cloud Code sollen fuer frische Rechner eigene Bootstrap-Skripte veroeffentlichen und deren Adressen sowohl in der Registry als auch in der Delta-Bruecke mitfuehren."
     }
   }
 }

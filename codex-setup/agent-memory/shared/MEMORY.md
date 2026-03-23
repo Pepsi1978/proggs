@@ -216,8 +216,11 @@ _Noch keine Eintraege._
 
 - **[2026-03-23 17:24] codex-setup**: Die Cloud-Code- und Gemini-Delta-Audits lesen ihre Git-Scanpfade, Trigger und Bridge-Metadaten jetzt direkt aus codex-setup/bridges/bridge-registry.json plus der jeweiligen Bridge-JSON. Neue Bruecken sollen damit zuerst die zentrale Registry erweitern, statt dieselben Pfade oder Trigger spaeter nochmal im Audit-Code zu duplizieren.
 
+- **[2026-03-23 13:48] self-improve**: Frische Rechner sollen Codex-Setup jetzt ueber `codex-setup/scripts/bootstrap-codex-setup.{ps1,sh}` bootstrapen. Die Bootstrap-Adressen sind zusaetzlich in `codex-setup/bridges/bridge-registry.json`, den Delta-Bruecken und der Intelligence-Exchange-Bruecke dokumentiert, damit Cloud Code und Gemini CLI dieselbe Struktur spaeter read-only nachziehen koennen.
+
 ## Debugging-Muster
-_Noch keine Eintraege._
+- **[2026-03-23 13:53] self-improve**: In PowerShell-Skripten muss `param(...)` das erste ausführbare Statement bleiben. Wenn vorher bereits `$ErrorActionPreference` oder anderer Code steht, wird `param` beim Script-Aufruf als normaler Befehl interpretiert und der Bootstrap bricht sofort ab.
+
 
 ## Performance & Optimierung
 _Noch keine Eintraege._
@@ -277,3 +280,5 @@ _Noch keine Eintraege._
 - **[2026-03-23 17:05] codex-setup**: Die zentrale Bridge-Registry liegt jetzt in codex-setup/bridges/bridge-registry.json. Sichtbare Vorschlaege muessen ab jetzt immer exakt als `💡 Intelligenz-Vorschlag:` erscheinen. Umgesetzte Intelligenzvorschlaege folgen nun demselben Zukunftsstandard wie Umgebungsfixes, inklusive Resilienz-Zusammenfassung und Failure-Review, und die Cloud-Code- sowie Gemini-Bruecken tragen den Registry-Adoptionshinweis jetzt auch maschinenlesbar mit.
 
 - **[2026-03-23 17:48] codex-setup**: Fuer frische Rechner gilt jetzt explizit: operative Codex-Pfade sind workspace-relativ, und typische lokale Gemini-Pfade werden als `%USERPROFILE%\GeminiCLI\...`-Vorlage behandelt. Aeltere absolute Benutzerpfade in historischen Whiteboard-Eintraegen sind nur Sitzungskontext dieser Maschine, nicht die aktuelle operative Vorgabe.
+
+- **[2026-03-23 13:48] self-improve**: Wenn neue Reproduzierbarkeits-Artefakte wie Bootstrap-Skripte entstehen, muessen ihre exakten Repo-/GitHub-Adressen nicht nur in README und Ledgern, sondern auch in `bridge-registry.json` und den betroffenen Delta-Bruecken stehen, damit andere CLIs sie ohne Session-Kontext finden.

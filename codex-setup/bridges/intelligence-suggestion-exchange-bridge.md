@@ -83,3 +83,26 @@ Die Bruecke soll bei deutschen Formulierungen wie diesen aktiviert werden:
 - `codex-setup/scripts/register-intelligence-suggestion.mjs`
 - `codex-setup/scripts/register-intelligence-suggestion.sh`
 - `codex-setup/scripts/register-intelligence-suggestion.ps1`
+- `codex-setup/scripts/bootstrap-codex-setup.sh`
+- `codex-setup/scripts/bootstrap-codex-setup.ps1`
+
+## Erwartete Bootstrap-Adressen
+
+- Codex:
+  `codex-setup/scripts/bootstrap-codex-setup.sh`
+  und
+  `codex-setup/scripts/bootstrap-codex-setup.ps1`
+- Cloud Code erwartet:
+  `claude-code-setup/scripts/bootstrap-claude-code-setup.sh`
+  und
+  `claude-code-setup/scripts/bootstrap-claude-code-setup.ps1`
+- Gemini CLI erwartet:
+  `Gemini-Setup/scripts/bootstrap-gemini-setup.sh`
+  und
+  `Gemini-Setup/scripts/bootstrap-gemini-setup.ps1`
+- Lokale read-only Zusatzquelle fuer Gemini CLI:
+  `%USERPROFILE%\GeminiCLI\scripts/bootstrap-gemini-setup.sh`
+  und
+  `%USERPROFILE%\GeminiCLI\scripts/bootstrap-gemini-setup.ps1`
+
+Andere CLIs sollen diese Bootstrap-Adressen in ihrer Registry und in ihrer Delta-Bruecke mit veroeffentlichen, damit frische Rechner dieselbe Setup-Logik ohne Session-Kontext nachziehen koennen.
