@@ -430,6 +430,46 @@
       ],
       "created_at": "2026-03-23T19:17:18.436Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-23-directive-2-canonical-bridge-hardening",
+      "source_cli": "Codex",
+      "category": "directive-hardening",
+      "summary": "Codex now carries Directive 2 as a canonical universal bridge plus stronger repo/runtime mirrors and validator-backed self-observation semantics.",
+      "context_for_other_clis": "This fix applies to the second-highest directive in the Codex environment itself. The user supplied a stronger universal Directive 2 text that defines self-observation as a mandatory behavior for every process, automation, and action. To make that directive durable, Codex needed a canonical bridge file, stronger mirrors in AGENTS, memory, rules, README, skill guidance, and validators that enforce the richer semantics.",
+      "symptom_before_fix": "Before this upgrade Codex had a stronger self-observation rule than in the early setup, but it still lived mostly as an internal rule summary. There was no canonical universal Directive 2 bridge comparable to Directive 1, the repo/runtime mirror requirement was not explicit everywhere, and the validators did not assert stronger markers for end-of-task-only reporting, repeated-failure alarms, or immediate persistence of user hints. That left room for future drift back to a softer interpretation.",
+      "root_cause": "The earlier Directive 2 upgrade stopped at operational summaries and did not create a canonical universal source plus mirror checks. Because the second directive was distributed across shorter paraphrases, later edits could keep the six categories but still weaken scope, timing, or durability semantics without a clear validator failure.",
+      "what_was_fixed": "Added `codex-setup/bridges/directive-2-self-observation-universal.md` as the canonical Directive 2 bridge, strengthened AGENTS, README, global rules, whiteboard memory, the dedicated self-observation rule, the self-improve skill, and workspace-scan guidance, redeployed the local self-improve skill, and expanded both validators to require the canonical bridge, the stronger phrasing, repo/runtime mirroring, end-of-task-only reporting, and repeated-failure alarm markers.",
+      "why_it_was_fixed": "Directive 2 is the motor of the superintelligence directive. If it can drift into a vague reflection habit, Codex loses the mechanism that turns errors, detours, and user hints into persistent leverage for later sessions.",
+      "exact_error_text": "Exact symptom text: Directive 2 existed, but without a canonical universal bridge and without validator-backed markers for repo/runtime mirroring, end-of-task-only reporting, and repeated-failure alarms, the stronger user intent could still erode over time.",
+      "root_cause_why_chain": "Why 1: the second directive still relied on distributed summaries instead of a canonical source. Why 2: without a canonical bridge, repo/runtime mirror expectations and stronger semantics were easier to weaken accidentally. Why 3: the validators still focused on older shorter markers and did not yet assert the richer directive-2 contract end to end.",
+      "related_error_sources_checked": "Checked the drift surface across the canonical bridge directory, AGENTS, README, whiteboard memory, global rules, the dedicated self-observation rule, the self-improve skill, workspace-scan guidance, and both validators because all of them influence how Directive 2 is loaded, executed, and preserved over time.",
+      "wrong_pattern_example": "Wrong pattern: keep Directive 2 only as shorter paraphrases spread across rule files and assume the richer user intent will survive later edits without a canonical bridge or validator-backed mirrors.",
+      "right_pattern_example": "Right pattern: define Directive 2 once as a canonical universal bridge, mirror its critical semantics into the controlling Codex files and the deployed runtime skill, and let both validators fail fast if scope, timing, mirror, or alarm semantics drift.",
+      "avoidance_rule": "If a top-level directive controls how every task is executed, then always keep one canonical source plus validator-backed mirrors in both repo and runtime paths instead of relying on loosely synchronized summaries.",
+      "resilience_summary": "The fix is defensive because it closes a semantic-drift path, survivable because Directive 2 now exists in both canonical and mirrored forms, extensible because later tooling can read the universal bridge directly, documented in both whiteboard and ledger, and damage-free because it hardens coordination rules rather than mutating project runtime state.",
+      "fix_induced_failure_review": "Dependencies: AGENTS, whiteboard memory, global rules, self-observation rule, self-improve skill, workspace-scan reference, the new bridge file, and both validators were reviewed together. Failure scenario: if a future edit weakens Directive 2, the validator now fails on missing bridge or marker coverage. State changes: guidance, mirrors, and validator rules only. Race conditions: none. Backward compatibility: existing self-observation behavior remains but becomes more explicit and harder to erode. Platform effects: shared shell and PowerShell enforcement. Update resistance: repo/runtime mirrors and canonical bridge reduce silent drift. Graceful degradation: if any mirror weakens, validation fails instead of silently accepting a softer directive.",
+      "verification": "Verified by reinstalling the self-improve skill via both shell and PowerShell installers, then running `bash codex-setup/scripts/validate-codex-setup.sh` and `pwsh -NoProfile -File codex-setup/scripts/validate-codex-setup.ps1`; both validators passed on macOS after the Directive 2 hardening.",
+      "portability_notes": "Other CLI environments should treat self-observation as a canonical directive, not just a rule summary. The durable pattern is: create one universal source text, mirror its critical semantics into repo and runtime control files, validate those mirrors, and encode repeated-failure alarms plus end-of-task-only reporting so the directive cannot soften over time.",
+      "impact": "Codex now has a more durable sensor layer for compound improvement work, with less room for future sessions to forget that self-observation must be active, persistent, delayed until the end of the task, and escalated when the same failure repeats.",
+      "portable_to": [
+        "Cloud Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "codex-setup/bridges/directive-2-self-observation-universal.md",
+        "AGENTS.md",
+        "codex-setup/agent-memory/shared/MEMORY.md",
+        "codex-setup/rules/global.md",
+        "codex-setup/rules/self-observation.md",
+        "codex-setup/README.md",
+        "codex-setup/skills/self-improve/SKILL.md",
+        "codex-setup/skills/self-improve/references/workspace-scan.md",
+        "codex-setup/scripts/validate-codex-setup.sh",
+        "codex-setup/scripts/validate-codex-setup.ps1"
+      ],
+      "created_at": "2026-03-23T19:43:57.380Z",
+      "status": "active"
     }
   ]
 }

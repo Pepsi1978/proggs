@@ -141,14 +141,16 @@ Alle acht Dimensionen muessen wachsen. Schnell schlechter Code ist nicht intelli
 9. Diese Direktive hat hoechste Prioritaet.
 10. Redundanz schuetzt die Direktive.
 
-### Direktive 2: Selbstbeobachtung
+### Direktive 2: Selbstbeobachtung - Wer arbeitet, beobachtet sich selbst
 
-- Direktive Nummer 2 unterhalb dieser `Oberste Direktive` ist Codex-Selbstbeobachtung.
+- Diese Direktive ist die zweithoechste Regel direkt unter Direktive 1 und gilt fuer jede Aktion, jede Automatisierung und jeden Arbeitsprozess im Codex-Setup.
 - Sie gilt fuer jeden Agenten, jeden Skill, jedes Plugin, jeden Hook und jeden Prozess.
-- Codex soll waehrend der Arbeit seine eigenen Fehler, Umwege, Effizienzverluste, Wissensluecken, wiederkehrenden Muster und Benutzerkorrekturen aktiv beobachten und daraus Schutzmassnahmen, Regelideen oder Intelligenzvorschlaege ableiten.
-- Beobachtungen werden waehrend der Arbeit gesammelt, aber erst am Ende der Aufgabe nach der Status-Meldung gebuendelt zurueckgegeben.
+- Selbstbeobachtung ist der Motor des Compound Intelligence Effects: Fehler, Umwege und Ineffizienzen werden waehrend der Arbeit sichtbar gemacht, damit sie am Ende in dauerhafte Upgrades uebersetzt werden koennen.
+- Codex beobachtet dabei immer diese 6 Kategorien: Fehler die auftreten, Umwege und mehrfache Versuche, Geschwindigkeit und Effizienz, Wissensluecken, Muster-Erkennung und Hinweise des Benutzers.
+- WAEHREND der Arbeit: beobachten und mental notieren. NACH der Aufgabe: nummerierte Vorschlaege praesentieren. NIEMALS: mittendrin fuer einen Vorschlag unterbrechen.
 - Wenn der Benutzer etwas korrigiert oder neues Setup-Wissen liefert, soll dieses Wissen sofort dauerhaft abgesichert werden.
-- Wenn derselbe Fehlertyp erneut auftaucht, soll die ganze Fehlerklasse adressiert werden, nicht nur die einzelne Instanz.
+- Wenn derselbe Fehlertyp zum zweiten Mal auftaucht, ist das ein Alarm und die ganze Fehlerklasse muss adressiert werden, nicht nur die einzelne Instanz.
+- Diese Direktive soll wie Direktive 1 im Repo-Whiteboard und im deployten lokalen Self-Improve-Skill gespiegelt bleiben.
 
 ### Direktive 3: Resilient Bugfixing
 
@@ -265,6 +267,8 @@ Optionaler Gesamtueberblick:
 
 - **[2026-03-23 20:16] self-improve**: Die staerkere Direktive-1-Fassung ist jetzt ueber Whiteboard, global.md, AGENTS und self-improve gespiegelt; bash validate-codex-setup.sh und pwsh validate-codex-setup.ps1 laufen danach auf macOS gruen. Der OpenAI-Docs-MCP-Smoke bekommt waehrend der Validierung jetzt 45000 ms statt des strengeren Default-Budgets.
 
+[2026-03-23 20:43] self-improve: Direktive-2-Upgrade mit bash/pwsh install-self-improve sowie bash/pwsh validate-codex-setup erfolgreich validiert; neue Validator-Marker sichern Bridge, Mirror, End-of-Task-Reporting und Repeated-Failure-Alarm ab.
+
 ## Architektur-Entscheidungen
 - **[2026-03-22 10:48] self-improve**: Die Whiteboard-Bruecke arbeitet jetzt fail-closed. Whiteboard-Aufloesung ist nur noch fuer das autoritative Workspace-Ziel `<workspace>/codex-setup/agent-memory/shared/MEMORY.md` erlaubt; Wrapper uebergeben dafuer explizit `--workspace`, und der Validator deckt CWD-Regressionsfaelle ab.
 
@@ -310,6 +314,8 @@ PowerShell Online Help https://aka.ms/powershell-docs
 All parameters are case-insensitive.-Aufrufe, und \ leitet sein Zielverzeichnis plattformtauglich ueber UserProfile/HOME ab. Damit werden macOS-Pfad- und Home-Aufloesungen nicht mehr stillschweigend als grün fehlinterpretiert.
 
 - **[2026-03-23 20:16] self-improve**: Direktive 1 ist jetzt in der staerkeren Weltklasse-Fassung verankert: Ziel ist die intelligenteste Programmierumgebung der Welt, der Benutzer wird explizit als deutschsprachiger Systemarchitekt gefasst, und die Direktive muss mindestens im Repo-Whiteboard plus in der lokal deployten self-improve-Kopie gespiegelt bleiben. Die Validatoren pruefen diese Marker jetzt aktiv.
+
+[2026-03-23 20:43] self-improve: Direktive 2 ist jetzt als kanonische Bridge-Datei in codex-setup/bridges verankert und als staerkere Repo-/Runtime-Spiegelung in AGENTS, MEMORY, global.md, self-observation.md und dem Self-Improve-Skill durchgezogen.
 
 ## Debugging-Muster
 - **[2026-03-23 13:53] self-improve**: In PowerShell-Skripten muss `param(...)` das erste ausführbare Statement bleiben. Wenn vorher bereits `$ErrorActionPreference` oder anderer Code steht, wird `param` beim Script-Aufruf als normaler Befehl interpretiert und der Bootstrap bricht sofort ab.

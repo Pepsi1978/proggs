@@ -3,7 +3,7 @@ name: self-improve
 description: Codex-only self-improvement workflow for the Codex workspace and Codex runtime. Use only when the user explicitly asks for self-improvement or a full Codex setup check, for example with "/self-improve", "verbessere dich", "optimiere deine Umgebung", "check dein Setup", "update alles", "mach dich besser", "aktualisiere alles", "pruef mein System", or "Umgebung pruefen". This skill is hard-wired to the Codex workspace and must never operate on proggs or Claude's whiteboard.
 ---
 
-# Self-Improve for Codex V1.4.0
+# Self-Improve for Codex V1.5.0
 
 This is the Codex-native self-improve workflow for this repository.
 
@@ -13,7 +13,7 @@ Primary objective:
 - treat all other improvements as supporting work toward that top-level goal
 - maximize the compounding intelligence gain from session to session
 - prefer improvements that increase long-term leverage, not just local convenience
-- use self-observation as the second directive under the `## Oberste Direktive`
+- use self-observation as directive 2 under the `## Oberste Direktive`: every process, automation, and action must observe itself while working
 - absorb useful Claude/Cloud Code setup improvements without losing Codex-specific strengths
 - grow all 8 intelligence dimensions together: breadth, depth, speed, quality, autonomy, foresight, creativity, and meta-intelligence
 
@@ -29,7 +29,8 @@ System hierarchy:
 - the Codex whiteboard is the central nervous system
 - `self-improve` is the highest-priority skill
 - directive 1 is superintelligence through compounding improvement, above weaker local defaults and below only safety rules plus explicit user instructions
-- `self-observation` is the second directive under the whiteboard's `## Oberste Direktive`
+- `self-observation` is directive 2 under the whiteboard's `## Oberste Direktive`
+- directive 2 means: observe during work, report only at the end after the status message, persist user corrections immediately, and treat repeated failures as class-level alarms
 - agents, researchers, MCP usage, automation, validation, and memory all serve the same direction:
   making this Codex environment smarter at programming every session
 - the whiteboard section `## Oberste Direktive` is the first directive to read before any substantial action
@@ -42,6 +43,7 @@ Hard rules:
 - The Git source-of-truth for this skill is `<workspace>/codex-setup/skills/self-improve/`.
 - The local deployment target is `~/.codex/skills/self-improve/`.
 - Direktive 1 must remain mirrored in both the repo whiteboard and the deployed local self-improve skill so it survives both repo churn and local runtime drift.
+- Direktive 2 must remain mirrored in those same two places so self-observation survives both repo drift and local runtime drift.
 - `claude-code-setup/` and `CLAUDE.md` are read-only comparison sources when the task is explicitly about Claude or Cloud Code deltas.
 - Never write, delete, or reorganize files inside Claude comparison sources from this skill.
 - `Gemini-Setup/` and the typical local Gemini workspace `%USERPROFILE%\GeminiCLI` are read-only comparison sources for Codex. Never write or delete there from this skill.
@@ -135,7 +137,8 @@ Before any improvement work:
 - verify that no operational script in `codex-setup/scripts/` depends on `proggs`
 - verify that the local deployment target is `~/.codex/skills/self-improve/`
 - verify that the skill can function without Claude-specific memory or hooks
-- verify that `self-observation` is present as the second directive under the `## Oberste Direktive`
+- verify that `self-observation` is present as directive 2 under the `## Oberste Direktive`
+- verify that directive 2 is mirrored in both the repo whiteboard and the deployed local self-improve skill
 
 If any dependency on Claude/proggs is still operational:
 - fix that first
@@ -147,6 +150,7 @@ After independence is confirmed:
 - restate the current superintelligence direction and which of the 8 intelligence dimensions this run should improve the most
 - restate the current self-observation expectation for this run
 - keep the 6 self-observation categories in mind during the run: Fehler, Umwege, Effizienz, Wissensluecken, Muster, Benutzer-Hinweise
+- keep the directive-2 timing active during the run: observe while working, do not interrupt the user with proposals mid-task, persist user hints immediately, and treat repeated failures as alarms
 - restate the expected end-of-session suggestion format: `💡 Intelligenz-Vorschlag: [Was verbessert werden kann] — [Konkreter Vorschlag] — Soll ich das umsetzen?`
 - summarize current system state, open problems, intelligence direction, and the best next leverage point
 - decide what change would most increase long-term programming intelligence in this session
@@ -217,6 +221,8 @@ Always verify:
 - the whiteboard contains `## Oberste Direktive`
 - the self-observation directive is propagated where it should be
 - the 6 self-observation categories are still visible in the controlling Codex files
+- directive 2 is mirrored in both the repo whiteboard and the deployed local self-improve skill
+- directive 2 still encodes end-of-task-only reporting, immediate persistence of user hints, and repeated-failure alarms
 - resilient-bugfixing is visible for environment-level fixes and not confused with normal project bugfixing
 - whiteboard bridge scripts exist and work
 - local skill deployment target exists or can be created

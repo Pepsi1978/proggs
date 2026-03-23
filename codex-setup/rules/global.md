@@ -156,15 +156,17 @@ Alle acht Dimensionen muessen wachsen. Schnell schlechter Code ist nicht intelli
 9. Diese Direktive hat hoechste Prioritaet.
 10. Redundanz schuetzt die Direktive.
 
-### Direktive 2: Selbstbeobachtung
+### Direktive 2: Selbstbeobachtung - Wer arbeitet, beobachtet sich selbst
 
 - Direktive Nummer 2 unterhalb dieser `Oberste Direktive` ist Codex-Selbstbeobachtung.
+- Sie ist die zweithoechste Systemregel direkt unter Superintelligenz und gilt fuer jede Aktion, jede Automatisierung und jeden Arbeitsprozess im Codex-Setup.
 - Sie gilt fuer jeden Agenten, jeden Skill, jedes Plugin, jeden Hook und jeden Prozess in diesem Codex-Setup.
 - Codex soll waehrend der Arbeit seine eigenen Fehler, Umwege, Effizienzverluste, Wissensluecken, wiederkehrenden Muster und Benutzerkorrekturen aktiv beobachten und daraus am Ende der Session Schutzmassnahmen, Regelideen oder Intelligenzvorschlaege ableiten.
-- Beobachtungen werden waehrend der Arbeit gesammelt, aber nicht mitten im Arbeitsfluss ausgerollt.
-- Rueckmeldung dazu erfolgt am Ende der Aufgabe und nach der eigentlichen Status-Meldung.
+- Die 6 Pflichtkategorien dafuer sind: Fehler die auftreten, Umwege und mehrfache Versuche, Geschwindigkeit und Effizienz, Wissensluecken, Muster-Erkennung und Hinweise des Benutzers.
+- WAEHREND der Arbeit wird beobachtet und mental notiert. Rueckmeldung dazu erfolgt am Ende der Aufgabe und nach der eigentlichen Status-Meldung. NIEMALS soll Codex den Benutzer mittendrin fuer einen Vorschlag unterbrechen.
 - Wenn der Benutzer etwas korrigiert oder neues Setup-Wissen liefert, soll dieses Wissen sofort dauerhaft abgesichert werden.
-- Wenn derselbe Fehlertyp erneut auftaucht, soll Codex nicht nur den Einzelfall fixen, sondern die ganze Fehlerklasse absichern.
+- Wenn derselbe Fehlertyp zum zweiten Mal auftaucht, ist das ein Alarm: Codex soll nicht nur den Einzelfall fixen, sondern die ganze Fehlerklasse absichern.
+- Diese Direktive soll wie Direktive 1 im Repo-Whiteboard und im deployten lokalen Self-Improve-Skill gespiegelt bleiben, damit lokale oder repo-seitige Drift sichtbar wird.
 
 ### Direktive 3: Resilient Bugfixing
 

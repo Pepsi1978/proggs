@@ -21,6 +21,8 @@ Always inspect:
 - `codex-setup/state/gemini-delta-state.json`
 - `codex-setup/state/environment-fixes.json`
 - `codex-setup/bridges/`
+- `codex-setup/bridges/directive-1-superintelligence-universal.md`
+- `codex-setup/bridges/directive-2-self-observation-universal.md`
 - `codex-setup/skills/self-improve/`
 - `.github/workflows/`
 - `~/.codex/config.toml`
@@ -45,12 +47,14 @@ The scan must answer:
 9. Are the 8 intelligence dimensions and the compounding-superintelligence direction visible in the controlling Codex files?
 10. Are the 6 self-observation categories visible and propagated in the controlling Codex files?
 11. Does self-observation still require end-of-task reporting instead of mid-task interruption?
-12. Is resilient bugfixing visible as directive 3 for environment-level fixes?
-13. Can Claude/Cloud Code setup changes be audited without writing into Claude files?
-14. Does the Claude-delta audit state cleanly track only programming-environment deltas?
-15. Does `codex-setup/bridges/` expose a reusable Cloud-Code bridge spec that other CLIs can read and mirror?
-16. Does Codex log environment-level fixes with enough context, symptom, cause, verification, and portability detail that other CLIs can understand them without session context?
-17. Can Gemini CLI setup and memory changes be audited without writing into Gemini files?
+12. Is directive 2 mirrored in both the repo whiteboard and the deployed local self-improve skill?
+13. Does directive 2 still require immediate persistence of user hints and treat repeated failures as alarms?
+14. Is resilient bugfixing visible as directive 3 for environment-level fixes?
+15. Can Claude/Cloud Code setup changes be audited without writing into Claude files?
+16. Does the Claude-delta audit state cleanly track only programming-environment deltas?
+17. Does `codex-setup/bridges/` expose a reusable Cloud-Code bridge spec that other CLIs can read and mirror?
+18. Does Codex log environment-level fixes with enough context, symptom, cause, verification, and portability detail that other CLIs can understand them without session context?
+19. Can Gemini CLI setup and memory changes be audited without writing into Gemini files?
 
 ## Forbidden Operational Sources
 

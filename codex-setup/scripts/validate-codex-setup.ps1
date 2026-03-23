@@ -52,6 +52,8 @@ $RequiredFiles = @(
     "codex-setup\state\implemented-intelligence-suggestions.json",
     "codex-setup\bridges\cloud-code-delta-bridge.md",
     "codex-setup\bridges\cloud-code-delta-bridge.json",
+    "codex-setup\bridges\directive-1-superintelligence-universal.md",
+    "codex-setup\bridges\directive-2-self-observation-universal.md",
     "codex-setup\bridges\gemini-cli-delta-bridge.md",
     "codex-setup\bridges\gemini-cli-delta-bridge.json",
     "codex-setup\bridges\bridge-registry.json",
@@ -225,6 +227,10 @@ if ((Get-Content "AGENTS.md" -Raw) -notmatch "at least two places that survive d
     throw "AGENTS.md must preserve the two-location directive mirror."
 }
 
+if ((Get-Content "AGENTS.md" -Raw) -notmatch "present numbered suggestions only after the status message") {
+    throw "AGENTS.md must enforce end-of-task-only self-observation reporting."
+}
+
 if ((Get-Content "AGENTS.md" -Raw) -notmatch "💡 Intelligenz-Vorschlag:") {
     throw "AGENTS.md must define the intelligence proposal format."
 }
@@ -345,6 +351,14 @@ if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "Direktive 3: Res
     throw "global.md must define resilient bugfixing as directive 3."
 }
 
+if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "Wer arbeitet, beobachtet sich selbst") {
+    throw "global.md must carry the stronger directive 2 phrasing."
+}
+
+if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "Muster-Erkennung und Hinweise des Benutzers") {
+    throw "global.md must spell out the stronger directive 2 categories."
+}
+
 if ((Get-Content "codex-setup\rules\resilient-bugfixing.md" -Raw) -notmatch '3x `Warum\?`') {
     throw "resilient-bugfixing.md must require 3x Warum."
 }
@@ -365,12 +379,12 @@ if ((Get-Content "codex-setup\rules\self-observation.md" -Raw) -notmatch "Die 6 
     throw "self-observation.md must define the 6 observation categories."
 }
 
-if ((Get-Content "codex-setup\rules\self-observation.md" -Raw) -notmatch "### 4. Wissensluecken") {
+if ((Get-Content "codex-setup\rules\self-observation.md" -Raw) -notmatch "### Kategorie 4: Wissensluecken") {
     throw "self-observation.md must include Wissensluecken."
 }
 
-if ((Get-Content "codex-setup\rules\self-observation.md" -Raw) -notmatch "### 6. Benutzer-Hinweise") {
-    throw "self-observation.md must include Benutzer-Hinweise."
+if ((Get-Content "codex-setup\rules\self-observation.md" -Raw) -notmatch "### Kategorie 6: Hinweise des Benutzers") {
+    throw "self-observation.md must include user hints as a full category."
 }
 
 if ((Get-Content "codex-setup\rules\self-observation.md" -Raw) -notmatch "Rueckmeldung: immer am Ende der Aufgabe und nach der Status-Meldung") {
@@ -379,6 +393,18 @@ if ((Get-Content "codex-setup\rules\self-observation.md" -Raw) -notmatch "Rueckm
 
 if ((Get-Content "codex-setup\rules\self-observation.md" -Raw) -notmatch "jeden Agenten, jeden Skill, jedes Plugin, jeden Hook und jeden Prozess") {
     throw "self-observation.md must apply to all working components."
+}
+
+if ((Get-Content "codex-setup\rules\self-observation.md" -Raw) -notmatch "Wer arbeitet, beobachtet sich selbst. Ausnahmslos.") {
+    throw "self-observation.md must carry the core self-observation sentence."
+}
+
+if ((Get-Content "codex-setup\rules\self-observation.md" -Raw) -notmatch "NIEMALS: Mittendrin unterbrechen fuer einen Vorschlag.") {
+    throw "self-observation.md must forbid mid-task proposal interruptions."
+}
+
+if ((Get-Content "codex-setup\rules\self-observation.md" -Raw) -notmatch "Derselbe Fehlertyp tritt zum zweiten Mal auf: Alarm") {
+    throw "self-observation.md must escalate repeated failures."
 }
 
 if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "audit-claude-delta.mjs") {
@@ -663,8 +689,16 @@ if ((Get-Content "codex-setup\agent-memory\shared\MEMORY.md" -Raw) -notmatch "�
     throw "MEMORY.md must define the intelligence proposal format."
 }
 
-if ((Get-Content "codex-setup\agent-memory\shared\MEMORY.md" -Raw) -notmatch "Effizienzverluste, Wissensluecken, wiederkehrenden Muster") {
+if ((Get-Content "codex-setup\agent-memory\shared\MEMORY.md" -Raw) -notmatch "Geschwindigkeit und Effizienz, Wissensluecken, Muster-Erkennung und Hinweise des Benutzers") {
     throw "MEMORY.md must summarize the stronger self-observation categories."
+}
+
+if ((Get-Content "codex-setup\agent-memory\shared\MEMORY.md" -Raw) -notmatch "Wer arbeitet, beobachtet sich selbst") {
+    throw "MEMORY.md must mirror the stronger directive 2 phrasing."
+}
+
+if ((Get-Content "codex-setup\agent-memory\shared\MEMORY.md" -Raw) -notmatch "Muster-Erkennung und Hinweise des Benutzers") {
+    throw "MEMORY.md must include the stronger directive 2 category summary."
 }
 
 if ((Get-Content "codex-setup\skills\self-improve\references\report-and-creative.md" -Raw) -notmatch "💡 Intelligenz-Vorschlag:") {
@@ -681,6 +715,22 @@ if ((Get-Content "codex-setup\skills\self-improve\SKILL.md" -Raw) -notmatch "bel
 
 if ((Get-Content "codex-setup\skills\self-improve\SKILL.md" -Raw) -notmatch "Direktive 1 must remain mirrored") {
     throw "SKILL.md must preserve the local directive mirror."
+}
+
+if ((Get-Content "codex-setup\skills\self-improve\SKILL.md" -Raw) -notmatch "Direktive 2 must remain mirrored") {
+    throw "SKILL.md must preserve directive 2 in repo and local deployment."
+}
+
+if ((Get-Content "codex-setup\skills\self-improve\SKILL.md" -Raw) -notmatch "repeated failures as class-level alarms") {
+    throw "SKILL.md must keep the stronger directive 2 alarm semantics."
+}
+
+if ((Get-Content "codex-setup\bridges\directive-2-self-observation-universal.md" -Raw) -notmatch "SELBSTBEOBACHTUNG \(ZWEITHOECHSTE PRIORITAET\)") {
+    throw "directive-2-self-observation-universal.md must exist as the canonical directive 2 bridge."
+}
+
+if ((Get-Content "codex-setup\bridges\directive-2-self-observation-universal.md" -Raw) -notmatch "Wer arbeitet, beobachtet sich selbst. Ausnahmslos.") {
+    throw "directive-2-self-observation-universal.md must include the core self-observation sentence."
 }
 
 $CloudCodeBridge = Get-Content "codex-setup\bridges\cloud-code-delta-bridge.json" -Raw | ConvertFrom-Json

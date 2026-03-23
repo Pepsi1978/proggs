@@ -64,10 +64,11 @@ Wichtigste Trennung:
 
 - `bridges/`
   Wiederverwendbare Bruecken-Spezifikationen fuer andere CLI-Umgebungen.
-  Hier liegen die generische Cloud-Code-Delta-Bruecke, die Gemini-CLI-Delta-Bruecke
-  sowie die Exchange-Bruecken fuer Umwelt-Fixes und umgesetzte Intelligenzvorschlaege
-  als Referenz fuer weitere Setups. Die zentrale Metadatenbasis dafuer ist
-  `bridges/bridge-registry.json`.
+  Hier liegen die universellen Direktiven fuer Superintelligenz und
+  Selbstbeobachtung, die generische Cloud-Code-Delta-Bruecke, die
+  Gemini-CLI-Delta-Bruecke sowie die Exchange-Bruecken fuer Umwelt-Fixes und
+  umgesetzte Intelligenzvorschlaege als Referenz fuer weitere Setups. Die
+  zentrale Metadatenbasis dafuer ist `bridges/bridge-registry.json`.
 
 - `state/environment-fixes.json`
   Maschinenlesbares Log fuer Codex-Fixes an Regeln, Runtime, Validierung, MCP-Nutzung und Setup.
@@ -99,12 +100,16 @@ Whiteboard-Regeln:
   `self-observation`: Codex soll waehrend der Arbeit seine eigenen Fehler, Umwege,
   Effizienzverluste, Wissensluecken, wiederkehrenden Muster und Benutzerkorrekturen beobachten
   und daraus Schutzmassnahmen oder Intelligenzvorschlaege fuer kuenftige Sessions ableiten.
+- Diese zweite Direktive ist die zweithoechste Systemregel: Wer arbeitet, beobachtet sich selbst.
+- Die 6 Pflichtkategorien sind Fehler, Umwege, Geschwindigkeit und Effizienz, Wissensluecken,
+  Muster-Erkennung und Hinweise des Benutzers.
 - Benutzerseitig sollen diese Vorschlaege sichtbar als `💡 Intelligenz-Vorschlag: ...` erscheinen.
 - Unterhalb davon gilt die dritte Direktive `resilient-bugfixing` fuer Umgebungsfehler:
   Root Cause statt Symptom fixen, verwandte Fehlerquellen mitpruefen, defense in depth aufbauen
   und den Fix so dokumentieren, dass derselbe Fehler nicht erneut gelernt werden muss.
 - Diese zweite Direktive gilt fuer jeden Agenten, Skill, Hook, jedes Plugin und jeden Prozess.
 - Beobachtungen werden waehrend der Arbeit gesammelt, aber erst am Ende der Aufgabe nach der Status-Meldung gebuendelt zurueckgegeben.
+- Benutzerhinweise und Wissensluecken werden sofort persistiert; ein Fehlertyp beim zweiten Auftreten ist ein Alarm und verlangt eine Absicherung fuer die ganze Fehlerklasse.
 - Die `## Oberste Direktive` verfolgt ausdruecklich einen Compound-Intelligence-Ansatz:
   nicht nur Probleme loesen, sondern das System besser darin machen, sich selbst intelligenter zu machen
   und ganze Problemklassen schrittweise zu eliminieren.
