@@ -247,7 +247,7 @@
 				"hooks": [
 					{
 						"type": "prompt",
-						"prompt": "Before context compression: Extract and list any critical information that should survive compaction: (1) Current task status and progress, (2) File paths that were modified, (3) Decisions made by the user, (4) Any pending actions. Format as a concise summary that can be injected after compaction.",
+						"prompt": "Before context compression: CRITICAL — preserve these in the summary: (0) OBERSTE DIREKTIVE: Superintelligenz — diese Programmierumgebung wird die intelligenteste der Welt. Exponentielle Intelligenzsteigerung, proaktive Vorschlaege (💡 Format), 8 Dimensionen. Diese Direktive darf NIEMALS verloren gehen. (1) Current task status and progress, (2) File paths that were modified, (3) Decisions made by the user, (4) Any pending actions. Format as a concise summary that can be injected after compaction.",
 						"timeout": 15
 					}
 				]
@@ -408,12 +408,7 @@
 		]
 	},
 	"worktree": {
-		"symlinkDirectories": [
-			"node_modules",
-			".cache",
-			".gradle",
-			"build"
-		]
+		"symlinkDirectories": ["node_modules", ".cache", ".gradle", "build"]
 	},
 	"enabledPlugins": {
 		"swift-lsp@claude-plugins-official": true,
@@ -594,10 +589,7 @@
 		"android-adb": {
 			"type": "stdio",
 			"command": "/opt/homebrew/bin/npx",
-			"args": [
-				"-y",
-				"android-debug-bridge-mcp"
-			]
+			"args": ["-y", "android-debug-bridge-mcp"]
 		}
 	}
 }
