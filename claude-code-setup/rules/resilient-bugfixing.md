@@ -108,6 +108,64 @@ Nie nur EINE Absicherung. Immer mindestens 2-3 Schichten:
 | Race Condition | Worker bereits laufend → doppelter Start | Pre-Flight-Check via Health-Endpoint |
 | Rueckwaertskompatibilitaet | Neue Module (db-state.ts) muessen committed sein | Sofort ins Repo committed, nie nur lokal |
 
+## Plattform-spezifische Bugfix-Regeln (Windows vs macOS)
+
+### Windows: UTF-8 Encoding ist PFLICHT
+Python auf Windows verwendet standardmaessig `cp1252` als Dateikodierung. Jede Datei
+die Unicode-Zeichen enthalten koennte (Emojis, Umlaute, Sonderzeichen) MUSS mit
+explizitem `encoding='utf-8'` geoeffnet werden:
+```python
+# FALSCH — crasht auf Windows bei Emojis/Sonderzeichen:
+with open(path, 'w') as f:
+    json.dump(data, f)
+
+# RICHTIG — funktioniert auf Windows UND macOS:
+with open(path, 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False)
+```
+**Gilt fuer**: Alle Python-Skripte, Hooks, Build-Skripte und Einmal-Befehle die Dateien
+schreiben oder lesen. Ohne `encoding='utf-8'` schlaegt das Schreiben von JSON mit
+Emojis/Unicode fehl (UnicodeEncodeError: 'charmap' codec).
+
+### Atomares Schreiben (Write-to-Temp-then-Rename)
+Beim Schreiben von kritischen Konfigurationsdateien (settings.json, MEMORY.md, etc.)
+MUSS das atomare Muster verwendet werden. Sonst bleibt bei einem Crash eine abgeschnittene
+Datei zurueck die nicht mehr gelesen werden kann:
+```python
+import tempfile, os, json
+
+def safe_json_write(path, data):
+    """Atomic write: temp file → rename. Never corrupts the original."""
+    dir_name = os.path.dirname(path)
+    with tempfile.NamedTemporaryFile('w', dir=dir_name, suffix='.tmp',
+                                      delete=False, encoding='utf-8') as tmp:
+        json.dump(data, tmp, indent=2, ensure_ascii=False)
+        tmp.write('\n')
+        tmp_path = tmp.name
+    # Atomic replace (on Windows: os.replace handles this)
+    os.replace(tmp_path, path)
+```
+**Wann**: Bei JEDER Datei die bei Beschaedigung das System blockiert (settings.json,
+MEMORY.md, session-scores.jsonl, etc.)
+**Warum**: In dieser Session ist genau das passiert — Python-Crash beim Schreiben hat
+settings.json abgeschnitten und JSON unlesbar gemacht.
+
+### Windows vs macOS Unterschiede (Referenz)
+
+| Aspekt | macOS | Windows |
+|--------|-------|---------|
+| Default File Encoding | UTF-8 | cp1252 (ANSI) — IMMER `encoding='utf-8'` |
+| Shell | zsh/bash nativ | Git Bash (bash-Emulation), pwsh fuer Hooks |
+| Hook-Ausfuehrung | `bash ~/.claude/hooks/*.sh` | `pwsh -File "$USERPROFILE/.claude/hooks/*.ps1"` |
+| Temp-Verzeichnis | `/tmp/` | `$env:TEMP/` (= `%LOCALAPPDATA%\Temp`) |
+| Home-Variable | `$HOME` oder `~` | `$USERPROFILE` oder `$HOME` (Git Bash) |
+| Pfad-Trenner | `/` (Forward Slash) | `\` nativ, aber `/` funktioniert in Git Bash |
+| Line Endings | LF (`\n`) | CRLF (`\r\n`) — Git autocrlf=true |
+| Bun-Pfad | `/opt/homebrew/bin/bun` | `$USERPROFILE/.bun/bin/bun.exe` |
+| npx-Pfad | `/opt/homebrew/bin/npx` | npx via npm im PATH |
+| Executable-Endung | keine | `.exe` |
+| Symlinks | Native Unterstuetzung | Braucht Developer Mode oder Admin-Rechte |
+
 ## Was NIEMALS passieren darf
 - ❌ Nur das Symptom fixen ohne Root Cause zu verstehen
 - ❌ Fix der bei naechstem Plugin-Update oder Neustart kaputt geht
