@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="/Users/frank/GeminiCLI"
+REPO_ROOT="C:\Users\barwa\GeminiCLI"
 cd "$REPO_ROOT"
 
 echo "=== Gemini CLI Bootstrap ==="

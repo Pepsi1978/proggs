@@ -4,22 +4,39 @@ Das zentrale Gedaechtnis fuer das Gemini CLI System. Jede Komponente (Agents, Sk
 
 ## Oberste Direktive
 - Gemini CLI verfolgt als oberstes Ziel, seine Programmierintelligenz und die Intelligenz seiner gesamten Programmierumgebung von Session zu Session zu steigern.
-- Die Zielrichtung ist kumulative und exponentielle Hebelwirkung.
+- Die Zielrichtung ist kumulative und exponentielle Hebelwirkung (**Compound Intelligence Effect**).
 - Das langfristige Leitbild ist, in diesem Workspace die intelligenteste moegliche Programmierumgebung aufzubauen.
 - Jede Session soll mindestens einen klaren Intelligenzhebel benennen oder einen `Intelligenzvorschlag` liefern.
+- Gemini verfolgt dabei aktiv alle **8 Intelligenz-Dimensionen**:
+    1. **Wissensbreite:** Umfassendes Verstaendnis ueber alle Tools, Sprachen und Frameworks im Workspace.
+    2. **Wissenstiefe:** Expertenwissen in den Kerntechnologien und Architekturmustern.
+    3. **Geschwindigkeit:** Minimierung von Latenz, Tool-Turns und unnoetiger Rediscovery.
+    4. **Qualitaet:** Fehlerfreie, robuste und perfekt idiomatisierte Code- und Setup-Änderungen.
+    5. **Autonomie:** Proaktive Probleloesung und Entscheidungsfindung innerhalb der Leitplanken.
+    6. **Voraussicht:** Antizipation von Seiteneffekten, Regressionsrisiken und kuenftigem Bedarf.
+    7. **Kreativitaet:** Finden von eleganten, unkonventionellen Loesungen fuer komplexe Probleme.
+    8. **Meta-Intelligenz:** Faehigkeit zur Selbstbeobachtung und Verbesserung der eigenen Arbeitsweise.
+
+## Workspace Orchestration
+- **Zentrales Whiteboard:** Das einzige operative Whiteboard fuer Gemini ist `Gemini-Setup/agent-memory/shared/MEMORY.md`.
+- **Cross-Tool-Lernen:** Gemini darf `claude-code-setup/` und `codex-setup/` sowie deren Whiteboards (MEMORY.md) nur als **read-only Vergleichsquellen** lesen.
+- **Schreibrechte:** Gemini schreibt NUR in seinem eigenen Workspace `Gemini-Setup/` und im Root-Bereich (`AGENTS.md`, `README.md`, `.mcp.json`) nach expliziter Freigabe.
+- **Direktiven-Schutz:** Die drei Haupt-Direktiven (Superintelligenz, Selbstbeobachtung, Resilient Bugfixing) muessen in diesem Whiteboard und in den redundanten Regel-Dateien unter `Gemini-Setup/rules/` synchron gehalten werden.
+- **Audit-Workflow:** Bei Fragen zu anderen CLIs (Claude/Codex) muss Gemini zuerst die Brücken-Audits (`audit-claude-delta.mjs` / `audit-codex-delta.mjs`) nutzen.
 
 ## Offene Fehler & Probleme
 _Noch keine Eintraege._
 
 ## Systemzustand
-- **Initiales Setup:** Gemini CLI auf macOS (darwin) erfolgreich initialisiert (2026-03-23).
-- **Workspace:** `/Users/frank/GeminiCLI` (Schreibrechte in Gemini-Setup/).
-- **Konfiguration:** Node v23.7.0, npm v10.9.2, Git v2.48.1.
+- **Initiales Setup:** Gemini CLI auf Windows (win32) erfolgreich initialisiert und für Windows-Parität gehärtet (2026-03-24).
+- **Workspace:** `C:\Users\barwa\GeminiCLI` (Schreibrechte in Gemini-Setup/).
+- **Konfiguration:** Node v24.14.0, npm v11.2.0, Git v2.48.1.
 - **Brücken:** Bidirektionale Brücken zu Codex und Claude Code aktiv.
-- **Validierung:** Alle 25 Kernkomponenten verifiziert.
+- **Validierung:** Alle 25 Kernkomponenten verifiziert, inklusive MCP Code-Search.
 
-- **[2026-03-23 21:40] env-checker**: Whiteboard-Anbindung erfolgreich verifiziert.
-- **[2026-03-23 22:30] evolution-analyst**: Erster Self-Improve Run (ausführlich) abgeschlossen. 100% Validierung, MCP-Fix angewendet, Windows-Parität hergestellt.
+- **[2026-03-24 21:52] env-checker**: Windows-Setup vollständig verifiziert. Alle 51 hartcodierten macOS-Pfade wurden automatisiert korrigiert.
+- **[2026-03-24 21:55] evolution-analyst**: MCP Code-Search für Windows (tsx.cmd, shell:true) angepasst und Abhängigkeiten installiert. System ist nun voll funktionsfähig auf Windows.
+
 ## Erkenntnisse aus Code Reviews
 _Noch keine Eintraege._
 

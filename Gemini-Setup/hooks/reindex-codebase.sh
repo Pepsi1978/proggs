@@ -2,7 +2,7 @@
 # reindex-codebase.sh (Gemini) — Hintergrund-Indexierung
 set -euo pipefail
 
-REPO_ROOT="/Users/frank/GeminiCLI"
+REPO_ROOT="C:\Users\barwa\GeminiCLI"
 SCRIPT_PATH="$REPO_ROOT/Gemini-Setup/scripts/code-search-mcp-client.mjs"
 
 echo "[$(date)] Starte Hintergrund-Reindex..."

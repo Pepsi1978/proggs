@@ -14,7 +14,7 @@ Dies ist der Gemini-native Workflow zur Selbstverbesserung in diesem Repository.
 - Integriere portable Verbesserungen von Codex und Claude Code über die Delta-Brücken.
 
 ## Harte Regeln
-- Arbeite nur im Gemini-Workspace (`/Users/frank/GeminiCLI`).
+- Arbeite nur im Gemini-Workspace (`C:\Users\barwa\GeminiCLI`).
 - Das einzige operative Whiteboard ist `Gemini-Setup/agent-memory/shared/MEMORY.md`.
 - `codex-setup/` und `claude-code-setup/` sind reine Lesequellen (Audit-Modus).
 - Jeder systemische Fix muss in `Gemini-Setup/state/environment-fixes.json` geloggt werden.

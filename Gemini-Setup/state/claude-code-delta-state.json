@@ -4,9 +4,9 @@
 	"tracked_paths": ["claude-code-setup/**", "CLAUDE.md"],
 	"replace_requires_confirmation": true,
 	"additive_bias": true,
-	"last_reviewed_commit": "9279af2",
-	"last_applied_commit": "9279af2",
-	"last_reviewed_at": "2026-03-23T19:50:00+01:00",
-	"last_applied_at": "2026-03-23T19:50:00+01:00",
-	"notes": "Bootstrapped by Claude Code. Tracks only Claude Code setup and programming-environment deltas for Gemini CLI."
+	"last_reviewed_commit": "c902ae2",
+	"last_applied_commit": "c902ae2",
+	"last_reviewed_at": "2026-03-24T23:05:00+01:00",
+	"last_applied_at": "2026-03-24T23:05:00+01:00",
+	"notes": "Full port of Claude Code improvements from c902ae2. Applied: Bridge-Registry v2, new-environment-fix (mjs/ps1), safety-gate hardening. Removed: all Termux references and rules as per user request."
 }

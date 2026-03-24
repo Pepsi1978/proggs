@@ -34,6 +34,7 @@ function usage() {
 	return [
 		"Usage:",
 		"  code-search-mcp-client.mjs tools [--config <path>] [--json]",
+		"  code-search-mcp-client.mjs status [--workspace <path>] [--json]",
 		"  code-search-mcp-client.mjs call <tool> [--config <path>] [--args-json <json>] [--json]",
 		"  code-search-mcp-client.mjs smoke [--config <path>] [--workspace <path>] [--query <text>] [--limit <n>] [--json]",
 		"",
@@ -119,7 +120,7 @@ function parseArgs(argv) {
 		fail("The smoke query must not be empty.");
 	}
 
-	if (!["tools", "call", "smoke"].includes(command)) {
+	if (!["tools", "call", "smoke", "status"].includes(command)) {
 		fail(`Unknown command: ${command}`, usage());
 	}
 
@@ -172,7 +173,7 @@ function sanitizeConfigData(configPath, rawConfig) {
 function parseCodeSearchConfig(configPathInput = "") {
 	const configPath = resolve(configPathInput || join(homedir(), ".gemini", "settings.json"));
     // Simplification for Gemini: look for .mcp.json in workspace if settings.json doesn't have it
-    const mcpJsonPath = "/Users/frank/GeminiCLI/.mcp.json";
+    const mcpJsonPath = "C:\\Users\\barwa\\GeminiCLI/.mcp.json";
     if (existsSync(mcpJsonPath)) {
         const mcpConfig = JSON.parse(readFileSync(mcpJsonPath, "utf8"));
         const server = mcpConfig.mcpServers?.["code-search"];
@@ -185,7 +186,7 @@ function parseCodeSearchConfig(configPathInput = "") {
 
 function resolveWorkspace(input) {
 	if (!input) {
-		return "/Users/frank/GeminiCLI";
+		return "C:\\Users\\barwa\\GeminiCLI";
 	}
 	const requested = resolve(input);
 	return requested;
@@ -233,6 +234,7 @@ class CodeSearchMcpClient {
 	}
 
 	async connectWithProtocol(protocolVersion) {
+		const isBun = this.config.command === "bun" || this.config.command.endsWith("bun.exe");
 		this.child = spawn(this.config.command, this.config.args, {
 			cwd: this.config.cwd,
 			env: {
@@ -240,6 +242,7 @@ class CodeSearchMcpClient {
 				...this.config.env,
 			},
 			stdio: ["pipe", "pipe", "pipe"],
+			shell: process.platform === "win32" && !isBun,
 		});
 
 		this.child.stdout.setEncoding("utf8");
@@ -411,6 +414,29 @@ async function withClient(handler, options = {}) {
 }
 
 async function runCommand(options) {
+	if (options.command === "tools") {
+		const result = await withClient(async (client) => {
+			return await client.listTools();
+		}, options);
+		console.log(JSON.stringify(result, null, "\t"));
+		return;
+	}
+
+	if (options.command === "status") {
+		const workspace = resolveWorkspace(options.workspace);
+		const result = await withClient(async (client, config) => {
+			const statusResponse = await client.callTool("search_status", {
+				directory: workspace,
+			});
+			return {
+				workspace,
+				statusText: textFromToolResult(statusResponse)
+			};
+		}, options);
+		console.log(options.json ? JSON.stringify(result, null, 2) : result.statusText);
+		return;
+	}
+
 	if (options.command === "smoke") {
 		const workspace = resolveWorkspace(options.workspace);
 		const result = await withClient(async (client, config) => {
@@ -420,16 +446,29 @@ async function runCommand(options) {
 				: [];
 			const toolsOk = REQUIRED_TOOLS.every((name) => toolNames.includes(name));
 
-			const statusResponse = await client.callTool("search_status", {
+			let statusResponse = await client.callTool("search_status", {
 				directory: workspace,
 			});
+			let statusText = textFromToolResult(statusResponse);
+
+			if (statusText.includes("No usable index database found") || statusText.includes("Run index_codebase first")) {
+				process.stderr.write("No index found. Starting auto-index...\n");
+				await client.callTool("index_codebase", { directory: workspace });
+				// Poll for status until it's ready or timeout
+				let retries = 10;
+				while (retries-- > 0) {
+					await new Promise(r => setTimeout(r, 2000));
+					statusResponse = await client.callTool("search_status", { directory: workspace });
+					statusText = textFromToolResult(statusResponse);
+					if (statusText.includes("Index status for")) break;
+				}
+			}
+
 			const queryResponse = await client.callTool("search_code", {
 				directory: workspace,
 				query: options.query,
 				limit: options.limit,
 			});
-
-			const statusText = textFromToolResult(statusResponse);
 			const queryText = textFromToolResult(queryResponse);
 			const queryTopPath = topPathFromSearchResult(queryText);
 			const statusOk = statusText.startsWith(`Index status for ${workspace}:`);

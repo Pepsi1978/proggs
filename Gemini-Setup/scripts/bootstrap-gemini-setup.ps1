@@ -1,5 +1,5 @@
 # bootstrap-gemini-setup.ps1
-$RepoRoot = "/Users/frank/GeminiCLI"
+$RepoRoot = "C:\Users\barwa\GeminiCLI"
 cd $RepoRoot
 
 Write-Host "=== Gemini CLI Bootstrap (Windows/PS7) ==="
@@ -20,6 +20,9 @@ pwsh Gemini-Setup/scripts/session-start-audit.ps1
 
 Write-Host "[4/4] Führe Plugin-Health-Check aus..."
 pwsh Gemini-Setup/scripts/plugin-health-check.ps1
+
+Write-Host "[5/5] Starte inkrementelle Reindexierung (Hintergrund)..."
+pwsh Gemini-Setup/hooks/reindex-codebase.ps1
 
 Write-Host "---"
 Write-Host "Gemini CLI Bootstrap abgeschlossen."

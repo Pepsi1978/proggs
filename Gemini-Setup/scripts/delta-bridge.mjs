@@ -3,7 +3,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const REPO_ROOT = process.env.GEMINI_REPO_ROOT || "/Users/frank/GeminiCLI";
+const REPO_ROOT = process.env.GEMINI_REPO_ROOT || "C:\\Users\\barwa\\GeminiCLI";
 
 const WHITEBOARDS = {
   GEMINI: path.join(REPO_ROOT, "Gemini-Setup", "agent-memory", "shared", "MEMORY.md"),

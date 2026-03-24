@@ -44,8 +44,8 @@ function runSmokeTest(repoRoot, workspace, query) {
 
 function main() {
 	const scriptDir = fileURLToPath(new URL(".", import.meta.url));
-	const repoRoot = "/Users/frank/GeminiCLI";
-	const workspace = "/Users/frank/GeminiCLI";
+	const repoRoot = "C:\\Users\\barwa\\GeminiCLI";
+	const workspace = "C:\\Users\\barwa\\GeminiCLI";
 	
     console.log(`Prüfe Code-Suche Gesundheit für ${workspace}...`);
     const smoke = runSmokeTest(repoRoot, workspace, DEFAULT_QUERY);

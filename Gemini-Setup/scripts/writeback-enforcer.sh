@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="/Users/frank/GeminiCLI"
+REPO_ROOT="C:\Users\barwa\GeminiCLI"
 SCRIPT_DIR="$REPO_ROOT/Gemini-Setup/scripts"
 
 # Führe den Whiteboard-Merge aus

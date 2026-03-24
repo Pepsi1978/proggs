@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const REPO_ROOT = "/Users/frank/GeminiCLI";
+const REPO_ROOT = "C:\\Users\\barwa\\GeminiCLI";
 const MCP_CONFIG_PATH = path.join(REPO_ROOT, ".mcp.json");
 
 function log(msg) { console.log(`[mcp-path-check] ${msg}`); }

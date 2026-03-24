@@ -1,5 +1,5 @@
 # session-start-audit.ps1
-$RepoRoot = "/Users/frank/GeminiCLI"
+$RepoRoot = "C:\Users\barwa\GeminiCLI"
 cd $RepoRoot
 
 Write-Host "=== Cross-CLI Intelligenz-Audit (Start/PS7) ==="

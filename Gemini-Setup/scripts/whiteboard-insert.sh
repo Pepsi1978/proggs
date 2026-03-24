@@ -14,7 +14,7 @@ replace_whiteboard_entry() {
     local section="$1"
     local match_pattern="$2"   # Lines containing this string will be REMOVED first
     local entry="$3"
-    local memory_file="/Users/frank/GeminiCLI/Gemini-Setup/agent-memory/shared/MEMORY.md"
+    local memory_file="C:\Users\barwa\GeminiCLI/Gemini-Setup/agent-memory/shared/MEMORY.md"
     local lock_file="/tmp/Gemini-whiteboard.lock"
 
     if [ ! -f "$memory_file" ]; then
@@ -99,7 +99,7 @@ PYEOF
 insert_whiteboard_entry() {
     local section="$1"
     local entry="$2"
-    local memory_file="/Users/frank/GeminiCLI/Gemini-Setup/agent-memory/shared/MEMORY.md"
+    local memory_file="C:\Users\barwa\GeminiCLI/Gemini-Setup/agent-memory/shared/MEMORY.md"
     local placeholder="_Noch keine Eintraege._"
     local lock_file="/tmp/Gemini-whiteboard.lock"
 

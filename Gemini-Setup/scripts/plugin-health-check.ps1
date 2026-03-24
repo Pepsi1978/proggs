@@ -1,5 +1,5 @@
 # plugin-health-check.ps1
-$RepoRoot = "/Users/frank/GeminiCLI"
+$RepoRoot = "C:\Users\barwa\GeminiCLI"
 $LogFile = "$RepoRoot/Gemini-Setup/logs/plugin-health.log"
 if (-not (Test-Path (Split-Path $LogFile))) { New-Item -ItemType Directory -Path (Split-Path $LogFile) -Force }
 

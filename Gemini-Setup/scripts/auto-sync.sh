@@ -2,7 +2,7 @@
 # auto-sync.sh (Gemini) — Automatischer Pull & Diff-Anzeige
 set -uo pipefail
 
-REPO_ROOT="/Users/frank/GeminiCLI"
+REPO_ROOT="C:\Users\barwa\GeminiCLI"
 cd "$REPO_ROOT"
 
 echo "[$(date)] Starte automatischen Repository-Sync..."

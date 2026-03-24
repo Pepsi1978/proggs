@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const REPO_ROOT = "/Users/frank/GeminiCLI";
+export const REPO_ROOT = "C:\\Users\\barwa\\GeminiCLI";
 export const BRIDGE_REGISTRY_REPO_PATH = "Gemini-Setup/bridges/bridge-registry.json";
 export const BRIDGE_REGISTRY_PATH = path.join(REPO_ROOT, BRIDGE_REGISTRY_REPO_PATH);
 

@@ -1,13 +1,19 @@
 # Safety Gate: Block dangerous commands before execution
 # Hook event: PreToolUse (Bash)
 # Platform: Windows (PowerShell 7+)
+#
+# ROBUSTNESS: Entire script wrapped in try/catch. Any failure → exit 0 (allow).
+# A broken safety-gate must never block normal work.
 
-. "$PSScriptRoot/hook-log.ps1"
-. "$PSScriptRoot/whiteboard-insert.ps1"
+$ErrorActionPreference = 'SilentlyContinue'
 
-$hookInput = [Console]::In.ReadToEnd()
+try { . "$PSScriptRoot/hook-log.ps1" } catch { }
+try { . "$PSScriptRoot/whiteboard-insert.ps1" } catch { }
+
 try {
-    $json = $hookInput | ConvertFrom-Json
+    $hookInput = [Console]::In.ReadToEnd()
+    if (-not $hookInput -or $hookInput.Length -lt 5) { exit 0 }
+    $json = $hookInput | ConvertFrom-Json -ErrorAction Stop
 } catch {
     exit 0
 }
@@ -36,17 +42,17 @@ $dangerous = @(
     'format\s+[A-Z]:',                # format drive
     'del\s+/[sS]\s+/[qQ]\s+C:',      # delete C: drive
     'Remove-Item\s+-Recurse.*C:\\',   # PowerShell recursive delete C:
-    'git\s+init',                     # (#42) block creating new repos — only Pepsi1978/proggs allowed (unanchored)
-    'gh\s+repo\s+create',             # (#42) block creating GitHub repos (unanchored)
-    'git\s+remote\s+add'              # (#42) block adding new remotes — only Pepsi1978/proggs allowed (unanchored)
+    'git\s+init',                     # block creating new repos — only Pepsi1978/proggs allowed (unanchored)
+    'gh\s+repo\s+create',             # block creating GitHub repos (unanchored)
+    'git\s+remote\s+add'              # block adding new remotes — only Pepsi1978/proggs allowed (unanchored)
 )
 
 # Shell update patterns — WARNING only (exit 0), not blocking
-# (#49) Warn when shell tools are updated mid-session (can kill running terminals)
+# Warn when shell tools are updated mid-session (can kill running terminals)
 $shellUpdates = @(
-    'npm\s+install\s+-g\s+@anthropic',  # global Gemini-code install during session
-    'winget\s+upgrade\s+Git\.Git',       # git update during session
-    'rustup\s+update'                    # rustup update during session
+    'npm\s+install\s+-g\s+@google/gemini-cli',  # global Gemini-CLI install during session
+    'winget\s+upgrade\s+Git\.Git',              # git update during session
+    'rustup\s+update'                           # rustup update during session
 )
 
 foreach ($pattern in $dangerous) {
@@ -62,21 +68,20 @@ foreach ($pattern in $dangerous) {
     }
 }
 
-# (#49) Shell update warning — allow but warn user
+# Shell update warning — allow but warn user
 foreach ($pattern in $shellUpdates) {
     if ($cmd -match $pattern) {
         Hook-LogWarn "Shell-update detected mid-session: $pattern"
-        Write-Output "WARNING (safety-gate): Shell/Tool-Update erkannt. Laut Gemini.md-Regel muessen Shell-Updates NACH Abschluss aller Aufgaben erfolgen — sie koennen alle offenen Terminals killen. Bitte erst alle Aufgaben beenden und committen, dann updaten."
+        Write-Output "WARNING (safety-gate): Shell/Tool-Update erkannt. Laut Gemini-Regeln muessen Shell-Updates NACH Abschluss aller Aufgaben erfolgen — sie koennen alle offenen Terminals killen. Bitte erst alle Aufgaben beenden und committen, dann updaten."
         exit 0  # allow, but user has been warned
     }
 }
 
-# (#43) settings.json write-via-Bash warning — allow but warn
+# settings.json write-via-Bash warning — allow but warn
 if ($cmd -match '>\s*.*settings\.json' -or $cmd -match 'echo.*>.*settings\.json' -or $cmd -match 'cat.*>.*settings\.json') {
-    Hook-LogWarn "Bash command writing to settings.json detected — config-guard will verify afterwards"
-    Write-Output "WARNING (safety-gate): Schreibzugriff auf settings.json per Bash erkannt. config-guard.ps1 prueft die Datei nach der Aenderung auf geschuetzte Settings (effortLevel, defaultMode, AUTOCOMPACT, SUBAGENT_MODEL)."
-    exit 0  # allow — config-guard PostToolUse will catch violations
+    Hook-LogWarn "Bash command writing to settings.json detected"
+    Write-Output "WARNING (safety-gate): Schreibzugriff auf settings.json per Bash erkannt."
+    exit 0
 }
 
 exit 0
-

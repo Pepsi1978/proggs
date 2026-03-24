@@ -1,5 +1,5 @@
 # validate-gemini-setup.ps1
-$RepoRoot = "/Users/frank/GeminiCLI"
+$RepoRoot = "C:\Users\barwa\GeminiCLI"
 cd $RepoRoot
 
 Write-Host "=== Gemini Setup Validierung (PS7) ==="

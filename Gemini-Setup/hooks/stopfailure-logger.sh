@@ -39,7 +39,7 @@ ENTRY_EOF
 )
 
 # Use whiteboard-insert.sh (already sourced above)
-WHITEBOARDS=("/Users/frank/GeminiCLI/Gemini-Setup/agent-memory/shared/MEMORY.md")
+WHITEBOARDS=("C:\Users\barwa\GeminiCLI/Gemini-Setup/agent-memory/shared/MEMORY.md")
 if [ -f "$WHITEBOARD" ]; then
     insert_whiteboard_entry "Offene Fehler & Probleme" "$ENTRY" || \
         echo "[stopfailure-logger] whiteboard-insert failed — error NOT logged to whiteboard. Manual check required." >&2

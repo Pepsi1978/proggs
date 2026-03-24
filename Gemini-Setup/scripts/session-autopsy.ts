@@ -25,7 +25,7 @@ const HOME = process.env.USERPROFILE || process.env.HOME || "";
 
 // Windows project directory: find dynamically (C--Users-barwa or similar)
 function findProjectsDir(): string {
-	const GeminiDir = join("/Users/frank/GeminiCLI/Gemini-Setup", "projects");
+	const GeminiDir = join("C:\\Users\\barwa\\GeminiCLI/Gemini-Setup", "projects");
 	if (!existsSync(GeminiDir)) return "";
 	try {
 		const entries = readdirSync(GeminiDir);
@@ -69,8 +69,8 @@ const MIN_CORRECTIONS_TO_WRITE = 3;
 const MAX_AUTOPSY_ENTRIES = 10;
 
 // v3: Closed-Loop Learning — auto-generate rules from recurring correction patterns
-const LEARNING_STATE_FILE = join("/Users/frank/GeminiCLI/Gemini-Setup", "learning-loop-state.json");
-const AUTO_RULES_DIR = join("/Users/frank/GeminiCLI/Gemini-Setup", "rules", "auto-learned");
+const LEARNING_STATE_FILE = join("C:\\Users\\barwa\\GeminiCLI/Gemini-Setup", "learning-loop-state.json");
+const AUTO_RULES_DIR = join("C:\\Users\\barwa\\GeminiCLI/Gemini-Setup", "rules", "auto-learned");
 const MAX_AUTO_RULES = 5; // cap to prevent rule bloat
 const PATTERN_THRESHOLD = 3; // how many sessions with same type trigger auto-rule
 const LOOKBACK_SESSIONS = 10; // how far back to look

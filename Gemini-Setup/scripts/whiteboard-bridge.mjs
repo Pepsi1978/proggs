@@ -76,7 +76,7 @@ function buildAuthoritativeMemoryPath(workspaceRoot) {
 }
 
 async function resolveMemoryPath(options = {}) {
-  const workspaceRoot = options.workspace || "/Users/frank/GeminiCLI";
+  const workspaceRoot = options.workspace || "C:\\Users\\barwa\\GeminiCLI";
   const authoritativeMemory = buildAuthoritativeMemoryPath(workspaceRoot);
   if (await fileExists(authoritativeMemory)) return authoritativeMemory;
   throw new Error(`No Gemini whiteboard found at ${authoritativeMemory}.`);

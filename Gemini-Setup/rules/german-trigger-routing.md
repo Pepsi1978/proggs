@@ -5,7 +5,7 @@ Dieses Routing gilt unter der `## Oberste Direktive` fuer Gemini-Setup- und Umge
 ## Grundregel
 - Schreibrechte bestehen nur in `Gemini-Setup/`.
 - `codex-setup/` und `claude-code-setup/` sind reine Lesequellen (Brücken).
-- Das zentrale Whiteboard ist `/Users/frank/GeminiCLI/Gemini-Setup/agent-memory/shared/MEMORY.md`.
+- Das zentrale Whiteboard ist `C:\Users\barwa\GeminiCLI/Gemini-Setup/agent-memory/shared/MEMORY.md`.
 
 ## Triggergruppen
 

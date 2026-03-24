@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const REPO_ROOT = "/Users/frank/GeminiCLI";
+const REPO_ROOT = "C:\\Users\\barwa\\GeminiCLI";
 const DEFAULT_LEDGER_PATH = path.join(
   REPO_ROOT,
   "Gemini-Setup",

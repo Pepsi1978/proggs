@@ -2,7 +2,7 @@
 # mcp-path-guard.sh (Gemini)
 set -uo pipefail
 
-REPO_ROOT="/Users/frank/GeminiCLI"
+REPO_ROOT="C:\Users\barwa\GeminiCLI"
 
 echo "[$(date)] Prüfe MCP-Pfadintegrität..."
 if ! node "$REPO_ROOT/Gemini-Setup/scripts/validate-mcp-paths.mjs"; then

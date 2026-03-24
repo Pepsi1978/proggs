@@ -94,7 +94,7 @@ Erst wenn alle Pruefungen bestanden sind:
 
 ## Shared Knowledge Hub Integration
 
-**Whiteboard**: `/Users/frank/GeminiCLI/Gemini-Setup/agent-memory/shared/MEMORY.md` (EINZIGE zentrale Wissensdatei)
+**Whiteboard**: `C:\Users\barwa\GeminiCLI/Gemini-Setup/agent-memory/shared/MEMORY.md` (EINZIGE zentrale Wissensdatei)
 
 **Lesen**: Vor Schritt 1 (PRUEFEN) das Whiteboard lesen fuer bekannte Test-Muster, Konventionen und offene Fehler die diesen Bereich betreffen.
 

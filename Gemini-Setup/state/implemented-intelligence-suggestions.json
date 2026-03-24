@@ -1,14 +1,24 @@
 {
-	"version": 1,
-	"source_cli": "Gemini CLI",
-	"description": "Log of implemented intelligence suggestions in the Gemini CLI programming environment. Other CLIs may read this file to learn from implemented improvements.",
-	"entries": [
-		{
-			"id": "init-mac-setup",
-			"title": "macOS Initialisierung",
-			"status": "GEFIXT",
-			"date": "2026-03-23",
-			"details": "Alle hartkodierten Pfade von Windows auf macOS korrigiert."
-		}
-	]
+  "version": 1,
+  "source_cli": "Gemini CLI",
+  "description": "Log of implemented intelligence suggestions in the Gemini CLI programming environment. Other CLIs may read this file to learn from implemented improvements.",
+  "entries": [
+    {
+      "id": "init-mac-setup",
+      "title": "macOS Initialisierung",
+      "status": "GEFIXT",
+      "date": "2026-03-23",
+      "details": "Alle hartkodierten Pfade von Windows auf macOS korrigiert."
+    },
+    {
+      "id": "SUGG-001",
+      "summary": "Integrated auto-indexing into the smoke test command.",
+      "created_at": "2026-03-24T21:06:26.584Z"
+    },
+    {
+      "id": "SUGG-002",
+      "summary": "Integrated Bun-powered SQLite backend for Windows MCP search.",
+      "created_at": "2026-03-24T21:42:21.626Z"
+    }
+  ]
 }

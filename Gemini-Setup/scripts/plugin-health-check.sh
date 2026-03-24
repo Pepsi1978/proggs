@@ -2,7 +2,7 @@
 # plugin-health-check.sh (Gemini)
 set +e
 
-REPO_ROOT="/Users/frank/GeminiCLI"
+REPO_ROOT="C:\Users\barwa\GeminiCLI"
 LOG_FILE="$REPO_ROOT/Gemini-Setup/logs/plugin-health.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 

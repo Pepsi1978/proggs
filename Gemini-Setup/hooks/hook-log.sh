@@ -11,7 +11,7 @@
 # Logs to: C:/Users/barwa/GeminiCLI/proggs/Gemini-Setup/logs/hooks/YYYY-MM-DD.log
 # Log rotation: files older than 14 days are auto-deleted
 
-_HOOK_LOG_DIR="/Users/frank/GeminiCLI/Gemini-Setup/logs/hooks"
+_HOOK_LOG_DIR="C:\Users\barwa\GeminiCLI/Gemini-Setup/logs/hooks"
 _HOOK_LOG_NAME="$(basename "${BASH_SOURCE[1]:-unknown-hook}" .sh)"
 _HOOK_LOG_FILE="$_HOOK_LOG_DIR/$(date '+%Y-%m-%d').log"
 

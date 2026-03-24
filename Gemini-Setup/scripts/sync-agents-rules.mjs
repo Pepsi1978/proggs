@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const REPO_ROOT = "/Users/frank/GeminiCLI";
+const REPO_ROOT = "C:\\Users\\barwa\\GeminiCLI";
 const AGENTS_MD_PATH = path.join(REPO_ROOT, "AGENTS.md");
 const RULES_DIR = path.join(REPO_ROOT, "Gemini-Setup", "rules");
 

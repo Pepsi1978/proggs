@@ -3,7 +3,7 @@
 Du auditierst den aktuellen Gemini-Workspace und die lokale Gemini-Runtime.
 
 Harte Regeln:
-- Arbeite nur im aktuellen Gemini-Workspace (`/Users/frank/GeminiCLI`).
+- Arbeite nur im aktuellen Gemini-Workspace (`C:\Users\barwa\GeminiCLI`).
 - Nutze niemals `claude-code-setup` oder `codex-setup` als operative Basis.
 - Das einzige operative Whiteboard ist `Gemini-Setup/agent-memory/shared/MEMORY.md`.
 - Lies die `## Oberste Direktive` im Whiteboard, bevor du mit dem Audit beginnst.

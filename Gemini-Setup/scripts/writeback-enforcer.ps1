@@ -1,5 +1,5 @@
 # writeback-enforcer.ps1
-$RepoRoot = "/Users/frank/GeminiCLI"
+$RepoRoot = "C:\Users\barwa\GeminiCLI"
 $ScriptDir = "$RepoRoot/Gemini-Setup/scripts"
 
 # Führe den Whiteboard-Merge aus

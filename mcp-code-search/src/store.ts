@@ -1,11 +1,26 @@
-// Vector Store — sqlite-vec powered via better-sqlite3
+// Vector Store — sqlite-vec powered via better-sqlite3 or bun:sqlite
 // Stores code chunks with their embeddings in SQLite.
 // Uses sqlite-vec extension for fast approximate nearest neighbor search.
-// Note: bun:sqlite on macOS does not support loadExtension, so we use
-// better-sqlite3 which works on both Node.js and Bun across all platforms.
 
-import Database from "better-sqlite3";
-import * as sqliteVec from "sqlite-vec";
+const useBun = typeof Bun !== "undefined";
+const useBetterSqlite3 = !useBun;
+
+let Database: any;
+let sqliteVec: any;
+
+if (useBun) {
+	// Bun has built-in SQLite support
+	const { Database: BunDatabase } = await import("bun:sqlite");
+	Database = BunDatabase;
+	// We still need the sqlite-vec extension path if possible, 
+	// but Bun on Windows might need a different approach for extensions.
+	// For now, let's try to load it via the same package.
+	sqliteVec = await import("sqlite-vec");
+} else {
+	const { default: BetterDatabase } = await import("better-sqlite3");
+	Database = BetterDatabase;
+	sqliteVec = await import("sqlite-vec");
+}
 
 const VECTOR_DIM = 768; // nomic-embed-text dimension
 
@@ -22,11 +37,17 @@ export interface SearchResult extends CodeChunk {
 }
 
 export class VectorStore {
-	private db: InstanceType<typeof Database>;
+	private db: any;
 
 	constructor(dbPath: string) {
-		this.db = new Database(dbPath);
-		sqliteVec.load(this.db);
+		if (useBun) {
+			this.db = new Database(dbPath);
+			// Bun uses loadExtension differently
+			this.db.loadExtension(sqliteVec.getLoadablePath());
+		} else {
+			this.db = new Database(dbPath);
+			sqliteVec.load(this.db);
+		}
 
 		this.db.exec("PRAGMA journal_mode = WAL");
 		this.db.exec("PRAGMA busy_timeout = 5000"); // wait up to 5s if DB is locked
@@ -60,23 +81,34 @@ export class VectorStore {
 
 	/** Delete all chunks belonging to a file path. Returns number of deleted chunks. */
 	deleteByFilePath(filePath: string): number {
-		const ids = this.db
-			.prepare("SELECT id FROM chunks WHERE file_path = ?")
-			.all(filePath) as Array<{ id: number }>;
+		const prepare = (sql: string) => this.db.prepare(sql);
+		
+		const ids = useBun 
+			? prepare("SELECT id FROM chunks WHERE file_path = ?").all(filePath) as Array<{ id: number }>
+			: prepare("SELECT id FROM chunks WHERE file_path = ?").all(filePath) as Array<{ id: number }>;
 
 		if (ids.length === 0) return 0;
 
-		const deleteVec = this.db.prepare("DELETE FROM vec_chunks WHERE rowid = ?");
-		const deleteChunk = this.db.prepare("DELETE FROM chunks WHERE id = ?");
+		const deleteVec = prepare("DELETE FROM vec_chunks WHERE rowid = ?");
+		const deleteChunk = prepare("DELETE FROM chunks WHERE id = ?");
 
-		const run = this.db.transaction(() => {
-			for (const { id } of ids) {
-				deleteVec.run(id);
-				deleteChunk.run(id);
-			}
-		});
-
-		run();
+		if (useBun) {
+			const transaction = this.db.transaction((items: any[]) => {
+				for (const { id } of items) {
+					deleteVec.run(id);
+					deleteChunk.run(id);
+				}
+			});
+			transaction(ids);
+		} else {
+			const run = this.db.transaction(() => {
+				for (const { id } of ids) {
+					deleteVec.run(id);
+					deleteChunk.run(id);
+				}
+			});
+			run();
+		}
 		return ids.length;
 	}
 
@@ -85,7 +117,7 @@ export class VectorStore {
 		const rows = this.db
 			.prepare("SELECT DISTINCT file_path FROM chunks ORDER BY file_path")
 			.all() as Array<{ file_path: string }>;
-		return rows.map((r) => r.file_path);
+		return rows.map((r: any) => r.file_path);
 	}
 
 	insert(chunk: CodeChunk, embedding: number[]): void {
@@ -96,20 +128,35 @@ export class VectorStore {
 			"INSERT INTO vec_chunks (rowid, embedding) VALUES (?, vec_f32(?))",
 		);
 
-		const run = this.db.transaction(() => {
-			const result = insertChunk.run(
-				chunk.filePath,
-				chunk.startLine,
-				chunk.endLine,
-				chunk.content,
-				chunk.language,
-			);
-			const rowId = BigInt(result.lastInsertRowid);
-			const buf = new Float32Array(embedding);
-			insertVec.run(rowId, buf);
-		});
-
-		run();
+		const buf = new Float32Array(embedding);
+		
+		if (useBun) {
+			const transaction = this.db.transaction((c: any, e: any) => {
+				const result = insertChunk.run(
+					c.filePath,
+					c.startLine,
+					c.endLine,
+					c.content,
+					c.language,
+				);
+				const rowId = result.lastInsertRowid;
+				insertVec.run(rowId, e);
+			});
+			transaction(chunk, buf);
+		} else {
+			const run = this.db.transaction(() => {
+				const result = insertChunk.run(
+					chunk.filePath,
+					chunk.startLine,
+					chunk.endLine,
+					chunk.content,
+					chunk.language,
+				);
+				const rowId = BigInt(result.lastInsertRowid);
+				insertVec.run(rowId, buf);
+			});
+			run();
+		}
 	}
 
 	insertBatch(chunks: CodeChunk[], embeddings: number[][]): void {
@@ -126,29 +173,55 @@ export class VectorStore {
 			"INSERT INTO vec_chunks (rowid, embedding) VALUES (?, vec_f32(?))",
 		);
 
-		const run = this.db.transaction(() => {
-			for (let i = 0; i < chunks.length; i++) {
-				const chunk = chunks[i]!;
-				const embedding = embeddings[i]!;
+		if (useBun) {
+			const transaction = this.db.transaction((cs: any[], es: any[]) => {
+				for (let i = 0; i < cs.length; i++) {
+					const c = cs[i]!;
+					const e = new Float32Array(es[i]!);
 
-				const result = insertChunk.run(
-					chunk.filePath,
-					chunk.startLine,
-					chunk.endLine,
-					chunk.content,
-					chunk.language,
-				);
-				const rowId = BigInt(result.lastInsertRowid);
-				const buf = new Float32Array(embedding);
-				insertVec.run(rowId, buf);
-			}
-		});
+					const result = insertChunk.run(
+						c.filePath,
+						c.startLine,
+						c.endLine,
+						c.content,
+						c.language,
+					);
+					const rowId = result.lastInsertRowid;
+					insertVec.run(rowId, e);
+				}
+			});
+			transaction(chunks, embeddings);
+		} else {
+			const run = this.db.transaction(() => {
+				for (let i = 0; i < chunks.length; i++) {
+					const chunk = chunks[i]!;
+					const embedding = embeddings[i]!;
 
-		run();
+					const result = insertChunk.run(
+						chunk.filePath,
+						chunk.startLine,
+						chunk.endLine,
+						chunk.content,
+						chunk.language,
+					);
+					const rowId = BigInt(result.lastInsertRowid);
+					const buf = new Float32Array(embedding);
+					insertVec.run(rowId, buf);
+				}
+			});
+			run();
+		}
 	}
 
 	async backupTo(destinationPath: string): Promise<void> {
-		await this.db.backup(destinationPath);
+		if (useBun) {
+			// Bun doesn't have native backup() yet, but we can copy the file
+			// In WAL mode, we should use a safer method if needed
+			// For now, simpler:
+			throw new Error("Backup not implemented for bun:sqlite yet");
+		} else {
+			await this.db.backup(destinationPath);
+		}
 	}
 
 	search(queryEmbedding: number[], limit: number): SearchResult[] {
@@ -215,7 +288,8 @@ export class VectorStore {
 			const row = this.db.prepare("PRAGMA integrity_check(1)").get() as
 				| { integrity_check: string }
 				| undefined;
-			return row?.integrity_check === "ok";
+			const val = row?.integrity_check || (row as any)?.["integrity_check(1)"];
+			return val === "ok";
 		} catch {
 			return false;
 		}
@@ -230,3 +304,4 @@ export class VectorStore {
 		this.db.close();
 	}
 }
+
