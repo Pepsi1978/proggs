@@ -2,15 +2,15 @@
 	"_comment": "MCP server configuration for Windows. Copy into the Codex workspace .mcp.json on Windows.",
 	"mcpServers": {
 		"code-review-graph": {
-			"command": "uvx",
+			"command": "C:/Users/barwa/bin/uvx.exe",
 			"args": ["code-review-graph", "serve"]
 		},
 		"code-search": {
-			"command": "bun",
-			"args": ["run", "mcp-code-search/src/index.ts"]
+			"command": "C:/Users/barwa/AppData/Roaming/npm/tsx.cmd",
+			"args": ["mcp-code-search/src/index.ts"]
 		},
 		"think-tank": {
-			"command": "npx",
+			"command": "C:/Program Files/nodejs/npx.cmd",
 			"args": ["-y", "mcp-think-tank@2.0.6"],
 			"env": {
 				"MCP_THINK_TANK_STORAGE": ".think-tank"

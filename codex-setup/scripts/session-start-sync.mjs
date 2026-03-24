@@ -40,6 +40,35 @@ function printBlock(title, body) {
   process.stdout.write(`${trimmed || "(keine aenderungen)"}\n`);
 }
 
+function restoreMcpConfig(repoRoot) {
+  const helperPath = path.join(
+    __dirname,
+    "restore-mcp-config.mjs",
+  );
+  const result = spawnSync(process.execPath, [helperPath], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    stdio: "pipe",
+  });
+
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    const stderr = `${result.stderr || ""}`.trim();
+    const stdout = `${result.stdout || ""}`.trim();
+    const details = [stdout, stderr].filter(Boolean).join("\n");
+    throw new Error(
+      `restore-mcp-config failed${details ? `:\n${details}` : ""}`,
+    );
+  }
+
+  const output = `${result.stdout || ""}`.trim();
+  if (output) {
+    process.stdout.write(`${output}\n`);
+  }
+}
+
 async function main() {
   const repoRoot = runGit(["rev-parse", "--show-toplevel"], {
     cwd: __dirname,
@@ -70,6 +99,11 @@ async function main() {
     cwd: repoRoot,
     stdio: "inherit",
   });
+
+  process.stdout.write(
+    "\n[session-start-sync] Stelle .mcp.json nach Plattform-Referenz wieder her...\n",
+  );
+  restoreMcpConfig(repoRoot);
 
   const status = runGit(["status", "--short"], { cwd: repoRoot });
   printBlock("[session-start-sync] Status nach dem Rebase", status);

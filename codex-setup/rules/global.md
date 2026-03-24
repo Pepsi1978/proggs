@@ -50,6 +50,8 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
 - Zuerst wird `origin/main` geholt, dann werden die ankommenden Aenderungen per `git diff --stat HEAD..origin/main`
   und `git diff --name-status HEAD..origin/main` sichtbar gemacht, danach folgt `git pull --rebase --autostash origin main`.
 - Der Zweck ist, dass Codex direkt sieht, was diese Session noch nicht hatte, bevor neue Aenderungen beginnen.
+- Auf Windows gehoert dazu auch die Wiederherstellung von `.mcp.json` aus `codex-setup/mcp-windows.json`,
+  damit Plattformdrift nach einem Merge nicht in die Arbeit hineinragt.
 
 ## Codex Whiteboard
 

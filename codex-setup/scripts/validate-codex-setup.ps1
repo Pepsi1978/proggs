@@ -78,6 +78,9 @@ $RequiredFiles = @(
     "codex-setup\scripts\session-start-sync.mjs",
     "codex-setup\scripts\session-start-sync.sh",
     "codex-setup\scripts\session-start-sync.ps1",
+    "codex-setup\scripts\restore-mcp-config.mjs",
+    "codex-setup\scripts\restore-mcp-config.sh",
+    "codex-setup\scripts\restore-mcp-config.ps1",
     "codex-setup\scripts\check-openai-docs-mcp.mjs",
     "codex-setup\scripts\check-openai-docs-mcp.sh",
     "codex-setup\scripts\check-openai-docs-mcp.ps1",
@@ -103,6 +106,7 @@ $RequiredFiles = @(
     "codex-setup\scripts\register-intelligence-suggestion.mjs",
     "codex-setup\scripts\register-intelligence-suggestion.sh",
     "codex-setup\scripts\register-intelligence-suggestion.ps1",
+    "codex-setup\mcp-windows.json",
     "codex-setup\skills\self-improve\references\claude-delta-sync.md",
     "codex-setup\skills\self-improve\references\gemini-delta-sync.md",
     "codex-setup\skills\self-improve\references\resilient-bugfixing.md",
@@ -205,6 +209,10 @@ if ((Get-Content "AGENTS.md" -Raw) -notmatch "OpenAI developer documentation MCP
 
 if ((Get-Content "AGENTS.md" -Raw) -notmatch [regex]::Escape("session-start-sync")) {
     throw "AGENTS.md must require the session-start sync helper."
+}
+
+if ((Get-Content "AGENTS.md" -Raw) -notmatch [regex]::Escape("codex-setup/mcp-windows.json")) {
+    throw "AGENTS.md must require the Windows MCP restore reference."
 }
 
 if ((Get-Content "AGENTS.md" -Raw) -notmatch [regex]::Escape("git diff --stat")) {
@@ -329,6 +337,10 @@ if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch [regex]::Escape("
 
 if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "semantischer Suche, Indexierung, Hintergrund-Reindex") {
     throw "global.md must route semantic-search questions through the code-search healthcheck."
+}
+
+if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch [regex]::Escape("codex-setup/mcp-windows.json")) {
+    throw "global.md must document the Windows MCP restore reference."
 }
 
 if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "Read-Only Fremd-Workspaces") {
@@ -541,6 +553,14 @@ if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape("sessio
 
 if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape("session-start-sync.ps1")) {
     throw "README.md must document the PowerShell session-start sync wrapper."
+}
+
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape("MCP-Konfig-Restore")) {
+    throw "README.md must document the MCP config restore section."
+}
+
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape("restore-mcp-config.mjs")) {
+    throw "README.md must document the restore-mcp-config helper."
 }
 
 if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "Starte bitte die Bruecke zu Claude Code") {
@@ -799,6 +819,10 @@ if ((Get-Content "codex-setup\skills\self-improve\SKILL.md" -Raw) -notmatch "Ger
 
 if ((Get-Content "codex-setup\skills\self-improve\SKILL.md" -Raw) -notmatch "session-start-sync") {
     throw "SKILL.md must document the session-start sync helper."
+}
+
+if ((Get-Content "codex-setup\skills\self-improve\SKILL.md" -Raw) -notmatch [regex]::Escape("codex-setup/mcp-windows.json")) {
+    throw "SKILL.md must document the Windows MCP restore reference."
 }
 
 if ((Get-Content "codex-setup\skills\self-improve\SKILL.md" -Raw) -notmatch [regex]::Escape("git diff --stat HEAD..origin/main")) {

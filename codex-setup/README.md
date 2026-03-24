@@ -60,7 +60,7 @@ Wichtigste Trennung:
 - `scripts/`
   Plattformuebergreifende Hilfsskripte fuer Whiteboard-Resolver, Whiteboard-Insert, Sentinel-Merge,
   Skill-Installation, Session-Start-Sync, Bootstrap fuer frische Rechner, Validierung, `code-search`-Healthchecks,
-  gefuehrte Umgebungsfix-Erfassung, Intelligenzvorschlag-Logging sowie Claude- und Gemini-Delta-Audits.
+  MCP-Konfig-Restore, gefuehrte Umgebungsfix-Erfassung, Intelligenzvorschlag-Logging sowie Claude- und Gemini-Delta-Audits.
 
 - `bridges/`
   Wiederverwendbare Bruecken-Spezifikationen fuer andere CLI-Umgebungen.
@@ -180,6 +180,19 @@ Bevor substanzielle Arbeit in einer neuen Session beginnt, soll dieser Helper la
 Der Helper holt zuerst `origin/main`, zeigt die ankommenden Aenderungen mit `git diff --stat HEAD..origin/main` und
 `git diff --name-status HEAD..origin/main`, und rebased danach mit `git pull --rebase --autostash origin main`.
 So wird sichtbar, was Codex in der aktuellen Session noch nicht hatte, bevor neue Aenderungen entstehen.
+
+Nach dem Rebase stellt er auf Windows ausserdem die lokale `.mcp.json` aus `codex-setup/mcp-windows.json` wieder her,
+damit plattformbedingte MCP-Pfaddrift nicht in die laufende Session uebernommen wird.
+
+## MCP-Konfig-Restore
+
+Falls `.mcp.json` manuell oder durch einen Merge aus dem Tritt geraet, kann dieser Helper separat laufen:
+
+- direkt: `node codex-setup/scripts/restore-mcp-config.mjs`
+- macOS/Linux: `bash codex-setup/scripts/restore-mcp-config.sh`
+- Windows: `pwsh -NoProfile -File codex-setup/scripts/restore-mcp-config.ps1`
+
+Auf Windows kopiert der Helper `codex-setup/mcp-windows.json` zurueck nach `.mcp.json`, auf anderen Plattformen no-oped er.
 
 ## Claude-Delta-Audit
 

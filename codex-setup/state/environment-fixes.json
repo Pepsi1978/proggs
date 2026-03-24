@@ -737,6 +737,47 @@
       ],
       "created_at": "2026-03-24T22:29:51.383Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-24-windows-mcp-config-restored-in-session-sync",
+      "source_cli": "Codex",
+      "category": "session-start-sync",
+      "summary": "Session-start sync restores the Windows .mcp.json from codex-setup/mcp-windows.json after rebase.",
+      "context_for_other_clis": "This change belongs to the Codex session-start path on Windows. The repo keeps a tracked Windows MCP reference file so the working copy can be restored after rebase or merge events without depending on manual remembering.",
+      "symptom_before_fix": "Windows .mcp.json could drift away from the tracked workspace reference and stay stale after a session-start rebase.",
+      "root_cause": "The session-start flow handled fetch, diff preview, and rebase, but it did not restore the Windows MCP configuration from a tracked reference file, so platform-specific drift could survive into the next task.",
+      "what_was_fixed": "Added codex-setup/mcp-windows.json, restore-mcp-config helpers, and a session-start restore step on Windows.",
+      "why_it_was_fixed": "The restore step keeps the workspace MCP config aligned with the tracked reference and removes a recurring manual repair task.",
+      "exact_error_text": "Exact symptom text: Windows MCP configuration drift could survive a session-start rebase because the local .mcp.json was not restored from the tracked reference.",
+      "root_cause_why_chain": "Why 1: the rebase flow did not refresh .mcp.json from a tracked Windows reference. Why 2: the workspace relied on manual PATH and config repair after platform-specific changes. Why 3: the session-start automation had no restore step for the Windows MCP file.",
+      "related_error_sources_checked": "Checked the same drift risk in AGENTS.md, codex-setup/README.md, codex-setup/rules/global.md, codex-setup/skills/self-improve/SKILL.md, session-start-sync.mjs, and the validate-codex-setup scripts because all of them define or enforce the same startup contract.",
+      "wrong_pattern_example": "Wrong pattern: keep an untracked or stale local .mcp.json and hope a later session notices the mismatch.",
+      "right_pattern_example": "Right pattern: keep a tracked Windows reference and restore .mcp.json automatically after the session-start rebase.",
+      "avoidance_rule": "If a Codex startup path depends on a platform-specific config file, then restore it from a tracked reference during session start instead of relying on manual cleanup.",
+      "resilience_summary": "The fix is defensive because it makes the restore step automatic, survivable because the tracked reference can be reapplied after future rebases, extensible because other platform-specific configs can follow the same pattern, documented in the ledger, and damage-free because it only rewrites the local runtime file back to the tracked state.",
+      "fix_induced_failure_review": "Dependencies: session-start-sync, the tracked reference file, and the validator/doc surfaces were reviewed together. Failure scenario: if the restore step fails, the helper stops clearly and the validation catches missing references. State changes: only the local MCP config file is rewritten on Windows. Race conditions: low because the restore runs after rebase and before work continues. Backward compatibility: non-Windows paths remain no-ops. Platform effects: Windows gets automatic recovery from config drift, while other platforms keep the simpler path. Update resistance: future MCP changes can update the tracked reference and reuse the same restore flow. Graceful degradation: if no restore is needed, the helper reports that the file already matches.",
+      "verification": "Verified by running node syntax checks for the new helpers and both codex-setup validators in PowerShell and Git Bash. The validators passed after the session-start restore integration and the new reference file were added.",
+      "portability_notes": "Other CLIs that keep platform-specific runtime config outside the main repo should use the same pattern: track a reference file, restore it automatically at session start, and validate both the helper and the reference in setup checks.",
+      "impact": "",
+      "portable_to": [
+        "Claude Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "AGENTS.md",
+        "codex-setup/README.md",
+        "codex-setup/rules/global.md",
+        "codex-setup/skills/self-improve/SKILL.md",
+        "codex-setup/scripts/session-start-sync.mjs",
+        "codex-setup/scripts/restore-mcp-config.mjs",
+        "codex-setup/scripts/restore-mcp-config.ps1",
+        "codex-setup/scripts/restore-mcp-config.sh",
+        "codex-setup/mcp-windows.json",
+        "codex-setup/scripts/validate-codex-setup.ps1",
+        "codex-setup/scripts/validate-codex-setup.sh"
+      ],
+      "created_at": "2026-03-24T22:46:22.313Z",
+      "status": "active"
     }
   ]
 }
