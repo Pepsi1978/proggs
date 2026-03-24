@@ -1,12 +1,6 @@
 {
-	"version": 1,
-	"scope": "codex-environment-only",
-	"tracked_paths": ["codex-setup/**", "AGENTS.md"],
-	"replace_requires_confirmation": true,
-	"additive_bias": true,
-	"last_reviewed_commit": "82e8f25",
-	"last_applied_commit": "82e8f25",
-	"last_reviewed_at": "2026-03-23T22:22:00+01:00",
-	"last_applied_at": "2026-03-23T22:22:00+01:00",
-	"notes": "16 Codex-Commits reviewed. Applied: A1 (directive-2 universal bridge), C1 (new-environment-fix.mjs), C3 (validate-claude-code-setup.sh). Skipped: E1 (TOML fix not relevant for Claude Code JSON config). 8 of 13 environment fixes were already implemented."
+	"last_checked_commit": "aac2bdb3cbb747495ac40f1db2b76e39372acfe1",
+	"last_checked_date": "2026-03-24",
+	"initialized": true,
+	"note": "Checked commits #703 + #704. C1 (session-start preview) pending user approval."
 }

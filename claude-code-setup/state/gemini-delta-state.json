@@ -1,12 +1,6 @@
 {
-	"version": 1,
-	"scope": "gemini-environment-only",
-	"tracked_paths": ["Gemini-Setup/**"],
-	"replace_requires_confirmation": true,
-	"additive_bias": true,
-	"last_reviewed_commit": "2950f65",
-	"last_applied_commit": "2950f65",
-	"last_reviewed_at": "2026-03-23T13:15:00+01:00",
-	"last_applied_at": "2026-03-23T13:15:00+01:00",
-	"notes": "Bootstrapped during first Claude Code session with Gemini delta bridge. Gemini CLI is newly set up — expect more content over time."
+	"last_checked_commit": "aac2bdb3cbb747495ac40f1db2b76e39372acfe1",
+	"last_checked_date": "2026-03-24",
+	"initialized": true,
+	"note": "Checked Gemini sync commit. Termux removal already done. A1 (8 dimensions in whiteboard) optional."
 }
