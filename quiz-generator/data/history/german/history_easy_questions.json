@@ -1,0 +1,652 @@
+[
+	{
+		"id": "G_leicht_001",
+		"question": "Wann endete der Zweite Weltkrieg?",
+		"options": ["1939", "1945", "1941", "1944"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_002",
+		"question": "Welche Stadt wurde 753 v. Chr. gegründet?",
+		"options": ["Rom", "Griechenland", "Paris", "Lissabon"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_003",
+		"question": "Wer war der erste Kaiser Roms?",
+		"options": ["Julius Caesar", "Augustus", "Nero", "Caligula"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_004",
+		"question": "In welchem Jahr begann der Erste Weltkrieg?",
+		"options": ["1914", "1939", "1918", "1933"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_005",
+		"question": "Welcher deutsche Kaiser fiel 1918?",
+		"options": ["Wilhelm II.", "Friedrich II.", "Karl III.", "Ludwig II."],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_006",
+		"question": "Wer entdeckte Amerika?",
+		"options": ["Columbus", "Magellan", "Vasco da Gama", "Cook"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_007",
+		"question": "Wann fiel die Mauer in Berlin?",
+		"options": ["1961", "1989", "1974", "1982"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_008",
+		"question": "Wer war Kaiser von Japan während der Periode der Samurai?",
+		"options": ["Ninomiya", "Tokugawa", "Minamoto", "Ashikaga"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_009",
+		"question": "Wie hieß der Friede, der nach dem Ersten Weltkrieg geschlossen wurde?",
+		"options": [
+			"Sèvres",
+			"Versailler Vertrag",
+			"Treaty of Saint-Germain",
+			"Kiel Canal Treaty"
+		],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_010",
+		"question": "Wer war der erste Präsident der USA?",
+		"options": ["Lincoln", "Washington", "Jefferson", "FDR"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_011",
+		"question": "Welches Ereignis markiert den Beginn der Französischen Revolution?",
+		"options": [
+			"Sturm auf die Bastille",
+			"Kroneffassung Ludwigs XVI.",
+			"Karl-Marx geboren",
+			"Fall von Paris"
+		],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_012",
+		"question": "In welchem Jahr wurde die Französische Revolution begonnen?",
+		"options": ["1789", "1776", "1793", "1804"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_013",
+		"question": "Wer war der erste Kaiser von Frankreich?",
+		"options": ["Ludwig I.", "Napoleon I.", "Louis XIV.", "Napoleon III."],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_014",
+		"question": "Welche Stadt war Hauptstadt des deutschen Kaiserreichs?",
+		"options": ["Berlin", "München", "Frankfurt", "Hamburg"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_015",
+		"question": "Wer führte den Dreißigjährigen Krieg in Europa?",
+		"options": [
+			"Habsburger und Welfen",
+			"Ottomanen und Safawiden",
+			"Normannen und Wenden",
+			"Makedonen und Perser"
+		],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_016",
+		"question": "Wann wurde die USA unabhängig von Großbritannien erklärt?",
+		"options": ["1776", "1789", "1791", "1801"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_017",
+		"question": "Welcher Präsident führte die USA im Zweiten Weltkrieg?",
+		"options": ["Truman", "Lincoln", "FDR", "Jefferson"],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_018",
+		"question": "In welchem Jahr wurde die Sowjetunion gegründet?",
+		"options": ["1917", "1922", "1939", "1945"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_019",
+		"question": "Wer war der letzte Zar Russlands?",
+		"options": [
+			"Zar Nikolai II.",
+			"Zar Alexander II.",
+			"Zar Peter I.",
+			"Zar Ivan IV."
+		],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_020",
+		"question": "Welcher Krieg endete mit dem Vertrag von Tordesillas?",
+		"options": [
+			"Italienischer Krieg",
+			"Portugiesisch-Brasiliens Krieg",
+			"Spanischer Erbfolgekrieg",
+			"Hundertjähriger Krieg"
+		],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_021",
+		"question": "Wann fiel das Römische Reich im Westen?",
+		"options": ["476 n. Chr.", "530 n. Chr.", "395 n. Chr.", "410 n. Chr."],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_022",
+		"question": "Wer war der letzte Kaiser des Heiligen Römischen Reiches?",
+		"options": ["Friedrich II.", "Karl V.", "Heinrich VII.", "Friedrich III."],
+		"answer": 3
+	},
+	{
+		"id": "G_leicht_023",
+		"question": "Welche Schlacht entschied den Dreißigjährigen Krieg zugunsten der Protestanten?",
+		"options": ["Breitenfeld", "Lepanto", "Nördlingen", "Pavia"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_024",
+		"question": "Wann wurde die Sowjetunion aufgelöst?",
+		"options": ["1985", "1991", "1989", "1993"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_025",
+		"question": "Wer war der erste russische Präsident?",
+		"options": ["Eltschin", "Jelzin", "Putin", "Lew Wassiljew"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_026",
+		"question": "In welchem Jahr wurde die Bundesrepublik Deutschland gegründet?",
+		"options": ["1945", "1949", "1950", "1952"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_027",
+		"question": "Welche Nation besetzte Europa nach dem Ersten Weltkrieg?",
+		"options": ["Deutschland", "Frankreich", "Polen", "Italien"],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_028",
+		"question": "Wer war der erste Kanzler der Bundesrepublik Deutschland?",
+		"options": [
+			"Helmut Kohl",
+			"Konrad Adenauer",
+			"Willy Brandt",
+			"Ludwig Erhard"
+		],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_029",
+		"question": "In welchem Jahr wurde die Volksrepublik China gegründet?",
+		"options": ["1949", "1945", "1952", "1957"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_030",
+		"question": "Welche Schlacht endete den Hundertjährigen Krieg?",
+		"options": ["Azincourt", "Castillon", "Agincourt", "Crecy"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_031",
+		"question": "Wann wurde die Europäische Union gegründet?",
+		"options": ["1992", "1958", "1993", "1957"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_032",
+		"question": "Welcher Vertrag gründete die Europäische Gemeinschaft?",
+		"options": [
+			"Vertrag von Maastricht",
+			"Römischer Vertrag",
+			"Treaty of Rome",
+			"Vertrag von Lissabon"
+		],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_033",
+		"question": "In welchem Jahr wurde die EU als solche gegründet?",
+		"options": ["1993", "1992", "1958", "1991"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_034",
+		"question": "Wer war der erste Präsident der Europäischen Kommission?",
+		"options": ["Van Rompuy", "Santer", "Barroso", "Durao Barroso"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_035",
+		"question": "Wann wurde die Arabische Liga gegründet?",
+		"options": ["1945", "1946", "1947", "1949"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_036",
+		"question": "In welchem Jahr wurde das Vereinigte Königreich gegründet?",
+		"options": ["1707", "1714", "1700", "1689"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_037",
+		"question": "Welche Schlacht beendete den Dreißigjährigen Krieg?",
+		"options": ["Lützen", "Weißenburg", "Mühlberg", "Wittstock"],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_038",
+		"question": "Wer war der letzte König von Frankreich?",
+		"options": ["Louis XVI.", "Louis XVIII.", "Ludwig XV.", "Charles X."],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_039",
+		"question": "In welchem Jahr wurde die USA durch den Unabhängigkeitskrieg unabhängig?",
+		"options": ["1775", "1781", "1783", "1791"],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_040",
+		"question": "Welcher Krieg wurde 1861 im USA begonnen?",
+		"options": [
+			"Bürgerkrieg",
+			"Koreanischer Krieg",
+			"Vietnamkrieg",
+			"Irak-Krieg"
+		],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_041",
+		"question": "Wann fiel die Sowjetische Union?",
+		"options": ["1989", "1990", "1991", "1992"],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_042",
+		"question": "Wer war der letzte Diktator der USA?",
+		"options": ["Lincoln", "Washington", "Jefferson", "Jackson"],
+		"answer": 3
+	},
+	{
+		"id": "G_leicht_043",
+		"question": "In welchem Jahr wurde die Bundesrepublik Deutschland gegründet?",
+		"options": ["1945", "1949", "1955", "1956"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_044",
+		"question": "Welche Stadt wurde 1945 von den Sowjets besetzt?",
+		"options": ["Berlin", "Warschau", "Prag", "Budapest"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_045",
+		"question": "Wer war der erste Kanzler der DDR?",
+		"options": [
+			"Walter Ulbricht",
+			"Erich Honecker",
+			"Otto Grotewohl",
+			"Wilhelm Pieck"
+		],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_046",
+		"question": "In welchem Jahr wurde die DDR gegründet?",
+		"options": ["1948", "1949", "1950", "1952"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_047",
+		"question": "Wann wurde die Volksrepublik China gegründet?",
+		"options": ["1945", "1949", "1950", "1951"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_048",
+		"question": "Wer war der erste Führer der Sowjetunion?",
+		"options": ["Stalin", "Lenin", "Brezhnew", "Gorbatschow"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_049",
+		"question": "In welchem Jahr wurde die Sowjetunion gegründet?",
+		"options": ["1917", "1922", "1923", "1924"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_050",
+		"question": "Welche Stadt wurde 1991 als Hauptstadt Russlands erklärt?",
+		"options": ["Moskau", "Sankt Petersburg", "Kiew", "Simferopol"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_051",
+		"question": "In welchem Jahr wurde der Kalte Krieg beendet?",
+		"options": ["1985", "1989", "1991", "1990"],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_052",
+		"question": "Wer war der letzte Diktator der DDR?",
+		"options": [
+			"Erich Honecker",
+			"Walter Ulbricht",
+			"Otto Grotewohl",
+			"Wilhelm Pieck"
+		],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_053",
+		"question": "Wann wurde die Volksrepublik Vietnam gegründet?",
+		"options": ["1945", "1949", "1975", "1976"],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_054",
+		"question": "In welchem Jahr wurde die USA als Nation gegründet?",
+		"options": ["1607", "1776", "1783", "1800"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_055",
+		"question": "Welche Stadt wurde 1990 als Hauptstadt Deutschlands erklärt?",
+		"options": ["Berlin", "Hamburg", "München", "Frankfurt"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_056",
+		"question": "In welchem Jahr wurde die EU als solche gegründet?",
+		"options": ["1993", "1992", "1958", "1957"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_057",
+		"question": "Welche Nation wurde 1990 wiedervereinigt?",
+		"options": ["Frankreich", "Italien", "Deutschland", "Spanien"],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_058",
+		"question": "Wann wurde die Arabische Liga gegründet?",
+		"options": ["1945", "1946", "1947", "1948"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_059",
+		"question": "In welchem Jahr wurde die Sowjetunion aufgelöst?",
+		"options": ["1989", "1990", "1991", "1992"],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_060",
+		"question": "Wer war der letzte Zar Russlands?",
+		"options": ["Nikolai II.", "Alexander III.", "Alexander II.", "Petr I."],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_061",
+		"question": "Welches Land wurde 1991 nach dem Zerfall der Sowjetunion unabhängig?",
+		"options": ["Ukraine", "Polen", "Tschechien", "Slowakei"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_062",
+		"question": "In welchem Jahr wurde die DDR aufgelöst?",
+		"options": ["1989", "1990", "1991", "1992"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_063",
+		"question": "Wer war der erste Präsident der USA?",
+		"options": ["Washington", "Lincoln", "Jefferson", "Franklin"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_064",
+		"question": "In welchem Jahr wurde die Französische Revolution begonnen?",
+		"options": ["1789", "1792", "1793", "1794"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_065",
+		"question": "Welche Schlacht markierte den Höhepunkt des Ersten Weltkrieges?",
+		"options": ["Verdun", "Somme", "Aisne", "Arras"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_066",
+		"question": "In welchem Jahr fiel der Kommunismus in Ostdeutschland?",
+		"options": ["1989", "1988", "1990", "1991"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_067",
+		"question": "Wer war der erste Präsident der Sowjetunion?",
+		"options": ["Stalin", "Lenin", "Brezhnew", "Gorbatschow"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_068",
+		"question": "In welchem Jahr wurde der Zweite Weltkrieg beendet?",
+		"options": ["1943", "1944", "1945", "1946"],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_069",
+		"question": "Welche Stadt wurde 1945 von den Alliierten besetzt?",
+		"options": ["Berlin", "Paris", "London", "Rom"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_070",
+		"question": "In welchem Jahr wurde die Volksrepublik China gegründet?",
+		"options": ["1945", "1949", "1950", "1951"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_071",
+		"question": "Welches Land wurde 1776 unabhängig von Großbritannien?",
+		"options": ["USA", "Frankreich", "Spanien", "Portugal"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_072",
+		"question": "In welchem Jahr wurde die Europäische Union gegründet?",
+		"options": ["1993", "1992", "1958", "1957"],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_073",
+		"question": "Wer war der erste Kanzler der Bundesrepublik Deutschland?",
+		"options": ["Adenauer", "Brandt", "Schmidt", "Kohl"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_074",
+		"question": "In welchem Jahr wurde die Sowjetunion gegründet?",
+		"options": ["1917", "1922", "1923", "1924"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_075",
+		"question": "Wann wurde die DDR gegründet?",
+		"options": ["1948", "1949", "1950", "1951"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_076",
+		"question": "Welche Stadt wurde 1990 als Hauptstadt Deutschlands erklärt?",
+		"options": ["Berlin", "Hamburg", "München", "Frankfurt"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_077",
+		"question": "In welchem Jahr wurde die EU als solche gegründet?",
+		"options": ["1993", "1992", "1958", "1957"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_078",
+		"question": "Welche Nation wurde 1990 wiedervereinigt?",
+		"options": ["Deutschland", "Frankreich", "Italien", "Spanien"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_079",
+		"question": "Wann wurde die Arabische Liga gegründet?",
+		"options": ["1945", "1946", "1947", "1948"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_080",
+		"question": "In welchem Jahr wurde die Sowjetunion aufgelöst?",
+		"options": ["1989", "1990", "1991", "1992"],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_081",
+		"question": "Wer war der letzte Zar Russlands?",
+		"options": ["Nikolai II.", "Alexander III.", "Alexander II.", "Petr I."],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_082",
+		"question": "Welches Land wurde 1991 nach dem Zerfall der Sowjetunion unabhängig?",
+		"options": ["Ukraine", "Polen", "Tschechien", "Slowakei"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_083",
+		"question": "In welchem Jahr wurde die DDR aufgelöst?",
+		"options": ["1989", "1990", "1991", "1992"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_084",
+		"question": "Wer war der erste Präsident der USA?",
+		"options": ["Washington", "Lincoln", "Jefferson", "Franklin"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_085",
+		"question": "In welchem Jahr wurde die Französische Revolution begonnen?",
+		"options": ["1789", "1792", "1793", "1794"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_086",
+		"question": "Welche Schlacht markierte den Höhepunkt des Ersten Weltkrieges?",
+		"options": ["Verdun", "Somme", "Aisne", "Arras"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_087",
+		"question": "In welchem Jahr fiel der Kommunismus in Ostdeutschland?",
+		"options": ["1989", "1988", "1990", "1991"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_088",
+		"question": "Wer war der erste Präsident der Sowjetunion?",
+		"options": ["Stalin", "Lenin", "Brezhnew", "Gorbatschow"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_089",
+		"question": "In welchem Jahr wurde der Zweite Weltkrieg beendet?",
+		"options": ["1943", "1944", "1945", "1946"],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_090",
+		"question": "Welche Stadt wurde 1945 von den Alliierten besetzt?",
+		"options": ["Berlin", "Paris", "London", "Rom"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_091",
+		"question": "In welchem Jahr wurde die Volksrepublik China gegründet?",
+		"options": ["1945", "1949", "1950", "1951"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_092",
+		"question": "Welches Land wurde 1776 unabhängig von Großbritannien?",
+		"options": ["USA", "Frankreich", "Spanien", "Portugal"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_093",
+		"question": "In welchem Jahr wurde die Europäische Union gegründet?",
+		"options": ["1993", "1992", "1958", "1957"],
+		"answer": 2
+	},
+	{
+		"id": "G_leicht_094",
+		"question": "Wer war der erste Kanzler der Bundesrepublik Deutschland?",
+		"options": ["Adenauer", "Brandt", "Schmidt", "Kohl"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_095",
+		"question": "In welchem Jahr wurde die Sowjetunion gegründet?",
+		"options": ["1917", "1922", "1923", "1924"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_096",
+		"question": "Wann wurde die DDR gegründet?",
+		"options": ["1948", "1949", "1950", "1951"],
+		"answer": 1
+	},
+	{
+		"id": "G_leicht_097",
+		"question": "Welche Stadt wurde 1990 als Hauptstadt Deutschlands erklärt?",
+		"options": ["Berlin", "Hamburg", "München", "Frankfurt"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_098",
+		"question": "In welchem Jahr wurde die EU als solche gegründet?",
+		"options": ["1993", "1992", "1958", "1957"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_099",
+		"question": "Welche Nation wurde 1990 wiedervereinigt?",
+		"options": ["Deutschland", "Frankreich", "Italien", "Spanien"],
+		"answer": 0
+	},
+	{
+		"id": "G_leicht_100",
+		"question": "Wann wurde die Arabische Liga gegründet?",
+		"options": ["1945", "1946", "1947", "1948"],
+		"answer": 1
+	}
+]
