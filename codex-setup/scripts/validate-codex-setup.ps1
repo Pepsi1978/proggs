@@ -75,6 +75,9 @@ $RequiredFiles = @(
     "codex-setup\scripts\bootstrap-report.mjs",
     "codex-setup\scripts\bootstrap-report.sh",
     "codex-setup\scripts\bootstrap-report.ps1",
+    "codex-setup\scripts\session-start-sync.mjs",
+    "codex-setup\scripts\session-start-sync.sh",
+    "codex-setup\scripts\session-start-sync.ps1",
     "codex-setup\scripts\check-openai-docs-mcp.mjs",
     "codex-setup\scripts\check-openai-docs-mcp.sh",
     "codex-setup\scripts\check-openai-docs-mcp.ps1",
@@ -200,6 +203,18 @@ if ((Get-Content "AGENTS.md" -Raw) -notmatch "OpenAI developer documentation MCP
     throw "AGENTS.md must instruct Codex to use the OpenAI Docs MCP server."
 }
 
+if ((Get-Content "AGENTS.md" -Raw) -notmatch [regex]::Escape("session-start-sync")) {
+    throw "AGENTS.md must require the session-start sync helper."
+}
+
+if ((Get-Content "AGENTS.md" -Raw) -notmatch [regex]::Escape("git diff --stat")) {
+    throw "AGENTS.md must require the session-start diff preview."
+}
+
+if ((Get-Content "AGENTS.md" -Raw) -notmatch [regex]::Escape("git pull --rebase --autostash")) {
+    throw "AGENTS.md must require the session-start rebase step."
+}
+
 if ((Get-Content "AGENTS.md" -Raw) -notmatch "GeminiCLI") {
     throw "AGENTS.md must mark Gemini comparison paths as read-only."
 }
@@ -302,6 +317,14 @@ if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape('Last w
 
 if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "neue Tools, Plugins oder Agenten") {
     throw "global.md must require future-proof fixes across new tools and agents."
+}
+
+if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "Session-Start Sync") {
+    throw "global.md must document the session-start sync section."
+}
+
+if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch [regex]::Escape("git pull --rebase --autostash origin main")) {
+    throw "global.md must require the session-start rebase command."
 }
 
 if ((Get-Content "codex-setup\rules\global.md" -Raw) -notmatch "semantischer Suche, Indexierung, Hintergrund-Reindex") {
@@ -502,6 +525,22 @@ if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "bootstrap-report.mjs")
 
 if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "bootstrap-report.ps1") {
     throw "README.md must document the registry-driven bootstrap report."
+}
+
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape("Session-Start-Sync")) {
+    throw "README.md must document the session-start sync section."
+}
+
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape("session-start-sync.mjs")) {
+    throw "README.md must document the direct session-start sync helper."
+}
+
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape("session-start-sync.sh")) {
+    throw "README.md must document the Bash session-start sync wrapper."
+}
+
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape("session-start-sync.ps1")) {
+    throw "README.md must document the PowerShell session-start sync wrapper."
 }
 
 if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "Starte bitte die Bruecke zu Claude Code") {
@@ -756,6 +795,18 @@ if ((Get-Content "codex-setup\skills\self-improve\references\report-and-creative
 
 if ((Get-Content "codex-setup\skills\self-improve\SKILL.md" -Raw) -notmatch "German-speaking Systemarchitekt") {
     throw "SKILL.md must describe the user as a German-speaking system architect."
+}
+
+if ((Get-Content "codex-setup\skills\self-improve\SKILL.md" -Raw) -notmatch "session-start-sync") {
+    throw "SKILL.md must document the session-start sync helper."
+}
+
+if ((Get-Content "codex-setup\skills\self-improve\SKILL.md" -Raw) -notmatch [regex]::Escape("git diff --stat HEAD..origin/main")) {
+    throw "SKILL.md must document the session-start diff preview."
+}
+
+if ((Get-Content "codex-setup\skills\self-improve\SKILL.md" -Raw) -notmatch [regex]::Escape("git pull --rebase --autostash origin main")) {
+    throw "SKILL.md must document the session-start rebase command."
 }
 
 if ((Get-Content "codex-setup\skills\self-improve\SKILL.md" -Raw) -notmatch "below only safety rules plus explicit user instructions") {

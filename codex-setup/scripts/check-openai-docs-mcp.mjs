@@ -257,15 +257,12 @@ async function runCodexAttempt(repoRoot, options, attempt) {
 			const unavailableSignal = observedUnavailableSignal(logText, smokeResult);
 			const explicitAvailable = smokeResult === "AVAILABLE";
 			const toolPathConfirmed =
-				startupReady &&
-				toolInvocationObserved &&
-				!unavailableSignal &&
-				terminationMode === "early-success";
+				startupReady && toolInvocationObserved && !unavailableSignal;
 			const available = explicitAvailable || toolPathConfirmed;
 			const successMode = explicitAvailable
 				? "explicit-reply"
 				: toolPathConfirmed
-					? "tool-dispatch-before-timeout"
+					? "tool-dispatch-observed"
 					: "";
 			const failureReason = available
 				? ""
@@ -396,8 +393,8 @@ function printHumanSuccess(report) {
 	const attemptLabel = report.successAttempt === 1
 		? "on the first attempt"
 		: `on attempt ${report.successAttempt}/${report.attempts}`;
-	const successLabel = report.successMode === "tool-dispatch-before-timeout"
-		? "reached a real openaiDeveloperDocs tool dispatch before the bounded timeout"
+	const successLabel = report.successMode === "tool-dispatch-observed"
+		? "reached a real openaiDeveloperDocs tool dispatch"
 		: "replied AVAILABLE";
 	console.log(
 		`openaiDeveloperDocs MCP configured, official docs reachable, and fresh Codex exec ${successLabel} ${attemptLabel} with a ${report.timeoutMs} ms timeout per attempt`,

@@ -44,6 +44,13 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
 - `proggs` ist ausschliesslich fuer Claude Code reserviert.
 - Codex darf Dateien dort nicht lesen, schreiben, als `workdir` verwenden oder fuer Git-Operationen benutzen.
 
+## Session-Start Sync
+
+- Zu Beginn jeder neuen Session und vor substanzieller Arbeit laeuft `codex-setup/scripts/session-start-sync.*`.
+- Zuerst wird `origin/main` geholt, dann werden die ankommenden Aenderungen per `git diff --stat HEAD..origin/main`
+  und `git diff --name-status HEAD..origin/main` sichtbar gemacht, danach folgt `git pull --rebase --autostash origin main`.
+- Der Zweck ist, dass Codex direkt sieht, was diese Session noch nicht hatte, bevor neue Aenderungen beginnen.
+
 ## Codex Whiteboard
 
 - Codex hat ein eigenes Whiteboard: `codex-setup/agent-memory/shared/MEMORY.md`.

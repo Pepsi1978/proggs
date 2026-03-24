@@ -44,6 +44,7 @@ Hard rules:
 - The only authoritative whiteboard is `<workspace>/codex-setup/agent-memory/shared/MEMORY.md`.
 - The Git source-of-truth for this skill is `<workspace>/codex-setup/skills/self-improve/`.
 - The local deployment target is `~/.codex/skills/self-improve/`.
+- Before any substantial work in a new session, run the `session-start-sync` helper (`codex-setup/scripts/session-start-sync.*`) so `origin/main` is fetched, `git diff --stat HEAD..origin/main` and `git diff --name-status HEAD..origin/main` show incoming changes, and the workspace is rebased with `git pull --rebase --autostash origin main` before edits begin.
 - Direktive 1 must remain mirrored in both the repo whiteboard and the deployed local self-improve skill so it survives both repo churn and local runtime drift.
 - Direktive 2 must remain mirrored in those same two places so self-observation survives both repo drift and local runtime drift.
 - Direktive 3 must remain mirrored in those same two places so resilient bugfixing survives both repo drift and local runtime drift.
@@ -139,6 +140,7 @@ Before any improvement work:
 - verify that the active whiteboard is the Codex whiteboard in `codex-setup/`
 - verify that no operational script in `codex-setup/scripts/` depends on `proggs`
 - verify that the local deployment target is `~/.codex/skills/self-improve/`
+- verify that the session-start sync helper is present and documented before substantial work begins
 - verify that the skill can function without Claude-specific memory or hooks
 - verify that `self-observation` is present as directive 2 under the `## Oberste Direktive`
 - verify that directive 2 is mirrored in both the repo whiteboard and the deployed local self-improve skill

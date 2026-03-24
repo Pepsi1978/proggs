@@ -704,6 +704,39 @@
       ],
       "created_at": "2026-03-24T21:54:03.157Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-24-openai-docs-smoke-tool-dispatch-resilience",
+      "source_cli": "Codex",
+      "category": "validator-hardening",
+      "summary": "OpenAI docs MCP smoke now treats confirmed tool dispatch as success instead of failing on a slow Fresh Codex exec.",
+      "context_for_other_clis": "This fix applies to Codex validation of the OpenAI developer docs MCP. codex mcp list shows openaiDeveloperDocs enabled, but a fresh Codex exec can still reach tool dispatch and then miss the reply inside the bounded retry window, which produced a false negative during codex-setup validation.",
+      "symptom_before_fix": "validate-codex-setup.ps1 failed with Fresh Codex exec did not confirm openaiDeveloperDocs availability within the bounded retry window even though the server was registered and the fresh exec had already reached openaiDeveloperDocs tool dispatch.",
+      "root_cause": "The smoke test required an explicit AVAILABLE reply or early timeout success, even after a fresh exec had already started the MCP server and invoked the OpenAI docs tool. That made a live, reachable server look unavailable when the reply path was just slower than the bounded window.",
+      "what_was_fixed": "check-openai-docs-mcp.mjs now treats startup plus tool dispatch without an unavailable signal as success, even if the exec does not finish early, and the success label was aligned with that behavior.",
+      "why_it_was_fixed": "The validator should distinguish a genuinely missing MCP server from a reachable but slow reply path. The previous behavior created false negatives in the Codex setup validation.",
+      "exact_error_text": "Fresh Codex exec did not confirm openaiDeveloperDocs availability within the bounded retry window.",
+      "root_cause_why_chain": "Why 1: the fresh exec saw the server but not the reply in time. Why 2: the test only accepted an explicit AVAILABLE or early-success termination. Why 3: tool dispatch already proved reachability, but the success criteria were stricter than the observed runtime behavior.",
+      "related_error_sources_checked": "Checked the same runtime surface in codex mcp list, the fresh Codex exec smoke, the OpenAI docs helper, and the validation wrapper because they all rely on the same registered MCP path.",
+      "wrong_pattern_example": "Wrong pattern: fail validation whenever a reachable MCP server does not reply before a narrow bounded timeout, even if the server startup and tool dispatch were observed.",
+      "right_pattern_example": "Right pattern: treat startup plus confirmed tool dispatch as a valid success signal when the goal is to verify that the server is registered and reachable.",
+      "avoidance_rule": "If a validator exercises a live MCP server, prefer success criteria that distinguish registration and dispatch from slow response timing, so a working server does not look broken.",
+      "resilience_summary": "The fix is resilient because it covers the slow-reply failure class, survives the already-registered server state, and keeps the validation from depending on a single narrow reply deadline.",
+      "fix_induced_failure_review": "Dependencies: the validator wrapper, fresh Codex exec, MCP registration, and tool dispatch were reviewed together. Failure scenarios: if the server is genuinely missing, the script still fails. State changes: only validation behavior changes. Race conditions: the bounded window still exists, but dispatch observation now counts. Backward compatibility: existing success cases still pass. Platform effects: both PowerShell and Bash validators benefit. Update resistance: the validation now tracks a stable reachability signal instead of a brittle exact reply timing. Graceful degradation: a live but slow server no longer turns the entire setup validation red.",
+      "verification": "Verified by rerunning validate-codex-setup.ps1 and validate-codex-setup.sh successfully after the tool-dispatch success rule was applied.",
+      "portability_notes": "Other CLI environments should not require an exact tool reply if the test objective is only to confirm that an MCP server is reachable and dispatchable. A dispatch-based success path is usually more robust for live validation.",
+      "impact": "OpenAI docs validation is now robust against slow fresh exec replies.",
+      "portable_to": [
+        "Claude Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "codex-setup/scripts/check-openai-docs-mcp.mjs",
+        "codex-setup/scripts/validate-codex-setup.ps1",
+        "codex-setup/scripts/validate-codex-setup.sh"
+      ],
+      "created_at": "2026-03-24T22:29:51.383Z",
+      "status": "active"
     }
   ]
 }

@@ -59,8 +59,8 @@ Wichtigste Trennung:
 
 - `scripts/`
   Plattformuebergreifende Hilfsskripte fuer Whiteboard-Resolver, Whiteboard-Insert, Sentinel-Merge,
-  Skill-Installation, Bootstrap fuer frische Rechner, Validierung, `code-search`-Healthchecks, gefuehrte Umgebungsfix-Erfassung,
-  Intelligenzvorschlag-Logging sowie Claude- und Gemini-Delta-Audits.
+  Skill-Installation, Session-Start-Sync, Bootstrap fuer frische Rechner, Validierung, `code-search`-Healthchecks,
+  gefuehrte Umgebungsfix-Erfassung, Intelligenzvorschlag-Logging sowie Claude- und Gemini-Delta-Audits.
 
 - `bridges/`
   Wiederverwendbare Bruecken-Spezifikationen fuer andere CLI-Umgebungen.
@@ -168,6 +168,18 @@ Der Report sammelt:
 - die Codex-seitigen Bridge-Einstiege fuer Claude Code und Gemini CLI
 
 Andere CLIs sollen spaeter denselben Report-Typ im eigenen Setup anlegen und seine Adressen ebenfalls in Registry und Delta-Bruecke veroeffentlichen.
+
+## Session-Start-Sync
+
+Bevor substanzielle Arbeit in einer neuen Session beginnt, soll dieser Helper laufen:
+
+- direkt: `node codex-setup/scripts/session-start-sync.mjs`
+- macOS/Linux: `bash codex-setup/scripts/session-start-sync.sh`
+- Windows: `pwsh -NoProfile -File codex-setup/scripts/session-start-sync.ps1`
+
+Der Helper holt zuerst `origin/main`, zeigt die ankommenden Aenderungen mit `git diff --stat HEAD..origin/main` und
+`git diff --name-status HEAD..origin/main`, und rebased danach mit `git pull --rebase --autostash origin main`.
+So wird sichtbar, was Codex in der aktuellen Session noch nicht hatte, bevor neue Aenderungen entstehen.
 
 ## Claude-Delta-Audit
 
