@@ -1,15 +1,16 @@
 {
+	"_comment": "MCP server configuration for Windows. Copy into ~/proggs/.mcp.json on Windows.",
 	"mcpServers": {
 		"code-review-graph": {
-			"command": "/opt/homebrew/bin/uvx",
+			"command": "C:/Users/barwa/bin/uvx.exe",
 			"args": ["code-review-graph", "serve"]
 		},
 		"code-search": {
-			"command": "/opt/homebrew/bin/tsx",
+			"command": "C:/Users/barwa/AppData/Roaming/npm/tsx.cmd",
 			"args": ["mcp-code-search/src/index.ts"]
 		},
 		"think-tank": {
-			"command": "/opt/homebrew/bin/npx",
+			"command": "C:/Program Files/nodejs/npx.cmd",
 			"args": ["-y", "mcp-think-tank@2.0.6"],
 			"env": {
 				"MCP_THINK_TANK_STORAGE": ".think-tank"
