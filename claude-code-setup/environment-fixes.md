@@ -23,6 +23,41 @@ Hintergrund, Code-Beispielen und konkreten Regeln.
 
 ---
 
+## 2026-03-24 — Missing standalone Kotlin/Gradle/pipx after PowerShell 7.6 upgrade (Windows)
+
+**Plattform:** Windows
+**Kontext:** User upgraded PowerShell manually from 7.5.5 to 7.6.0. Full environment audit
+revealed that Kotlin standalone compiler, Gradle, pipx, and `.local/bin` were missing from
+the system. The PowerShell upgrade itself was clean (no PATH corruption), but the audit
+exposed pre-existing gaps that the CLAUDE.md PATH reference list demanded.
+**Symptom:** `kotlinc: command not found`, `gradle: command not found`, `pipx: command not found`.
+PATH entries `C:\Kotlin\kotlinc\bin`, `C:\Gradle\gradle-9.4.1\bin`, `%USERPROFILE%\.local\bin`
+were listed in CLAUDE.md but the actual directories did not exist on the system.
+JAVA_HOME was only set at Machine level, not User level.
+**Root Cause:** Kotlin and Gradle were never installed as standalone tools — they were only
+available bundled inside Android Studio. The CLAUDE.md reference list was aspirational but
+the actual installations were missing. pipx was not installed because `uv tool install` was
+used directly. `.local/bin` was never created.
+**Fix:**
+1. Kotlin: Downloaded `kotlin-compiler-2.3.20.zip` from JetBrains GitHub releases, extracted
+   to `C:\Kotlin\` (creates `C:\Kotlin\kotlinc\bin\kotlinc.bat`)
+2. Gradle: Downloaded `gradle-9.4.1-bin.zip` from services.gradle.org, extracted to
+   `C:\Gradle\` (creates `C:\Gradle\gradle-9.4.1\bin\gradle.bat`)
+3. pipx: `uv tool install pipx` (installs to `.local/bin`)
+4. `.local/bin`: `mkdir -p "$USERPROFILE/.local/bin"`
+5. PATH: Added all three missing entries to User PATH via `[Environment]::SetEnvironmentVariable`
+6. JAVA_HOME: Copied Machine-level value to User level
+7. Verification: `kotlinc -version` (2.3.20), `gradle --version` (9.4.1), `pipx --version` (1.11.0),
+   Kotlin+Java integration test (compiled and ran Hello World), Gradle+Java integration (detected JVM 21)
+**Vermeidungsregel:**
+- After ANY shell/runtime upgrade, run the full PATH verification from CLAUDE.md (11 entries + 3 env vars)
+- Standalone tools (Kotlin, Gradle) must be installed OUTSIDE of Android Studio for CLI use
+- When updating Gradle version: change BOTH the directory name (`C:\Gradle\gradle-X.Y.Z\bin`)
+  AND the CLAUDE.md reference list entry
+- `gh release download` for GitHub assets, NOT `curl` to `api.github.com` (hook blocks raw curl)
+
+---
+
 ## 2026-03-23 — Python cp1252 Encoding Crash (Windows)
 
 **Plattform:** Windows
