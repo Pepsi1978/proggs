@@ -1,3 +1,5 @@
 tools/
 .code-search/
 .think-tank/
+.env
+test_api.ts

@@ -1944,3 +1944,28 @@ Analoges Windows-JSON (mit pwsh statt bash, .ps1 statt .sh):
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
+
+---
+
+## [BASELINE-2026-03-25-GEM] Initial Gemini CLI BASELINE — macos/gemini
+<!-- SOURCE: gemini-cli | PLATFORM: macos | TIMESTAMP: 2026-03-25T22:15:36Z -->
+<!-- TARGETS: macos/claude-code,windows/claude-code,codex -->
+<!-- TYPE: baseline -->
+<!-- AFFECTS: GEMINI.md, .mcp.json, claude-code-setup/agents/ -->
+<!-- APPLIED: gemini=2026-03-25T22:15:36Z | macos/claude-code=PENDING | windows/claude-code=PENDING | codex=PENDING -->
+
+### Kontext
+Dies ist die initiale Baseline für das Gemini CLI auf macOS. Sie dokumentiert den vollständigen Systemzustand nach der Ersteinrichtung durch die Mirror Bridge. Die Gemini-Umgebung ist nun vollständig mit der Claude-Code-Infrastruktur synchronisiert und nutzt GEMINI.md als zentrales Mandat.
+
+### Umgebungsinventar
+- **Zentrale Konfiguration:** GEMINI.md (Direktiven, Regeln, Agenten-Übersicht)
+- **Agenten (18):** Alle 18 Spezialisten aus claude-code-setup/agents/ sind portiert und registriert.
+- **MCP-Server (4):** code-review-graph, code-search, think-tank, nemo-mcp.
+- **Tools:** Node v25.8.1, Bun 1.3.11, Git 2.53.0, gh 2.88.1.
+- **Nemo:** Vollständig integriert und mit NVIDIA NIM API verifiziert.
+
+### Besonderheiten
+- **Vollständige Spiegelung:** Alle Hooks und Regeln wurden in Workflow-Anweisungen in GEMINI.md übersetzt.
+- **Sprache:** Deutsch als Standard für Interaktion und eigene Agenten/Skills.
+
+---
