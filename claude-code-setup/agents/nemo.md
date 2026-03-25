@@ -4,7 +4,6 @@ model: opus
 maxTurns: 30
 effort: high
 color: cyan
-tools: ["Read", "Write", "Grep", "Glob", "mcp__nemo-mcp__nemo_ask", "mcp__nemo-mcp__nemo_quiz", "mcp__nemo-mcp__nemo_research", "mcp__nemo-mcp__nemo_generate", "mcp__nemo-mcp__nemo_summarize", "mcp__nemo-mcp__nemo_translate"]
 description: >
   Nutze diesen Agenten wenn eine Wissensaufgabe kostenlos an ein LLM ausgelagert werden kann statt Claude-Tokens zu verbrauchen.
   Nemo ist ein universeller Wissens-Worker mit Nemotron 3 Super 120B (kostenlos ueber NVIDIA NIM API).
