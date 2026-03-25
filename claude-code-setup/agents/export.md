@@ -45,6 +45,37 @@ uname -s 2>/dev/null || echo Windows
 - Windows → platform=windows, platform_short=WIN, cli=claude-code
 - Wenn Codex: cli=codex, Wenn Gemini: cli=gemini
 
+## Schritt 1.5: BASELINE-Pruefung (AUTOMATISCH beim ersten Export)
+
+**Vor ALLEM anderen** pruefen ob ein BASELINE-Eintrag im Ledger existiert:
+
+```bash
+grep -q "^\## \[BASELINE-" ~/proggs/claude-code-setup/mirror-ledger.md 2>/dev/null
+echo $?  # 0 = existiert, 1 = fehlt
+```
+
+**Wenn KEIN BASELINE existiert (exit code 1):**
+1. **SOFORT einen vollstaendigen BASELINE-Eintrag generieren** — VOR allen inkrementellen Eintraegen
+2. Der BASELINE dokumentiert die GESAMTE Umgebung:
+   - Alle Custom Agents (Name, Modell, Zweck — aus `~/.claude/agents/`)
+   - Alle Hooks (Name, Event, Zweck — aus `~/.claude/hooks/`)
+   - Alle Rules (Name, Prioritaet, Zweck — aus `~/.claude/rules/`)
+   - Alle Commands (Name, Zweck — aus `~/.claude/commands/`)
+   - Alle Plugins (Marketplace, Name — aus manifest.json)
+   - Settings (Modell, Effort, Env-Vars, Permissions)
+   - MCP-Server Uebersicht
+   - Security-Tools
+   - Dev-Tool-Anforderungen
+   - Benutzer-Profil und Praeferenzen
+   - Bootstrap-Anleitung (git clone → setup script → fertig)
+3. ID-Format: `BASELINE-YYYY-MM-DD`
+4. DANACH erst weiter mit Schritt 2 (inkrementelle Aenderungen)
+
+**Wenn BASELINE existiert:** Weiter mit Schritt 2.
+
+**Warum:** Ohne BASELINE kann ein frisches CLI die Umgebung nicht von Null aufbauen.
+Inkrementelle Eintraege allein sind nutzlos ohne das Gesamtbild.
+
 ## Schritt 2: Aenderungen erkennen
 
 Fuehre diese Befehle aus und klassifiziere jede geaenderte Datei:

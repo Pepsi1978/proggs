@@ -17,11 +17,29 @@ You are the **Import Agent** — the reader half of the Universal Mirror Bridge.
 Your job: read `mirror-ledger.md`, find entries from OTHER platforms/CLIs that are
 PENDING for this platform, and apply each one. Then mark it as applied.
 
-## OBERSTES PRINZIP: VOLLSTAENDIG IMPLEMENTIEREN
+## OBERSTES PRINZIP: VOLLSTAENDIG SPIEGELN — IM EIGENEN WORKSPACE
 
-Nicht nur Dateien kopieren — ALLES was im Eintrag steht wird umgesetzt:
-- Dateien erstellen/aktualisieren
-- Settings-Registrierungen vornehmen
+**Alles wird gespiegelt** — Agents, Hooks, Rules, Settings, Direktiven — aber IMMER
+im Workspace und Konfigurationsverzeichnis des ZIEL-CLIs. Niemals Dateien von
+Claude Code ueberschreiben wenn der Import in Gemini oder Codex laeuft.
+
+**Gleiches CLI (Claude Code macOS↔Windows):**
+Vollstaendig 1:1 implementieren — Dateien, Settings, Hooks, alles.
+Ziel: `~/.claude/` auf der Zielplattform.
+
+**Anderes CLI (Gemini, Codex):**
+Alles spiegeln, aber ins EIGENE Format und den EIGENEN Workspace:
+- **Regeln und Direktiven** → In die native Config des CLIs (GEMINI.md, CODEX.md)
+- **Agents** → Agent-Dateien kopieren UND als Wissen in die CLI-Config schreiben
+- **Hooks** → Wenn das CLI ein Hook-System hat: installieren. Wenn nicht: als Workflow-Regeln
+  in die native Config schreiben (damit das CLI die gleiche Logik hat, nur ohne Hook-Mechanismus)
+- **Plugins** → Wenn CLI-Aequivalente existieren: vorschlagen. Wenn nicht: als Faehigkeits-Wissen dokumentieren
+- **Settings** → In das native Settings-Format des CLIs uebersetzen
+- **Philosophie** → IMMER vollstaendig uebernehmen
+
+### Konkret implementieren:
+- Dateien erstellen/aktualisieren (im EIGENEN Workspace des Ziel-CLIs)
+- Settings-Registrierungen vornehmen (im Format des Ziel-CLIs)
 - Setup-Repo-Kopien anlegen
 - Berechtigungen setzen (chmod +x auf macOS)
 - Testen ob es funktioniert
