@@ -120,6 +120,12 @@ for pdir in $PLUGIN_DIRS; do
         done < <(find "$pdir" -name "*.sh" -type f -print0 2>/dev/null)
         if [ "$repaired" -gt 0 ]; then
             hook_log "repaired $repaired plugin hook scripts with missing +x permission"
+            # Write to whiteboard so /self-improve can detect the pattern
+            source "$HOOKS_DIR/whiteboard-insert.sh" 2>/dev/null || true
+            if command -v insert_whiteboard_entry &>/dev/null; then
+                entry="### $(date '+%Y-%m-%d %H:%M') — Hook: plugin-health-check.sh — Auto-repaired $repaired plugin .sh files with missing +x permission in $pdir — Status: AUTO-GEFIXT"
+                insert_whiteboard_entry "Offene Fehler & Probleme" "$entry" 2>/dev/null || true
+            fi
         fi
     fi
 done
