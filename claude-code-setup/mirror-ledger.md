@@ -366,7 +366,7 @@ Claude uebernimmt das Denken (Prompt-Optimierung, Struktur), Nemotron generiert 
 <!-- APPLIED: macos/claude-code=2026-03-25T22:30:00Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
 ---
 
@@ -466,7 +466,7 @@ Keine Settings-Registrierung noetig. Die Agenten werden per Sprach-Trigger aktiv
 <!-- APPLIED: macos/claude-code=2026-03-25T21:02:54Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
 ---
 
@@ -631,7 +631,7 @@ Kein `matcher` oder `async` noetig. Der Hook ist synchron und laeuft bei JEDEM S
 <!-- APPLIED: macos/claude-code=2026-03-25T21:02:54Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
 ---
 
@@ -737,7 +737,7 @@ automatisch von Claude Code beim Start geladen.
 <!-- APPLIED: macos/claude-code=2026-03-25T21:02:54Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
 ---
 
@@ -822,7 +822,7 @@ Keine — Regel-Dateien werden automatisch geladen.
 <!-- APPLIED: macos/claude-code=2026-03-25T21:02:54Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
 ---
 
@@ -915,7 +915,7 @@ muessen identisch sein.
 <!-- APPLIED: macos/claude-code=2026-03-25T21:02:54Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
 ---
 
@@ -1016,7 +1016,7 @@ Er war vorher unter dem SessionStart Event registriert. Der neue Ersatz ist `mir
 <!-- APPLIED: macos/claude-code=2026-03-25T21:02:54Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
 ---
 
@@ -1159,7 +1159,7 @@ Setup-Script (`setup-macos.sh` / `setup-windows.ps1`) ausgewertet.
 <!-- APPLIED: macos/claude-code=2026-03-25T23:00:00Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
 ---
 
@@ -1396,7 +1396,7 @@ SessionEnd ueberschrieben. Hooks immer nur in `~/.claude/settings.json` bearbeit
 <!-- APPLIED: macos/claude-code=2026-03-25T23:00:00Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
 ---
 
@@ -1518,7 +1518,7 @@ Wenn BASELINE existiert: Weiter mit Schritt 2.
 <!-- APPLIED: macos/claude-code=2026-03-25T22:23:29Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
 ---
 
@@ -1641,7 +1641,7 @@ Anderes CLI (Gemini, Codex):
 <!-- APPLIED: macos/claude-code=2026-03-25T22:23:29Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
 ---
 
@@ -1764,7 +1764,7 @@ cd ~/proggs && git pull
 <!-- APPLIED: macos/claude-code=2026-03-25T22:23:29Z -->
 <!-- APPLIED: windows/claude-code=2026-03-25T22:23:29Z -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
 ---
 
@@ -1943,4 +1943,4 @@ Analoges Windows-JSON (mit pwsh statt bash, .ps1 statt .sh):
 <!-- APPLIED: macos/claude-code=2026-03-25T22:15:09Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
