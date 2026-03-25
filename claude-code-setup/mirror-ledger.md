@@ -1952,7 +1952,7 @@ Analoges Windows-JSON (mit pwsh statt bash, .ps1 statt .sh):
 <!-- TARGETS: macos/claude-code,windows/claude-code,codex -->
 <!-- TYPE: baseline -->
 <!-- AFFECTS: GEMINI.md, .mcp.json, claude-code-setup/agents/ -->
-<!-- APPLIED: gemini=2026-03-25T22:15:36Z | macos/claude-code=PENDING | windows/claude-code=PENDING | codex=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T22:15:36Z | macos/claude-code=2026-03-25T22:31:00Z | windows/claude-code=PENDING | codex=PENDING -->
 
 ### Kontext
 Dies ist die initiale Baseline für das Gemini CLI auf macOS. Sie dokumentiert den vollständigen Systemzustand nach der Ersteinrichtung durch die Mirror Bridge. Die Gemini-Umgebung ist nun vollständig mit der Claude-Code-Infrastruktur synchronisiert und nutzt GEMINI.md als zentrales Mandat.
