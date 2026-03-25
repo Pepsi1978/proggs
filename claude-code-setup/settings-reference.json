@@ -180,6 +180,15 @@
 						"timeout": 10
 					}
 				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/mirror-check.ps1\"",
+						"timeout": 5
+					}
+				]
 			}
 		],
 		"UserPromptSubmit": [

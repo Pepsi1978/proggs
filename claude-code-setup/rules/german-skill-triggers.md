@@ -211,6 +211,23 @@ ueber die NIM API ansteuert. Claude denkt vorher, Nemo fuehrt aus.**
 | "Nemo" | Agent `nemo` (Nemotron-Worker) |
 | "Nimmo" / "Niemo" | Agent `nemo` |
 
+## 15. Mirror Bridge — Universal Cross-Platform & Cross-CLI Sync
+
+**Zwei Agenten die zusammen eine universelle "Spiegelung" zwischen allen Plattformen
+und CLIs ermoegllichen. Der `export` Agent schreibt, der `import` Agent liest und baut ein.**
+
+| Deutsche Phrase | Agent | Was er WIRKLICH tut |
+|----------------|-------|---------------------|
+| "starte den export Agenten", "exportiere", "Aenderungen spiegeln", "export" | `export` | Scannt ALLE Session-Aenderungen und schreibt sie ausfuehrlich ins mirror-ledger.md — mit Kontext, Portierungs-Anweisungen, vollstaendigen Datei-Inhalten fuer beide Plattformen |
+| "starte den import Agenten", "importiere", "hol Neuerungen", "was ist neu", "import" | `import` | Liest mirror-ledger.md, zeigt Triage-Tabelle, portiert ausstehende Aenderungen automatisch auf die aktuelle Plattform/CLI |
+
+**Wann welchen Agent:**
+- **Session beendet, Aenderungen gemacht** → `export` (schreibt alles ins Ledger)
+- **Plattform gewechselt, moechte aufholen** → `import` (holt alles vom Ledger)
+- **Neues CLI gestartet (Codex/Gemini)** → `import` (portiert Aenderungen von Claude Code)
+
+**Automatische Benachrichtigung:** Bei SessionStart zeigt `mirror-check` Hook an wenn Eintraege ausstehen.
+
 ## Proaktive Agents (kein Trigger noetig — laufen automatisch)
 
 Diese laufen automatisch nach Code-Aenderungen und sollen NICHT manuell getriggert werden:

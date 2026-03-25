@@ -176,6 +176,15 @@
 						"timeout": 10
 					}
 				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash ~/.claude/hooks/mirror-check.sh",
+						"timeout": 5
+					}
+				]
 			}
 		],
 		"UserPromptSubmit": [
