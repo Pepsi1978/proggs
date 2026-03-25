@@ -38,6 +38,11 @@ Write-Host "`n--- Starte Cleanup-Pruefung (Stale Rules) ---" -ForegroundColor Ye
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Gemini-Setup/scripts/check-for-stale-rules.ps1"
 $staleExitCode = $LASTEXITCODE
 
+# 4. Git-Hook Installation
+Write-Host "`n--- Installiere/Pruefe Git-Hooks ---" -ForegroundColor Yellow
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Gemini-Setup/scripts/auto-install-git-hooks.ps1"
+$hooksExitCode = $LASTEXITCODE
+
 if ($parityExitCode -ne 0) {
     Write-Host "`n💡 Inkonsistenzen in den Regeln gefunden!" -ForegroundColor Yellow
     if ([Environment]::UserInteractive) {
