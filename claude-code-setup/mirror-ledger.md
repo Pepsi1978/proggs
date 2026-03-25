@@ -29,6 +29,347 @@ schreibt hier rein was geaendert wurde und liest was die anderen geaendert haben
 
 ---
 
+## [BASELINE-2026-03-25] Vollstaendiges Umgebungs-Inventar — Von Null aufbauen
+<!-- SOURCE: claude-code | PLATFORM: macos | TIMESTAMP: 2026-03-25T22:30:00Z -->
+<!-- TARGETS: windows/claude-code,codex,gemini -->
+<!-- TYPE: baseline -->
+<!-- AFFECTS: GESAMTE Programmierumgebung -->
+
+> **Dies ist der BASELINE-Eintrag.** Er beschreibt die KOMPLETTE Programmierumgebung so
+> detailliert, dass ein frisches CLI (Claude Code, Codex, Gemini) auf einem neuen Rechner
+> die gesamte Umgebung von Null aufbauen kann. Alle nachfolgenden Eintraege sind inkrementell.
+
+### Bootstrap-Anleitung (Schritt fuer Schritt)
+
+**Voraussetzung:** Git und Claude Code CLI muessen installiert sein.
+
+```bash
+# 1. Repository klonen
+git clone https://github.com/Pepsi1978/proggs ~/proggs
+cd ~/proggs
+
+# 2. Setup-Script ausfuehren
+# macOS:
+bash claude-code-setup/setup-macos.sh
+# Windows:
+# powershell claude-code-setup/setup-windows.ps1
+
+# 3. CLAUDE.md an den richtigen Ort kopieren
+cp ~/proggs/CLAUDE.md ~/CLAUDE.md
+```
+
+Das Setup-Script installiert: Plugins aus 10+ Marketplaces, kopiert Agents/Hooks/Rules/Commands
+nach `~/.claude/`, konfiguriert Settings und MCP-Server.
+
+**Alle Dateien liegen im Setup-Repo:** `~/proggs/claude-code-setup/`
+Dieses Verzeichnis ist die **einzige Wahrheitsquelle** fuer die Konfiguration.
+
+---
+
+### 1. Philosophie und Direktiven (KRITISCH — ohne das ist nichts sinnvoll)
+
+Die Umgebung verfolgt EIN Ziel: **Die intelligenteste Programmierumgebung der Welt werden.**
+
+Drei Direktiven in absteigender Prioritaet:
+1. **Superintelligenz** (`rules/superintelligence.md`) — Exponentielle Intelligenzsteigerung in jeder Session
+2. **Selbstbeobachtung** (`rules/self-observation.md`) — Jede Aktion beobachten, Fehler→Upgrades, Intelligenz-Vorschlaege am Ende
+3. **Resilient Bugfixing** (`rules/resilient-bugfixing.md`) — Jeder Bug genau EINMAL, dann nie wieder. 5-Schritte-Fix
+
+Diese Direktiven stehen auch in `CLAUDE.md` (wird bei jedem Start geladen) und im Whiteboard.
+
+---
+
+### 2. Custom Agents (18 Stueck)
+
+Alle in `claude-code-setup/agents/*.md`, werden nach `~/.claude/agents/` kopiert.
+
+| Agent | Modell | Zweck |
+|-------|--------|-------|
+| `architect` | Opus | Systemarchitektur entwerfen, bevor Code geschrieben wird |
+| `batch-reviewer` | Sonnet | Schnelle Bulk-Reviews fuer grosse Changesets |
+| `challenger` | Opus | Devil's Advocate — hinterfragt Plaene und Architektur-Entscheidungen |
+| `code-reviewer` | Opus | Code-Review mit `memory: project` (lernt ueber Sessions) |
+| `coder` | Sonnet | Schnelle Implementation, `isolation: worktree`, 3-5 parallel spawnen |
+| `debugger` | Opus | Systematisches Debugging mit Sub-Agenten fuer Hypothesen |
+| `env-checker` | Sonnet | Prueft installierte Tools, Versionen, Hooks, Plugins, Security |
+| `evolution-analyst` | Opus | Meta-Evolution Trend-Analyse aus session-scores.jsonl |
+| `export` | Opus | Mirror Bridge: Schreibt Session-Aenderungen ins Ledger |
+| `import` | Opus | Mirror Bridge: Liest Ledger und portiert auf aktuelle Plattform |
+| `intelligence-researcher` | Opus | Recherche fuer Self-Improve: Reasoning-Breakthroughs, Cognitive Tools |
+| `mar-reviewer` | Opus | Multi-Agent Reflexion: 3 parallele Kritiker (Security, Architect, User Advocate) |
+| `nemo` | Opus | Orchestriert NVIDIA Nemotron 3 Super 120B (kostenlos via NIM API) fuer Massen-Generierung, Recherche, Uebersetzung |
+| `optimizer` | Opus | Performance, Binary-Groesse, Ressourcen optimieren |
+| `quality-gate` | Opus | Startet tester+code-reviewer+optimizer parallel, gibt PASS/FAIL |
+| `researcher` | Sonnet | Schnelles Web-Lookup, 3-5 parallel spawnen |
+| `tester` | Opus | Tests schreiben und ausfuehren, liest Specs |
+| `ui-polisher` | Opus | UI professionell und Store-qualitaet machen |
+
+**Geschwindigkeitsregel:** Opus denkt, Sonnet macht. `coder`+`researcher`+`batch-reviewer` = Sonnet (schnell+guenstig). Alles andere = Opus.
+
+---
+
+### 3. Hooks (52 Dateien — 26 Paare .sh/.ps1)
+
+Alle in `claude-code-setup/hooks/`, werden nach `~/.claude/hooks/` kopiert.
+Jeder Hook existiert als `.sh` (macOS/bash) UND `.ps1` (Windows/PowerShell).
+
+| Hook-Paar | Event | Zweck |
+|-----------|-------|-------|
+| `auto-sync` | SessionStart | Synchronisiert Config automatisch von GitHub beim Start |
+| `mirror-check` | SessionStart | Zeigt an wenn Mirror-Ledger-Eintraege ausstehen |
+| `disk-guard` | SessionStart | Warnt wenn Speicherplatz knapp wird |
+| `plugin-health-check` | SessionStart | Prueft ob alle Plugins funktionieren |
+| `claude-mem-worker-guard` | SessionStart | Stellt sicher dass claude-mem Worker laeuft |
+| `pending-admin-updates` | SessionStart | Zeigt ausstehende Admin-Updates an |
+| `safety-gate` | PreToolUse/Bash | Blockiert gefaehrliche Befehle (rm -rf, etc.) |
+| `config-guard` | ConfigChange | Schuetzt settings.json vor ungewollten Aenderungen |
+| `auto-format` | PostToolUse (async) | Formatiert Dateien nach Edit/Write automatisch |
+| `hook-log` | PostToolUse | Loggt Fehler mit ERR/EXIT-Traps |
+| `agent-resource-lock` | SubagentStart | Verhindert dass 2 Agents die gleiche Datei bearbeiten |
+| `subagent-context` | SubagentStart | Gibt Subagents zusaetzlichen Kontext |
+| `intent-anker` | UserPromptSubmit | Speichert Session-Ziel, erinnert alle 5 Turns |
+| `whiteboard-insert` | PostToolUse | Schreibt Erkenntnisse ins Whiteboard |
+| `whiteboard-safe-pull` | SessionStart | Sicherer Git-Pull fuer Whiteboard |
+| `writeback-enforcer` | PostToolUse | Erzwingt Cross-Platform-Sync |
+| `memory-watchdog` | PostToolUse | Ueberwacht Agent Write-Back Compliance |
+| `session-scorer` | SessionEnd | Bewertet Session-Qualitaet (IQ-Score, Meta-Intelligence) |
+| `session-autopsy` | SessionEnd | Clustert Korrekturen, generiert Auto-Rules |
+| `session-cleanup` | SessionEnd | Raeumt temporaere Dateien auf |
+| `stopfailure-logger` | StopFailure | Loggt wenn Session nicht sauber beendet wird |
+| `notify` | Notification | macOS-Benachrichtigungen bei langen Aufgaben |
+| `reindex-codebase` | PostToolUse | Reindiziert Code-Search nach Datei-Aenderungen |
+| `sync-hooks-reference` | PostToolUse | Haelt Setup-Repo Hooks synchron |
+| `admin-setup` | SessionStart | Prueft Admin-Voraussetzungen |
+| `porting-inbox` | DEPRECATED | Ersetzt durch mirror-check + import Agent |
+
+**Zusaetzlich:**
+- `prompt-injection-defender/` — Python-basierter Prompt Injection Scanner (Verzeichnis mit mehreren Dateien)
+- `claude-mem-worker-launcher.sh` — Startet claude-mem Worker als Daemon (nur macOS)
+- `session-score.ps1` — Windows-Version des Session-Scorers (TypeScript-Version ist primaer)
+
+---
+
+### 4. Rules (21 Dateien)
+
+Alle in `claude-code-setup/rules/*.md`, werden nach `~/.claude/rules/` kopiert.
+Rules werden automatisch beim Start geladen — keine Settings-Registrierung noetig.
+
+| Regel | Prioritaet | Zweck |
+|-------|-----------|-------|
+| `superintelligence.md` | #1 (HOECHSTE) | Oberstes Ziel: Intelligenteste Umgebung der Welt |
+| `self-observation.md` | #2 | Selbstbeobachtung bei jeder Aufgabe, Intelligenz-Vorschlaege |
+| `resilient-bugfixing.md` | #3 | Jeder Bug genau 1x, 5-Schritte-Fix, Defense in Depth |
+| `agent-reliability.md` | Hoch | Keine stillen Agent-Abstuerze, Timeout-Erwartungen, Status-Updates |
+| `german-agents-skills.md` | Hoch | Alle eigenen Agents/Skills auf Deutsch |
+| `german-skill-triggers.md` | Hoch | Deutsche Trigger-Map: Whisper-Phrasen → Skills/Agents |
+| `intent-tracking.md` | Hoch | Verhindert Intent Drift in langen Sessions |
+| `spec-first.md` | Mittel | Specs schreiben VOR Code (Invarianten, Pre/Post-Conditions) |
+| `semantic-search-isolation.md` | Hoch | Semantische Suche NIEMALS plattformuebergreifend aendern |
+| `codex-directory-forbidden.md` | KRITISCH | ~/Codex/ ist GESPERRT (paralleler Codex-Klon) |
+| `swift.md` | Sprache | Swift-Konventionen |
+| `csharp.md` | Sprache | C#/WPF-Konventionen |
+| `typescript.md` | Sprache | TypeScript-Konventionen |
+| `rust.md` | Sprache | Rust-Konventionen |
+| `go.md` | Sprache | Go-Konventionen |
+| `kotlin.md` | Sprache | Kotlin/Android-Konventionen |
+| `android.md` | Sprache | Android-spezifische Regeln |
+| `java.md` | Sprache | Java/Spring-Konventionen |
+| `cpp.md` | Sprache | C++-Konventionen |
+| `tampermonkey.md` | Spezial | Tampermonkey-Skript-Regeln (Versionierung) |
+| `auto-learned/` | Auto | Maschinell generierte Regeln (Closed-Loop Learning) |
+
+---
+
+### 5. Commands (9 Dateien)
+
+Alle in `claude-code-setup/commands/*.md`, werden nach `~/.claude/commands/` kopiert.
+
+| Command | Zweck |
+|---------|-------|
+| `self-improve.md` | Systematische Selbstverbesserung der Umgebung (10-30min, token-intensiv) |
+| `self-improve-ref/researchers.md` | Researcher-Templates fuer Self-Improve |
+| `self-improve-ref/report-and-creative.md` | Report-Templates fuer Self-Improve |
+| `tool-check.md` | Code-Health-Scanner (Bugs, Security, Performance, UI) |
+| `tool-check-ref/loops.md` | Loop-Checklisten fuer Tool-Check |
+| `tool-check-ref/meta-improve.md` | Meta-Improve fuer Tool-Check |
+| `claudeception.md` | Extrahiert wiederverwendbares Wissen aus Sessions |
+| `codex-bridge.md` | Codex Delta Bridge (Cross-CLI Sync) |
+| `gemini-bridge.md` | Gemini Delta Bridge (Cross-CLI Sync) |
+
+---
+
+### 6. Plugins (89 aktiv, 10+ Marketplaces)
+
+Vollstaendige Liste in `claude-code-setup/manifest.json` unter `"plugins"`.
+Das Setup-Script installiert alle automatisch.
+
+**Marketplace-Uebersicht:**
+
+| Marketplace | Anzahl | Highlights |
+|-------------|--------|-----------|
+| claude-plugins-official | 23 | LSPs (Swift, TS, C#, Rust, Go, Kotlin...), GitHub, Playwright, Superpowers, CodeRabbit |
+| superpowers-marketplace | 7 | Episodic Memory, Chrome DevTools, Session Driver, Lab |
+| trailofbits | 30 | Security-Skills (Semgrep, Audit, Fuzzing, YARA, Zeroize...) |
+| context-engineering-kit | 12 | TDD, DDD, SDD, Kaizen, Sadd, Reflexion, Git, Docs |
+| everything-claude-code | 1 | Mega-Plugin mit 100+ Skills (Go, Kotlin, Python, Swift, Django...) |
+| compound-engineering | 1 | Design, Research, Review, Workflow Skills |
+| thedotmack (claude-mem) | 1 | Persistent Cross-Session Memory mit Tree-sitter AST |
+| boostvolt | 1 | Extra LSP-Server |
+| xclaude-plugin | 1 | iOS/Xcode Simulator + Build MCP-Server |
+| apple-platform-build-tools | 1 (macOS only) | Xcode Build Agent + Skills |
+| claude-reflect | 1 | Session Reflections → CLAUDE.md Updates |
+| FlineDev (context-kit) | 1 | Context Kit |
+
+**Deaktiviert nach Install:** `fp-check` (nur fuer App-Store-Apps aktivieren)
+
+---
+
+### 7. Settings
+
+Drei Referenz-Dateien im Setup-Repo:
+- `settings.json` — macOS-Version
+- `settings-reference.json` — Windows-Version (1:1 Kopie der aktiven Windows-Settings)
+- `settings.local.json` — Vorlage fuer lokale Overrides
+
+**Kritische Settings:**
+```json
+{
+  "model": "claude-opus-4-6",
+  "effortLevel": "high",
+  "maxOutputTokens": 64000,
+  "enableAllProjectMcpServers": true,
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "95",
+    "CLAUDE_CODE_EFFORT_LEVEL": "high",
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "1"
+  }
+}
+```
+
+**Hooks in Settings registriert:** Alle oben genannten Hooks muessen unter den richtigen
+Events (SessionStart, PreToolUse, PostToolUse, SessionEnd, etc.) eingetragen sein.
+Die vollstaendige Zuordnung steht in `hooks-macos.json` und `hooks-windows.json`.
+
+---
+
+### 8. MCP-Server
+
+Projekt-MCP-Server in `~/proggs/.mcp.json` (PLATTFORMSPEZIFISCH — nie automatisch aendern!):
+- `code-search` — Lokaler semantischer Code-Index (Bun)
+- `code-review-graph` — Code-Review Graph (uvx)
+- `think-tank` — Sequential Thinking (npx)
+
+Referenz-Configs: `mcp-macos.json` und `mcp-windows.json` im Setup-Repo.
+
+Plugin-MCP-Server (werden durch Plugins automatisch konfiguriert):
+- context7, github, playwright, episodic-memory, nemo-mcp, better-icons,
+  codebase-memory-mcp, sequential-thinking, serena (zeroize-audit)
+
+---
+
+### 9. Security-Tools
+
+| Tool | Zweck | Installation |
+|------|-------|-------------|
+| Parry / parry-guard | Prompt-Injection-Scanner (DeBERTa + Llama) | `cargo install --git ... parry-guard` |
+| prompt-injection-defender | Pattern-basierter PI-Scanner (50+ Patterns) | Python, bereits in hooks/ |
+| cargo-audit | Rust Crate CVE Scanner | `cargo install cargo-audit` |
+| safety-gate Hook | Blockiert rm -rf und andere gefaehrliche Befehle | Bereits installiert |
+
+---
+
+### 10. Dev-Tools (Referenz)
+
+Vollstaendige Liste in manifest.json unter `"dev_tools"`. Minimum:
+- Node.js, Bun, Deno, Git, gh CLI
+- Swift (macOS), .NET SDK (Windows), Rust, Go, Kotlin, Java
+- Android SDK mit NDK, Build Tools, Emulator
+- Docker + Compose
+- Linter: Biome, SwiftLint, swift-format, golangci-lint, ktfmt, detekt
+
+---
+
+### 11. Whiteboard (Shared Knowledge Hub)
+
+**Datei:** `~/proggs/.claude/agent-memory/shared/MEMORY.md`
+JEDER Agent, Hook und Skill MUSS dieses Whiteboard lesen und relevante Erkenntnisse reinschreiben.
+Es ist die zentrale Wissensdatei fuer das gesamte System.
+
+---
+
+### 12. Memory-System
+
+**Auto-Memory:** `~/.claude/projects/-Users-frank/memory/` (27 Dateien)
+- `MEMORY.md` — Index aller Memories
+- `feedback_*.md` — Benutzer-Korrekturen und bestaetitgte Ansaetze
+- `project_*.md` — Projekt-spezifische Informationen
+- `user_*.md` — Benutzer-Profil und Praeferenzen
+- `reference_*.md` — Externe Ressourcen-Zeiger
+
+Diese Memories sind Claude-Code-spezifisch und muessen NICHT auf andere CLIs portiert werden.
+Sie werden automatisch bei jedem Start geladen.
+
+---
+
+### 13. Benutzer-Profil (fuer andere CLIs wichtig!)
+
+- **Sprache:** Deutsch (Whisper Speech-to-Text), Code/Commits auf Englisch
+- **Kein Programmierer** — will verstehen was passiert, ausfuehrliche Erklaerungen
+- **Maximale Parallelisierung** — 3-5 Agents gleichzeitig ist Standard
+- **Sichtbarkeit:** NIEMALS unsichtbar im Hintergrund arbeiten
+- **Kein Python fuer GUIs** — Swift, C#, Kotlin, TypeScript, Rust, Go bevorzugt
+- **Cross-Platform:** macOS (Swift/AppKit) + Windows (C#/WPF) + Android (Kotlin/Compose)
+- **Einziges Repo:** `Pepsi1978/proggs` — NIEMALS neue Repos erstellen
+- **Commit-Format:** `#NNN - Beschreibung` (fortlaufend nummeriert, Englisch)
+- **Status-Meldung:** Jede Aufgabe endet mit "Committed, gepusht und plattformuebergreifend." (oder ehrliche Alternative)
+
+---
+
+### 14. Nemo Agent (NVIDIA Nemotron 3 Super 120B)
+
+Der `nemo` Agent ist ein **kostenloser Wissens-Worker** der NVIDIA Nemotron ueber die NIM API ansteuert.
+Claude uebernimmt das Denken (Prompt-Optimierung, Struktur), Nemotron generiert den Output.
+
+**MCP-Tools:** `nemo_ask`, `nemo_generate`, `nemo_quiz`, `nemo_research`, `nemo_translate`, `nemo_summarize`
+
+**Wann Nemo:** Massenproduktion (50+ Items), Allgemeinwissen, einfache Uebersetzungen
+**Wann NICHT Nemo:** Komplexes Reasoning, Code-Review, Architektur, Security, Internet-Zugang
+
+---
+
+### Portierung auf ein frisches System
+
+**Claude Code (macOS oder Windows):**
+1. `git clone https://github.com/Pepsi1978/proggs ~/proggs`
+2. `bash ~/proggs/claude-code-setup/setup-macos.sh` (oder `.ps1` fuer Windows)
+3. `cp ~/proggs/CLAUDE.md ~/CLAUDE.md`
+4. Claude Code starten — Auto-Sync Hook macht den Rest
+
+**Codex CLI:**
+1. Repo klonen
+2. `CODEX.md` aus `~/proggs/claude-code-setup/bridges/` laden (falls vorhanden)
+3. Agents/Rules manuell ins Codex-Konfigurationsverzeichnis kopieren
+4. Plugins muessen manuell als Codex-Aequivalente konfiguriert werden
+
+**Gemini CLI:**
+1. Repo klonen
+2. `GEMINI.md` aus `~/proggs/claude-code-setup/bridges/` laden (falls vorhanden)
+3. Agents/Rules ins Gemini-Konfigurationsverzeichnis kopieren
+
+**Fuer ALLE CLIs gilt:**
+- Dieses Ledger lesen und alle PENDING-Eintraege fuer die Zielplattform anwenden
+- Das Whiteboard (`agent-memory/shared/MEMORY.md`) lesen fuer aktuellen Systemzustand
+- CLAUDE.md/CODEX.md/GEMINI.md als primaere Direktiven-Quelle nutzen
+
+<!-- APPLIED: macos/claude-code=2026-03-25T22:30:00Z -->
+<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: codex=PENDING -->
+<!-- APPLIED: gemini=PENDING -->
+
+---
+
 ## [MIRROR-2026-03-25-MAC-001] Universal Mirror Bridge: export und import Agenten
 <!-- SOURCE: claude-code | PLATFORM: macos | TIMESTAMP: 2026-03-25T21:02:54Z -->
 <!-- TARGETS: windows/claude-code,codex,gemini -->
