@@ -1947,6 +1947,264 @@ Analoges Windows-JSON (mit pwsh statt bash, .ps1 statt .sh):
 
 ---
 
+## [MIRROR-2026-03-25-MAC-013] OpenClaw v2026.3.24 nativ auf macOS eingerichtet mit Gemini 3 Flash Preview
+<!-- SOURCE: claude-code | PLATFORM: macos | TIMESTAMP: 2026-03-25T22:45:36Z -->
+<!-- TARGETS: windows/claude-code,codex,gemini -->
+<!-- TYPE: software -->
+<!-- AFFECTS: ~/.openclaw/openclaw.json, ~/.openclaw/agents/main/agent/models.json, ~/Library/LaunchAgents/ai.openclaw.gateway.plist, ~/Desktop/OpenClaw.command -->
+
+### Kontext (WICHTIG — andere CLIs kennen das nicht!)
+
+OpenClaw ist ein KI-Coding-Agent aehnlich wie Claude Code, der ueber eine lokale Gateway-Architektur laeuft. Der Gateway-Prozess laeuft als permanenter Hintergrunddienst (auf macOS als launchd-LaunchAgent, auf Windows als Windows-Dienst, auf Linux als systemd-Unit) und stellt eine HTTP-API auf Port 18789 bereit, ueber die die TUI (Terminal User Interface) kommuniziert.
+
+Bis zu dieser Session lief OpenClaw nur innerhalb der NemoClaw-Sandbox — also nicht als vollwertige native Installation, sondern in einer eingeschraenkten Testumgebung. In dieser Session wurde OpenClaw v2026.3.24 als native macOS-Installation eingerichtet:
+
+1. Der Gemini 3 Flash Preview (`google/gemini-3-flash-preview`) wurde als Standardmodell konfiguriert. Dieses Modell hat 1 Million Token Kontextfenster und 65.536 Token maximaler Ausgabe und wird direkt ueber die Google Generative Language API angesprochen (`https://generativelanguage.googleapis.com/v1beta`).
+
+2. Der Gateway-Prozess wurde als LaunchAgent registriert, damit er automatisch beim macOS-Login startet und bei Absturz neu gestartet wird (`KeepAlive: true`). Logs landen in `~/.openclaw/logs/`.
+
+3. Eine Desktop-Verknuepfung (`~/Desktop/OpenClaw.command`) wurde erstellt, mit der der Benutzer OpenClaw per Doppelklick im Terminal starten kann.
+
+Dieses Setup ist unabhaengig von Claude Code und ergaenzt die bestehende KI-Infrastruktur. OpenClaw nutzt einen eigenen API-Key fuer Gemini (der Benutzer hat einen separaten Google AI Studio Key).
+
+**Sicherheitshinweis**: Der Gemini API Key ist in `~/.openclaw/openclaw.json` gespeichert. Diese Datei darf NIEMALS ins Git-Repo committed werden. Der Key hat das Format `AIzaSy...` und muss auf jedem System separat konfiguriert werden.
+
+### Was wurde geaendert?
+
+**Datei 1: `~/.openclaw/openclaw.json`** — Haupt-Konfigurationsdatei
+- `agents.defaults.model` wurde auf `"google/gemini-3-flash-preview"` gesetzt (vorher war OpenClaw in der NemoClaw-Sandbox konfiguriert, nicht nativ)
+- Neuer `models.providers.google`-Block hinzugefuegt mit:
+  - `baseUrl`: `"https://generativelanguage.googleapis.com/v1beta"`
+  - `apiKey`: Gemini API Key des Benutzers (hier aus Sicherheitsgruenden nicht gezeigt — NIEMALS ins Repo committen)
+  - `models`-Array mit gemini-3-flash-preview (1M context, 65k output)
+- `gateway.mode`: `"local"` (Gateway laeuft lokal, nicht cloud-basiert)
+- `gateway.auth.mode`: `"token"` mit auto-generiertem Token fuer lokale Authentifizierung
+
+**Datei 2: `~/.openclaw/agents/main/agent/models.json`** — Provider-Registry fuer den Agent
+- Neuer Provider `google` hinzugefuegt mit:
+  - `baseUrl`: `https://generativelanguage.googleapis.com/v1beta`
+  - `api`: `google-gemini` (OpenClaw-internes Protokoll fuer Google-kompatible APIs)
+  - Das Modell gemini-3-flash-preview mit vollstaendigen Spezifikationen
+
+**Datei 3: `~/Library/LaunchAgents/ai.openclaw.gateway.plist`** — macOS LaunchAgent
+- Neuer LaunchAgent der den OpenClaw Gateway-Prozess beim Login startet
+- Verwendet absoluten Pfad zu Node.js: `/opt/homebrew/opt/node/bin/node`
+- Startet `openclaw gateway --port 18789`
+- Vollstaendiger PATH mit allen relevanten Verzeichnissen gesetzt
+- `KeepAlive: true` — wird bei Absturz automatisch neu gestartet
+
+**Datei 4: `~/Desktop/OpenClaw.command`** — Desktop-Verknuepfung
+- Einfaches Shell-Skript das `openclaw tui` startet
+- Durch Doppelklick im Finder ausfuehrbar
+
+### Warum?
+
+Der Benutzer wollte OpenClaw als vollwertige native Alternative zu Claude Code nutzen koennen, insbesondere mit Gemini 3 Flash Preview als Modell. Die NemoClaw-Sandbox war zu eingeschraenkt fuer produktive Nutzung. Mit der nativen Installation kann OpenClaw nun direkt auf alle Projekt-Dateien zugreifen, den Gateway nutzt, und wird automatisch beim Login gestartet.
+
+### Portierung Windows/claude-code
+
+Auf Windows gibt es keinen launchd, aber OpenClaw hat einen eigenen Service-Installer:
+
+1. **OpenClaw installieren** (falls noch nicht geschehen):
+   ```
+   npm install -g openclaw
+   ```
+
+2. **Konfigurationsdatei erstellen** unter `%USERPROFILE%\.openclaw\openclaw.json`:
+   - Inhalt: Gleich wie macOS-Version unten, aber API-Key separat setzen
+   - NIEMALS den API-Key ins Repo committen
+   - Verzeichnis erstellen: `New-Item -ItemType Directory -Force "$env:USERPROFILE\.openclaw"`
+
+3. **Gateway als Windows-Dienst installieren**:
+   ```
+   openclaw gateway install
+   ```
+   Das erstellt automatisch einen Windows-Dienst (kein Task Scheduler noetig).
+   Pruefen ob er laeuft: `sc query "OpenClaw Gateway"`
+
+4. **Desktop-Verknuepfung erstellen**: Eine `OpenClaw.bat` auf dem Desktop:
+   ```bat
+   @echo off
+   cd %USERPROFILE%
+   openclaw tui
+   ```
+   Oder alternativ eine .lnk-Datei via PowerShell.
+
+5. **API-Key setzen**: In `%USERPROFILE%\.openclaw\openclaw.json` den `apiKey`-Wert auf den eigenen Gemini-Key setzen.
+
+**Wichtige Unterschiede zu macOS**:
+- Kein `.command`-Format — stattdessen `.bat` oder `.lnk`
+- Kein LaunchAgent/plist — stattdessen `openclaw gateway install` (Windows-Dienst)
+- Node.js-Pfad ist `C:\Program Files\nodejs\node.exe` oder via PATH (nicht `/opt/homebrew/opt/node/bin/node`)
+- `%USERPROFILE%\.openclaw\` statt `~/.openclaw/`
+
+### Portierung codex
+
+Codex CLI laeuft auf derselben macOS-Maschine. OpenClaw ist unabhaengig von Codex und kann parallel laufen. Die Installation ist bereits vorhanden. Falls Codex auf einem anderen System laeuft:
+
+1. `npm install -g openclaw` ausfuehren
+2. `~/.openclaw/openclaw.json` erstellen (Inhalt siehe unten, API-Key ergaenzen)
+3. `openclaw gateway install` fuer den Service
+4. `openclaw tui` zum Starten
+
+### Portierung gemini
+
+Gemini CLI laeuft ebenfalls auf macOS. OpenClaw ist bereits nativ installiert. Fuer Gemini CLI selbst ist keine Portierung noetig — OpenClaw ist ein separates Tool.
+
+### Datei-Inhalt macOS (openclaw.json) — OHNE API-KEY
+
+**ACHTUNG: Den `apiKey`-Wert NIEMALS ins Repository committen. Den echten Key separat auf jedem System setzen.**
+
+```json
+{
+  "meta": {
+    "lastTouchedVersion": "2026.3.24",
+    "lastTouchedAt": "2026-03-25T22:18:32.547Z"
+  },
+  "agents": {
+    "defaults": {
+      "workspace": "/Users/frank/.openclaw/workspace",
+      "model": "google/gemini-3-flash-preview"
+    }
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+  "models": {
+    "providers": {
+      "google": {
+        "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+        "apiKey": "HIER_DEN_EIGENEN_GEMINI_API_KEY_EINTRAGEN",
+        "models": [
+          {
+            "id": "gemini-3-flash-preview",
+            "name": "Gemini 3 Flash Preview",
+            "contextWindow": 1048576,
+            "maxTokens": 65536
+          }
+        ]
+      }
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "auth": {
+      "mode": "token",
+      "token": "AUTO_GENERIERT_BEIM_ERSTEN_START"
+    }
+  }
+}
+```
+
+**Workspace-Pfad auf Windows anpassen**: `"workspace": "$env:USERPROFILE\\.openclaw\\workspace"` (oder den absoluten Pfad verwenden).
+
+### Datei-Inhalt macOS (ai.openclaw.gateway.plist)
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>ai.openclaw.gateway</string>
+
+    <key>Comment</key>
+    <string>OpenClaw Gateway (v2026.3.24)</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>1</integer>
+    <key>Umask</key>
+    <integer>63</integer>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/opt/homebrew/opt/node/bin/node</string>
+      <string>/opt/homebrew/lib/node_modules/openclaw/dist/index.js</string>
+      <string>gateway</string>
+      <string>--port</string>
+      <string>18789</string>
+    </array>
+
+    <key>StandardOutPath</key>
+    <string>/Users/frank/.openclaw/logs/gateway.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/frank/.openclaw/logs/gateway.err.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>HOME</key>
+      <string>/Users/frank</string>
+      <key>TMPDIR</key>
+      <string>/var/folders/h6/mqbrn72x551brgqdnh_75s4m0000gn/T/</string>
+      <key>NODE_EXTRA_CA_CERTS</key>
+      <string>/etc/ssl/cert.pem</string>
+      <key>NODE_USE_SYSTEM_CA</key>
+      <string>1</string>
+      <key>PATH</key>
+      <string>/opt/homebrew/opt/node/bin:/Users/frank/.local/bin:/Users/frank/.npm-global/bin:/Users/frank/bin:/Users/frank/.volta/bin:/Users/frank/.bun/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+      <key>OPENCLAW_GATEWAY_PORT</key>
+      <string>18789</string>
+      <key>OPENCLAW_LAUNCHD_LABEL</key>
+      <string>ai.openclaw.gateway</string>
+      <key>OPENCLAW_SERVICE_MARKER</key>
+      <string>openclaw</string>
+      <key>OPENCLAW_SERVICE_KIND</key>
+      <string>gateway</string>
+      <key>OPENCLAW_SERVICE_VERSION</key>
+      <string>2026.3.24</string>
+    </dict>
+  </dict>
+</plist>
+```
+
+**Hinweis**: `/Users/frank` muss durch den tatsaechlichen Home-Pfad ersetzt werden. `TMPDIR` ist Mac-spezifisch und aendert sich; kann auch auf `/tmp` gesetzt werden.
+
+### Datei-Inhalt macOS (OpenClaw.command — Desktop-Verknuepfung)
+
+```bash
+#!/bin/bash
+cd ~
+/opt/homebrew/bin/openclaw tui
+```
+
+**Ausfuehren**: `chmod +x ~/Desktop/OpenClaw.command` damit sie per Doppelklick ausfuehrbar ist.
+
+### Datei-Inhalt Windows (OpenClaw.bat — Desktop-Verknuepfung)
+
+```bat
+@echo off
+cd %USERPROFILE%
+openclaw tui
+pause
+```
+
+### Settings-Registrierung
+
+OpenClaw ist kein Claude-Code-Hook und benoetigt keine Registrierung in `~/.claude/settings.json`. Es ist ein eigenstaendiger KI-Agent. Der Gateway laeuft als launchd-Daemon (macOS) bzw. Windows-Dienst unabhaengig von Claude Code.
+
+**LaunchAgent laden/neu laden** (macOS, nach Aenderungen an der plist):
+```bash
+launchctl unload ~/Library/LaunchAgents/ai.openclaw.gateway.plist 2>/dev/null || true
+launchctl load ~/Library/LaunchAgents/ai.openclaw.gateway.plist
+```
+
+**Gateway-Status pruefen** (macOS):
+```bash
+launchctl list | grep openclaw
+curl -s http://localhost:18789/health 2>/dev/null || echo "Gateway nicht erreichbar"
+```
+
+<!-- APPLIED: macos/claude-code=2026-03-25T22:45:36Z -->
+<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: codex=PENDING -->
+<!-- APPLIED: gemini=PENDING -->
+
+---
+
 ## [BASELINE-2026-03-25-GEM] Initial Gemini CLI BASELINE — macos/gemini
 <!-- SOURCE: gemini-cli | PLATFORM: macos | TIMESTAMP: 2026-03-25T22:15:36Z -->
 <!-- TARGETS: macos/claude-code,windows/claude-code,codex -->
