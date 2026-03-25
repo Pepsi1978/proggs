@@ -15,7 +15,8 @@ $requiredFiles = @(
     "Gemini-Setup/bridges/bridge-registry.json",
     "Gemini-Setup/state/environment-fixes.json",
     "Gemini-Setup/state/implemented-intelligence-suggestions.json",
-    "Gemini-Setup/scripts/check-rule-parity.ps1"
+    "Gemini-Setup/scripts/check-rule-parity.ps1",
+    "Gemini-Setup/scripts/check-pwsh-availability.ps1"
 )
 
 $missing = 0
@@ -28,7 +29,12 @@ foreach ($file in $requiredFiles) {
     }
 }
 
-# 2. Regel-Konsistenz-Check
+# 2. Runtime-Check: pwsh
+Write-Host "`n--- Starte Runtime-Pruefung ---" -ForegroundColor Yellow
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Gemini-Setup/scripts/check-pwsh-availability.ps1"
+$runtimeExitCode = $LASTEXITCODE
+
+# 3. Regel-Konsistenz-Check
 Write-Host "`n--- Starte Regel-Konsistenz-Pruefung ---" -ForegroundColor Yellow
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "Gemini-Setup/scripts/check-rule-parity.ps1"
 $parityExitCode = $LASTEXITCODE
