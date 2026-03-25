@@ -71,43 +71,36 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 <!-- ARCHIV (2026-03-21): safety-gate.ps1 Blockierungen (6x) und Write-Back-Warnungen (2x) — erwartetes Verhalten, kein Fehler. -->
 <!-- ARCHIV (2026-03-21): reindex-codebase.ps1 — ExitCode 1 (6x, 2026-03-21 10:44–11:25) — Timeout von 180s auf 300s erhoeht als Fix; gebuendelt zu einem Eintrag. -->
 
-### 2026-03-21 17:35 — StopFailure: API/Rate-Limit Error — Status: OFFEN
-**Quelle:** Hook: StopFailure (command-type, no API dependency)
-**Symptom:** Session-Turn endete durch API-Fehler
-**Details:** {"tool_name":"test"}
-**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
-**Status:** OFFEN
-### 2026-03-21 17:53 — Hook: safety-gate.sh — Befehl blockiert: rm[[:space:]]+-rf[[:space:]]+[/~]
-### 2026-03-21 17:53 — Hook: safety-gate.sh — Befehl blockiert: rm[[:space:]]+-rf[[:space:]]+[/~]
-### [2026-03-22 17:29] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-03-24 23:26 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+<!-- ARCHIV (2026-03-25, /self-improve Cleanup): StopFailure API/Rate-Limit Errors (2026-03-21 + 2026-03-24) — temporaere API-Fehler, einmalig, kein dauerhaftes Problem. safety-gate.sh duplizierte Blockierung (2x 2026-03-21) — erwartetes Verhalten, kein Fehler. Write-Back nicht erfolgt (2026-03-22 + 2026-03-25) — Einmalige Events, memory-watchdog loggt korrekt, kein systemisches Problem. -->
 ---
 
 ## Systemzustand (aktuell)
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
 
-**Stand:** 2026-03-21
+**Stand:** 2026-03-25 (aktualisiert durch /self-improve Thorough-Lauf)
 
-- **Plattform:** Windows 11 Home (x64) + macOS (Apple Silicon), Claude Code v2.1.80, Opus 4.6 (1M context)
-- **Sprachen:** Swift, C#, TypeScript, Rust, Go, Kotlin
+- **Plattform:** Windows 11 Home 10.0.26200 (x64) + macOS (Apple Silicon), Claude Code v2.1.81, Opus 4.6 (1M context)
+- **Sprachen:** Swift, C#, TypeScript, Rust (1.94.0), Go (1.26.1), Kotlin (2.3.20), Java (OpenJDK 21.0.10)
+- **Node.js:** v24.14.0, npm 11.11.1, Bun 1.3.10, Deno 2.7.5
 - **Semantic Search:** Aktiv (wird bei jeder Session automatisch aktualisiert via reindex-Hook)
 - **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
-- **Agents:** 15 aktiv, alle mit C1 Sentinel-Enforcement (code-reviewer hat memory:project, coder hat isolation:worktree)
-- **Hooks:** 14 Event-Typen, 18 .sh Hook-Dateien deployed + prompt-injection-defender (Python) — alle in settings.json angebunden (writeback-enforcer, memory-watchdog, reindex-codebase, pending-admin-updates, stopfailure-logger)
-- **Plugins:** 89 Eintraege, 86 aktiv (3 deaktiviert: zeroize-audit, fp-check, xclaude-plugin)
-- **Whiteboard-Anbindung:** Alle Hooks nutzen whiteboard-insert.sh (sektionsbasiert) — echo/append ans Dateiende eliminiert
-- **Ollama:** v0.18.2, nomic-embed-text Modell (768 Dim, 274MB), laeuft als brew-Service (macOS)
-- **File-Locking:** flock v2.41.3 (util-linux via Homebrew), writeback-enforcer nutzt echtes Locking (macOS)
-- **Session-Scorer:** v3 — schreibt NUR in session-scores.jsonl, NICHT mehr direkt in MEMORY.md
-- **Session-Autopsy:** v2 — schreibt in MEMORY.md "Debugging-Muster" statt separate AUTOPSY.md
+- **Agents:** 15 aktiv, alle korrekt konfiguriert (code-reviewer hat memory:project, coder hat isolation:worktree)
+- **Hooks:** 22 Hook-Events in settings.json, 19 .ps1 Hook-Dateien + prompt-injection-defender (Python) + 2 .ts Hooks — alle in settings.json angebunden
+- **Plugins:** 91 Eintraege, 88 aktiv (3 deaktiviert: zeroize-audit, fp-check, xclaude-plugin)
+- **Whiteboard-Anbindung:** Alle Hooks nutzen whiteboard-insert.ps1/.sh (sektionsbasiert) — echo/append ans Dateiende eliminiert
+- **Session-Scorer:** v3 — schreibt NUR in session-scores.jsonl, nutzt pwsh (Fix #703 vom 2026-03-24)
+- **Session-Autopsy:** v2 — nutzt pwsh (Fix #703 vom 2026-03-24)
+- **Hook-Log:** Register-EngineEvent stdout unterdrueckt (Fix #703 vom 2026-03-24)
+- **Auto-Sync:** Mit Diff-Preview und Newer-Hooks-Guard (Fix #704 + #706 vom 2026-03-24)
 - **Preferred Patterns:** MVVM (Swift), Fluent Design (C#), strict mode (TypeScript)
-- **Self-Improve Skill:** v5.19 — Restructured: bash scripts extracted, mode comparison table, workspace constraints, consolidated rules
-- **Semantic Search:** index-72.db aktiv, 5 alte DBs + 10 WAL/SHM bereinigt (2026-03-20)
-- **Evolution-Analyst (2026-03-20):** 5-Session-Avg 8.42, Trend: STABIL. Kein errors (0/7). Tool-Effizienz 0.87.
-- **Neue Hooks:** StopFailure (v2.1.78) — loggt API-Fehler/Rate-Limits ins Whiteboard
-
-- **Pending Admin Updates (10):** biome,deno,gitleaks,gradle,harfbuzz,ktfmt,libmpc,libnghttp2,simdjson,uv
+- **Self-Improve Skill:** v5.19
+- **Git:** v2.53.0, Git Credential Manager aktiv
+- **Android:** SDK 34/35/36, 4 AVDs, ADB 1.0.41 — NDK FEHLT (blockiert native Cross-Compilation)
+- **Sicherheit:** Prompt-Injection-Defender aktiv, gitleaks und semgrep FEHLEN im PATH
+- **Speicher:** 391 GB frei (42% von 928 GB)
+- **Evolution-Analyst (2026-03-25):** 5-Session-Avg 8.28, Trend: PLATEAU. Meta-Intelligence-Rate 8% (KRITISCH, Schwellwert 20%). IQ-Score nie berechnet (immer 0).
+- **Cross-Tool:** Codex + Gemini Delta Bridges aktiv, 8 Intelligenz-Dimensionen im Whiteboard portiert
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -163,6 +156,21 @@ _Noch keine Eintraege._
 
 - **[2026-03-20] Multi-Agent als Industrie-Standard: Alle grossen Tools Feb 2026** — Status: BESTAETIGT | Quelle: https://www.morphllm.com/ai-coding-agent | Empfehlung: BESTAETIGUNG (bereits umgesetzt)
   Grok Build (8 Agents), Windsurf (5 parallel), Claude Code Agent Teams, Codex CLI — alle parallel in Feb 2026 launched. Unser Setup mit 5 parallelen Agents ist bereits State-of-the-Art. Naechste Differenzierung: echtes Feedback-Loop zwischen Agents (nicht nur parallele Ausfuehrung).
+
+- **[2026-03-25] MAR: Multi-Agent Reflexion (arxiv 2512.20845)** — Status: UMZUSETZEN | Empfehlung: JA sofort
+  Spezialisierte Agenten debattieren strukturiert und widersprechen sich gegenseitig statt nur parallel zu arbeiten. Sofort umsetzbar als Erweiterung des quality-gate: tester und code-reviewer tauschen Outputs und fordern Widerspruch an.
+
+- **[2026-03-25] BIGMAS: Brain-Inspired Graph Multi-Agent (arxiv 2603.15371)** — Status: EVALUIERT | Empfehlung: JA spaeter
+  Dynamische Agenten-Topologie: Einfache Aufgaben bekommen wenige Agenten, komplexe viele. Kernidee als Heuristik im architect Agent umsetzbar.
+
+- **[2026-03-25] Test-Time Compute Scaling: 32B schlaegt 671B (arxiv 2503.23803)** — Status: UMZUSETZEN | Empfehlung: JA sofort
+  Laengeres Nachdenken statt groesseres Modell. Extended Thinking im coder-Agent fuer komplexe Aufgaben aktivieren + Execution Verification durch tester.
+
+- **[2026-03-25] Windsurf Arena Mode: Blindes Modell-Voting** — Status: EVALUIERT | Empfehlung: JA spaeter
+  Zwei Modelle loesen gleiche Aufgabe, Reviewer waehlt blind den besseren Output. Datenbasiertes Routing statt statischer Modell-Zuweisung.
+
+- **[2026-03-25] Cursor OS-Level Sandboxing** — Status: EVALUIERT | Empfehlung: JA spaeter
+  Praeventive Sandbox statt reaktiver Blockierung. Naechste Evolution des safety-gate als Defense-in-Depth Schicht 2.
 
 ---
 
