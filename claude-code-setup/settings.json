@@ -95,7 +95,6 @@
 			"mcp__plugin_episodic-memory_episodic-memory__read",
 			"mcp__plugin_episodic-memory_episodic-memory__search",
 			"mcp__plugin_superpowers-chrome_chrome__use_browser",
-			"mcp__sequential-thinking__sequentialthinking",
 			"mcp__claude_ai_Gmail__gmail_create_draft",
 			"mcp__claude_ai_Gmail__gmail_get_profile",
 			"mcp__claude_ai_Gmail__gmail_list_drafts",
@@ -182,6 +181,15 @@
 					{
 						"type": "command",
 						"command": "bash ~/.claude/hooks/mirror-check.sh",
+						"timeout": 5
+					}
+				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash ~/.claude/hooks/doctor-lite.sh",
 						"timeout": 5
 					}
 				]
