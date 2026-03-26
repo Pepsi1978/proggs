@@ -1,4 +1,5 @@
 # Agents, Skills & Commands: Komplett auf Deutsch (KRITISCH)
+<!-- Adapted from MIRROR-2026-03-25-MAC-003 by import agent on 2026-03-26 -->
 
 ## Regel
 

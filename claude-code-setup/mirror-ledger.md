@@ -364,7 +364,7 @@ Claude uebernimmt das Denken (Prompt-Optimierung, Struktur), Nemotron generiert 
 - CLAUDE.md/CODEX.md/GEMINI.md als primaere Direktiven-Quelle nutzen
 
 <!-- APPLIED: macos/claude-code=2026-03-25T22:30:00Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
@@ -464,7 +464,7 @@ Keine Settings-Registrierung noetig. Die Agenten werden per Sprach-Trigger aktiv
 - "importiere" / "starte den import Agenten" / "was ist neu" → `import` Agent
 
 <!-- APPLIED: macos/claude-code=2026-03-25T21:02:54Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
@@ -629,7 +629,7 @@ Windows-Befehl: `"command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/
 Kein `matcher` oder `async` noetig. Der Hook ist synchron und laeuft bei JEDEM Session-Start.
 
 <!-- APPLIED: macos/claude-code=2026-03-25T21:02:54Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
@@ -735,7 +735,7 @@ Keine Settings-Registrierung noetig. Regel-Dateien in `~/.claude/rules/` werden
 automatisch von Claude Code beim Start geladen.
 
 <!-- APPLIED: macos/claude-code=2026-03-25T21:02:54Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
@@ -820,7 +820,7 @@ und dem Abschnitt "Proaktive Agents".
 Keine — Regel-Dateien werden automatisch geladen.
 
 <!-- APPLIED: macos/claude-code=2026-03-25T21:02:54Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
@@ -913,7 +913,7 @@ Keine — CLAUDE.md wird automatisch geladen. Beide Kopien (~/CLAUDE.md und ~/pr
 muessen identisch sein.
 
 <!-- APPLIED: macos/claude-code=2026-03-25T21:02:54Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
@@ -1014,7 +1014,7 @@ Er war vorher unter dem SessionStart Event registriert. Der neue Ersatz ist `mir
 (siehe Eintrag MAC-002).
 
 <!-- APPLIED: macos/claude-code=2026-03-25T21:02:54Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
@@ -1157,7 +1157,7 @@ Keine — `manifest.json` ist kein Hook und kein Settings-File. Es wird nur vom
 Setup-Script (`setup-macos.sh` / `setup-windows.ps1`) ausgewertet.
 
 <!-- APPLIED: macos/claude-code=2026-03-25T23:00:00Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
@@ -1394,7 +1394,7 @@ AUTO-GENERIERT. Die Datei NICHT manuell bearbeiten — Aenderungen werden beim n
 SessionEnd ueberschrieben. Hooks immer nur in `~/.claude/settings.json` bearbeiten.
 
 <!-- APPLIED: macos/claude-code=2026-03-25T23:00:00Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
@@ -1516,7 +1516,7 @@ Wenn BASELINE existiert: Weiter mit Schritt 2.
 ```
 
 <!-- APPLIED: macos/claude-code=2026-03-25T22:23:29Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
@@ -1639,7 +1639,7 @@ Anderes CLI (Gemini, Codex):
 ```
 
 <!-- APPLIED: macos/claude-code=2026-03-25T22:23:29Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
@@ -1941,7 +1941,7 @@ Analoges Windows-JSON (mit pwsh statt bash, .ps1 statt .sh):
 ```
 
 <!-- APPLIED: macos/claude-code=2026-03-25T22:15:09Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-25T21:47:57Z -->
 
@@ -2199,7 +2199,7 @@ curl -s http://localhost:18789/health 2>/dev/null || echo "Gateway nicht erreich
 ```
 
 <!-- APPLIED: macos/claude-code=2026-03-25T22:45:36Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-26T01:48:45Z -->
 
@@ -2385,7 +2385,7 @@ exit 0
 **KRITISCH:** Den alten `type: "prompt"` Hook aus dem `SessionStart`-Block entfernen, wenn er noch existiert. Ein Prompt-Hook bei SessionStart erzeugt immer den Fehler `ToolUseContext is required for prompt hooks`.
 
 <!-- APPLIED: macos/claude-code=2026-03-25T23:33:00Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-26T01:48:45Z -->
 
@@ -2466,7 +2466,7 @@ Gleiches Prinzip: Wenn ein Hook-System existiert, nach Installation von Plugins/
 Der vollstaendige Dateiinhalt ist 157 Zeilen. Die relevante Ergaenzung ist CHECK 5 (Zeilen 106-131), der oben vollstaendig abgedruckt ist. Die restlichen Checks (claude-mem worker, Ollama, hooks.json integrity, code-search dependencies, launchd agents) sind unveraendert.
 
 <!-- APPLIED: macos/claude-code=2026-03-25T23:33:00Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-26T01:48:45Z -->
 
@@ -2556,7 +2556,7 @@ exit 0
 ```
 
 <!-- APPLIED: macos/claude-code=2026-03-25T23:33:00Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-26T01:48:45Z -->
 
@@ -2663,7 +2663,7 @@ NIEMALS Hooks einzeln testen — die echte Startup-Umgebung ist anders.
 Keine Settings-Registrierung noetig. Regel-Dateien in `~/.claude/rules/` werden automatisch bei jedem Start geladen. Die Datei muss nur an diesem Pfad existieren.
 
 <!-- APPLIED: macos/claude-code=2026-03-25T23:33:00Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-26T01:48:45Z -->
 
@@ -2729,6 +2729,6 @@ Nicht raten, nicht einzeln testen, nicht in Logs suchen. Debug-File ist die einz
 ```
 
 <!-- APPLIED: macos/claude-code=2026-03-25T23:33:00Z -->
-<!-- APPLIED: windows/claude-code=PENDING -->
+<!-- APPLIED: windows/claude-code=2026-03-26T12:00:00Z -->
 <!-- APPLIED: codex=PENDING -->
 <!-- APPLIED: gemini=2026-03-26T01:48:45Z -->

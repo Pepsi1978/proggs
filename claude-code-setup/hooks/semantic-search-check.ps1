@@ -3,6 +3,7 @@
 # missing ToolUseContext — a Claude Code limitation).
 # This command-type hook checks the MCP server's health endpoint instead.
 # Platform: Windows (PowerShell equivalent of semantic-search-check.sh)
+# Adapted from MIRROR-2026-03-25-MAC-014 by import agent on 2026-03-26
 
 $ErrorActionPreference = "SilentlyContinue"
 
@@ -20,9 +21,9 @@ if (-not (Test-Path $MCP_INDEX)) {
 
 $MCP_JSON = Join-Path $env:USERPROFILE ".mcp.json"
 if (Test-Path $MCP_JSON) {
-    $content = Get-Content $MCP_JSON -Raw
+    $content = Get-Content $MCP_JSON -Raw -Encoding UTF8
     if ($content -match "code-search") {
-        # code-search is configured
+        # code-search is configured — silently OK
     }
 }
 

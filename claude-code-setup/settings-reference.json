@@ -176,7 +176,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "pwsh -NoProfile -File \"$env:USERPROFILE\\.claude\\hooks\\semantic-search-check.ps1\"",
+						"command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/semantic-search-check.ps1\"",
 						"timeout": 10
 					}
 				]
@@ -436,7 +436,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/sync-hooks-reference.ps1\"",
+						"command": "pwsh -NoProfile -File \"$USERPROFILE/.claude/hooks/sync-hooks-reference.ps1\"",
 						"timeout": 10,
 						"async": true
 					}

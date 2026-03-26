@@ -166,12 +166,24 @@ auf den Skill der aehnlich klingt.
 
 ## 14. Cross-Platform & Cross-CLI Sync (Universal Mirror Bridge)
 
-| Deutsche Phrase | Agent | Was der Agent WIRKLICH tut |
-|----------------|-------|---------------------------|
-| "exportiere Session", "Mirror Export", "Session spiegeln", "Aenderungen exportieren" | `mirror-export` Agent | Scannt ALLE Aenderungen der Session und schreibt sie als ausfuehrliche Eintraege ins `mirror-ledger.md`. Wird am Ende einer Session gestartet. |
-| "importiere Mirror", "Mirror Import", "synchronisiere", "was fehlt von macOS/Windows?" | `mirror-import` Agent | Liest `mirror-ledger.md`, findet ausstehende Eintraege fuer diese Plattform und baut sie vollautomatisch ein. Wird beim Start auf einer anderen Plattform gestartet. |
+**Zwei Agenten die zusammen eine universelle "Spiegelung" zwischen allen Plattformen
+und CLIs ermoeglichen. Der `export` Agent schreibt, der `import` Agent liest und baut ein.**
 
-**Entscheidungshilfe**: Session beenden → `mirror-export`. Neue Plattform starten → `mirror-import`. Beide Agenten zusammen bilden die **Universal Mirror Bridge**.
+| Deutsche Phrase | Agent | Was er WIRKLICH tut |
+|----------------|-------|---------------------|
+| "starte den export Agenten", "exportiere", "Aenderungen spiegeln", "export" | `export` | Scannt ALLE Session-Aenderungen und schreibt sie ausfuehrlich ins mirror-ledger.md — mit Kontext, Portierungs-Anweisungen, vollstaendigen Datei-Inhalten fuer beide Plattformen |
+| "starte den import Agenten", "importiere", "hol Neuerungen", "was ist neu", "import" | `import` | Liest mirror-ledger.md, zeigt Triage-Tabelle, portiert ausstehende Aenderungen automatisch auf die aktuelle Plattform/CLI |
+
+**NICHT verwechseln mit alten Agenten:** `mirror-export` und `mirror-import` sind die alten
+Agenten (erste Version). Die neuen heissen `export` und `import` (kuerzere Namen, mehr Funktionen).
+
+**Wann welchen Agent:**
+- **Session beendet, Aenderungen gemacht** → `export` (schreibt alles ins Ledger)
+- **Plattform gewechselt, moechte aufholen** → `import` (holt alles vom Ledger)
+- **Neues CLI gestartet (Codex/Gemini)** → `import` (portiert Aenderungen von Claude Code)
+
+**Automatische Benachrichtigung:** Bei SessionStart zeigt `mirror-check` Hook an wenn Eintraege ausstehen.
+<!-- Updated from MIRROR-2026-03-25-MAC-004 by import agent on 2026-03-26 -->
 
 ---
 
@@ -188,56 +200,6 @@ auf den Skill der aehnlich klingt.
 | "Brainstorm" | `superpowers:brainstorming` |
 | "Reflektion" / "Reflect" | `claude-reflect:reflect` (Lernen) oder `reflexion:reflect` (Bewertung) — nachfragen! |
 | "Code Rabbit" | `coderabbit:review` |
-
-## 14. Nemo — Kostenloser Wissens-Worker (Nemotron 3 Super 120B)
-
-**Nemo ist ein universeller Wissens-Agent der NVIDIA Nemotron 3 Super 120B kostenlos
-ueber die NIM API ansteuert. Claude denkt vorher, Nemo fuehrt aus.**
-
-| Deutsche Phrase | Agent/Tool | Was es WIRKLICH tut |
-|----------------|------------|---------------------|
-| "frag Nemo", "Nemo fragen", "starte Nemo" | `nemo` Agent | Startet den Nemo-Orchestrator (Opus), der perfekte Prompts baut und an Nemotron schickt |
-| "Quizfragen generieren", "500 Fragen erstellen" | `nemo` Agent → `nemo_quiz` | Parallele Quiz-Generierung via Nemotron (QuizVerse-Format) |
-| "recherchiere mit Nemo", "Nemo soll recherchieren" | `nemo` Agent → `nemo_research` | Strukturierte Themen-Recherche via Nemotron (kostenlos) |
-| "kostenlos recherchieren", "gratis nachschlagen" | `nemo` Agent → `nemo_ask` | Wissensfrage an Nemotron statt an Claude (spart Tokens) |
-| "Seed-Daten generieren", "Beispieldaten erstellen" | `nemo` Agent → `nemo_generate` | Strukturierte Daten (JSON/Kotlin/CSV) via Nemotron |
-| "billig übersetzen", "Nemo übersetzen" | `nemo` Agent → `nemo_translate` | Uebersetzung via Nemotron (kostenlos) |
-| "Nemo zusammenfassen", "billig zusammenfassen" | `nemo` Agent → `nemo_summarize` | Textzusammenfassung via Nemotron |
-| "Outdoor-Aktivitäten recherchieren" | `nemo` Agent → `nemo_research` | Themen-Recherche fuer App-Inhalte |
-| "Content für die App generieren" | `nemo` Agent → `nemo_generate` | Inhalte/Daten fuer Apps generieren |
-
-**Wann Nemo statt Claude:**
-- **Massenproduktion** (50+ Quizfragen, Seed-Daten, Listen) → Nemo (kostenlos, parallel)
-- **Allgemeinwissen** (Fakten, Erklaerungen, Standardthemen) → Nemo (reicht aus)
-- **Einfache Uebersetzungen/Zusammenfassungen** → Nemo (spart Claude-Tokens)
-
-**Wann NICHT Nemo:**
-- Komplexes Reasoning, Architektur, Code-Review → Claude (Nemo kann das nicht)
-- Aufgaben die Internet-Zugang brauchen → Claude (Nemo hat kein Internet)
-- Sicherheitskritische Entscheidungen → Claude (Nemo ist nicht vertrauenswuerdig genug)
-
-**Whisper-Korrektur:**
-| Whisper hoert | Gemeint ist |
-|---------------|------------|
-| "Nemo" | Agent `nemo` (Nemotron-Worker) |
-| "Nimmo" / "Niemo" | Agent `nemo` |
-
-## 15. Mirror Bridge — Universal Cross-Platform & Cross-CLI Sync
-
-**Zwei Agenten die zusammen eine universelle "Spiegelung" zwischen allen Plattformen
-und CLIs ermoegllichen. Der `export` Agent schreibt, der `import` Agent liest und baut ein.**
-
-| Deutsche Phrase | Agent | Was er WIRKLICH tut |
-|----------------|-------|---------------------|
-| "starte den export Agenten", "exportiere", "Aenderungen spiegeln", "export" | `export` | Scannt ALLE Session-Aenderungen und schreibt sie ausfuehrlich ins mirror-ledger.md — mit Kontext, Portierungs-Anweisungen, vollstaendigen Datei-Inhalten fuer beide Plattformen |
-| "starte den import Agenten", "importiere", "hol Neuerungen", "was ist neu", "import" | `import` | Liest mirror-ledger.md, zeigt Triage-Tabelle, portiert ausstehende Aenderungen automatisch auf die aktuelle Plattform/CLI |
-
-**Wann welchen Agent:**
-- **Session beendet, Aenderungen gemacht** → `export` (schreibt alles ins Ledger)
-- **Plattform gewechselt, moechte aufholen** → `import` (holt alles vom Ledger)
-- **Neues CLI gestartet (Codex/Gemini)** → `import` (portiert Aenderungen von Claude Code)
-
-**Automatische Benachrichtigung:** Bei SessionStart zeigt `mirror-check` Hook an wenn Eintraege ausstehen.
 
 ## Proaktive Agents (kein Trigger noetig — laufen automatisch)
 
