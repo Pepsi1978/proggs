@@ -427,7 +427,7 @@ Das neue System ist bidirektional, vollstaendig, und APPLIED-Status wird getrack
 
 1. Analog: Erstelle die Agenten-Dateien im jeweiligen agents/-Verzeichnis
 2. Passe die Plattform-Erkennung im Agent-Prompt an (platform=codex oder gemini)
-3. Beim import: APPLIED-Status mit codex=PENDING bzw. gemini=PENDING suchen
+3. Beim import: APPLIED-Status mit codex=PENDING bzw. gemini=2026-03-26T01:48:45Z suchen
 
 ### Datei-Inhalt macOS+Windows (export.md)
 
@@ -2201,7 +2201,7 @@ curl -s http://localhost:18789/health 2>/dev/null || echo "Gateway nicht erreich
 <!-- APPLIED: macos/claude-code=2026-03-25T22:45:36Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-26T01:48:45Z -->
 
 ---
 
@@ -2387,7 +2387,7 @@ exit 0
 <!-- APPLIED: macos/claude-code=2026-03-25T23:33:00Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-26T01:48:45Z -->
 
 ---
 
@@ -2468,7 +2468,7 @@ Der vollstaendige Dateiinhalt ist 157 Zeilen. Die relevante Ergaenzung ist CHECK
 <!-- APPLIED: macos/claude-code=2026-03-25T23:33:00Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-26T01:48:45Z -->
 
 ---
 
@@ -2558,7 +2558,7 @@ exit 0
 <!-- APPLIED: macos/claude-code=2026-03-25T23:33:00Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-26T01:48:45Z -->
 
 ---
 
@@ -2665,7 +2665,7 @@ Keine Settings-Registrierung noetig. Regel-Dateien in `~/.claude/rules/` werden 
 <!-- APPLIED: macos/claude-code=2026-03-25T23:33:00Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-26T01:48:45Z -->
 
 ---
 
@@ -2731,4 +2731,4 @@ Nicht raten, nicht einzeln testen, nicht in Logs suchen. Debug-File ist die einz
 <!-- APPLIED: macos/claude-code=2026-03-25T23:33:00Z -->
 <!-- APPLIED: windows/claude-code=PENDING -->
 <!-- APPLIED: codex=PENDING -->
-<!-- APPLIED: gemini=PENDING -->
+<!-- APPLIED: gemini=2026-03-26T01:48:45Z -->
