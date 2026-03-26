@@ -52,6 +52,14 @@ Besonders wichtig für Gemini:
 - `german-agents-skills.md`: Pflicht für deutsche Beschreibungen.
 - `german-skill-triggers.md`: Zuordnung von Whisper-Phrasen.
 - `semantic-search-isolation.md`: Code-Search Indizes niemals plattformübergreifend ändern.
+- `hook-constraints.md`: (Neu) Erkenntnisse zu Hook-Einschränkungen und Debug-Methoden.
+
+### 5.1 Wissens-Update (März 2026)
+
+- **OpenClaw Integration:** OpenClaw v2026.3.24 ist nativ auf macOS eingerichtet (Modell: `google/gemini-3-flash-preview`). Gateway auf Port 18789.
+- **Hook-Einschränkungen:** Prompt-Hooks (`type: "prompt"`) dürfen niemals bei `SessionStart` oder `SessionEnd` verwendet werden (fehlender ToolUseContext). Stattdessen immer Command-Hooks verwenden.
+- **Debug-Methode:** Bei Startup-Fehlern ("startup hook error") sofort `claude -p --debug-file $env:TEMP\hook-debug.txt --system-prompt "Reply with just OK"` nutzen. Einzeltests von Hooks sind unzuverlässig.
+- **Mirror-Check Robustheit:** Der `mirror-check` Hook wurde stabilisiert (grep/Select-String null-safe gemacht).
 
 ## 6. Benutzer-Profil
 
@@ -62,4 +70,4 @@ Besonders wichtig für Gemini:
 - **Commit-Format:** `#NNN - Beschreibung` (Englisch).
 
 ---
-*Zuletzt aktualisiert: 2026-03-25 (via import Agent von MIRROR-2026-03-25-MAC-011)*
+*Zuletzt aktualisiert: 2026-03-26 (via import Agent von MIRROR-2026-03-25-MAC-018)*

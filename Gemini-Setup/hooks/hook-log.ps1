@@ -1,4 +1,4 @@
-# hook-log.ps1 — Error logging for Gemini CLI hooks (PowerShell 7)
+# hook-log.ps1 — Error logging for Claude Code hooks (PowerShell 7)
 # Dot-source this at the top of every hook script:
 #   . "$PSScriptRoot/hook-log.ps1"
 #
@@ -8,10 +8,10 @@
 #   Hook-LogWarn "message"    — log warning
 #   Automatic error trapping  — uncaught errors are logged on exit
 #
-# Logs to: ~/.Gemini/logs/hooks/YYYY-MM-DD.log
+# Logs to: ~/.claude/logs/hooks/YYYY-MM-DD.log
 # Log rotation: files older than 14 days are auto-deleted
 
-$script:_HookLogDir = Join-Path $env:USERPROFILE ".Gemini" "logs" "hooks"
+$script:_HookLogDir = Join-Path $env:USERPROFILE ".claude" "logs" "hooks"
 $script:_HookLogName = if ($MyInvocation.ScriptName) {
     [System.IO.Path]::GetFileNameWithoutExtension($MyInvocation.ScriptName)
 } else {
@@ -84,4 +84,3 @@ trap {
 }
 
 Hook-Log "started"
-

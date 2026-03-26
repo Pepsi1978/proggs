@@ -1,6 +1,7 @@
-# stopfailure-logger.ps1 — Logs API failures to whiteboard without requiring API access
-# Triggered by StopFailure hook event (Gemini CLI v2.1.78+)
+# stopfailure-logger.ps1 — Logs API failures to whiteboard with rate limiting
+# Triggered by StopFailure hook event (Claude Code v2.1.78+)
 # Uses whiteboard-insert.ps1 for section-based writing (no Add-Content!)
+# Rate limit: max 1 whiteboard entry per hour to prevent spam
 
 param()
 
@@ -8,7 +9,21 @@ param()
 . "$PSScriptRoot/whiteboard-insert.ps1"
 
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
-# Read stdin for error details (Gemini CLI pipes error info)
+
+# Rate limiting: check if we already logged a StopFailure recently
+$rateLimitFile = Join-Path $env:TEMP "claude-stopfailure-last.txt"
+if (Test-Path $rateLimitFile) {
+    try {
+        $lastLog = Get-Item $rateLimitFile
+        $elapsed = (Get-Date) - $lastLog.LastWriteTime
+        if ($elapsed.TotalMinutes -lt 60) {
+            Hook-Log "StopFailure rate-limited (last logged $([int]$elapsed.TotalMinutes)min ago)"
+            exit 0
+        }
+    } catch { }
+}
+
+# Read stdin for error details
 $errorInput = ""
 try {
     if (-not [Console]::IsInputRedirected) {
@@ -24,27 +39,22 @@ try {
 }
 
 # Truncate long error messages
-if ($errorInput.Length -gt 500) {
-    $errorInput = $errorInput.Substring(0, 500) + "... (truncated)"
+if ($errorInput.Length -gt 300) {
+    $errorInput = $errorInput.Substring(0, 300) + "... (truncated)"
 }
+
+# Update rate limit marker
+Set-Content -Path $rateLimitFile -Value $timestamp -NoNewline -ErrorAction SilentlyContinue
 
 # Build whiteboard entry
-$entry = @"
+$entry = "### $timestamp — StopFailure: API/Rate-Limit Error — Status: OFFEN"
 
-### $timestamp — StopFailure: API/Rate-Limit Error — Status: OFFEN
-**Quelle:** Hook: StopFailure (command-type, no API dependency)
-**Symptom:** Session-Turn endete durch API-Fehler
-**Details:** $errorInput
-**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
-**Status:** OFFEN
-"@
-
-# Write to whiteboard (whiteboard-insert.ps1 already sourced at top)
+# Write to whiteboard
 try {
     Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
+    Hook-Log "StopFailure logged to whiteboard"
 } catch {
-    Write-Output "[stopfailure-logger] whiteboard-insert failed — error NOT logged to whiteboard. Manual check required."
+    Hook-LogWarn "whiteboard-insert failed — StopFailure not logged"
 }
 
-Write-Output "StopFailure logged to whiteboard at $timestamp"
-
+exit 0

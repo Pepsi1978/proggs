@@ -2,16 +2,15 @@
 # UserPromptSubmit hook: Turn 1 saves goal, counter tracks session length
 # Platform: Windows (PowerShell 7+)
 #
-# The goal file is used by:
-# - intent-tracking.md rule (every ~5 turns: verify alignment)
-# - PreCompact prompt hook (preserve goal during compaction)
+# ROBUSTNESS: Non-critical hook. Any failure → exit 0 silently.
 
-. "$PSScriptRoot/hook-log.ps1"
+$ErrorActionPreference = 'SilentlyContinue'
+try { . "$PSScriptRoot/hook-log.ps1" } catch { }
 
-$GoalFile = Join-Path $env:TEMP "Gemini-session-goal.txt"
-$CounterFile = Join-Path $env:TEMP "Gemini-turn-counter.txt"
+$GoalFile = Join-Path $env:TEMP "claude-session-goal.txt"
+$CounterFile = Join-Path $env:TEMP "claude-turn-counter.txt"
 
-# Read JSON input from stdin (Gemini CLI sends hook context)
+# Read JSON input from stdin (Claude Code sends hook context)
 $json = $null
 try {
     $hookInput = [Console]::In.ReadToEnd()
@@ -28,8 +27,8 @@ if (Test-Path $CounterFile) {
 }
 
 # Reset counter if goal file is stale (older than 2 hours = new session)
-# This prevents the counter from carrying over across separate Gemini CLI sessions
-$goalFile = Join-Path $env:TEMP "Gemini-session-goal.txt"
+# This prevents the counter from carrying over across separate Claude Code sessions
+$goalFile = Join-Path $env:TEMP "claude-session-goal.txt"
 if (Test-Path $goalFile) {
     $goalAge = (Get-Date) - (Get-Item $goalFile).LastWriteTime
     if ($goalAge.TotalHours -gt 2) {
@@ -58,9 +57,8 @@ if ($turn -eq 1 -and $json) {
 # Every 5 turns: write a reminder marker file
 # Drift onset peaks at turns 4-7 (arxiv 2510.07777), so 5-turn interval catches it early
 if (($turn % 5) -eq 0 -and (Test-Path $GoalFile)) {
-    $reminderFile = Join-Path $env:TEMP "Gemini-intent-reminder.txt"
+    $reminderFile = Join-Path $env:TEMP "claude-intent-reminder.txt"
     Set-Content -Path $reminderFile -Value $turn -NoNewline
 }
 
 exit 0
-
