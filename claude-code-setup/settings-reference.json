@@ -470,7 +470,7 @@
 		"superpowers-chrome@superpowers-marketplace": true,
 		"claude-session-driver@superpowers-marketplace": true,
 		"code-review@claude-plugins-official": true,
-		"playwright@claude-plugins-official": true,
+		"playwright@claude-plugins-official": false,
 		"explanatory-output-style@claude-plugins-official": true,
 		"superpowers-lab@superpowers-marketplace": true,
 		"superpowers-developing-for-claude-code@superpowers-marketplace": true,
@@ -531,13 +531,9 @@
 		"tech-stack@context-engineering-kit": true,
 		"mcp@context-engineering-kit": true,
 		"fpf@context-engineering-kit": true,
-		"claude-code-lsps@boostvolt": false,
 		"xclaude-plugin@xclaude-plugin-marketplace": false,
 		"claude-reflect@claude-reflect-marketplace": true,
 		"coderabbit@claude-plugins-official": true,
-		"aikido@claude-plugins-official": false,
-		"spec-driven-development@context-engineering-kit": false,
-		"context-kit@FlineDev": false,
 		"second-opinion@trailofbits": true
 	},
 	"extraKnownMarketplaces": {
