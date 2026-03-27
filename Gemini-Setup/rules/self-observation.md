@@ -137,6 +137,15 @@ ZWEITE DIREKTIVE: SELBSTBEOBACHTUNG
   "Intelligenz-Vorschlag [Nummer]: [Was verbessert werden kann — konkret und verstaendlich beschrieben] → [Konkreter Vorschlag was getan werden sollte] — Soll ich das
   umsetzen?"
 
+  Ausfuehrliche Erklaerung (ABSOLUTE PFLICHT — 5 bis 7 Zeilen)
+  Zusaetzlich zum Format oben MUSS jeder Vorschlag eine 5 bis 7 Zeilen lange, ausfuehrliche Erklaerung in einfacher Sprache enthalten.
+  Diese Erklaerung beantwortet:
+  1. Was ist das Problem oder die Ineffizienz im Detail?
+  2. Was genau wuerde sich durch die Umsetzung aendern?
+  3. WARUM wird das System dadurch messbar intelligenter (Bezug auf die 8 Dimensionen der Superintelligenz)?
+  4. Wie verstaerkt dies den Compound Intelligence Effect fuer zukuenftige Sessions?
+  Diese Erklaerung ist entscheidend fuer das Verstaendnis und die Akzeptanz des Benutzers und muss in jeder Session, auch in 10 oder mehr Sessions, zu 100% umgesetzt werden.
+
   Beispiele fuer gut formulierte Vorschlaege:
 
   "Intelligenz-Vorschlag 1: Ich habe 3 Versuche gebraucht um den richtigen Hook-Pfad zu finden, weil die Pfade fuer macOS und Windows unterschiedlich sind und nirgends zentral
