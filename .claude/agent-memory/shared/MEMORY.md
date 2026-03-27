@@ -71,30 +71,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 <!-- ARCHIV (2026-03-21): safety-gate.ps1 Blockierungen (6x) und Write-Back-Warnungen (2x) — erwartetes Verhalten, kein Fehler. -->
 <!-- ARCHIV (2026-03-21): reindex-codebase.ps1 — ExitCode 1 (6x, 2026-03-21 10:44–11:25) — Timeout von 180s auf 300s erhoeht als Fix; gebuendelt zu einem Eintrag. -->
 
-<!-- ARCHIV (2026-03-25, /self-improve Cleanup): StopFailure API/Rate-Limit Errors (2026-03-21 + 2026-03-24) — temporaere API-Fehler, einmalig, kein dauerhaftes Problem. safety-gate.sh duplizierte Blockierung (2x 2026-03-21) — erwartetes Verhalten, kein Fehler. Write-Back nicht erfolgt (2026-03-22 + 2026-03-25) — Einmalige Events, memory-watchdog loggt korrekt, kein systemisches Problem. -->
-
-### 2026-03-25 20:40 — StopFailure: API/Rate-Limit Error — Status: OFFEN
-**Quelle:** Hook: StopFailure (command-type, no API dependency)
-**Symptom:** Session-Turn endete durch API-Fehler
-**Details:** {"session_id":"417bedd7-16ef-4692-a390-6008722a12c5","transcript_path":"/Users/frank/.claude/projects/-Users-frank/417bedd7-16ef-4692-a390-6008722a12c5.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"unknown","last_assistant_message":"API Error: 429 {\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"you (barwandt) have reached your session usage limit, upgrade for higher limits: https://ollama.com/upgrade\"},\"request_id\":\"req_481a6e25000bb68... (truncated)
-**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
-**Status:** OFFEN
-
-### 2026-03-25 20:43 — StopFailure: API/Rate-Limit Error — Status: OFFEN
-**Quelle:** Hook: StopFailure (command-type, no API dependency)
-**Symptom:** Session-Turn endete durch API-Fehler
-**Details:** {"session_id":"417bedd7-16ef-4692-a390-6008722a12c5","transcript_path":"/Users/frank/.claude/projects/-Users-frank/417bedd7-16ef-4692-a390-6008722a12c5.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"unknown","last_assistant_message":"API Error: 429 {\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"you (barwandt) have reached your session usage limit, upgrade for higher limits: https://ollama.com/upgrade\"},\"request_id\":\"req_29ea21d6de45387... (truncated)
-**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
-**Status:** OFFEN
-
-### 2026-03-25 20:46 — StopFailure: API/Rate-Limit Error — Status: OFFEN
-**Quelle:** Hook: StopFailure (command-type, no API dependency)
-**Symptom:** Session-Turn endete durch API-Fehler
-**Details:** {"session_id":"417bedd7-16ef-4692-a390-6008722a12c5","transcript_path":"/Users/frank/.claude/projects/-Users-frank/417bedd7-16ef-4692-a390-6008722a12c5.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"unknown","last_assistant_message":"API Error: 429 {\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"you (barwandt) have reached your session usage limit, upgrade for higher limits: https://ollama.com/upgrade\"},\"request_id\":\"req_056c5419f6bca04... (truncated)
-**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
-**Status:** OFFEN
-### [2026-03-25 21:30] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-03-26 01:45 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+<!-- ARCHIV (2026-03-25, /self-improve Cleanup): StopFailure API/Rate-Limit Errors (2026-03-21 + 2026-03-24 + 2026-03-25) — temporaere API-Fehler, einmalig, kein dauerhaftes Problem. safety-gate.sh duplizierte Blockierung (2x 2026-03-21) — erwartetes Verhalten, kein Fehler. Write-Back nicht erfolgt (2026-03-22 + 2026-03-25 + 2026-03-26) — Einmalige Events, memory-watchdog loggt korrekt, kein systemisches Problem. -->
 ---
 
 ## Systemzustand (aktuell)
