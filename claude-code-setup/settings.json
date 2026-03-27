@@ -372,7 +372,7 @@
 				"hooks": [
 					{
 						"type": "prompt",
-						"prompt": "Context was just compacted. Read /tmp/claude-session-goal.txt to recall the original user goal. Also read `~/proggs/.claude/agent-memory/shared/MEMORY.md` for project conventions and open issues. Briefly state what you were working on before compaction and what the next step should be.",
+						"prompt": "Context was just compacted. Read the session goal file by running: cat ${TMPDIR:-/tmp}/claude-session-goal.txt — this recalls the original user goal. Also read ~/proggs/.claude/agent-memory/shared/MEMORY.md for project conventions and open issues. Briefly state what you were working on before compaction and what the next step should be.",
 						"timeout": 10
 					}
 				]
