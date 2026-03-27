@@ -453,6 +453,13 @@ while IFS= read -r -d '' file; do
   node --check "$file"
 done < <(find "codex-setup/scripts" -name "*.mjs" -print0)
 
+while IFS= read -r -d '' file; do
+  if search_fixed "actions/checkout@v4" "$file" || search_fixed "actions/setup-node@v4" "$file"; then
+    echo "Deprecated GitHub Actions runtime pins remain in $file." >&2
+    exit 1
+  fi
+done < <(find ".github/workflows" \( -name "*.yml" -o -name "*.yaml" \) -print0)
+
 mkdir -p "$temp_workspace/codex-setup/agent-memory/shared"
 cp "codex-setup/agent-memory/shared/MEMORY.md" "$temp_workspace/codex-setup/agent-memory/shared/MEMORY.md"
 

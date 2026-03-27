@@ -250,6 +250,35 @@
       ],
       "created_at": "2026-03-23T23:04:38.848Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-27-github-actions-node24-runtime-upgrade",
+      "source_cli": "Codex",
+      "summary": "Codex-Setup-Workflows laufen jetzt auf der aktuellen GitHub-Actions-Runtime ohne Node-20-Warnung.",
+      "proposal_text": "💡 Intelligenz-Vorschlag: Die GitHub-Actions-Jobs erzeugen noch Node-20-Warnungen, obwohl die eigentliche Prüfung schon sauber ist — Ich hebe checkout und setup-node in den betroffenen Workflows auf die aktuelle Actions-Version an, damit die Warnung verschwindet und echte Fehler wieder klar sichtbar sind. Soll ich das umsetzen?",
+      "context_for_other_clis": "This Codex setup improvement applies to the repository workflows that validate or support the Codex workspace. GitHub currently warns that actions/checkout@v4 and actions/setup-node@v4 are running on Node.js 20, which adds noise to CI logs and can turn into a future compatibility problem. The change keeps the actual validation logic intact and only updates the action runtime surface.",
+      "why_it_was_suggested": "The warning was not a repository bug, but it still hid real signal in the CI output and pointed at a near-future runtime deprecation that should be removed before it becomes a failure.",
+      "why_it_was_implemented": "The user approved the improvement, and Codex should store the change so future sessions know that the workflow runtime itself was modernized instead of being left at the deprecated default.",
+      "how_it_was_implemented": "Codex updated the affected GitHub Actions workflows from actions/checkout@v4 to actions/checkout@v5 and from actions/setup-node@v4 to actions/setup-node@v5 in codex-setup-validate, the Tampermonkey lint workflow, the Mac and Windows build workflows, the autobump workflow, and the two Claude comparison workflows.",
+      "bridge_value": "Other CLIs can use the same small migration when GitHub reports action-runtime deprecations, because the fix keeps the job logic the same while removing noisy and eventually risky runtime warnings.",
+      "adoption_guidance": "When another workflow shows a Node runtime deprecation warning, update the pinned action versions together, verify that the job steps still behave the same, and keep the validation scripts unchanged unless the job output itself changes.",
+      "resilience_summary": "This change is durable because it removes the deprecation at the source instead of hiding it, keeps the repository validation semantics intact, and reduces the chance that future CI runs will drown real failures in warning noise.",
+      "future_failure_review": "Dependencies: the workflow pins, GitHub-hosted runner runtimes, and the validation scripts were checked together. Failure scenario: if a future action release changes behavior, the job would fail during normal validation instead of silently producing the old warning. State changes: only workflow metadata changed. Race conditions: none. Backward compatibility: the steps and scripts stayed the same. Platform effects: the update applies across GitHub-hosted Linux, macOS, and Windows jobs. Update resistance: future workflows can follow the same version bump pattern. Graceful degradation: if GitHub later changes the runtime again, the warning will reappear and point to the next migration target instead of breaking the repo.",
+      "portable_to": [
+        "Claude Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        ".github/workflows/codex-setup-validate.yml",
+        ".github/workflows/build-macos.yml",
+        ".github/workflows/build-windows.yml",
+        ".github/workflows/autobump-tampermonkey.yml",
+        ".github/workflows/lint-tampermonkey.yml",
+        ".github/workflows/claude.yml",
+        ".github/workflows/claude-code-review.yml"
+      ],
+      "created_at": "2026-03-27T19:45:45.250Z",
+      "status": "active"
     }
   ]
 }

@@ -222,6 +222,14 @@ foreach ($file in $DirectiveFiles) {
     }
 }
 
+$WorkflowFiles = Get-ChildItem -Path ".github\workflows" -Include *.yml, *.yaml -File
+foreach ($WorkflowFile in $WorkflowFiles) {
+    $WorkflowContent = Get-Content $WorkflowFile.FullName -Raw
+    if ($WorkflowContent -match "actions/checkout@v4" -or $WorkflowContent -match "actions/setup-node@v4") {
+        throw "Deprecated GitHub Actions runtime pins remain in $($WorkflowFile.FullName)"
+    }
+}
+
 if ((Get-Content "AGENTS.md" -Raw) -notmatch "OpenAI developer documentation MCP server") {
     throw "AGENTS.md must instruct Codex to use the OpenAI Docs MCP server."
 }

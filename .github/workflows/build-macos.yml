@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Projektdateien laden
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Xcode-Version anzeigen
         run: xcodebuild -version
@@ -66,7 +66,7 @@ jobs:
 
     steps:
       - name: Projektdateien laden
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Build ausfuehren
         run: |

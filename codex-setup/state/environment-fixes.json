@@ -877,6 +877,43 @@
       ],
       "created_at": "2026-03-27T19:36:38.185Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-27-github-actions-node20-warning-actions-v5",
+      "source_cli": "Codex",
+      "category": "ci-hardening",
+      "summary": "GitHub Actions workflows use current action runtimes so Node-20 warnings stop appearing in Codex setup logs.",
+      "context_for_other_clis": "This fix belongs to the Codex setup validation and supporting GitHub Actions workflows. GitHub-hosted runners reported deprecation annotations for actions/checkout@v4 and actions/setup-node@v4, which made the CI output noisier and created avoidable future risk even though the underlying checks still passed.",
+      "symptom_before_fix": "The Codex setup validation workflow and related repo workflows showed Node.js 20 deprecation annotations for actions/checkout@v4 and actions/setup-node@v4, even though the job logic itself was healthy.",
+      "root_cause": "The repository still pinned several GitHub Actions to v4, and those action versions currently run on the deprecated Node 20 runtime. GitHub now emits a warning for that runtime on hosted runners.",
+      "what_was_fixed": "Updated the affected workflows from actions/checkout@v4 to actions/checkout@v5 and from actions/setup-node@v4 to actions/setup-node@v5.",
+      "why_it_was_fixed": "The warning should be removed at the source so future sessions see clean signal, lower maintenance noise, and less chance of a surprise runtime break later.",
+      "exact_error_text": "Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-node@v4.",
+      "root_cause_why_chain": "Why 1: the workflows were pinned to v4 action versions. Why 2: those versions run on the Node 20 runtime that GitHub is deprecating. Why 3: the repository had no central upgrade sweep for the affected workflow pins, so the warning survived in multiple jobs.",
+      "related_error_sources_checked": "Checked every GitHub Actions workflow that still referenced actions/checkout@v4 or actions/setup-node@v4, including codex-setup-validate.yml, build-macos.yml, build-windows.yml, autobump-tampermonkey.yml, lint-tampermonkey.yml, claude.yml, and claude-code-review.yml.",
+      "wrong_pattern_example": "Wrong pattern: leave action pins on an old runtime and rely on the warning banner to remind people later.",
+      "right_pattern_example": "Right pattern: update the matching action pins together, keep the workflow steps the same, and revalidate so the CI output stays clean.",
+      "avoidance_rule": "If GitHub warns that a pinned action runtime is deprecated, then upgrade every matching workflow pin in the repo instead of fixing only the one job that happened to show the warning first.",
+      "resilience_summary": "The fix is defensive because it removes the warning before it becomes a hard failure, update-resilient because the workflows now target the newer action runtime, and low-risk because the job logic and validation steps did not change.",
+      "fix_induced_failure_review": "Dependencies: the workflow pins, hosted runner runtime, and repository validation scripts were reviewed together. Failure scenario: if a future action release changes behavior, the normal CI run will catch it immediately. State changes: only workflow metadata changed. Race conditions: none. Backward compatibility: the same steps still run in the same order. Platform effects: the change applies to Linux, macOS, and Windows GitHub-hosted jobs. Update resistance: future runtime shifts can be handled by the same version-bump pattern. Graceful degradation: if GitHub changes the runtime again, the warning will point to the next upgrade target instead of silently breaking validation.",
+      "verification": "Confirmed with rg that no actions/checkout@v4 or actions/setup-node@v4 references remain in .github/workflows, and the Codex setup validation workflow still uses the same step order after the version bump.",
+      "portability_notes": "Other CLIs should treat action-runtime deprecation warnings as early infrastructure work and sweep all matching workflow pins together so the same warning does not recur in sibling jobs.",
+      "impact": "",
+      "portable_to": [
+        "Claude Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        ".github/workflows/codex-setup-validate.yml",
+        ".github/workflows/build-macos.yml",
+        ".github/workflows/build-windows.yml",
+        ".github/workflows/autobump-tampermonkey.yml",
+        ".github/workflows/lint-tampermonkey.yml",
+        ".github/workflows/claude.yml",
+        ".github/workflows/claude-code-review.yml"
+      ],
+      "created_at": "2026-03-27T19:45:45.248Z",
+      "status": "active"
     }
   ]
 }
