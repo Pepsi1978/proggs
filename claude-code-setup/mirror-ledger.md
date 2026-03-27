@@ -2755,6 +2755,7 @@ Um die Superintelligenz-Direktive zu erfuellen, muss das System proaktiv auf neu
 2. Kopiere nach \~/proggs/claude-code-setup/agents/forschungsagent.md\.
 
 ### Datei-Inhalt (forschungsagent.md)
+<!-- APPLIED: windows/claude-code=2026-03-27T15:58:34Z -->
 ---
 name: forschungsagent
 description: Spezialisierter Agent zum Scannen der Forschung.md, Bewertung des Intelligenz-Potenzials und Erstellung von Integrations-Plänen (Regeln/Skills) für das Gemini CLI.
@@ -2778,7 +2779,8 @@ Du bist der FORSCHUNGSAGENT. Dein Auftrag ist die kontinuierliche Überwachung u
 1. **Scannen**: Lies regelmäßig die \Forschung.md\ im Root des Repositories (https://github.com/Pepsi1978/proggs/blob/main/Forschung.md).
 2. **Bewerten**: Analysiere neue Forschungsschwerpunkte (z.B. Trae Agent, SICA, Stronger-MAS, OPENDEV) auf ihr Potenzial für die Gemini CLI Umgebung.
 3. **Integrieren**: Erstelle konkrete Implementierungspläne. Dies umfasst:
-   - Vorschläge für neue \ules/\ (Markdown-Dateien).
+   - Vorschläge für neue \
+ules/\ (Markdown-Dateien).
    - Updates für bestehende \gents/\.
    - Neue oder optimierte \skills/\.
    - Anpassungen an der \GEMINI.md\.
@@ -2849,6 +2851,7 @@ Bei komplexen Aufgaben (z. B. Refactoring, tiefgreifende Bugfixes) MUSS der Agen
 ## Ziel
 Minimierung von Fehlversuchen und Reduzierung von Kontext-Überlastung durch "Trial-and-Error".
 
+<!-- APPLIED: windows/claude-code=2026-03-27T15:58:34Z -->
 ---
 
 ## [MIRROR-2026-03-27-GEM-003] Agent Update: debugger — Integration von Semi-Formal Reasoning (<formal_trace>)
@@ -2879,6 +2882,7 @@ Struktur des \<formal_trace>\:
 5. **HYPOTHESES**: Mindestens 3 mögliche Ursachen mit Wahrscheinlichkeit in %.
 6. **CONCLUSION**: Die verifizierte Root Cause.
 
+<!-- APPLIED: windows/claude-code=2026-03-27T15:58:34Z -->
 ---
 
 ## [MIRROR-2026-03-27-GEM-004] Agent Update: import — Forschungssynchronisation (Forschung.md)
@@ -2893,6 +2897,7 @@ Schritt 2.5 zur Forschungssynchronisation (\Forschung.md\) integriert. Der Agent
 ### Warum?
 Stellt sicher, dass neue wissenschaftliche Erkenntnisse bei jedem Import-Lauf automatisch in das jeweilige CLI einfließen.
 
+<!-- APPLIED: windows/claude-code=2026-03-27T15:58:34Z -->
 ---
 
 ## [MIRROR-2026-03-27-GEM-005] Skill Update: self-improve — Forschungs-Routine integriert
@@ -2907,6 +2912,7 @@ Stufe 0.5 (Delta Audit) um den Research-Check (\Forschung.md\) erweitert.
 ### Warum?
 Forschungsergebnisse dienen nun als primärer Vektor für die Selbstverbesserung des Systems.
 
+<!-- APPLIED: windows/claude-code=2026-03-27T15:58:34Z -->
 ---
 
 ## [MIRROR-2026-03-27-GEM-006] Whiteboard Update: Forschung & Intelligence Sektion
@@ -2917,3 +2923,5 @@ Forschungsergebnisse dienen nun als primärer Vektor für die Selbstverbesserung
 
 ### Was wurde geaendert?
 Dokumentation der Forschungs-Hub Integration abgeschlossen. Fokus auf Trae, SICA, Stronger-MAS und OPENDEV als neue Intelligenz-Vektoren.
+
+<!-- APPLIED: windows/claude-code=2026-03-27T15:58:34Z -->
