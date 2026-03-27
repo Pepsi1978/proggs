@@ -1,5 +1,5 @@
-# clawi-observation-collector.ps1 - Automatischer Gedächtnis-Staubsauger (v2 mit Kontext)
-# Scannt die OpenClaw Transkripte nach "🔍 Selbstbeobachtung" und sichert sie inkl. Kontext.
+# clawi-observation-collector.ps1 - Automatischer Gedächtnis-Staubsauger (v3 - Deep Context)
+# Scannt Transkripte nach "🔍 Selbstbeobachtung" und sichert User- + Assistant-Kontext.
 
 $ErrorActionPreference = "SilentlyContinue"
 
@@ -10,7 +10,7 @@ $MemoryDir = Join-Path $WorkspaceDir "memory"
 $Today = Get-Date -Format "yyyy-MM-dd"
 $LogFile = Join-Path $MemoryDir "$Today.md"
 
-Write-Host "🦖 Clawi Gedächtnis-Staubsauger (v2) startet..." -ForegroundColor Cyan
+Write-Host "🦖 Clawi Gedächtnis-Staubsauger (v3) startet..." -ForegroundColor Cyan
 
 # 1. Neueste Transkript finden
 $LatestFile = Get-ChildItem $SessionsDir -Filter "*.jsonl" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
@@ -39,26 +39,40 @@ for ($i = 0; $i -lt $Entries.Count; $i++) {
     if ($entry.content -match "(🔍 Selbstbeobachtung[\s\S]*?)(?=\n\n|\n💡|\n---|\z)") {
         $observation = $Matches[1].Trim()
         
-        # Kontext-Suche: Nimm die letzte Benutzer-Nachricht vor dieser Beobachtung
-        $context = "Kein Kontext gefunden."
-        for ($j = $i - 1; $j -ge 0; $j--) {
-            if ($Entries[$j].role -eq "user") {
-                $context = $Entries[$j].content.Trim()
-                if ($context.Length -gt 200) { $context = $context.Substring(0, 197) + "..." }
-                break
-            }
-        }
-        
-        # Prüfen ob bereits im Log
+        # Prüfen ob bereits im Log (substring match)
         $CurrentLog = Get-Content $LogFile -Raw
         if ($CurrentLog -match [regex]::Escape($observation)) {
             continue
         }
+
+        # --- KONTEXT-EXTRAKTION (Rückwärts-Scan) ---
+        $userContext = "Unbekannt"
+        $assistantThought = "Nicht dokumentiert"
         
-        # Anhängen mit Kontext
+        # 1. User-Input finden
+        for ($j = $i - 1; $j -ge 0; $j--) {
+            if ($Entries[$j].role -eq "user") {
+                $userContext = $Entries[$j].content.Trim()
+                if ($userContext.Length -gt 300) { $userContext = $userContext.Substring(0, 297) + "..." }
+                break
+            }
+        }
+        
+        # 2. Assistant-Thought/Reasoning finden (falls vorhanden)
+        # In OpenClaw ist das oft ein separater Part im Content oder Metadaten
+        if ($entry.thought) {
+            $assistantThought = $entry.thought.Trim()
+        } elseif ($entry.content -match "<think>([\s\S]*?)</think>") {
+            $assistantThought = $Matches[1].Trim()
+        }
+        if ($assistantThought.Length -gt 500) { $assistantThought = $assistantThought.Substring(0, 497) + "..." }
+
+        # --- LOG-BLOCK BAUEN ---
         $logBlock = "`n### 🗓️ Gesammelt am $(Get-Date -Format 'HH:mm:ss')`n"
-        $logBlock += "**Kontext (User):** $context`n`n"
-        $logBlock += "$observation`n"
+        $logBlock += "**🎯 User-Trigger:** $userContext`n`n"
+        $logBlock += "**🧠 Clawi-Reasoning (Warum mir das auffiel):**`n$assistantThought`n`n"
+        $logBlock += "**🔍 Erkenntnis:**`n$observation`n"
+        $logBlock += "**🚀 Prävention:** (Abgeleitet in ENVIRONMENT-FIXES.md oder DIREKTIVEN.md)`n"
         $logBlock += "---`n"
         
         $logBlock | Out-File $LogFile -Append -Encoding utf8
@@ -67,7 +81,7 @@ for ($i = 0; $i -lt $Entries.Count; $i++) {
 }
 
 if ($CollectorCount -gt 0) {
-    Write-Host "✅ $CollectorCount neue Beobachtung(en) mit Kontext gesichert." -ForegroundColor Green
+    Write-Host "✅ $CollectorCount neue Beobachtung(en) mit Deep Context gesichert." -ForegroundColor Green
 } else {
     Write-Host "Keine neuen Beobachtungen gefunden."
 }
