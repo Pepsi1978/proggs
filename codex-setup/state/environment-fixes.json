@@ -947,6 +947,40 @@
       ],
       "created_at": "2026-03-27T19:53:33.566Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-27-codex-nemo-mcp-registration",
+      "source_cli": "Codex",
+      "category": "mcp-registration",
+      "summary": "Codex CLI registers nemo-mcp as a live MCP server.",
+      "context_for_other_clis": "This fix belongs to the Codex CLI setup on macOS. The Nemo MCP server already existed in /Users/frank/Codex/tools/nemo-mcp/ but Codex did not load it until ~/.codex/config.toml got a dedicated [mcp_servers.nemo-mcp] block with the Bun launcher and the NIM API key. Other CLIs can reuse the same pattern when they need a lightweight knowledge worker.",
+      "symptom_before_fix": "Before the fix codex mcp list showed only code-search, codebase-memory-mcp, and openaiDeveloperDocs. Nemo tools were invisible and could not be used from Codex.",
+      "root_cause": "The server code and dependencies existed, but the Codex MCP registry in ~/.codex/config.toml had no nemo-mcp entry, so the runtime never launched the server at session start.",
+      "what_was_fixed": "Added a dedicated nemo-mcp entry in ~/.codex/config.toml, pointed it at /opt/homebrew/bin/bun run /Users/frank/Codex/tools/nemo-mcp/src/index.ts, and wired in NIM_API_KEY from the local environment. Then ran bun install in tools/nemo-mcp to ensure the SDK dependencies were present.",
+      "why_it_was_fixed": "The server is only useful if Codex can discover and launch it automatically, and the config entry makes the setup durable across sessions.",
+      "exact_error_text": "Before the fix, codex mcp list did not show nemo-mcp; only code-search, codebase-memory-mcp, and openaiDeveloperDocs were available, so Nemo tools were not reachable from Codex.",
+      "root_cause_why_chain": "Why 1: the tools existed in the repo but were not exposed through the Codex registry. Why 2: the runtime only loads MCP servers that are declared in ~/.codex/config.toml. Why 3: without a dedicated entry Codex never starts the Bun process and the tool names stay invisible in the session.",
+      "related_error_sources_checked": "Checked the same missing-registration surface in ~/.codex/config.toml, codex mcp list, the local bun install dependency path, the tools/nemo-mcp/src/index.ts tool names, and an end-to-end MCP smoke test against nemo_ask.",
+      "wrong_pattern_example": "Keep the server code in the repo and assume Codex will discover it automatically.",
+      "right_pattern_example": "Register the server in the Codex MCP config, confirm it appears in codex mcp list, and run a real tool call before treating it as installed.",
+      "avoidance_rule": "Whenever a local MCP server is added for Codex, always register it in ~/.codex/config.toml, install its dependencies, and run one real tool smoke test.",
+      "resilience_summary": "The fix is defensive because discovery and execution are both checked, survivable because it uses the stable Codex config file instead of a one-off shell session, extensible because more servers can follow the same registration pattern, documented in the ledger, and damage-free because it only changes local setup state.",
+      "fix_induced_failure_review": "Dependencies: bun, NIM_API_KEY, and the local tool path were reviewed. Failure scenario: if NIM is unavailable, the server surfaces an error instead of hiding the tool. State change: only ~/.codex/config.toml and local node_modules were touched. Race conditions: low risk because registration is static, and the server is spawned once per Codex session. Backward compatibility: existing MCP servers stayed untouched. Platform effects: Mac path uses /opt/homebrew/bin/bun while Windows needs its own launcher path. Update resistance: the repo path and launcher are explicit, so session restarts keep working. Graceful degradation: if the API key is missing, the server returns a clear error instead of breaking Codex startup.",
+      "verification": "Verified with codex mcp list showing nemo-mcp enabled and a direct MCP smoke test that listed all six Nemo tools and answered Canberra to the Australia question.",
+      "portability_notes": "Other CLIs can adopt the same pattern: keep the MCP server in the repo, register it centrally, source the API key from environment config, and smoke-test a real tool before exposing it to users.",
+      "impact": "Codex can now offload simple knowledge tasks to the free Nemotron backend and save tokens for harder reasoning.",
+      "portable_to": [
+        "Claude Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "~/.codex/config.toml",
+        "codex-setup/state/environment-fixes.json",
+        "tools/nemo-mcp/src/index.ts",
+        "tools/nemo-mcp/package.json"
+      ],
+      "created_at": "2026-03-27T20:32:43.372Z",
+      "status": "active"
     }
   ]
 }
