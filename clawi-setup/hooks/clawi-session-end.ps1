@@ -10,6 +10,12 @@ $StateFile = Join-Path $RepoDir "clawi-setup\hooks\sync-state.json"
 
 Write-Host "🦖 Clawi Auto-Backup gestartet..." -ForegroundColor Cyan
 
+# 0. Gedächtnis-Staubsauger ausführen (letzte Beobachtungen sammeln)
+$CollectorScript = Join-Path $RepoDir "clawi-setup\hooks\clawi-observation-collector.ps1"
+if (Test-Path $CollectorScript) {
+    powershell -NoProfile -File $CollectorScript
+}
+
 # 1. Identität vom lokalen Workspace in den Repo-Ordner kopieren
 if (Test-Path $SyncScript) {
     powershell -NoProfile -File $SyncScript -Mode push
