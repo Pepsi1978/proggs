@@ -1,7 +1,0 @@
-# sync-state.json - Tracks the last successful sync operations
-{
-    "last_push_timestamp": 0,
-    "last_pull_timestamp": 0,
-    "scheduled_backup_hour": 0,
-    "scheduled_pull_hour": 8
-}
