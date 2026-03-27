@@ -71,7 +71,31 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 <!-- ARCHIV (2026-03-21): safety-gate.ps1 Blockierungen (6x) und Write-Back-Warnungen (2x) — erwartetes Verhalten, kein Fehler. -->
 <!-- ARCHIV (2026-03-21): reindex-codebase.ps1 — ExitCode 1 (6x, 2026-03-21 10:44–11:25) — Timeout von 180s auf 300s erhoeht als Fix; gebuendelt zu einem Eintrag. -->
 
-<!-- ARCHIV (2026-03-25, /self-improve Cleanup): StopFailure API/Rate-Limit Errors (2026-03-21 + 2026-03-24 + 2026-03-25) — temporaere API-Fehler, einmalig, kein dauerhaftes Problem. safety-gate.sh duplizierte Blockierung (2x 2026-03-21) — erwartetes Verhalten, kein Fehler. Write-Back nicht erfolgt (2026-03-22 + 2026-03-25 + 2026-03-26) — Einmalige Events, memory-watchdog loggt korrekt, kein systemisches Problem. -->
+<!-- ARCHIV (2026-03-25, /self-improve Cleanup): StopFailure API/Rate-Limit Errors (2026-03-21 + 2026-03-24) — temporaere API-Fehler, einmalig, kein dauerhaftes Problem. safety-gate.sh duplizierte Blockierung (2x 2026-03-21) — erwartetes Verhalten, kein Fehler. Write-Back nicht erfolgt (2026-03-22 + 2026-03-25) — Einmalige Events, memory-watchdog loggt korrekt, kein systemisches Problem. -->
+
+### 2026-03-25 20:40 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+**Quelle:** Hook: StopFailure (command-type, no API dependency)
+**Symptom:** Session-Turn endete durch API-Fehler
+**Details:** {"session_id":"417bedd7-16ef-4692-a390-6008722a12c5","transcript_path":"/Users/frank/.claude/projects/-Users-frank/417bedd7-16ef-4692-a390-6008722a12c5.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"unknown","last_assistant_message":"API Error: 429 {\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"you (barwandt) have reached your session usage limit, upgrade for higher limits: https://ollama.com/upgrade\"},\"request_id\":\"req_481a6e25000bb68... (truncated)
+**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
+**Status:** OFFEN
+
+### 2026-03-25 20:43 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+**Quelle:** Hook: StopFailure (command-type, no API dependency)
+**Symptom:** Session-Turn endete durch API-Fehler
+**Details:** {"session_id":"417bedd7-16ef-4692-a390-6008722a12c5","transcript_path":"/Users/frank/.claude/projects/-Users-frank/417bedd7-16ef-4692-a390-6008722a12c5.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"unknown","last_assistant_message":"API Error: 429 {\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"you (barwandt) have reached your session usage limit, upgrade for higher limits: https://ollama.com/upgrade\"},\"request_id\":\"req_29ea21d6de45387... (truncated)
+**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
+**Status:** OFFEN
+
+### 2026-03-25 20:46 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+**Quelle:** Hook: StopFailure (command-type, no API dependency)
+**Symptom:** Session-Turn endete durch API-Fehler
+**Details:** {"session_id":"417bedd7-16ef-4692-a390-6008722a12c5","transcript_path":"/Users/frank/.claude/projects/-Users-frank/417bedd7-16ef-4692-a390-6008722a12c5.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"unknown","last_assistant_message":"API Error: 429 {\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"you (barwandt) have reached your session usage limit, upgrade for higher limits: https://ollama.com/upgrade\"},\"request_id\":\"req_056c5419f6bca04... (truncated)
+**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
+**Status:** OFFEN
+### [2026-03-25 21:30] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### [2026-03-25 22:20] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-03-27 18:29 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 95%
 ---
 
 ## Systemzustand (aktuell)
@@ -129,26 +153,12 @@ _Noch keine Eintraege._
 <!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
-- **[2026-03-27 02:30] Code-Suche Index:** 14 Dateien, 59 Chunks indexiert.
 ## UI/UX-Patterns
 <!-- Writer: ui-polisher Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
 ## Forschung & Intelligence
-<!-- researcher, intelligence-researcher, forschungsagent schreiben hierher -->
-<!-- PRIMAERE QUELLE: ~/proggs/Forschung.md (zentraler Forschungs-Hub, gepflegt von allen CLIs) -->
-<!-- Forschungs-Hub-Anbindung: v5.22 (2026-03-27) — self-improve liest Forschung.md in Stufe 0b -->
-<!-- Forschungsagent: ~/.claude/agents/forschungsagent.md — bewertet Paper mit 4-Kriterien-Framework -->
-<!-- Import-Agent: Schritt 6b prueft Forschung.md bei jedem Session-Start auf neue Eintraege -->
-
-- **[2026-03-27] Trae Agent: Ensemble-Reasoning fuer Repository-Level Issue Resolution (arxiv 2507.23370)** — Status: EVALUIERT | Quelle: https://arxiv.org/abs/2507.23370 | Empfehlung: JA spaeter
-  Erster Agent-basierter Ensemble-Reasoning-Ansatz. Modulare Agenten fuer Generation, Pruning und Selection. Top-Position auf SWE-bench Verified (Pass@1: 75.20%). Pruning-Konzept koennte quality-gate und mar-reviewer drastisch verbessern. Quelle: Forschung.md Forschungs-Hub.
-
-- **[2026-03-27] OPENDEV: CLI-based Agents and Context Management (arxiv 2603.05344)** — Status: NEU | Quelle: https://arxiv.org/abs/2603.05344 | Empfehlung: JA spaeter
-  Dual-Agent Architektur (Planung vs. Ausfuehrung), adaptive Kontext-Kompaktierung und "Lazy Tool Discovery". Besonders relevant fuer Claude Code und Codex, um Reasoning-Degradierung in langen Sessions zu verhindern. Quelle: Forschung.md Forschungs-Hub.
-
-- **[2026-03-27] Agentic Code Reasoning — Semi-Formal Reasoning fuer Fault Localization (arxiv 2603.01896)** — Status: NEU | Quelle: https://arxiv.org/abs/2603.01896 | Empfehlung: JA spaeter
-  Strukturierte Methodik: Agenten stellen explizite Praemissen auf und tracen Ausfuehrungspfade bevor sie Schluesse ziehen. Erhoehung der Genauigkeit bei Fehlersuche. Umsetzbar als Update der debugger.md Instruktionen fuer alle drei CLIs. Quelle: Forschung.md Forschungs-Hub.
+<!-- researcher, intelligence-researcher schreiben hierher -->
 
 - **[2026-03-20] SICA: Self-Improving Coding Agent (arxiv 2504.15228)** — Status: UMZUSETZEN | Quelle: https://arxiv.org/abs/2504.15228 | Empfehlung: JA sofort
   Agent bearbeitet seinen eigenen Code via LLM-Reflexion ohne Trainingsgradienten. +17-53% auf SWE-Bench Verified. Kein Meta-Agent/Target-Agent-Trennungskonzept noetig. Umsetzbar als /self-improve v6: Agent analysiert eigene Fehler → editiert eigene Agent-Dateien.
@@ -189,7 +199,6 @@ _Noch keine Eintraege._
 - **[2026-03-25] Cursor OS-Level Sandboxing** — Status: EVALUIERT | Empfehlung: JA spaeter
   Praeventive Sandbox statt reaktiver Blockierung. Naechste Evolution des safety-gate als Defense-in-Depth Schicht 2.
 
-- **[2026-03-27 02:02] Cross-CLI Delta:** Codex(1), Gemini(1) neue Commits — Bruecke starten fuer Details.
 ---
 
 ## Meta-Intelligenz & Selbstverbesserung
@@ -216,7 +225,6 @@ _Noch keine Eintraege._
 
 - **[2026-03-25] intelligence-checker**: [WARNING] Session 417bedd7 (47 Turns) hatte keinen Intelligenz-Vorschlag
 - **[2026-03-25] self-observation-checker**: [WARNING] Session 417bedd7 (47 Turns) zeigte keine Selbstbeobachtung
-- **[2026-03-26] intelligence-checker**: [WARNING] Session 919451e3 (14 Turns) hatte keinen Intelligenz-Vorschlag
 ---
 
 ## Regeln & Konventionen
