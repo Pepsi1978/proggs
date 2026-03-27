@@ -811,6 +811,39 @@
       ],
       "created_at": "2026-03-24T22:59:58.943Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-27-shell-wrappers-missing-exec-bit",
+      "source_cli": "Codex",
+      "category": "setup-hardening",
+      "summary": "All Codex shell wrapper scripts now carry the executable bit.",
+      "context_for_other_clis": "This fix belongs to the Codex setup layer. Several repo scripts are documented and invoked as direct shell wrappers, but the checkout had them stored as plain readable files without the executable bit. That prevented direct invocation on macOS and other Unix-like environments and forced a shell-specific workaround that should not be required.",
+      "symptom_before_fix": "Attempting to run codex-setup/scripts/whiteboard-insert.sh directly failed with a permission error even though the script contents were valid.",
+      "root_cause": "The repository tracked the shell wrapper files without the executable mode bit, so direct execution failed even though the files existed and contained correct shell logic.",
+      "what_was_fixed": "Applied chmod +x to codex-setup/scripts/*.sh so the full family of Codex shell wrappers can be executed directly again.",
+      "why_it_was_fixed": "Direct execution is the intended and documented usage pattern for these wrappers, and missing mode bits create avoidable friction across sessions and platforms.",
+      "exact_error_text": "zsh:1: permission denied: codex-setup/scripts/whiteboard-insert.sh",
+      "root_cause_why_chain": "Why 1: the wrapper could not be executed directly. Why 2: the file lacked the executable bit. Why 3: the whole shell-wrapper family had been checked in as readable files instead of executable launchers, so the same failure class affected every .sh wrapper in codex-setup/scripts.",
+      "related_error_sources_checked": "Checked the same failure class across all shell wrappers in codex-setup/scripts, the same execution surface for direct wrapper calls, and the same dependency surface used by the whiteboard insert and writeback helpers.",
+      "wrong_pattern_example": "Wrong pattern: assume a .sh file can always be executed directly just because it exists in the repository.",
+      "right_pattern_example": "Right pattern: ensure shell wrapper files in codex-setup/scripts are executable and verify the direct-invocation path instead of depending on an implicit bash fallback.",
+      "avoidance_rule": "If a Codex setup script is meant to be a direct shell wrapper, then verify and preserve the executable bit in the repository and after checkout.",
+      "resilience_summary": "The fix is defensive because it repairs the whole shell-wrapper class, survivable because future sessions can invoke the scripts directly again, extensible because any new .sh wrapper will follow the same executable-mode convention, documented in the ledger, and damage-free because it changes file mode only.",
+      "fix_induced_failure_review": "Dependencies: direct wrapper invocation, repository file mode tracking, and the whiteboard/writeback helper paths were reviewed together. Failure scenario: if the mode bit is missing again, direct execution fails loudly instead of silently doing the wrong thing. State changes: only executable file mode changes. Race conditions: none. Backward compatibility: scripts still run via bash if needed. Platform effects: Unix-like shells benefit directly; Windows .ps1 wrappers are unaffected. Update resistance: file mode survives future sessions if preserved in git. Graceful degradation: if a wrapper is still invoked through bash, it continues to work.",
+      "verification": "Verified by rerunning /Users/frank/Codex/codex-setup/scripts/whiteboard-insert.sh directly after chmod +x and confirming it succeeds without the Bash fallback.",
+      "portability_notes": "Any CLI workspace that relies on direct .sh wrapper invocation should keep executable bits under version control and check them in validation. The same class of bug will otherwise recur on fresh clones, new machines, or after mode-bit drift.",
+      "impact": "Direct invocation of Codex shell wrappers now works again on Unix-like hosts.",
+      "portable_to": [
+        "Claude Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "codex-setup/scripts/*.sh",
+        "codex-setup/scripts/whiteboard-insert.sh",
+        "codex-setup/scripts/writeback-enforcer.sh"
+      ],
+      "created_at": "2026-03-27T19:14:45.345Z",
+      "status": "active"
     }
   ]
 }

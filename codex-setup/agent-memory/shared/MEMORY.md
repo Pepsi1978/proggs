@@ -235,6 +235,8 @@ Alle acht Dimensionen muessen wachsen. Schnell schlechter Code ist nicht intelli
 
 - **[2026-03-23 12:15] self-improve**: Codex hat jetzt self-observation als zweite Direktive, eine wiederverwendbare Claude Code-Bruecke in codex-setup/bridges/ und einen Claude-Delta-Audit fuer Regeln, Agenten, Prozesse, Setup-Verbesserungen sowie umgebungsbezogene Fehlerfixes.
 
+[2026-03-27] user-directives: Der Benutzer hat die drei Hauptdirektiven erneut in Langform bestaetigt; die operative Fassung bleibt unter ## Oberste Direktive, und die Langform ist als dauerhaft relevante Referenz fuer spaetere Sessions zu behandeln.
+
 ---
 
 ## Erkenntnisse aus Code Reviews

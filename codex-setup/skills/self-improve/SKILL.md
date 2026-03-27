@@ -36,6 +36,7 @@ System hierarchy:
 - agents, researchers, MCP usage, automation, validation, and memory all serve the same direction:
   making this Codex environment smarter at programming every session
 - the whiteboard section `## Oberste Direktive` is the first directive to read before any substantial action
+- the user-confirmed long form of the three main directives from 2026-03-27 remains a durable reference for future interpretation; the operational form stays in the whiteboard's `## Oberste Direktive`
 
 Hard rules:
 - Work only in the current `Codex` workspace.
