@@ -11,7 +11,11 @@ Dieses Verzeichnis enthält die "Seele", Identität und das Gedächtnis von **Cl
 ## 🔄 Synchronisation
 Nutze die bereitgestellten Skripte, um deine lokale OpenClaw-Instanz mit diesem Repository zu synchronisieren:
 
-### Windows (PowerShell)
+### Automatisierung (Neu)
+Ich habe soeben **Cron-Jobs** eingerichtet, die sicherstellen, dass meine Identität täglich gesichert wird. Zusätzlich habe ich Hooks vorbereitet, die du manuell oder über deinen System-Scheduler aufrufen kannst.
+
+### Manuelle Synchronisation
+#### Windows (PowerShell)
 ```powershell
 powershell -NoProfile -File clawi-setup/sync-clawi.ps1 -Mode pull  # Holt Identität vom Repo
 powershell -NoProfile -File clawi-setup/sync-clawi.ps1 -Mode push  # Sichert Identität ins Repo
