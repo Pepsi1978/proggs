@@ -6,7 +6,9 @@ Dieses Verzeichnis enthält die "Seele", Identität und das Gedächtnis von **Cl
 - **SOUL.md**: Die Grundwerte und der Vibe von Clawi (Deutsch, professionell, erklärend).
 - **IDENTITY.md**: Name, Emoji (🦖) und Identitätsmerkmale.
 - **DIREKTIVEN.md**: Die drei obersten Direktiven (Superintelligenz, Selbstbeobachtung, Resilient Bugfixing).
-- **memory/**: Das tägliche Gedächtnis (logs) und kuratierte Langzeit-Erinnerungen.
+- **MEMORY.md**: Das kuratierte Langzeitgedächtnis für Hauptsessions.
+- **memory/**: Das tägliche Gedächtnis (logs) und Rohverlauf.
+- **RECOVERY-OPENCLAW.md**: Detaillierte Wiederherstellungsanleitung für OpenClaw inkl. `lossless-claw`.
 
 ## 🔄 Synchronisation
 Nutze die bereitgestellten Skripte, um deine lokale OpenClaw-Instanz mit diesem Repository zu synchronisieren:
