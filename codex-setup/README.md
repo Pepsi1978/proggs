@@ -192,6 +192,8 @@ So wird sichtbar, was Codex in der aktuellen Session noch nicht hatte, bevor neu
 
 Nach dem Rebase stellt er auf Windows ausserdem die lokale `.mcp.json` aus `codex-setup/mcp-windows.json` wieder her,
 damit plattformbedingte MCP-Pfaddrift nicht in die laufende Session uebernommen wird.
+Ausserdem prueft er den lokalen `core.hooksPath` und setzt ihn bei Bedarf wieder auf
+`codex-setup/hooks/`, damit der Pre-Commit-Guard auch in frischen oder verschobenen Workspaces aktiv bleibt.
 
 ## Git-Hook-Installation
 

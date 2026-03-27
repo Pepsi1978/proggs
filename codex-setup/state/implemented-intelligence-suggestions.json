@@ -309,6 +309,34 @@
       ],
       "created_at": "2026-03-27T19:58:07.549Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-27-session-start-sync-repair-hooks-path",
+      "source_cli": "Codex",
+      "summary": "Session-Start-Sync repariert den lokalen Git-Hook-Pfad jetzt selbst.",
+      "proposal_text": "💡 Intelligenz-Vorschlag: Neue Klone brauchen den Hook-Installer einmal, und verschobene Workspaces verlieren manchmal den lokalen Hook-Pfad - Ich erweitere `session-start-sync`, damit es `core.hooksPath` bei Bedarf automatisch wieder auf `codex-setup/hooks/` setzt. Soll ich das umsetzen?",
+      "context_for_other_clis": "This Codex setup improvement applies to the session-start synchronization path. The local pre-commit hook is now part of the supported workflow, but fresh clones or relocated workspaces can still lose the Git hooks configuration. Session-start-sync is the best place to repair that drift because it already runs before new work is started and before the user depends on the workspace state.",
+      "why_it_was_suggested": "The earlier hook installer works, but it still requires a one-time setup or a stable local config. Repairing the hook path at session start removes that last manual dependency.",
+      "why_it_was_implemented": "The user approved the follow-up idea, and Codex should preserve the self-healing path so future sessions know the hook installation is not just documented but also automatically restored when needed.",
+      "how_it_was_implemented": "Codex extended codex-setup/scripts/session-start-sync.mjs to inspect the local core.hooksPath, compare it against codex-setup/hooks, and reset it when the stored path is missing or drifted. The README now documents that behavior so the session-start helper is understood as a self-healing entry point, not just a sync wrapper.",
+      "bridge_value": "Other CLIs can reuse the same pattern by making session-start synchronization repair the local hook path before doing any other work. That keeps commit guards alive even when a workspace moves, a new clone is created, or a local config is dropped.",
+      "adoption_guidance": "If another CLI relies on a local Git hook guard, its session-start path should verify the hooksPath, repair it when necessary, and document the behavior next to the bootstrap steps so the protection is obvious on fresh setups.",
+      "resilience_summary": "The change is durable because it removes the last manual step from the hook guard path. New sessions now get the same protection automatically, so the commit guard survives cloned workspaces, moved directories, and forgotten local config.",
+      "future_failure_review": "Dependencies: the session-start helper, the hook installer, the pre-commit hook, and the README guidance were reviewed together. Failure scenario: if the hook file is missing the session-start helper now fails loudly instead of pretending the guard exists; if the local config is wrong it is repaired before new work starts. State changes: only local Git config is written. Race conditions: low because the helper only reads and rewrites one Git setting. Backward compatibility: the normal sync and rebase flow stays the same. Platform effects: macOS, Linux, and Windows all use the same repair logic through the shared Node path. Update resistance: future hook-path changes can be handled in one place. Graceful degradation: if Git cannot read or write the hook path, the session fails with a clear error instead of leaving the guard half-installed.",
+      "portable_to": [
+        "Claude Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "codex-setup/scripts/session-start-sync.mjs",
+        "codex-setup/README.md",
+        "codex-setup/scripts/install-git-hooks.sh",
+        "codex-setup/scripts/install-git-hooks.ps1",
+        "codex-setup/hooks/pre-commit"
+      ],
+      "created_at": "2026-03-27T20:01:35.611Z",
+      "status": "active",
+      "updated_at": "2026-03-27T20:01:47.009Z"
     }
   ]
 }

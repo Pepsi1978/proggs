@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -40,6 +41,68 @@ function printBlock(title, body) {
   process.stdout.write(`${trimmed || "(keine aenderungen)"}\n`);
 }
 
+function normalizeGitPath(rawPath, repoRoot) {
+  const normalized = `${rawPath || ""}`.trim();
+  if (!normalized) {
+    return "";
+  }
+
+  const absolutePath = path.isAbsolute(normalized)
+    ? normalized
+    : path.resolve(repoRoot, normalized);
+  return absolutePath.replace(/\\/g, "/");
+}
+
+function ensureGitHooksPath(repoRoot) {
+  const hooksDir = path.join(repoRoot, "codex-setup", "hooks");
+  const preCommitHook = path.join(hooksDir, "pre-commit");
+
+  if (!existsSync(preCommitHook)) {
+    throw new Error(`Missing Codex pre-commit hook: ${preCommitHook}`);
+  }
+
+  const result = spawnSync(
+    "git",
+    ["config", "--local", "--get", "core.hooksPath"],
+    {
+      cwd: repoRoot,
+      encoding: "utf8",
+      stdio: "pipe",
+    },
+  );
+
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    const stdout = `${result.stdout || ""}`.trim();
+    const stderr = `${result.stderr || ""}`.trim();
+    const unexpectedOutput = [stdout, stderr].filter(Boolean).join("\n");
+    if (unexpectedOutput) {
+      throw new Error(
+        `git config --local --get core.hooksPath failed:\n${unexpectedOutput}`,
+      );
+    }
+  }
+
+  const currentHooksPath = normalizeGitPath(result.stdout, repoRoot);
+  const desiredHooksPath = hooksDir.replace(/\\/g, "/");
+
+  if (currentHooksPath !== desiredHooksPath) {
+    runGit(["config", "--local", "core.hooksPath", desiredHooksPath], {
+      cwd: repoRoot,
+    });
+    process.stdout.write(
+      "[session-start-sync] core.hooksPath wurde auf den Codex-Hook-Pfad gesetzt.\n",
+    );
+    return;
+  }
+
+  process.stdout.write(
+    "[session-start-sync] core.hooksPath zeigt bereits auf den Codex-Hook-Pfad.\n",
+  );
+}
+
 function restoreMcpConfig(repoRoot) {
   const helperPath = path.join(
     __dirname,
@@ -75,6 +138,10 @@ async function main() {
   }).trim();
 
   process.stdout.write(`[session-start-sync] Arbeitsbereich: ${repoRoot}\n`);
+  process.stdout.write(
+    "[session-start-sync] Stelle bei Bedarf den lokalen Git-Hook-Pfad wieder her...\n",
+  );
+  ensureGitHooksPath(repoRoot);
   process.stdout.write(
     "[session-start-sync] Hole origin/main und zeige die Differenz vor dem Rebase...\n",
   );
