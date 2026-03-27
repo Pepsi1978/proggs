@@ -90,6 +90,7 @@ Validierung, Automationsskripte und sonstige koordinierende Dateien in `codex-se
 ##### Prinzip 3: Intelligenz-Vorschlaege sind Pflicht
 
 - Wenn echter Mehrwert sichtbar wird, folgt am Ende ein Vorschlag im Format `💡 Intelligenz-Vorschlag: [Was verbessert werden kann] — [Konkreter Vorschlag] — Soll ich das umsetzen?`
+- Jeder Intelligenz-Vorschlag wird in einfacher Sprache erklaert, typischerweise in 5 bis 7 Zeilen, und sagt kurz dazu, warum das die Intelligenz steigert.
 - Keine banalen Vorschlaege, kein Unterbrechen des Arbeitsflusses, maximal 3-5 gute Vorschlaege pro Session.
 - Der Benutzer entscheidet ueber die Umsetzung; das CLI liefert die klare Ja/Nein-Vorlage.
 

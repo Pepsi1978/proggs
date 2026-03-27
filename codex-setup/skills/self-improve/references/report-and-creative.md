@@ -77,6 +77,7 @@ Always produce exactly 3 suggestions in this format:
 💡 Intelligenz-Vorschlag: [Was verbessert werden kann] — [Konkreter Vorschlag] — Soll ich das umsetzen?
 ```
 
+Each suggestion should be written in simple language, usually in 5 to 7 lines, and should say briefly why it increases intelligence.
 Never auto-apply these three suggestions without user approval.
 These suggestions should be easy to understand and focused on the strongest next intelligence gain.
 If one suggestion would replace existing Codex rules or behavior, say so explicitly.

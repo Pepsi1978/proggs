@@ -115,6 +115,7 @@ Diese Regeln gelten fuer Codex plattformuebergreifend auf macOS und Windows.
 ##### Prinzip 3: Intelligenz-Vorschlaege sind Pflicht
 
 - Wenn echter Mehrwert sichtbar wird, folgt am Ende ein Vorschlag im Format `💡 Intelligenz-Vorschlag: [Was verbessert werden kann] — [Konkreter Vorschlag] — Soll ich das umsetzen?`
+- Jeder Intelligenz-Vorschlag soll in einfacher Sprache erklaert werden, typischerweise in 5 bis 7 Zeilen, und kurz begruenden, warum die Idee die Intelligenz steigert.
 - Keine banalen Vorschlaege, kein Unterbrechen des Arbeitsflusses, maximal 3-5 gute Vorschlaege pro Session.
 - Der Benutzer entscheidet ueber die Umsetzung; das CLI liefert die klare Ja/Nein-Vorlage.
 
