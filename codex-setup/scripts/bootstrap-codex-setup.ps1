@@ -17,19 +17,22 @@ Set-Location $RepoRoot
 Write-Host "Codex bootstrap startet im Workspace $RepoRoot"
 
 if (-not $SkipInstall) {
-    Write-Host "[1/2] Installiere self-improve lokal nach ~/.codex/skills ..."
+    Write-Host "[1/3] Installiere self-improve lokal nach ~/.codex/skills ..."
     & (Join-Path $ScriptDir "install-self-improve.ps1")
+    Write-Host "[2/3] Konfiguriere Git-Hooks fuer den lokalen Pre-Commit-Scanner ..."
+    & (Join-Path $ScriptDir "install-git-hooks.ps1")
 }
 else {
-    Write-Host "[1/2] self-improve-Installation uebersprungen (--SkipInstall)."
+    Write-Host "[1/3] self-improve-Installation uebersprungen (--SkipInstall)."
+    Write-Host "[2/3] Git-Hook-Installation uebersprungen (--SkipInstall)."
 }
 
 if (-not $SkipValidate) {
-    Write-Host "[2/2] Validiere codex-setup ..."
+    Write-Host "[3/3] Validiere codex-setup ..."
     & (Join-Path $ScriptDir "validate-codex-setup.ps1")
 }
 else {
-    Write-Host "[2/2] Validierung uebersprungen (--SkipValidate)."
+    Write-Host "[3/3] Validierung uebersprungen (--SkipValidate)."
 }
 
 Write-Host "Bootstrap abgeschlossen."

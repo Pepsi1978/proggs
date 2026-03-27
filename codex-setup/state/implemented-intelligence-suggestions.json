@@ -279,6 +279,36 @@
       ],
       "created_at": "2026-03-27T19:45:45.250Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-27-pre-commit-workflow-pin-guard",
+      "source_cli": "Codex",
+      "summary": "Lokaler Pre-Commit-Guard fuer GitHub-Actions-Runtime-Pins ist jetzt installiert und automatisiert.",
+      "proposal_text": "💡 Intelligenz-Vorschlag: Alte GitHub-Actions-Pins werden oft erst in GitHub Actions entdeckt - Ich richte einen lokalen Pre-Commit-Hook ein, der denselben Runtime-Pin-Scanner vor jedem Commit laeuft und veraltete Pins sofort beim Aendern stoppt. Soll ich das umsetzen?",
+      "context_for_other_clis": "This Codex setup improvement applies to the repository-owned Git workflow. The earlier runtime-pin scanner could catch deprecated actions during validation, but a local commit guard is stronger because it stops the bad change before it is even pushed or handed to CI. The hook is installed through repo-local Git configuration so the protection travels with the workspace and does not depend on remembering a manual command.",
+      "why_it_was_suggested": "The CI warning was a late signal. A local hook moves the check closer to the edit moment, which saves time and prevents avoidable round-trips through GitHub Actions.",
+      "why_it_was_implemented": "The user approved the idea, and Codex should preserve the full path so later sessions know that the scanner is available both in validation and as an automatic commit gate.",
+      "how_it_was_implemented": "Codex added codex-setup/hooks/pre-commit, codex-setup/scripts/install-git-hooks.sh, codex-setup/scripts/install-git-hooks.ps1, updated the bootstrap scripts to install the hook automatically, and wired the validators and README to treat the hook as part of the supported Codex setup.",
+      "bridge_value": "Other CLIs can copy the same pattern: keep the scanner as a standalone script, add a Git hook that calls it, and provide a small installer that writes core.hooksPath so the guard is active without manual setup.",
+      "adoption_guidance": "If another CLI wants the same guard, it should keep the scanner logic separate from the hook wrapper, make the installer idempotent, and record the hook path in its setup docs so the protection is easy to reapply on a new machine.",
+      "resilience_summary": "The change is durable because it does not rely on memory or CI feedback alone. The repository now has a local guard, a documented installer, a bootstrap path, and validation coverage, so the same warning should be blocked much earlier in future sessions.",
+      "future_failure_review": "Dependencies: the hook file, the installer scripts, the bootstrap scripts, and the runtime-pin scanner must stay aligned. Failure scenario: if the hook path is not configured the guard does not run; if node is missing the hook fails loudly instead of silently allowing a bad commit. State changes: only local Git configuration is written by the installer, while the repository files remain ordinary tracked setup artifacts. Race conditions: low because the hook only reads workflow files. Backward compatibility: validation still works even if the hook is not installed yet. Platform effects: the same hook and installer are available on macOS, Linux, and Windows. Update resistance: future action pin changes can reuse the same scanner and hook. Graceful degradation: if the hook cannot run, the installer and validator still expose the issue instead of hiding it.",
+      "portable_to": [
+        "Claude Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "codex-setup/hooks/pre-commit",
+        "codex-setup/scripts/install-git-hooks.sh",
+        "codex-setup/scripts/install-git-hooks.ps1",
+        "codex-setup/scripts/bootstrap-codex-setup.sh",
+        "codex-setup/scripts/bootstrap-codex-setup.ps1",
+        "codex-setup/scripts/validate-codex-setup.sh",
+        "codex-setup/scripts/validate-codex-setup.ps1",
+        "codex-setup/README.md"
+      ],
+      "created_at": "2026-03-27T19:58:07.549Z",
+      "status": "active"
     }
   ]
 }

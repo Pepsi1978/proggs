@@ -100,6 +100,8 @@ $RequiredFiles = @(
     "codex-setup\scripts\check-github-actions-runtime-pins.mjs",
     "codex-setup\scripts\check-github-actions-runtime-pins.sh",
     "codex-setup\scripts\check-github-actions-runtime-pins.ps1",
+    "codex-setup\scripts\install-git-hooks.sh",
+    "codex-setup\scripts\install-git-hooks.ps1",
     "codex-setup\scripts\code-search-mcp-client.mjs",
     "codex-setup\scripts\code-search-mcp-client.sh",
     "codex-setup\scripts\code-search-mcp-client.ps1",
@@ -133,6 +135,7 @@ $RequiredFiles = @(
     "codex-setup\bridges\universal-mirror-bridge.md",
     "codex-setup\bridges\universal-mirror-bridge.json",
     "codex-setup\state\mirror-bridge-state.json",
+    "codex-setup\hooks\pre-commit",
     "codex-setup\skills\self-improve\SKILL.md"
 )
 
@@ -352,6 +355,14 @@ if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape('code-s
 
 if ((Get-Content "codex-setup\README.md" -Raw) -notmatch "GitHub-Actions-Runtime-Pin-Scanner") {
     throw "README.md must document the GitHub Actions runtime pin scanner."
+}
+
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape("install-git-hooks.sh")) {
+    throw "README.md must document the Git hook installer."
+}
+
+if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape("core.hooksPath")) {
+    throw "README.md must document the git hooks path configuration."
 }
 
 if ((Get-Content "codex-setup\README.md" -Raw) -notmatch [regex]::Escape('Last write mode')) {
@@ -1198,6 +1209,14 @@ if ($TempMemoryAfterFailure -match "should fail") {
 }
 
 Remove-Item -Recurse -Force $TempWorkspace -ErrorAction SilentlyContinue
+
+if (Test-Path "codex-setup\hooks\pre-commit") {
+    $PreCommitHook = (Join-Path $RepoRoot "codex-setup\hooks\pre-commit") -replace '\\', '/'
+    & bash -n $PreCommitHook
+    if ($LASTEXITCODE -ne 0) {
+        throw "Codex pre-commit hook has invalid Bash syntax."
+    }
+}
 
 if (Test-CodexMcpServer "openaiDeveloperDocs") {
     $OpenAiDocsOutput = & pwsh -NoProfile -File (Join-Path $RepoRoot "codex-setup\scripts\check-openai-docs-mcp.ps1") --timeout-ms 90000 2>&1

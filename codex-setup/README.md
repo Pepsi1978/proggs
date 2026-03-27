@@ -63,6 +63,9 @@ Wichtigste Trennung:
   GitHub-Actions-Runtime-Pin-Scanner, MCP-Konfig-Restore, gefuehrte Umgebungsfix-Erfassung,
   Intelligenzvorschlag-Logging sowie Claude- und Gemini-Delta-Audits.
 
+- `hooks/`
+  Lokale Git-Hooks fuer Codex, aktuell der Pre-Commit-Guard fuer GitHub-Actions-Runtime-Pins.
+
 - `bridges/`
   Wiederverwendbare Bruecken-Spezifikationen fuer andere CLI-Umgebungen.
   Hier liegen die universellen Direktiven fuer Superintelligenz und
@@ -145,6 +148,8 @@ Wenn Codex auf einem neuen Rechner diese Bruecken und Direktiven noch nicht kenn
 3. Optional einzelne Schritte separat ausfuehren:
    `bash codex-setup/scripts/install-self-improve.sh`,
    `pwsh -File codex-setup/scripts/install-self-improve.ps1`,
+   `bash codex-setup/scripts/install-git-hooks.sh`,
+   `pwsh -File codex-setup/scripts/install-git-hooks.ps1`,
    `bash codex-setup/scripts/validate-codex-setup.sh` oder
    `pwsh -NoProfile -File codex-setup/scripts/validate-codex-setup.ps1`
 4. Optional den Gesamtueberblick fuer Bootstrap-, Ledger- und Bridge-Adressen anzeigen:
@@ -187,6 +192,16 @@ So wird sichtbar, was Codex in der aktuellen Session noch nicht hatte, bevor neu
 
 Nach dem Rebase stellt er auf Windows ausserdem die lokale `.mcp.json` aus `codex-setup/mcp-windows.json` wieder her,
 damit plattformbedingte MCP-Pfaddrift nicht in die laufende Session uebernommen wird.
+
+## Git-Hook-Installation
+
+Der lokale Pre-Commit-Guard fuer GitHub-Actions-Runtime-Pins wird ueber einen Repo-Hook aktiviert:
+
+- `bash codex-setup/scripts/install-git-hooks.sh`
+- `pwsh -File codex-setup/scripts/install-git-hooks.ps1`
+
+Die Installation setzt `core.hooksPath` auf `codex-setup/hooks/`, damit der Pre-Commit-Check automatisch
+vor jedem Commit laeuft und veraltete Action-Pins schon vor GitHub Actions stoppt.
 
 ## MCP-Konfig-Restore
 

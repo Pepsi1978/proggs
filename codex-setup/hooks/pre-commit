@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$REPO_ROOT"
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "Codex pre-commit hook requires node, but node is not available." >&2
+  exit 1
+fi
+
+if ! output="$(node "codex-setup/scripts/check-github-actions-runtime-pins.mjs" 2>&1)"; then
+  echo "$output" >&2
+  exit 1
+fi

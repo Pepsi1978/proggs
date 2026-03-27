@@ -33,17 +33,20 @@ cd "$REPO_ROOT"
 echo "Codex bootstrap startet im Workspace $REPO_ROOT"
 
 if [[ "$skip_install" -eq 0 ]]; then
-  echo "[1/2] Installiere self-improve lokal nach ~/.codex/skills ..."
+  echo "[1/3] Installiere self-improve lokal nach ~/.codex/skills ..."
   bash "$SCRIPT_DIR/install-self-improve.sh"
+  echo "[2/3] Konfiguriere Git-Hooks fuer den lokalen Pre-Commit-Scanner ..."
+  bash "$SCRIPT_DIR/install-git-hooks.sh"
 else
-  echo "[1/2] self-improve-Installation uebersprungen (--skip-install)."
+  echo "[1/3] self-improve-Installation uebersprungen (--skip-install)."
+  echo "[2/3] Git-Hook-Installation uebersprungen (--skip-install)."
 fi
 
 if [[ "$skip_validate" -eq 0 ]]; then
-  echo "[2/2] Validiere codex-setup ..."
+  echo "[3/3] Validiere codex-setup ..."
   bash "$SCRIPT_DIR/validate-codex-setup.sh"
 else
-  echo "[2/2] Validierung uebersprungen (--skip-validate)."
+  echo "[3/3] Validierung uebersprungen (--skip-validate)."
 fi
 
 echo "Bootstrap abgeschlossen."

@@ -94,6 +94,8 @@ required_files=(
   "codex-setup/scripts/check-github-actions-runtime-pins.mjs"
   "codex-setup/scripts/check-github-actions-runtime-pins.sh"
   "codex-setup/scripts/check-github-actions-runtime-pins.ps1"
+  "codex-setup/scripts/install-git-hooks.sh"
+  "codex-setup/scripts/install-git-hooks.ps1"
   "codex-setup/scripts/code-search-mcp-client.mjs"
   "codex-setup/scripts/code-search-mcp-client.sh"
   "codex-setup/scripts/code-search-mcp-client.ps1"
@@ -127,6 +129,7 @@ required_files=(
   "codex-setup/bridges/universal-mirror-bridge.md"
   "codex-setup/bridges/universal-mirror-bridge.json"
   "codex-setup/state/mirror-bridge-state.json"
+  "codex-setup/hooks/pre-commit"
   "codex-setup/skills/self-improve/SKILL.md"
 )
 
@@ -230,6 +233,8 @@ search_fixed "nach erfolgreicher lokaler Validierung eigenstaendig committen und
 search_fixed "check-code-search-health.sh" "codex-setup/README.md"
 search_fixed "code-search-mcp-client.sh" "codex-setup/README.md"
 search_fixed "GitHub-Actions-Runtime-Pin-Scanner" "codex-setup/README.md"
+search_fixed "install-git-hooks.sh" "codex-setup/README.md"
+search_fixed "core.hooksPath" "codex-setup/README.md"
 search_fixed "Universal Mirror Bridge" "codex-setup/README.md"
 search_fixed "mirror-bridge-bootstrap.md" "codex-setup/README.md"
 search_fixed "Last write mode" "codex-setup/README.md"
@@ -456,6 +461,10 @@ done < <(find "codex-setup/scripts" -name "*.sh" -print0)
 while IFS= read -r -d '' file; do
   node --check "$file"
 done < <(find "codex-setup/scripts" -name "*.mjs" -print0)
+
+if [ -f "codex-setup/hooks/pre-commit" ]; then
+  bash -n "codex-setup/hooks/pre-commit"
+fi
 
 node "codex-setup/scripts/check-github-actions-runtime-pins.mjs"
 
