@@ -152,7 +152,7 @@ _Noch keine Eintraege._
 <!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
-- **[2026-03-27 02:02] Code-Suche Index:** 18 Dateien, 51 Chunks indexiert.
+- **[2026-03-27 02:30] Code-Suche Index:** 14 Dateien, 59 Chunks indexiert.
 ## UI/UX-Patterns
 <!-- Writer: ui-polisher Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
@@ -166,6 +166,12 @@ _Noch keine Eintraege._
 
 - **[2026-03-27] Trae Agent: Ensemble-Reasoning fuer Repository-Level Issue Resolution (arxiv 2507.23370)** — Status: EVALUIERT | Quelle: https://arxiv.org/abs/2507.23370 | Empfehlung: JA spaeter
   Erster Agent-basierter Ensemble-Reasoning-Ansatz. Modulare Agenten fuer Generation, Pruning und Selection. Top-Position auf SWE-bench Verified (Pass@1: 75.20%). Pruning-Konzept koennte quality-gate und mar-reviewer drastisch verbessern. Quelle: Forschung.md Forschungs-Hub.
+
+- **[2026-03-27] OPENDEV: CLI-based Agents and Context Management (arxiv 2603.05344)** — Status: NEU | Quelle: https://arxiv.org/abs/2603.05344 | Empfehlung: JA spaeter
+  Dual-Agent Architektur (Planung vs. Ausfuehrung), adaptive Kontext-Kompaktierung und "Lazy Tool Discovery". Besonders relevant fuer Claude Code und Codex, um Reasoning-Degradierung in langen Sessions zu verhindern. Quelle: Forschung.md Forschungs-Hub.
+
+- **[2026-03-27] Agentic Code Reasoning — Semi-Formal Reasoning fuer Fault Localization (arxiv 2603.01896)** — Status: NEU | Quelle: https://arxiv.org/abs/2603.01896 | Empfehlung: JA spaeter
+  Strukturierte Methodik: Agenten stellen explizite Praemissen auf und tracen Ausfuehrungspfade bevor sie Schluesse ziehen. Erhoehung der Genauigkeit bei Fehlersuche. Umsetzbar als Update der debugger.md Instruktionen fuer alle drei CLIs. Quelle: Forschung.md Forschungs-Hub.
 
 - **[2026-03-20] SICA: Self-Improving Coding Agent (arxiv 2504.15228)** — Status: UMZUSETZEN | Quelle: https://arxiv.org/abs/2504.15228 | Empfehlung: JA sofort
   Agent bearbeitet seinen eigenen Code via LLM-Reflexion ohne Trainingsgradienten. +17-53% auf SWE-Bench Verified. Kein Meta-Agent/Target-Agent-Trennungskonzept noetig. Umsetzbar als /self-improve v6: Agent analysiert eigene Fehler → editiert eigene Agent-Dateien.

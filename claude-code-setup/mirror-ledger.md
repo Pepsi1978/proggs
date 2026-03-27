@@ -2210,7 +2210,7 @@ curl -s http://localhost:18789/health 2>/dev/null || echo "Gateway nicht erreich
 <!-- TARGETS: macos/claude-code,windows/claude-code,codex -->
 <!-- TYPE: baseline -->
 <!-- AFFECTS: GEMINI.md, .mcp.json, claude-code-setup/agents/ -->
-<!-- APPLIED: gemini=2026-03-25T22:15:36Z | macos/claude-code=2026-03-25T22:31:00Z | windows/claude-code=PENDING | codex=PENDING -->
+<!-- APPLIED: gemini=2026-03-25T22:15:36Z | macos/claude-code=2026-03-25T22:31:00Z | windows/claude-code=2026-03-27T00:00:00Z | codex=PENDING -->
 
 ### Kontext
 Dies ist die initiale Baseline für das Gemini CLI auf macOS. Sie dokumentiert den vollständigen Systemzustand nach der Ersteinrichtung durch die Mirror Bridge. Die Gemini-Umgebung ist nun vollständig mit der Claude-Code-Infrastruktur synchronisiert und nutzt GEMINI.md als zentrales Mandat.
