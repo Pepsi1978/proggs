@@ -1,4 +1,4 @@
-# sync-clawi.ps1 - Sync Clawi's Identity/Memory between Repo and Local Workspace
+# sync-clawi.ps1 - Sync Clawi's complete identity/memory baseline between Repo and Local Workspace
 param(
     [Parameter(Mandatory=$true)]
     [ValidateSet("pull", "push")]
@@ -15,10 +15,14 @@ $FilesToSync = @(
     "DIREKTIVEN.md",
     "AGENTS.md",
     "ENVIRONMENT-FIXES.md",
+    "Forschung-clawi.md",
     "README.md",
     "HEARTBEAT.md",
     "MEMORY.md",
-    "RECOVERY-OPENCLAW.md"
+    "RECOVERY-OPENCLAW.md",
+    "health-report-template.md",
+    "sync-clawi.sh",
+    "sync-clawi.ps1"
 )
 
 if (-not (Test-Path $WorkspaceDir)) {
@@ -43,7 +47,7 @@ function Copy-IfExists {
 }
 
 if ($Mode -eq "pull") {
-    Write-Host "Pulling Clawi's Identity from Repo to $WorkspaceDir..." -ForegroundColor Cyan
+    Write-Host "Pulling Clawi's full baseline from Repo to $WorkspaceDir..." -ForegroundColor Cyan
     foreach ($file in $FilesToSync) {
         Copy-IfExists (Join-Path $RepoDir $file) (Join-Path $WorkspaceDir $file)
     }
@@ -53,7 +57,7 @@ if ($Mode -eq "pull") {
     if (Test-Path $repoMemory) {
         if (-not (Test-Path $workspaceMemory)) { New-Item -ItemType Directory $workspaceMemory -Force | Out-Null }
         Copy-Item (Join-Path $repoMemory "*") $workspaceMemory -Force -Recurse
-        Write-Host "  Updated Memory logs"
+        Write-Host "  Updated memory/"
     }
 
     $repoHooks = Join-Path $RepoDir "hooks"
@@ -61,13 +65,13 @@ if ($Mode -eq "pull") {
     if (Test-Path $repoHooks) {
         if (-not (Test-Path $workspaceHooks)) { New-Item -ItemType Directory $workspaceHooks -Force | Out-Null }
         Copy-Item (Join-Path $repoHooks "*") $workspaceHooks -Force -Recurse
-        Write-Host "  Updated hooks"
+        Write-Host "  Updated hooks/"
     }
 
-    Write-Host "Clawi's Identity is now up to date in local workspace!" -ForegroundColor Green
+    Write-Host "Clawi's full baseline is now up to date in local workspace!" -ForegroundColor Green
 }
 elseif ($Mode -eq "push") {
-    Write-Host "Pushing Clawi's Identity from $WorkspaceDir to Repo..." -ForegroundColor Cyan
+    Write-Host "Pushing Clawi's full baseline from $WorkspaceDir to Repo..." -ForegroundColor Cyan
     foreach ($file in $FilesToSync) {
         Copy-IfExists (Join-Path $WorkspaceDir $file) (Join-Path $RepoDir $file)
     }
@@ -77,7 +81,7 @@ elseif ($Mode -eq "push") {
     if (Test-Path $wsMemory) {
         if (-not (Test-Path $repoMemory)) { New-Item -ItemType Directory $repoMemory -Force | Out-Null }
         Copy-Item (Join-Path $wsMemory "*") $repoMemory -Force -Recurse
-        Write-Host "  Saved Memory logs"
+        Write-Host "  Saved memory/"
     }
 
     $wsHooks = Join-Path $WorkspaceDir "hooks"
@@ -85,8 +89,8 @@ elseif ($Mode -eq "push") {
     if (Test-Path $wsHooks) {
         if (-not (Test-Path $repoHooks)) { New-Item -ItemType Directory $repoHooks -Force | Out-Null }
         Copy-Item (Join-Path $wsHooks "*") $repoHooks -Force -Recurse
-        Write-Host "  Saved hooks"
+        Write-Host "  Saved hooks/"
     }
 
-    Write-Host "Clawi's Identity is now backed up in the repository!" -ForegroundColor Green
+    Write-Host "Clawi's full baseline is now backed up in the repository!" -ForegroundColor Green
 }
