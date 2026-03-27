@@ -1,7 +1,16 @@
 # clawi-observation-collector.ps1 - Automatischer Gedächtnis-Staubsauger (v3 - Deep Context)
-# Scannt Transkripte nach "Selbstbeobachtung" (mit Lupe) und sichert User- + Assistant-Kontext.
+# Scannt Transkripte nach "Selbstbeobachtung" und sichert User- + Assistant-Kontext.
 
 $ErrorActionPreference = "SilentlyContinue"
+
+# Unicode-Konstanten für Emojis (Windows-Resilienz)
+$Magnifier = [char]::ConvertFromUtf32(0x1F50D)
+$Bulb = [char]::ConvertFromUtf32(0x1F4A1)
+$Dino = [char]::ConvertFromUtf32(0x1F996)
+$Calendar = [char]::ConvertFromUtf32(0x1F5D3)
+$Brain = [char]::ConvertFromUtf32(0x1F9E0)
+$Target = [char]::ConvertFromUtf32(0x1F3AF)
+$Rocket = [char]::ConvertFromUtf32(0x1F680)
 
 # Pfade
 $SessionsDir = Join-Path $env:USERPROFILE ".openclaw\agents\main\sessions"
@@ -9,11 +18,6 @@ $WorkspaceDir = Join-Path $env:USERPROFILE ".openclaw\workspace"
 $MemoryDir = Join-Path $WorkspaceDir "memory"
 $Today = Get-Date -Format "yyyy-MM-dd"
 $LogFile = Join-Path $MemoryDir "$Today.md"
-
-# Unicode für Lupe (U+1F50D) und Glühbirne (U+1F4A1)
-$Magnifier = [char]::ConvertFromUtf32(0x1F50D)
-$Bulb = [char]::ConvertFromUtf32(0x1F4A1)
-$Dino = [char]::ConvertFromUtf32(0x1F996)
 
 Write-Host "$Dino Clawi Gedächtnis-Staubsauger (v3) startet..." -ForegroundColor Cyan
 
@@ -27,7 +31,7 @@ if (-not $LatestFile) {
 # 2. Daily Log initialisieren
 if (-not (Test-Path $MemoryDir)) { New-Item -ItemType Directory $MemoryDir -Force }
 if (-not (Test-Path $LogFile)) { 
-    "# 🧠 Selbstbeobachtung - $Today`n" | Out-File $LogFile -Encoding utf8 
+    "# $Brain Selbstbeobachtung - $Today`n" | Out-File $LogFile -Encoding utf8 
 }
 
 # 3. Transkript laden
@@ -40,22 +44,21 @@ for ($i = 0; $i -lt $Entries.Count; $i++) {
     $entry = $Entries[$i]
     if ($null -eq $entry -or $entry.role -ne "assistant") { continue }
     
-    # Suche nach Selbstbeobachtung (Regex mit Variable für Emoji)
+    # Suche nach Selbstbeobachtung
     $Pattern = [regex]::Escape($Magnifier) + " Selbstbeobachtung"
     if ($entry.content -match "($Pattern[\s\S]*?)(?=\n\n|\n$Bulb|\n---|$)") {
         $observation = $Matches[1].Trim()
         
-        # Prüfen ob bereits im Log (substring match)
+        # Prüfen ob bereits im Log
         $CurrentLog = Get-Content $LogFile -Raw
         if ($CurrentLog -match [regex]::Escape($observation)) {
             continue
         }
 
-        # --- KONTEXT-EXTRAKTION (Rückwärts-Scan) ---
+        # --- KONTEXT-EXTRAKTION ---
         $userContext = "Unbekannt"
         $assistantThought = "Nicht dokumentiert"
         
-        # 1. User-Input finden
         for ($j = $i - 1; $j -ge 0; $j--) {
             if ($Entries[$j].role -eq "user") {
                 $userContext = $Entries[$j].content.Trim()
@@ -64,7 +67,6 @@ for ($i = 0; $i -lt $Entries.Count; $i++) {
             }
         }
         
-        # 2. Assistant-Thought/Reasoning finden
         if ($entry.thought) {
             $assistantThought = $entry.thought.Trim()
         } elseif ($entry.content -match "<think>([\s\S]*?)</think>") {
@@ -73,11 +75,11 @@ for ($i = 0; $i -lt $Entries.Count; $i++) {
         if ($assistantThought.Length -gt 500) { $assistantThought = $assistantThought.Substring(0, 497) + "..." }
 
         # --- LOG-BLOCK BAUEN ---
-        $logBlock = "`n### 🗓️ Gesammelt am $(Get-Date -Format 'HH:mm:ss')`n"
-        $logBlock += "**🎯 User-Trigger:** $userContext`n`n"
-        $logBlock += "**🧠 Clawi-Reasoning (Warum mir das auffiel):**`n$assistantThought`n`n"
-        $logBlock += "**🔍 Erkenntnis:**`n$observation`n"
-        $logBlock += "**🚀 Prävention:** (Abgeleitet in ENVIRONMENT-FIXES.md oder DIREKTIVEN.md)`n"
+        $logBlock = "`n### $Calendar Gesammelt am $(Get-Date -Format 'HH:mm:ss')`n"
+        $logBlock += "**$Target User-Trigger:** $userContext`n`n"
+        $logBlock += "**$Brain Clawi-Reasoning (Warum mir das auffiel):**`n$assistantThought`n`n"
+        $logBlock += "**$Magnifier Erkenntnis:**`n$observation`n"
+        $logBlock += "**$Rocket Prävention:** (Abgeleitet in ENVIRONMENT-FIXES.md oder DIREKTIVEN.md)`n"
         $logBlock += "---`n"
         
         $logBlock | Out-File $LogFile -Append -Encoding utf8
@@ -86,7 +88,7 @@ for ($i = 0; $i -lt $Entries.Count; $i++) {
 }
 
 if ($CollectorCount -gt 0) {
-    Write-Host "✅ $CollectorCount neue Beobachtung(en) mit Deep Context gesichert." -ForegroundColor Green
+    Write-Host "OK. $CollectorCount neue Beobachtung(en) gesichert." -ForegroundColor Green
 } else {
     Write-Host "Keine neuen Beobachtungen gefunden."
 }

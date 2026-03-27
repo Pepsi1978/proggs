@@ -3,12 +3,16 @@
 
 $ErrorActionPreference = "SilentlyContinue"
 
+# Unicode-Konstanten für Emojis (Windows-Resilienz)
+$Dino = [char]::ConvertFromUtf32(0x1F996)
+$Bulb = [char]::ConvertFromUtf32(0x1F4A1)
+
 $LogDir = "\tmp\openclaw"
 $RepoDir = "C:\Users\barwa\Clawi"
 $ReportFile = Join-Path $RepoDir "clawi-setup\memory\system-health-report.md"
 $FixesFile = Join-Path $RepoDir "clawi-setup\ENVIRONMENT-FIXES.md"
 
-Write-Host "🦖 Log-Clean-Agent startet Analyse..." -ForegroundColor Cyan
+Write-Host "$Dino Log-Clean-Agent startet Analyse..." -ForegroundColor Cyan
 
 if (-not (Test-Path $LogDir)) {
     Write-Host "Log-Verzeichnis nicht gefunden." -ForegroundColor Red
@@ -40,9 +44,9 @@ $ReportContent += "- **WhatsApp Disconnects:** $ConnectionClosedCount`n"
 $ReportContent += "- **Timeouts:** $TimeoutCount`n"
 
 if ($EditFailedCount -gt 5) {
-    $ReportContent += "`n💡 **Intelligenz-Vorschlag:** Die Edit-Strategie greift noch nicht optimal. Eventuell müssen die Sektions-Begrenzungen im Agent-System schärfer definiert werden.`n"
+    $ReportContent += "`n$Bulb **Intelligenz-Vorschlag:** Die Edit-Strategie greift noch nicht optimal. Eventuell muessen die Sektions-Begrenzungen im Agent-System schaerfer definiert werden.`n"
 }
 
 $ReportHeader + $ReportContent | Out-File $ReportFile -Encoding utf8
 
-Write-Host "✅ Analyse abgeschlossen. Report unter clawi-setup\memory\system-health-report.md gesichert." -ForegroundColor Green
+Write-Host "OK. Analyse abgeschlossen. Report unter clawi-setup\memory\system-health-report.md gesichert." -ForegroundColor Green

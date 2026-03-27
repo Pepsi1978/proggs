@@ -3,17 +3,23 @@
 
 $ErrorActionPreference = "SilentlyContinue"
 
+# Unicode-Konstanten für Emojis (Windows-Resilienz)
+$Dino = [char]::ConvertFromUtf32(0x1F996)
+
 # Pfade
 $RepoDir = "C:\Users\barwa\Clawi"
 $SyncScript = Join-Path $RepoDir "clawi-setup\sync-clawi.ps1"
 $StateFile = Join-Path $RepoDir "clawi-setup\hooks\sync-state.json"
 
-Write-Host "🦖 Clawi Auto-Sync gestartet..." -ForegroundColor Cyan
+Write-Host "$Dino Clawi Auto-Sync gestartet..." -ForegroundColor Cyan
 
 # 1. Neueste Änderungen von GitHub holen
 Set-Location $RepoDir
 if (Test-Path ".git") {
-    git pull origin main
+    # Stash changes in clawi-setup just in case
+    git stash push clawi-setup/ -m "Auto-sync stash"
+    git pull origin main --rebase
+    git stash pop
 }
 
 # 2. Identität vom Repo-Ordner in den lokalen Workspace laden
@@ -28,4 +34,4 @@ if (Test-Path $SyncScript) {
     }
 }
 
-Write-Host "✅ Clawi ist auf dem neuesten Stand." -ForegroundColor Green
+Write-Host "OK. Clawi ist auf dem neuesten Stand." -ForegroundColor Green

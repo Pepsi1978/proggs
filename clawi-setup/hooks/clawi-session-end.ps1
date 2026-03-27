@@ -3,12 +3,15 @@
 
 $ErrorActionPreference = "SilentlyContinue"
 
+# Unicode-Konstanten für Emojis (Windows-Resilienz)
+$Dino = [char]::ConvertFromUtf32(0x1F996)
+
 # Pfade
 $RepoDir = "C:\Users\barwa\Clawi"
 $SyncScript = Join-Path $RepoDir "clawi-setup\sync-clawi.ps1"
 $StateFile = Join-Path $RepoDir "clawi-setup\hooks\sync-state.json"
 
-Write-Host "🦖 Clawi Auto-Backup gestartet..." -ForegroundColor Cyan
+Write-Host "$Dino Clawi Auto-Backup gestartet..." -ForegroundColor Cyan
 
 # 0. Gedächtnis-Staubsauger ausführen (letzte Beobachtungen sammeln)
 $CollectorScript = Join-Path $RepoDir "clawi-setup\hooks\clawi-observation-collector.ps1"
@@ -37,4 +40,4 @@ if (Test-Path ".git") {
     }
 }
 
-Write-Host "✅ Clawi Identität erfolgreich zu GitHub gesichert." -ForegroundColor Green
+Write-Host "OK. Clawi Identitaet erfolgreich zu GitHub gesichert." -ForegroundColor Green
