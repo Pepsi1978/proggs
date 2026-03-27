@@ -7,53 +7,86 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Paths
 $RepoDir = $PSScriptRoot
 $WorkspaceDir = Join-Path $env:USERPROFILE ".openclaw\workspace"
-$FilesToSync = @("SOUL.md", "IDENTITY.md", "DIREKTIVEN.md")
+$FilesToSync = @(
+    "SOUL.md",
+    "IDENTITY.md",
+    "DIREKTIVEN.md",
+    "AGENTS.md",
+    "ENVIRONMENT-FIXES.md",
+    "README.md",
+    "HEARTBEAT.md",
+    "MEMORY.md",
+    "RECOVERY-OPENCLAW.md"
+)
 
 if (-not (Test-Path $WorkspaceDir)) {
     Write-Host "Local OpenClaw workspace not found at $WorkspaceDir" -ForegroundColor Red
     exit 1
 }
 
+function Copy-IfExists {
+    param(
+        [string]$Source,
+        [string]$Destination
+    )
+
+    if (Test-Path $Source) {
+        $parent = Split-Path -Parent $Destination
+        if ($parent -and -not (Test-Path $parent)) {
+            New-Item -ItemType Directory -Path $parent -Force | Out-Null
+        }
+        Copy-Item $Source $Destination -Force
+        Write-Host "  Synced $(Split-Path $Source -Leaf)"
+    }
+}
+
 if ($Mode -eq "pull") {
-    # From Repo to Workspace
     Write-Host "Pulling Clawi's Identity from Repo to $WorkspaceDir..." -ForegroundColor Cyan
     foreach ($file in $FilesToSync) {
-        $repoFile = Join-Path $RepoDir $file
-        if (Test-Path $repoFile) {
-            Copy-Item $repoFile $WorkspaceDir -Force
-            Write-Host "  Updated $file"
-        }
+        Copy-IfExists (Join-Path $RepoDir $file) (Join-Path $WorkspaceDir $file)
     }
-    # Memory Sync (pull)
+
     $repoMemory = Join-Path $RepoDir "memory"
     $workspaceMemory = Join-Path $WorkspaceDir "memory"
     if (Test-Path $repoMemory) {
-        if (-not (Test-Path $workspaceMemory)) { New-Item -ItemType Directory $workspaceMemory -Force }
+        if (-not (Test-Path $workspaceMemory)) { New-Item -ItemType Directory $workspaceMemory -Force | Out-Null }
         Copy-Item (Join-Path $repoMemory "*") $workspaceMemory -Force -Recurse
         Write-Host "  Updated Memory logs"
     }
+
+    $repoHooks = Join-Path $RepoDir "hooks"
+    $workspaceHooks = Join-Path $WorkspaceDir "hooks"
+    if (Test-Path $repoHooks) {
+        if (-not (Test-Path $workspaceHooks)) { New-Item -ItemType Directory $workspaceHooks -Force | Out-Null }
+        Copy-Item (Join-Path $repoHooks "*") $workspaceHooks -Force -Recurse
+        Write-Host "  Updated hooks"
+    }
+
     Write-Host "Clawi's Identity is now up to date in local workspace!" -ForegroundColor Green
 }
 elseif ($Mode -eq "push") {
-    # From Workspace to Repo
     Write-Host "Pushing Clawi's Identity from $WorkspaceDir to Repo..." -ForegroundColor Cyan
     foreach ($file in $FilesToSync) {
-        $wsFile = Join-Path $WorkspaceDir $file
-        if (Test-Path $wsFile) {
-            Copy-Item $wsFile $RepoDir -Force
-            Write-Host "  Saved $file"
-        }
+        Copy-IfExists (Join-Path $WorkspaceDir $file) (Join-Path $RepoDir $file)
     }
-    # Memory Sync (push)
+
     $wsMemory = Join-Path $WorkspaceDir "memory"
     $repoMemory = Join-Path $RepoDir "memory"
     if (Test-Path $wsMemory) {
-        if (-not (Test-Path $repoMemory)) { New-Item -ItemType Directory $repoMemory -Force }
+        if (-not (Test-Path $repoMemory)) { New-Item -ItemType Directory $repoMemory -Force | Out-Null }
         Copy-Item (Join-Path $wsMemory "*") $repoMemory -Force -Recurse
         Write-Host "  Saved Memory logs"
     }
+
+    $wsHooks = Join-Path $WorkspaceDir "hooks"
+    $repoHooks = Join-Path $RepoDir "hooks"
+    if (Test-Path $wsHooks) {
+        if (-not (Test-Path $repoHooks)) { New-Item -ItemType Directory $repoHooks -Force | Out-Null }
+        Copy-Item (Join-Path $wsHooks "*") $repoHooks -Force -Recurse
+        Write-Host "  Saved hooks"
+    }
+
     Write-Host "Clawi's Identity is now backed up in the repository!" -ForegroundColor Green
 }
