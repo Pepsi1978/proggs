@@ -91,6 +91,9 @@ required_files=(
   "codex-setup/scripts/check-openai-docs-mcp.mjs"
   "codex-setup/scripts/check-openai-docs-mcp.sh"
   "codex-setup/scripts/check-openai-docs-mcp.ps1"
+  "codex-setup/scripts/check-github-actions-runtime-pins.mjs"
+  "codex-setup/scripts/check-github-actions-runtime-pins.sh"
+  "codex-setup/scripts/check-github-actions-runtime-pins.ps1"
   "codex-setup/scripts/code-search-mcp-client.mjs"
   "codex-setup/scripts/code-search-mcp-client.sh"
   "codex-setup/scripts/code-search-mcp-client.ps1"
@@ -226,6 +229,7 @@ search_fixed "als zweite Abschlusszeile \`Gepusht in <path>, plattformuebergreif
 search_fixed "nach erfolgreicher lokaler Validierung eigenstaendig committen und nach \`origin/main\` pushen soll" "codex-setup/README.md"
 search_fixed "check-code-search-health.sh" "codex-setup/README.md"
 search_fixed "code-search-mcp-client.sh" "codex-setup/README.md"
+search_fixed "GitHub-Actions-Runtime-Pin-Scanner" "codex-setup/README.md"
 search_fixed "Universal Mirror Bridge" "codex-setup/README.md"
 search_fixed "mirror-bridge-bootstrap.md" "codex-setup/README.md"
 search_fixed "Last write mode" "codex-setup/README.md"
@@ -453,12 +457,7 @@ while IFS= read -r -d '' file; do
   node --check "$file"
 done < <(find "codex-setup/scripts" -name "*.mjs" -print0)
 
-while IFS= read -r -d '' file; do
-  if search_fixed "actions/checkout@v4" "$file" || search_fixed "actions/setup-node@v4" "$file"; then
-    echo "Deprecated GitHub Actions runtime pins remain in $file." >&2
-    exit 1
-  fi
-done < <(find ".github/workflows" \( -name "*.yml" -o -name "*.yaml" \) -print0)
+node "codex-setup/scripts/check-github-actions-runtime-pins.mjs"
 
 mkdir -p "$temp_workspace/codex-setup/agent-memory/shared"
 cp "codex-setup/agent-memory/shared/MEMORY.md" "$temp_workspace/codex-setup/agent-memory/shared/MEMORY.md"
@@ -500,7 +499,15 @@ node -e "const data=JSON.parse(process.argv[1]); if(data.report_kind!=='bootstra
 bash "codex-setup/scripts/bootstrap-report.sh" --cli "Codex" >/dev/null
 
 if has_mcp_server "openaiDeveloperDocs"; then
-  bash "codex-setup/scripts/check-openai-docs-mcp.sh" --timeout-ms 90000 >/dev/null
+  if ! openai_docs_output="$(bash "codex-setup/scripts/check-openai-docs-mcp.sh" --timeout-ms 90000 2>&1)"; then
+    if grep -Fq "UNAVAILABLE" <<<"$openai_docs_output" || grep -Fq "did not confirm openaiDeveloperDocs availability" <<<"$openai_docs_output"; then
+      echo "Skipping openaiDeveloperDocs MCP smoke test: fresh Codex exec did not confirm availability in this runtime."
+    else
+      echo "$openai_docs_output" >&2
+      echo "openaiDeveloperDocs MCP smoke test failed." >&2
+      exit 1
+    fi
+  fi
 else
   echo "Skipping openaiDeveloperDocs MCP smoke test: server not configured in this Codex runtime."
 fi

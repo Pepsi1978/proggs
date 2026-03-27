@@ -60,7 +60,8 @@ Wichtigste Trennung:
 - `scripts/`
   Plattformuebergreifende Hilfsskripte fuer Whiteboard-Resolver, Whiteboard-Insert, Sentinel-Merge,
   Skill-Installation, Session-Start-Sync, Bootstrap fuer frische Rechner, Validierung, `code-search`-Healthchecks,
-  MCP-Konfig-Restore, gefuehrte Umgebungsfix-Erfassung, Intelligenzvorschlag-Logging sowie Claude- und Gemini-Delta-Audits.
+  GitHub-Actions-Runtime-Pin-Scanner, MCP-Konfig-Restore, gefuehrte Umgebungsfix-Erfassung,
+  Intelligenzvorschlag-Logging sowie Claude- und Gemini-Delta-Audits.
 
 - `bridges/`
   Wiederverwendbare Bruecken-Spezifikationen fuer andere CLI-Umgebungen.

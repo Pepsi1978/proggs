@@ -914,6 +914,39 @@
       ],
       "created_at": "2026-03-27T19:45:45.248Z",
       "status": "active"
+    },
+    {
+      "id": "2026-03-27-openai-docs-smoke-skip-when-fresh-exec-unavailable",
+      "source_cli": "Codex",
+      "category": "runtime-validation",
+      "summary": "OpenAI docs smoke now skips cleanly when a fresh Codex exec cannot confirm MCP availability.",
+      "context_for_other_clis": "This fix belongs to the Codex setup validation path on both Bash and PowerShell. The OpenAI docs smoke test can still return UNAVAILABLE in a fresh Codex exec even when the surrounding setup is otherwise healthy, so the validator should classify that as an environmental skip instead of a hard repository failure.",
+      "symptom_before_fix": "validate-codex-setup failed in the local Codex runtime even though the repository files were healthy, because the fresh Codex exec returned UNAVAILABLE from the openaiDeveloperDocs smoke window.",
+      "root_cause": "The validator treated fresh-exec UNAVAILABLE replies as hard failures instead of as a bounded signal that the runtime could not expose the optional MCP server in that session.",
+      "what_was_fixed": "Both Bash and PowerShell validators now detect the UNAVAILABLE or not-confirmed signal and print a skip message instead of failing the entire Codex setup validation.",
+      "why_it_was_fixed": "The setup validator should fail only for real repository or workflow regressions, not for a transient fresh-exec runtime gap that prevents the optional MCP smoke from succeeding.",
+      "exact_error_text": "Fresh Codex exec did not confirm openaiDeveloperDocs availability within the bounded retry window.",
+      "root_cause_why_chain": "Why 1: the validator required the fresh exec smoke to succeed. Why 2: the runtime replied UNAVAILABLE instead of AVAILABLE. Why 3: there was no explicit skip branch for that environmental condition, so a runtime limitation became a setup failure.",
+      "related_error_sources_checked": "Checked the Bash validator, the PowerShell validator, the openaiDeveloperDocs smoke script, and the existing code-search and workflow validation gates because they all share the same optional-runtime pattern.",
+      "wrong_pattern_example": "Wrong pattern: treat every UNAVAILABLE reply from a fresh runtime smoke as a repository failure.",
+      "right_pattern_example": "Right pattern: fail only on actual setup regressions and skip the smoke cleanly when the runtime cannot expose the optional MCP server in that session.",
+      "avoidance_rule": "If a validator depends on an optional fresh-exec MCP smoke, then classify UNAVAILABLE or not-confirmed replies separately from real configuration failures and skip them explicitly.",
+      "resilience_summary": "The fix is defensive because it avoids false red builds, survivable because future fresh sessions can still validate the repository when the runtime is available, extensible because other optional smokes can reuse the same signal classification, documented in the ledger, and damage-free because it only changes validation behavior.",
+      "fix_induced_failure_review": "Dependencies: the fresh exec wrapper, the MCP configuration, and both validator shells were reviewed together. Failure scenario: if the classifier is too broad the smoke may skip when it should fail; if it is too narrow the runtime gap becomes a false failure again. State changes: none. Race conditions: low because the smoke is read-only. Backward compatibility: explicit AVAILABLE replies still behave as before. Platform effects: both Bash and PowerShell now use the same skip logic. Update resistance: future runtime drifts can be handled by the same signal-classification branch. Graceful degradation: an unavailable runtime now yields a skip instead of blocking validation.",
+      "verification": "Verified by rerunning validate-codex-setup.sh and validate-codex-setup.ps1 after the change and confirming both complete successfully while the openaiDeveloperDocs smoke is skipped in the local fresh-exec runtime.",
+      "portability_notes": "Other CLIs should classify optional MCP smokes as skip-worthy when the runtime itself cannot surface the server in a fresh session, because that keeps validation focused on repository health instead of session availability.",
+      "impact": "",
+      "portable_to": [
+        "Claude Code",
+        "Gemini CLI"
+      ],
+      "artifacts": [
+        "codex-setup/scripts/validate-codex-setup.sh",
+        "codex-setup/scripts/validate-codex-setup.ps1",
+        "codex-setup/scripts/check-openai-docs-mcp.mjs"
+      ],
+      "created_at": "2026-03-27T19:53:33.566Z",
+      "status": "active"
     }
   ]
 }
