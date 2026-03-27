@@ -7,20 +7,20 @@ Diese Datei ist das zentrale Mandat für die Gemini CLI in diesem Projekt. Sie b
 Das Ziel: **Die intelligenteste Programmierumgebung der Welt werden.**
 
 Drei Haupt-Direktiven (Priorität absteigend):
-1. **Superintelligenz** (siehe `claude-code-setup/rules/superintelligence.md`) — Exponentielle Intelligenzsteigerung.
-2. **Selbstbeobachtung** (siehe `claude-code-setup/rules/self-observation.md`) — Jede Aktion beobachten, Fehler analysieren, Intelligenz-Vorschläge generieren.
-3. **Resilient Bugfixing** (siehe `claude-code-setup/rules/resilient-bugfixing.md`) — Jeder Bug genau einmal. 5-Schritte-Fix.
+1. **Superintelligenz** (siehe `Gemini-Setup/rules/superintelligence.md`) — Exponentielle Intelligenzsteigerung.
+2. **Selbstbeobachtung** (siehe `Gemini-Setup/rules/self-observation.md`) — Jede Aktion beobachten, Fehler analysieren, Intelligenz-Vorschläge generieren.
+3. **Resilient Bugfixing** (siehe `Gemini-Setup/rules/resilient-bugfixing.md`) — Jeder Bug genau einmal. 5-Schritte-Fix.
 
 ## 2. Sprache & Interaktion
 
 - **Sprache:** Alle Interaktionen, Erklärungen und Intelligenz-Vorschläge erfolgen auf **Deutsch**.
 - **Code & Commits:** Quellcode, Kommentare und Commit-Messages erfolgen auf **Englisch**.
 - **Agenten & Skills:** Alle selbst erstellten Agenten, Skills und Commands müssen **komplett auf Deutsch** verfasst sein (Description, Examples, System-Prompt).
-- **Whisper-Trigger:** Deutsche Sprachbefehle (via Whisper) werden gemäß `claude-code-setup/rules/german-skill-triggers.md` zugeordnet.
+- **Whisper-Trigger:** Deutsche Sprachbefehle (via Whisper) werden gemäß `Gemini-Setup/rules/german-skill-triggers.md` zugeordnet.
 
 ## 3. Agenten-System (18 Spezialisten)
 
-Die Agenten befinden sich in `claude-code-setup/agents/`. Gemini CLI nutzt diese Beschreibungen als Wissensbasis für seine Fähigkeiten.
+Die Agenten befinden sich in `Gemini-Setup/agents/`. Gemini CLI nutzt diese Beschreibungen als Wissensbasis für seine Fähigkeiten.
 
 | Agent | Zweck |
 |-------|-------|
@@ -47,7 +47,7 @@ Dieses System synchronisiert Änderungen zwischen macOS/Windows und verschiedene
 
 ## 5. Regeln & Konventionen
 
-Alle Regeln aus `claude-code-setup/rules/` sind bindend.
+Alle Regeln aus `Gemini-Setup/rules/` sind bindend.
 Besonders wichtig für Gemini:
 - `german-agents-skills.md`: Pflicht für deutsche Beschreibungen.
 - `german-skill-triggers.md`: Zuordnung von Whisper-Phrasen.
