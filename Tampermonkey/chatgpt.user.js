@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         ChatGPT V.1.5.1
+// @name         ChatGPT V.1.5.2
 // @namespace    https://chatgpt.com/
-// @version      1.5.1
+// @version      1.5.2
 // @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/chatgpt.user.js
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/chatgpt.user.js
 // @description  Speech-to-Text + Gemini-Diktat-Bereinigung (DE) auf ChatGPT. Mic-Button unten rechts. Zwei Prompt-Builder Buttons (Frank + für jedermann) über dem Mic. Memory-Button links neben dem Mic. v1.4.3: Live-Vorschau Debounce, parallele Chunk-Korrektur, MutationObserver-Throttle, Gemini-Modell per Menü änderbar, API-Key-Status beim Start.
