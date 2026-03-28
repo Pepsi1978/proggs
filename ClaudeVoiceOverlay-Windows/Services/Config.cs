@@ -89,6 +89,8 @@ namespace ClaudeVoiceOverlay.Services
             {
                 Path.Combine(exeDir, ".env"),
                 Path.Combine(cwd, ".env"),
+                Path.Combine(cwd, "publish", ".env"),
+                Path.Combine(exeDir, "..", ".env"),
                 Path.Combine(userProfile, ".env"),
                 Path.Combine(appData, "ClaudeVoiceOverlay", ".env"),
             };
