@@ -151,7 +151,9 @@ Regeln:
     suspend fun undoLastRefresh(): Boolean {
         val prev = previousBlocks ?: return false
         adviceDashboardDao.deleteAll()
-        adviceDashboardDao.upsertAll(prev)
+        // Reset IDs to 0 so Room auto-generates fresh IDs
+        val freshEntities = prev.map { it.copy(id = 0) }
+        adviceDashboardDao.upsertAll(freshEntities)
         previousBlocks = null
         return true
     }
