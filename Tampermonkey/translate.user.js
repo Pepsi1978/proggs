@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         Translate V.1.4.2
+// @name         Translate V.1.4.3
 // @namespace    https://translate.google.com/
-// @version      1.4.2
+// @version      1.4.3
 // @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/translate.user.js
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/translate.user.js
-// @description  Speech-to-Text + Gemini-Diktat-Bereinigung (DE) auf Google Translate. Mic-Button unten rechts. Kein stilles Fallback. Mit Output-Preview. API-Key wird in Tampermonkey gespeichert.
+// @description  Speech-to-Text (DE) auf Google Translate. Mic-Button unten rechts. Kein stilles Fallback. Mit Output-Preview. API-Key wird in Tampermonkey gespeichert.
 // @match        https://translate.google.com/*
 // @match        https://www.translate.google.com/*
 // @match        https://translate.google.de/*
@@ -15,9 +15,6 @@
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_registerMenuCommand
-// @connect      generativelanguage.googleapis.com
-// @connect      *.googleapis.com
-// @connect      googleapis.com
 // @connect      api.groq.com
 // ==/UserScript==
 
@@ -40,15 +37,6 @@
 	} catch (e) {
 		/* CSS-Animation nicht verfügbar, Buttons funktionieren trotzdem */
 	}
-
-	// ============================================================
-	// 🔑 API-Key
-	// ============================================================
-	// ⚠️ WICHTIG: API-Key NICHT öffentlich posten. Wenn der Key geleakt ist: rotieren.
-	const GEMINI_API_KEY_DEFAULT = "hier".trim();
-	const GEMINI_MODEL = "models/gemini-3.1-flash-lite-preview";
-	const GEMINI_THINKING_LEVEL = "MEDIUM";
-	const API_KEY_STORAGE_KEY = "translateGeminiApiKey";
 
 	// ============================================================
 	// UI POSITION
@@ -82,44 +70,17 @@
 	}
 
 	const CFG = {
-		minCharsForRewrite: 6,
 		requestTimeoutMs: 120000, // 120s
 		postPasteDelayMs: 80,
 		reactNudgeDelayMs: 60,
 		maxRetries: 4,
 		retryWaitMs: 1200,
 		previewChars: 140,
-		grammarMaxOutputTokens: 8192,
-		grammarChunkChars: 3500,
-		grammarTruncationRatio: 0.85,
-		autoGeminiCorrection: true,
 
 		// Groq Whisper Speech-to-Text
 		whisperModel: "whisper-large-v3",
 		whisperLang: "de",
 	};
-
-	// ============================================================
-	// 🔑 KEY MANAGEMENT (Tampermonkey-Menü)
-	// ============================================================
-	function setGeminiKey() {
-		const key = (prompt("Neuen Gemini API-Key eingeben:") || "").trim();
-		if (key) {
-			try {
-				GM_setValue(API_KEY_STORAGE_KEY, key);
-			} catch {}
-			alert("✅ Gemini API-Key gespeichert.");
-		} else {
-			alert("⚠️ Kein Key eingegeben.");
-		}
-	}
-
-	function clearGeminiKey() {
-		try {
-			GM_setValue(API_KEY_STORAGE_KEY, "");
-		} catch {}
-		alert("🧹 Gemini API-Key gelöscht.");
-	}
 
 	function setGroqKey() {
 		const key = (prompt("Neuen Groq API-Key eingeben:") || "").trim();
@@ -140,13 +101,7 @@
 		alert("🧹 Groq API-Key gelöscht.");
 	}
 
-	// Gespeicherten Auto-Korrektur-Status laden
-	if (typeof GM_getValue === "function") {
-		CFG.autoGeminiCorrection =
-			GM_getValue("autoGeminiCorrection", true) !== false;
-	}
-
-	// Tampermonkey-Menü: Key-Verwaltung + Auto-Korrektur
+	// Tampermonkey-Menü: Key-Verwaltung
 	(function () {
 		const reg =
 			typeof GM_registerMenuCommand === "function"
@@ -155,21 +110,8 @@
 					? GM?.registerMenuCommand?.bind(GM)
 					: null;
 		if (!reg) return;
-		reg("🔑 Gemini-Key setzen/ändern", setGeminiKey);
-		reg("🧹 Gemini-Key löschen", clearGeminiKey);
 		reg("🎙️ Groq-Key setzen/ändern", setGroqKey);
 		reg("🗑️ Groq-Key löschen", clearGroqKey);
-		reg("🔄 Auto-Korrektur [AN/AUS]", function () {
-			CFG.autoGeminiCorrection = !CFG.autoGeminiCorrection;
-			if (typeof GM_setValue === "function")
-				GM_setValue("autoGeminiCorrection", CFG.autoGeminiCorrection);
-			showToast(
-				CFG.autoGeminiCorrection
-					? "✅ Auto-Korrektur aktiviert"
-					: "❌ Auto-Korrektur deaktiviert",
-				3000,
-			);
-		});
 	})();
 
 	const supportedSpeech = !!(
@@ -227,58 +169,6 @@
 	}
 
 	const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-	// ============================================================
-	// API-Key Storage (Tampermonkey)
-	// ============================================================
-	function readStoredApiKey() {
-		try {
-			if (typeof GM_getValue === "function") {
-				return String(GM_getValue(API_KEY_STORAGE_KEY, "") || "").trim();
-			}
-		} catch {}
-
-		try {
-			return String(localStorage.getItem(API_KEY_STORAGE_KEY) || "").trim();
-		} catch {}
-
-		return "";
-	}
-
-	function writeStoredApiKey(key) {
-		const cleanKey = String(key || "").trim();
-		try {
-			if (typeof GM_setValue === "function") {
-				GM_setValue(API_KEY_STORAGE_KEY, cleanKey);
-				return;
-			}
-		} catch {}
-
-		try {
-			localStorage.setItem(API_KEY_STORAGE_KEY, cleanKey);
-		} catch {}
-	}
-
-	function getEffectiveApiKey() {
-		return readStoredApiKey() || GEMINI_API_KEY_DEFAULT;
-	}
-
-	function requestApiKey() {
-		const existing = readStoredApiKey();
-		const input = prompt(
-			"Bitte Gemini API-Key eingeben (wird in Tampermonkey gespeichert):",
-			existing || "",
-		);
-		if (input === null) return "";
-		const cleaned = String(input || "").trim();
-		if (cleaned) {
-			writeStoredApiKey(cleaned);
-			showToast("✅ API-Key gespeichert.", 2600);
-			return cleaned;
-		}
-		showToast("⚠️ API-Key leer. Vorgang abgebrochen.", 3200);
-		return "";
-	}
 
 	// ============================================================
 	// Prompt Finder (Fallback) – wir nutzen weiterhin das zuletzt fokussierte Feld
@@ -825,257 +715,13 @@
 	}
 
 	// ============================================================
-	// Gemini Calls
+	// GM Request Helper
 	// ============================================================
 	function gmRequest() {
 		if (typeof GM !== "undefined" && typeof GM.xmlHttpRequest === "function")
 			return GM.xmlHttpRequest;
 		if (typeof GM_xmlhttpRequest === "function") return GM_xmlhttpRequest;
 		return null;
-	}
-
-	function extractGeminiText(json) {
-		const parts = json?.candidates?.[0]?.content?.parts;
-		if (Array.isArray(parts)) {
-			// Thinking-Parts überspringen (thought: true), nur normalen Text extrahieren
-			const out = parts
-				.filter((p) => !p?.thought)
-				.map((p) => p?.text ?? "")
-				.join("")
-				.trim();
-			if (out) return out;
-		}
-		const t = json?.candidates?.[0]?.text;
-		if (typeof t === "string" && t.trim()) return t.trim();
-		return "";
-	}
-
-	function geminiGenerate(
-		userPrompt,
-		{ temperature = 0.05, maxOutputTokens = 2048 } = {},
-	) {
-		let apiKey = getEffectiveApiKey();
-		if (
-			!apiKey ||
-			apiKey.toLowerCase().includes("key hier") ||
-			apiKey.toLowerCase().includes("hier")
-		) {
-			apiKey = requestApiKey();
-		}
-
-		if (!apiKey) {
-			return Promise.reject("API-Key fehlt oder Eingabe abgebrochen.");
-		}
-
-		const url = `https://generativelanguage.googleapis.com/v1beta/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-		const payload = {
-			contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-			generationConfig: GEMINI_MODEL.includes("gemini-3")
-				? {
-						maxOutputTokens,
-						thinkingConfig: { thinkingLevel: GEMINI_THINKING_LEVEL },
-					}
-				: { temperature, maxOutputTokens },
-		};
-
-		const req = gmRequest();
-		if (!req)
-			return Promise.reject("GM Request API fehlt (Tampermonkey Grants).");
-
-		const sleepLocal = (ms) => new Promise((r) => setTimeout(r, ms));
-
-		const attempt = (n) =>
-			new Promise((resolve, reject) => {
-				req({
-					method: "POST",
-					url,
-					headers: { "Content-Type": "application/json" },
-					data: JSON.stringify(payload),
-					timeout: CFG.requestTimeoutMs,
-
-					onload: (r) => {
-						const body = String(r.responseText || "");
-						if (r.status !== 200) {
-							let msg = body.slice(0, 800);
-							try {
-								const j = JSON.parse(body);
-								const m = j?.error?.message || j?.message;
-								if (m) msg = m;
-							} catch {}
-							reject(`HTTP ${r.status}: ${msg}`);
-							return;
-						}
-
-						try {
-							const j = JSON.parse(body);
-							const out = extractGeminiText(j);
-							if (!out) {
-								reject(
-									"Gemini lieferte keinen Text (Parser fand keinen Output).",
-								);
-								return;
-							}
-							resolve(out);
-						} catch {
-							reject("Antwort konnte nicht gelesen werden (JSON Parse).");
-						}
-					},
-
-					onerror: () =>
-						reject(
-							`Network (Status 0).\nURL: ${url}\nHinweise: @connect, Adblock/Privacy, VPN/Proxy, Firmen-Netz.`,
-						),
-					ontimeout: () => reject("Timeout"),
-				});
-			}).catch(async (err) => {
-				const msg = String(err || "");
-				const retryable =
-					msg.includes("Network (Status 0)") || msg === "Timeout";
-				if (retryable && n < CFG.maxRetries) {
-					await sleepLocal(CFG.retryWaitMs * (n + 1));
-					return attempt(n + 1);
-				}
-				throw err;
-			});
-
-		return attempt(0);
-	}
-
-	// ---- Diktat-Bereinigung + Grammatik Prompt ----
-	function buildGrammarPrompt(text) {
-		const mode = (CFG.dictationCleanupMode || "balanced").toLowerCase();
-
-		const modeRules =
-			mode === "aggressive"
-				? `
-- Entferne auch einzelne Wörter, die im Kontext sehr wahrscheinlich Fehlhörer sind und den Satz entgleisen lassen.
-- Glätte Satzstruktur stärker, aber ohne neue Fakten hinzuzufügen.
-`
-				: mode === "conservative"
-					? `
-- Entferne nur extrem offensichtliches Kauderwelsch (z.B. Wortfragmente, lautmalerische Silben, unverbundene Tokens).
-- Wenn du unsicher bist, lass lieber stehen als zu viel zu löschen.
-`
-					: `
-- Entferne offensichtliches Kauderwelsch zuverlässig, aber ohne den Text stilistisch umzuschreiben.
-- Korrigiere offensichtliche Fehlhörer nur dann, wenn es genau eine sehr naheliegende Korrektur gibt.
-`;
-
-		return `
-Du bist ein deutscher Diktat-Editor.
-
-AUFGABE (in dieser Reihenfolge):
-1) Bereinige Diktat-Artefakte: entferne Fülllaute (z.B. "äh", "ähm", "öhm", "hm", "mhm").
-2) Entferne Doppler durch Stottern/ASR: doppelte Wörter oder kurze Wiederholungen (z.B. "ich ich", "das das", "und und").
-3) Entferne eindeutig sinnlose Kauderwelsch-Tokens (Wortfragmente, unverbundene Einzelwörter, semantisch nicht anschließbare Einsprengsel).
-4) Korrigiere Grammatik, Satzbau, Zeichensetzung und Groß-/Kleinschreibung.
-5) Erkenne Satzgrenzen korrekt.
-
-MODUS:
-${modeRules.trim()}
-
-WICHTIG (strikt):
-- Keine neuen Informationen hinzufügen.
-- Keine kreativen Ergänzungen, keine Vermutungen.
-- Keine stilistische Umformulierung: Wortwahl und Struktur so nah wie möglich am Original halten.
-- Wenn ein Wort falsch erkannt wirkt, aber nicht eindeutig reparierbar ist: entferne es lieber, statt zu raten.
-
-REGEL:
-Gib AUSSCHLIESSLICH den bereinigten Text zurück.
-Keine Kommentare. Keine Erklärungen.
-
-TEXT:
-${text}
-`.trim();
-	}
-
-	function geminiRewriteGrammar(text) {
-		return geminiGenerate(buildGrammarPrompt(text), {
-			temperature: 0.03,
-			maxOutputTokens: CFG.grammarMaxOutputTokens || 8192,
-		});
-	}
-
-	function splitIntoChunksByParagraphs(text, maxChars) {
-		const s = String(text || "");
-		if (s.length <= maxChars) return [s];
-
-		const paras = s.split(/\n{2,}/g);
-		const chunks = [];
-		let buf = "";
-
-		const pushBuf = () => {
-			if (buf.trim().length) chunks.push(buf);
-			buf = "";
-		};
-
-		for (let p of paras) {
-			p = p.trim();
-			if (!p) continue;
-
-			if (p.length > maxChars) {
-				pushBuf();
-				let start = 0;
-				while (start < p.length) {
-					let end = Math.min(start + maxChars, p.length);
-					if (end < p.length) {
-						const windowStart = Math.max(
-							start,
-							end - Math.floor(maxChars * 0.5),
-						);
-						const slice = p.slice(windowStart, end);
-						const lastDot = Math.max(
-							slice.lastIndexOf("."),
-							slice.lastIndexOf("!"),
-							slice.lastIndexOf("?"),
-							slice.lastIndexOf(";"),
-							slice.lastIndexOf(":"),
-						);
-						if (lastDot > -1) end = windowStart + lastDot + 1;
-					}
-					chunks.push(p.slice(start, end).trim());
-					start = end;
-				}
-				continue;
-			}
-
-			const candidate = buf ? buf + "\n\n" + p : p;
-			if (candidate.length > maxChars) {
-				pushBuf();
-				buf = p;
-			} else {
-				buf = candidate;
-			}
-		}
-
-		pushBuf();
-		return chunks.length ? chunks : [s];
-	}
-
-	async function geminiRewriteGrammarSmart(fullText, onProgress) {
-		const input = String(fullText || "");
-		if (!input.trim()) return input;
-
-		const oneShot = await geminiRewriteGrammar(input);
-		const ratio = oneShot.length / Math.max(1, input.length);
-		if (ratio >= (CFG.grammarTruncationRatio || 0.85)) return oneShot;
-
-		const chunks = splitIntoChunksByParagraphs(
-			input,
-			CFG.grammarChunkChars || 3500,
-		);
-		const outParts = [];
-
-		for (let i = 0; i < chunks.length; i++) {
-			onProgress?.(i + 1, chunks.length);
-			const fixed = await geminiRewriteGrammar(chunks[i]);
-			outParts.push(
-				fixed && fixed.trim().length ? fixed.trim() : chunks[i].trim(),
-			);
-		}
-
-		return outParts.join("\n\n").trim();
 	}
 
 	// ============================================================
@@ -1457,37 +1103,14 @@ ${text}
 				const base = textBeforeSpeech;
 				const spacer =
 					base && !base.endsWith(" ") && !base.endsWith("\n") ? " " : "";
-				let combined = base + spacer + text;
-				let corrected = false;
-
-				// Gemini Intentions-Korrektur (falls aktiviert)
-				if (CFG.autoGeminiCorrection && text.length >= CFG.minCharsForRewrite) {
-					try {
-						setMicState("working", "Gemini korrigiert…");
-						showToast("✨ Gemini korrigiert…", 3000);
-						const result = await geminiRewriteGrammarSmart(text);
-						if (result && result.trim().length > 0) {
-							combined = base + spacer + result.trim();
-							corrected = true;
-						}
-					} catch (err) {
-						console.warn("[STT] Gemini-Korrektur fehlgeschlagen:", err);
-						showToast(
-							"⚠️ Gemini-Korrektur fehlgeschlagen. Roher Text wird verwendet.",
-							4000,
-						);
-					}
-				}
+				const combined = base + spacer + text;
 
 				const ok = await setViaPaste(el, combined);
 				removeLivePreview();
 				if (ok) {
 					setMicState("idle");
 					const preview = text.length > 80 ? text.slice(0, 80) + "…" : text;
-					showToast(
-						corrected ? "✨ Korrigiert & eingefügt" : "✅ " + preview,
-						3000,
-					);
+					showToast("✅ " + preview, 3000);
 				} else {
 					setMicState("error", "Text nicht übernommen");
 					showToast("❌ Eingabefeld hat Text nicht übernommen.", 5000);
@@ -1735,15 +1358,6 @@ ${text}
 			showToast("SpeechRecognition nicht verf\u00fcgbar (Chrome/Edge).", 7000);
 		}
 
-		if (!getEffectiveApiKey()) {
-			showToast(
-				"\uD83D\uDD11 API-Key fehlt. Eingabe wird abgefragt\u2026",
-				3200,
-			);
-			setTimeout(() => {
-				if (!getEffectiveApiKey()) requestApiKey();
-			}, 800);
-		}
 
 		try {
 			mountOrRepairUI();
