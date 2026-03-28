@@ -11,6 +11,7 @@ namespace ClaudeVoiceOverlay.Services
     public static class AppController
     {
         private const byte VK_A = 0x41;
+        private const byte VK_C = 0x43;
         private const byte VK_BACKSPACE = 0x08;
         private const byte VK_RETURN = 0x0D;
         private const ushort VK_HOME = 0x24;
@@ -106,6 +107,37 @@ namespace ClaudeVoiceOverlay.Services
         public static void SendReturn()
         {
             SendKey(VK_RETURN);
+        }
+
+        /// <summary>
+        /// Copies the currently selected text in the app via Ctrl+C.
+        /// </summary>
+        public static void CopySelection(IntPtr appHwnd)
+        {
+            BringToForeground(appHwnd);
+            SendKeyCombo(Win32.VK_CONTROL, VK_C);
+        }
+
+        /// <summary>
+        /// Pastes the current clipboard content into the app via Ctrl+V.
+        /// Does NOT modify the clipboard — pastes whatever is already there.
+        /// </summary>
+        public static void PasteClipboard(IntPtr appHwnd)
+        {
+            BringToForeground(appHwnd);
+
+            if (IsCodexProcess(appHwnd))
+            {
+                SendKey(Win32.VK_ESCAPE);
+                Thread.Sleep(200);
+                SendCtrlV();
+            }
+            else
+            {
+                FocusDirectRenderWidget(appHwnd);
+                ClickInputField(appHwnd);
+                SendCtrlV();
+            }
         }
 
         public static void PressReturn(IntPtr appHwnd)

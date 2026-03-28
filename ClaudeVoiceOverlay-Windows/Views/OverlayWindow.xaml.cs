@@ -33,6 +33,9 @@ namespace ClaudeVoiceOverlay.Views
         private static readonly SolidColorBrush BtnX         = Brush("#E53935");
         private static readonly SolidColorBrush BtnXPressed  = Brush("#FF6666");
         private static readonly SolidColorBrush BtnMicIdle   = Brush("#2A5DA8");
+        // Copy/Paste buttons
+        private static readonly SolidColorBrush BtnCopy      = Brush("#29B6F6");
+        private static readonly SolidColorBrush BtnPaste     = Brush("#AB47BC");
 
         // Pulse colours for main mic
         private static readonly SolidColorBrush BtnRecordingBright = Brush("#FF6666");
@@ -103,6 +106,8 @@ namespace ClaudeVoiceOverlay.Views
             BtwButton.Background    = BtnBtwIdle;      // light blue
             GButton.Background    = ToggleOff;       // dark   (Gemini starts disabled)
             EnterButton.Background = BtnProcessing;   // orange (autoEnter starts true)
+            CopyButton.Background  = BtnCopy;         // light blue
+            PasteButton.Background = BtnPaste;        // purple
 
             // ── Hover animations ──
             AttachHover(XButton);
@@ -111,6 +116,8 @@ namespace ClaudeVoiceOverlay.Views
             AttachHover(MicButton);
             AttachHover(GButton);
             AttachHover(EnterButton);
+            AttachHover(CopyButton);
+            AttachHover(PasteButton);
 
             // ── App watcher ──
             _appWatcher.AppActivated   += OnAppActivated;
@@ -481,6 +488,45 @@ namespace ClaudeVoiceOverlay.Views
                 // Fire a Return key press into the active app
                 AppController.PressReturn(_appWatcher.ActiveAppHwnd);
             }
+        }
+
+        /// <summary>C button — copy selected text via Ctrl+C.</summary>
+        private void BtnCopy_Click(object sender, RoutedEventArgs e)
+        {
+            var hwnd = _appWatcher.ActiveAppHwnd;
+
+            // Flash: gray for 2 s then back to blue
+            CopyButton.Background = BtnIdle;
+
+            AppController.CopySelection(hwnd);
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(2000);
+                Dispatcher.Invoke(() => CopyButton.Background = BtnCopy);
+            });
+
+            Console.WriteLine("Copy: Ctrl+C sent to app");
+        }
+
+        /// <summary>P button — paste clipboard content into input field via Ctrl+V.</summary>
+        private void BtnPaste_Click(object sender, RoutedEventArgs e)
+        {
+            var hwnd = _appWatcher.ActiveAppHwnd;
+
+            // Flash: gray for 2 s then back to purple
+            PasteButton.Background = BtnIdle;
+
+            AppController.PasteClipboard(hwnd);
+            hasPastedText = true;
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(2000);
+                Dispatcher.Invoke(() => PasteButton.Background = BtnPaste);
+            });
+
+            Console.WriteLine("Paste: Ctrl+V sent to app");
         }
 
         // ── Mic state helpers ──

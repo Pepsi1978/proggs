@@ -76,6 +76,36 @@ namespace TerminalVoiceOverlay.Services
             SendKeyCombo(Win32.VK_CONTROL, VK_C);
         }
 
+        /// <summary>
+        /// Copies the currently selected text in the terminal via Ctrl+C.
+        /// Windows Terminal detects selection and copies instead of sending SIGINT.
+        /// </summary>
+        public static void CopySelection(IntPtr terminalHwnd)
+        {
+            if (terminalHwnd != IntPtr.Zero)
+            {
+                Win32.SetForegroundWindow(terminalHwnd);
+                Thread.Sleep(50);
+            }
+
+            SendKeyCombo(Win32.VK_CONTROL, VK_C);
+        }
+
+        /// <summary>
+        /// Pastes the current clipboard content into the terminal via Ctrl+V.
+        /// Does NOT modify the clipboard — pastes whatever is already there.
+        /// </summary>
+        public static void PasteClipboard(IntPtr terminalHwnd)
+        {
+            if (terminalHwnd != IntPtr.Zero)
+            {
+                Win32.SetForegroundWindow(terminalHwnd);
+                Thread.Sleep(50);
+            }
+
+            SendCtrlV();
+        }
+
         private const ushort VK_C = 0x43;
 
         private const byte VK_HOME = 0x24;
