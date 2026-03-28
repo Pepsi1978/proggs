@@ -358,7 +358,7 @@
 		const vh = Math.max(1, window.innerHeight);
 		const vw = Math.max(1, window.innerWidth);
 
-		if (r.width < 120 || r.height < 24) return false;
+		if (r.width < 120 || r.height < 10) return false;
 		if (r.height > vh * 0.55) return false;
 		if (r.width > vw * 0.99 && r.height > vh * 0.35) return false;
 		return true;
@@ -379,35 +379,41 @@
 			aria.includes("send a message") ||
 			aria.includes("nachricht") ||
 			aria.includes("message") ||
-			aria.includes("prompt")
+			aria.includes("prompt") ||
+			aria.includes("anfrage") ||
+			aria.includes("claude") ||
+			aria.includes("write") ||
+			aria.includes("schreiben")
 		)
 			return true;
 		if (
 			placeholder.includes("send a message") ||
 			placeholder.includes("nachricht") ||
 			placeholder.includes("message") ||
-			placeholder.includes("prompt")
+			placeholder.includes("prompt") ||
+			placeholder.includes("anfrage") ||
+			placeholder.includes("claude")
 		)
 			return true;
 
-		if (el.classList?.contains("ProseMirror")) {
-			const form = el.closest?.("form");
-			if (
-				form &&
-				form.querySelector(
-					"button[type='submit'], [aria-label*='Send'], [aria-label*='Senden']",
-				)
-			)
-				return true;
+		// tiptap/ProseMirror inside a fieldset or form = likely chat input
+		if (
+			el.classList?.contains("ProseMirror") ||
+			el.classList?.contains("tiptap")
+		) {
+			const container = el.closest?.("form") || el.closest?.("fieldset");
+			if (container) return true;
 		}
 
-		const form = el.closest?.("form");
+		const container = el.closest?.("form") || el.closest?.("fieldset");
 		if (
-			form &&
-			form.querySelector("textarea, .ProseMirror, [contenteditable='true']")
+			container &&
+			container.querySelector(
+				"textarea, .ProseMirror, .tiptap, [contenteditable]",
+			)
 		) {
-			const sendBtn = form.querySelector(
-				"button[type='submit'], [aria-label*='Send'], [aria-label*='Senden'], [data-testid*='send']",
+			const sendBtn = container.querySelector(
+				"button[type='submit'], [aria-label*='Send'], [aria-label*='Senden'], [data-testid*='send'], button[aria-label]",
 			);
 			if (sendBtn) return true;
 		}
