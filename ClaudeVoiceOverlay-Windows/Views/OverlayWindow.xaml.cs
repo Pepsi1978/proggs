@@ -183,7 +183,7 @@ namespace ClaudeVoiceOverlay.Views
         {
             var workArea = AppWatcher.GetMonitorWorkArea(appHwnd);
             Left = workArea.X + workArea.Width - Width - 23;
-            Top  = workArea.Y + (workArea.Height - Height) / 4;
+            Top  = workArea.Y + (workArea.Height - Height) / 2;
 
             if (!IsVisible)
             {

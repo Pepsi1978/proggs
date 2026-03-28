@@ -87,9 +87,7 @@
                     Margin="0,8,0,0"
                     Click="BtnBtw_Click"
                     ToolTip="BTW voice input">
-                <Viewbox Width="22" Height="22">
-                    <Path Fill="White" Data="M12,14 C13.66,14 15,12.66 15,11 L15,5 C15,3.34 13.66,2 12,2 C10.34,2 9,3.34 9,5 L9,11 C9,12.66 10.34,14 12,14 Z M17.3,11 C17.3,14 14.76,16.1 12,16.1 C9.24,16.1 6.7,14 6.7,11 L5,11 C5,14.41 7.72,17.23 11,17.72 L11,21 L13,21 L13,17.72 C16.28,17.23 19,14.41 19,11 L17.3,11 Z"/>
-                </Viewbox>
+                <TextBlock Text="BTW" FontWeight="Bold" FontSize="13" Foreground="White"/>
             </Button>
 
             <!-- G Button (Gemini toggle) -->

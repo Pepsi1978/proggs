@@ -85,7 +85,7 @@
                     Margin="0,8,0,0"
                     Click="BtnBtw_Click"
                     ToolTip="BTW voice input">
-                <TextBlock Text="&#x1F3A4;" FontSize="20" Foreground="White"/>
+                <TextBlock Text="BTW" FontWeight="Bold" FontSize="13" Foreground="White"/>
             </Button>
 
             <!-- G Button (Gemini toggle) -->
