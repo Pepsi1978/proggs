@@ -436,8 +436,7 @@
 			(typeof geminiToggleBtn !== "undefined" && el === geminiToggleBtn) ||
 			(typeof clearBtn !== "undefined" && el === clearBtn) ||
 			(typeof promptBtn !== "undefined" && el === promptBtn) ||
-			(typeof promptBtn2 !== "undefined" && el === promptBtn2) ||
-			(typeof memBtn !== "undefined" && el === memBtn)
+			(typeof promptBtn2 !== "undefined" && el === promptBtn2)
 		)
 			return false;
 

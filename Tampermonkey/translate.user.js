@@ -336,10 +336,7 @@
 		// eslint-disable-next-line no-undef
 		if (
 			(typeof micBtn !== "undefined" && el === micBtn) ||
-			(typeof clearBtn !== "undefined" && el === clearBtn) ||
-			(typeof promptBtn !== "undefined" && el === promptBtn) ||
-			(typeof promptBtn2 !== "undefined" && el === promptBtn2) ||
-			(typeof memBtn !== "undefined" && el === memBtn)
+			(typeof clearBtn !== "undefined" && el === clearBtn)
 		)
 			return false;
 
