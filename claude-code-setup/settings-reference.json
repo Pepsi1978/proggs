@@ -130,6 +130,15 @@
 				"hooks": [
 					{
 						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/session-guard.ps1\"",
+						"timeout": 10
+					}
+				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
 						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/claude-mem-worker-guard.ps1\"",
 						"timeout": 10
 					}
@@ -559,7 +568,6 @@
 				"repo": "NeoLabHQ/context-engineering-kit"
 			}
 		},
-		"_comment_boostvolt": "Removed: boostvolt/claude-code-lsps plugin not found (2026-03-28)",
 		"xclaude-plugin-marketplace": {
 			"source": {
 				"source": "github",
@@ -583,8 +591,7 @@
 				"source": "github",
 				"repo": "trailofbits/skills-curated"
 			}
-		},
-		"_comment_FlineDev": "Removed: FlineDev/context-kit repo cannot be cloned (2026-03-28)"
+		}
 	},
 	"language": "de",
 	"alwaysThinkingEnabled": true,
