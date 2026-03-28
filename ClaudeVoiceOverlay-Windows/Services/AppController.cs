@@ -31,24 +31,20 @@ namespace ClaudeVoiceOverlay.Services
 
             bool isCodex = IsCodexProcess(appHwnd);
 
-            if (isCodex)
+            // Universal Electron approach: Escape returns focus to the input field
+            // regardless of which tab is active (Code, Cowork, Chat).
+            // Then focus the render widget and click as backup.
+            Console.WriteLine("AppController: Escape → focus → click → Ctrl+V");
+            SendKey(Win32.VK_ESCAPE);
+            Thread.Sleep(150);
+
+            if (!isCodex)
             {
-                // Codex has a different Electron window structure:
-                // Chrome_RenderWidgetHostHWND is NOT a child of the main window.
-                // SetFocus on any child window STEALS keyboard focus.
-                // Instead: just Escape (returns focus to input) → Ctrl+V
-                Console.WriteLine("AppController: Codex mode — Escape → Ctrl+V");
-                SendKey(Win32.VK_ESCAPE);
-                Thread.Sleep(200);
-                SendCtrlV();
-            }
-            else
-            {
-                // Claude Desktop: render widget is a direct child — SetFocus + click works
                 FocusDirectRenderWidget(appHwnd);
                 ClickInputField(appHwnd);
-                SendCtrlV();
             }
+
+            SendCtrlV();
 
             if (autoEnter)
             {
@@ -70,38 +66,25 @@ namespace ClaudeVoiceOverlay.Services
         {
             BringToForeground(appHwnd);
 
-            if (IsCodexProcess(appHwnd))
+            // Escape first to focus the input field in any tab
+            SendKey(Win32.VK_ESCAPE);
+            Thread.Sleep(150);
+
+            if (!IsCodexProcess(appHwnd))
             {
-                // Codex: double-Escape — first closes any popup/autocomplete,
-                // second ensures focus lands in the input field
-                SendKey(Win32.VK_ESCAPE);
-                Thread.Sleep(150);
-                SendKey(Win32.VK_ESCAPE);
-                Thread.Sleep(200);
-                SendKey(VK_END);
-                Thread.Sleep(30);
-                // Ctrl+Shift+Home selects all text from cursor to start within the input
-                byte ctrlScan = (byte)Win32.MapVirtualKey(Win32.VK_CONTROL, Win32.MAPVK_VK_TO_VSC);
-                byte shiftScan = (byte)Win32.MapVirtualKey(Win32.VK_SHIFT, Win32.MAPVK_VK_TO_VSC);
-                byte homeScan = (byte)Win32.MapVirtualKey((uint)VK_HOME, Win32.MAPVK_VK_TO_VSC);
-                Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, 0, UIntPtr.Zero);
-                Win32.keybd_event((byte)Win32.VK_SHIFT, shiftScan, 0, UIntPtr.Zero);
-                Win32.keybd_event((byte)VK_HOME, homeScan, Win32.KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
-                Win32.keybd_event((byte)VK_HOME, homeScan, Win32.KEYEVENTF_EXTENDEDKEY | Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                Win32.keybd_event((byte)Win32.VK_SHIFT, shiftScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                Win32.keybd_event((byte)Win32.VK_CONTROL, ctrlScan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
-                Thread.Sleep(50);
-                SendKey(VK_BACKSPACE);
+                FocusDirectRenderWidget(appHwnd);
+                ClickInputField(appHwnd);
             }
             else
             {
-                // Claude Desktop: click into input field, then Ctrl+A is safe
-                FocusDirectRenderWidget(appHwnd);
-                ClickInputField(appHwnd);
-                SendKeyCombo(Win32.VK_CONTROL, VK_A);
-                Thread.Sleep(50);
-                SendKey(VK_BACKSPACE);
+                // Codex: second Escape to close popups
+                SendKey(Win32.VK_ESCAPE);
+                Thread.Sleep(150);
             }
+
+            SendKeyCombo(Win32.VK_CONTROL, VK_A);
+            Thread.Sleep(50);
+            SendKey(VK_BACKSPACE);
         }
 
         public static void SendReturn()
@@ -126,30 +109,28 @@ namespace ClaudeVoiceOverlay.Services
         {
             BringToForeground(appHwnd);
 
-            if (IsCodexProcess(appHwnd))
-            {
-                SendKey(Win32.VK_ESCAPE);
-                Thread.Sleep(200);
-                SendCtrlV();
-            }
-            else
+            // Escape focuses the input in any tab (Code, Cowork, Chat)
+            SendKey(Win32.VK_ESCAPE);
+            Thread.Sleep(150);
+
+            if (!IsCodexProcess(appHwnd))
             {
                 FocusDirectRenderWidget(appHwnd);
                 ClickInputField(appHwnd);
-                SendCtrlV();
             }
+
+            SendCtrlV();
         }
 
         public static void PressReturn(IntPtr appHwnd)
         {
             BringToForeground(appHwnd);
 
-            if (IsCodexProcess(appHwnd))
-            {
-                SendKey(Win32.VK_ESCAPE);
-                Thread.Sleep(100);
-            }
-            else
+            // Escape focuses the input in any tab
+            SendKey(Win32.VK_ESCAPE);
+            Thread.Sleep(150);
+
+            if (!IsCodexProcess(appHwnd))
             {
                 FocusDirectRenderWidget(appHwnd);
                 ClickInputField(appHwnd);
@@ -243,12 +224,15 @@ namespace ClaudeVoiceOverlay.Services
             int windowHeight = rect.Bottom - rect.Top;
             if (windowWidth < 100 || windowHeight < 100) return;
 
-            // Claude Desktop: input at ~86% height, 55% width (past sidebar)
-            int clickX = rect.Left + (int)(windowWidth * 0.55);
-            int clickY = rect.Top + (int)(windowHeight * 0.86);
+            // Claude Desktop input field position varies by tab:
+            // - Claude Code: ~86% height, ~55% width (past sidebar)
+            // - Cowork/Chat: ~90-95% height, ~50% width (input at very bottom)
+            // Click near the bottom-center of the content area
+            int clickX = rect.Left + (int)(windowWidth * 0.50);
+            int clickY = rect.Top + (int)(windowHeight * 0.92);
 
             clickX = Math.Clamp(clickX, rect.Left + 50, rect.Right - 50);
-            clickY = Math.Clamp(clickY, rect.Top + 50, rect.Bottom - 50);
+            clickY = Math.Clamp(clickY, rect.Top + 50, rect.Bottom - 30);
 
             Win32.GetCursorPos(out Win32.POINT savedPos);
 
