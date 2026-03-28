@@ -62,37 +62,50 @@ kontraproduktiv. Drei Absicherungsschichten:
 ## 2026-03-28 — Claude Code starts in home directory instead of ~/proggs/ (Windows + macOS)
 
 **Plattform:** Beide (Windows + macOS)
-**Kontext:** Claude Code startet manchmal im Home-Verzeichnis (~/) statt im Workspace
-(~/proggs/). Das passiert wenn Claude Code nicht ueber Windows Terminal gestartet wird
-(z.B. Desktop-App, VS Code Extension, andere Launcher). Der SessionStart-Hook kann
-das Verzeichnis nicht aendern, weil Hooks in Subprozessen laufen.
-**Symptom:** `pwd` zeigt `/c/Users/barwa` (Windows) oder `/Users/barwa` (macOS) statt
-`/c/Users/barwa/proggs` bzw. `/Users/barwa/proggs`. Alle Git-Befehle schlagen fehl
-weil im Home-Verzeichnis kein Repository liegt.
-**Root Cause:** SessionStart-Hooks (session-guard.ps1/.sh) laufen in einem eigenen
-Subprozess. Sie koennten `cd` ausfuehren, aber das aendert nur IHREN Prozess — Claude
-Codes Hauptprozess bleibt im Home-Verzeichnis. Windows Terminal `startingDirectory`
-greift nur bei Terminal-Profilen, nicht bei der Desktop-App oder VS Code.
-**Fix:** Auto-cd in `.bashrc` (Git Bash) bzw. `.zshrc` (macOS) — die Shell-RC-Datei
-laeuft BEVOR Claude Code seinen Shell-Zustand bekommt. Nur wenn das aktuelle
-Verzeichnis das Home-Verzeichnis ist, wird nach ~/proggs/ gewechselt:
-```bash
-# FALSCH — kein Auto-cd, Session-Guard warnt nur (wirkungslos):
-# (nichts in .bashrc)
+**Kontext:** Claude Code startet wiederholt im Home-Verzeichnis (~/) statt im Workspace
+(~/proggs/). Der Benutzer hat einen Desktop-Shortcut "Claude T.lnk" der `pwsh.exe` direkt
+startet (NICHT ueber Windows Terminal) und `claude --dangerously-skip-permissions` ausfuehrt.
+**Symptom:** `pwd` zeigt `/c/Users/barwa` bei JEDEM Start. Alle bisherigen Fixes (.bashrc
+auto-cd, Windows Terminal startingDirectory, session-guard.ps1 Warnung) haben NICHT geholfen.
+**Root Cause (ECHTE — gefunden am 28.03.2026 17:10):**
+Der Desktop-Shortcut "Claude T.lnk" hatte:
+- Target: `C:\Program Files\PowerShell\7\pwsh.exe`
+- Arguments: `-NoExit -Command "claude --dangerously-skip-permissions"`
+- **WorkingDirectory: `C:\Users\barwa`** ← DAS war das eigentliche Problem!
 
-# RICHTIG — Auto-cd in .bashrc/.zshrc:
-if [[ "$PWD" == "$HOME" || "$PWD" == "/c/Users/barwa" || "$PWD" == "C:\\Users\\barwa" ]]; then
-    cd "$HOME/proggs" 2>/dev/null || true
-fi
-```
-Drei Absicherungsschichten:
-1. `.bashrc`/`.zshrc` Auto-cd (aendert das Verzeichnis TATSAECHLICH)
-2. Windows Terminal `startingDirectory` (Backup fuer Terminal-Starts)
-3. SessionStart-Hook Warnung (letzte Sicherung falls beides versagt)
+Warum die bisherigen Fixes ALLE wirkungslos waren:
+1. `.bashrc` auto-cd → greift nicht, weil der Shortcut **PowerShell** startet, nicht Git Bash.
+   `.bashrc` wird nur von Git Bash gesourced, PowerShell ignoriert es komplett.
+2. Windows Terminal `startingDirectory` → greift nicht, weil der Shortcut **direkt pwsh.exe**
+   startet, nicht Windows Terminal. Die Einstellung gilt nur fuer Tabs IN Windows Terminal.
+3. SessionStart-Hooks (session-guard.ps1) → laufen in Subprozessen. `cd` dort aendert nur
+   den Subprozess, nicht Claude Codes Hauptprozess.
 
-**Vermeidungsregel:** Wenn eine Shell-Umgebung falsch startet, NIEMALS nur in Hooks
-warnen — Hooks koennen das CWD des Hauptprozesses nicht aendern. Stattdessen die
-Shell-RC-Datei (.bashrc/.zshrc) verwenden, die VOR dem CLI-Tool laeuft.
+**Fix (5-Schichten Defense in Depth):**
+1. **Desktop-Shortcut gefixt** (PRIMAERER FIX): WorkingDirectory auf `C:\Users\barwa\proggs`
+   geaendert UND `Set-Location` vor `claude` in die Arguments eingefuegt:
+   ```
+   Arguments: -NoExit -Command "Set-Location C:\Users\barwa\proggs; claude --dangerously-skip-permissions"
+   WorkingDir: C:\Users\barwa\proggs
+   ```
+2. **PowerShell-Profil auto-cd** (NEU): Auto-cd in
+   `~/Documents/PowerShell/Microsoft.PowerShell_profile.ps1` hinzugefuegt — greift wenn
+   pwsh.exe direkt gestartet wird (z.B. neue Shortcuts, VS Code Terminal):
+   ```powershell
+   if ($PWD.Path -eq $env:USERPROFILE -or $PWD.Path -eq "C:\Users\barwa") {
+       $proggs = Join-Path $env:USERPROFILE "proggs"
+       if (Test-Path $proggs) { Set-Location $proggs }
+   }
+   ```
+3. `.bashrc` auto-cd (fuer Git Bash Starts)
+4. Windows Terminal `startingDirectory` (fuer Terminal-Tab-Starts)
+5. SessionStart-Hook Warnung (letzte Sicherung falls alles versagt)
+
+**Vermeidungsregel:** Wenn eine Shell-Umgebung falsch startet, ZUERST pruefen WIE die
+Shell gestartet wird (Shortcut? Terminal? Desktop-App?). Desktop-Shortcuts umgehen ALLE
+Terminal-Konfigurationen. Die WorkingDirectory im Shortcut selbst ist die einzige Stelle
+die das CWD des Prozesses bestimmt. Shell-RC-Dateien (.bashrc, PowerShell-Profile) sind
+Schicht 2 — sie greifen INNERHALB der Shell, aber das CWD wird VOR der Shell gesetzt.
 
 ---
 
