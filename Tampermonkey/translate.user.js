@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Translate V.1.5.3
+// @name         Translate V.1.5.4
 // @namespace    https://translate.google.com/
-// @version      1.5.3
+// @version      1.5.4
 // @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/translate.user.js
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/translate.user.js
 // @description  Speech-to-Text (DE) auf Google Translate. Mic-Button unten rechts. Kein stilles Fallback. Mit Output-Preview. API-Key wird in Tampermonkey gespeichert.
