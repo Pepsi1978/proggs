@@ -97,6 +97,8 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### [2026-03-25 22:20] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-03-27 18:29 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 95%
 ### 2026-03-28 16:51 — Hook: session-guard.ps1 — Auto-Reparatur: Projekt C--Users-barwa--claude-double-shot-latte settings.local.json erstellt; Projekt C--Users-barwa--claude-mem-observer-sessions settings.local.json erstellt — Status: AUTO-GEFIXT
+### 2026-03-27 20:47 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 95%
+### 2026-03-28 21:28 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 96%
 ---
 
 ## Systemzustand (aktuell)
@@ -128,7 +130,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Cross-Tool:** Codex + Gemini Delta Bridges aktiv, 8 Intelligenz-Dimensionen im Whiteboard portiert
 - **Neue Hooks:** StopFailure (v2.1.78) — loggt API-Fehler/Rate-Limits ins Whiteboard
 - **Windows→macOS Porting (2026-03-25):** 6 Hook-Upgrades portiert (Semantic Search Check, config-guard PostToolUse, Enhanced PostToolUseFailure/SubagentStop/PostCompact, session-scorer 25s Timeout)
-- **Pending Admin Updates (17):** ada-url,biome,deno,freetype,git,gitleaks,golangci-lint,gradle,gradle-completion,harfbuzz,ktfmt,libmpc,libnghttp2,node,simdjson,svt-av1,uv,
+- **Pending Admin Updates (19):** ada-url,biome,deno,freetype,gh,git,gitleaks,golangci-lint,gradle,gradle-completion,harfbuzz,jpeg-turbo,ktfmt,libnghttp2,node,ollama,simdjson,uv,yq,
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -201,7 +203,7 @@ _Noch keine Eintraege._
 - **[2026-03-25] Cursor OS-Level Sandboxing** — Status: EVALUIERT | Empfehlung: JA spaeter
   Praeventive Sandbox statt reaktiver Blockierung. Naechste Evolution des safety-gate als Defense-in-Depth Schicht 2.
 
-- **[2026-03-28 14:17] Cross-CLI Delta:** Codex(11), Gemini(5) neue Commits — Bruecke starten fuer Details.
+- **[2026-03-28 21:29] Cross-CLI Delta:** Codex(1), Gemini(1) neue Commits — Bruecke starten fuer Details.
 ---
 
 ## Meta-Intelligenz & Selbstverbesserung
