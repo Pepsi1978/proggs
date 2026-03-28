@@ -94,10 +94,13 @@ class JournalViewModel @Inject constructor(
 
     private fun stopRecording() {
         recordAudioUseCase.stopRecording()
-        recordingJob?.cancel()
-        _uiState.value = _uiState.value.copy(recordingState = RecordingState.TRANSCRIBING)
 
         viewModelScope.launch {
+            // Wait for the recording coroutine to finish writing the WAV header
+            recordingJob?.join()
+
+            _uiState.value = _uiState.value.copy(recordingState = RecordingState.TRANSCRIBING)
+
             val audioFile = currentAudioFile ?: return@launch
             transcribeAudioUseCase(audioFile)
                 .onSuccess { text ->
@@ -140,6 +143,10 @@ class JournalViewModel @Inject constructor(
                     )
                 }
         }
+    }
+
+    fun setUseImprovedText(use: Boolean) {
+        _uiState.value = _uiState.value.copy(isImproveEnabled = use)
     }
 
     fun saveEntry() {
@@ -196,7 +203,7 @@ class JournalViewModel @Inject constructor(
     private fun triggerDebouncedSync() {
         syncDebounceJob?.cancel()
         syncDebounceJob = viewModelScope.launch {
-            delay(30_000) // 30 second debounce
+            delay(30_000)
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCING)
             syncWithDriveUseCase.backup()
                 .onSuccess {
@@ -211,7 +218,7 @@ class JournalViewModel @Inject constructor(
     private fun triggerDebouncedAnalysis() {
         analysisDebounceJob?.cancel()
         analysisDebounceJob = viewModelScope.launch {
-            delay(60_000) // 60 second debounce
+            delay(60_000)
             analyzeEntropyUseCase()
         }
     }

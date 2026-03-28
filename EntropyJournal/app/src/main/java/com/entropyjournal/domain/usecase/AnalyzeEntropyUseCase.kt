@@ -13,10 +13,11 @@ class AnalyzeEntropyUseCase @Inject constructor(
         val entries = journalRepository.getAllEntries().first()
         if (entries.isEmpty()) return Result.failure(Exception("Keine Tagebucheinträge vorhanden"))
 
-        val allText = entries.joinToString("\n\n---\n\n") { entry ->
-            "[${com.entropyjournal.util.DateTimeFormatter.formatFull(entry.timestamp)}]\n${entry.displayText}"
-        }
+        val total = entries.size
+        val allText = entries.mapIndexed { index, entry ->
+            "=== EINTRAG ${index + 1} von $total (${com.entropyjournal.util.DateTimeFormatter.formatFull(entry.timestamp)}) ===\n${entry.displayText}"
+        }.joinToString("\n\n")
 
-        return adviceRepository.analyzeEntropy(allText)
+        return adviceRepository.analyzeEntropy(allText, entries.size)
     }
 }

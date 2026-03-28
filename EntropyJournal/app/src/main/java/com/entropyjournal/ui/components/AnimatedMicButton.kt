@@ -18,6 +18,7 @@ import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -27,12 +28,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import com.entropyjournal.ui.theme.CosmosSurface
 import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonMagenta
 import com.entropyjournal.ui.theme.NeonRed
 import com.entropyjournal.ui.theme.NeonViolet
-import com.entropyjournal.ui.theme.TextPrimary
 
 @Composable
 fun AnimatedMicButton(
@@ -95,8 +94,8 @@ fun AnimatedMicButton(
         FloatingActionButton(
             onClick = onClick,
             modifier = Modifier.size(64.dp),
-            containerColor = if (isRecording) NeonRed else CosmosSurface,
-            contentColor = TextPrimary,
+            containerColor = if (isRecording) NeonRed else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (isRecording) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onSurface,
             shape = CircleShape,
             elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
         ) {

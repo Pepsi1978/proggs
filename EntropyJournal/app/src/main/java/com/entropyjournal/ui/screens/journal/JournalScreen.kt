@@ -1,5 +1,9 @@
 package com.entropyjournal.ui.screens.journal
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -38,12 +42,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -51,27 +49,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.entropyjournal.ui.components.AnimatedMicButton
 import com.entropyjournal.ui.components.GlassCard
 import com.entropyjournal.ui.components.ShimmerLoadingEffect
 import com.entropyjournal.ui.components.TimelineItem
-import com.entropyjournal.ui.theme.CosmosBlack
-import com.entropyjournal.ui.theme.CosmosDeep
-import com.entropyjournal.ui.theme.CosmosSurface
 import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
-import com.entropyjournal.ui.theme.TextMuted
-import com.entropyjournal.ui.theme.TextPrimary
-import com.entropyjournal.ui.theme.TextSecondary
 
 @Composable
 fun JournalScreen(
@@ -83,6 +76,15 @@ fun JournalScreen(
     val amplitude by viewModel.amplitude.collectAsState()
     val duration by viewModel.durationSeconds.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            viewModel.toggleRecording()
+        }
+    }
 
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
@@ -91,10 +93,25 @@ fun JournalScreen(
         }
     }
 
+    val onMicClick: () -> Unit = {
+        if (uiState.recordingState == RecordingState.RECORDING) {
+            viewModel.toggleRecording()
+        } else {
+            val hasPermission = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+            if (hasPermission) {
+                viewModel.toggleRecording()
+            } else {
+                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CosmosBlack)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Search bar
@@ -102,21 +119,21 @@ fun JournalScreen(
                 TextField(
                     value = uiState.searchQuery,
                     onValueChange = { viewModel.setSearchQuery(it) },
-                    placeholder = { Text("Einträge durchsuchen...", color = TextMuted) },
+                    placeholder = { Text("Eintr\u00e4ge durchsuchen...", color = MaterialTheme.colorScheme.outline) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = CosmosDeep,
-                        unfocusedContainerColor = CosmosDeep,
-                        focusedTextColor = TextPrimary,
-                        cursorColor = NeonCyan,
-                        focusedIndicatorColor = NeonCyan,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
                         unfocusedIndicatorColor = Color.Transparent
                     ),
                     trailingIcon = {
                         IconButton(onClick = { viewModel.toggleSearch() }) {
-                            Icon(Icons.Rounded.Close, "Suche schließen", tint = TextSecondary)
+                            Icon(Icons.Rounded.Close, "Suche schlie\u00dfen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
                     singleLine = true,
@@ -134,7 +151,8 @@ fun JournalScreen(
             ) {
                 Text(
                     text = "Tagebuch",
-                    style = MaterialTheme.typography.headlineMedium
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -146,27 +164,27 @@ fun JournalScreen(
                         contentDescription = "Sync-Status",
                         tint = when (uiState.syncStatus) {
                             SyncStatus.SYNCED -> NeonEmerald
-                            SyncStatus.SYNCING -> NeonCyan
+                            SyncStatus.SYNCING -> MaterialTheme.colorScheme.primary
                             SyncStatus.ERROR -> NeonRed
-                            else -> TextMuted
+                            else -> MaterialTheme.colorScheme.outline
                         },
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     IconButton(onClick = { viewModel.toggleSearch() }) {
-                        Icon(Icons.Rounded.Search, "Suchen", tint = TextSecondary)
+                        Icon(Icons.Rounded.Search, "Suchen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
 
-            // Entry list
+            // Transcribing state
             if (uiState.recordingState == RecordingState.TRANSCRIBING) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     ShimmerLoadingEffect(height = 20.dp)
                     Spacer(modifier = Modifier.height(8.dp))
                     ShimmerLoadingEffect(height = 16.dp, modifier = Modifier.fillMaxWidth(0.7f))
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Transkribiere...", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                    Text("Transkribiere...", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
@@ -176,9 +194,9 @@ fun JournalScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Noch keine Einträge", style = MaterialTheme.typography.titleLarge, color = TextMuted)
+                        Text("Noch keine Eintr\u00e4ge", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.outline)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Tippe auf das Mikrofon um zu starten", style = MaterialTheme.typography.bodyMedium, color = TextMuted, textAlign = TextAlign.Center)
+                        Text("Tippe auf das Mikrofon um zu starten", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center)
                     }
                 }
             } else {
@@ -213,7 +231,7 @@ fun JournalScreen(
         // Mic button
         AnimatedMicButton(
             isRecording = uiState.recordingState == RecordingState.RECORDING,
-            onClick = { viewModel.toggleRecording() },
+            onClick = onMicClick,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 16.dp)
@@ -225,7 +243,9 @@ fun JournalScreen(
                 rawText = uiState.rawText,
                 improvedText = uiState.improvedText,
                 isImproving = uiState.recordingState == RecordingState.IMPROVING,
+                isUsingImproved = uiState.isImproveEnabled,
                 onImproveClick = { viewModel.improveText() },
+                onToggleVersion = { useImproved -> viewModel.setUseImprovedText(useImproved) },
                 onSave = { viewModel.saveEntry() },
                 onDismiss = { viewModel.dismissPreview() }
             )
@@ -235,7 +255,11 @@ fun JournalScreen(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)
         ) { data ->
-            Snackbar(snackbarData = data, containerColor = CosmosDeep, contentColor = TextPrimary)
+            Snackbar(
+                snackbarData = data,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
@@ -245,79 +269,92 @@ private fun PreviewDialog(
     rawText: String,
     improvedText: String?,
     isImproving: Boolean,
+    isUsingImproved: Boolean,
     onImproveClick: () -> Unit,
+    onToggleVersion: (Boolean) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val showingImproved = isUsingImproved && improvedText != null
+    val displayText = if (showingImproved) improvedText!! else rawText
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = CosmosDeep,
-        title = { Text("Neuer Eintrag", color = TextPrimary) },
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Neuer Eintrag", color = MaterialTheme.colorScheme.onSurface)
+                if (improvedText != null) {
+                    Text(
+                        text = if (showingImproved) "Verbessert" else "Original",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        },
         text = {
             Column {
-                if (improvedText != null) {
-                    TabRow(
-                        selectedTabIndex = selectedTab,
-                        containerColor = Color.Transparent,
-                        contentColor = NeonCyan,
-                        indicator = { tabPositions ->
-                            if (selectedTab < tabPositions.size) {
-                                SecondaryIndicator(
-                                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                                    color = NeonCyan
-                                )
-                            }
-                        }
-                    ) {
-                        Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
-                            Text("Original", modifier = Modifier.padding(8.dp), color = if (selectedTab == 0) NeonCyan else TextMuted)
-                        }
-                        Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
-                            Text("Verbessert", modifier = Modifier.padding(8.dp), color = if (selectedTab == 1) NeonCyan else TextMuted)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-
                 Text(
-                    text = if (selectedTab == 1 && improvedText != null) improvedText else rawText,
+                    text = displayText,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
-                if (improvedText == null && !isImproving) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Text verbessern", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Switch(
-                            checked = false,
-                            onCheckedChange = { onImproveClick() },
-                            colors = SwitchDefaults.colors(checkedTrackColor = NeonCyan)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (improvedText != null && !isImproving) {
+                    // Toggle between versions
+                    OutlinedButton(
+                        onClick = { onToggleVersion(!showingImproved) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text(
+                            text = if (showingImproved) "\u21A9 Original anzeigen" else "\u2728 Verbesserte Version anzeigen"
                         )
                     }
                 }
 
+                if (improvedText == null && !isImproving) {
+                    Button(
+                        onClick = onImproveClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    ) {
+                        Text("\u2728 Text verbessern")
+                    }
+                }
+
                 if (isImproving) {
-                    Spacer(modifier = Modifier.height(12.dp))
                     ShimmerLoadingEffect(height = 16.dp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Optimiere Text...", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                    Text("Optimiere Text...", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
             }
         },
         confirmButton = {
             Button(
                 onClick = onSave,
-                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = CosmosBlack)
-            ) { Text("Speichern") }
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                Text(if (showingImproved) "Verbessert speichern" else "Speichern")
+            }
         },
         dismissButton = {
             OutlinedButton(
                 onClick = onDismiss,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
             ) { Text("Verwerfen") }
         }
     )

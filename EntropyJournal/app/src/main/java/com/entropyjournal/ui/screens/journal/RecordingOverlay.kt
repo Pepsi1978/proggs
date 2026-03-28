@@ -15,9 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.entropyjournal.ui.components.WaveformVisualizer
-import com.entropyjournal.ui.theme.CosmosDeep
-import com.entropyjournal.ui.theme.NeonCyan
-import com.entropyjournal.ui.theme.TextSecondary
 import com.entropyjournal.util.DateTimeFormatter
 
 @Composable
@@ -32,20 +29,20 @@ fun RecordingOverlay(
             .padding(horizontal = 16.dp)
             .padding(bottom = 96.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(CosmosDeep.copy(alpha = 0.95f))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Aufnahme läuft",
+            text = "Aufnahme l\u00e4uft",
             style = MaterialTheme.typography.titleMedium,
-            color = NeonCyan
+            color = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = DateTimeFormatter.formatDuration(durationSeconds),
             style = MaterialTheme.typography.displayLarge,
-            color = NeonCyan
+            color = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(12.dp))
         WaveformVisualizer(amplitude = amplitude)
@@ -53,7 +50,7 @@ fun RecordingOverlay(
         Text(
             text = "Erneut tippen zum Stoppen",
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

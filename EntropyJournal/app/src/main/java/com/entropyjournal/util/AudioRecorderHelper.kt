@@ -18,7 +18,7 @@ import javax.inject.Singleton
 @Singleton
 class AudioRecorderHelper @Inject constructor() {
 
-    private var audioRecord: AudioRecord? = null
+    @Volatile
     private var isRecording = false
 
     private val _amplitude = MutableStateFlow(0f)
@@ -27,7 +27,7 @@ class AudioRecorderHelper @Inject constructor() {
     private val _durationSeconds = MutableStateFlow(0)
     val durationSeconds: StateFlow<Int> = _durationSeconds
 
-    private val sampleRate = Constants.AUDIO_SAMPLE_RATE // 16000
+    private val sampleRate = Constants.AUDIO_SAMPLE_RATE
     private val channelConfig = AudioFormat.CHANNEL_IN_MONO
     private val audioFormat = AudioFormat.ENCODING_PCM_16BIT
     private val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
@@ -36,7 +36,7 @@ class AudioRecorderHelper @Inject constructor() {
     suspend fun startRecording(outputFile: File): Unit = withContext(Dispatchers.IO) {
         if (isRecording) return@withContext
 
-        audioRecord = AudioRecord(
+        val recorder = AudioRecord(
             MediaRecorder.AudioSource.MIC,
             sampleRate,
             channelConfig,
@@ -44,24 +44,28 @@ class AudioRecorderHelper @Inject constructor() {
             bufferSize * 2
         )
 
+        if (recorder.state != AudioRecord.STATE_INITIALIZED) {
+            recorder.release()
+            throw IllegalStateException("AudioRecord konnte nicht initialisiert werden")
+        }
+
         isRecording = true
         _durationSeconds.value = 0
+        _amplitude.value = 0f
 
-        audioRecord?.startRecording()
+        recorder.startRecording()
 
-        val outputStream = FileOutputStream(outputFile)
         val buffer = ShortArray(bufferSize / 2)
         var totalSamplesWritten = 0L
-
-        // Write placeholder WAV header (44 bytes), will be updated after recording
-        val placeholderHeader = ByteArray(44)
-        outputStream.write(placeholderHeader)
-
         val startTime = System.currentTimeMillis()
 
+        val outputStream = FileOutputStream(outputFile)
         try {
+            // Write placeholder WAV header (44 bytes)
+            outputStream.write(ByteArray(44))
+
             while (isRecording && isActive) {
-                val readCount = audioRecord?.read(buffer, 0, buffer.size) ?: 0
+                val readCount = recorder.read(buffer, 0, buffer.size)
                 if (readCount > 0) {
                     // Calculate amplitude for visualization
                     var sum = 0L
@@ -80,17 +84,18 @@ class AudioRecorderHelper @Inject constructor() {
                     outputStream.write(byteBuffer)
                     totalSamplesWritten += readCount
 
-                    // Update duration
                     val elapsed = (System.currentTimeMillis() - startTime) / 1000
                     _durationSeconds.value = elapsed.toInt()
                 }
             }
         } finally {
             outputStream.close()
+            try { recorder.stop() } catch (_: Exception) {}
+            recorder.release()
         }
 
         // Update WAV header with correct file size
-        val totalDataSize = totalSamplesWritten * 2 // 16-bit = 2 bytes per sample
+        val totalDataSize = totalSamplesWritten * 2
         writeWavHeader(outputFile, totalDataSize)
 
         _amplitude.value = 0f
@@ -98,34 +103,28 @@ class AudioRecorderHelper @Inject constructor() {
 
     fun stopRecording() {
         isRecording = false
-        audioRecord?.stop()
-        audioRecord?.release()
-        audioRecord = null
     }
 
     fun isCurrentlyRecording(): Boolean = isRecording
 
     private fun writeWavHeader(file: File, dataSize: Long) {
         val raf = RandomAccessFile(file, "rw")
-        val totalFileSize = dataSize + 36 // 44 - 8 header bytes
+        val totalFileSize = dataSize + 36
 
         raf.seek(0)
-        // RIFF header
         raf.writeBytes("RIFF")
         raf.writeIntLE((totalFileSize).toInt())
         raf.writeBytes("WAVE")
 
-        // fmt sub-chunk
         raf.writeBytes("fmt ")
-        raf.writeIntLE(16) // sub-chunk size
-        raf.writeShortLE(1) // PCM format
-        raf.writeShortLE(Constants.AUDIO_CHANNELS.toShort()) // mono
-        raf.writeIntLE(sampleRate) // sample rate
-        raf.writeIntLE(sampleRate * Constants.AUDIO_CHANNELS * 2) // byte rate
-        raf.writeShortLE((Constants.AUDIO_CHANNELS * 2).toShort()) // block align
-        raf.writeShortLE(16) // bits per sample
+        raf.writeIntLE(16)
+        raf.writeShortLE(1)
+        raf.writeShortLE(Constants.AUDIO_CHANNELS.toShort())
+        raf.writeIntLE(sampleRate)
+        raf.writeIntLE(sampleRate * Constants.AUDIO_CHANNELS * 2)
+        raf.writeShortLE((Constants.AUDIO_CHANNELS * 2).toShort())
+        raf.writeShortLE(16)
 
-        // data sub-chunk
         raf.writeBytes("data")
         raf.writeIntLE(dataSize.toInt())
 
@@ -133,7 +132,6 @@ class AudioRecorderHelper @Inject constructor() {
     }
 }
 
-// Extension functions for little-endian writing to RandomAccessFile
 private fun RandomAccessFile.writeIntLE(value: Int) {
     write(value and 0xFF)
     write((value shr 8) and 0xFF)

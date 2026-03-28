@@ -36,50 +36,43 @@ val AppTypography = Typography(
         fontFamily = Exo2,
         fontWeight = FontWeight.Bold,
         fontSize = 32.sp,
-        letterSpacing = (-0.5).sp,
-        color = TextPrimary
+        letterSpacing = (-0.5).sp
     ),
     headlineMedium = TextStyle(
         fontFamily = Exo2,
         fontWeight = FontWeight.SemiBold,
         fontSize = 24.sp,
-        letterSpacing = 0.sp,
-        color = TextPrimary
+        letterSpacing = 0.sp
     ),
     titleLarge = TextStyle(
         fontFamily = Exo2,
         fontWeight = FontWeight.Medium,
         fontSize = 20.sp,
-        letterSpacing = 0.15.sp,
-        color = TextPrimary
+        letterSpacing = 0.15.sp
     ),
     titleMedium = TextStyle(
         fontFamily = Exo2,
         fontWeight = FontWeight.Medium,
         fontSize = 16.sp,
-        letterSpacing = 0.15.sp,
-        color = TextPrimary
+        letterSpacing = 0.15.sp
     ),
     bodyLarge = TextStyle(
         fontFamily = SourceSansPro,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
-        letterSpacing = 0.25.sp,
-        color = TextPrimary
+        letterSpacing = 0.25.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = SourceSansPro,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
-        lineHeight = 20.sp,
-        color = TextSecondary
+        lineHeight = 20.sp
     ),
     labelMedium = TextStyle(
         fontFamily = JetBrainsMono,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
-        letterSpacing = 0.5.sp,
-        color = TextMuted
+        letterSpacing = 0.5.sp
     )
 )

@@ -2,6 +2,7 @@ package com.entropyjournal.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
@@ -19,6 +20,7 @@ import com.entropyjournal.ui.theme.NeonCyan
 fun ThreeDCard(
     modifier: Modifier = Modifier,
     glowColor: Color = NeonCyan,
+    onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     var rotationX by remember { mutableFloatStateOf(0f) }
@@ -37,6 +39,7 @@ fun ThreeDCard(
 
     Box(
         modifier = modifier
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDrag = { change, _ ->

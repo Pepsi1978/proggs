@@ -16,14 +16,22 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -46,17 +54,11 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.entropyjournal.ui.components.GlassCard
-import com.entropyjournal.ui.components.NeonDivider
-import com.entropyjournal.ui.theme.CosmosBlack
-import com.entropyjournal.ui.theme.CosmosDeep
-import com.entropyjournal.ui.theme.CosmosSurface
-import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonRed
-import com.entropyjournal.ui.theme.TextMuted
-import com.entropyjournal.ui.theme.TextPrimary
-import com.entropyjournal.ui.theme.TextSecondary
+import com.entropyjournal.util.Constants
 import com.entropyjournal.util.DateTimeFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
@@ -67,52 +69,154 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CosmosBlack)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Einstellungen", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            "Einstellungen",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        // Theme toggle
+        GlassCard {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Icon(
+                        imageVector = if (uiState.isDarkTheme) Icons.Rounded.DarkMode else Icons.Rounded.LightMode,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text("Erscheinungsbild", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            if (uiState.isDarkTheme) "Dunkelmodus" else "Tagmodus",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Switch(
+                    checked = uiState.isDarkTheme,
+                    onCheckedChange = { viewModel.updateDarkTheme(it) },
+                    colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
+                )
+            }
+        }
+
+        // Gemini model selection
+        GlassCard {
+            Column {
+                Text("Gemini-Modell", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "F\u00fcr Textverbesserung und Dashboard-Analyse",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                var expanded by remember { mutableStateOf(false) }
+                val selectedModel = Constants.GEMINI_FLASH_MODELS.find { it.id == uiState.selectedModel }
+                    ?: Constants.GEMINI_FLASH_MODELS.first()
+
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = it }
+                ) {
+                    TextField(
+                        value = "${selectedModel.displayName}   ${selectedModel.price}",
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = {
+                            Icon(Icons.Rounded.KeyboardArrowDown, "Modell w\u00e4hlen")
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ) {
+                        Constants.GEMINI_FLASH_MODELS.forEach { model ->
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(
+                                            model.displayName,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = if (model.id == uiState.selectedModel)
+                                                MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            "Input ${model.price.substringBefore("/")} \u2022 Output ${model.price.substringAfter("/")}  pro 1M Token",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    viewModel.updateSelectedModel(model.id)
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
         // Account section
         GlassCard {
             Column {
-                Text("Konto", style = MaterialTheme.typography.titleMedium, color = NeonCyan)
+                Text("Konto", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(12.dp))
                 uiState.userProfile?.let { profile ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         androidx.compose.foundation.layout.Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(CosmosSurface),
+                            modifier = Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = profile.displayName.take(1).uppercase(),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = NeonCyan
-                            )
+                            Text(profile.displayName.take(1).uppercase(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text(profile.displayName, style = MaterialTheme.typography.bodyLarge)
-                            Text(profile.email, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                            Text(profile.displayName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            Text(profile.email, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     uiState.lastSyncTimestamp?.let { ts ->
-                        Text(
-                            "Letzte Synchronisation: ${DateTimeFormatter.formatFull(ts)}",
-                            style = MaterialTheme.typography.labelMedium
-                        )
+                        Text("Letzte Synchronisation: ${DateTimeFormatter.formatFull(ts)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = { viewModel.syncNow() },
                             enabled = !uiState.isSyncing,
-                            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = CosmosBlack)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
                         ) { Text(if (uiState.isSyncing) "Synchronisiere..." else "Jetzt synchronisieren") }
                         OutlinedButton(
                             onClick = { viewModel.showLogoutDialog(true) },
@@ -121,7 +225,7 @@ fun SettingsScreen(
                     }
                     uiState.syncMessage?.let { msg ->
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(msg, style = MaterialTheme.typography.labelMedium, color = TextSecondary)
+                        Text(msg, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -130,144 +234,93 @@ fun SettingsScreen(
         // API Keys section
         GlassCard {
             Column {
-                Text("API-Schlüssel", style = MaterialTheme.typography.titleMedium, color = NeonCyan)
+                Text("API-Schl\u00fcssel", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(12.dp))
-                ApiKeyField(
-                    label = "Groq API-Key",
-                    value = uiState.groqApiKey,
-                    onValueChange = { viewModel.updateGroqApiKey(it) }
-                )
+                ApiKeyField(label = "Groq API-Key", value = uiState.groqApiKey, onValueChange = { viewModel.updateGroqApiKey(it) })
                 Spacer(modifier = Modifier.height(8.dp))
-                ApiKeyField(
-                    label = "Gemini API-Key",
-                    value = uiState.geminiApiKey,
-                    onValueChange = { viewModel.updateGeminiApiKey(it) }
-                )
+                ApiKeyField(label = "Gemini API-Key", value = uiState.geminiApiKey, onValueChange = { viewModel.updateGeminiApiKey(it) })
             }
         }
 
-        // Text improvement section
-        GlassCard {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Textverbesserung", style = MaterialTheme.typography.titleMedium, color = NeonCyan)
-                    Text("Standardmäßig aktivieren", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-                }
-                Switch(
-                    checked = uiState.textImprovementDefault,
-                    onCheckedChange = { viewModel.updateTextImprovementDefault(it) },
-                    colors = SwitchDefaults.colors(checkedTrackColor = NeonCyan)
-                )
-            }
-        }
-
-        // Recording section
+        // Recording & preferences section (combined)
         GlassCard {
             Column {
-                Text("Aufnahme", style = MaterialTheme.typography.titleMedium, color = NeonCyan)
+                Text("Aufnahme", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Max. Aufnahmedauer: ${uiState.maxRecordingDuration} Min.", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                Text("Max. Aufnahmedauer: ${uiState.maxRecordingDuration} Min.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Slider(
-                    value = uiState.maxRecordingDuration.toFloat(),
-                    onValueChange = { viewModel.updateMaxRecordingDuration(it.toInt()) },
-                    valueRange = 1f..10f,
-                    steps = 8,
-                    colors = SliderDefaults.colors(thumbColor = NeonCyan, activeTrackColor = NeonCyan)
+                    value = uiState.maxRecordingDuration.toFloat(), onValueChange = { viewModel.updateMaxRecordingDuration(it.toInt()) },
+                    valueRange = 1f..10f, steps = 8,
+                    colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary)
                 )
-            }
-        }
-
-        // Dashboard section
-        GlassCard {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Dashboard", style = MaterialTheme.typography.titleMedium, color = NeonCyan)
-                    Text("Automatisch aktualisieren", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Textverbesserung", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Standardm\u00e4\u00dfig aktivieren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = uiState.textImprovementDefault, onCheckedChange = { viewModel.updateTextImprovementDefault(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
                 }
-                Switch(
-                    checked = uiState.autoUpdateDashboard,
-                    onCheckedChange = { viewModel.updateAutoUpdateDashboard(it) },
-                    colors = SwitchDefaults.colors(checkedTrackColor = NeonCyan)
-                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Dashboard", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Automatisch aktualisieren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = uiState.autoUpdateDashboard, onCheckedChange = { viewModel.updateAutoUpdateDashboard(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
+                }
             }
         }
 
         // About section
         GlassCard {
             Column {
-                Text("Über die App", style = MaterialTheme.typography.titleMedium, color = NeonCyan)
+                Text("\u00dcber die App", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Entropy Journal v1.0.0", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-                Text("Dein persönliches KI-Tagebuch", style = MaterialTheme.typography.bodyMedium, color = TextMuted)
+                Text("Entropy Journal v0.1.5", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Dein pers\u00f6nliches KI-Tagebuch", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("\u00a9 Frank Barwandt", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
             }
         }
 
         Spacer(modifier = Modifier.height(80.dp))
     }
 
-    // Logout dialog
     if (uiState.showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.showLogoutDialog(false) },
-            containerColor = CosmosDeep,
-            title = { Text("Abmelden?", color = TextPrimary) },
-            text = { Text("Möchtest du dich wirklich abmelden?", color = TextSecondary) },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Abmelden?", color = MaterialTheme.colorScheme.onSurface) },
+            text = { Text("M\u00f6chtest du dich wirklich abmelden?", color = MaterialTheme.colorScheme.onSurfaceVariant) },
             confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.signOut()
-                        onSignOut()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonRed)
-                ) { Text("Abmelden") }
+                Button(onClick = { viewModel.signOut(); onSignOut() }, colors = ButtonDefaults.buttonColors(containerColor = NeonRed)) { Text("Abmelden") }
             },
             dismissButton = {
-                OutlinedButton(onClick = { viewModel.showLogoutDialog(false) }) { Text("Abbrechen", color = TextSecondary) }
+                OutlinedButton(onClick = { viewModel.showLogoutDialog(false) }) { Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         )
     }
 }
 
 @Composable
-private fun ApiKeyField(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit
-) {
+private fun ApiKeyField(label: String, value: String, onValueChange: (String) -> Unit) {
     var visible by remember { mutableStateOf(false) }
-
     TextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label, color = TextMuted) },
+        value = value, onValueChange = onValueChange,
+        label = { Text(label, color = MaterialTheme.colorScheme.outline) },
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
             IconButton(onClick = { visible = !visible }) {
-                Icon(
-                    if (visible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
-                    contentDescription = if (visible) "Verbergen" else "Anzeigen",
-                    tint = TextSecondary
-                )
+                Icon(if (visible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility, if (visible) "Verbergen" else "Anzeigen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         modifier = Modifier.fillMaxWidth(),
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = CosmosSurface,
-            unfocusedContainerColor = CosmosSurface,
-            focusedTextColor = TextPrimary,
-            cursorColor = NeonCyan,
-            focusedIndicatorColor = NeonCyan,
-            unfocusedIndicatorColor = Color.Transparent
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant, unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedTextColor = MaterialTheme.colorScheme.onSurface, cursorColor = MaterialTheme.colorScheme.primary,
+            focusedIndicatorColor = MaterialTheme.colorScheme.primary, unfocusedIndicatorColor = Color.Transparent
         ),
-        singleLine = true,
-        shape = RoundedCornerShape(12.dp)
+        singleLine = true, shape = RoundedCornerShape(12.dp)
     )
 }

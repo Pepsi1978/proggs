@@ -21,4 +21,7 @@ interface AdviceDashboardDao {
 
     @Query("SELECT COUNT(*) FROM advice_blocks")
     suspend fun getBlockCount(): Int
+
+    @Query("SELECT * FROM advice_blocks ORDER BY entropyLevel DESC")
+    suspend fun getAllSync(): List<AdviceBlockEntity>
 }

@@ -19,11 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.entropyjournal.ui.theme.CosmosBlack
 import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonMagenta
 import com.entropyjournal.ui.theme.NeonViolet
-import com.entropyjournal.ui.theme.TextPrimary
 import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
@@ -69,7 +67,7 @@ fun SplashScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CosmosBlack),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -104,12 +102,12 @@ fun SplashScreen(
             Text(
                 text = "E",
                 style = MaterialTheme.typography.displayLarge,
-                color = NeonCyan.copy(alpha = convergence.value)
+                color = MaterialTheme.colorScheme.primary.copy(alpha = convergence.value)
             )
             Text(
                 text = "Entropy Journal",
                 style = MaterialTheme.typography.titleLarge,
-                color = TextPrimary.copy(alpha = textAlpha.value),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = textAlpha.value),
                 modifier = Modifier.offset(y = 8.dp)
             )
         }

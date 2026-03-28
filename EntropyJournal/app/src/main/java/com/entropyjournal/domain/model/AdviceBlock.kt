@@ -17,7 +17,13 @@ data class Advice(
     val title: String,
     val description: String,
     val priority: AdvicePriority,
-    val connection: String           // cross-category link description
+    val connection: String,          // cross-category link description
+    val derivation: List<DerivationEntry> = emptyList()
+)
+
+data class DerivationEntry(
+    val date: String,
+    val summary: String
 )
 
 enum class AdvicePriority(val label: String) {

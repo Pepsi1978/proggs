@@ -1,6 +1,5 @@
 package com.entropyjournal.ui.screens.login
 
-import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,11 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.entropyjournal.ui.theme.CosmosBlack
-import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonRed
-import com.entropyjournal.ui.theme.TextPrimary
-import com.entropyjournal.ui.theme.TextSecondary
 
 @Composable
 fun LoginScreen(
@@ -50,7 +45,7 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CosmosBlack),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -61,19 +56,19 @@ fun LoginScreen(
             Text(
                 text = "E",
                 style = MaterialTheme.typography.displayLarge,
-                color = NeonCyan
+                color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Entropy Journal",
                 style = MaterialTheme.typography.headlineMedium,
-                color = TextPrimary
+                color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Dein persönliches KI-Tagebuch\nfür Klarheit und Veränderung",
+                text = "Dein pers\u00f6nliches KI-Tagebuch\nf\u00fcr Klarheit und Ver\u00e4nderung",
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(48.dp))
@@ -81,13 +76,21 @@ fun LoginScreen(
             when (uiState) {
                 is LoginUiState.Loading -> {
                     CircularProgressIndicator(
-                        color = NeonCyan,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(48.dp)
                     )
                 }
                 is LoginUiState.Error -> {
+                    val errorMsg = (uiState as LoginUiState.Error).message
+                    val displayMsg = if (errorMsg.contains("No credentials available", ignoreCase = true)
+                        || errorMsg.contains("YOUR_WEB_CLIENT_ID", ignoreCase = true)
+                    ) {
+                        "Google-Anmeldung ist noch nicht eingerichtet.\nBitte zuerst ohne Anmeldung fortfahren."
+                    } else {
+                        errorMsg
+                    }
                     Text(
-                        text = (uiState as LoginUiState.Error).message,
+                        text = displayMsg,
                         color = NeonRed,
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center
@@ -98,6 +101,17 @@ fun LoginScreen(
                 else -> {
                     GoogleSignInButton(onClick = { viewModel.signIn(context) })
                 }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            androidx.compose.material3.TextButton(
+                onClick = onLoginSuccess
+            ) {
+                Text(
+                    text = "Ohne Anmeldung fortfahren",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

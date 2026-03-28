@@ -43,21 +43,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.entropyjournal.ui.components.GlassCard
-import com.entropyjournal.ui.components.NeonDivider
-import com.entropyjournal.ui.theme.CosmosBlack
-import com.entropyjournal.ui.theme.CosmosDeep
-import com.entropyjournal.ui.theme.CosmosLayer
 import com.entropyjournal.ui.theme.NeonAmber
-import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
-import com.entropyjournal.ui.theme.TextMuted
-import com.entropyjournal.ui.theme.TextPrimary
-import com.entropyjournal.ui.theme.TextSecondary
 import com.entropyjournal.util.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -75,18 +66,18 @@ fun EntryDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CosmosBlack)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         TopAppBar(
-            title = { Text("Eintrag", color = TextPrimary) },
+            title = { Text("Eintrag", color = MaterialTheme.colorScheme.onBackground) },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück", tint = TextPrimary)
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Zur\u00fcck", tint = MaterialTheme.colorScheme.onBackground)
                 }
             },
             actions = {
                 IconButton(onClick = { viewModel.showDeleteDialog(true) }) {
-                    Icon(Icons.Rounded.Delete, "Löschen", tint = NeonRed)
+                    Icon(Icons.Rounded.Delete, "L\u00f6schen", tint = NeonRed)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -99,7 +90,6 @@ fun EntryDetailScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Timestamp and mood
                 GlassCard {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -107,8 +97,16 @@ fun EntryDetailScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text(DateTimeFormatter.formatFull(entry.timestamp), style = MaterialTheme.typography.labelMedium)
-                            Text(DateTimeFormatter.formatRelative(entry.timestamp), style = MaterialTheme.typography.labelMedium, color = TextMuted)
+                            Text(
+                                DateTimeFormatter.formatFull(entry.timestamp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                            Text(
+                                DateTimeFormatter.formatRelative(entry.timestamp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.outline
+                            )
                         }
                         Text(
                             text = when (entry.moodTag) {
@@ -121,7 +119,6 @@ fun EntryDetailScreen(
                     }
                 }
 
-                // Entropy score
                 entry.entropyScore?.let { score ->
                     GlassCard(
                         glowColor = when {
@@ -131,7 +128,11 @@ fun EntryDetailScreen(
                         }
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Entropie-Score: ", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                            Text(
+                                "Entropie-Score: ",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                             Text(
                                 text = String.format("%.0f%%", score * 100),
                                 style = MaterialTheme.typography.titleMedium,
@@ -145,25 +146,35 @@ fun EntryDetailScreen(
                     }
                 }
 
-                // Text content with tab switching
                 var selectedTab by remember { mutableIntStateOf(0) }
 
                 if (entry.isImproved && entry.improvedText != null) {
                     TabRow(
                         selectedTabIndex = selectedTab,
                         containerColor = Color.Transparent,
-                        contentColor = NeonCyan,
+                        contentColor = MaterialTheme.colorScheme.primary,
                         indicator = { tabPositions ->
                             if (selectedTab < tabPositions.size) {
-                                SecondaryIndicator(Modifier.tabIndicatorOffset(tabPositions[selectedTab]), color = NeonCyan)
+                                SecondaryIndicator(
+                                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                     ) {
                         Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
-                            Text("Verbessert", modifier = Modifier.padding(8.dp), color = if (selectedTab == 0) NeonCyan else TextMuted)
+                            Text(
+                                "Verbessert",
+                                modifier = Modifier.padding(8.dp),
+                                color = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            )
                         }
                         Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
-                            Text("Original", modifier = Modifier.padding(8.dp), color = if (selectedTab == 1) NeonCyan else TextMuted)
+                            Text(
+                                "Original",
+                                modifier = Modifier.padding(8.dp),
+                                color = if (selectedTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            )
                         }
                     }
                 }
@@ -171,26 +182,33 @@ fun EntryDetailScreen(
                 GlassCard {
                     Text(
                         text = if (selectedTab == 1) entry.rawText else entry.displayText,
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
-                // Category tags
                 if (!entry.adviceCategoryTags.isNullOrBlank()) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         entry.adviceCategoryTags.split(",").map { it.trim() }.filter { it.isNotBlank() }.forEach { tag ->
-                            Surface(shape = RoundedCornerShape(8.dp), color = CosmosLayer) {
-                                Text(tag, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), style = MaterialTheme.typography.labelMedium, color = NeonCyan)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Text(
+                                    tag,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                     }
                 }
 
-                // Recording duration
                 Text(
                     text = "Aufnahmedauer: ${DateTimeFormatter.formatDuration(entry.audioDurationSeconds)}",
                     style = MaterialTheme.typography.labelMedium,
-                    color = TextMuted
+                    color = MaterialTheme.colorScheme.outline
                 )
 
                 Spacer(modifier = Modifier.height(80.dp))
@@ -198,21 +216,22 @@ fun EntryDetailScreen(
         }
     }
 
-    // Delete dialog
     if (uiState.showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.showDeleteDialog(false) },
-            containerColor = CosmosDeep,
-            title = { Text("Eintrag löschen?", color = TextPrimary) },
-            text = { Text("Diesen Eintrag unwiderruflich löschen?", color = TextSecondary) },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Eintrag l\u00f6schen?", color = MaterialTheme.colorScheme.onSurface) },
+            text = { Text("Diesen Eintrag unwiderruflich l\u00f6schen?", color = MaterialTheme.colorScheme.onSurfaceVariant) },
             confirmButton = {
                 Button(
                     onClick = { viewModel.deleteEntry() },
                     colors = ButtonDefaults.buttonColors(containerColor = NeonRed)
-                ) { Text("Löschen") }
+                ) { Text("L\u00f6schen") }
             },
             dismissButton = {
-                OutlinedButton(onClick = { viewModel.showDeleteDialog(false) }) { Text("Abbrechen", color = TextSecondary) }
+                OutlinedButton(onClick = { viewModel.showDeleteDialog(false) }) {
+                    Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         )
     }

@@ -17,9 +17,11 @@ data class SettingsUiState(
     val userProfile: UserProfile? = null,
     val groqApiKey: String = "",
     val geminiApiKey: String = "",
+    val selectedModel: String = Constants.DEFAULT_GEMINI_MODEL,
     val textImprovementDefault: Boolean = false,
     val maxRecordingDuration: Int = 5,
     val autoUpdateDashboard: Boolean = true,
+    val isDarkTheme: Boolean = true,
     val lastSyncTimestamp: Long? = null,
     val isSyncing: Boolean = false,
     val syncMessage: String? = null,
@@ -45,11 +47,23 @@ class SettingsViewModel @Inject constructor(
             userProfile = signInUseCase.getProfile(),
             groqApiKey = encryptedPrefs.getString(Constants.PREF_GROQ_API_KEY, "") ?: "",
             geminiApiKey = encryptedPrefs.getString(Constants.PREF_GEMINI_API_KEY, "") ?: "",
+            selectedModel = encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL) ?: Constants.DEFAULT_GEMINI_MODEL,
             textImprovementDefault = encryptedPrefs.getBoolean(Constants.PREF_TEXT_IMPROVEMENT_DEFAULT, false),
             maxRecordingDuration = encryptedPrefs.getInt(Constants.PREF_MAX_RECORDING_DURATION, 5),
             autoUpdateDashboard = encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true),
+            isDarkTheme = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, true),
             lastSyncTimestamp = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L).takeIf { it > 0 }
         )
+    }
+
+    fun updateDarkTheme(enabled: Boolean) {
+        encryptedPrefs.edit().putBoolean(Constants.PREF_DARK_THEME, enabled).apply()
+        _uiState.value = _uiState.value.copy(isDarkTheme = enabled)
+    }
+
+    fun updateSelectedModel(modelId: String) {
+        encryptedPrefs.edit().putString(Constants.PREF_GEMINI_MODEL, modelId).apply()
+        _uiState.value = _uiState.value.copy(selectedModel = modelId)
     }
 
     fun updateGroqApiKey(key: String) {
@@ -104,9 +118,5 @@ class SettingsViewModel @Inject constructor(
     fun signOut() {
         signInUseCase.signOut()
         _uiState.value = _uiState.value.copy(userProfile = null, showLogoutDialog = false)
-    }
-
-    fun clearSyncMessage() {
-        _uiState.value = _uiState.value.copy(syncMessage = null)
     }
 }
