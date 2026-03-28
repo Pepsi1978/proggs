@@ -259,6 +259,50 @@ if (Test-Path $gitignore) {
     $synced += ".gitignore"
 }
 
+# .mcp.json — platform-specific sync (Windows version from mcp-windows.json)
+# The .mcp.json is NOT tracked in git anymore — each platform generates its own.
+$mcpSource = Join-Path $SetupDir "mcp-windows.json"
+$mcpDest = Join-Path $RepoDir ".mcp.json"
+if (Test-Path $mcpSource) {
+    $needsCopy = $true
+    if (Test-Path $mcpDest) {
+        $srcHash = (Get-FileHash $mcpSource).Hash
+        $dstHash = (Get-FileHash $mcpDest).Hash
+        if ($srcHash -eq $dstHash) { $needsCopy = $false }
+    }
+    if ($needsCopy) {
+        Copy-Item $mcpSource $mcpDest -Force
+        $synced += ".mcp.json(windows)"
+        Hook-Log ".mcp.json synced from mcp-windows.json"
+    }
+}
+
+# GitHub Personal Access Token — auto-refresh from gh CLI
+# Writes to settings.local.json (NOT settings.json — that gets committed to the repo)
+try {
+    $ghToken = & gh auth token 2>$null
+    if ($LASTEXITCODE -eq 0 -and $ghToken) {
+        $localSettings = Join-Path $ClaudeDir "settings.local.json"
+        $localData = @{}
+        if (Test-Path $localSettings) {
+            $localData = Get-Content $localSettings -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable
+        }
+        if (-not $localData.ContainsKey("env")) { $localData["env"] = @{} }
+        $currentToken = $localData["env"]["GITHUB_PERSONAL_ACCESS_TOKEN"]
+        if ($currentToken -ne $ghToken) {
+            $localData["env"]["GITHUB_PERSONAL_ACCESS_TOKEN"] = $ghToken
+            # Atomic write via temp file
+            $tmpFile = "$localSettings.tmp"
+            $localData | ConvertTo-Json -Depth 10 | Out-File -FilePath $tmpFile -Encoding UTF8 -NoNewline
+            Move-Item -Path $tmpFile -Destination $localSettings -Force
+            $synced += "GH-Token(refreshed)"
+            Hook-Log "GitHub PAT refreshed in settings.local.json"
+        }
+    }
+} catch {
+    Hook-LogWarn "GitHub token refresh failed: $_"
+}
+
 $syncedStr = $synced -join " "
 Hook-Log "sync complete: $syncedStr"
 Write-Status "Auto-Sync: Lokale Konfiguration aktualisiert: $syncedStr"

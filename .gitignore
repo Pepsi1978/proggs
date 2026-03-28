@@ -3,3 +3,4 @@ tools/
 .think-tank/
 .env
 test_api.ts
+.mcp.json

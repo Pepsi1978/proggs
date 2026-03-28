@@ -38,13 +38,14 @@ fi
 local_sha=$(git rev-parse HEAD 2>/dev/null)
 remote_sha=$(git rev-parse '@{u}' 2>/dev/null)
 
-# Always sync .mcp.json from repo to home dir (regardless of new commits)
-# Claude Code reads .mcp.json from the working dir (~), not from ~/proggs/
-repo_mcp="$REPO_DIR/.mcp.json"
-if [ -f "$repo_mcp" ]; then
-    if ! diff -q "$repo_mcp" "$HOME/.mcp.json" > /dev/null 2>&1; then
-        cp "$repo_mcp" "$HOME/.mcp.json"
-        hook_log ".mcp.json synced to home dir (was out of date)"
+# .mcp.json — platform-specific sync (macOS version from mcp-macos.json)
+# The .mcp.json is NOT tracked in git anymore — each platform generates its own.
+mcp_source="$SETUP_DIR/mcp-macos.json"
+mcp_dest="$REPO_DIR/.mcp.json"
+if [ -f "$mcp_source" ]; then
+    if ! diff -q "$mcp_source" "$mcp_dest" > /dev/null 2>&1; then
+        cp "$mcp_source" "$mcp_dest"
+        hook_log ".mcp.json synced from mcp-macos.json"
     fi
 fi
 
@@ -269,12 +270,14 @@ if [ -d "$skills_dir" ]; then
     fi
 fi
 
-# .mcp.json — always sync from repo to home directory
-# (Claude Code reads .mcp.json from the working dir, which is ~ on session start)
-repo_mcp="$REPO_DIR/.mcp.json"
-if [ -f "$repo_mcp" ]; then
-    cp "$repo_mcp" "$HOME/.mcp.json"
-    synced="$synced .mcp.json"
+# .mcp.json — platform-specific sync after pull (macOS from mcp-macos.json)
+mcp_source="$SETUP_DIR/mcp-macos.json"
+mcp_dest="$REPO_DIR/.mcp.json"
+if [ -f "$mcp_source" ]; then
+    if ! diff -q "$mcp_source" "$mcp_dest" > /dev/null 2>&1; then
+        cp "$mcp_source" "$mcp_dest"
+        synced="$synced .mcp.json(macos)"
+    fi
 fi
 
 # .gitignore_global
@@ -282,6 +285,36 @@ gitignore="$SETUP_DIR/.gitignore_global"
 if [ -f "$gitignore" ]; then
     cp "$gitignore" "$HOME/.gitignore_global"
     synced="$synced .gitignore"
+fi
+
+# GitHub Personal Access Token — auto-refresh from gh CLI
+# Writes to settings.local.json (NOT settings.json — that gets committed to the repo)
+gh_token=$(gh auth token 2>/dev/null)
+if [ -n "$gh_token" ]; then
+    local_settings="$CLAUDE_DIR/settings.local.json"
+    if [ -f "$local_settings" ]; then
+        current_token=$(python3 -c "
+import json, sys
+try:
+    d = json.load(open('$local_settings', encoding='utf-8'))
+    print(d.get('env', {}).get('GITHUB_PERSONAL_ACCESS_TOKEN', ''))
+except: pass
+" 2>/dev/null)
+        if [ "$current_token" != "$gh_token" ]; then
+            python3 -c "
+import json, tempfile, os
+path = '$local_settings'
+d = json.load(open(path, encoding='utf-8'))
+if 'env' not in d: d['env'] = {}
+d['env']['GITHUB_PERSONAL_ACCESS_TOKEN'] = '$gh_token'
+tmp = path + '.tmp'
+with open(tmp, 'w', encoding='utf-8') as f:
+    json.dump(d, f, indent=2, ensure_ascii=False)
+    f.write('\n')
+os.replace(tmp, path)
+" 2>/dev/null && synced="$synced GH-Token(refreshed)" && hook_log "GitHub PAT refreshed"
+        fi
+    fi
 fi
 
 hook_log "sync complete:$synced"
