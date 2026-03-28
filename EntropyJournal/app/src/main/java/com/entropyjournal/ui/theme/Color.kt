@@ -2,32 +2,39 @@ package com.entropyjournal.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Dark mode backgrounds — warm gray tones, NOT black
-val CosmosBlack = Color(0xFF2A2A32)
-val CosmosDeep = Color(0xFF343440)
-val CosmosLayer = Color(0xFF3E3E4E)
-val CosmosSurface = Color(0xFF48485A)
+// Dark mode — warm brown-gray palette
+val CosmosBlack = Color(0xFF2D2424)       // Background — warm dark brown
+val CosmosDeep = Color(0xFF363333)        // Surface — cards, nav bar
+val CosmosLayer = Color(0xFF393E46)       // Elevated — dialogs, inputs
+val CosmosSurface = Color(0xFF5C3D2E)     // Container — chips, tags
 
-// Neon accents
-val NeonCyan = Color(0xFF00E5FF)
+// Warm accents (dark mode primary palette)
+val WarmCopper = Color(0xFFB85C38)        // Primary accent — buttons, links
+val WarmSand = Color(0xFFE0C097)          // Secondary accent — highlights
+val WarmGold = Color(0xFFD4A76A)          // Tertiary — subtle warmth
+
+// Semantic colors (kept for entropy indicators + priority dots)
+val NeonEmerald = Color(0xFF4CAF7D)       // Success / low entropy
+val NeonAmber = Color(0xFFFFB300)         // Warning / medium entropy
+val NeonRed = Color(0xFFFF5252)           // Error / high entropy
+val NeonCyan = Color(0xFF4ECDC4)          // Info / low priority dot
+
+// Legacy neon (still used in some components)
 val NeonViolet = Color(0xFF7C4DFF)
 val NeonMagenta = Color(0xFFFF00E5)
-val NeonEmerald = Color(0xFF00FF9C)
-val NeonAmber = Color(0xFFFFAB00)
-val NeonRed = Color(0xFFFF1744)
 
-// Glassmorphism
-val GlassWhite = Color(0x1AFFFFFF)
-val GlassBorder = Color(0x33FFFFFF)
-val GlassHighlight = Color(0x0DFFFFFF)
+// Glassmorphism (warm-tinted)
+val GlassWhite = Color(0x18E0C097)        // Warm sand overlay 9%
+val GlassBorder = Color(0x28E0C097)       // Warm sand border 16%
+val GlassHighlight = Color(0x0CE0C097)    // Warm sand highlight 5%
 
-// Text
-val TextPrimary = Color(0xFFE8E8F0)
-val TextSecondary = Color(0xFFA0A0B8)
-val TextMuted = Color(0xFF6B6B80)
+// Text (warm tones for dark mode)
+val TextPrimary = Color(0xFFEDE5DD)       // Warm white — high emphasis
+val TextSecondary = Color(0xFFA8A098)     // Warm gray — medium emphasis
+val TextMuted = Color(0xFF7A7068)         // Warm muted — low emphasis
 
 // Gradient pairs
-val GradientCyanToViolet = listOf(NeonCyan, NeonViolet)
+val GradientCyanToViolet = listOf(WarmCopper, WarmSand)
 val GradientVioletToMagenta = listOf(NeonViolet, NeonMagenta)
 val GradientEmeraldToCyan = listOf(NeonEmerald, NeonCyan)
 

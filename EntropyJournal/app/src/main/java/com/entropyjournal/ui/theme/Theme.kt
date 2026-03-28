@@ -10,22 +10,22 @@ import androidx.compose.ui.graphics.Color
 
 val LocalIsDarkTheme = staticCompositionLocalOf { true }
 
-private val CosmosColorScheme = darkColorScheme(
-    primary = NeonCyan,
-    onPrimary = CosmosBlack,
-    primaryContainer = NeonCyan.copy(alpha = 0.12f),
-    onPrimaryContainer = NeonCyan,
-    secondary = NeonViolet,
+private val WarmDarkScheme = darkColorScheme(
+    primary = WarmCopper,
+    onPrimary = Color.White,
+    primaryContainer = CosmosSurface,
+    onPrimaryContainer = WarmSand,
+    secondary = WarmSand,
     onSecondary = CosmosBlack,
-    secondaryContainer = NeonViolet.copy(alpha = 0.12f),
-    onSecondaryContainer = NeonViolet,
-    tertiary = NeonMagenta,
+    secondaryContainer = CosmosSurface.copy(alpha = 0.7f),
+    onSecondaryContainer = WarmSand,
+    tertiary = WarmGold,
     onTertiary = CosmosBlack,
-    tertiaryContainer = NeonMagenta.copy(alpha = 0.12f),
-    onTertiaryContainer = NeonMagenta,
+    tertiaryContainer = CosmosSurface.copy(alpha = 0.5f),
+    onTertiaryContainer = WarmGold,
     error = NeonRed,
-    onError = CosmosBlack,
-    errorContainer = NeonRed.copy(alpha = 0.12f),
+    onError = Color.White,
+    errorContainer = NeonRed.copy(alpha = 0.15f),
     onErrorContainer = NeonRed,
     background = CosmosBlack,
     onBackground = TextPrimary,
@@ -37,14 +37,14 @@ private val CosmosColorScheme = darkColorScheme(
     outlineVariant = GlassHighlight,
     inverseSurface = TextPrimary,
     inverseOnSurface = CosmosBlack,
-    surfaceTint = NeonCyan
+    surfaceTint = WarmCopper
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF0097A7),
+    primary = Color(0xFF9C4A2E),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFB2EBF2),
-    onPrimaryContainer = Color(0xFF00363D),
+    primaryContainer = Color(0xFFFFDBC9),
+    onPrimaryContainer = Color(0xFF3A0B00),
     secondary = Color(0xFF5E35B1),
     onSecondary = Color.White,
     secondaryContainer = Color(0xFFEDE7F6),
@@ -67,7 +67,7 @@ private val LightColorScheme = lightColorScheme(
     outlineVariant = Color(0xFFD8D8E0),
     inverseSurface = LightTextPrimary,
     inverseOnSurface = LightBackground,
-    surfaceTint = Color(0xFF0097A7)
+    surfaceTint = Color(0xFF9C4A2E)
 )
 
 @Composable
@@ -75,7 +75,7 @@ fun EntropyJournalTheme(
     darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) CosmosColorScheme else LightColorScheme
+    val colorScheme = if (darkTheme) WarmDarkScheme else LightColorScheme
 
     CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
         MaterialTheme(
