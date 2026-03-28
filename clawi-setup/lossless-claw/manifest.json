@@ -1,0 +1,35 @@
+{
+  "capturedAt": "2026-03-28T00:30:37Z",
+  "dbPath": "/Users/frank/.openclaw/lcm.db",
+  "dbSizeBytes": 5468160,
+  "dbSha256": "69c53d56b72b708f406c1763b87cee4b8d606ded94a61e61cdf017027af6ea4b",
+  "counts": {
+    "conversations": 1,
+    "messages": 527,
+    "summaries": 9
+  },
+  "pluginEntry": {
+    "enabled": true,
+    "config": {
+      "freshTailCount": 48,
+      "contextThreshold": 0.75,
+      "incrementalMaxDepth": -1,
+      "summaryModel": "openai-codex/gpt-5.4",
+      "expansionModel": "openai-codex/gpt-5.4"
+    }
+  },
+  "pluginInstall": {
+    "source": "npm",
+    "spec": "@martian-engineering/lossless-claw@0.5.2",
+    "installPath": "/Users/frank/.openclaw/extensions/lossless-claw",
+    "version": "0.5.2",
+    "resolvedName": "@martian-engineering/lossless-claw",
+    "resolvedVersion": "0.5.2",
+    "resolvedSpec": "@martian-engineering/lossless-claw@0.5.2",
+    "integrity": "sha512-z1XP+czeRyyB31Mb3W++kXlldTisi9Ttqh25ggrm7rGMqBGpWxJ+sVAMGAHdKgSZTVmj8wOOVyMfEW9IHI6K+g==",
+    "shasum": "246d1a75bda9140ae47e57a0a987d0f8ac25abe4",
+    "resolvedAt": "2026-03-27T23:36:43.296Z",
+    "installedAt": "2026-03-27T23:37:03.804Z"
+  },
+  "note": "Backed up LCM data and lossless-claw config for Clawi recovery."
+}

@@ -19,6 +19,9 @@ else {
     $RepoDir = $ScriptDir
 }
 $WorkspaceDir = Join-Path $env:USERPROFILE ".openclaw\workspace"
+$OpenClawHome = Join-Path $env:USERPROFILE ".openclaw"
+$LcmDb = Join-Path $OpenClawHome "lcm.db"
+$LcmBackupDir = Join-Path $RepoDir "lossless-claw"
 $FilesToSync = @(
     "SOUL.md",
     "IDENTITY.md",
@@ -74,6 +77,28 @@ function Copy-DirIfExists {
     }
 }
 
+function Write-LcmManifest {
+    param([string]$OutputPath)
+
+    if (-not (Test-Path $LcmDb)) { return }
+    $cfg = Get-Content (Join-Path $OpenClawHome "openclaw.json") -Raw | ConvertFrom-Json
+    $pluginEntry = $cfg.plugins.entries.'lossless-claw'
+    $pluginInstall = $cfg.plugins.installs.'lossless-claw'
+    $hash = (Get-FileHash $LcmDb -Algorithm SHA256).Hash.ToLower()
+    $manifest = [ordered]@{
+        capturedAt = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+        dbPath = $LcmDb
+        dbSizeBytes = (Get-Item $LcmDb).Length
+        dbSha256 = $hash
+        counts = @{}
+        pluginEntry = $pluginEntry
+        pluginInstall = $pluginInstall
+        rawDatabaseBackedUpToGit = $false
+        note = 'Only sanitized lossless-claw metadata is backed up to Git. Raw lcm.db is intentionally excluded because it may contain sensitive conversation/config data.'
+    }
+    $manifest | ConvertTo-Json -Depth 10 | Out-File $OutputPath -Encoding utf8
+}
+
 if ($Mode -eq "pull") {
     Write-Host "Pulling Clawi's full baseline from Repo ($RepoDir) to $WorkspaceDir..." -ForegroundColor Cyan
     foreach ($file in $FilesToSync) {
@@ -81,6 +106,9 @@ if ($Mode -eq "pull") {
     }
     foreach ($dir in $DirsToSync) {
         Copy-DirIfExists (Join-Path $RepoDir $dir) (Join-Path $WorkspaceDir $dir)
+    }
+    if (Test-Path (Join-Path $LcmBackupDir "manifest.json")) {
+        Copy-IfExists (Join-Path $LcmBackupDir "manifest.json") (Join-Path $OpenClawHome "lcm.manifest.json")
     }
     Write-Host "Clawi's full baseline is now up to date in local workspace!" -ForegroundColor Green
 }
@@ -91,6 +119,11 @@ elseif ($Mode -eq "push") {
     }
     foreach ($dir in $DirsToSync) {
         Copy-DirIfExists (Join-Path $WorkspaceDir $dir) (Join-Path $RepoDir $dir)
+    }
+    if (Test-Path $LcmDb) {
+        if (-not (Test-Path $LcmBackupDir)) { New-Item -ItemType Directory -Path $LcmBackupDir -Force | Out-Null }
+        Write-LcmManifest (Join-Path $LcmBackupDir "manifest.json")
+        Write-Host "  Synced lossless-claw metadata/"
     }
     Write-Host "Clawi's full baseline is now backed up in the repository!" -ForegroundColor Green
 }
