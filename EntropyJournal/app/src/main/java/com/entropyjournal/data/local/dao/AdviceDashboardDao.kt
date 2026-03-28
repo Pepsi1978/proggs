@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface AdviceDashboardDao {
 
-    @Query("SELECT * FROM advice_blocks ORDER BY entropyLevel DESC")
+    @Query("SELECT * FROM advice_blocks ORDER BY entropyLevel DESC, categoryName ASC")
     fun getAll(): Flow<List<AdviceBlockEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

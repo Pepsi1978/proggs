@@ -72,10 +72,22 @@ Standard-Kategorien (nur als Ausgangspunkt — erstelle NEUE passend zum Inhalt)
 - Zuhause (icon: home, farbe: #34D399)
 - Persönliche Entwicklung (icon: trending_up, farbe: #60A5FA)
 
-Weitere verfügbare Icons für dynamische Kategorien:
-code, computer, school, self_improvement, favorite, health, medical,
-finance, shopping, car, running, travel, nature, sun, pets, music,
-art, design, gaming, lightbulb, timer, star, achievement, social, energy
+Weitere verfügbare Icons (nutze den passendsten für das erkannte Thema):
+Gesundheit: health, medical, spa, coffee, fitness_center, directions_run
+Psyche: psychology, self_improvement, mood_bad, nights_stay
+Beziehungen: people, child_care, cake (Dating), volunteer_activism
+Arbeit: work, trending_up (Karriere), school, code, computer, timer
+Finanzen: finance, account_balance, shopping
+Alltag: home, cleaning_services (Haushalt), directions_car, gavel (Recht/Bürokratie)
+Freizeit: menu_book, music_note, palette (Kunst), sports_esports, photo_camera, grass (Hobby/Garten), travel (Urlaub), pets
+Sucht: smoking_rooms (Rauchen), local_bar (Alkohol/Sucht)
+Spiritualität: church
+Sonstiges: nature, wb_sunny, lightbulb, star, emoji_events, thermostat
+
+Verwende KURZE Kategorienamen (1-2 Wörter, max. 15 Zeichen). Beispiele:
+RICHTIG: "Schlaf", "Arbeit", "Fitness", "Finanzen", "Karriere", "Haushalt"
+FALSCH: "Persönliche Entwicklung" (zu lang) → stattdessen "Entwicklung"
+FALSCH: "Mentale Gesundheit" (zu lang) → stattdessen "Psyche"
 
 ENTROPIE-LEVEL (0.0 bis 1.0):
 Diese Skala zeigt die INTENSITÄT der Belastung in jeder Kategorie:
