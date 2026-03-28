@@ -38,17 +38,17 @@ val GradientCyanToViolet = listOf(WarmCopper, WarmSand)
 val GradientVioletToMagenta = listOf(NeonViolet, NeonMagenta)
 val GradientEmeraldToCyan = listOf(NeonEmerald, NeonCyan)
 
-// Light mode — soft blue-cream palette
-val LightBackground = Color(0xFFF9F8F6)      // Warmest white — main background
-val LightSurface = Color(0xFFFAF9EE)         // Cream-white — cards
-val LightSurfaceVariant = Color(0xFFD9EAFD)  // Soft sky blue — inputs, chips
-val LightSurfaceContainer = Color(0xFFBCCCDC) // Muted blue-gray — containers
+// Light mode backgrounds
+val LightBackground = Color(0xFFF8F8FC)
+val LightSurface = Color(0xFFFFFFFF)
+val LightSurfaceVariant = Color(0xFFF0F0F5)
+val LightSurfaceContainer = Color(0xFFE8E8F0)
 
-// Light mode text (dark enough for WCAG AA on all light backgrounds)
-val LightTextPrimary = Color(0xFF1C2833)      // Dark blue-gray
-val LightTextSecondary = Color(0xFF4A5568)    // Medium blue-gray
-val LightTextMuted = Color(0xFF9AA6B2)        // Matches palette — soft steel
+// Light mode text
+val LightTextPrimary = Color(0xFF1A1A2E)
+val LightTextSecondary = Color(0xFF5A5A70)
+val LightTextMuted = Color(0xFF9090A8)
 
 // Light mode glass
-val LightGlassBorder = Color(0x18000000)
-val LightGlassBackground = Color(0xFFFAF9EE)
+val LightGlassBorder = Color(0x15000000)
+val LightGlassBackground = Color(0xFFFFFEFC)

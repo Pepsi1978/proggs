@@ -41,33 +41,33 @@ private val WarmDarkScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF3D6B8E),              // Deep steel blue — buttons, links
+    primary = Color(0xFF0097A7),
     onPrimary = Color.White,
-    primaryContainer = LightSurfaceVariant,   // Soft sky blue
-    onPrimaryContainer = Color(0xFF1C3A52),
-    secondary = Color(0xFF8B6914),            // Warm amber — secondary actions
+    primaryContainer = Color(0xFFB2EBF2),
+    onPrimaryContainer = Color(0xFF00363D),
+    secondary = Color(0xFF5E35B1),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFFAF9EE),
-    onSecondaryContainer = Color(0xFF4A3600),
-    tertiary = Color(0xFF6B7B8D),             // Cool gray-blue
+    secondaryContainer = Color(0xFFEDE7F6),
+    onSecondaryContainer = Color(0xFF311B92),
+    tertiary = Color(0xFFC2185B),
     onTertiary = Color.White,
-    tertiaryContainer = LightSurfaceContainer,
-    onTertiaryContainer = Color(0xFF2C3E50),
+    tertiaryContainer = Color(0xFFF8BBD0),
+    onTertiaryContainer = Color(0xFF880E4F),
     error = Color(0xFFD32F2F),
     onError = Color.White,
     errorContainer = Color(0xFFFFCDD2),
     onErrorContainer = Color(0xFFB71C1C),
-    background = LightBackground,             // #F9F8F6
-    onBackground = LightTextPrimary,          // #1C2833
-    surface = LightSurface,                   // #FAF9EE
+    background = LightBackground,
+    onBackground = LightTextPrimary,
+    surface = LightSurface,
     onSurface = LightTextPrimary,
-    surfaceVariant = LightSurfaceVariant,     // #D9EAFD
-    onSurfaceVariant = LightTextSecondary,    // #4A5568
-    outline = LightTextMuted,                 // #9AA6B2
-    outlineVariant = LightSurfaceContainer,   // #BCCCDC
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightTextSecondary,
+    outline = LightTextMuted,
+    outlineVariant = Color(0xFFD8D8E0),
     inverseSurface = LightTextPrimary,
     inverseOnSurface = LightBackground,
-    surfaceTint = Color(0xFF3D6B8E)
+    surfaceTint = Color(0xFF0097A7)
 )
 
 @Composable
