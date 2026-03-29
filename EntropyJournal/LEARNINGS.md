@@ -50,3 +50,47 @@
 - `ACCESS_COARSE_LOCATION` reicht aus (keine GPS-Genauigkeit noetig)
 - Standort wird einmal geholt und in SharedPreferences gespeichert fuer Offline-Berechnung
 - Drei Theme-Modi sind gegenseitig exklusiv: Manuell / System / Sonne
+
+## sherpa-onnx (Offline Speech-to-Text)
+- Library: Apache 2.0, kommerziell kostenlos nutzbar
+- AAR von GitHub Releases herunterladen und als `implementation(files("libs/....aar"))` einbinden
+- Konstruktor: `OfflineRecognizer(context.assets, config)` — laedt Modelle direkt aus Assets
+- `noCompress += listOf("onnx", "txt")` in `androidResources` damit Assets nicht komprimiert werden
+- Whisper Base int8: Encoder 28 MB + Decoder 125 MB + Tokens 800 KB = 153 MB
+- 51x schneller als whisper.cpp auf Android (benchmarked)
+- WAV-Samples: 16-bit PCM nach Float normalisieren mit `sample.toShort().toFloat() / 32768.0f`
+
+## Biometric Lock
+- `BiometricPrompt` braucht `FragmentActivity` — `ComponentActivity` reicht NICHT
+- `MainActivity` von `FragmentActivity()` erben lassen (statt `ComponentActivity`)
+- `DEVICE_CREDENTIAL` als Authenticator erlauben → PIN/Muster als Fallback automatisch
+- Lock-Delay: `onPause` Timestamp speichern, in `onResume` pruefen ob >60s vergangen
+- `showBiometricPrompt` als `fun` (nicht private) damit SettingsScreen sie aufrufen kann
+
+## SharedPreferences Sign-Out (Race Condition Fix)
+- NIEMALS zwei separate `edit().apply()` Aufrufe auf dem gleichen SharedPreferences-Objekt
+- **Loesung**: Ein einziger `edit().clear().putString(...).commit()` Block
+- `commit()` statt `apply()` vor App-Restart — garantiert synchrones Schreiben
+- API-Keys, Theme, Biometric-Setting vor `clear()` lesen und danach zurueckschreiben
+
+## Gmail API (Feedback)
+- Gmail API muss im Google Cloud Projekt aktiviert werden (einmalig)
+- Scope: `oauth2:https://www.googleapis.com/auth/gmail.send`
+- Token via `GoogleAuthUtil.getToken()` — gleicher Mechanismus wie Drive API
+- E-Mail als RFC 2822 String bauen, Base64url-kodieren, als JSON `{"raw":"..."}` senden
+- `android.util.Base64` verwenden (nicht `java.util.Base64`)
+- `UserRecoverableAuthException` abfangen und Consent-Intent zeigen
+
+## Inline-Editing (Tagebuch)
+- `TextField` mit transparentem Background sieht aus wie Text, wird bei Tap editierbar
+- Auto-Save: Debounced nach 1.5s Inaktivitaet via `Job.cancel()` + `delay()`
+- Focus-Timeout: Nach 5s Inaktivitaet `focusManager.clearFocus()` per `LaunchedEffect`
+- Keyboard-Dismiss: `WindowInsets.ime.getBottom()` beobachten — bei 0 Focus clearen
+- Klick ausserhalb: `Column` mit `clickable(indication=null)` → `focusManager.clearFocus()`
+
+## Text-Verbesserung (Tampermonkey-Style)
+- Temperature 0.4 fuer konsistente, praezise Ergebnisse
+- maxOutputTokens 8192 um Abschneidung zu verhindern
+- Truncation Detection: Wenn Ergebnis <85% der Eingangslaenge → in Chunks aufteilen
+- Chunks: Paragraphen-basiert, max 3500 Zeichen, an Satzgrenzen splitten
+- Parallele Verarbeitung aller Chunks via `coroutineScope { chunks.map { async { ... } } }`

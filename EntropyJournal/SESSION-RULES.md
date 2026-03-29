@@ -25,6 +25,7 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Entropy Journal App.
 ## Geraete
 - Erstes Handy (Samsung): `RFCX70KTDFX`
 - Zweites Handy (Samsung): `R5CW206F0ZM`
+- Tablet: `3406105H803E8G`
 - Emulator: `emulator-5554`
 
 ## Dark Mode Farben (festgelegt)
@@ -55,9 +56,11 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Entropy Journal App.
 
 ## Google Cloud Projekt
 - Projektname: "Tagebuch"
+- Projekt-ID: `674560807048`
 - Web-Client-ID: `674560807048-l6ktqsucjr4ld91srdc6assgfiks19mh.apps.googleusercontent.com`
 - Android-Client: Paketname `com.entropyjournal.debug`, SHA-1 vom Debug-Keystore
 - Google Drive API: aktiviert
+- Gmail API: aktiviert (fuer Feedback-Funktion)
 - Testnutzer: barwandt@gmail.com
 
 ## Gemini Modelle (aktuelle Liste)
@@ -81,3 +84,33 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Entropy Journal App.
 - Manuelle Aktualisierung: Frische Analyse OHNE alten Kontext
 - Undo-Button: Vorherigen Zustand wiederherstellen
 - Sprache: Einfach, klar, fuer Zehntklaessler verstaendlich
+
+## Tagebuch-Timeline (festgelegt)
+- Eintraege gruppiert nach: Heute → Gestern → Letzte Woche → Monate → Jahre
+- Vertikale Timeline-Linie links mit farbigen Punkten (Cyan)
+- KI-generierte Ueberschrift (3-4 Woerter, unterstrichen, Primary-Farbe) ueber jedem Eintrag
+- KI-generierte Stichpunkt-Zusammenfassung in der Detailansicht
+- Stift-Button (links) + Mikrofon-Button (rechts) unten zentriert
+
+## Offline-Transkription (sherpa-onnx)
+- Bibliothek: sherpa-onnx v1.12.34 (Apache 2.0, kostenlos)
+- Modell: Whisper Base int8 (153 MB, in APK gebundelt)
+- Sprache: Deutsch (multilingual)
+- Geschwindigkeit: ~4 Sekunden fuer 30s Audio
+- Fallback-Logik: Groq API (wenn Key vorhanden) → Lokales Whisper (immer verfuegbar)
+- AAR: `app/libs/sherpa-onnx-1.12.34.aar`
+- Modell-Dateien: `app/src/main/assets/whisper/` (NICHT in Git — zu gross)
+
+## Sicherheit (festgelegt)
+- Biometric Lock: Fingerabdruck / PIN / Muster
+- 60 Sekunden Toleranz bei Hintergrund-Wechsel
+- API-Keys nur sichtbar nach Biometric-Auth (wenn Lock aktiviert)
+- Feedback-Senden: Via Gmail API aus dem Google-Konto des Users
+- Sign-Out: Atomares `clear()` + `commit()` auf SharedPreferences
+
+## Konto-Logik (festgelegt)
+- Anmelden: Direkt aus Einstellungen, kein Zwischenschritt
+- Auto-Restore: Nach Anmeldung automatisch Backup von Drive laden + App-Restart
+- Abmelden: DB loeschen, Prefs atomar clearen, API-Keys/Theme/Biometric behalten
+- Sichern: Manueller Button "Tagebucheintraege sichern"
+- Feedback: dev.app.support@gmail.com + Bestaetigung an User
