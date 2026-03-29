@@ -133,14 +133,19 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // System folgen — Phone icon
+                // System folgen — Phone icon with divider (matching Sun/Moon style)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Icon(imageVector = Icons.Rounded.PhoneAndroid, contentDescription = null, tint = if (uiState.followSystem) MaterialTheme.colorScheme.primary else Color(0xFF666666), modifier = Modifier.size(24.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp)) {
+                                Icon(imageVector = Icons.Rounded.PhoneAndroid, contentDescription = null, tint = if (uiState.followSystem) MaterialTheme.colorScheme.primary else Color(0xFF666666), modifier = Modifier.size(22.dp))
+                            }
+                            Divider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.height(16.dp).width(1.dp))
+                        }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text("System folgen", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                            Text("Automatisch mit dem Handy umschalten", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Automatisch mit dem Handy", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     Switch(checked = uiState.followSystem, onCheckedChange = { viewModel.updateFollowSystem(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
