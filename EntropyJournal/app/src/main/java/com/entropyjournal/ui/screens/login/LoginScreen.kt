@@ -1,5 +1,7 @@
 package com.entropyjournal.ui.screens.login
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,9 +38,27 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    val consentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        viewModel.onConsentResult()
+    }
+
     LaunchedEffect(uiState) {
-        if (uiState is LoginUiState.Success) {
-            onLoginSuccess()
+        when (val state = uiState) {
+            is LoginUiState.Success -> {
+                if (state.needsRestart) {
+                    // Restart app so Room picks up the restored database
+                    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                    intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    context.startActivity(intent)
+                    Runtime.getRuntime().exit(0)
+                } else {
+                    onLoginSuccess()
+                }
+            }
+            is LoginUiState.NeedConsent -> {
+                consentLauncher.launch(state.intent)
+            }
+            else -> {}
         }
     }
 
