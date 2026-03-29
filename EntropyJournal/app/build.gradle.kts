@@ -14,8 +14,8 @@ android {
         applicationId = "com.entropyjournal"
         minSdk = 26
         targetSdk = 35
-        versionCode = 21
-        versionName = "0.3.2"
+        versionCode = 22
+        versionName = "0.3.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -107,6 +107,7 @@ dependencies {
     implementation(libs.credentials.play)
     implementation(libs.google.id)
     implementation(libs.google.api.client.android)
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
     implementation(libs.google.drive.api)
 
     // Security

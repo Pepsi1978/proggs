@@ -1,9 +1,10 @@
 package com.entropyjournal.data.remote.googledrive
 
+import android.accounts.Account
 import android.content.Context
 import android.content.SharedPreferences
 import com.entropyjournal.util.Constants
-import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
@@ -21,23 +22,28 @@ class DriveRestoreManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val encryptedPrefs: SharedPreferences
 ) {
-    private fun getDriveService(): Drive? {
+    private suspend fun getDriveService(): Drive? = withContext(Dispatchers.IO) {
         val accountEmail = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null)
-            ?: return null
+            ?: return@withContext null
 
-        val credential = GoogleAccountCredential.usingOAuth2(
-            context, listOf(DriveScopes.DRIVE_APPDATA)
-        ).apply {
-            selectedAccountName = accountEmail
+        if (accountEmail.isBlank()) return@withContext null
+
+        try {
+            val account = Account(accountEmail, "com.google")
+            val scope = "oauth2:${DriveScopes.DRIVE_APPDATA}"
+            val token = GoogleAuthUtil.getToken(context, account, scope)
+
+            Drive.Builder(
+                NetHttpTransport(),
+                GsonFactory.getDefaultInstance()
+            ) { request ->
+                request.headers.authorization = "Bearer $token"
+            }
+                .setApplicationName("Journal")
+                .build()
+        } catch (e: Exception) {
+            null
         }
-
-        return Drive.Builder(
-            NetHttpTransport(),
-            GsonFactory.getDefaultInstance(),
-            credential
-        )
-            .setApplicationName("Entropy Journal")
-            .build()
     }
 
     suspend fun hasBackup(): Boolean = withContext(Dispatchers.IO) {
