@@ -32,6 +32,8 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -39,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -147,6 +150,7 @@ fun EntryDetailScreen(
                 }
 
                 var selectedTab by remember { mutableIntStateOf(0) }
+                val isShowingOriginal = selectedTab == 1 && entry.isImproved && entry.improvedText != null
 
                 if (entry.isImproved && entry.improvedText != null) {
                     TabRow(
@@ -180,11 +184,55 @@ fun EntryDetailScreen(
                 }
 
                 GlassCard {
-                    Text(
-                        text = if (selectedTab == 1) entry.rawText else entry.displayText,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Column {
+                        if (isShowingOriginal) {
+                            // Original text is read-only — edit the raw text separately
+                            var editedRawText by remember(entry.rawText) { mutableStateOf(entry.rawText) }
+                            TextField(
+                                value = editedRawText,
+                                onValueChange = { newText ->
+                                    editedRawText = newText
+                                    viewModel.updateRawText(newText)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.onSurface
+                                ),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    cursorColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        } else {
+                            // Display text (or improved text) — editable
+                            TextField(
+                                value = uiState.editedDisplayText,
+                                onValueChange = { viewModel.updateDisplayText(it) },
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.onSurface
+                                ),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    cursorColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        }
+                        if (uiState.isSaving) {
+                            Text(
+                                "Wird gespeichert...",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                    }
                 }
 
                 if (!entry.adviceCategoryTags.isNullOrBlank()) {

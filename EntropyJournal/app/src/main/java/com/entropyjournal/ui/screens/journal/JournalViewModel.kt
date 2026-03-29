@@ -149,6 +149,15 @@ class JournalViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(isImproveEnabled = use)
     }
 
+    fun updatePreviewText(newText: String) {
+        val state = _uiState.value
+        if (state.isImproveEnabled && state.improvedText != null) {
+            _uiState.value = state.copy(improvedText = newText)
+        } else {
+            _uiState.value = state.copy(rawText = newText)
+        }
+    }
+
     fun saveEntry() {
         val state = _uiState.value
         val displayText = if (state.isImproveEnabled && state.improvedText != null) {

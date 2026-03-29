@@ -266,6 +266,7 @@ fun JournalScreen(
                 isUsingImproved = uiState.isImproveEnabled,
                 onImproveClick = { viewModel.improveText() },
                 onToggleVersion = { useImproved -> viewModel.setUseImprovedText(useImproved) },
+                onTextEdit = { viewModel.updatePreviewText(it) },
                 onSave = { viewModel.saveEntry() },
                 onDismiss = { viewModel.dismissPreview() }
             )
@@ -292,6 +293,7 @@ private fun PreviewDialog(
     isUsingImproved: Boolean,
     onImproveClick: () -> Unit,
     onToggleVersion: (Boolean) -> Unit,
+    onTextEdit: (String) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -308,21 +310,45 @@ private fun PreviewDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Neuer Eintrag", color = MaterialTheme.colorScheme.onSurface)
-                if (improvedText != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (improvedText != null) {
+                        Text(
+                            text = if (showingImproved) "Verbessert" else "Original",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
                     Text(
-                        text = if (showingImproved) "Verbessert" else "Original",
+                        text = "\u270F\uFE0F",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.outline
                     )
                 }
             }
         },
         text = {
             Column {
-                Text(
-                    text = displayText,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                TextField(
+                    value = displayText,
+                    onValueChange = onTextEdit,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = MaterialTheme.colorScheme.primary
+                    ),
+                    placeholder = {
+                        Text(
+                            "Tippe hier, um den Text zu bearbeiten...",
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
