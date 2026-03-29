@@ -133,6 +133,46 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Switch(checked = uiState.followSystem, onCheckedChange = { viewModel.updateFollowSystem(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                val locationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                    if (granted) {
+                        try {
+                            val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+                            @Suppress("MissingPermission")
+                            val loc = lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+                                ?: lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+                            if (loc != null) {
+                                viewModel.saveLocation(loc.latitude, loc.longitude)
+                                viewModel.updateFollowSun(true)
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Sonnenauf-/untergang", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Dunkel bei Nacht, hell bei Tag", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = uiState.followSun, onCheckedChange = { enabled ->
+                        if (enabled) {
+                            val hasPerm = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            if (hasPerm) {
+                                try {
+                                    val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+                                    @Suppress("MissingPermission")
+                                    val loc = lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+                                        ?: lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+                                    if (loc != null) { viewModel.saveLocation(loc.latitude, loc.longitude) }
+                                } catch (_: Exception) {}
+                                viewModel.updateFollowSun(true)
+                            } else {
+                                locationLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                            }
+                        } else {
+                            viewModel.updateFollowSun(false)
+                        }
+                    }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
+                }
             }
         }
 
@@ -203,7 +243,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             Column {
                 Text("\u00dcber die App", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Entropy Journal v0.4.0", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Entropy Journal v0.4.1", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Dein pers\u00f6nliches KI-Tagebuch", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("\u00a9 Frank Barwandt", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)

@@ -26,6 +26,7 @@ data class SettingsUiState(
     val autoUpdateDashboard: Boolean = true,
     val isDarkTheme: Boolean = false,
     val followSystem: Boolean = false,
+    val followSun: Boolean = false,
     val lastSyncTimestamp: Long? = null,
     val isSyncing: Boolean = false,
     val syncMessage: String? = null,
@@ -58,25 +59,43 @@ class SettingsViewModel @Inject constructor(
             autoUpdateDashboard = encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true),
             isDarkTheme = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false),
             followSystem = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false),
+            followSun = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false),
             lastSyncTimestamp = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L).takeIf { it > 0 }
         )
     }
 
     fun updateDarkTheme(enabled: Boolean) {
-        encryptedPrefs.edit().putBoolean(Constants.PREF_DARK_THEME, enabled).apply()
-        _uiState.value = _uiState.value.copy(isDarkTheme = enabled)
+        encryptedPrefs.edit()
+            .putBoolean(Constants.PREF_DARK_THEME, enabled)
+            .putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)
+            .putBoolean(Constants.PREF_THEME_FOLLOW_SUN, false)
+            .apply()
+        _uiState.value = _uiState.value.copy(isDarkTheme = enabled, followSystem = false, followSun = false)
     }
 
     fun updateFollowSystem(enabled: Boolean) {
-        encryptedPrefs.edit().putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, enabled).apply()
-        if (enabled) {
-            // When enabling system follow, reset manual dark mode to false
-            // The actual theme will be determined by the system setting in MainActivity
-            encryptedPrefs.edit().putBoolean(Constants.PREF_DARK_THEME, false).apply()
-            _uiState.value = _uiState.value.copy(followSystem = true, isDarkTheme = false)
-        } else {
-            _uiState.value = _uiState.value.copy(followSystem = false)
-        }
+        encryptedPrefs.edit()
+            .putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, enabled)
+            .putBoolean(Constants.PREF_DARK_THEME, false)
+            .putBoolean(Constants.PREF_THEME_FOLLOW_SUN, false)
+            .apply()
+        _uiState.value = _uiState.value.copy(followSystem = enabled, isDarkTheme = false, followSun = false)
+    }
+
+    fun updateFollowSun(enabled: Boolean) {
+        encryptedPrefs.edit()
+            .putBoolean(Constants.PREF_THEME_FOLLOW_SUN, enabled)
+            .putBoolean(Constants.PREF_DARK_THEME, false)
+            .putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)
+            .apply()
+        _uiState.value = _uiState.value.copy(followSun = enabled, isDarkTheme = false, followSystem = false)
+    }
+
+    fun saveLocation(lat: Double, lon: Double) {
+        encryptedPrefs.edit()
+            .putFloat(Constants.PREF_LATITUDE, lat.toFloat())
+            .putFloat(Constants.PREF_LONGITUDE, lon.toFloat())
+            .apply()
     }
 
     fun updateSelectedModel(modelId: String) {
