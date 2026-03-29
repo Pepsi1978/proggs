@@ -110,17 +110,6 @@ fun TimelineItem(
                     )
                 }
 
-                if (!entry.summary.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = entry.summary,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
-                        maxLines = 4,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
