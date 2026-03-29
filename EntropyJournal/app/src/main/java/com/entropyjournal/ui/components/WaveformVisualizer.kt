@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
@@ -25,22 +26,17 @@ fun WaveformVisualizer(
     barCount: Int = 40
 ) {
     val currentAmplitude by rememberUpdatedState(amplitude)
-    val history = remember { FloatArray(barCount) }
-    val version = remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val history = remember {
+        mutableStateListOf<Float>().apply { repeat(barCount) { add(0f) } }
+    }
 
-    // Push new amplitude sample every 80ms — scrolls bars left
     LaunchedEffect(Unit) {
         while (true) {
             delay(80)
-            System.arraycopy(history, 1, history, 0, history.size - 1)
-            history[history.size - 1] = currentAmplitude
-            version.intValue++
+            history.removeAt(0)
+            history.add(currentAmplitude)
         }
     }
-
-    // Read version to trigger recomposition
-    @Suppress("UNUSED_VARIABLE")
-    val tick = version.intValue
 
     Canvas(
         modifier = modifier
@@ -52,9 +48,8 @@ fun WaveformVisualizer(
         val maxBarHeight = size.height * 0.9f
         val minBarHeight = 3.dp.toPx()
 
-        for (i in 0 until barCount) {
+        for (i in history.indices) {
             val amp = history[i].coerceIn(0f, 1f)
-            // Scale amplitude for better visibility (boost low values)
             val scaled = kotlin.math.sqrt(amp.toDouble()).toFloat()
             val barHeight = (maxBarHeight * scaled).coerceAtLeast(minBarHeight)
 
