@@ -90,8 +90,11 @@ if ($LASTEXITCODE -ne 0) {
 if ($stashed) {
     $null = git stash pop 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Hook-LogWarn "stash pop had conflicts"
-        Write-Status "Auto-Sync: WARNUNG -- Stash-Restore hatte Konflikte. Bitte manuell pruefen: cd ~/proggs; git stash show"
+        # stash pop failed — drop the stash so it doesn't accumulate
+        Hook-LogWarn "stash pop had conflicts — dropping stash to prevent accumulation"
+        $null = git checkout -- . 2>&1
+        $null = git stash drop 2>&1
+        Write-Status "Auto-Sync: WARNUNG -- Stash-Restore hatte Konflikte. Stash wurde entfernt."
     } else {
         Write-Status "Auto-Sync: Lokale Aenderungen wiederhergestellt."
     }
