@@ -69,6 +69,21 @@ class JournalViewModel @Inject constructor(
     private var syncDebounceJob: Job? = null
     private var analysisDebounceJob: Job? = null
 
+    init {
+        // Backfill summaries for existing entries that don't have one yet
+        viewModelScope.launch {
+            entries.collect { list ->
+                val missing = list.filter { it.summary.isNullOrBlank() && it.displayText.isNotBlank() }
+                if (missing.isNotEmpty()) {
+                    for (entry in missing) {
+                        launch { summarizeEntryUseCase(entry.id, entry.displayText) }
+                    }
+                }
+                return@collect
+            }
+        }
+    }
+
     fun toggleRecording() {
         if (_uiState.value.recordingState == RecordingState.RECORDING) {
             stopRecording()
