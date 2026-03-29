@@ -49,14 +49,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import androidx.core.content.ContextCompat
 import com.entropyjournal.ui.components.AnimatedMicButton
 import com.entropyjournal.ui.components.GlassCard
@@ -284,9 +289,23 @@ private fun PreviewDialog(
 ) {
     val showingImproved = isUsingImproved && improvedText != null
     val displayText = if (showingImproved) improvedText!! else rawText
+    val focusManager = LocalFocusManager.current
+    var lastEditTime by remember { mutableLongStateOf(0L) }
+    var isFocused by remember { mutableStateOf(false) }
+
+    // Auto-clear focus after 5 seconds of inactivity
+    LaunchedEffect(lastEditTime) {
+        if (lastEditTime > 0 && isFocused) {
+            delay(5000)
+            focusManager.clearFocus()
+        }
+    }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            focusManager.clearFocus()
+            onDismiss()
+        },
         containerColor = MaterialTheme.colorScheme.surface,
         title = {
             Row(
@@ -316,8 +335,16 @@ private fun PreviewDialog(
             Column {
                 TextField(
                     value = displayText,
-                    onValueChange = onTextEdit,
-                    modifier = Modifier.fillMaxWidth(),
+                    onValueChange = { newText ->
+                        lastEditTime = System.currentTimeMillis()
+                        onTextEdit(newText)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { state ->
+                            isFocused = state.isFocused
+                            if (state.isFocused) lastEditTime = System.currentTimeMillis()
+                        },
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurface
                     ),
