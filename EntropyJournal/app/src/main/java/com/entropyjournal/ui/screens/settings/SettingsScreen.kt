@@ -366,7 +366,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             Column {
                 Text("\u00dcber die App", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Entropy Journal v0.6.6", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Entropy Journal v0.6.7", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Dein pers\u00f6nliches KI-Tagebuch", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("\u00a9 Frank Barwandt", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
@@ -526,10 +526,11 @@ private fun FeedbackDialog(
 ) {
     var feedbackText by remember { mutableStateOf("") }
     var isSending by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isSending) onDismiss() },
         containerColor = MaterialTheme.colorScheme.surface,
         title = { Text("Feedback", color = MaterialTheme.colorScheme.onSurface) },
         text = {
@@ -555,16 +556,34 @@ private fun FeedbackDialog(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("Wird gesendet...", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
                 }
+                errorMessage?.let {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(it, style = MaterialTheme.typography.labelMedium, color = NeonRed)
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     if (feedbackText.isNotBlank() && !isSending) {
+                        if (userEmail == null) {
+                            errorMessage = "Bitte zuerst mit Google anmelden"
+                            return@Button
+                        }
                         isSending = true
+                        errorMessage = null
                         scope.launch {
-                            sendFeedbackInBackground(feedbackText, userEmail)
-                            onSent()
+                            val success = com.entropyjournal.data.remote.FeedbackSender.send(
+                                context = context,
+                                accountEmail = userEmail,
+                                feedbackText = feedbackText
+                            )
+                            if (success) {
+                                onSent()
+                            } else {
+                                isSending = false
+                                errorMessage = "Senden fehlgeschlagen. Bitte erneut versuchen."
+                            }
                         }
                     }
                 },
@@ -573,30 +592,7 @@ private fun FeedbackDialog(
             ) { Text("Senden") }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismiss) { Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            OutlinedButton(onClick = { if (!isSending) onDismiss() }) { Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     )
-}
-
-private suspend fun sendFeedbackInBackground(message: String, userEmail: String?) {
-    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        try {
-            val url = java.net.URL("https://formsubmit.co/ajax/dev.app.support@gmail.com")
-            val conn = url.openConnection() as java.net.HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.setRequestProperty("Accept", "application/json")
-            conn.doOutput = true
-            val json = org.json.JSONObject().apply {
-                put("name", userEmail ?: "Anonymer Nutzer")
-                put("email", userEmail ?: "noreply@entropyjournal.app")
-                put("message", message)
-                put("_subject", "Entropy Journal Feedback")
-                if (userEmail != null) put("_cc", userEmail)
-            }
-            conn.outputStream.bufferedWriter().use { it.write(json.toString()) }
-            conn.responseCode // trigger the request
-            conn.disconnect()
-        } catch (_: Exception) { }
-    }
 }
