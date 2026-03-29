@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Visibility
@@ -111,7 +112,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     uiState.lastSyncTimestamp?.let { ts ->
                         Text("Letzte Synchronisation: ${DateTimeFormatter.formatFull(ts)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
                     }
-                    Text("Eintr\u00e4ge werden bei der Anmeldung automatisch geladen", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                    Text("Eintr\u00e4ge werden bei der Anmeldung automatisch geladen", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                         Button(
@@ -314,12 +315,57 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             }
         }
 
-        // 6. Ueber die App
+        // 6. Feedback
+        var showFeedbackDialog by remember { mutableStateOf(false) }
+        var feedbackSent by remember { mutableStateOf(false) }
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Column {
+                Text("Feedback", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Anregungen, W\u00fcnsche, Verbesserungsvorschl\u00e4ge", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    Button(
+                        onClick = { showFeedbackDialog = true; feedbackSent = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
+                    ) {
+                        Icon(Icons.Rounded.Feedback, null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Feedback senden")
+                    }
+                }
+                if (feedbackSent) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Senden erfolgreich", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                }
+            }
+        }
+
+        if (feedbackSent) {
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                kotlinx.coroutines.delay(3000)
+                feedbackSent = false
+            }
+        }
+
+        if (showFeedbackDialog) {
+            FeedbackDialog(
+                userEmail = uiState.userProfile?.email,
+                onDismiss = { showFeedbackDialog = false },
+                onSent = {
+                    showFeedbackDialog = false
+                    feedbackSent = true
+                },
+                context = context
+            )
+        }
+
+        // 7. Ueber die App
         GlassCard {
             Column {
                 Text("\u00dcber die App", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Entropy Journal v0.6.3", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Entropy Journal v0.6.4", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Dein pers\u00f6nliches KI-Tagebuch", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("\u00a9 Frank Barwandt", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
@@ -468,4 +514,69 @@ private fun SettingsSunMoonIcon(isDark: Boolean) {
             Icon(Icons.Rounded.DarkMode, "Mond", tint = if (isDark) glowYellow else mutedGray, modifier = Modifier.size(moonSize))
         }
     }
+}
+
+@Composable
+private fun FeedbackDialog(
+    userEmail: String?,
+    onDismiss: () -> Unit,
+    onSent: () -> Unit,
+    context: android.content.Context
+) {
+    var feedbackText by remember { mutableStateOf("") }
+    var isSending by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = { Text("Feedback", color = MaterialTheme.colorScheme.onSurface) },
+        text = {
+            Column {
+                Text("Deine Nachricht an den Entwickler:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+                TextField(
+                    value = feedbackText,
+                    onValueChange = { feedbackText = it },
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                    placeholder = { Text("Schreib uns dein Feedback...", color = MaterialTheme.colorScheme.outline) },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = MaterialTheme.colorScheme.primary
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (feedbackText.isNotBlank() && !isSending) {
+                        isSending = true
+                        val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                            data = android.net.Uri.parse("mailto:")
+                            putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("dev.app.support@gmail.com"))
+                            if (userEmail != null) {
+                                putExtra(android.content.Intent.EXTRA_CC, arrayOf(userEmail))
+                            }
+                            putExtra(android.content.Intent.EXTRA_SUBJECT, "Entropy Journal Feedback")
+                            putExtra(android.content.Intent.EXTRA_TEXT, feedbackText)
+                        }
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: Exception) { }
+                        onSent()
+                    }
+                },
+                enabled = feedbackText.isNotBlank() && !isSending,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
+            ) { Text("Senden") }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) { Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+    )
 }

@@ -46,7 +46,8 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Entropy Journal App.
 4. API-Schluessel
 5. Gemini-Modell
 6. Aufnahme (Dauer + Textverbesserung + Dashboard-Auto-Update)
-7. Ueber die App (Version + Copyright Frank Barwandt)
+7. Feedback (E-Mail an dev.app.support@gmail.com, CC an angemeldeten User)
+8. Ueber die App (Version + Copyright Frank Barwandt)
 
 ## Navigation-Reihenfolge (festgelegt)
 - Unten: Dashboard | Tagebuch | Einstellungen
