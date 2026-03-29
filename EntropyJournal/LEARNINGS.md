@@ -1,5 +1,40 @@
 # Entropy Journal — Learnings & Best Practices
 
+## Inhaltsverzeichnis
+
+**Audio & Sprache:**
+- [sherpa-onnx (Offline Speech-to-Text)](#sherpa-onnx-offline-speech-to-text)
+- [Whisper 30-Sekunden-Limit: Stille-basiertes Chunking](#whisper-30-sekunden-limit-stille-basiertes-chunking-wichtig) ⭐
+- [Compose Waveform-Visualizer](#compose-waveform-visualizer-mutablestatelistof--rememberupdatedstate-wichtig) ⭐
+- [Text-Verbesserung (Tampermonkey-Style)](#text-verbesserung-tampermonkey-style)
+
+**UI & Navigation:**
+- [HorizontalPager fuer Wisch-Navigation](#horizontalpager-fuer-wisch-navigation-zwischen-tabs-wichtig) ⭐
+- [Scroll-Pattern: LazyRow](#scroll-pattern-lazyrow-statt-rowhorizontalscroll)
+- [TextField in AlertDialog: heightIn begrenzen](#textfield-in-alertdialog-heightin-begrenzen-wichtig) ⭐
+- [Tastatur-Steuerung: Kontextabhaengiger Auto-Focus](#tastatur-steuerung-kontextabhaengiger-auto-focus)
+- [Inline-Editing (Tagebuch)](#inline-editing-tagebuch)
+- [Shimmer/Ladebalken](#shimmerladebalken)
+- [Kategorie-Icons](#kategorie-icons)
+- [Cloud-Sync-Icon: Persistenter Status](#cloud-sync-icon-persistenter-status-statt-kurzes-aufblinken)
+
+**Authentifizierung & Sicherheit:**
+- [Biometric Lock: savedInstanceState bei Rotation](#biometric-lock-savedinstancestate-bei-rotation-wichtig) ⭐
+- [Biometric Lock (Grundlagen)](#biometric-lock)
+- [SharedPreferences Sign-Out (Race Condition)](#sharedpreferences-sign-out-race-condition-fix)
+
+**APIs & Cloud:**
+- [Google Drive Sync](#google-drive-sync)
+- [Gemini API](#gemini-api)
+- [Gmail API (Feedback)](#gmail-api-feedback)
+
+**Sonstiges:**
+- [Theme-Toggle](#theme-toggle-separates-sharedpreferences-fuer-quick-toggle)
+- [Hilt/Dagger](#hiltdagger)
+- [Sonnenauf-/untergang](#sonnenauf-untergang)
+
+---
+
 ## Scroll-Pattern: LazyRow statt Row+horizontalScroll
 - `Row + Modifier.horizontalScroll()` funktioniert NICHT zuverlaessig innerhalb von `LazyColumn`
 - **Loesung**: `LazyRow` mit `contentPadding` und `Arrangement.spacedBy()`
