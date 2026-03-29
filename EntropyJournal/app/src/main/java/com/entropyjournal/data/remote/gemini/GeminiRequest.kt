@@ -6,7 +6,14 @@ import com.squareup.moshi.JsonClass
 @JsonClass(generateAdapter = true)
 data class GeminiRequest(
     @Json(name = "contents") val contents: List<GeminiContent>,
-    @Json(name = "systemInstruction") val systemInstruction: GeminiContent? = null
+    @Json(name = "systemInstruction") val systemInstruction: GeminiContent? = null,
+    @Json(name = "generationConfig") val generationConfig: GeminiGenerationConfig? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class GeminiGenerationConfig(
+    @Json(name = "temperature") val temperature: Float? = null,
+    @Json(name = "maxOutputTokens") val maxOutputTokens: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -21,13 +28,21 @@ data class GeminiPart(
 
 // Helper to build requests easily
 object GeminiRequestBuilder {
-    fun build(userText: String, systemPrompt: String? = null): GeminiRequest {
+    fun build(
+        userText: String,
+        systemPrompt: String? = null,
+        temperature: Float? = null,
+        maxOutputTokens: Int? = null
+    ): GeminiRequest {
         val contents = listOf(
             GeminiContent(parts = listOf(GeminiPart(text = userText)))
         )
         val systemInstruction = systemPrompt?.let {
             GeminiContent(parts = listOf(GeminiPart(text = it)))
         }
-        return GeminiRequest(contents = contents, systemInstruction = systemInstruction)
+        val config = if (temperature != null || maxOutputTokens != null) {
+            GeminiGenerationConfig(temperature = temperature, maxOutputTokens = maxOutputTokens)
+        } else null
+        return GeminiRequest(contents = contents, systemInstruction = systemInstruction, generationConfig = config)
     }
 }
