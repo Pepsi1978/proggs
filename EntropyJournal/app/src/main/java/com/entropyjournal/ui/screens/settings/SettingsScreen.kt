@@ -134,20 +134,10 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // System folgen — Light phone | divider | Dark phone
+                // System folgen — Light phone (sun) | divider | Dark phone (moon)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            // Light phone
-                            androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp)) {
-                                Icon(imageVector = Icons.Rounded.PhoneAndroid, contentDescription = "Hell", tint = Color(0xFFBBBBBB), modifier = Modifier.size(20.dp))
-                            }
-                            Divider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.height(16.dp).width(1.dp))
-                            // Dark phone
-                            androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp)) {
-                                Icon(imageVector = Icons.Rounded.PhoneAndroid, contentDescription = "Dunkel", tint = Color(0xFF444444), modifier = Modifier.size(20.dp))
-                            }
-                        }
+                        SettingsPhoneIcon(isDark = uiState.isDarkTheme)
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text("System folgen", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
@@ -302,7 +292,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             Column {
                 Text("\u00dcber die App", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Entropy Journal v0.5.1", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Entropy Journal v0.5.2", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Dein pers\u00f6nliches KI-Tagebuch", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("\u00a9 Frank Barwandt", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
@@ -336,6 +326,34 @@ private fun ApiKeyField(label: String, value: String, onValueChange: (String) ->
         colors = TextFieldDefaults.colors(focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant, unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant, focusedTextColor = MaterialTheme.colorScheme.onSurface, cursorColor = MaterialTheme.colorScheme.primary, focusedIndicatorColor = MaterialTheme.colorScheme.primary, unfocusedIndicatorColor = Color.Transparent),
         singleLine = true, shape = RoundedCornerShape(12.dp)
     )
+}
+
+@Composable
+private fun SettingsPhoneIcon(isDark: Boolean) {
+    val glowYellow = Color(0xFFFFD54F)
+    val mutedGray = Color(0xFF666666)
+    val lightPhoneSize by animateDpAsState(
+        targetValue = if (!isDark) 22.dp else 14.dp,
+        animationSpec = tween(300), label = "lightPhoneSize"
+    )
+    val darkPhoneSize by animateDpAsState(
+        targetValue = if (isDark) 22.dp else 14.dp,
+        animationSpec = tween(300), label = "darkPhoneSize"
+    )
+
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        // Light phone with mini sun
+        androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp)) {
+            Icon(Icons.Rounded.PhoneAndroid, "Hell", tint = if (!isDark) glowYellow else mutedGray, modifier = Modifier.size(lightPhoneSize))
+            Icon(Icons.Rounded.LightMode, null, tint = if (!isDark) glowYellow else mutedGray, modifier = Modifier.size(lightPhoneSize * 0.35f))
+        }
+        Divider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.height(16.dp).width(1.dp))
+        // Dark phone with mini moon
+        androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp)) {
+            Icon(Icons.Rounded.PhoneAndroid, "Dunkel", tint = if (isDark) glowYellow else mutedGray, modifier = Modifier.size(darkPhoneSize))
+            Icon(Icons.Rounded.DarkMode, null, tint = if (isDark) glowYellow else mutedGray, modifier = Modifier.size(darkPhoneSize * 0.35f))
+        }
+    }
 }
 
 @Composable
