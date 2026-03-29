@@ -42,10 +42,11 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Entropy Journal App.
 ## Einstellungen-Reihenfolge (festgelegt)
 1. Konto
 2. Erscheinungsbild (Dunkelmodus / System folgen / Sonnenauf-untergang)
-3. API-Schluessel
-4. Gemini-Modell
-5. Aufnahme (Dauer + Textverbesserung + Dashboard-Auto-Update)
-6. Ueber die App (Version + Copyright Frank Barwandt)
+3. Sicherheit (Fingerabdruck / PIN — sperrt nach 60s im Hintergrund)
+4. API-Schluessel
+5. Gemini-Modell
+6. Aufnahme (Dauer + Textverbesserung + Dashboard-Auto-Update)
+7. Ueber die App (Version + Copyright Frank Barwandt)
 
 ## Navigation-Reihenfolge (festgelegt)
 - Unten: Dashboard | Tagebuch | Einstellungen
