@@ -160,6 +160,10 @@ class SettingsViewModel @Inject constructor(
         signInUseCase.signOut()
         // Delete local database — data belongs to the account
         context.deleteDatabase("entropy_journal_db")
-        _uiState.value = _uiState.value.copy(userProfile = null, showLogoutDialog = false)
+        // Restart the app process so Room clears its in-memory cache
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        context.startActivity(intent)
+        Runtime.getRuntime().exit(0)
     }
 }
