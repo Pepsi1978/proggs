@@ -284,7 +284,8 @@ fun JournalScreen(
         ) {
             RecordingOverlay(
                 amplitude = amplitude,
-                durationSeconds = duration
+                durationSeconds = duration,
+                transcriptionModel = if (viewModel.isGroqActive()) "Groq API (Whisper Large v3)" else "Lokal (Whisper Base)"
             )
         }
 

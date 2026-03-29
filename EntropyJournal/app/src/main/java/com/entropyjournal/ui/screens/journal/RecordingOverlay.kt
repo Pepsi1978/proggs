@@ -21,6 +21,7 @@ import com.entropyjournal.util.DateTimeFormatter
 fun RecordingOverlay(
     amplitude: Float,
     durationSeconds: Int,
+    transcriptionModel: String = "",
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -38,6 +39,13 @@ fun RecordingOverlay(
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary
         )
+        if (transcriptionModel.isNotBlank()) {
+            Text(
+                text = transcriptionModel,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = DateTimeFormatter.formatDuration(durationSeconds),

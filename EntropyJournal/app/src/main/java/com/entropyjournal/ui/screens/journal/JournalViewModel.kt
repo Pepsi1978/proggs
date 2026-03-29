@@ -1,6 +1,7 @@
 package com.entropyjournal.ui.screens.journal
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.entropyjournal.data.repository.JournalRepository
@@ -12,6 +13,7 @@ import com.entropyjournal.domain.usecase.SaveJournalEntryUseCase
 import com.entropyjournal.domain.usecase.SummarizeEntryUseCase
 import com.entropyjournal.domain.usecase.SyncWithDriveUseCase
 import com.entropyjournal.domain.usecase.TranscribeAudioUseCase
+import com.entropyjournal.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -52,7 +54,8 @@ class JournalViewModel @Inject constructor(
     private val summarizeEntryUseCase: SummarizeEntryUseCase,
     private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
     private val syncWithDriveUseCase: SyncWithDriveUseCase,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val encryptedPrefs: SharedPreferences
 ) : ViewModel() {
 
     val entries = journalRepository.getAllEntries()
@@ -63,6 +66,11 @@ class JournalViewModel @Inject constructor(
 
     val amplitude: StateFlow<Float> = recordAudioUseCase.amplitude
     val durationSeconds: StateFlow<Int> = recordAudioUseCase.durationSeconds
+
+    fun isGroqActive(): Boolean {
+        val key = encryptedPrefs.getString(Constants.PREF_GROQ_API_KEY, "") ?: ""
+        return key.isNotBlank()
+    }
 
     private var currentAudioFile: File? = null
     private var recordingJob: Job? = null
