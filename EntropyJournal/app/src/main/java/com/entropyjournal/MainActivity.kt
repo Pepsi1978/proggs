@@ -23,6 +23,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val quickPrefs = getSharedPreferences("entropy_theme_quick", MODE_PRIVATE)
+
         setContent {
             val followSystem = remember {
                 mutableStateOf(encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false))
@@ -32,8 +35,9 @@ class MainActivity : ComponentActivity() {
             }
             val systemDark = isSystemInDarkTheme()
 
+            // Listen to encrypted prefs (settings changes)
             DisposableEffect(Unit) {
-                val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                val encListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
                     when (key) {
                         Constants.PREF_DARK_THEME -> {
                             manualDark.value = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false)
@@ -43,9 +47,26 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-                encryptedPrefs.registerOnSharedPreferenceChangeListener(listener)
+                encryptedPrefs.registerOnSharedPreferenceChangeListener(encListener)
+
+                // Listen to quick toggle prefs (Journal/Dashboard icon clicks)
+                val quickListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+                    if (key == "toggle_time") {
+                        val newDark = prefs.getBoolean("toggle_dark", false)
+                        // Apply to encrypted prefs so settings stay in sync
+                        encryptedPrefs.edit()
+                            .putBoolean(Constants.PREF_DARK_THEME, newDark)
+                            .putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)
+                            .apply()
+                        manualDark.value = newDark
+                        followSystem.value = false
+                    }
+                }
+                quickPrefs.registerOnSharedPreferenceChangeListener(quickListener)
+
                 onDispose {
-                    encryptedPrefs.unregisterOnSharedPreferenceChangeListener(listener)
+                    encryptedPrefs.unregisterOnSharedPreferenceChangeListener(encListener)
+                    quickPrefs.unregisterOnSharedPreferenceChangeListener(quickListener)
                 }
             }
 

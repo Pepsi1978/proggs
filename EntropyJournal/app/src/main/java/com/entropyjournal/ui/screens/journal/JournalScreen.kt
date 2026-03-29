@@ -162,24 +162,16 @@ fun JournalScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     val isDark = LocalIsDarkTheme.current
                     IconButton(onClick = {
-                        try {
-                            val encPrefs = androidx.security.crypto.EncryptedSharedPreferences.create(
-                                Constants.ENCRYPTED_PREFS_NAME,
-                                androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC),
-                                context,
-                                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                            )
-                            encPrefs.edit()
-                                .putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)
-                                .putBoolean(Constants.PREF_DARK_THEME, !isDark)
-                                .apply()
-                        } catch (_: Exception) {}
+                        val themePrefs = context.getSharedPreferences("entropy_theme_quick", android.content.Context.MODE_PRIVATE)
+                        themePrefs.edit()
+                            .putBoolean("toggle_dark", !isDark)
+                            .putLong("toggle_time", System.currentTimeMillis())
+                            .apply()
                     }) {
                         Icon(
                             imageVector = if (isDark) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
                             contentDescription = "Tag/Nacht",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (isDark) androidx.compose.ui.graphics.Color(0xFFFFD54F) else androidx.compose.ui.graphics.Color(0xFFFFD54F)
                         )
                     }
                 }
