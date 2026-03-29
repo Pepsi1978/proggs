@@ -74,40 +74,22 @@ if [ -n "$diff_stat" ]; then
     write_status "$diff_stat"
 fi
 
-# Stash local changes if working tree is dirty (so rebase can proceed)
+# Discard uncommitted changes so rebase can proceed cleanly.
+# At session start, uncommitted changes are only hook artifacts (MEMORY.md etc.)
+# — all real work was committed and pushed in the previous session.
 dirty=$(git status --porcelain 2>/dev/null)
-stashed=false
 if [ -n "$dirty" ]; then
-    if git stash --include-untracked -m "auto-sync-stash" 2>/dev/null; then
-        stashed=true
-        write_status "Auto-Sync: Lokale Aenderungen temporaer gesichert (git stash)."
-    fi
+    git checkout -- . 2>/dev/null || true
+    write_status "Auto-Sync: Hook-Reste verworfen (nur Schmierzettel, nichts Wichtiges)."
 fi
 
 # Pull with rebase
 if ! git pull --rebase --quiet 2>/dev/null; then
-    # Restore stash if pull failed
-    if [ "$stashed" = true ]; then
-        git stash pop 2>/dev/null || true
-    fi
     hook_log_error "git pull --rebase failed — merge conflict?"
     entry="### $(date '+%Y-%m-%d %H:%M') — Hook: auto-sync.sh — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: OFFEN"
     insert_whiteboard_entry "Offene Fehler & Probleme" "$entry"
     write_status "Auto-Sync: FEHLER beim Pull (Merge-Konflikt?). Bitte manuell pruefen: cd ~/proggs; git status"
     exit 1
-fi
-
-# Restore stashed changes
-if [ "$stashed" = true ]; then
-    if ! git stash pop 2>/dev/null; then
-        # stash pop failed — drop the stash so it doesn't accumulate
-        hook_log_warn "stash pop had conflicts — dropping stash to prevent accumulation"
-        git checkout -- . 2>/dev/null || true
-        git stash drop 2>/dev/null || true
-        write_status "Auto-Sync: WARNUNG -- Stash-Restore hatte Konflikte. Stash wurde entfernt."
-    else
-        write_status "Auto-Sync: Lokale Aenderungen wiederhergestellt."
-    fi
 fi
 
 write_status "Auto-Sync: Git Pull erfolgreich."
