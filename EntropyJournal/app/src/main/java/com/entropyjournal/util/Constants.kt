@@ -33,7 +33,7 @@ object Constants {
     const val PREF_DARK_THEME = "dark_theme"
 
     // Google OAuth
-    const val GOOGLE_WEB_CLIENT_ID = "YOUR_WEB_CLIENT_ID_HERE"
+    const val GOOGLE_WEB_CLIENT_ID = "674560807048-l6ktqsucjr4ld91srdc6assgfiks19mh.apps.googleusercontent.com"
 
     // Encrypted SharedPreferences file name
     const val ENCRYPTED_PREFS_NAME = "entropy_journal_secure_prefs"
