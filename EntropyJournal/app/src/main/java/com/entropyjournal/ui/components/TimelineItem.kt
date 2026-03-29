@@ -98,30 +98,15 @@ fun TimelineItem(
             glowIntensity = 0.1f
         ) {
             Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = DateTimeFormatter.formatFull(entry.timestamp),
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        Text(
-                            text = DateTimeFormatter.formatRelative(entry.timestamp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = TextMuted
-                        )
-                    }
-
+                Column {
                     Text(
-                        text = when (entry.moodTag) {
-                            "positiv" -> "\uD83D\uDFE2"
-                            "belastend" -> "\uD83D\uDD34"
-                            else -> "\uD83D\uDFE1"
-                        },
-                        modifier = Modifier.size(24.dp)
+                        text = DateTimeFormatter.formatFull(entry.timestamp),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    Text(
+                        text = DateTimeFormatter.formatRelative(entry.timestamp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextMuted
                     )
                 }
 

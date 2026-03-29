@@ -131,30 +131,16 @@ fun EntryDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 GlassCard {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                DateTimeFormatter.formatFull(entry.timestamp),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                            Text(
-                                DateTimeFormatter.formatRelative(entry.timestamp),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        }
+                    Column {
                         Text(
-                            text = when (entry.moodTag) {
-                                "positiv" -> "\uD83D\uDFE2"
-                                "belastend" -> "\uD83D\uDD34"
-                                else -> "\uD83D\uDFE1"
-                            },
-                            modifier = Modifier.size(28.dp)
+                            DateTimeFormatter.formatFull(entry.timestamp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        Text(
+                            DateTimeFormatter.formatRelative(entry.timestamp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.outline
                         )
                     }
                 }
