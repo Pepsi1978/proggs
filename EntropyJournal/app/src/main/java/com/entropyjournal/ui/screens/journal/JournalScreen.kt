@@ -76,10 +76,12 @@ import com.entropyjournal.ui.components.GlassCard
 import com.entropyjournal.ui.components.ShimmerLoadingEffect
 import com.entropyjournal.ui.components.SunMoonToggle
 import com.entropyjournal.ui.components.TimelineItem
+import com.entropyjournal.ui.components.TimelinePosition
 import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
 import com.entropyjournal.util.Constants
+import com.entropyjournal.util.DateTimeFormatter as DTFormatter
 
 @Composable
 fun JournalScreen(
@@ -218,17 +220,56 @@ fun JournalScreen(
                     }
                 }
             } else {
+                // Group entries by time period
+                val groupedEntries = remember(entries) {
+                    entries.groupBy { DTFormatter.getSectionLabel(it.timestamp) }
+                }
+
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    items(entries, key = { it.id }) { entry ->
-                        TimelineItem(
-                            entry = entry,
-                            onClick = { onEntryClick(entry.id) }
-                        )
+                    groupedEntries.forEach { (sectionLabel, sectionEntries) ->
+                        // Section header
+                        item(key = "header_$sectionLabel") {
+                            Column(modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)) {
+                                Text(
+                                    text = sectionLabel,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(MaterialTheme.colorScheme.outlineVariant)
+                                )
+                            }
+                        }
+
+                        // Entries with timeline position
+                        items(
+                            count = sectionEntries.size,
+                            key = { sectionEntries[it].id }
+                        ) { index ->
+                            val position = when {
+                                sectionEntries.size == 1 -> TimelinePosition.ONLY
+                                index == 0 -> TimelinePosition.FIRST
+                                index == sectionEntries.lastIndex -> TimelinePosition.LAST
+                                else -> TimelinePosition.MIDDLE
+                            }
+                            TimelineItem(
+                                entry = sectionEntries[index],
+                                onClick = { onEntryClick(sectionEntries[index].id) },
+                                position = position,
+                                modifier = Modifier.padding(vertical = 6.dp)
+                            )
+                        }
                     }
+
+                    // Bottom padding for buttons
+                    item { Spacer(modifier = Modifier.height(80.dp)) }
                 }
             }
         }
