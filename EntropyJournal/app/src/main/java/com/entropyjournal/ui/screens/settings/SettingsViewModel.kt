@@ -212,6 +212,34 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun signIn(activityContext: android.content.Context) {
+        viewModelScope.launch {
+            signInUseCase(activityContext)
+                .onSuccess { profile ->
+                    _uiState.value = _uiState.value.copy(
+                        userProfile = profile,
+                        syncMessage = null
+                    )
+                    // Auto-restore backup
+                    try {
+                        if (syncUseCase.hasBackup()) {
+                            syncUseCase.restore()
+                            // Restart to load restored database
+                            val intent = activityContext.packageManager.getLaunchIntentForPackage(activityContext.packageName)
+                            intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                            activityContext.startActivity(intent)
+                            Runtime.getRuntime().exit(0)
+                        }
+                    } catch (_: Exception) { }
+                }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        syncMessage = "Anmeldung fehlgeschlagen: ${error.message}"
+                    )
+                }
+        }
+    }
+
     fun showLogoutDialog(show: Boolean) {
         _uiState.value = _uiState.value.copy(showLogoutDialog = show)
     }
