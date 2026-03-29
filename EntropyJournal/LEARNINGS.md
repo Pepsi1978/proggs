@@ -73,6 +73,16 @@
 - Funktioniert fuer beliebige Aufnahmedauer (3, 5, 10, 15+ Minuten)
 - **Dieses Pattern ist wiederverwendbar** fuer jedes Projekt das Whisper/sherpa-onnx offline nutzt
 
+## Compose Waveform-Visualizer: mutableStateListOf + rememberUpdatedState (WICHTIG)
+- `LaunchedEffect(Unit)` faengt Parameter-Werte einmalig ein — spaetere Updates kommen nie an
+- **Loesung**: `rememberUpdatedState(amplitude)` liefert immer den aktuellen Wert auch in laufenden Coroutinen
+- `FloatArray` ist KEIN Compose-State — Aenderungen triggern KEINE Recomposition
+- **Loesung**: `mutableStateListOf<Float>()` ist ein Compose Snapshot-State — `removeAt(0)` + `add()` triggert automatisch Canvas-Redraw
+- Pattern fuer rollendes Waveform: `LaunchedEffect(Unit) { while(true) { delay(80); history.removeAt(0); history.add(currentAmplitude) } }`
+- Amplitude-Boost: `(amp * 3f).coerceAtMost(1f)` + `sqrt()` fuer sichtbare Ausschlaege bei normaler Sprechlautstaerke
+- 50 Balken mit 3dp Gap, 64dp Hoehe, Cyan-zu-Violett Gradient, abgerundete Ecken
+- **Dieses Pattern ist wiederverwendbar** fuer jede Audio-Visualisierung in Compose
+
 ## Biometric Lock: savedInstanceState bei Rotation (WICHTIG)
 - Android zerstoert und erstellt die Activity bei Bildschirmrotation neu
 - State in `mutableStateOf` auf der Activity-Instanz geht dabei verloren

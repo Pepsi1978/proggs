@@ -23,7 +23,7 @@ import kotlinx.coroutines.delay
 fun WaveformVisualizer(
     amplitude: Float,
     modifier: Modifier = Modifier,
-    barCount: Int = 40
+    barCount: Int = 50
 ) {
     val currentAmplitude by rememberUpdatedState(amplitude)
     val history = remember {
@@ -50,7 +50,8 @@ fun WaveformVisualizer(
 
         for (i in history.indices) {
             val amp = history[i].coerceIn(0f, 1f)
-            val scaled = kotlin.math.sqrt(amp.toDouble()).toFloat()
+            val boosted = (amp * 3f).coerceAtMost(1f)
+            val scaled = kotlin.math.sqrt(boosted.toDouble()).toFloat()
             val barHeight = (maxBarHeight * scaled).coerceAtLeast(minBarHeight)
 
             val x = i * (barWidth + gap)
