@@ -35,6 +35,7 @@ object Constants {
     const val PREF_THEME_FOLLOW_SUN = "theme_follow_sun"
     const val PREF_LATITUDE = "location_latitude"
     const val PREF_LONGITUDE = "location_longitude"
+    const val PREF_BIOMETRIC_LOCK = "biometric_lock"
 
     // Google OAuth
     const val GOOGLE_WEB_CLIENT_ID = "674560807048-l6ktqsucjr4ld91srdc6assgfiks19mh.apps.googleusercontent.com"

@@ -27,6 +27,7 @@ data class SettingsUiState(
     val isDarkTheme: Boolean = false,
     val followSystem: Boolean = false,
     val followSun: Boolean = false,
+    val biometricLock: Boolean = false,
     val lastSyncTimestamp: Long? = null,
     val isSyncing: Boolean = false,
     val syncMessage: String? = null,
@@ -79,6 +80,7 @@ class SettingsViewModel @Inject constructor(
             isDarkTheme = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false),
             followSystem = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false),
             followSun = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false),
+            biometricLock = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false),
             lastSyncTimestamp = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L).takeIf { it > 0 }
         )
     }
@@ -145,6 +147,11 @@ class SettingsViewModel @Inject constructor(
     fun updateAutoUpdateDashboard(enabled: Boolean) {
         encryptedPrefs.edit().putBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, enabled).apply()
         _uiState.value = _uiState.value.copy(autoUpdateDashboard = enabled)
+    }
+
+    fun updateBiometricLock(enabled: Boolean) {
+        encryptedPrefs.edit().putBoolean(Constants.PREF_BIOMETRIC_LOCK, enabled).apply()
+        _uiState.value = _uiState.value.copy(biometricLock = enabled)
     }
 
     fun syncNow() {

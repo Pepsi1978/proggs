@@ -112,6 +112,7 @@ dependencies {
 
     // Security
     implementation(libs.security.crypto)
+    implementation(libs.biometric)
 
     // Coroutines
     implementation(libs.coroutines.core)

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -198,7 +199,26 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             }
         }
 
-        // 3. API-Schluessel
+        // 3. Sicherheit
+        GlassCard {
+            Column {
+                Text("Sicherheit", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Icon(imageVector = Icons.Rounded.Fingerprint, contentDescription = null, tint = if (uiState.biometricLock) MaterialTheme.colorScheme.primary else Color(0xFF666666), modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("Fingerabdruck", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            Text("App beim Start entsperren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Switch(checked = uiState.biometricLock, onCheckedChange = { viewModel.updateBiometricLock(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
+                }
+            }
+        }
+
+        // 4. API-Schluessel
         GlassCard {
             Column {
                 Text("API-Schl\u00fcssel", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
