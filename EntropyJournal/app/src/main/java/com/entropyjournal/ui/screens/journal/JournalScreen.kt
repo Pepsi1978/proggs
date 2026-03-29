@@ -153,11 +153,36 @@ fun JournalScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Tagebuch",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Tagebuch",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    val isDark = LocalIsDarkTheme.current
+                    IconButton(onClick = {
+                        try {
+                            val encPrefs = androidx.security.crypto.EncryptedSharedPreferences.create(
+                                Constants.ENCRYPTED_PREFS_NAME,
+                                androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC),
+                                context,
+                                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                            )
+                            encPrefs.edit()
+                                .putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)
+                                .putBoolean(Constants.PREF_DARK_THEME, !isDark)
+                                .apply()
+                        } catch (_: Exception) {}
+                    }) {
+                        Icon(
+                            imageVector = if (isDark) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
+                            contentDescription = "Tag/Nacht",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = when (uiState.syncStatus) {

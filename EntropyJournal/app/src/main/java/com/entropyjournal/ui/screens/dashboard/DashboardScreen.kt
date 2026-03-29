@@ -88,7 +88,32 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Dashboard", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Dashboard", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        val dashCtx = androidx.compose.ui.platform.LocalContext.current
+                        IconButton(onClick = {
+                            try {
+                                val encPrefs = androidx.security.crypto.EncryptedSharedPreferences.create(
+                                    com.entropyjournal.util.Constants.ENCRYPTED_PREFS_NAME,
+                                    androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC),
+                                    dashCtx,
+                                    androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                                    androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                                )
+                                encPrefs.edit()
+                                    .putBoolean(com.entropyjournal.util.Constants.PREF_THEME_FOLLOW_SYSTEM, false)
+                                    .putBoolean(com.entropyjournal.util.Constants.PREF_DARK_THEME, !isDark)
+                                    .apply()
+                            } catch (_: Exception) {}
+                        }) {
+                            Icon(
+                                imageVector = if (isDark) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
+                                contentDescription = "Tag/Nacht",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     Row {
                         IconButton(onClick = { showLegendDialog = true }) {
                             Icon(Icons.Rounded.Info, "Legende", tint = MaterialTheme.colorScheme.onSurfaceVariant)
