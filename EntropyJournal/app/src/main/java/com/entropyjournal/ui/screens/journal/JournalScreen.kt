@@ -375,12 +375,6 @@ private fun PreviewDialog(
     var isFocused by remember { mutableStateOf(false) }
     var hadFocusOnce by remember { mutableStateOf(false) }
 
-    // Auto-focus the text field when dialog opens (keyboard pops up immediately)
-    LaunchedEffect(Unit) {
-        delay(300) // wait for dialog animation
-        focusRequester.requestFocus()
-    }
-
     // Auto-clear focus after 5 seconds of inactivity
     LaunchedEffect(lastEditTime) {
         if (lastEditTime > 0 && isFocused) {
