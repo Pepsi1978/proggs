@@ -158,9 +158,24 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun signOut(context: android.content.Context) {
+        // Save API keys before sign-out — they belong to the device, not the account
+        val groqKey = encryptedPrefs.getString(Constants.PREF_GROQ_API_KEY, "") ?: ""
+        val geminiKey = encryptedPrefs.getString(Constants.PREF_GEMINI_API_KEY, "") ?: ""
+        val selectedModel = encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL) ?: Constants.DEFAULT_GEMINI_MODEL
+        val isDark = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, true)
+
         signInUseCase.signOut()
         // Delete local database — data belongs to the account
         context.deleteDatabase("entropy_journal_db")
+
+        // Restore API keys and settings
+        encryptedPrefs.edit()
+            .putString(Constants.PREF_GROQ_API_KEY, groqKey)
+            .putString(Constants.PREF_GEMINI_API_KEY, geminiKey)
+            .putString(Constants.PREF_GEMINI_MODEL, selectedModel)
+            .putBoolean(Constants.PREF_DARK_THEME, isDark)
+            .apply()
+
         // Restart the app process so Room clears its in-memory cache
         val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
         intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
