@@ -91,20 +91,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Dashboard", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
                         Spacer(modifier = Modifier.width(8.dp))
-                        val dashCtx = androidx.compose.ui.platform.LocalContext.current
-                        IconButton(onClick = {
-                            val themePrefs = dashCtx.getSharedPreferences("entropy_theme_quick", android.content.Context.MODE_PRIVATE)
-                            themePrefs.edit()
-                                .putBoolean("toggle_dark", !isDark)
-                                .putLong("toggle_time", System.currentTimeMillis())
-                                .apply()
-                        }) {
-                            Icon(
-                                imageVector = if (isDark) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
-                                contentDescription = "Tag/Nacht",
-                                tint = androidx.compose.ui.graphics.Color(0xFFFFD54F)
-                            )
-                        }
+                        com.entropyjournal.ui.components.SunMoonToggle()
                     }
                     Row {
                         IconButton(onClick = { showLegendDialog = true }) {

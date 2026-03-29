@@ -30,8 +30,6 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
-import androidx.compose.material.icons.rounded.DarkMode
-import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -63,8 +61,8 @@ import androidx.core.content.ContextCompat
 import com.entropyjournal.ui.components.AnimatedMicButton
 import com.entropyjournal.ui.components.GlassCard
 import com.entropyjournal.ui.components.ShimmerLoadingEffect
+import com.entropyjournal.ui.components.SunMoonToggle
 import com.entropyjournal.ui.components.TimelineItem
-import com.entropyjournal.ui.theme.LocalIsDarkTheme
 import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
@@ -160,20 +158,7 @@ fun JournalScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    val isDark = LocalIsDarkTheme.current
-                    IconButton(onClick = {
-                        val themePrefs = context.getSharedPreferences("entropy_theme_quick", android.content.Context.MODE_PRIVATE)
-                        themePrefs.edit()
-                            .putBoolean("toggle_dark", !isDark)
-                            .putLong("toggle_time", System.currentTimeMillis())
-                            .apply()
-                    }) {
-                        Icon(
-                            imageVector = if (isDark) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
-                            contentDescription = "Tag/Nacht",
-                            tint = if (isDark) androidx.compose.ui.graphics.Color(0xFFFFD54F) else androidx.compose.ui.graphics.Color(0xFFFFD54F)
-                        )
-                    }
+                    SunMoonToggle()
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
