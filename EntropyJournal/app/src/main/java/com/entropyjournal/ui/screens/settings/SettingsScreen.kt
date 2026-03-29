@@ -89,14 +89,22 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text("Konto", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(12.dp))
-                uiState.userProfile?.let { profile ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        GoogleLogo(modifier = Modifier.size(40.dp))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(profile.displayName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                            Text(profile.email, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (uiState.userProfile != null) {
+                    val profile = uiState.userProfile!!
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            GoogleLogo(modifier = Modifier.size(40.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(profile.displayName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                                Text(profile.email, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
+                        OutlinedButton(onClick = { viewModel.showLogoutDialog(true) }, colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonRed)) { Text("Abmelden") }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     uiState.lastSyncTimestamp?.let { ts ->
@@ -104,12 +112,28 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { viewModel.syncNow() }, enabled = !uiState.isSyncing, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)) { Text(if (uiState.isSyncing) "..." else "Sichern") }
-                        OutlinedButton(onClick = { viewModel.restoreFromCloud(context) }, enabled = !uiState.isSyncing) { Text("Wiederherstellen") }
+                        Column {
+                            Button(onClick = { viewModel.syncNow() }, enabled = !uiState.isSyncing, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)) { Text(if (uiState.isSyncing) "..." else "Sichern") }
+                            Text("Eintr\u00e4ge bei Google sichern", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                        }
+                        Column {
+                            OutlinedButton(onClick = { viewModel.restoreFromCloud(context) }, enabled = !uiState.isSyncing) { Text("Wiederherstellen") }
+                            Text("Gesicherte Daten laden", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                        }
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    OutlinedButton(onClick = { viewModel.showLogoutDialog(true) }, colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonRed)) { Text("Abmelden") }
                     uiState.syncMessage?.let { msg -> Spacer(modifier = Modifier.height(4.dp)); Text(msg, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                } else {
+                    // Not logged in
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        GoogleLogo(modifier = Modifier.size(40.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Nicht angemeldet", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Mit Google anmelden um Daten zu sichern", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = { onSignOut() }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)) { Text("Anmelden") }
                 }
             }
         }
@@ -292,7 +316,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             Column {
                 Text("\u00dcber die App", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Entropy Journal v0.5.4", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Entropy Journal v0.5.5", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Dein pers\u00f6nliches KI-Tagebuch", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("\u00a9 Frank Barwandt", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
