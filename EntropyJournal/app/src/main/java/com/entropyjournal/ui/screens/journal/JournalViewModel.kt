@@ -184,6 +184,16 @@ class JournalViewModel @Inject constructor(
         }
     }
 
+    fun startTextEntry() {
+        _uiState.value = _uiState.value.copy(
+            recordingState = RecordingState.PREVIEW,
+            rawText = "",
+            improvedText = null,
+            isImproveEnabled = false,
+            showPreviewDialog = true
+        )
+    }
+
     fun dismissPreview() {
         resetState()
     }

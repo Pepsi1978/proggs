@@ -12,6 +12,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -30,10 +31,13 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -241,14 +245,44 @@ fun JournalScreen(
             )
         }
 
-        // Mic button
-        AnimatedMicButton(
-            isRecording = uiState.recordingState == RecordingState.RECORDING,
-            onClick = onMicClick,
+        // Mic + Text entry buttons
+        Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp)
-        )
+                .padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Mic button
+            AnimatedMicButton(
+                isRecording = uiState.recordingState == RecordingState.RECORDING,
+                onClick = onMicClick
+            )
+
+            // Divider
+            Box(
+                modifier = Modifier
+                    .height(32.dp)
+                    .width(1.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant)
+            )
+
+            // Text entry button
+            FloatingActionButton(
+                onClick = { viewModel.startTextEntry() },
+                modifier = Modifier.size(64.dp),
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                shape = CircleShape,
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Edit,
+                    contentDescription = "Text eingeben",
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
 
         // Preview dialog
         if (uiState.showPreviewDialog) {
