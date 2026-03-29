@@ -44,8 +44,27 @@ class SettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState
 
+    // Listen for external theme changes (e.g. quick toggle from Journal/Dashboard)
+    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        when (key) {
+            Constants.PREF_DARK_THEME, Constants.PREF_THEME_FOLLOW_SYSTEM, Constants.PREF_THEME_FOLLOW_SUN -> {
+                _uiState.value = _uiState.value.copy(
+                    isDarkTheme = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false),
+                    followSystem = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false),
+                    followSun = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false)
+                )
+            }
+        }
+    }
+
     init {
         loadSettings()
+        encryptedPrefs.registerOnSharedPreferenceChangeListener(prefsListener)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        encryptedPrefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
     }
 
     private fun loadSettings() {
