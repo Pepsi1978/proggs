@@ -418,6 +418,14 @@ private fun PreviewDialog(
     var isFocused by remember { mutableStateOf(false) }
     var hadFocusOnce by remember { mutableStateOf(false) }
 
+    // Auto-focus only for text entry mode (empty text = user tapped the edit button)
+    LaunchedEffect(Unit) {
+        if (rawText.isBlank()) {
+            delay(300)
+            focusRequester.requestFocus()
+        }
+    }
+
     // Auto-clear focus after 5 seconds of inactivity
     LaunchedEffect(lastEditTime) {
         if (lastEditTime > 0 && isFocused) {
