@@ -223,6 +223,10 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         }
                     }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
                 }
+                if (uiState.biometricLock) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Sperrt automatisch nach 60 Sekunden im Hintergrund", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                }
             }
         }
 
