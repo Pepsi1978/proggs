@@ -142,8 +142,12 @@ fun EntryDetailScreen(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.outline
                         )
-                        if (!entry.summary.isNullOrBlank()) {
-                            Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
+
+                if (!entry.summary.isNullOrBlank()) {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Column {
                             Text(
                                 "Zusammenfassung",
                                 style = MaterialTheme.typography.labelMedium,
