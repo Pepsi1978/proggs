@@ -14,8 +14,8 @@ android {
         applicationId = "com.entropyjournal"
         minSdk = 26
         targetSdk = 35
-        versionCode = 50
-        versionName = "0.6.7"
+        versionCode = 51
+        versionName = "0.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -59,6 +59,10 @@ android {
             excludes += "/META-INF/DEPENDENCIES"
             excludes += "/META-INF/INDEX.LIST"
         }
+    }
+
+    androidResources {
+        noCompress += listOf("onnx", "txt")
     }
 }
 
@@ -113,6 +117,9 @@ dependencies {
     // Security
     implementation(libs.security.crypto)
     implementation(libs.biometric)
+
+    // Sherpa-ONNX (local Whisper speech-to-text)
+    implementation(files("libs/sherpa-onnx-1.12.34.aar"))
 
     // Coroutines
     implementation(libs.coroutines.core)
