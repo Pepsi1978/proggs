@@ -60,6 +60,27 @@
 - 51x schneller als whisper.cpp auf Android (benchmarked)
 - WAV-Samples: 16-bit PCM nach Float normalisieren mit `sample.toShort().toFloat() / 32768.0f`
 
+## Whisper 30-Sekunden-Limit: Stille-basiertes Chunking (WICHTIG)
+- Whisper-Modelle (Base, Small, Medium, Large) haben ein **festes 30-Sekunden-Kontextfenster** — architekturbedingt (1500 Mel-Spectrogram-Frames a 20ms)
+- Wenn man laengeres Audio als einen Block an `OfflineRecognizer` schickt, wird alles nach 30s abgeschnitten
+- **NICHT hart alle 30 Sekunden schneiden** — das zerstueckelt Woerter an den Schnittstellen
+- **Loesung: Stille-basiertes Chunking** — in den letzten 5 Sekunden jedes 30s-Fensters nach der leisesten Stelle suchen
+- Algorithmus: Sliding-Window RMS-Energie (300ms Fenster, 75ms Schrittweite) ueber die Samples von Sekunde 25-30
+- Der Punkt mit niedrigster Energie ist fast immer eine Atempause oder Satzgrenze
+- Dort schneiden → kein Wort wird zerstueckelt, kein Text geht verloren, keine Duplikate
+- Performance: Stille-Erkennung braucht <1ms (reine Arithmetik auf Float-Array), voellig unsichtbar
+- Jeder Chunk wird separat transkribiert, Ergebnisse mit Leerzeichen zusammengefuegt
+- Funktioniert fuer beliebige Aufnahmedauer (3, 5, 10, 15+ Minuten)
+- **Dieses Pattern ist wiederverwendbar** fuer jedes Projekt das Whisper/sherpa-onnx offline nutzt
+
+## Biometric Lock: savedInstanceState bei Rotation (WICHTIG)
+- Android zerstoert und erstellt die Activity bei Bildschirmrotation neu
+- State in `mutableStateOf` auf der Activity-Instanz geht dabei verloren
+- **Loesung**: `onSaveInstanceState()` ueberschreiben und kritischen State (z.B. `isUnlocked`) im Bundle speichern
+- In `onCreate()` aus `savedInstanceState` wiederherstellen wenn nicht null
+- Alternative `configChanges` im Manifest ist ein Holzhammer — Google raet davon ab
+- ViewModel waere Overkill fuer einen einzelnen Boolean
+
 ## Biometric Lock
 - `BiometricPrompt` braucht `FragmentActivity` — `ComponentActivity` reicht NICHT
 - `MainActivity` von `FragmentActivity()` erben lassen (statt `ComponentActivity`)
