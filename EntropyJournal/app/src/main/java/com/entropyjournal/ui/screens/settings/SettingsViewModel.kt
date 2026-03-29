@@ -69,7 +69,14 @@ class SettingsViewModel @Inject constructor(
 
     fun updateFollowSystem(enabled: Boolean) {
         encryptedPrefs.edit().putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, enabled).apply()
-        _uiState.value = _uiState.value.copy(followSystem = enabled)
+        if (enabled) {
+            // When enabling system follow, reset manual dark mode to false
+            // The actual theme will be determined by the system setting in MainActivity
+            encryptedPrefs.edit().putBoolean(Constants.PREF_DARK_THEME, false).apply()
+            _uiState.value = _uiState.value.copy(followSystem = true, isDarkTheme = false)
+        } else {
+            _uiState.value = _uiState.value.copy(followSystem = false)
+        }
     }
 
     fun updateSelectedModel(modelId: String) {
