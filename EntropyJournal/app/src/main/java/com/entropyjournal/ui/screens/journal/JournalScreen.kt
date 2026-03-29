@@ -276,16 +276,6 @@ fun JournalScreen(
         }
 
         // Recording overlay
-        var showModelLabel by remember { mutableStateOf(false) }
-        LaunchedEffect(uiState.recordingState) {
-            if (uiState.recordingState == RecordingState.RECORDING) {
-                showModelLabel = true
-                delay(5000)
-                showModelLabel = false
-            } else {
-                showModelLabel = false
-            }
-        }
         AnimatedVisibility(
             visible = uiState.recordingState == RecordingState.RECORDING,
             enter = fadeIn() + slideInVertically { it },
@@ -295,9 +285,7 @@ fun JournalScreen(
             RecordingOverlay(
                 amplitude = amplitude,
                 durationSeconds = duration,
-                transcriptionModel = if (showModelLabel) {
-                    if (viewModel.isGroqActive()) "Groq API" else "Lokales Whisper-Modell"
-                } else ""
+                transcriptionModel = if (viewModel.isGroqActive()) "Groq API" else "Lokales Whisper-Modell"
             )
         }
 
