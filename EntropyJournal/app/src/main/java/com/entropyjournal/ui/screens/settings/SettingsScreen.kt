@@ -230,9 +230,9 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             Column {
                 Text("API-Schl\u00fcssel", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(12.dp))
-                ApiKeyField(label = "Groq API-Key", value = uiState.groqApiKey, onValueChange = { viewModel.updateGroqApiKey(it) })
+                ApiKeyField(label = "Groq API-Key", value = uiState.groqApiKey, onValueChange = { viewModel.updateGroqApiKey(it) }, requireBiometric = uiState.biometricLock)
                 Spacer(modifier = Modifier.height(8.dp))
-                ApiKeyField(label = "Gemini API-Key", value = uiState.geminiApiKey, onValueChange = { viewModel.updateGeminiApiKey(it) })
+                ApiKeyField(label = "Gemini API-Key", value = uiState.geminiApiKey, onValueChange = { viewModel.updateGeminiApiKey(it) }, requireBiometric = uiState.biometricLock)
             }
         }
 
@@ -292,7 +292,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             Column {
                 Text("\u00dcber die App", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Entropy Journal v0.5.3", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Entropy Journal v0.5.4", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Dein pers\u00f6nliches KI-Tagebuch", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("\u00a9 Frank Barwandt", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
@@ -315,13 +315,33 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
 }
 
 @Composable
-private fun ApiKeyField(label: String, value: String, onValueChange: (String) -> Unit) {
+private fun ApiKeyField(label: String, value: String, onValueChange: (String) -> Unit, requireBiometric: Boolean = false) {
     var visible by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     TextField(
         value = value, onValueChange = onValueChange,
         label = { Text(label, color = MaterialTheme.colorScheme.outline) },
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-        trailingIcon = { IconButton(onClick = { visible = !visible }) { Icon(if (visible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility, if (visible) "Verbergen" else "Anzeigen", tint = MaterialTheme.colorScheme.onSurfaceVariant) } },
+        trailingIcon = {
+            IconButton(onClick = {
+                if (visible) {
+                    // Always allow hiding
+                    visible = false
+                } else if (requireBiometric) {
+                    // Require biometric to reveal
+                    val activity = context as? com.entropyjournal.MainActivity
+                    if (activity != null) {
+                        activity.showBiometricPrompt { visible = true }
+                    } else {
+                        visible = true
+                    }
+                } else {
+                    visible = true
+                }
+            }) {
+                Icon(if (visible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility, if (visible) "Verbergen" else "Anzeigen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
         modifier = Modifier.fillMaxWidth(),
         colors = TextFieldDefaults.colors(focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant, unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant, focusedTextColor = MaterialTheme.colorScheme.onSurface, cursorColor = MaterialTheme.colorScheme.primary, focusedIndicatorColor = MaterialTheme.colorScheme.primary, unfocusedIndicatorColor = Color.Transparent),
         singleLine = true, shape = RoundedCornerShape(12.dp)
