@@ -221,23 +221,31 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun signOut(context: android.content.Context) {
-        // Save API keys before sign-out — they belong to the device, not the account
-        val groqKey = encryptedPrefs.getString(Constants.PREF_GROQ_API_KEY, "") ?: ""
-        val geminiKey = encryptedPrefs.getString(Constants.PREF_GEMINI_API_KEY, "") ?: ""
-        val selectedModel = encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL) ?: Constants.DEFAULT_GEMINI_MODEL
-        val isDark = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, true)
+        try {
+            // Save API keys before sign-out — they belong to the device, not the account
+            val groqKey = encryptedPrefs.getString(Constants.PREF_GROQ_API_KEY, "") ?: ""
+            val geminiKey = encryptedPrefs.getString(Constants.PREF_GEMINI_API_KEY, "") ?: ""
+            val selectedModel = encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL) ?: Constants.DEFAULT_GEMINI_MODEL
+            val isDark = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, true)
+            val biometricLock = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)
 
-        signInUseCase.signOut()
-        // Delete local database — data belongs to the account
-        context.deleteDatabase("entropy_journal_db")
+            signInUseCase.signOut()
 
-        // Restore API keys and settings
-        encryptedPrefs.edit()
-            .putString(Constants.PREF_GROQ_API_KEY, groqKey)
-            .putString(Constants.PREF_GEMINI_API_KEY, geminiKey)
-            .putString(Constants.PREF_GEMINI_MODEL, selectedModel)
-            .putBoolean(Constants.PREF_DARK_THEME, isDark)
-            .apply()
+            // Delete local database — data belongs to the account
+            context.deleteDatabase("entropy_journal_db")
+            // Also delete WAL/SHM files
+            context.getDatabasePath("entropy_journal_db-wal")?.delete()
+            context.getDatabasePath("entropy_journal_db-shm")?.delete()
+
+            // Restore device-specific settings
+            encryptedPrefs.edit()
+                .putString(Constants.PREF_GROQ_API_KEY, groqKey)
+                .putString(Constants.PREF_GEMINI_API_KEY, geminiKey)
+                .putString(Constants.PREF_GEMINI_MODEL, selectedModel)
+                .putBoolean(Constants.PREF_DARK_THEME, isDark)
+                .putBoolean(Constants.PREF_BIOMETRIC_LOCK, biometricLock)
+                .apply()
+        } catch (_: Exception) { }
 
         // Restart the app process so Room clears its in-memory cache
         val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)

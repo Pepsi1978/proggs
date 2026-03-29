@@ -382,7 +382,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             containerColor = MaterialTheme.colorScheme.surface,
             title = { Text("Abmelden?", color = MaterialTheme.colorScheme.onSurface) },
             text = { Text("M\u00f6chtest du dich wirklich abmelden?", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-            confirmButton = { Button(onClick = { viewModel.signOut(context); onSignOut() }, colors = ButtonDefaults.buttonColors(containerColor = NeonRed)) { Text("Abmelden") } },
+            confirmButton = { Button(onClick = { viewModel.signOut(context) }, colors = ButtonDefaults.buttonColors(containerColor = NeonRed)) { Text("Abmelden") } },
             dismissButton = { OutlinedButton(onClick = { viewModel.showLogoutDialog(false) }) { Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant) } }
         )
     }
