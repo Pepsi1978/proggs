@@ -8,6 +8,7 @@ import com.entropyjournal.domain.usecase.SignInWithGoogleUseCase
 import com.entropyjournal.domain.usecase.SyncWithDriveUseCase
 import com.entropyjournal.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -161,9 +162,12 @@ class SettingsViewModel @Inject constructor(
                 .onSuccess {
                     _uiState.value = _uiState.value.copy(
                         isSyncing = false,
-                        syncMessage = "Synchronisation erfolgreich",
+                        syncMessage = "Erfolgreich gesichert",
                         lastSyncTimestamp = System.currentTimeMillis()
                     )
+                    // Auto-dismiss message after 3 seconds
+                    delay(3000)
+                    _uiState.value = _uiState.value.copy(syncMessage = null)
                 }
                 .onFailure { error ->
                     if (error is NeedConsentException) {

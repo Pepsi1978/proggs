@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.entropyjournal.ui.components.GlassCard
@@ -109,16 +110,17 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Spacer(modifier = Modifier.height(12.dp))
                     uiState.lastSyncTimestamp?.let { ts ->
                         Text("Letzte Synchronisation: ${DateTimeFormatter.formatFull(ts)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
-                        Spacer(modifier = Modifier.height(8.dp))
                     }
-                    Button(
-                        onClick = { viewModel.syncNow() },
-                        enabled = !uiState.isSyncing,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
-                    ) { Text(if (uiState.isSyncing) "Wird gesichert..." else "Tagebucheintr\u00e4ge sichern") }
                     Text("Eintr\u00e4ge werden bei der Anmeldung automatisch geladen", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-                    uiState.syncMessage?.let { msg -> Spacer(modifier = Modifier.height(4.dp)); Text(msg, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        Button(
+                            onClick = { viewModel.syncNow() },
+                            enabled = !uiState.isSyncing,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
+                        ) { Text(if (uiState.isSyncing) "Wird gesichert..." else "Tagebucheintr\u00e4ge sichern") }
+                    }
+                    uiState.syncMessage?.let { msg -> Spacer(modifier = Modifier.height(4.dp)); Text(msg, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
                 } else {
                     // Not logged in
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -317,7 +319,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             Column {
                 Text("\u00dcber die App", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Entropy Journal v0.5.9", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Entropy Journal v0.6.0", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Dein pers\u00f6nliches KI-Tagebuch", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("\u00a9 Frank Barwandt", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
