@@ -40,9 +40,19 @@ class MainActivity : FragmentActivity() {
 
     @Inject lateinit var encryptedPrefs: SharedPreferences
 
+    // Compose-accessible lock state — survives recomposition
+    private val isUnlocked = mutableStateOf(false)
+    private var biometricPromptActive = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // If biometric not enabled, start unlocked
+        if (!encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)) {
+            isUnlocked.value = true
+        }
+
         val quickPrefs = getSharedPreferences("entropy_theme_quick", MODE_PRIVATE)
 
         setContent {
@@ -57,10 +67,6 @@ class MainActivity : FragmentActivity() {
                 } catch (_: Exception) { false })
             }
             val systemDark = isSystemInDarkTheme()
-
-            // Biometric lock state
-            val biometricRequired = remember { mutableStateOf(encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)) }
-            val isUnlocked = remember { mutableStateOf(!biometricRequired.value) }
 
             DisposableEffect(Unit) {
                 val encListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -93,11 +99,6 @@ class MainActivity : FragmentActivity() {
                     }
                 }
                 quickPrefs.registerOnSharedPreferenceChangeListener(quickListener)
-
-                // Show biometric prompt if needed
-                if (biometricRequired.value && !isUnlocked.value) {
-                    showBiometricPrompt { isUnlocked.value = true }
-                }
 
                 onDispose {
                     encryptedPrefs.unregisterOnSharedPreferenceChangeListener(encListener)
@@ -140,11 +141,30 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun showBiometricPrompt(onSuccess: () -> Unit) {
+    override fun onResume() {
+        super.onResume()
+        val biometricEnabled = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)
+        if (biometricEnabled && !isUnlocked.value && !biometricPromptActive) {
+            showBiometricPrompt { isUnlocked.value = true }
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Lock the app when it goes to background
+        if (encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)) {
+            isUnlocked.value = false
+        }
+    }
+
+    fun showBiometricPrompt(onSuccess: () -> Unit) {
+        if (biometricPromptActive) return
+        biometricPromptActive = true
+
         val biometricManager = BiometricManager.from(this)
         val canAuth = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
         if (canAuth != BiometricManager.BIOMETRIC_SUCCESS) {
-            // Device doesn't support biometrics or none enrolled — skip lock
+            biometricPromptActive = false
             onSuccess()
             return
         }
@@ -152,10 +172,14 @@ class MainActivity : FragmentActivity() {
         val executor = ContextCompat.getMainExecutor(this)
         val prompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                biometricPromptActive = false
                 onSuccess()
             }
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                // User cancelled — stay on lock screen (they can tap "Entsperren" to retry)
+                biometricPromptActive = false
+            }
+            override fun onAuthenticationFailed() {
+                // Single attempt failed — prompt stays open for retry
             }
         })
 

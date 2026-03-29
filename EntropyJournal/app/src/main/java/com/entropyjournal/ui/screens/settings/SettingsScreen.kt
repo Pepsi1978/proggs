@@ -213,7 +213,15 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             Text("App beim Start entsperren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    Switch(checked = uiState.biometricLock, onCheckedChange = { viewModel.updateBiometricLock(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
+                    Switch(checked = uiState.biometricLock, onCheckedChange = { enabled ->
+                        // Require biometric auth before toggling the lock on or off
+                        val activity = context as? com.entropyjournal.MainActivity
+                        if (activity != null) {
+                            activity.showBiometricPrompt { viewModel.updateBiometricLock(enabled) }
+                        } else {
+                            viewModel.updateBiometricLock(enabled)
+                        }
+                    }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
                 }
             }
         }
