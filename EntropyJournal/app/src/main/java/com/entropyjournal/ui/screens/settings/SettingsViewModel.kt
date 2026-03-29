@@ -24,7 +24,8 @@ data class SettingsUiState(
     val textImprovementDefault: Boolean = false,
     val maxRecordingDuration: Int = 5,
     val autoUpdateDashboard: Boolean = true,
-    val isDarkTheme: Boolean = true,
+    val isDarkTheme: Boolean = false,
+    val followSystem: Boolean = false,
     val lastSyncTimestamp: Long? = null,
     val isSyncing: Boolean = false,
     val syncMessage: String? = null,
@@ -55,7 +56,8 @@ class SettingsViewModel @Inject constructor(
             textImprovementDefault = encryptedPrefs.getBoolean(Constants.PREF_TEXT_IMPROVEMENT_DEFAULT, false),
             maxRecordingDuration = encryptedPrefs.getInt(Constants.PREF_MAX_RECORDING_DURATION, 5),
             autoUpdateDashboard = encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true),
-            isDarkTheme = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, true),
+            isDarkTheme = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false),
+            followSystem = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false),
             lastSyncTimestamp = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L).takeIf { it > 0 }
         )
     }
@@ -63,6 +65,11 @@ class SettingsViewModel @Inject constructor(
     fun updateDarkTheme(enabled: Boolean) {
         encryptedPrefs.edit().putBoolean(Constants.PREF_DARK_THEME, enabled).apply()
         _uiState.value = _uiState.value.copy(isDarkTheme = enabled)
+    }
+
+    fun updateFollowSystem(enabled: Boolean) {
+        encryptedPrefs.edit().putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, enabled).apply()
+        _uiState.value = _uiState.value.copy(followSystem = enabled)
     }
 
     fun updateSelectedModel(modelId: String) {

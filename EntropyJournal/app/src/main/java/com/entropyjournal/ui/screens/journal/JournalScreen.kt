@@ -174,24 +174,6 @@ fun JournalScreen(
                         },
                         modifier = Modifier.size(20.dp)
                     )
-                    val isDark = LocalIsDarkTheme.current
-                    val prefs = context.getSharedPreferences("entropy_theme", android.content.Context.MODE_PRIVATE)
-                    IconButton(onClick = {
-                        val encPrefs = androidx.security.crypto.EncryptedSharedPreferences.create(
-                            Constants.ENCRYPTED_PREFS_NAME,
-                            androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC),
-                            context,
-                            androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                            androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                        )
-                        encPrefs.edit().putBoolean(Constants.PREF_DARK_THEME, !isDark).apply()
-                    }) {
-                        Icon(
-                            imageVector = if (isDark) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
-                            contentDescription = "Tag/Nacht",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                     IconButton(onClick = { viewModel.toggleSearch() }) {
                         Icon(Icons.Rounded.Search, "Suchen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

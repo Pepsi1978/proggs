@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,14 +24,23 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val isDarkTheme = remember {
-                mutableStateOf(encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, true))
+            val followSystem = remember {
+                mutableStateOf(encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false))
             }
+            val manualDark = remember {
+                mutableStateOf(encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false))
+            }
+            val systemDark = isSystemInDarkTheme()
 
             DisposableEffect(Unit) {
                 val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-                    if (key == Constants.PREF_DARK_THEME) {
-                        isDarkTheme.value = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, true)
+                    when (key) {
+                        Constants.PREF_DARK_THEME -> {
+                            manualDark.value = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false)
+                        }
+                        Constants.PREF_THEME_FOLLOW_SYSTEM -> {
+                            followSystem.value = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)
+                        }
                     }
                 }
                 encryptedPrefs.registerOnSharedPreferenceChangeListener(listener)
@@ -39,7 +49,9 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            EntropyJournalTheme(darkTheme = isDarkTheme.value) {
+            val isDark = if (followSystem.value) systemDark else manualDark.value
+
+            EntropyJournalTheme(darkTheme = isDark) {
                 AppNavGraph()
             }
         }
