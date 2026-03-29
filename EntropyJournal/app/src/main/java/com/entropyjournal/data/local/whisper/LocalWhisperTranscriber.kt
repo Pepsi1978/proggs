@@ -55,15 +55,11 @@ class LocalWhisperTranscriber @Inject constructor(
                 return@withContext Result.failure(Exception("Audio-Datei ist leer"))
             }
 
-            // Whisper processes audio in 30-second windows — split long recordings into chunks
-            val chunkSize = SAMPLE_RATE * MAX_CHUNK_SECONDS // 480,000 samples = 30s
+            // Whisper processes audio in 30-second windows — split at silence points
+            val chunks = splitAtSilence(samples)
             val results = StringBuilder()
 
-            var offset = 0
-            while (offset < samples.size) {
-                val end = minOf(offset + chunkSize, samples.size)
-                val chunk = samples.copyOfRange(offset, end)
-
+            for (chunk in chunks) {
                 val stream = rec.createStream()
                 stream.acceptWaveform(chunk, SAMPLE_RATE)
                 rec.decode(stream)
@@ -73,8 +69,6 @@ class LocalWhisperTranscriber @Inject constructor(
                     if (results.isNotEmpty()) results.append(" ")
                     results.append(chunkText)
                 }
-
-                offset = end
             }
 
             val text = results.toString().trim()
@@ -88,9 +82,72 @@ class LocalWhisperTranscriber @Inject constructor(
         }
     }
 
+    /**
+     * Split audio samples into chunks at natural silence points.
+     * Each chunk is up to 30 seconds. The split point is chosen where
+     * the audio is quietest in a 3-second search window before the 30s mark.
+     */
+    private fun splitAtSilence(samples: FloatArray): List<FloatArray> {
+        val maxChunkSamples = SAMPLE_RATE * MAX_CHUNK_SECONDS
+        if (samples.size <= maxChunkSamples) return listOf(samples)
+
+        val chunks = mutableListOf<FloatArray>()
+        var offset = 0
+
+        while (offset < samples.size) {
+            val remaining = samples.size - offset
+            if (remaining <= maxChunkSamples) {
+                chunks.add(samples.copyOfRange(offset, samples.size))
+                break
+            }
+
+            // Search for quietest point in window [27s..30s] from chunk start
+            val searchStart = offset + SAMPLE_RATE * SEARCH_WINDOW_START_SECONDS
+            val searchEnd = offset + maxChunkSamples
+            val splitPoint = findQuietestPoint(samples, searchStart, searchEnd)
+
+            chunks.add(samples.copyOfRange(offset, splitPoint))
+            offset = splitPoint
+        }
+
+        return chunks
+    }
+
+    /**
+     * Find the sample position with lowest energy (quietest moment)
+     * using a sliding RMS window.
+     */
+    private fun findQuietestPoint(samples: FloatArray, searchStart: Int, searchEnd: Int): Int {
+        val windowSamples = SAMPLE_RATE * SILENCE_WINDOW_MS / 1000 // 300ms window
+        var bestPos = searchEnd
+        var bestEnergy = Float.MAX_VALUE
+
+        val start = searchStart.coerceIn(0, samples.size)
+        val end = (searchEnd - windowSamples).coerceIn(start, samples.size)
+
+        var pos = start
+        while (pos < end) {
+            var sum = 0f
+            for (i in pos until minOf(pos + windowSamples, samples.size)) {
+                sum += samples[i] * samples[i]
+            }
+            val energy = sum / windowSamples
+
+            if (energy < bestEnergy) {
+                bestEnergy = energy
+                bestPos = pos + windowSamples / 2 // split at center of quiet window
+            }
+            pos += windowSamples / 4 // slide by 75ms steps for speed
+        }
+
+        return bestPos.coerceIn(0, samples.size)
+    }
+
     companion object {
         private const val SAMPLE_RATE = 16000
         private const val MAX_CHUNK_SECONDS = 30
+        private const val SEARCH_WINDOW_START_SECONDS = 25 // start searching 5s before max
+        private const val SILENCE_WINDOW_MS = 300 // 300ms window for RMS energy
     }
 
     private fun readWavSamples(file: File): FloatArray {
