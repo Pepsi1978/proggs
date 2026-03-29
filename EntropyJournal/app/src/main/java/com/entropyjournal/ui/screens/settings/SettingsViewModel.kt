@@ -222,29 +222,27 @@ class SettingsViewModel @Inject constructor(
 
     fun signOut(context: android.content.Context) {
         try {
-            // Save API keys before sign-out — they belong to the device, not the account
+            // Save device-specific settings BEFORE clearing everything
             val groqKey = encryptedPrefs.getString(Constants.PREF_GROQ_API_KEY, "") ?: ""
             val geminiKey = encryptedPrefs.getString(Constants.PREF_GEMINI_API_KEY, "") ?: ""
             val selectedModel = encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL) ?: Constants.DEFAULT_GEMINI_MODEL
             val isDark = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, true)
             val biometricLock = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)
 
-            signInUseCase.signOut()
-
-            // Delete local database — data belongs to the account
-            context.deleteDatabase("entropy_journal_db")
-            // Also delete WAL/SHM files
-            context.getDatabasePath("entropy_journal_db-wal")?.delete()
-            context.getDatabasePath("entropy_journal_db-shm")?.delete()
-
-            // Restore device-specific settings
+            // Clear ALL prefs, then restore only device-specific ones — single atomic operation
             encryptedPrefs.edit()
+                .clear()
                 .putString(Constants.PREF_GROQ_API_KEY, groqKey)
                 .putString(Constants.PREF_GEMINI_API_KEY, geminiKey)
                 .putString(Constants.PREF_GEMINI_MODEL, selectedModel)
                 .putBoolean(Constants.PREF_DARK_THEME, isDark)
                 .putBoolean(Constants.PREF_BIOMETRIC_LOCK, biometricLock)
-                .apply()
+                .commit() // commit() is synchronous — guarantees write before restart
+
+            // Delete local database — data belongs to the account
+            context.deleteDatabase("entropy_journal_db")
+            context.getDatabasePath("entropy_journal_db-wal")?.delete()
+            context.getDatabasePath("entropy_journal_db-shm")?.delete()
         } catch (_: Exception) { }
 
         // Restart the app process so Room clears its in-memory cache
