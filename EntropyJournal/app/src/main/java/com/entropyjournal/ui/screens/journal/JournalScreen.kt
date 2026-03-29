@@ -126,6 +126,8 @@ fun JournalScreen(
         }
     }
 
+    var showSyncLegend by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -177,21 +179,24 @@ fun JournalScreen(
                     SunMoonToggle()
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = when (uiState.syncStatus) {
-                            SyncStatus.SYNCED -> Icons.Rounded.CloudDone
-                            SyncStatus.ERROR -> Icons.Rounded.CloudOff
-                            else -> Icons.Rounded.Cloud
-                        },
-                        contentDescription = "Sync-Status",
-                        tint = when (uiState.syncStatus) {
-                            SyncStatus.SYNCED -> NeonEmerald
-                            SyncStatus.SYNCING -> MaterialTheme.colorScheme.primary
-                            SyncStatus.ERROR -> NeonRed
-                            else -> MaterialTheme.colorScheme.outline
-                        },
-                        modifier = Modifier.size(20.dp)
-                    )
+                    IconButton(onClick = { showSyncLegend = true }) {
+                        Icon(
+                            imageVector = when (uiState.syncStatus) {
+                                SyncStatus.SYNCED -> Icons.Rounded.CloudDone
+                                SyncStatus.ERROR -> Icons.Rounded.CloudOff
+                                SyncStatus.SYNCING -> Icons.Rounded.Cloud
+                                else -> Icons.Rounded.Cloud
+                            },
+                            contentDescription = "Sync-Status",
+                            tint = when (uiState.syncStatus) {
+                                SyncStatus.SYNCED -> NeonEmerald
+                                SyncStatus.SYNCING -> NeonCyan
+                                SyncStatus.ERROR -> NeonRed
+                                else -> MaterialTheme.colorScheme.outline
+                            },
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     IconButton(onClick = { viewModel.toggleSearch() }) {
                         Icon(Icons.Rounded.Search, "Suchen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -351,6 +356,43 @@ fun JournalScreen(
                 snackbarData = data,
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        if (showSyncLegend) {
+            AlertDialog(
+                onDismissRequest = { showSyncLegend = false },
+                containerColor = MaterialTheme.colorScheme.surface,
+                title = { Text("Google Drive Backup", color = MaterialTheme.colorScheme.onSurface) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.CloudDone, null, tint = NeonEmerald, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Backup aktuell \u2014 alle Eintr\u00e4ge gesichert", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Cloud, null, tint = NeonCyan, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Backup wird hochgeladen\u2026", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Cloud, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Nicht mit Google verbunden", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.CloudOff, null, tint = NeonRed, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Backup fehlgeschlagen!", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                },
+                confirmButton = {
+                    OutlinedButton(onClick = { showSyncLegend = false }) {
+                        Text("OK")
+                    }
+                }
             )
         }
     }

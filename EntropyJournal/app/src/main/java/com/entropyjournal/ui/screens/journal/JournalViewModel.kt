@@ -78,6 +78,11 @@ class JournalViewModel @Inject constructor(
     private var analysisDebounceJob: Job? = null
 
     init {
+        // Set initial sync status based on sign-in state
+        if (encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")?.isNotBlank() == true) {
+            _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
+        }
+
         // Backfill summaries for existing entries that don't have one yet
         viewModelScope.launch {
             entries.collect { list ->
@@ -206,7 +211,7 @@ class JournalViewModel @Inject constructor(
             resetState()
             // Generate summary in background (non-blocking)
             launch { summarizeEntryUseCase(savedId, displayText) }
-            triggerDebouncedSync()
+            triggerSync()
             triggerDebouncedAnalysis()
         }
     }
@@ -246,10 +251,9 @@ class JournalViewModel @Inject constructor(
         _uiState.value = JournalUiState()
     }
 
-    private fun triggerDebouncedSync() {
+    private fun triggerSync() {
         syncDebounceJob?.cancel()
         syncDebounceJob = viewModelScope.launch {
-            delay(30_000)
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCING)
             syncWithDriveUseCase.backup()
                 .onSuccess {
