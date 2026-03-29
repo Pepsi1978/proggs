@@ -573,16 +573,23 @@ private fun FeedbackDialog(
                         isSending = true
                         errorMessage = null
                         scope.launch {
-                            val success = com.entropyjournal.data.remote.FeedbackSender.send(
-                                context = context,
-                                accountEmail = userEmail,
-                                feedbackText = feedbackText
-                            )
-                            if (success) {
-                                onSent()
-                            } else {
+                            try {
+                                val success = com.entropyjournal.data.remote.FeedbackSender.send(
+                                    context = context,
+                                    accountEmail = userEmail,
+                                    feedbackText = feedbackText
+                                )
+                                if (success) {
+                                    onSent()
+                                } else {
+                                    isSending = false
+                                    errorMessage = "Senden fehlgeschlagen. Bitte erneut versuchen."
+                                }
+                            } catch (e: com.entropyjournal.data.remote.FeedbackNeedConsentException) {
+                                // Gmail permission needed — show consent screen
                                 isSending = false
-                                errorMessage = "Senden fehlgeschlagen. Bitte erneut versuchen."
+                                try { context.startActivity(e.consentIntent) } catch (_: Exception) {}
+                                errorMessage = "Bitte Gmail-Zugriff erlauben und erneut versuchen."
                             }
                         }
                     }
