@@ -13,15 +13,21 @@ class SummarizeEntryUseCase @Inject constructor(
     private val encryptedPrefs: SharedPreferences
 ) {
     private fun buildPrompt(text: String): String = """
-Du erhältst einen Tagebucheintrag. Fasse ihn in 2-4 kurzen Stichpunkten zusammen.
+Du erhältst einen Tagebucheintrag. Erstelle:
+1. Eine Überschrift in 3-4 Wörtern (erste Zeile)
+2. Dann 2-4 Stichpunkte als Zusammenfassung
+
+FORMAT (exakt so):
+TITEL: [3-4 Wörter Überschrift]
+• [Stichpunkt 1]
+• [Stichpunkt 2]
+• [Stichpunkt 3]
 
 REGELN:
-- Jeder Stichpunkt beginnt mit "• " (Aufzählungszeichen + Leerzeichen)
-- Jeder Stichpunkt ist maximal eine Zeile lang
-- Kurz und prägnant — keine ganzen Sätze, nur Kernaussagen
-- Behalte die wichtigsten Themen und Emotionen bei
+- Überschrift: Maximal 4 Wörter, fängt den Kern des Eintrags ein
+- Stichpunkte: Kurz und prägnant, nur Kernaussagen
 - Sprache: Deutsch
-- Gib NUR die Stichpunkte zurück, nichts anderes
+- Gib NUR das Format oben zurück, nichts anderes
 
 TEXT:
 $text
@@ -40,10 +46,20 @@ $text
                 maxOutputTokens = 512
             )
             val response = geminiApi.generateContent(model = model, apiKey = apiKey, request = request)
-            val summary = response.extractText()?.trim() ?: return
+            val result = response.extractText()?.trim() ?: return
+
+            // Parse title and summary from response
+            val lines = result.lines()
+            val titleLine = lines.firstOrNull { it.startsWith("TITEL:") }
+            val title = titleLine?.removePrefix("TITEL:")?.trim()
+            val summaryLines = lines.filter { it.trimStart().startsWith("•") }
+            val summary = summaryLines.joinToString("\n").trim().ifBlank { null }
 
             val entry = journalRepository.getEntryById(entryId) ?: return
-            journalRepository.updateEntry(entry.copy(summary = summary))
+            journalRepository.updateEntry(entry.copy(
+                summary = summary,
+                title = title
+            ))
         } catch (_: Exception) {
             // Summary is optional — silently skip on error
         }

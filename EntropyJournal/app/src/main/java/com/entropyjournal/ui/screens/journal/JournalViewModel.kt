@@ -73,7 +73,7 @@ class JournalViewModel @Inject constructor(
         // Backfill summaries for existing entries that don't have one yet
         viewModelScope.launch {
             entries.collect { list ->
-                val missing = list.filter { it.summary.isNullOrBlank() && it.displayText.isNotBlank() }
+                val missing = list.filter { (it.summary.isNullOrBlank() || it.title.isNullOrBlank()) && it.displayText.isNotBlank() }
                 if (missing.isNotEmpty()) {
                     for (entry in missing) {
                         launch { summarizeEntryUseCase(entry.id, entry.displayText) }

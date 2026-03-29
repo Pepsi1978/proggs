@@ -77,6 +77,7 @@ private fun JournalEntryEntity.toDomain() = JournalEntry(
     entropyScore = entropyScore,
     adviceCategoryTags = adviceCategoryTags,
     summary = summary,
+    title = title,
     isSynced = isSynced
 )
 
@@ -92,5 +93,6 @@ private fun JournalEntry.toEntity() = JournalEntryEntity(
     entropyScore = entropyScore,
     adviceCategoryTags = adviceCategoryTags,
     summary = summary,
+    title = title,
     isSynced = isSynced
 )

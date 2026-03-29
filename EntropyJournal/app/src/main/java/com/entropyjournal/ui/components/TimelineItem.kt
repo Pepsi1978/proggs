@@ -98,17 +98,24 @@ fun TimelineItem(
             glowIntensity = 0.1f
         ) {
             Column {
-                Column {
+                if (!entry.title.isNullOrBlank()) {
                     Text(
-                        text = DateTimeFormatter.formatFull(entry.timestamp),
-                        style = MaterialTheme.typography.labelMedium
+                        text = entry.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        text = DateTimeFormatter.formatRelative(entry.timestamp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = TextMuted
-                    )
+                    Spacer(modifier = Modifier.height(2.dp))
                 }
+                Text(
+                    text = DateTimeFormatter.formatFull(entry.timestamp),
+                    style = MaterialTheme.typography.labelMedium
+                )
+                Text(
+                    text = DateTimeFormatter.formatRelative(entry.timestamp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextMuted
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
 

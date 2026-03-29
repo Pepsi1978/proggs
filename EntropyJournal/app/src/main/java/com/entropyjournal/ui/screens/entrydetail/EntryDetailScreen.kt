@@ -143,12 +143,28 @@ fun EntryDetailScreen(
                             color = MaterialTheme.colorScheme.outline
                         )
                         if (!entry.summary.isNullOrBlank()) {
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                entry.summary,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                "Zusammenfassung",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
                             )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            entry.summary.lines().filter { it.trimStart().startsWith("\u2022") }.forEach { line ->
+                                val bulletText = line.trimStart().removePrefix("\u2022").trim()
+                                Row(modifier = Modifier.padding(bottom = 2.dp)) {
+                                    Text(
+                                        "\u2022 ",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        bulletText,
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
                         }
                     }
                 }

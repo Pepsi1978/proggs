@@ -12,5 +12,6 @@ data class JournalEntry(
     val entropyScore: Float? = null,     // 0.0 to 1.0
     val adviceCategoryTags: String? = null, // comma-separated
     val summary: String? = null,
+    val title: String? = null,
     val isSynced: Boolean = false
 )
