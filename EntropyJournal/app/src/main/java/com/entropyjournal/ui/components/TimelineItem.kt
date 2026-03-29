@@ -103,6 +103,7 @@ fun TimelineItem(
                     Text(
                         text = entry.title,
                         style = MaterialTheme.typography.titleSmall.copy(textDecoration = TextDecoration.Underline),
+                        color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

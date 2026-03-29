@@ -64,6 +64,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.entropyjournal.ui.components.GlassCard
 import com.entropyjournal.ui.theme.NeonRed
 import com.entropyjournal.util.Constants
@@ -365,7 +366,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             Column {
                 Text("\u00dcber die App", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Entropy Journal v0.6.5", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Entropy Journal v0.6.6", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Dein pers\u00f6nliches KI-Tagebuch", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("\u00a9 Frank Barwandt", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
@@ -525,6 +526,7 @@ private fun FeedbackDialog(
 ) {
     var feedbackText by remember { mutableStateOf("") }
     var isSending by remember { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -549,6 +551,10 @@ private fun FeedbackDialog(
                     ),
                     shape = RoundedCornerShape(12.dp)
                 )
+                if (isSending) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Wird gesendet...", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                }
             }
         },
         confirmButton = {
@@ -556,19 +562,10 @@ private fun FeedbackDialog(
                 onClick = {
                     if (feedbackText.isNotBlank() && !isSending) {
                         isSending = true
-                        val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
-                            data = android.net.Uri.parse("mailto:")
-                            putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("dev.app.support@gmail.com"))
-                            if (userEmail != null) {
-                                putExtra(android.content.Intent.EXTRA_CC, arrayOf(userEmail))
-                            }
-                            putExtra(android.content.Intent.EXTRA_SUBJECT, "Entropy Journal Feedback")
-                            putExtra(android.content.Intent.EXTRA_TEXT, feedbackText)
+                        scope.launch {
+                            sendFeedbackInBackground(feedbackText, userEmail)
+                            onSent()
                         }
-                        try {
-                            context.startActivity(intent)
-                        } catch (_: Exception) { }
-                        onSent()
                     }
                 },
                 enabled = feedbackText.isNotBlank() && !isSending,
@@ -579,4 +576,27 @@ private fun FeedbackDialog(
             OutlinedButton(onClick = onDismiss) { Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     )
+}
+
+private suspend fun sendFeedbackInBackground(message: String, userEmail: String?) {
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
+            val url = java.net.URL("https://formsubmit.co/ajax/dev.app.support@gmail.com")
+            val conn = url.openConnection() as java.net.HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("Accept", "application/json")
+            conn.doOutput = true
+            val json = org.json.JSONObject().apply {
+                put("name", userEmail ?: "Anonymer Nutzer")
+                put("email", userEmail ?: "noreply@entropyjournal.app")
+                put("message", message)
+                put("_subject", "Entropy Journal Feedback")
+                if (userEmail != null) put("_cc", userEmail)
+            }
+            conn.outputStream.bufferedWriter().use { it.write(json.toString()) }
+            conn.responseCode // trigger the request
+            conn.disconnect()
+        } catch (_: Exception) { }
+    }
 }

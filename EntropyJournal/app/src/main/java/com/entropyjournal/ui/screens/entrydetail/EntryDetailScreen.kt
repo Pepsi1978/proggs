@@ -130,7 +130,7 @@ fun EntryDetailScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                GlassCard {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
                         Text(
                             DateTimeFormatter.formatFull(entry.timestamp),
@@ -142,12 +142,8 @@ fun EntryDetailScreen(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.outline
                         )
-                    }
-                }
-
-                if (!entry.summary.isNullOrBlank()) {
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Column {
+                        if (!entry.summary.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 "Zusammenfassung",
                                 style = MaterialTheme.typography.labelMedium,
