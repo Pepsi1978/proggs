@@ -111,16 +111,13 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         Text("Letzte Synchronisation: ${DateTimeFormatter.formatFull(ts)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
                         Spacer(modifier = Modifier.height(8.dp))
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Column {
-                            Button(onClick = { viewModel.syncNow() }, enabled = !uiState.isSyncing, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)) { Text(if (uiState.isSyncing) "..." else "Sichern") }
-                            Text("Eintr\u00e4ge bei Google sichern", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-                        }
-                        Column {
-                            OutlinedButton(onClick = { viewModel.restoreFromCloud(context) }, enabled = !uiState.isSyncing) { Text("Wiederherstellen") }
-                            Text("Gesicherte Daten laden", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-                        }
-                    }
+                    Button(
+                        onClick = { viewModel.syncNow() },
+                        enabled = !uiState.isSyncing,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
+                    ) { Text(if (uiState.isSyncing) "Wird gesichert..." else "Tagebucheintr\u00e4ge sichern") }
+                    Text("Eintr\u00e4ge werden bei der Anmeldung automatisch geladen", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                     uiState.syncMessage?.let { msg -> Spacer(modifier = Modifier.height(4.dp)); Text(msg, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 } else {
                     // Not logged in
@@ -129,11 +126,15 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Nicht angemeldet", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                            Text("Mit Google anmelden um Daten zu sichern", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Gesicherte Eintr\u00e4ge werden beim Anmelden geladen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    Button(onClick = { onSignOut() }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)) { Text("Anmelden") }
+                    Button(
+                        onClick = { onSignOut() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
+                    ) { Text("Mit Google anmelden") }
                 }
             }
         }
@@ -316,7 +317,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             Column {
                 Text("\u00dcber die App", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Entropy Journal v0.5.7", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Entropy Journal v0.5.8", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Dein pers\u00f6nliches KI-Tagebuch", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("\u00a9 Frank Barwandt", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)

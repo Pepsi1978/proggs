@@ -15,5 +15,6 @@ data class JournalEntryEntity(
     val moodTag: String?,
     val entropyScore: Float?,
     val adviceCategoryTags: String?,
+    val summary: String? = null,
     val isSynced: Boolean = false
 )

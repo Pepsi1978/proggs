@@ -9,6 +9,7 @@ import com.entropyjournal.domain.usecase.AnalyzeEntropyUseCase
 import com.entropyjournal.domain.usecase.ImproveTextUseCase
 import com.entropyjournal.domain.usecase.RecordAudioUseCase
 import com.entropyjournal.domain.usecase.SaveJournalEntryUseCase
+import com.entropyjournal.domain.usecase.SummarizeEntryUseCase
 import com.entropyjournal.domain.usecase.SyncWithDriveUseCase
 import com.entropyjournal.domain.usecase.TranscribeAudioUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -48,6 +49,7 @@ class JournalViewModel @Inject constructor(
     private val transcribeAudioUseCase: TranscribeAudioUseCase,
     private val improveTextUseCase: ImproveTextUseCase,
     private val saveJournalEntryUseCase: SaveJournalEntryUseCase,
+    private val summarizeEntryUseCase: SummarizeEntryUseCase,
     private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
     private val syncWithDriveUseCase: SyncWithDriveUseCase,
     @ApplicationContext private val context: Context
@@ -177,8 +179,10 @@ class JournalViewModel @Inject constructor(
                 displayText = displayText,
                 audioDurationSeconds = durationSeconds.value
             )
-            saveJournalEntryUseCase(entry)
+            val savedId = saveJournalEntryUseCase(entry)
             resetState()
+            // Generate summary in background (non-blocking)
+            launch { summarizeEntryUseCase(savedId, displayText) }
             triggerDebouncedSync()
             triggerDebouncedAnalysis()
         }

@@ -33,20 +33,20 @@ class LoginViewModel @Inject constructor(
             _uiState.value = LoginUiState.Loading
             signInUseCase(activityContext)
                 .onSuccess { profile ->
-                    val hasBackup = try { syncUseCase.hasBackup() } catch (e: Exception) { false }
-                    _uiState.value = LoginUiState.Success(profile, hasBackup)
+                    // Auto-restore backup on login
+                    try {
+                        val hasBackup = syncUseCase.hasBackup()
+                        if (hasBackup) {
+                            syncUseCase.restore()
+                        }
+                    } catch (_: Exception) { }
+                    _uiState.value = LoginUiState.Success(profile, false)
                 }
                 .onFailure { error ->
                     _uiState.value = LoginUiState.Error(
                         error.message ?: "Anmeldung fehlgeschlagen"
                     )
                 }
-        }
-    }
-
-    fun restoreBackup() {
-        viewModelScope.launch {
-            syncUseCase.restore()
         }
     }
 }
