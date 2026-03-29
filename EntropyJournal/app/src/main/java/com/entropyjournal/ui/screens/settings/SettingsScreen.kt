@@ -239,7 +239,7 @@ fun SettingsScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
                         ) { Text(if (uiState.isSyncing) "..." else "Sichern") }
                         OutlinedButton(
-                            onClick = { viewModel.restoreFromCloud() },
+                            onClick = { viewModel.restoreFromCloud(context) },
                             enabled = !uiState.isSyncing,
                         ) { Text("Wiederherstellen") }
                     }

@@ -122,15 +122,16 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun restoreFromCloud() {
+    fun restoreFromCloud(context: android.content.Context) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSyncing = true, syncMessage = null)
             syncUseCase.restore()
                 .onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        isSyncing = false,
-                        syncMessage = "Wiederherstellung erfolgreich! Bitte App neu starten."
-                    )
+                    // Restart app so Room picks up the restored database
+                    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                    intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    context.startActivity(intent)
+                    Runtime.getRuntime().exit(0)
                 }
                 .onFailure { error ->
                     if (error is NeedConsentException) {
