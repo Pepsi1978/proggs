@@ -61,6 +61,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -327,8 +328,16 @@ private fun PreviewDialog(
     val showingImproved = isUsingImproved && improvedText != null
     val displayText = if (showingImproved) improvedText!! else rawText
     val focusManager = LocalFocusManager.current
+    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     var lastEditTime by remember { mutableLongStateOf(0L) }
     var isFocused by remember { mutableStateOf(false) }
+    var hadFocusOnce by remember { mutableStateOf(false) }
+
+    // Auto-focus the text field when dialog opens (keyboard pops up immediately)
+    LaunchedEffect(Unit) {
+        delay(300) // wait for dialog animation
+        focusRequester.requestFocus()
+    }
 
     // Auto-clear focus after 5 seconds of inactivity
     LaunchedEffect(lastEditTime) {
@@ -339,10 +348,14 @@ private fun PreviewDialog(
     }
 
     // Clear focus when keyboard is dismissed (back gesture/swipe)
+    // If text is empty, also close the dialog
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     LaunchedEffect(imeVisible) {
         if (!imeVisible && isFocused) {
             focusManager.clearFocus()
+        }
+        if (!imeVisible && hadFocusOnce && displayText.isBlank()) {
+            onDismiss()
         }
     }
 
@@ -386,8 +399,10 @@ private fun PreviewDialog(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .focusRequester(focusRequester)
                         .onFocusChanged { state ->
                             isFocused = state.isFocused
+                            if (state.isFocused) hadFocusOnce = true
                             if (state.isFocused) lastEditTime = System.currentTimeMillis()
                         },
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
