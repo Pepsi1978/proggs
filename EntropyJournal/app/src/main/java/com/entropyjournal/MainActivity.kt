@@ -43,6 +43,8 @@ class MainActivity : FragmentActivity() {
     // Compose-accessible lock state — survives recomposition
     private val isUnlocked = mutableStateOf(false)
     private var biometricPromptActive = false
+    private var backgroundTimestamp = 0L
+    private val lockDelayMs = 60_000L // 60 seconds tolerance
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -144,6 +146,14 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         val biometricEnabled = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)
+        if (biometricEnabled && isUnlocked.value && backgroundTimestamp > 0) {
+            // Lock only if more than 60 seconds have passed in background
+            val elapsed = System.currentTimeMillis() - backgroundTimestamp
+            if (elapsed > lockDelayMs) {
+                isUnlocked.value = false
+            }
+        }
+        backgroundTimestamp = 0L
         if (biometricEnabled && !isUnlocked.value && !biometricPromptActive) {
             showBiometricPrompt { isUnlocked.value = true }
         }
@@ -151,9 +161,9 @@ class MainActivity : FragmentActivity() {
 
     override fun onPause() {
         super.onPause()
-        // Lock the app when it goes to background
+        // Record when app went to background — actual lock happens in onResume after 60s
         if (encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)) {
-            isUnlocked.value = false
+            backgroundTimestamp = System.currentTimeMillis()
         }
     }
 
