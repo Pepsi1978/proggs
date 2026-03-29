@@ -55,11 +55,29 @@ class LocalWhisperTranscriber @Inject constructor(
                 return@withContext Result.failure(Exception("Audio-Datei ist leer"))
             }
 
-            val stream = rec.createStream()
-            stream.acceptWaveform(samples, 16000)
-            rec.decode(stream)
-            val text = rec.getResult(stream).text.trim()
+            // Whisper processes audio in 30-second windows — split long recordings into chunks
+            val chunkSize = SAMPLE_RATE * MAX_CHUNK_SECONDS // 480,000 samples = 30s
+            val results = StringBuilder()
 
+            var offset = 0
+            while (offset < samples.size) {
+                val end = minOf(offset + chunkSize, samples.size)
+                val chunk = samples.copyOfRange(offset, end)
+
+                val stream = rec.createStream()
+                stream.acceptWaveform(chunk, SAMPLE_RATE)
+                rec.decode(stream)
+                val chunkText = rec.getResult(stream).text.trim()
+
+                if (chunkText.isNotBlank()) {
+                    if (results.isNotEmpty()) results.append(" ")
+                    results.append(chunkText)
+                }
+
+                offset = end
+            }
+
+            val text = results.toString().trim()
             if (text.isBlank()) {
                 Result.failure(Exception("Kein Text erkannt"))
             } else {
@@ -68,6 +86,11 @@ class LocalWhisperTranscriber @Inject constructor(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    companion object {
+        private const val SAMPLE_RATE = 16000
+        private const val MAX_CHUNK_SECONDS = 30
     }
 
     private fun readWavSamples(file: File): FloatArray {

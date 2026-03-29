@@ -40,7 +40,7 @@ class MainActivity : FragmentActivity() {
 
     @Inject lateinit var encryptedPrefs: SharedPreferences
 
-    // Compose-accessible lock state — survives recomposition
+    // Compose-accessible lock state — survives recomposition AND configuration changes
     private val isUnlocked = mutableStateOf(false)
     private var biometricPromptActive = false
     private var backgroundTimestamp = 0L
@@ -50,8 +50,11 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // If biometric not enabled, start unlocked
-        if (!encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)) {
+        // Restore unlock state across configuration changes (e.g. screen rotation)
+        if (savedInstanceState != null) {
+            isUnlocked.value = savedInstanceState.getBoolean(KEY_IS_UNLOCKED, false)
+            backgroundTimestamp = savedInstanceState.getLong(KEY_BG_TIMESTAMP, 0L)
+        } else if (!encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)) {
             isUnlocked.value = true
         }
 
@@ -143,6 +146,12 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(KEY_IS_UNLOCKED, isUnlocked.value)
+        outState.putLong(KEY_BG_TIMESTAMP, backgroundTimestamp)
+    }
+
     override fun onResume() {
         super.onResume()
         val biometricEnabled = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)
@@ -200,5 +209,10 @@ class MainActivity : FragmentActivity() {
             .build()
 
         prompt.authenticate(promptInfo)
+    }
+
+    companion object {
+        private const val KEY_IS_UNLOCKED = "is_unlocked"
+        private const val KEY_BG_TIMESTAMP = "background_timestamp"
     }
 }

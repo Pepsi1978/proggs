@@ -104,6 +104,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-03-28 21:24 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-03-28 21:29 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-03-28 21:41 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+### 2026-03-29 21:23 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ---
 
 ## Systemzustand (aktuell)
@@ -161,7 +162,7 @@ _Noch keine Eintraege._
 <!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
-- **[2026-03-29 00:09] Code-Suche Index:** 3 Dateien, 28 Chunks indexiert.
+- **[2026-03-29 21:30] Code-Suche Index:** 1 Dateien, 3 Chunks indexiert.
 ## UI/UX-Patterns
 <!-- Writer: ui-polisher Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
