@@ -245,7 +245,7 @@ fun JournalScreen(
             )
         }
 
-        // Mic + Text entry buttons
+        // Text entry + Mic buttons
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -253,21 +253,7 @@ fun JournalScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Mic button
-            AnimatedMicButton(
-                isRecording = uiState.recordingState == RecordingState.RECORDING,
-                onClick = onMicClick
-            )
-
-            // Divider
-            Box(
-                modifier = Modifier
-                    .height(32.dp)
-                    .width(1.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant)
-            )
-
-            // Text entry button
+            // Text entry button (left)
             FloatingActionButton(
                 onClick = { viewModel.startTextEntry() },
                 modifier = Modifier.size(64.dp),
@@ -282,6 +268,20 @@ fun JournalScreen(
                     modifier = Modifier.size(28.dp)
                 )
             }
+
+            // Divider
+            Box(
+                modifier = Modifier
+                    .height(32.dp)
+                    .width(1.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant)
+            )
+
+            // Mic button (right)
+            AnimatedMicButton(
+                isRecording = uiState.recordingState == RecordingState.RECORDING,
+                onClick = onMicClick
+            )
         }
 
         // Preview dialog
