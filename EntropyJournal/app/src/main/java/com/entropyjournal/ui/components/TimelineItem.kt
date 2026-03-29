@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.entropyjournal.domain.model.JournalEntry
@@ -101,7 +102,7 @@ fun TimelineItem(
                 if (!entry.title.isNullOrBlank()) {
                     Text(
                         text = entry.title,
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleSmall.copy(textDecoration = TextDecoration.Underline),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
