@@ -91,6 +91,35 @@
 - Alternative `configChanges` im Manifest ist ein Holzhammer — Google raet davon ab
 - ViewModel waere Overkill fuer einen einzelnen Boolean
 
+## HorizontalPager fuer Wisch-Navigation zwischen Tabs (WICHTIG)
+- `HorizontalPager` aus `androidx.compose.foundation.pager` ersetzt separate NavHost-Routes
+- Drei Hauptseiten (Dashboard, Tagebuch, Einstellungen) als Pager-Pages statt einzelne Composables
+- `pagerState.animateScrollToPage()` fuer programmatischen Tab-Wechsel (von BottomNavBar)
+- `snapshotFlow { pagerState.currentPage }` synchronisiert Pager → BottomNavBar
+- `beyondViewportPageCount = 1` holt Nachbarseiten vor — fluessigeres Wischen
+- Login, Splash und Entry-Detail bleiben als normale NavHost-Routes (kein Pager)
+- **Wiederverwendbar** fuer jede App mit Tab-Navigation die auch Wisch-Gesten braucht
+
+## TextField in AlertDialog: heightIn begrenzen (WICHTIG)
+- `TextField` in einem `AlertDialog` waechst unbegrenzt mit dem Inhalt
+- Bei langen Texten (z.B. 3-Minuten-Transkription) drueckt es Buttons aus dem sichtbaren Bereich
+- **Loesung**: `Modifier.heightIn(max = 300.dp)` auf dem TextField — Text scrollt intern
+- Buttons darunter bleiben immer sichtbar, egal wie lang der Text ist
+- Gilt fuer JEDEN Dialog der editierbare Texte unbekannter Laenge anzeigt
+
+## Tastatur-Steuerung: Kontextabhaengiger Auto-Focus
+- Nach Sprachaufnahme (Text schon vorhanden): Tastatur NICHT automatisch oeffnen — Benutzer will erst lesen
+- Bei manuellem Texteintrag (leerer Text): Tastatur SOFORT oeffnen — Benutzer will tippen
+- **Loesung**: `if (rawText.isBlank()) { delay(300); focusRequester.requestFocus() }`
+- Einfache Unterscheidung: leerer Text = Schreib-Modus, gefuellter Text = Lese-Modus
+
+## Cloud-Sync-Icon: Persistenter Status statt kurzes Aufblinken
+- Benutzer wollen DAUERHAFT sehen ob ihr Backup aktuell ist — nicht nur 2 Sekunden gruen
+- **Loesung**: Beim App-Start pruefen ob Google-Konto verbunden → Wolke sofort gruen setzen
+- Gruen bleibt bis ein Fehler auftritt oder abgemeldet wird
+- Klickbare Wolke mit Legende-Dialog erklaert alle Zustaende (gruen/blau/grau/rot)
+- Sofortiger Sync beim Speichern statt 30s Debounce — Benutzer erwartet sofortige Sicherung
+
 ## Biometric Lock
 - `BiometricPrompt` braucht `FragmentActivity` — `ComponentActivity` reicht NICHT
 - `MainActivity` von `FragmentActivity()` erben lassen (statt `ComponentActivity`)
