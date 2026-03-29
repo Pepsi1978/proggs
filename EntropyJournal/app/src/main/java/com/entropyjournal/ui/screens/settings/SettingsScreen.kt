@@ -17,12 +17,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material3.Divider
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -114,9 +118,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             Column {
                 Text("Erscheinungsbild", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(12.dp))
+
+                // Dunkelmodus — Sun | Moon icon
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Icon(imageVector = if (uiState.isDarkTheme) Icons.Rounded.DarkMode else Icons.Rounded.LightMode, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                        SettingsSunMoonIcon(isDark = uiState.isDarkTheme)
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text("Dunkelmodus", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
@@ -126,10 +132,16 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Switch(checked = uiState.isDarkTheme, onCheckedChange = { if (uiState.followSystem) viewModel.updateFollowSystem(false); viewModel.updateDarkTheme(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // System folgen — Phone icon
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("System folgen", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                        Text("Automatisch mit dem Handy umschalten", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Icon(imageVector = Icons.Rounded.PhoneAndroid, contentDescription = null, tint = if (uiState.followSystem) MaterialTheme.colorScheme.primary else Color(0xFF666666), modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("System folgen", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Automatisch mit dem Handy umschalten", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                     Switch(checked = uiState.followSystem, onCheckedChange = { viewModel.updateFollowSystem(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
                 }
@@ -148,10 +160,15 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         } catch (_: Exception) {}
                     }
                 }
+                // Sonnenauf-/untergang — Sun | Moon based on actual time
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Sonnenauf-/untergang", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                        Text("Dunkel bei Nacht, hell bei Tag", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        SettingsSunMoonIcon(isDark = uiState.isDarkTheme)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("Sonnenauf-/untergang", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Dunkel bei Nacht, hell bei Tag", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                     Switch(checked = uiState.followSun, onCheckedChange = { enabled ->
                         if (enabled) {
@@ -277,4 +294,28 @@ private fun ApiKeyField(label: String, value: String, onValueChange: (String) ->
         colors = TextFieldDefaults.colors(focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant, unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant, focusedTextColor = MaterialTheme.colorScheme.onSurface, cursorColor = MaterialTheme.colorScheme.primary, focusedIndicatorColor = MaterialTheme.colorScheme.primary, unfocusedIndicatorColor = Color.Transparent),
         singleLine = true, shape = RoundedCornerShape(12.dp)
     )
+}
+
+@Composable
+private fun SettingsSunMoonIcon(isDark: Boolean) {
+    val glowYellow = Color(0xFFFFD54F)
+    val mutedGray = Color(0xFF666666)
+    val sunSize by animateDpAsState(
+        targetValue = if (!isDark) 22.dp else 14.dp,
+        animationSpec = tween(300), label = "settingSunSize"
+    )
+    val moonSize by animateDpAsState(
+        targetValue = if (isDark) 22.dp else 14.dp,
+        animationSpec = tween(300), label = "settingMoonSize"
+    )
+
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp)) {
+            Icon(Icons.Rounded.LightMode, "Sonne", tint = if (!isDark) glowYellow else mutedGray, modifier = Modifier.size(sunSize))
+        }
+        Divider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.height(16.dp).width(1.dp))
+        androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp)) {
+            Icon(Icons.Rounded.DarkMode, "Mond", tint = if (isDark) glowYellow else mutedGray, modifier = Modifier.size(moonSize))
+        }
+    }
 }
