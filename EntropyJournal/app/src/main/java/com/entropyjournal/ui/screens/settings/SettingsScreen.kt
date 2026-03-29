@@ -56,6 +56,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -89,9 +91,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 Spacer(modifier = Modifier.height(12.dp))
                 uiState.userProfile?.let { profile ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        androidx.compose.foundation.layout.Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                            Text(profile.displayName.take(1).uppercase(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                        }
+                        GoogleLogo(modifier = Modifier.size(40.dp))
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(profile.displayName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
@@ -292,7 +292,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             Column {
                 Text("\u00dcber die App", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Entropy Journal v0.5.2", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Entropy Journal v0.5.3", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Dein pers\u00f6nliches KI-Tagebuch", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("\u00a9 Frank Barwandt", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
@@ -326,6 +326,49 @@ private fun ApiKeyField(label: String, value: String, onValueChange: (String) ->
         colors = TextFieldDefaults.colors(focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant, unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant, focusedTextColor = MaterialTheme.colorScheme.onSurface, cursorColor = MaterialTheme.colorScheme.primary, focusedIndicatorColor = MaterialTheme.colorScheme.primary, unfocusedIndicatorColor = Color.Transparent),
         singleLine = true, shape = RoundedCornerShape(12.dp)
     )
+}
+
+@Composable
+private fun GoogleLogo(modifier: Modifier = Modifier) {
+    // Google brand colors
+    val googleBlue = Color(0xFF4285F4)
+    val googleRed = Color(0xFFEA4335)
+    val googleYellow = Color(0xFFFBBC05)
+    val googleGreen = Color(0xFF34A853)
+
+    androidx.compose.foundation.Canvas(modifier = modifier) {
+        val strokeW = size.minDimension * 0.18f
+        val radius = (size.minDimension - strokeW) / 2f
+        val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
+
+        // Blue arc (right, top-right) — 315° to 85° (sweep 130°)
+        drawArc(color = googleBlue, startAngle = -45f, sweepAngle = 130f, useCenter = false,
+            style = Stroke(width = strokeW, cap = StrokeCap.Butt),
+            topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius),
+            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
+        // Green arc (bottom-right) — 85° to 175° (sweep 90°)
+        drawArc(color = googleGreen, startAngle = 85f, sweepAngle = 90f, useCenter = false,
+            style = Stroke(width = strokeW, cap = StrokeCap.Butt),
+            topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius),
+            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
+        // Yellow arc (bottom-left) — 175° to 225° (sweep 50°)
+        drawArc(color = googleYellow, startAngle = 175f, sweepAngle = 50f, useCenter = false,
+            style = Stroke(width = strokeW, cap = StrokeCap.Butt),
+            topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius),
+            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
+        // Red arc (top-left, top) — 225° to 315° (sweep 90°)
+        drawArc(color = googleRed, startAngle = 225f, sweepAngle = 90f, useCenter = false,
+            style = Stroke(width = strokeW, cap = StrokeCap.Butt),
+            topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius),
+            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
+
+        // Blue horizontal bar (the "crossbar" of the G)
+        val barY = center.y
+        val barLeft = center.x - strokeW * 0.1f
+        val barRight = center.x + radius
+        drawLine(color = googleBlue, start = androidx.compose.ui.geometry.Offset(barLeft, barY),
+            end = androidx.compose.ui.geometry.Offset(barRight, barY), strokeWidth = strokeW)
+    }
 }
 
 @Composable
