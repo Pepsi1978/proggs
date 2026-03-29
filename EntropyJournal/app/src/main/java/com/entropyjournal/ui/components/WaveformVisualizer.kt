@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -22,6 +24,7 @@ fun WaveformVisualizer(
     modifier: Modifier = Modifier,
     barCount: Int = 40
 ) {
+    val currentAmplitude by rememberUpdatedState(amplitude)
     val history = remember { FloatArray(barCount) }
     val version = remember { androidx.compose.runtime.mutableIntStateOf(0) }
 
@@ -30,7 +33,7 @@ fun WaveformVisualizer(
         while (true) {
             delay(80)
             System.arraycopy(history, 1, history, 0, history.size - 1)
-            history[history.size - 1] = amplitude
+            history[history.size - 1] = currentAmplitude
             version.intValue++
         }
     }
