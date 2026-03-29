@@ -53,11 +53,14 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -297,6 +300,14 @@ private fun PreviewDialog(
     LaunchedEffect(lastEditTime) {
         if (lastEditTime > 0 && isFocused) {
             delay(5000)
+            focusManager.clearFocus()
+        }
+    }
+
+    // Clear focus when keyboard is dismissed (back gesture/swipe)
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    LaunchedEffect(imeVisible) {
+        if (!imeVisible && isFocused) {
             focusManager.clearFocus()
         }
     }

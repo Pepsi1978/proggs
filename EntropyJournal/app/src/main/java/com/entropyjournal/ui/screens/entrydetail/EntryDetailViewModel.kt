@@ -85,6 +85,11 @@ class EntryDetailViewModel @Inject constructor(
         )
     }
 
+    fun saveNow() {
+        autoSaveJob?.cancel()
+        viewModelScope.launch { saveEditedText() }
+    }
+
     fun updateRawText(newText: String) {
         val entry = _uiState.value.entry ?: return
         _uiState.value = _uiState.value.copy(
