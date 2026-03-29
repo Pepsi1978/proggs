@@ -40,27 +40,6 @@ fun RecordingOverlay(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(NeonRed)
-            )
-            Spacer(modifier = Modifier.size(8.dp))
-            Text(
-                text = if (transcriptionModel.isNotBlank())
-                    "Aufnahme \u00fcber $transcriptionModel"
-                else
-                    "Aufnahme l\u00e4uft",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = DateTimeFormatter.formatDuration(durationSeconds),
             style = MaterialTheme.typography.displayLarge,
@@ -69,6 +48,26 @@ fun RecordingOverlay(
         Spacer(modifier = Modifier.height(12.dp))
         WaveformVisualizer(amplitude = amplitude)
         Spacer(modifier = Modifier.height(8.dp))
+        if (transcriptionModel.isNotBlank()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(NeonRed)
+                )
+                Spacer(modifier = Modifier.size(6.dp))
+                Text(
+                    text = transcriptionModel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
         Text(
             text = "Erneut tippen zum Stoppen",
             style = MaterialTheme.typography.bodyMedium,
