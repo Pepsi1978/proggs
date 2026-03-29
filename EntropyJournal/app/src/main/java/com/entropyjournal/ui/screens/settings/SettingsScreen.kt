@@ -574,16 +574,16 @@ private fun FeedbackDialog(
                         errorMessage = null
                         scope.launch {
                             try {
-                                val success = com.entropyjournal.data.remote.FeedbackSender.send(
+                                val error = com.entropyjournal.data.remote.FeedbackSender.send(
                                     context = context,
                                     accountEmail = userEmail,
                                     feedbackText = feedbackText
                                 )
-                                if (success) {
+                                if (error == null) {
                                     onSent()
                                 } else {
                                     isSending = false
-                                    errorMessage = "Senden fehlgeschlagen. Bitte erneut versuchen."
+                                    errorMessage = error
                                 }
                             } catch (e: com.entropyjournal.data.remote.FeedbackNeedConsentException) {
                                 // Gmail permission needed — show consent screen
