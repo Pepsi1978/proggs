@@ -316,17 +316,19 @@ fun SplashScreen(
                     .width(280.dp)
                     .graphicsLayer { alpha = textAlpha.value }
             )
-            // "Best Journal" text overlaid in bold handwriting style
+            // "Best Journal" in elegant handwriting (Dancing Script)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.offset(y = (-5).dp)
             ) {
                 Text("Best", style = MaterialTheme.typography.displayLarge.copy(
-                    fontWeight = FontWeight.Bold, fontSize = 46.sp, letterSpacing = 2.sp
-                ), color = Color(0xFF4A2800).copy(alpha = textAlpha.value))
+                    fontFamily = com.entropyjournal.ui.theme.DancingScript,
+                    fontWeight = FontWeight.Bold, fontSize = 52.sp, letterSpacing = 1.sp
+                ), color = Color(0xFF3A1800).copy(alpha = textAlpha.value))
                 Text("Journal", style = MaterialTheme.typography.displayLarge.copy(
-                    fontWeight = FontWeight.Bold, fontSize = 46.sp, letterSpacing = 2.sp
-                ), color = Color(0xFF4A2800).copy(alpha = textAlpha.value))
+                    fontFamily = com.entropyjournal.ui.theme.DancingScript,
+                    fontWeight = FontWeight.Bold, fontSize = 52.sp, letterSpacing = 1.sp
+                ), color = Color(0xFF3A1800).copy(alpha = textAlpha.value))
             }
         }
 
@@ -438,13 +440,19 @@ fun SplashScreen(
     }
 }
 
-// --- Speech bubble ---
+// --- Speech bubble with papyrus background ---
 @Composable
 private fun SpeechBubble(text: String) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 8.dp) {
-        Text(text, Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp, lineHeight = 22.sp), color = Color.Black)
+    Box(contentAlignment = Alignment.Center) {
+        Image(
+            painter = painterResource(id = com.entropyjournal.R.drawable.papyrus_bubble),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.matchParentSize()
+        )
+        Text(text, Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold,
+                fontSize = 15.sp, lineHeight = 20.sp), color = Color(0xFF3E2000))
     }
 }
 

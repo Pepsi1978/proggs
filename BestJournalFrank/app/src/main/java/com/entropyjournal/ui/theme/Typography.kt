@@ -27,6 +27,11 @@ val SourceSansPro = FontFamily(
     Font(googleFont = GoogleFont("Source Sans 3"), fontProvider = fontProvider, weight = FontWeight.Medium),
 )
 
+val DancingScript = FontFamily(
+    Font(googleFont = GoogleFont("Dancing Script"), fontProvider = fontProvider, weight = FontWeight.Bold),
+    Font(googleFont = GoogleFont("Dancing Script"), fontProvider = fontProvider, weight = FontWeight.Normal),
+)
+
 val JetBrainsMono = FontFamily(
     Font(googleFont = GoogleFont("JetBrains Mono"), fontProvider = fontProvider, weight = FontWeight.Normal),
 )
