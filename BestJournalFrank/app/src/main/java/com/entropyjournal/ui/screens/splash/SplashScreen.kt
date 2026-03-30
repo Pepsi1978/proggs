@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -32,7 +33,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -45,6 +48,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -140,6 +144,12 @@ fun SplashScreen(
         label = "heartbeat"
     )
 
+    // Scare state for interactive notebooks — tap to scare them away
+    val scareX = remember { List(5) { Animatable(0f) } }
+    val scareY = remember { List(5) { Animatable(0f) } }
+    val canvasSize = remember { mutableStateOf(Size.Zero) }
+    val scareScope = rememberCoroutineScope()
+
     // 5 flying notebooks with different movement patterns
     val notebooks = remember {
         listOf(
@@ -234,16 +244,46 @@ fun SplashScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         // --- Canvas: flying notebooks (background) + particles + effects ---
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Canvas(modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures { tapOffset ->
+                    val w = canvasSize.value.width
+                    val h = canvasSize.value.height
+                    if (w == 0f) return@detectTapGestures
+
+                    notebooks.forEachIndexed { i, nb ->
+                        val t = time + nb.phase
+                        val nbX = (nb.baseX + sin(t * nb.driftFreqX) * nb.driftSpeedX) * w + scareX[i].value
+                        val nbY = (nb.baseY + sin(t * nb.driftFreqY + 0.7f) * nb.driftSpeedY) * h + scareY[i].value
+                        val hitRadius = nb.nbSize * density * 0.7f
+
+                        val dx = tapOffset.x - nbX
+                        val dy = tapOffset.y - nbY
+                        if (dx * dx + dy * dy < hitRadius * hitRadius) {
+                            // Hit! Fly away from tap point
+                            val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+                            val fleeX = -(dx / dist) * w * 0.35f
+                            val fleeY = -(dy / dist) * h * 0.35f
+                            scareScope.launch {
+                                launch { scareX[i].snapTo(fleeX); scareX[i].animateTo(0f, tween(3000)) }
+                                launch { scareY[i].snapTo(fleeY); scareY[i].animateTo(0f, tween(3000)) }
+                            }
+                        }
+                    }
+                }
+            }
+        ) {
+            canvasSize.value = size
             val centerX = size.width / 2f
             val centerY = size.height / 2f
             val maxRadius = sqrt(centerX * centerX + centerY * centerY)
 
             // Layer 0: Flying notebooks (always visible, behind everything)
-            notebooks.forEach { nb ->
+            notebooks.forEachIndexed { i, nb ->
                 val t = time + nb.phase
-                val x = (nb.baseX + sin(t * nb.driftFreqX) * nb.driftSpeedX) * size.width
-                val y = (nb.baseY + sin(t * nb.driftFreqY + 0.7f) * nb.driftSpeedY) * size.height
+                val x = (nb.baseX + sin(t * nb.driftFreqX) * nb.driftSpeedX) * size.width + scareX[i].value
+                val y = (nb.baseY + sin(t * nb.driftFreqY + 0.7f) * nb.driftSpeedY) * size.height + scareY[i].value
                 val rotation = sin(t * nb.rotationFreq) * nb.rotationAmp
                 val wingAngle = sin(t * nb.wingSpeed) * 25f
                 drawFlyingNotebook(x, y, nb.nbSize * density, rotation, wingAngle)
