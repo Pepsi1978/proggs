@@ -97,10 +97,19 @@ fun SplashScreen(
     val impactRing = remember { Animatable(0f) }
     val particleAlpha = remember { Animatable(1f) }
     val glowAlpha = remember { Animatable(0f) }
+    // 4 smiley elements — each has alpha, position offset, and scale (big→small)
     val elem1Alpha = remember { Animatable(0f) }
     val elem1OffsetX = remember { Animatable(-300f) }
+    val elem1Scale = remember { Animatable(2.0f) }
+    val elem2Alpha = remember { Animatable(0f) }
+    val elem2OffsetX = remember { Animatable(300f) }
+    val elem2Scale = remember { Animatable(2.0f) }
     val elem3Alpha = remember { Animatable(0f) }
-    val elem3OffsetX = remember { Animatable(300f) }
+    val elem3OffsetX = remember { Animatable(-300f) }
+    val elem3Scale = remember { Animatable(2.0f) }
+    val elem4Alpha = remember { Animatable(0f) }
+    val elem4OffsetX = remember { Animatable(300f) }
+    val elem4Scale = remember { Animatable(2.0f) }
     val startBtnAlpha = remember { Animatable(0f) }
     val startBtnOffsetY = remember { Animatable(150f) }
     val startBtnScale = remember { Animatable(0f) }
@@ -108,8 +117,8 @@ fun SplashScreen(
     // Continuous animations
     val infiniteTransition = rememberInfiniteTransition(label = "notebooks")
     val time by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 100f,
-        animationSpec = infiniteRepeatable(tween(100000, easing = LinearEasing), RepeatMode.Restart),
+        initialValue = 0f, targetValue = 600f,
+        animationSpec = infiniteRepeatable(tween(600000, easing = LinearEasing), RepeatMode.Restart),
         label = "time"
     )
     // Heartbeat pulse for Best Journal card: bum-bum... bum-bum...
@@ -180,24 +189,42 @@ fun SplashScreen(
         textScale.animateTo(0.85f, tween(160))
         textScale.animateTo(1f, tween(250, easing = FastOutSlowInEasing))
 
-        // Phase 4: Speech bubbles fly in
-        delay(400)
-        launch {
-            launch { elem1Alpha.animateTo(1f, tween(500)) }
-            elem1OffsetX.animateTo(0f, tween(600, easing = FastOutSlowInEasing))
-        }
-        delay(500)
-        launch {
-            launch { elem3Alpha.animateTo(1f, tween(500)) }
-            elem3OffsetX.animateTo(0f, tween(600, easing = FastOutSlowInEasing))
-        }
-
-        // Phase 5: Start button flies in from bottom
-        delay(600)
+        // Phase 4: Start button flies in FIRST
+        delay(300)
         launch { startBtnAlpha.animateTo(1f, tween(400)) }
         launch { startBtnOffsetY.animateTo(0f, tween(500, easing = FastOutSlowInEasing)) }
         startBtnScale.animateTo(1.3f, tween(300, easing = FastOutSlowInEasing))
         startBtnScale.animateTo(1f, tween(200))
+
+        // Phase 5: Smileys fly in one by one — big to small
+        delay(300)
+        // 1. "Geniale Erkenntnisse" from left
+        launch {
+            launch { elem1Alpha.animateTo(1f, tween(500)) }
+            launch { elem1OffsetX.animateTo(0f, tween(700, easing = FastOutSlowInEasing)) }
+            elem1Scale.animateTo(1f, tween(700, easing = FastOutSlowInEasing))
+        }
+        delay(500)
+        // 2. "Aus Einträgen lernen" from right
+        launch {
+            launch { elem2Alpha.animateTo(1f, tween(500)) }
+            launch { elem2OffsetX.animateTo(0f, tween(700, easing = FastOutSlowInEasing)) }
+            elem2Scale.animateTo(1f, tween(700, easing = FastOutSlowInEasing))
+        }
+        delay(500)
+        // 3. "Zusammenfassungen mit KI" from left, upper area
+        launch {
+            launch { elem3Alpha.animateTo(1f, tween(500)) }
+            launch { elem3OffsetX.animateTo(0f, tween(700, easing = FastOutSlowInEasing)) }
+            elem3Scale.animateTo(1f, tween(700, easing = FastOutSlowInEasing))
+        }
+        delay(500)
+        // 4. "Tiefe Tagebuchanalyse" from right, upper area
+        launch {
+            launch { elem4Alpha.animateTo(1f, tween(500)) }
+            launch { elem4OffsetX.animateTo(0f, tween(700, easing = FastOutSlowInEasing)) }
+            elem4Scale.animateTo(1f, tween(700, easing = FastOutSlowInEasing))
+        }
         // No auto-navigation — user presses Start button
     }
 
@@ -249,6 +276,21 @@ fun SplashScreen(
             if (rp in 0.01f..0.99f) {
                 drawCircle(NeonCyan.copy(alpha = (1f - rp) * 0.5f), rp * maxRadius * 0.4f,
                     Offset(centerX, centerY), style = Stroke(5f * (1f - rp) * density))
+            }
+
+            // Heartbeat glow rings — pulse outward during each beat
+            if (textScale.value >= 0.99f) {
+                val hb = heartbeat
+                if (hb > 1.005f) {
+                    val glowStrength = (hb - 1f) * 8f  // 0..0.48
+                    drawCircle(NeonCyan.copy(alpha = glowStrength * 0.15f),
+                        200f * density * hb, Offset(centerX, centerY - 20f * density))
+                    drawCircle(NeonViolet.copy(alpha = glowStrength * 0.1f),
+                        280f * density * hb, Offset(centerX, centerY - 20f * density))
+                    drawCircle(NeonMagenta.copy(alpha = glowStrength * 0.06f),
+                        350f * density * hb, Offset(centerX, centerY - 20f * density),
+                        style = Stroke(2f * density))
+                }
             }
         }
 
@@ -310,44 +352,84 @@ fun SplashScreen(
             } // inner Surface
         }
 
-        // --- Speech bubble 1: Teacher, bottom-left ---
+        // --- Smiley 1: "Geniale Erkenntnisse" — bottom-left, from left ---
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .offset(x = 16.dp, y = (-200).dp)
+                .offset(x = 16.dp, y = (-190).dp)
                 .graphicsLayer {
                     alpha = elem1Alpha.value
                     translationX = elem1OffsetX.value * density
+                    scaleX = elem1Scale.value
+                    scaleY = elem1Scale.value
                 }
         ) {
-            Text("\uD83E\uDDD0☝\uFE0F", fontSize = 42.sp)
-            Spacer(Modifier.width(8.dp))
+            Text("\uD83E\uDDD9\u200D♂\uFE0F", fontSize = 36.sp) // Mage/wizard
+            Spacer(Modifier.width(6.dp))
             SpeechBubble("Geniale\nErkenntnisse")
         }
 
-        // --- Speech bubble 2: Professor, bottom-right ---
+        // --- Smiley 2: "Aus Einträgen lernen" — bottom-right, from right ---
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .offset(x = (-16).dp, y = (-120).dp)
                 .graphicsLayer {
-                    alpha = elem3Alpha.value
-                    translationX = elem3OffsetX.value * density
+                    alpha = elem2Alpha.value
+                    translationX = elem2OffsetX.value * density
+                    scaleX = elem2Scale.value
+                    scaleY = elem2Scale.value
                 }
         ) {
             SpeechBubble("Aus Eintr\u00e4gen\nlernen")
-            Spacer(Modifier.width(8.dp))
-            Text("\uD83D\uDC68\u200D\uD83C\uDF93", fontSize = 42.sp)
+            Spacer(Modifier.width(6.dp))
+            Text("\uD83E\uDDD1\u200D\uD83D\uDCBB", fontSize = 36.sp) // Technologist
         }
 
-        // --- Start button — bottom center, flies in last ---
+        // --- Smiley 3: "Zusammenfassungen mit KI" — top-left, from left ---
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = 12.dp, y = 50.dp)
+                .graphicsLayer {
+                    alpha = elem3Alpha.value
+                    translationX = elem3OffsetX.value * density
+                    scaleX = elem3Scale.value
+                    scaleY = elem3Scale.value
+                }
+        ) {
+            Text("\uD83E\uDDE0", fontSize = 34.sp) // Brain
+            Spacer(Modifier.width(6.dp))
+            SpeechBubble("Zusammenfassungen\nmit KI")
+        }
+
+        // --- Smiley 4: "Tiefe Tagebuchanalyse" — top-right, from right ---
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = (-12).dp, y = 110.dp)
+                .graphicsLayer {
+                    alpha = elem4Alpha.value
+                    translationX = elem4OffsetX.value * density
+                    scaleX = elem4Scale.value
+                    scaleY = elem4Scale.value
+                }
+        ) {
+            SpeechBubble("Tiefe\nTagebuchanalyse")
+            Spacer(Modifier.width(6.dp))
+            Text("\uD83D\uDD2E", fontSize = 34.sp) // Crystal ball
+        }
+
+        // --- Start button — bottom center ---
         Button(
             onClick = { onSplashFinished(viewModel.isUserSignedIn()) },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .offset(y = (-36).dp)
+                .offset(y = (-48).dp)
                 .graphicsLayer {
                     alpha = startBtnAlpha.value
                     scaleX = startBtnScale.value
@@ -358,7 +440,7 @@ fun SplashScreen(
                 .border(2.dp, Color.Black, RoundedCornerShape(14.dp)),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)
             ),
             elevation = ButtonDefaults.buttonElevation(
                 defaultElevation = 8.dp,
