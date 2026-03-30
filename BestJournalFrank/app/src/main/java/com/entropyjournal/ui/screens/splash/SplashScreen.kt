@@ -322,11 +322,11 @@ fun SplashScreen(
                 modifier = Modifier.offset(y = (-5).dp)
             ) {
                 Text("Best", style = MaterialTheme.typography.displayLarge.copy(
-                    fontFamily = com.entropyjournal.ui.theme.DancingScript,
+                    fontFamily = com.entropyjournal.ui.theme.Caveat,
                     fontWeight = FontWeight.Bold, fontSize = 52.sp, letterSpacing = 1.sp
                 ), color = Color(0xFF3A1800).copy(alpha = textAlpha.value))
                 Text("Journal", style = MaterialTheme.typography.displayLarge.copy(
-                    fontFamily = com.entropyjournal.ui.theme.DancingScript,
+                    fontFamily = com.entropyjournal.ui.theme.Caveat,
                     fontWeight = FontWeight.Bold, fontSize = 52.sp, letterSpacing = 1.sp
                 ), color = Color(0xFF3A1800).copy(alpha = textAlpha.value))
             }
