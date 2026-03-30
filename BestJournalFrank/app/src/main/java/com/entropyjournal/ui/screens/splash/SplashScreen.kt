@@ -6,6 +6,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -104,12 +105,26 @@ fun SplashScreen(
     val startBtnOffsetY = remember { Animatable(150f) }
     val startBtnScale = remember { Animatable(0f) }
 
-    // Continuous animation for flying notebooks
+    // Continuous animations
     val infiniteTransition = rememberInfiniteTransition(label = "notebooks")
     val time by infiniteTransition.animateFloat(
         initialValue = 0f, targetValue = 100f,
         animationSpec = infiniteRepeatable(tween(100000, easing = LinearEasing), RepeatMode.Restart),
         label = "time"
+    )
+    // Heartbeat pulse for Best Journal card: bum-bum... bum-bum...
+    val heartbeat by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(keyframes {
+            durationMillis = 1400
+            1.0f at 0
+            1.06f at 120    // first beat — expand
+            1.0f at 250     // contract
+            1.04f at 400    // second beat — smaller expand
+            1.0f at 550     // settle
+            1.0f at 1400    // pause before next cycle
+        }),
+        label = "heartbeat"
     )
 
     // 5 flying notebooks with different movement patterns
@@ -237,23 +252,32 @@ fun SplashScreen(
             }
         }
 
-        // --- "Best Journal" title as notebook card — CENTER ---
+        // --- "Best Journal" title as notebook card — CENTER, always on top ---
+        // Opaque background so notebooks never show through
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = Color.White.copy(alpha = 0.12f * textAlpha.value),
-            shadowElevation = (textScale.value * 12f).dp,
+            color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
+            shadowElevation = (textScale.value * 14f).dp,
             modifier = Modifier
                 .align(Alignment.Center)
                 .offset(y = (-20).dp)
                 .graphicsLayer {
-                    scaleX = textScale.value
-                    scaleY = textScale.value
+                    // Combine text bounce scale with heartbeat pulse
+                    val pulse = if (textScale.value >= 0.99f) heartbeat else 1f
+                    scaleX = textScale.value * pulse
+                    scaleY = textScale.value * pulse
                     translationY = textOffsetY.value * density
                 }
         ) {
+            // White inner card with rounded corners
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White.copy(alpha = 0.15f),
+                modifier = Modifier.padding(6.dp)
+            ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(horizontal = 32.dp, vertical = 20.dp)
+                modifier = Modifier.padding(start = 32.dp, end = 32.dp, top = 28.dp, bottom = 20.dp)
             ) {
                 Text("Best", style = MaterialTheme.typography.displayLarge.copy(
                     fontWeight = FontWeight.Bold, fontSize = 48.sp, letterSpacing = 2.sp
@@ -283,6 +307,7 @@ fun SplashScreen(
                     drawPath(path2, scribbleColor, style = Stroke(1.2f * density, cap = StrokeCap.Round))
                 }
             }
+            } // inner Surface
         }
 
         // --- Speech bubble 1: Teacher, bottom-left ---
@@ -333,7 +358,7 @@ fun SplashScreen(
                 .border(2.dp, Color.Black, RoundedCornerShape(14.dp)),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
+                containerColor = MaterialTheme.colorScheme.primary
             ),
             elevation = ButtonDefaults.buttonElevation(
                 defaultElevation = 8.dp,
