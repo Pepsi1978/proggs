@@ -336,8 +336,8 @@ fun SplashScreen(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .offset(x = 16.dp, y = (-210).dp)
+                .align(Alignment.BottomCenter)
+                .offset(y = (-250).dp)
                 .graphicsLayer {
                     alpha = elem1Alpha.value
                     translationX = elem1OffsetX.value * density
@@ -352,8 +352,8 @@ fun SplashScreen(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = (-16).dp, y = (-140).dp)
+                .align(Alignment.BottomCenter)
+                .offset(y = (-155).dp)
                 .graphicsLayer {
                     alpha = elem2Alpha.value
                     translationX = elem2OffsetX.value * density
@@ -368,8 +368,8 @@ fun SplashScreen(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = 12.dp, y = 100.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = 115.dp)
                 .graphicsLayer {
                     alpha = elem3Alpha.value
                     translationX = elem3OffsetX.value * density
@@ -384,8 +384,8 @@ fun SplashScreen(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = (-12).dp, y = 195.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = 210.dp)
                 .graphicsLayer {
                     alpha = elem4Alpha.value
                     translationX = elem4OffsetX.value * density
