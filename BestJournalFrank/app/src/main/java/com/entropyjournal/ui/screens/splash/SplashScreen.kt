@@ -15,9 +15,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -113,11 +115,11 @@ fun SplashScreen(
     // 5 flying notebooks with different movement patterns
     val notebooks = remember {
         listOf(
-            FlyingNotebook(0.15f, 0.2f, 0.08f, 0.06f, 0.7f, 0.5f, 15f, 0.3f, 3.5f, 95f, 0f),
-            FlyingNotebook(0.78f, 0.35f, 0.06f, 0.09f, 0.5f, 0.8f, 20f, 0.4f, 4.0f, 85f, 1.2f),
-            FlyingNotebook(0.5f, 0.65f, 0.1f, 0.05f, 0.9f, 0.6f, 12f, 0.5f, 3.0f, 90f, 2.5f),
-            FlyingNotebook(0.22f, 0.78f, 0.07f, 0.08f, 0.6f, 0.7f, 18f, 0.35f, 4.5f, 80f, 3.8f),
-            FlyingNotebook(0.82f, 0.12f, 0.09f, 0.07f, 0.8f, 0.4f, 22f, 0.45f, 3.2f, 88f, 5.0f)
+            FlyingNotebook(0.15f, 0.2f, 0.08f, 0.06f, 0.7f, 0.5f, 15f, 0.3f, 3.5f, 105f, 0f),
+            FlyingNotebook(0.78f, 0.35f, 0.06f, 0.09f, 0.5f, 0.8f, 20f, 0.4f, 4.0f, 70f, 1.2f),
+            FlyingNotebook(0.5f, 0.65f, 0.1f, 0.05f, 0.9f, 0.6f, 12f, 0.5f, 3.0f, 95f, 2.5f),
+            FlyingNotebook(0.22f, 0.78f, 0.07f, 0.08f, 0.6f, 0.7f, 18f, 0.35f, 4.5f, 60f, 3.8f),
+            FlyingNotebook(0.82f, 0.12f, 0.09f, 0.07f, 0.8f, 0.4f, 22f, 0.45f, 3.2f, 85f, 5.0f)
         )
     }
 
@@ -235,9 +237,11 @@ fun SplashScreen(
             }
         }
 
-        // --- "Best Journal" title — CENTER ---
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+        // --- "Best Journal" title as notebook card — CENTER ---
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White.copy(alpha = 0.12f * textAlpha.value),
+            shadowElevation = (textScale.value * 12f).dp,
             modifier = Modifier
                 .align(Alignment.Center)
                 .offset(y = (-20).dp)
@@ -245,15 +249,40 @@ fun SplashScreen(
                     scaleX = textScale.value
                     scaleY = textScale.value
                     translationY = textOffsetY.value * density
-                    shadowElevation = textScale.value * 24f
                 }
         ) {
-            Text("Best", style = MaterialTheme.typography.displayLarge.copy(
-                fontWeight = FontWeight.Bold, fontSize = 48.sp, letterSpacing = 2.sp
-            ), color = MaterialTheme.colorScheme.primary.copy(alpha = textAlpha.value))
-            Text("Journal", style = MaterialTheme.typography.displayLarge.copy(
-                fontWeight = FontWeight.Bold, fontSize = 48.sp, letterSpacing = 2.sp
-            ), color = MaterialTheme.colorScheme.primary.copy(alpha = textAlpha.value))
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(horizontal = 32.dp, vertical = 20.dp)
+            ) {
+                Text("Best", style = MaterialTheme.typography.displayLarge.copy(
+                    fontWeight = FontWeight.Bold, fontSize = 48.sp, letterSpacing = 2.sp
+                ), color = MaterialTheme.colorScheme.primary.copy(alpha = textAlpha.value))
+                Text("Journal", style = MaterialTheme.typography.displayLarge.copy(
+                    fontWeight = FontWeight.Bold, fontSize = 48.sp, letterSpacing = 2.sp
+                ), color = MaterialTheme.colorScheme.primary.copy(alpha = textAlpha.value))
+                // Scribble lines underneath — simulated handwriting
+                Spacer(Modifier.height(8.dp))
+                Canvas(modifier = Modifier.width(180.dp).height(24.dp).graphicsLayer {
+                    alpha = textAlpha.value * 0.4f
+                }) {
+                    val scribbleColor = Color.Gray
+                    // Line 1 — wavy
+                    val path1 = Path().apply {
+                        moveTo(10f, 6f * density)
+                        cubicTo(40f, 2f * density, 70f, 10f * density, 110f, 5f * density)
+                        cubicTo(140f, 1f * density, 160f, 8f * density, size.width - 10f, 4f * density)
+                    }
+                    drawPath(path1, scribbleColor, style = Stroke(1.2f * density, cap = StrokeCap.Round))
+                    // Line 2 — wavy
+                    val path2 = Path().apply {
+                        moveTo(20f, 16f * density)
+                        cubicTo(50f, 12f * density, 80f, 19f * density, 120f, 14f * density)
+                        cubicTo(145f, 11f * density, 155f, 17f * density, size.width - 30f, 13f * density)
+                    }
+                    drawPath(path2, scribbleColor, style = Stroke(1.2f * density, cap = StrokeCap.Round))
+                }
+            }
         }
 
         // --- Speech bubble 1: Teacher, bottom-left ---
@@ -261,7 +290,7 @@ fun SplashScreen(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .offset(x = 16.dp, y = (-160).dp)
+                .offset(x = 16.dp, y = (-200).dp)
                 .graphicsLayer {
                     alpha = elem1Alpha.value
                     translationX = elem1OffsetX.value * density
@@ -277,7 +306,7 @@ fun SplashScreen(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .offset(x = (-16).dp, y = (-80).dp)
+                .offset(x = (-16).dp, y = (-120).dp)
                 .graphicsLayer {
                     alpha = elem3Alpha.value
                     translationX = elem3OffsetX.value * density
@@ -293,17 +322,18 @@ fun SplashScreen(
             onClick = { onSplashFinished(viewModel.isUserSignedIn()) },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .offset(y = (-24).dp)
+                .offset(y = (-36).dp)
                 .graphicsLayer {
                     alpha = startBtnAlpha.value
                     scaleX = startBtnScale.value
                     scaleY = startBtnScale.value
                     translationY = startBtnOffsetY.value * density
                     shadowElevation = 16f
-                },
+                }
+                .border(2.dp, Color.Black, RoundedCornerShape(14.dp)),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
             ),
             elevation = ButtonDefaults.buttonElevation(
                 defaultElevation = 8.dp,
@@ -337,110 +367,135 @@ private fun SpeechBubble(text: String) {
 private fun DrawScope.drawFlyingNotebook(
     cx: Float, cy: Float, nbSize: Float, rotation: Float, wingAngle: Float
 ) {
-    val alpha = 0.10f  // 90% transparent
+    val a = 0.13f  // base alpha
     val nbW = nbSize * 0.7f
     val nbH = nbSize * 0.9f
-    val coverColor = Color(0xFF8B6914).copy(alpha = alpha)
-    val pageColor = Color(0xFFFFFDE7).copy(alpha = alpha * 1.2f)
-    val lineColor = Color(0xFF90CAF9).copy(alpha = alpha * 0.8f)
-    val textColor = android.graphics.Color.argb((alpha * 255 * 1.5f).toInt().coerceAtMost(255), 60, 40, 20)
-    val wingColor = Color.White.copy(alpha = alpha * 3f)
-    val penColor = Color(0xFF333333).copy(alpha = alpha * 1.3f)
+    val coverColor = Color(0xFF8B6914).copy(alpha = a)
+    val pageColor = Color(0xFFFFFDE7).copy(alpha = a * 1.3f)
+    val lineColor = Color(0xFF90CAF9).copy(alpha = a)
+    val textAlpha = (a * 255 * 2f).toInt().coerceAtMost(255)
+    // Wings SAME strength as cover
+    val wingFill = Color(0xFFD4A54A).copy(alpha = a)
+    val wingEdge = Color(0xFFBB8833).copy(alpha = a * 1.2f)
+    val penBodyColor = Color(0xFF444444).copy(alpha = a * 2f)
 
     rotate(rotation, Offset(cx, cy)) {
         val left = cx - nbW / 2
         val top = cy - nbH / 2
+        val right = left + nbW
 
-        // --- Wings (behind notebook) ---
-        val wingSpan = nbW * 0.7f
-        val wingH = nbH * 0.4f
+        // --- Wings (same opacity as notebook!) ---
+        val wingSpan = nbW * 0.85f
+        val wingH = nbH * 0.45f
 
         // Left wing
         rotate(wingAngle, Offset(left, cy)) {
             val lw = Path().apply {
-                moveTo(left, cy - wingH * 0.4f)
-                cubicTo(left - wingSpan * 0.4f, cy - wingH * 0.8f,
-                    left - wingSpan * 0.8f, cy - wingH * 0.3f,
-                    left - wingSpan, cy)
-                cubicTo(left - wingSpan * 0.8f, cy + wingH * 0.3f,
-                    left - wingSpan * 0.4f, cy + wingH * 0.5f,
-                    left, cy + wingH * 0.4f)
+                moveTo(left, cy - wingH * 0.35f)
+                cubicTo(left - wingSpan * 0.3f, cy - wingH * 0.9f,
+                    left - wingSpan * 0.7f, cy - wingH * 0.4f,
+                    left - wingSpan, cy - wingH * 0.05f)
+                cubicTo(left - wingSpan * 0.85f, cy + wingH * 0.25f,
+                    left - wingSpan * 0.4f, cy + wingH * 0.55f,
+                    left, cy + wingH * 0.35f)
                 close()
             }
-            drawPath(lw, wingColor)
+            drawPath(lw, wingFill)
+            drawPath(lw, wingEdge, style = Stroke(1.5f * density))
             // Feather lines
-            for (i in 1..3) {
-                val fx = left - wingSpan * (i * 0.22f)
-                drawLine(Color.White.copy(alpha = alpha * 2f),
-                    Offset(left - 2f, cy - wingH * 0.1f * i),
-                    Offset(fx, cy + wingH * 0.05f * i), 1f * density)
+            for (i in 1..4) {
+                val fx = left - wingSpan * (i * 0.2f)
+                val fy1 = cy - wingH * (0.3f - i * 0.04f)
+                val fy2 = cy + wingH * (0.1f + i * 0.04f)
+                drawLine(wingEdge, Offset(left, fy1), Offset(fx, fy2), 1.2f * density, StrokeCap.Round)
             }
         }
 
         // Right wing
-        val right = left + nbW
         rotate(-wingAngle, Offset(right, cy)) {
             val rw = Path().apply {
-                moveTo(right, cy - wingH * 0.4f)
-                cubicTo(right + wingSpan * 0.4f, cy - wingH * 0.8f,
-                    right + wingSpan * 0.8f, cy - wingH * 0.3f,
-                    right + wingSpan, cy)
-                cubicTo(right + wingSpan * 0.8f, cy + wingH * 0.3f,
-                    right + wingSpan * 0.4f, cy + wingH * 0.5f,
-                    right, cy + wingH * 0.4f)
+                moveTo(right, cy - wingH * 0.35f)
+                cubicTo(right + wingSpan * 0.3f, cy - wingH * 0.9f,
+                    right + wingSpan * 0.7f, cy - wingH * 0.4f,
+                    right + wingSpan, cy - wingH * 0.05f)
+                cubicTo(right + wingSpan * 0.85f, cy + wingH * 0.25f,
+                    right + wingSpan * 0.4f, cy + wingH * 0.55f,
+                    right, cy + wingH * 0.35f)
                 close()
             }
-            drawPath(rw, wingColor)
-            for (i in 1..3) {
-                val fx = right + wingSpan * (i * 0.22f)
-                drawLine(Color.White.copy(alpha = alpha * 2f),
-                    Offset(right + 2f, cy - wingH * 0.1f * i),
-                    Offset(fx, cy + wingH * 0.05f * i), 1f * density)
+            drawPath(rw, wingFill)
+            drawPath(rw, wingEdge, style = Stroke(1.5f * density))
+            for (i in 1..4) {
+                val fx = right + wingSpan * (i * 0.2f)
+                val fy1 = cy - wingH * (0.3f - i * 0.04f)
+                val fy2 = cy + wingH * (0.1f + i * 0.04f)
+                drawLine(wingEdge, Offset(right, fy1), Offset(fx, fy2), 1.2f * density, StrokeCap.Round)
             }
         }
 
         // --- Notebook body ---
-        // Shadow
-        drawRoundRect(Color.Black.copy(alpha = alpha * 0.3f),
-            Offset(left + 2f, top + 3f), Size(nbW, nbH), CornerRadius(4f, 4f))
-        // Cover
-        drawRoundRect(coverColor, Offset(left, top), Size(nbW, nbH), CornerRadius(4f, 4f))
-        // Spine
-        drawRoundRect(coverColor.copy(alpha = alpha * 0.7f),
-            Offset(left, top), Size(nbW * 0.1f, nbH), CornerRadius(4f, 4f))
+        drawRoundRect(Color.Black.copy(alpha = a * 0.4f),
+            Offset(left + 3f, top + 4f), Size(nbW, nbH), CornerRadius(6f, 6f))
+        drawRoundRect(coverColor, Offset(left, top), Size(nbW, nbH), CornerRadius(6f, 6f))
+        // Spine strip
+        drawRoundRect(coverColor.copy(alpha = a * 0.8f),
+            Offset(left, top), Size(nbW * 0.1f, nbH), CornerRadius(6f, 6f))
         // Page
-        val pageInset = nbW * 0.12f
-        drawRoundRect(pageColor, Offset(left + pageInset, top + nbH * 0.05f),
-            Size(nbW - pageInset - 4f, nbH * 0.9f), CornerRadius(2f, 2f))
+        val pi = nbW * 0.13f
+        val pageTop = top + nbH * 0.05f
+        val pageH = nbH * 0.9f
+        val pageW = nbW - pi - 4f
+        drawRoundRect(pageColor, Offset(left + pi, pageTop), Size(pageW, pageH), CornerRadius(3f, 3f))
 
         // Ruled lines
-        for (i in 1..5) {
-            val ly = top + nbH * 0.05f + (nbH * 0.9f / 6) * i
-            drawLine(lineColor, Offset(left + pageInset + 4f, ly),
-                Offset(left + nbW - 8f, ly), 0.5f * density)
+        for (i in 1..6) {
+            val ly = pageTop + (pageH / 7) * i
+            drawLine(lineColor, Offset(left + pi + 6f, ly), Offset(left + pi + pageW - 6f, ly), 0.8f * density)
         }
 
-        // "Tagebuch" text via native canvas
+        // Handwriting scribbles on lines
+        val scribbleColor = Color(0xFF333366).copy(alpha = a * 1.5f)
+        for (i in 1..4) {
+            val ly = pageTop + (pageH / 7) * i
+            val startX = left + pi + 10f + (i * 7f)
+            val endX = left + pi + pageW - 14f - (i * 11f)
+            val scribble = Path().apply {
+                moveTo(startX, ly - 2f)
+                cubicTo(startX + (endX - startX) * 0.25f, ly - 4f + (i % 2) * 6f,
+                    startX + (endX - startX) * 0.55f, ly + 3f - (i % 3) * 4f,
+                    endX, ly - 1f + (i % 2) * 3f)
+            }
+            drawPath(scribble, scribbleColor, style = Stroke(0.8f * density, cap = StrokeCap.Round))
+        }
+
+        // "Tagebuch" title
         drawContext.canvas.nativeCanvas.drawText(
-            "Tagebuch", cx + pageInset * 0.3f, top + nbH * 0.3f,
+            "Tagebuch", cx + pi * 0.2f, pageTop + pageH * 0.12f,
             android.graphics.Paint().apply {
-                color = textColor
-                textSize = nbSize * 0.14f
+                color = android.graphics.Color.argb(textAlpha, 50, 35, 15)
+                textSize = nbSize * 0.15f
                 textAlign = android.graphics.Paint.Align.CENTER
                 isAntiAlias = true
                 typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD)
             }
         )
 
-        // Pen (diagonal across lower right)
-        val penStartX = cx + nbW * 0.05f
-        val penStartY = cy + nbH * 0.2f
-        val penEndX = cx + nbW * 0.3f
-        val penEndY = cy - nbH * 0.05f
-        drawLine(penColor, Offset(penStartX, penStartY), Offset(penEndX, penEndY),
-            2f * density, StrokeCap.Round)
-        drawCircle(Color(0xFF1565C0).copy(alpha = alpha * 1.5f), 1.5f * density,
-            Offset(penStartX - 1f, penStartY + 1f))
+        // Pen ✏️ — visible pencil shape
+        val penLen = nbH * 0.55f
+        val penX1 = cx + nbW * 0.15f
+        val penY1 = cy + nbH * 0.3f
+        val penX2 = penX1 + penLen * 0.55f
+        val penY2 = penY1 - penLen * 0.45f
+        // Pencil body
+        drawLine(penBodyColor, Offset(penX1, penY1), Offset(penX2, penY2), 3.5f * density, StrokeCap.Round)
+        // Pencil eraser (pink)
+        drawCircle(Color(0xFFE88B8B).copy(alpha = a * 2f), 2.5f * density, Offset(penX2, penY2))
+        // Pencil tip (dark)
+        drawCircle(Color(0xFF222222).copy(alpha = a * 2f), 1.8f * density, Offset(penX1 - 1f, penY1 + 1f))
+        // Pencil ferrule (gold band)
+        val midX = (penX1 + penX2) * 0.72f
+        val midY = (penY1 + penY2) * 0.72f
+        drawCircle(Color(0xFFDAA520).copy(alpha = a * 2f), 2f * density, Offset(midX, midY))
     }
 }
 
