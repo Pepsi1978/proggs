@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -96,6 +98,9 @@ fun SplashScreen(
     val elem1OffsetX = remember { Animatable(-300f) }
     val elem3Alpha = remember { Animatable(0f) }
     val elem3OffsetX = remember { Animatable(300f) }
+    val startBtnAlpha = remember { Animatable(0f) }
+    val startBtnOffsetY = remember { Animatable(150f) }
+    val startBtnScale = remember { Animatable(0f) }
 
     // Continuous animation for flying notebooks
     val infiniteTransition = rememberInfiniteTransition(label = "notebooks")
@@ -170,9 +175,13 @@ fun SplashScreen(
             elem3OffsetX.animateTo(0f, tween(600, easing = FastOutSlowInEasing))
         }
 
-        // Hold 3.5 seconds
-        delay(3500)
-        onSplashFinished(viewModel.isUserSignedIn())
+        // Phase 5: Start button flies in from bottom
+        delay(600)
+        launch { startBtnAlpha.animateTo(1f, tween(400)) }
+        launch { startBtnOffsetY.animateTo(0f, tween(500, easing = FastOutSlowInEasing)) }
+        startBtnScale.animateTo(1.3f, tween(300, easing = FastOutSlowInEasing))
+        startBtnScale.animateTo(1f, tween(200))
+        // No auto-navigation — user presses Start button
     }
 
     Box(
@@ -278,6 +287,39 @@ fun SplashScreen(
             Spacer(Modifier.width(8.dp))
             Text("\uD83D\uDC68\u200D\uD83C\uDF93", fontSize = 42.sp)
         }
+
+        // --- Start button — bottom center, flies in last ---
+        Button(
+            onClick = { onSplashFinished(viewModel.isUserSignedIn()) },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(y = (-24).dp)
+                .graphicsLayer {
+                    alpha = startBtnAlpha.value
+                    scaleX = startBtnScale.value
+                    scaleY = startBtnScale.value
+                    translationY = startBtnOffsetY.value * density
+                    shadowElevation = 16f
+                },
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            ),
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 8.dp,
+                pressedElevation = 2.dp
+            )
+        ) {
+            Text(
+                "Start",
+                modifier = Modifier.padding(horizontal = 32.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                ),
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        }
     }
 }
 
@@ -302,7 +344,7 @@ private fun DrawScope.drawFlyingNotebook(
     val pageColor = Color(0xFFFFFDE7).copy(alpha = alpha * 1.2f)
     val lineColor = Color(0xFF90CAF9).copy(alpha = alpha * 0.8f)
     val textColor = android.graphics.Color.argb((alpha * 255 * 1.5f).toInt().coerceAtMost(255), 60, 40, 20)
-    val wingColor = Color(0xFFE0E0E0).copy(alpha = alpha * 1.5f)
+    val wingColor = Color.White.copy(alpha = alpha * 3f)
     val penColor = Color(0xFF333333).copy(alpha = alpha * 1.3f)
 
     rotate(rotation, Offset(cx, cy)) {
@@ -329,7 +371,7 @@ private fun DrawScope.drawFlyingNotebook(
             // Feather lines
             for (i in 1..3) {
                 val fx = left - wingSpan * (i * 0.22f)
-                drawLine(Color.White.copy(alpha = alpha * 0.5f),
+                drawLine(Color.White.copy(alpha = alpha * 2f),
                     Offset(left - 2f, cy - wingH * 0.1f * i),
                     Offset(fx, cy + wingH * 0.05f * i), 1f * density)
             }
@@ -351,7 +393,7 @@ private fun DrawScope.drawFlyingNotebook(
             drawPath(rw, wingColor)
             for (i in 1..3) {
                 val fx = right + wingSpan * (i * 0.22f)
-                drawLine(Color.White.copy(alpha = alpha * 0.5f),
+                drawLine(Color.White.copy(alpha = alpha * 2f),
                     Offset(right + 2f, cy - wingH * 0.1f * i),
                     Offset(fx, cy + wingH * 0.05f * i), 1f * density)
             }
