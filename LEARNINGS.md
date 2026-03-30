@@ -1,4 +1,8 @@
-# Entropy Journal — Learnings & Best Practices
+# Zentrale Learnings & Best Practices
+
+> Projektuebergreifende Wissensbasis fuer alle Apps.
+> Jedes Projekt schreibt hier rein — so profitieren zukuenftige Apps von allen Erfahrungen.
+> Quelle: Best Journal (ehemals Entropy Journal), weitere Projekte folgen.
 
 ## Inhaltsverzeichnis
 
@@ -32,6 +36,7 @@
 - [Ordner-Umbenennung: ADB/Gradle stoppen + LFS-Pfade anpassen](#ordner-umbenennung-adbgradle-stoppen--lfs-pfade-anpassen-wichtig) ⭐
 - [NestedScrollConnection: LazyRow in HorizontalPager isolieren](#nestedscrollconnection-lazyrow-in-horizontalpager-isolieren)
 - [Splash-Animation: Spring-Bounce vs Tween-Settle](#splash-animation-spring-bounce-vs-tween-settle)
+- [Scaffold NIE um den gesamten NavHost](#scaffold-nie-um-den-gesamten-navhost-wichtig) ⭐
 
 **Sonstiges:**
 - [Theme-Toggle](#theme-toggle-separates-sharedpreferences-fuer-quick-toggle)
@@ -237,3 +242,25 @@ textScale.animateTo(1f, tween(300))     // Settle
 - `dampingRatio < 1.0` = unterdaempft = schwingt nach (bounce)
 - `dampingRatio = 1.0` = kritisch gedaempft = kein Nachschwingen
 - `tween()` = garantiert kein Ueberschwinger, volle Kontrolle ueber Kurve
+
+## Scaffold NIE um den gesamten NavHost ⭐ WICHTIG
+**Problem**: Wenn ein `Scaffold` (mit `bottomBar`) den gesamten `NavHost` umschliesst, betrifft das Padding ALLE Screens — auch Splash, Login, Onboarding. Sobald die Route zu "main" wechselt und die BottomBar erscheint, verschiebt sich der Inhalt des noch sichtbaren Splash Screens nach oben (Layout-Shift waehrend der Fade-Transition).
+**Loesung**: Scaffold NUR um die "main"-Route wickeln:
+```kotlin
+// FALSCH — Scaffold um alles:
+Scaffold(bottomBar = { if (route == "main") BottomBar() }) {
+    NavHost(...) { composable("splash") {...}; composable("main") {...} }
+}
+// RICHTIG — Scaffold nur um main:
+NavHost(...) {
+    composable("splash") { SplashScreen(...) }  // volle Bildschirmhoehe
+    composable("main") {
+        Scaffold(bottomBar = { BottomBar() }) { padding ->
+            HorizontalPager(modifier = Modifier.padding(padding)) {...}
+        }
+    }
+}
+```
+- Splash und Login laufen vollstaendig isoliert — kein Padding, kein Layout-Shift
+- Die BottomBar erscheint erst NACH der vollstaendigen Transition zu "main"
+- **Gilt fuer JEDE App** mit Splash/Login/Onboarding + Hauptnavigation
