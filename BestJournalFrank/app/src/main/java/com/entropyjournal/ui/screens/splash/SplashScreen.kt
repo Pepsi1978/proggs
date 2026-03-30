@@ -316,15 +316,18 @@ fun SplashScreen(
                     val ringCount = 7
                     for (i in 0 until ringCount) {
                         val ry = size.height * (i + 0.5f) / ringCount
-                        drawCircle(Color(0xFFC0C0C0), 4f * density,
+                        drawCircle(Color(0xFFB8860B).copy(alpha = 0.5f), 4f * density,
                             Offset(size.width / 2f, ry), style = Stroke(1.5f * density))
                     }
                 }
-                // Page content
+                // Page content — ancient papyrus/scroll look
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFFFFEF0).copy(alpha = 0.2f),
-                    modifier = Modifier.weight(1f)
+                    color = Color(0xFFD4B483).copy(alpha = 0.4f),
+                    shadowElevation = 6.dp,
+                    modifier = Modifier
+                        .weight(1f)
+                        .border(1.dp, Color(0xFFB8860B).copy(alpha = 0.25f), RoundedCornerShape(12.dp))
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -347,8 +350,8 @@ fun SplashScreen(
                         Canvas(modifier = Modifier.width(200.dp).height(32.dp).graphicsLayer {
                             alpha = textAlpha.value * 0.5f
                         }) {
-                            val lineC = Color(0xFF90CAF9).copy(alpha = 0.3f)
-                            val scribC = Color.Gray
+                            val lineC = Color(0xFFB8860B).copy(alpha = 0.25f) // dark goldenrod
+                            val scribC = Color(0xFF5C3317) // ink brown
                             // 3 ruled lines
                             for (i in 0..2) {
                                 val ly = (i + 0.5f) * size.height / 3f
@@ -367,9 +370,9 @@ fun SplashScreen(
                             drawPath(p2, scribC, style = Stroke(1f * density, cap = StrokeCap.Round))
                         }
                         Spacer(Modifier.height(4.dp))
-                        // Pen emoji
-                        Text("\uD83D\uDD8A\uFE0F", fontSize = 18.sp, modifier = Modifier.graphicsLayer {
-                            alpha = textAlpha.value * 0.6f
+                        // Quill pen — fits papyrus scroll theme
+                        Text("\uD83E\uDEB6", fontSize = 20.sp, modifier = Modifier.graphicsLayer {
+                            alpha = textAlpha.value * 0.7f
                         })
                     }
                 }
