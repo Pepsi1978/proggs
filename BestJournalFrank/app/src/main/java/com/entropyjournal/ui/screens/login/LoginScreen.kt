@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -147,6 +148,36 @@ private fun GoogleSignInButton(onClick: () -> Unit) {
             contentColor = Color.DarkGray
         )
     ) {
+        // Google "G" logo in 4 colors
+        androidx.compose.foundation.Canvas(
+            modifier = Modifier.size(24.dp)
+        ) {
+            val r = size.width / 2f
+            val stroke = r * 0.38f
+            val arcStyle = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Butt)
+            // Blue (top-right arc)
+            drawArc(Color(0xFF4285F4), -45f, -90f, false, style = arcStyle,
+                topLeft = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2),
+                size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke))
+            // Green (bottom-right arc)
+            drawArc(Color(0xFF34A853), -135f, -90f, false, style = arcStyle,
+                topLeft = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2),
+                size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke))
+            // Yellow (bottom-left arc)
+            drawArc(Color(0xFFFBBC05), -225f, -90f, false, style = arcStyle,
+                topLeft = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2),
+                size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke))
+            // Red (top-left arc)
+            drawArc(Color(0xFFEA4335), -315f, -90f, false, style = arcStyle,
+                topLeft = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2),
+                size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke))
+            // Horizontal bar of the G
+            drawLine(Color(0xFF4285F4),
+                start = androidx.compose.ui.geometry.Offset(r, r),
+                end = androidx.compose.ui.geometry.Offset(size.width - stroke * 0.3f, r),
+                strokeWidth = stroke)
+        }
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = "Mit Google anmelden",
             style = MaterialTheme.typography.titleMedium,
