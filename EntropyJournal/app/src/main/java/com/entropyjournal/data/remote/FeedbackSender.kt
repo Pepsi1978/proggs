@@ -44,7 +44,7 @@ object FeedbackSender {
             val devMessage = buildRawEmail(
                 from = accountEmail,
                 to = DEV_EMAIL,
-                subject = "Entropy Journal Feedback",
+                subject = "Best Journal Feedback",
                 body = "Feedback von: $accountEmail\n\n$feedbackText"
             )
             sendViaGmailApi(token, devMessage)
@@ -53,7 +53,7 @@ object FeedbackSender {
             val userMessage = buildRawEmail(
                 from = accountEmail,
                 to = accountEmail,
-                subject = "Dein Feedback an Entropy Journal",
+                subject = "Dein Feedback an Best Journal",
                 body = "Diese Nachricht haben Sie an den Entwickler geschickt.\nEr wird sich bei Ihnen melden.\n\n" +
                         "--- Ihre Nachricht ---\n$feedbackText\n\n" +
                         "Mit freundlichen Gr\u00fc\u00dfen\nDEV.FRANK"

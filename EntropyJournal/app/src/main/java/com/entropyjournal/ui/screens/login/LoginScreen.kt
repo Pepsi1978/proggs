@@ -74,15 +74,14 @@ fun LoginScreen(
             modifier = Modifier.padding(32.dp)
         ) {
             Text(
-                text = "E",
+                text = "Best",
                 style = MaterialTheme.typography.displayLarge,
                 color = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Entropy Journal",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground
+                text = "Journal",
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(

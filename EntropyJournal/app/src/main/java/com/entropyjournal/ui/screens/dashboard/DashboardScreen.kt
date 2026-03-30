@@ -43,7 +43,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.entropyjournal.domain.model.Advice
 import com.entropyjournal.domain.model.AdvicePriority
@@ -155,21 +160,40 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     }
                 }
 
-                // Category cards — LazyRow for reliable horizontal scroll
+                // Category cards — LazyRow with scroll isolation from pager
+                // Consumes leftover horizontal scroll/fling so the HorizontalPager
+                // doesn't steal the gesture when swiping through categories
                 item {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        itemsIndexed(blocks) { index, block ->
-                            AdviceCategoryCard(
-                                block = block,
-                                isSelected = index == uiState.selectedCategoryIndex,
-                                onClick = {
-                                    viewModel.selectCategory(index)
-                                    selectedCategoryBlock = block
-                                }
-                            )
+                    val categoryScrollIsolation = remember {
+                        object : NestedScrollConnection {
+                            override fun onPostScroll(
+                                consumed: Offset,
+                                available: Offset,
+                                source: NestedScrollSource
+                            ): Offset = Offset(available.x, 0f)
+
+                            override suspend fun onPostFling(
+                                consumed: Velocity,
+                                available: Velocity
+                            ): Velocity = Velocity(available.x, 0f)
+                        }
+                    }
+
+                    Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            itemsIndexed(blocks) { index, block ->
+                                AdviceCategoryCard(
+                                    block = block,
+                                    isSelected = index == uiState.selectedCategoryIndex,
+                                    onClick = {
+                                        viewModel.selectCategory(index)
+                                        selectedCategoryBlock = block
+                                    }
+                                )
+                            }
                         }
                     }
                 }

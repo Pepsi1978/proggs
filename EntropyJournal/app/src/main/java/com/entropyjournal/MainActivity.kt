@@ -133,7 +133,7 @@ class MainActivity : FragmentActivity() {
                             modifier = Modifier.size(72.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Entropy Journal", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+                        Text("Best Journal", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("Zum Entsperren authentifizieren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.height(24.dp))
@@ -203,7 +203,7 @@ class MainActivity : FragmentActivity() {
         })
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Entropy Journal")
+            .setTitle("Best Journal")
             .setSubtitle("Entsperre dein Tagebuch")
             .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
             .build()
