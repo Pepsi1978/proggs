@@ -261,13 +261,17 @@ fun SplashScreen(
                         val dx = tapOffset.x - nbX
                         val dy = tapOffset.y - nbY
                         if (dx * dx + dy * dy < hitRadius * hitRadius) {
-                            // Hit! Fly away from tap point
+                            // Hit! Fly away visibly at 2.5x speed, then drift back
                             val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
-                            val fleeX = -(dx / dist) * w * 0.35f
-                            val fleeY = -(dy / dist) * h * 0.35f
+                            val fleeX = -(dx / dist) * w * 0.15f
+                            val fleeY = -(dy / dist) * h * 0.15f
                             scareScope.launch {
-                                launch { scareX[i].snapTo(fleeX); scareX[i].animateTo(0f, tween(3000)) }
-                                launch { scareY[i].snapTo(fleeY); scareY[i].animateTo(0f, tween(3000)) }
+                                // Fast visible flee (400ms)
+                                launch { scareX[i].animateTo(fleeX, tween(400)) }
+                                scareY[i].animateTo(fleeY, tween(400))
+                                // Slow drift back (2.5s)
+                                launch { scareX[i].animateTo(0f, tween(2500)) }
+                                scareY[i].animateTo(0f, tween(2500))
                             }
                         }
                     }
