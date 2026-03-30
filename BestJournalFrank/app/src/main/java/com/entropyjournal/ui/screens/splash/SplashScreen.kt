@@ -125,18 +125,24 @@ fun SplashScreen(
         textScale.animateTo(0.85f, tween(160))
         textScale.animateTo(1f, tween(250, easing = FastOutSlowInEasing))
 
-        // Phase 4: Elements fly in — staggered
-        delay(300)
-        launch {
-            launch { elem1Alpha.animateTo(1f, tween(500)) }
-            elem1OffsetX.animateTo(0f, tween(600, easing = FastOutSlowInEasing))
-        }
-        delay(300)
+        // Phase 4: Elements fly in — notebook first, then speech bubbles below
+        delay(200)
+
+        // Notebook flies down from above into top area
         launch {
             launch { elem2Alpha.animateTo(1f, tween(500)) }
             elem2OffsetY.animateTo(0f, tween(600, easing = FastOutSlowInEasing))
         }
-        delay(300)
+        delay(400)
+
+        // Speech bubble 1 (teacher) flies in from left
+        launch {
+            launch { elem1Alpha.animateTo(1f, tween(500)) }
+            elem1OffsetX.animateTo(0f, tween(600, easing = FastOutSlowInEasing))
+        }
+        delay(400)
+
+        // Speech bubble 2 (professor) flies in from right
         launch {
             launch { elem3Alpha.animateTo(1f, tween(500)) }
             elem3OffsetX.animateTo(0f, tween(600, easing = FastOutSlowInEasing))
@@ -182,12 +188,27 @@ fun SplashScreen(
             }
         }
 
-        // --- "Best Journal" title — upper area ---
+        // --- Element 2: Notebook — top area, flies down from above ---
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = 80.dp)
+                .graphicsLayer {
+                    alpha = elem2Alpha.value
+                    translationY = elem2OffsetY.value * density
+                }
+        ) {
+            Canvas(modifier = Modifier.size(120.dp, 140.dp)) {
+                drawNotebook()
+            }
+        }
+
+        // --- "Best Journal" title — CENTER ---
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset(y = 120.dp)
+                .align(Alignment.Center)
+                .offset(y = (-20).dp)
                 .graphicsLayer {
                     scaleX = textScale.value
                     scaleY = textScale.value
@@ -211,12 +232,12 @@ fun SplashScreen(
             )
         }
 
-        // --- Element 1: Teacher with speech bubble — from left ---
+        // --- Element 1: Teacher with speech bubble — below center left, from left ---
         Row(
-            verticalAlignment = Alignment.Top,
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .offset(x = 16.dp, y = 30.dp)
+                .align(Alignment.BottomStart)
+                .offset(x = 16.dp, y = (-160).dp)
                 .graphicsLayer {
                     alpha = elem1Alpha.value
                     translationX = elem1OffsetX.value * density
@@ -227,27 +248,12 @@ fun SplashScreen(
             SpeechBubble(text = "Geniale\nErkenntnisse", pointLeft = true)
         }
 
-        // --- Element 2: Drawn notebook — center ---
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .offset(y = 100.dp)
-                .graphicsLayer {
-                    alpha = elem2Alpha.value
-                    translationY = elem2OffsetY.value * density
-                }
-        ) {
-            Canvas(modifier = Modifier.size(120.dp, 140.dp)) {
-                drawNotebook()
-            }
-        }
-
-        // --- Element 3: Professor with speech bubble — from right ---
+        // --- Element 3: Professor with speech bubble — bottom right, from right ---
         Row(
-            verticalAlignment = Alignment.Top,
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .offset(x = (-16).dp, y = 130.dp)
+                .align(Alignment.BottomEnd)
+                .offset(x = (-16).dp, y = (-80).dp)
                 .graphicsLayer {
                     alpha = elem3Alpha.value
                     translationX = elem3OffsetX.value * density
@@ -285,9 +291,9 @@ private fun SpeechBubble(text: String, pointLeft: Boolean) {
 private fun DrawScope.drawNotebook() {
     val w = size.width
     val h = size.height
-    val coverColor = Color(0xFF8B4513)      // leather brown
-    val pageColor = Color(0xFFFFFEF0)       // cream white
-    val ringColor = Color(0xFFC0C0C0)       // silver
+    val coverColor = Color(0xFF8B4513).copy(alpha = 0.55f)  // leather brown, semi-transparent
+    val pageColor = Color(0xFFFFFEF0).copy(alpha = 0.7f)   // cream white, slightly transparent
+    val ringColor = Color(0xFFC0C0C0).copy(alpha = 0.6f)   // silver, semi-transparent
     val lineColor = Color(0xFFB0D4F1)       // ruled line blue
     val penColor = Color(0xFF2B2B2B)        // dark pen
     val penTip = Color(0xFF1565C0)          // blue ink
