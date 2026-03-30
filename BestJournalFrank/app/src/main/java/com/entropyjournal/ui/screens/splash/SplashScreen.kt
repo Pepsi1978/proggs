@@ -477,10 +477,13 @@ fun SplashScreen(
     }
 }
 
-// --- Speech bubble with papyrus scroll background ---
+// --- Speech bubble with papyrus scroll background + 3D shadow ---
 @Composable
 private fun SpeechBubble(text: String) {
-    Box(contentAlignment = Alignment.Center) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.graphicsLayer { shadowElevation = 12f; shape = RoundedCornerShape(8.dp); clip = false }
+    ) {
         Image(
             painter = painterResource(id = com.entropyjournal.R.drawable.papyrus_bubble),
             contentDescription = null,
