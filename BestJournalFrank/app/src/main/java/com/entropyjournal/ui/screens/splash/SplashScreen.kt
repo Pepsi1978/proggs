@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -299,6 +300,7 @@ fun SplashScreen(
             modifier = Modifier
                 .align(Alignment.Center)
                 .offset(y = (-20).dp)
+                .widthIn(max = 260.dp)
                 .graphicsLayer {
                     // Combine text bounce scale with heartbeat pulse
                     val pulse = if (textScale.value >= 0.99f) heartbeat else 1f
