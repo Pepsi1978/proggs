@@ -135,18 +135,18 @@ fun SplashScreen(
         animationSpec = infiniteRepeatable(keyframes {
             durationMillis = 1400
             1.0f at 0
-            1.06f at 120    // first beat — expand
-            1.0f at 250     // contract
-            1.04f at 400    // second beat — smaller expand
-            1.0f at 550     // settle
+            1.12f at 120    // first beat — strong expand
+            1.0f at 280     // contract
+            1.08f at 430    // second beat — medium expand
+            1.0f at 580     // settle
             1.0f at 1400    // pause before next cycle
         }),
         label = "heartbeat"
     )
 
     // Scare state for interactive notebooks — tap to scare them away
-    val scareX = remember { List(6) { Animatable(0f) } }
-    val scareY = remember { List(6) { Animatable(0f) } }
+    val scareX = remember { List(8) { Animatable(0f) } }
+    val scareY = remember { List(8) { Animatable(0f) } }
     val canvasSize = remember { mutableStateOf(Size.Zero) }
     val scareScope = rememberCoroutineScope()
 
@@ -158,7 +158,9 @@ fun SplashScreen(
             FlyingNotebook(0.5f, 0.65f, 0.18f, 0.10f, 0.9f, 0.6f, 12f, 0.5f, 3.0f, 95f, 2.5f),
             FlyingNotebook(0.22f, 0.78f, 0.14f, 0.15f, 0.6f, 0.7f, 18f, 0.35f, 4.5f, 60f, 3.8f),
             FlyingNotebook(0.82f, 0.12f, 0.16f, 0.13f, 0.8f, 0.4f, 22f, 0.45f, 3.2f, 85f, 5.0f),
-            FlyingNotebook(0.45f, 0.40f, 0.13f, 0.11f, 0.65f, 0.55f, 16f, 0.38f, 3.8f, 75f, 4.3f)
+            FlyingNotebook(0.45f, 0.40f, 0.13f, 0.11f, 0.65f, 0.55f, 16f, 0.38f, 3.8f, 75f, 4.3f),
+            FlyingNotebook(0.65f, 0.85f, 0.11f, 0.14f, 0.55f, 0.65f, 14f, 0.42f, 3.6f, 50f, 6.1f),
+            FlyingNotebook(0.35f, 0.10f, 0.17f, 0.10f, 0.75f, 0.45f, 20f, 0.32f, 4.2f, 115f, 7.0f)
         )
     }
 
@@ -489,8 +491,10 @@ private fun SpeechBubble(text: String) {
         )
         // Large padding: left for the roll, right/top/bottom for paper edges
         Text(text, Modifier.padding(start = 68.dp, end = 48.dp, top = 20.dp, bottom = 22.dp),
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold,
-                fontSize = 18.sp, lineHeight = 24.sp), color = Color(0xFF3E2000))
+            style = MaterialTheme.typography.bodyLarge.copy(
+                fontFamily = com.entropyjournal.ui.theme.Caveat,
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp, lineHeight = 28.sp), color = Color(0xFF3E2000))
     }
 }
 
