@@ -363,9 +363,9 @@ fun SplashScreen(
                     scaleY = elem2Scale.value
                 }
         ) {
-            SpeechBubble("Aus Eintr\u00e4gen\nlernen")
-            Spacer(Modifier.width(6.dp))
             Text("\uD83E\uDDD1\u200D\uD83D\uDCBB", fontSize = 36.sp) // Technologist
+            Spacer(Modifier.width(6.dp))
+            SpeechBubble("Aus Eintr\u00e4gen\nlernen")
         }
 
         // --- Smiley 3: "KI-Zusammenfassung" — top-left, from left ---
@@ -399,9 +399,9 @@ fun SplashScreen(
                     scaleY = elem4Scale.value
                 }
         ) {
-            SpeechBubble("Tiefe\nTagebuchanalyse")
-            Spacer(Modifier.width(6.dp))
             Text("\uD83C\uDF00", fontSize = 34.sp) // Cyclone — deep analysis spiral
+            Spacer(Modifier.width(6.dp))
+            SpeechBubble("Tiefe\nTagebuchanalyse")
         }
 
         // --- Start button — bottom center ---
@@ -440,7 +440,7 @@ fun SplashScreen(
     }
 }
 
-// --- Speech bubble with papyrus background ---
+// --- Speech bubble with papyrus scroll background ---
 @Composable
 private fun SpeechBubble(text: String) {
     Box(contentAlignment = Alignment.Center) {
@@ -450,7 +450,8 @@ private fun SpeechBubble(text: String) {
             contentScale = ContentScale.FillBounds,
             modifier = Modifier.matchParentSize()
         )
-        Text(text, Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+        // Extra left padding so text sits on the paper, not on the rolled part
+        Text(text, Modifier.padding(start = 36.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold,
                 fontSize = 15.sp, lineHeight = 20.sp), color = Color(0xFF3E2000))
     }

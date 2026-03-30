@@ -28,8 +28,8 @@ val SourceSansPro = FontFamily(
 )
 
 val Caveat = FontFamily(
-    Font(googleFont = GoogleFont("Caveat"), fontProvider = fontProvider, weight = FontWeight.Bold),
-    Font(googleFont = GoogleFont("Caveat"), fontProvider = fontProvider, weight = FontWeight.Normal),
+    androidx.compose.ui.text.font.Font(R.font.caveat_bold, FontWeight.Bold),
+    androidx.compose.ui.text.font.Font(R.font.caveat_bold, FontWeight.Normal),
 )
 
 val JetBrainsMono = FontFamily(
