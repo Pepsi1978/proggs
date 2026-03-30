@@ -145,19 +145,20 @@ fun SplashScreen(
     )
 
     // Scare state for interactive notebooks — tap to scare them away
-    val scareX = remember { List(5) { Animatable(0f) } }
-    val scareY = remember { List(5) { Animatable(0f) } }
+    val scareX = remember { List(6) { Animatable(0f) } }
+    val scareY = remember { List(6) { Animatable(0f) } }
     val canvasSize = remember { mutableStateOf(Size.Zero) }
     val scareScope = rememberCoroutineScope()
 
-    // 5 flying notebooks with different movement patterns
+    // 6 flying notebooks — wider flight radius (driftSpeed increased)
     val notebooks = remember {
         listOf(
-            FlyingNotebook(0.15f, 0.2f, 0.08f, 0.06f, 0.7f, 0.5f, 15f, 0.3f, 3.5f, 105f, 0f),
-            FlyingNotebook(0.78f, 0.35f, 0.06f, 0.09f, 0.5f, 0.8f, 20f, 0.4f, 4.0f, 70f, 1.2f),
-            FlyingNotebook(0.5f, 0.65f, 0.1f, 0.05f, 0.9f, 0.6f, 12f, 0.5f, 3.0f, 95f, 2.5f),
-            FlyingNotebook(0.22f, 0.78f, 0.07f, 0.08f, 0.6f, 0.7f, 18f, 0.35f, 4.5f, 60f, 3.8f),
-            FlyingNotebook(0.82f, 0.12f, 0.09f, 0.07f, 0.8f, 0.4f, 22f, 0.45f, 3.2f, 85f, 5.0f)
+            FlyingNotebook(0.15f, 0.2f, 0.15f, 0.12f, 0.7f, 0.5f, 15f, 0.3f, 3.5f, 105f, 0f),
+            FlyingNotebook(0.78f, 0.35f, 0.12f, 0.16f, 0.5f, 0.8f, 20f, 0.4f, 4.0f, 70f, 1.2f),
+            FlyingNotebook(0.5f, 0.65f, 0.18f, 0.10f, 0.9f, 0.6f, 12f, 0.5f, 3.0f, 95f, 2.5f),
+            FlyingNotebook(0.22f, 0.78f, 0.14f, 0.15f, 0.6f, 0.7f, 18f, 0.35f, 4.5f, 60f, 3.8f),
+            FlyingNotebook(0.82f, 0.12f, 0.16f, 0.13f, 0.8f, 0.4f, 22f, 0.45f, 3.2f, 85f, 5.0f),
+            FlyingNotebook(0.45f, 0.40f, 0.13f, 0.11f, 0.65f, 0.55f, 16f, 0.38f, 3.8f, 75f, 4.3f)
         )
     }
 
