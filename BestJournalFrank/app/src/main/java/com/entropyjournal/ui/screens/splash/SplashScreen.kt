@@ -10,6 +10,7 @@ import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +46,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -291,91 +294,39 @@ fun SplashScreen(
             }
         }
 
-        // --- "Best Journal" title as notebook card — CENTER, always on top ---
-        // Opaque background so notebooks never show through
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
-            shadowElevation = (textScale.value * 14f).dp,
+        // --- "Best Journal" on papyrus scroll — CENTER, always on top ---
+        Box(
+            contentAlignment = Alignment.Center,
             modifier = Modifier
                 .align(Alignment.Center)
                 .offset(y = (-20).dp)
-                .widthIn(max = 260.dp)
                 .graphicsLayer {
-                    // Combine text bounce scale with heartbeat pulse
                     val pulse = if (textScale.value >= 0.99f) heartbeat else 1f
                     scaleX = textScale.value * pulse
                     scaleY = textScale.value * pulse
                     translationY = textOffsetY.value * density
                 }
         ) {
-            // Notebook page with spiral rings, lines, pen
-            Row(modifier = Modifier.padding(4.dp)) {
-                // Spiral rings on left edge
-                Canvas(modifier = Modifier.width(16.dp).height(180.dp)) {
-                    val ringCount = 7
-                    for (i in 0 until ringCount) {
-                        val ry = size.height * (i + 0.5f) / ringCount
-                        drawCircle(Color(0xFFB8860B).copy(alpha = 0.5f), 4f * density,
-                            Offset(size.width / 2f, ry), style = Stroke(1.5f * density))
-                    }
-                }
-                // Page content — ancient papyrus/scroll look
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFD4B483).copy(alpha = 0.4f),
-                    shadowElevation = 6.dp,
-                    modifier = Modifier
-                        .weight(1f)
-                        .border(1.dp, Color(0xFFB8860B).copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(start = 28.dp, end = 28.dp, top = 24.dp, bottom = 16.dp)
-                    ) {
-                        // Ruled line above title
-                        Canvas(modifier = Modifier.width(200.dp).height(2.dp)) {
-                            drawLine(Color(0xFF90CAF9).copy(alpha = 0.3f),
-                                Offset(0f, 1f), Offset(size.width, 1f), 1f * density)
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Text("Best", style = MaterialTheme.typography.displayLarge.copy(
-                            fontWeight = FontWeight.Bold, fontSize = 48.sp, letterSpacing = 2.sp
-                        ), color = MaterialTheme.colorScheme.primary.copy(alpha = textAlpha.value))
-                        Text("Journal", style = MaterialTheme.typography.displayLarge.copy(
-                            fontWeight = FontWeight.Bold, fontSize = 48.sp, letterSpacing = 2.sp
-                        ), color = MaterialTheme.colorScheme.primary.copy(alpha = textAlpha.value))
-                        Spacer(Modifier.height(6.dp))
-                        // Ruled lines + scribbles
-                        Canvas(modifier = Modifier.width(200.dp).height(32.dp).graphicsLayer {
-                            alpha = textAlpha.value * 0.5f
-                        }) {
-                            val lineC = Color(0xFFB8860B).copy(alpha = 0.25f) // dark goldenrod
-                            val scribC = Color(0xFF5C3317) // ink brown
-                            // 3 ruled lines
-                            for (i in 0..2) {
-                                val ly = (i + 0.5f) * size.height / 3f
-                                drawLine(lineC, Offset(0f, ly), Offset(size.width, ly), 0.8f * density)
-                            }
-                            // Scribble handwriting
-                            val p1 = Path().apply {
-                                moveTo(8f, size.height * 0.2f)
-                                cubicTo(50f, size.height * 0.05f, 100f, size.height * 0.35f, size.width * 0.7f, size.height * 0.15f)
-                            }
-                            drawPath(p1, scribC, style = Stroke(1f * density, cap = StrokeCap.Round))
-                            val p2 = Path().apply {
-                                moveTo(12f, size.height * 0.55f)
-                                cubicTo(60f, size.height * 0.45f, 90f, size.height * 0.7f, size.width * 0.6f, size.height * 0.5f)
-                            }
-                            drawPath(p2, scribC, style = Stroke(1f * density, cap = StrokeCap.Round))
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        // Quill pen — fits papyrus scroll theme
-                        Text("\uD83E\uDEB6", fontSize = 20.sp, modifier = Modifier.graphicsLayer {
-                            alpha = textAlpha.value * 0.7f
-                        })
-                    }
-                }
+            // Papyrus scroll image
+            Image(
+                painter = painterResource(id = com.entropyjournal.R.drawable.papyrus_scroll),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .width(280.dp)
+                    .graphicsLayer { alpha = textAlpha.value }
+            )
+            // "Best Journal" text overlaid in bold handwriting style
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.offset(y = (-5).dp)
+            ) {
+                Text("Best", style = MaterialTheme.typography.displayLarge.copy(
+                    fontWeight = FontWeight.Bold, fontSize = 46.sp, letterSpacing = 2.sp
+                ), color = Color(0xFF4A2800).copy(alpha = textAlpha.value))
+                Text("Journal", style = MaterialTheme.typography.displayLarge.copy(
+                    fontWeight = FontWeight.Bold, fontSize = 46.sp, letterSpacing = 2.sp
+                ), color = Color(0xFF4A2800).copy(alpha = textAlpha.value))
             }
         }
 
