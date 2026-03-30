@@ -326,7 +326,7 @@ fun SplashScreen(
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 16.dp)
+                        modifier = Modifier.padding(start = 28.dp, end = 28.dp, top = 24.dp, bottom = 16.dp)
                     ) {
                         // Ruled line above title
                         Canvas(modifier = Modifier.width(200.dp).height(2.dp)) {
@@ -423,7 +423,7 @@ fun SplashScreen(
                     scaleY = elem3Scale.value
                 }
         ) {
-            Text("\u269B\uFE0F", fontSize = 34.sp) // Atom symbol — unique KI symbol
+            Text("\u26A1", fontSize = 34.sp) // Lightning bolt — KI power
             Spacer(Modifier.width(6.dp))
             SpeechBubble("KI-\nZusammenfassung")
         }
@@ -433,7 +433,7 @@ fun SplashScreen(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .offset(x = (-12).dp, y = 155.dp)
+                .offset(x = (-12).dp, y = 185.dp)
                 .graphicsLayer {
                     alpha = elem4Alpha.value
                     translationX = elem4OffsetX.value * density
@@ -462,7 +462,7 @@ fun SplashScreen(
                 .border(2.dp, Color.Black, RoundedCornerShape(14.dp)),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+                containerColor = MaterialTheme.colorScheme.primary
             ),
             elevation = ButtonDefaults.buttonElevation(
                 defaultElevation = 8.dp,
@@ -471,12 +471,12 @@ fun SplashScreen(
         ) {
             Text(
                 "Start",
-                modifier = Modifier.padding(horizontal = 32.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 ),
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = MaterialTheme.colorScheme.onPrimary
             )
         }
     }
