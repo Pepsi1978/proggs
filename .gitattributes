@@ -33,5 +33,5 @@
 *.exe binary
 *.app binary
 *.dll binary
-EntropyJournal/app/src/main/assets/whisper/*.onnx filter=lfs diff=lfs merge=lfs -text
+BestJournalFrank/app/src/main/assets/whisper/*.onnx filter=lfs diff=lfs merge=lfs -text
 *.aar filter=lfs diff=lfs merge=lfs -text
