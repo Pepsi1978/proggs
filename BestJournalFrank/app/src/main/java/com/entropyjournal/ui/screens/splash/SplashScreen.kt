@@ -477,14 +477,9 @@ fun SplashScreen(
     }
 }
 
-// --- Speech bubble with papyrus scroll background + bottom shimmer like Start button ---
+// --- Speech bubble with papyrus scroll background ---
 @Composable
 private fun SpeechBubble(text: String) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = Color.Transparent,
-        shadowElevation = 8.dp
-    ) {
     Box(contentAlignment = Alignment.Center) {
         Image(
             painter = painterResource(id = com.entropyjournal.R.drawable.papyrus_bubble),
@@ -493,11 +488,10 @@ private fun SpeechBubble(text: String) {
             modifier = Modifier.matchParentSize()
         )
         // Large padding: left for the roll, right/top/bottom for paper edges
-        Text(text, Modifier.padding(start = 60.dp, end = 40.dp, top = 16.dp, bottom = 18.dp),
+        Text(text, Modifier.padding(start = 68.dp, end = 48.dp, top = 20.dp, bottom = 22.dp),
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold,
-                fontSize = 15.sp, lineHeight = 20.sp), color = Color(0xFF3E2000))
+                fontSize = 18.sp, lineHeight = 24.sp), color = Color(0xFF3E2000))
     }
-    } // Surface
 }
 
 // --- Flying notebook with angel wings ---
