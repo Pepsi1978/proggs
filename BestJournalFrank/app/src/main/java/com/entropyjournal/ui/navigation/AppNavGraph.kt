@@ -11,7 +11,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -20,7 +19,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.entropyjournal.ui.screens.dashboard.DashboardScreen
@@ -38,80 +36,76 @@ private val mainPages = listOf(BottomNavItem.Dashboard, BottomNavItem.Journal, B
 fun AppNavGraph(
     navController: NavHostController = rememberNavController()
 ) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    // NavHost WITHOUT Scaffold — splash and login get full screen, no bottom bar
+    NavHost(
+        navController = navController,
+        startDestination = "splash"
+    ) {
+        composable(
+            "splash",
+            enterTransition = { fadeIn() },
+            exitTransition = { fadeOut() }
+        ) {
+            SplashScreen(
+                viewModel = hiltViewModel(),
+                onSplashFinished = { isSignedIn ->
+                    val destination = if (isSignedIn) "main" else "login"
+                    navController.navigate(destination) {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                }
+            )
+        }
 
-    val showBottomBar = currentRoute == "main"
-    val pagerState = rememberPagerState(initialPage = 1) { mainPages.size } // start on Journal
-    val coroutineScope = rememberCoroutineScope()
+        composable(
+            "login",
+            enterTransition = { fadeIn() },
+            exitTransition = { fadeOut() }
+        ) {
+            LoginScreen(
+                viewModel = hiltViewModel(),
+                onLoginSuccess = {
+                    navController.navigate("main") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                }
+            )
+        }
 
-    // Sync pager → bottom nav (when user swipes)
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }.collect { /* bottom nav reads pagerState.currentPage directly */ }
-    }
+        composable(
+            "main",
+            enterTransition = { fadeIn() },
+            exitTransition = { fadeOut() }
+        ) {
+            // Scaffold with bottom bar ONLY wraps the main content —
+            // splash and login screens are completely isolated
+            val pagerState = rememberPagerState(initialPage = 1) { mainPages.size }
+            val coroutineScope = rememberCoroutineScope()
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            if (showBottomBar) {
-                BottomNavBar(
-                    currentRoute = mainPages[pagerState.currentPage].route,
-                    onItemClick = { item ->
-                        val targetPage = mainPages.indexOf(item)
-                        if (targetPage >= 0) {
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(targetPage)
+            LaunchedEffect(pagerState) {
+                snapshotFlow { pagerState.currentPage }.collect { }
+            }
+
+            Scaffold(
+                containerColor = MaterialTheme.colorScheme.background,
+                bottomBar = {
+                    BottomNavBar(
+                        currentRoute = mainPages[pagerState.currentPage].route,
+                        onItemClick = { item ->
+                            val targetPage = mainPages.indexOf(item)
+                            if (targetPage >= 0) {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(targetPage)
+                                }
                             }
                         }
-                    }
-                )
-            }
-        }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = "splash",
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(
-                "splash",
-                enterTransition = { fadeIn() },
-                exitTransition = { fadeOut() }
-            ) {
-                SplashScreen(
-                    viewModel = hiltViewModel(),
-                    onSplashFinished = { isSignedIn ->
-                        val destination = if (isSignedIn) "main" else "login"
-                        navController.navigate(destination) {
-                            popUpTo("splash") { inclusive = true }
-                        }
-                    }
-                )
-            }
-
-            composable(
-                "login",
-                enterTransition = { fadeIn() },
-                exitTransition = { fadeOut() }
-            ) {
-                LoginScreen(
-                    viewModel = hiltViewModel(),
-                    onLoginSuccess = {
-                        navController.navigate("main") {
-                            popUpTo("login") { inclusive = true }
-                        }
-                    }
-                )
-            }
-
-            composable(
-                "main",
-                enterTransition = { fadeIn() },
-                exitTransition = { fadeOut() }
-            ) {
+                    )
+                }
+            ) { innerPadding ->
                 HorizontalPager(
                     state = pagerState,
-                    beyondViewportPageCount = 1
+                    beyondViewportPageCount = 1,
+                    modifier = Modifier.padding(innerPadding)
                 ) { page ->
                     when (page) {
                         0 -> DashboardScreen(viewModel = hiltViewModel())
@@ -132,18 +126,18 @@ fun AppNavGraph(
                     }
                 }
             }
+        }
 
-            composable(
-                "entry_detail/{entryId}",
-                arguments = listOf(navArgument("entryId") { type = NavType.LongType }),
-                enterTransition = { slideInHorizontally { it } + fadeIn() },
-                exitTransition = { slideOutHorizontally { it } + fadeOut() }
-            ) {
-                EntryDetailScreen(
-                    viewModel = hiltViewModel(),
-                    onBack = { navController.popBackStack() }
-                )
-            }
+        composable(
+            "entry_detail/{entryId}",
+            arguments = listOf(navArgument("entryId") { type = NavType.LongType }),
+            enterTransition = { slideInHorizontally { it } + fadeIn() },
+            exitTransition = { slideOutHorizontally { it } + fadeOut() }
+        ) {
+            EntryDetailScreen(
+                viewModel = hiltViewModel(),
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

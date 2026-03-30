@@ -123,8 +123,8 @@ fun SplashScreen(
         textScale.animateTo(0.85f, tween(180))
         textScale.animateTo(1f, tween(300, easing = FastOutSlowInEasing))
 
-        // Hold visible for 1.2 seconds
-        delay(1200)
+        // Hold visible for 2.5 seconds so user can read "Best Journal"
+        delay(2500)
         onSplashFinished(viewModel.isUserSignedIn())
     }
 
