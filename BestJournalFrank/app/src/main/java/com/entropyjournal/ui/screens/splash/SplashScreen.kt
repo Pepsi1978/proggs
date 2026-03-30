@@ -129,20 +129,37 @@ fun SplashScreen(
         animationSpec = infiniteRepeatable(tween(600000, easing = LinearEasing), RepeatMode.Restart),
         label = "time"
     )
-    // Heartbeat pulse for Best Journal card: bum-bum... bum-bum...
+    // Heartbeat pulse — normal rhythm
     val heartbeat by infiniteTransition.animateFloat(
         initialValue = 1f, targetValue = 1f,
         animationSpec = infiniteRepeatable(keyframes {
             durationMillis = 1400
             1.0f at 0
-            1.12f at 120    // first beat — strong expand
-            1.0f at 280     // contract
-            1.08f at 430    // second beat — medium expand
-            1.0f at 580     // settle
+            1.06f at 120    // first beat — expand
+            1.0f at 250     // contract
+            1.04f at 400    // second beat — smaller expand
+            1.0f at 550     // settle
             1.0f at 1400    // pause before next cycle
         }),
         label = "heartbeat"
     )
+    // Fast heartbeat — when tapped
+    val fastHeartbeat by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(keyframes {
+            durationMillis = 500
+            1.0f at 0
+            1.08f at 60
+            1.0f at 130
+            1.05f at 200
+            1.0f at 280
+            1.0f at 500
+        }),
+        label = "fastHeartbeat"
+    )
+    // Excited state: true for 3 seconds after tap on Best Journal
+    val excited = remember { mutableStateOf(false) }
+    val excitedScope = rememberCoroutineScope()
 
     // Scare state for interactive notebooks — tap to scare them away
     val scareX = remember { List(8) { Animatable(0f) } }
@@ -347,8 +364,19 @@ fun SplashScreen(
             modifier = Modifier
                 .align(Alignment.Center)
                 .offset(y = (-20).dp)
+                .pointerInput(Unit) {
+                    detectTapGestures {
+                        excited.value = true
+                        excitedScope.launch {
+                            delay(3000)
+                            excited.value = false
+                        }
+                    }
+                }
                 .graphicsLayer {
-                    val pulse = if (textScale.value >= 0.99f) heartbeat else 1f
+                    val pulse = if (textScale.value >= 0.99f) {
+                        if (excited.value) fastHeartbeat else heartbeat
+                    } else 1f
                     scaleX = textScale.value * pulse
                     scaleY = textScale.value * pulse
                     translationY = textOffsetY.value * density
