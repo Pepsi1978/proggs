@@ -28,6 +28,11 @@
 - [Gemini API](#gemini-api)
 - [Gmail API (Feedback)](#gmail-api-feedback)
 
+**Git & DevOps:**
+- [Ordner-Umbenennung: ADB/Gradle stoppen + LFS-Pfade anpassen](#ordner-umbenennung-adbgradle-stoppen--lfs-pfade-anpassen-wichtig) ⭐
+- [NestedScrollConnection: LazyRow in HorizontalPager isolieren](#nestedscrollconnection-lazyrow-in-horizontalpager-isolieren)
+- [Splash-Animation: Spring-Bounce vs Tween-Settle](#splash-animation-spring-bounce-vs-tween-settle)
+
 **Sonstiges:**
 - [Theme-Toggle](#theme-toggle-separates-sharedpreferences-fuer-quick-toggle)
 - [Hilt/Dagger](#hiltdagger)
@@ -189,3 +194,46 @@
 - Truncation Detection: Wenn Ergebnis <85% der Eingangslaenge → in Chunks aufteilen
 - Chunks: Paragraphen-basiert, max 3500 Zeichen, an Satzgrenzen splitten
 - Parallele Verarbeitung aller Chunks via `coroutineScope { chunks.map { async { ... } } }`
+
+## Ordner-Umbenennung: ADB/Gradle stoppen + LFS-Pfade anpassen ⭐ WICHTIG
+**Problem**: `git mv` auf einen Android-Projektordner schlaegt mit "Permission denied" fehl, weil ADB oder der Gradle-Daemon Dateien darin offen haben. Danach schlaegt `git push` fehl, weil Git-LFS-Regeln in `.gitattributes` auf den alten Ordnernamen zeigen — grosse Dateien werden als neue Git-Objekte statt als LFS-Pointer behandelt.
+**Pflicht-Ablauf bei Ordner-Umbenennung:**
+1. `./gradlew --stop` (Gradle-Daemon beenden)
+2. `adb kill-server` (ADB beenden — haelt File-Handles offen!)
+3. `cmd.exe //c "ren AlterName NeuerName"` (Windows-natives Rename)
+4. `.gitattributes` SOFORT aktualisieren: alle LFS-Regeln auf neuen Pfad aendern
+5. Dateien stagen, LFS-Status pruefen: `git lfs status` — alles muss "LFS → LFS" zeigen
+6. Falls Dateien als "Git:" statt "LFS:" erscheinen: `git rm --cached` + `git add` (erzwingt LFS-Filter)
+7. Erst DANN committen und pushen
+**Zeitersparnis**: Dieser Ablauf haette 6+ Minuten Fehlersuche verhindert.
+
+## NestedScrollConnection: LazyRow in HorizontalPager isolieren
+**Problem**: LazyRow (Kategorie-Tabs) leakt Scroll-Gesten an den uebergeordneten HorizontalPager. Ein starkes Wischen in den Kategorien springt zur naechsten Seite.
+**Loesung**: `NestedScrollConnection` der im `onPostScroll` und `onPostFling` alle ueberschuessigen horizontalen Gesten konsumiert:
+```kotlin
+val isolation = remember {
+    object : NestedScrollConnection {
+        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource) =
+            Offset(available.x, 0f)
+        override suspend fun onPostFling(consumed: Velocity, available: Velocity) =
+            Velocity(available.x, 0f)
+    }
+}
+Box(modifier = Modifier.nestedScroll(isolation)) { LazyRow(...) }
+```
+- Die LazyRow scrollt normal (sie konsumiert was sie braucht)
+- Ueberschuss (am Ende der Liste) wird von der Connection geschluckt statt an den Pager weitergereicht
+
+## Splash-Animation: Spring-Bounce vs Tween-Settle
+**Problem**: `spring(dampingRatio = 0.45)` erzeugt sichtbares Nachschwingen — der Text huepft nach der Landung nochmal hoch.
+**Loesung**: Statt Spring einfache `tween()`-Animation verwenden:
+```kotlin
+// FALSCH — bounced nach der Landung:
+textScale.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = 350f))
+// RICHTIG — landet sauber ohne Nachhuepfer:
+textScale.animateTo(0.85f, tween(180))  // Squash
+textScale.animateTo(1f, tween(300))     // Settle
+```
+- `dampingRatio < 1.0` = unterdaempft = schwingt nach (bounce)
+- `dampingRatio = 1.0` = kritisch gedaempft = kein Nachschwingen
+- `tween()` = garantiert kein Ueberschwinger, volle Kontrolle ueber Kurve
