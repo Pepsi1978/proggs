@@ -345,9 +345,7 @@ fun SplashScreen(
                     scaleY = elem1Scale.value
                 }
         ) {
-            Text("\uD83E\uDDD9\u200D♂\uFE0F", fontSize = 36.sp) // Mage/wizard
-            Spacer(Modifier.width(6.dp))
-            SpeechBubble("Geniale\nErkenntnisse")
+            SpeechBubble("Geniale Erkenntnisse")
         }
 
         // --- Smiley 2: "Aus Einträgen lernen" — bottom-right, from right ---
@@ -363,9 +361,7 @@ fun SplashScreen(
                     scaleY = elem2Scale.value
                 }
         ) {
-            Text("\uD83E\uDDD1\u200D\uD83D\uDCBB", fontSize = 36.sp) // Technologist
-            Spacer(Modifier.width(6.dp))
-            SpeechBubble("Aus Eintr\u00e4gen\nlernen")
+            SpeechBubble("Aus Eintr\u00e4gen lernen")
         }
 
         // --- Smiley 3: "KI-Zusammenfassung" — top-left, from left ---
@@ -381,9 +377,7 @@ fun SplashScreen(
                     scaleY = elem3Scale.value
                 }
         ) {
-            Text("\u26A1", fontSize = 34.sp) // Lightning bolt — KI power
-            Spacer(Modifier.width(6.dp))
-            SpeechBubble("KI-\nZusammenfassung")
+            SpeechBubble("KI-Zusammenfassung")
         }
 
         // --- Smiley 4: "Tiefe Tagebuchanalyse" — top-right, from right ---
@@ -399,9 +393,7 @@ fun SplashScreen(
                     scaleY = elem4Scale.value
                 }
         ) {
-            Text("\uD83C\uDF00", fontSize = 34.sp) // Cyclone — deep analysis spiral
-            Spacer(Modifier.width(6.dp))
-            SpeechBubble("Tiefe\nTagebuchanalyse")
+            SpeechBubble("Tiefe Tagebuchanalyse")
         }
 
         // --- Start button — bottom center ---
