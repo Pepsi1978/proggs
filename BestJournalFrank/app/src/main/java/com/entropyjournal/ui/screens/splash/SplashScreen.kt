@@ -443,7 +443,7 @@ private fun SpeechBubble(text: String) {
             modifier = Modifier.matchParentSize()
         )
         // Large padding: left for the roll, right/top/bottom for paper edges
-        Text(text, Modifier.padding(start = 52.dp, end = 48.dp, top = 16.dp, bottom = 18.dp),
+        Text(text, Modifier.padding(start = 60.dp, end = 40.dp, top = 16.dp, bottom = 18.dp),
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold,
                 fontSize = 15.sp, lineHeight = 20.sp), color = Color(0xFF3E2000))
     }
