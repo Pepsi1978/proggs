@@ -442,8 +442,8 @@ private fun SpeechBubble(text: String) {
             contentScale = ContentScale.FillBounds,
             modifier = Modifier.matchParentSize()
         )
-        // Extra left padding so text sits on the paper, not on the rolled part
-        Text(text, Modifier.padding(start = 36.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
+        // Large padding: left for the roll, right/top/bottom for paper edges
+        Text(text, Modifier.padding(start = 52.dp, end = 24.dp, top = 16.dp, bottom = 18.dp),
             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold,
                 fontSize = 15.sp, lineHeight = 20.sp), color = Color(0xFF3E2000))
     }
