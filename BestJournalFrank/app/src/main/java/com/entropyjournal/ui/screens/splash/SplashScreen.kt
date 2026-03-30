@@ -100,16 +100,16 @@ fun SplashScreen(
     // 4 smiley elements — each has alpha, position offset, and scale (big→small)
     val elem1Alpha = remember { Animatable(0f) }
     val elem1OffsetX = remember { Animatable(-300f) }
-    val elem1Scale = remember { Animatable(2.0f) }
+    val elem1Scale = remember { Animatable(3.5f) }
     val elem2Alpha = remember { Animatable(0f) }
     val elem2OffsetX = remember { Animatable(300f) }
-    val elem2Scale = remember { Animatable(2.0f) }
+    val elem2Scale = remember { Animatable(3.5f) }
     val elem3Alpha = remember { Animatable(0f) }
     val elem3OffsetX = remember { Animatable(-300f) }
-    val elem3Scale = remember { Animatable(2.0f) }
+    val elem3Scale = remember { Animatable(3.5f) }
     val elem4Alpha = remember { Animatable(0f) }
     val elem4OffsetX = remember { Animatable(300f) }
-    val elem4Scale = remember { Animatable(2.0f) }
+    val elem4Scale = remember { Animatable(3.5f) }
     val startBtnAlpha = remember { Animatable(0f) }
     val startBtnOffsetY = remember { Animatable(150f) }
     val startBtnScale = remember { Animatable(0f) }
@@ -196,35 +196,31 @@ fun SplashScreen(
         startBtnScale.animateTo(1.3f, tween(300, easing = FastOutSlowInEasing))
         startBtnScale.animateTo(1f, tween(200))
 
-        // Phase 5: Smileys fly in one by one — big to small
-        delay(300)
-        // 1. "Geniale Erkenntnisse" from left
-        launch {
-            launch { elem1Alpha.animateTo(1f, tween(500)) }
-            launch { elem1OffsetX.animateTo(0f, tween(700, easing = FastOutSlowInEasing)) }
-            elem1Scale.animateTo(1f, tween(700, easing = FastOutSlowInEasing))
-        }
-        delay(500)
-        // 2. "Aus Einträgen lernen" from right
-        launch {
-            launch { elem2Alpha.animateTo(1f, tween(500)) }
-            launch { elem2OffsetX.animateTo(0f, tween(700, easing = FastOutSlowInEasing)) }
-            elem2Scale.animateTo(1f, tween(700, easing = FastOutSlowInEasing))
-        }
-        delay(500)
-        // 3. "Zusammenfassungen mit KI" from left, upper area
-        launch {
-            launch { elem3Alpha.animateTo(1f, tween(500)) }
-            launch { elem3OffsetX.animateTo(0f, tween(700, easing = FastOutSlowInEasing)) }
-            elem3Scale.animateTo(1f, tween(700, easing = FastOutSlowInEasing))
-        }
-        delay(500)
-        // 4. "Tiefe Tagebuchanalyse" from right, upper area
-        launch {
-            launch { elem4Alpha.animateTo(1f, tween(500)) }
-            launch { elem4OffsetX.animateTo(0f, tween(700, easing = FastOutSlowInEasing)) }
-            elem4Scale.animateTo(1f, tween(700, easing = FastOutSlowInEasing))
-        }
+        // Phase 5: Smileys zoom in SEQUENTIALLY — each waits for previous to land
+        delay(400)
+
+        // 1. "Geniale Erkenntnisse" — zooms from full screen to landing spot
+        launch { elem1Alpha.animateTo(1f, tween(300)) }
+        launch { elem1OffsetX.animateTo(0f, tween(1200, easing = FastOutSlowInEasing)) }
+        elem1Scale.animateTo(1f, tween(1200, easing = FastOutSlowInEasing))
+
+        // 2. "Aus Einträgen lernen" — starts after 1 has landed
+        delay(200)
+        launch { elem2Alpha.animateTo(1f, tween(300)) }
+        launch { elem2OffsetX.animateTo(0f, tween(1200, easing = FastOutSlowInEasing)) }
+        elem2Scale.animateTo(1f, tween(1200, easing = FastOutSlowInEasing))
+
+        // 3. "KI-Zusammenfassung" — starts after 2 has landed
+        delay(200)
+        launch { elem3Alpha.animateTo(1f, tween(300)) }
+        launch { elem3OffsetX.animateTo(0f, tween(1200, easing = FastOutSlowInEasing)) }
+        elem3Scale.animateTo(1f, tween(1200, easing = FastOutSlowInEasing))
+
+        // 4. "Tiefe Tagebuchanalyse" — starts after 3 has landed
+        delay(200)
+        launch { elem4Alpha.animateTo(1f, tween(300)) }
+        launch { elem4OffsetX.animateTo(0f, tween(1200, easing = FastOutSlowInEasing)) }
+        elem4Scale.animateTo(1f, tween(1200, easing = FastOutSlowInEasing))
         // No auto-navigation — user presses Start button
     }
 
@@ -311,45 +307,71 @@ fun SplashScreen(
                     translationY = textOffsetY.value * density
                 }
         ) {
-            // White inner card with rounded corners
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White.copy(alpha = 0.15f),
-                modifier = Modifier.padding(6.dp)
-            ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(start = 32.dp, end = 32.dp, top = 28.dp, bottom = 20.dp)
-            ) {
-                Text("Best", style = MaterialTheme.typography.displayLarge.copy(
-                    fontWeight = FontWeight.Bold, fontSize = 48.sp, letterSpacing = 2.sp
-                ), color = MaterialTheme.colorScheme.primary.copy(alpha = textAlpha.value))
-                Text("Journal", style = MaterialTheme.typography.displayLarge.copy(
-                    fontWeight = FontWeight.Bold, fontSize = 48.sp, letterSpacing = 2.sp
-                ), color = MaterialTheme.colorScheme.primary.copy(alpha = textAlpha.value))
-                // Scribble lines underneath — simulated handwriting
-                Spacer(Modifier.height(8.dp))
-                Canvas(modifier = Modifier.width(180.dp).height(24.dp).graphicsLayer {
-                    alpha = textAlpha.value * 0.4f
-                }) {
-                    val scribbleColor = Color.Gray
-                    // Line 1 — wavy
-                    val path1 = Path().apply {
-                        moveTo(10f, 6f * density)
-                        cubicTo(40f, 2f * density, 70f, 10f * density, 110f, 5f * density)
-                        cubicTo(140f, 1f * density, 160f, 8f * density, size.width - 10f, 4f * density)
+            // Notebook page with spiral rings, lines, pen
+            Row(modifier = Modifier.padding(4.dp)) {
+                // Spiral rings on left edge
+                Canvas(modifier = Modifier.width(16.dp).height(180.dp)) {
+                    val ringCount = 7
+                    for (i in 0 until ringCount) {
+                        val ry = size.height * (i + 0.5f) / ringCount
+                        drawCircle(Color(0xFFC0C0C0), 4f * density,
+                            Offset(size.width / 2f, ry), style = Stroke(1.5f * density))
                     }
-                    drawPath(path1, scribbleColor, style = Stroke(1.2f * density, cap = StrokeCap.Round))
-                    // Line 2 — wavy
-                    val path2 = Path().apply {
-                        moveTo(20f, 16f * density)
-                        cubicTo(50f, 12f * density, 80f, 19f * density, 120f, 14f * density)
-                        cubicTo(145f, 11f * density, 155f, 17f * density, size.width - 30f, 13f * density)
+                }
+                // Page content
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFFFFEF0).copy(alpha = 0.2f),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 16.dp)
+                    ) {
+                        // Ruled line above title
+                        Canvas(modifier = Modifier.width(200.dp).height(2.dp)) {
+                            drawLine(Color(0xFF90CAF9).copy(alpha = 0.3f),
+                                Offset(0f, 1f), Offset(size.width, 1f), 1f * density)
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text("Best", style = MaterialTheme.typography.displayLarge.copy(
+                            fontWeight = FontWeight.Bold, fontSize = 48.sp, letterSpacing = 2.sp
+                        ), color = MaterialTheme.colorScheme.primary.copy(alpha = textAlpha.value))
+                        Text("Journal", style = MaterialTheme.typography.displayLarge.copy(
+                            fontWeight = FontWeight.Bold, fontSize = 48.sp, letterSpacing = 2.sp
+                        ), color = MaterialTheme.colorScheme.primary.copy(alpha = textAlpha.value))
+                        Spacer(Modifier.height(6.dp))
+                        // Ruled lines + scribbles
+                        Canvas(modifier = Modifier.width(200.dp).height(32.dp).graphicsLayer {
+                            alpha = textAlpha.value * 0.5f
+                        }) {
+                            val lineC = Color(0xFF90CAF9).copy(alpha = 0.3f)
+                            val scribC = Color.Gray
+                            // 3 ruled lines
+                            for (i in 0..2) {
+                                val ly = (i + 0.5f) * size.height / 3f
+                                drawLine(lineC, Offset(0f, ly), Offset(size.width, ly), 0.8f * density)
+                            }
+                            // Scribble handwriting
+                            val p1 = Path().apply {
+                                moveTo(8f, size.height * 0.2f)
+                                cubicTo(50f, size.height * 0.05f, 100f, size.height * 0.35f, size.width * 0.7f, size.height * 0.15f)
+                            }
+                            drawPath(p1, scribC, style = Stroke(1f * density, cap = StrokeCap.Round))
+                            val p2 = Path().apply {
+                                moveTo(12f, size.height * 0.55f)
+                                cubicTo(60f, size.height * 0.45f, 90f, size.height * 0.7f, size.width * 0.6f, size.height * 0.5f)
+                            }
+                            drawPath(p2, scribC, style = Stroke(1f * density, cap = StrokeCap.Round))
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        // Pen emoji
+                        Text("\uD83D\uDD8A\uFE0F", fontSize = 18.sp, modifier = Modifier.graphicsLayer {
+                            alpha = textAlpha.value * 0.6f
+                        })
                     }
-                    drawPath(path2, scribbleColor, style = Stroke(1.2f * density, cap = StrokeCap.Round))
                 }
             }
-            } // inner Surface
         }
 
         // --- Smiley 1: "Geniale Erkenntnisse" — bottom-left, from left ---
@@ -388,12 +410,12 @@ fun SplashScreen(
             Text("\uD83E\uDDD1\u200D\uD83D\uDCBB", fontSize = 36.sp) // Technologist
         }
 
-        // --- Smiley 3: "Zusammenfassungen mit KI" — top-left, from left ---
+        // --- Smiley 3: "KI-Zusammenfassung" — top-left, from left ---
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = 12.dp, y = 50.dp)
+                .offset(x = 12.dp, y = 90.dp)
                 .graphicsLayer {
                     alpha = elem3Alpha.value
                     translationX = elem3OffsetX.value * density
@@ -401,9 +423,9 @@ fun SplashScreen(
                     scaleY = elem3Scale.value
                 }
         ) {
-            Text("\uD83E\uDDE0", fontSize = 34.sp) // Brain
+            Text("\u269B\uFE0F", fontSize = 34.sp) // Atom symbol — unique KI symbol
             Spacer(Modifier.width(6.dp))
-            SpeechBubble("Zusammenfassungen\nmit KI")
+            SpeechBubble("KI-\nZusammenfassung")
         }
 
         // --- Smiley 4: "Tiefe Tagebuchanalyse" — top-right, from right ---
@@ -411,7 +433,7 @@ fun SplashScreen(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .offset(x = (-12).dp, y = 110.dp)
+                .offset(x = (-12).dp, y = 155.dp)
                 .graphicsLayer {
                     alpha = elem4Alpha.value
                     translationX = elem4OffsetX.value * density
@@ -421,7 +443,7 @@ fun SplashScreen(
         ) {
             SpeechBubble("Tiefe\nTagebuchanalyse")
             Spacer(Modifier.width(6.dp))
-            Text("\uD83D\uDD2E", fontSize = 34.sp) // Crystal ball
+            Text("\uD83C\uDF00", fontSize = 34.sp) // Cyclone — deep analysis spiral
         }
 
         // --- Start button — bottom center ---
@@ -440,7 +462,7 @@ fun SplashScreen(
                 .border(2.dp, Color.Black, RoundedCornerShape(14.dp)),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)
+                containerColor = MaterialTheme.colorScheme.primaryContainer
             ),
             elevation = ButtonDefaults.buttonElevation(
                 defaultElevation = 8.dp,
@@ -454,7 +476,7 @@ fun SplashScreen(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 ),
-                color = MaterialTheme.colorScheme.onPrimary
+                color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
     }
