@@ -5,23 +5,30 @@
 
 $ErrorActionPreference = "SilentlyContinue"
 $violations = @()
-$autoFixed = @()
 
 # --- Invariant 1: Stale OFFEN-Eintraege (>7 Tage) ---
 $whiteboardPath = Join-Path $env:USERPROFILE "proggs\.claude\agent-memory\shared\MEMORY.md"
+$content = $null
 if (Test-Path $whiteboardPath) {
     $content = Get-Content $whiteboardPath -Raw -Encoding UTF8
-    $pattern = '### (\d{4}-\d{2}-\d{2}).*?Status:\s*OFFEN'
-    $matches = [regex]::Matches($content, $pattern)
+    # BUG FIX 2026-03-31: Datum und Status stehen auf VERSCHIEDENEN Zeilen.
+    # Alte Regex konnte nie matchen (. matched keine Zeilenumbrueche).
+    # Neuer Ansatz: Splitte nach ### Eintraegen, pruefe jeden Block einzeln.
     $today = Get-Date
     $staleCount = 0
-    foreach ($m in $matches) {
-        try {
-            $dateStr = $m.Groups[1].Value
-            $entryDate = [DateTime]::ParseExact($dateStr, "yyyy-MM-dd", $null)
-            $age = ($today - $entryDate).Days
-            if ($age -gt 7) { $staleCount++ }
-        } catch {}
+    # (?m) = multiline: ^ matches line starts, not just string start
+    $blocks = $content -split '(?m)(?=^### \d{4}-\d{2}-\d{2})' | Where-Object { $_ -match '### \d{4}-\d{2}-\d{2}' }
+    foreach ($block in $blocks) {
+        # Pattern must match Markdown format: **Status:** OFFEN (but NOT DESIGN-OFFEN)
+        if ($block -match 'Status:\*\*\s+OFFEN\b') {
+            if ($block -match '^### (\d{4}-\d{2}-\d{2})') {
+                try {
+                    $entryDate = [DateTime]::ParseExact($Matches[1], "yyyy-MM-dd", $null)
+                    $age = ($today - $entryDate).Days
+                    if ($age -gt 7) { $staleCount++ }
+                } catch {}
+            }
+        }
     }
     if ($staleCount -gt 0) {
         $violations += "WHITEBOARD: $staleCount OFFEN-Eintraege aelter als 7 Tage — /self-improve starten!"
@@ -90,10 +97,6 @@ if ($violations.Count -gt 0) {
     }
 } else {
     Write-Host "Invariant-Check: Alle Pruefungen bestanden."
-}
-
-if ($autoFixed.Count -gt 0) {
-    Write-Host "  Auto-repariert: $($autoFixed -join ', ')"
 }
 
 exit 0

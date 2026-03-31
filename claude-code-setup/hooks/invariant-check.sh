@@ -7,22 +7,26 @@ set +e
 violations=()
 
 # --- Invariant 1: Stale OFFEN-Eintraege (>7 Tage) ---
+# BUG FIX 2026-03-31: Datum und Status stehen auf VERSCHIEDENEN Zeilen.
+# Alter grep-Ansatz fand Status-Zeile, aber KEIN Datum auf dieser Zeile.
+# Neuer Ansatz: grep -B20 holt Kontext VOR der Status-Zeile, dann Datum extrahieren.
 WHITEBOARD="$HOME/proggs/.claude/agent-memory/shared/MEMORY.md"
 if [ -f "$WHITEBOARD" ]; then
     today_epoch=$(date +%s)
     stale_count=0
-    while IFS= read -r line; do
-        date_str=$(echo "$line" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
+    # BUG FIX #5 (2026-03-31): Pattern must match Markdown **Status:** OFFEN
+    # but NOT **Status:** DESIGN-OFFEN. Use literal "Status:** OFFEN" for exact match.
+    # stale_count computed via subshell (pipe creates subshell, variable won't propagate)
+    stale_count=$(grep -B20 'Status:\*\* OFFEN' "$WHITEBOARD" 2>/dev/null | grep -E '^### [0-9]{4}-[0-9]{2}-[0-9]{2}' | while IFS= read -r header_line; do
+        date_str=$(echo "$header_line" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
         if [ -n "$date_str" ]; then
             entry_epoch=$(date -j -f "%Y-%m-%d" "$date_str" +%s 2>/dev/null || date -d "$date_str" +%s 2>/dev/null)
             if [ -n "$entry_epoch" ]; then
                 age=$(( (today_epoch - entry_epoch) / 86400 ))
-                if [ "$age" -gt 7 ]; then
-                    stale_count=$((stale_count + 1))
-                fi
+                if [ "$age" -gt 7 ]; then echo "stale"; fi
             fi
         fi
-    done < <(grep -i "Status: OFFEN" "$WHITEBOARD")
+    done | wc -l | tr -d ' ')
     if [ "$stale_count" -gt 0 ]; then
         violations+=("WHITEBOARD: $stale_count OFFEN-Eintraege aelter als 7 Tage — /self-improve starten!")
     fi

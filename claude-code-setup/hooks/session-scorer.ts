@@ -295,8 +295,11 @@ function analyzeTranscript(path: string): SessionMetrics {
 
 	// C2: IQ-Score — recalibrated to 0-100 additive scale (2026-03-31)
 	// Old formula was multiplicative (quality * efficiency * bonus) which caused 0-18 volatile scores.
-	// New formula: 5 weighted dimensions, each 0-20 points, totaling 0-100.
+	// New: 5 weighted dimensions: quality(0-40) + efficiency(0-20) + intelligence(0-30)
+	//   + self-observation(0-5) + meta-intelligence(0-5) = 0-100 total.
 	// Additive = more stable: one low dimension doesn't zero-out the entire score.
+	// NOTE: Old JSONL entries (before 2026-03-31) have iq_score 0-18. To compare
+	// across scales, multiply old values by 5.56 or filter by date.
 	const efficiency = Math.min(toolCalls / Math.max(totalTurns, 1), 1.0);
 	const qualityDim = (score / 10) * 40; // 0-40: core quality (most important)
 	const efficiencyDim = efficiency * 20; // 0-20: tool usage efficiency
