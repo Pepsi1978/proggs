@@ -3023,3 +3023,183 @@ Ueber die Zeit zeigt die Note ob das System wirklich intelligenter wird — oder
 | "Session-Trend zeigen" | Liest die letzten N Session-Scores und zeigt Trend |
 | (automatisch bei >5 Turns) | Stop-Hook injiziert kurze metacognitive Erinnerung |
 | (automatisch bei Session-Ende) | Session-Scorer schreibt Metriken in JSONL |
+
+---
+
+## [MIRROR-2026-03-31-MAC-001] launchd Heartbeat — Periodischer Gesundheits-Check
+<!-- SOURCE: claude-code | PLATFORM: macos | TIMESTAMP: 2026-03-31T23:00:00Z -->
+<!-- TARGETS: windows/claude-code -->
+<!-- APPLIED: PENDING -->
+<!-- TYPE: hook,env-fix -->
+
+### Was wurde gebaut?
+
+Ein **launchd-Agent** der alle 15 Minuten die Entwicklungsumgebung auf Gesundheit prueft —
+komplett unsichtbar, keine Popups, kein Nervfaktor. Meldet sich NUR bei kritischen Problemen
+per macOS-Benachrichtigung.
+
+### Neue Dateien (macOS-Version in `claude-code-setup/`)
+
+| Datei | Zweck | Windows-Gegenstueck noetig? |
+|-------|-------|----------------------------|
+| `hooks/heartbeat.sh` | 6 Checks: Disk, Config-JSON, Whiteboard, brew, claude-mem, Verzeichnisse | JA → `heartbeat.ps1` |
+| `launchd/com.frank.claude-heartbeat.plist` | macOS-Timer (alle 15 Min) | JA → Windows Task Scheduler |
+| `hooks/session-score.sh` | Session-Scoring bei Stop-Event | War schon als .ps1 vorhanden |
+| `hooks/invariant-check.sh` | Neue Invariante 6: Heartbeat-Status-Alter | `invariant-check.ps1` aktualisieren |
+
+### Windows-Portierungs-Anleitung
+
+#### 1. heartbeat.ps1 erstellen
+
+Das Skript prueft 6 Dinge und schreibt das Ergebnis nach `~/.claude/heartbeat-status.json`.
+**NUR bei KRITISCHEN Problemen** wird eine Windows-Toast-Benachrichtigung gezeigt.
+
+```powershell
+# heartbeat.ps1 — Periodic health check (Windows)
+# Wird von Windows Task Scheduler alle 15 Min gestartet
+
+$ErrorActionPreference = "Continue"
+
+$HeartbeatDir = Join-Path $env:USERPROFILE ".claude"
+$StatusFile = Join-Path $HeartbeatDir "heartbeat-status.json"
+$LogDir = Join-Path $HeartbeatDir "logs" "heartbeat"
+$ProgsDir = Join-Path $env:USERPROFILE "proggs"
+
+# Sicherstellen dass Log-Verzeichnis existiert
+New-Item -ItemType Directory -Path $LogDir -Force -ErrorAction SilentlyContinue | Out-Null
+
+$checks = @{}
+$overall = "OK"
+
+# Check 1: Disk Space
+try {
+    $disk = Get-PSDrive C
+    $pct = [math]::Round(($disk.Used / ($disk.Used + $disk.Free)) * 100)
+    $freeGB = [math]::Round($disk.Free / 1GB, 1)
+    if ($pct -ge 95) {
+        $checks["disk_space"] = @{status="CRITICAL"; detail="${pct}% used, ${freeGB}GB free"}
+        $overall = "CRITICAL"
+        # Windows Toast Notification
+        [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null
+        [System.Windows.Forms.MessageBox]::Show("Speicherplatz KRITISCH: ${pct}%", "Claude Heartbeat") | Out-Null
+    } elseif ($pct -ge 90) {
+        $checks["disk_space"] = @{status="WARNING"; detail="${pct}% used, ${freeGB}GB free"}
+        if ($overall -ne "CRITICAL") { $overall = "WARNING" }
+    } else {
+        $checks["disk_space"] = @{status="OK"; detail="${pct}% used"}
+    }
+} catch { $checks["disk_space"] = @{status="UNKNOWN"; detail="Could not read disk"} }
+
+# Check 2: Config Integrity (JSON-Validierung)
+$configOK = $true
+foreach ($cfg in @("settings.json", "settings.local.json")) {
+    $path = Join-Path $env:USERPROFILE ".claude" $cfg
+    if (Test-Path $path) {
+        try { Get-Content $path -Raw | ConvertFrom-Json | Out-Null }
+        catch { $configOK = $false; $overall = "CRITICAL" }
+    }
+}
+$mcpPath = Join-Path $ProgsDir ".mcp.json"
+if (Test-Path $mcpPath) {
+    try { Get-Content $mcpPath -Raw | ConvertFrom-Json | Out-Null }
+    catch { $configOK = $false; $overall = "CRITICAL" }
+}
+$checks["config_integrity"] = if ($configOK) {
+    @{status="OK"; detail="All config files valid"}
+} else {
+    @{status="CRITICAL"; detail="One or more config files CORRUPT"}
+}
+
+# Check 3: Whiteboard
+$wb = Join-Path $ProgsDir ".claude" "agent-memory" "shared" "MEMORY.md"
+if (Test-Path $wb) {
+    $lines = (Get-Content $wb).Count
+    $checks["whiteboard"] = @{status="OK"; detail="$lines lines"}
+} else {
+    $checks["whiteboard"] = @{status="CRITICAL"; detail="MEMORY.md missing"}
+    $overall = "CRITICAL"
+}
+
+# Check 4: Key Directories
+$missing = 0
+foreach ($dir in @("$env:USERPROFILE\.claude\hooks", "$env:USERPROFILE\.claude\agents",
+                    "$env:USERPROFILE\.claude\rules", "$ProgsDir\.claude\agent-memory\shared")) {
+    if (-not (Test-Path $dir)) { $missing++ }
+}
+$checks["key_directories"] = if ($missing -eq 0) {
+    @{status="OK"; detail="All key directories exist"}
+} else {
+    @{status="WARNING"; detail="$missing directories missing"}
+}
+
+# Status-Datei schreiben (atomar: temp → rename)
+$timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+$statusObj = @{ timestamp=$timestamp; status=$overall; checks=$checks }
+$tmpFile = "$StatusFile.tmp"
+$statusObj | ConvertTo-Json -Depth 3 | Out-File -FilePath $tmpFile -Encoding utf8
+Move-Item -Path $tmpFile -Destination $StatusFile -Force
+
+# Log-Rotation: Dateien aelter als 14 Tage loeschen
+Get-ChildItem $LogDir -Filter "*.log" -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-14) } |
+    Remove-Item -ErrorAction SilentlyContinue
+```
+
+#### 2. Windows Task Scheduler einrichten
+
+```powershell
+# Task Scheduler: Heartbeat alle 15 Minuten
+$action = New-ScheduledTaskAction -Execute "pwsh" -Argument "-NoProfile -File `"$env:USERPROFILE\.claude\hooks\heartbeat.ps1`""
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration (New-TimeSpan -Days 365)
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -Priority 7
+Register-ScheduledTask -TaskName "Claude-Heartbeat" -Action $action -Trigger $trigger -Settings $settings -Description "Periodic health check for Claude Code dev environment"
+```
+
+#### 3. invariant-check.ps1 aktualisieren
+
+Neue Invariante 6 hinzufuegen — Heartbeat-Status und ALTER pruefen:
+```powershell
+# --- Invariant 6: Heartbeat-Status ---
+$hbFile = Join-Path $env:USERPROFILE ".claude" "heartbeat-status.json"
+if (Test-Path $hbFile) {
+    $hb = Get-Content $hbFile -Raw | ConvertFrom-Json
+    # Alter pruefen (>30 Min = stale)
+    $hbAge = ((Get-Date).ToUniversalTime() - [datetime]::Parse($hb.timestamp)).TotalMinutes
+    if ($hbAge -gt 30) {
+        $violations += "HEARTBEAT: Letzter Check vor $([math]::Round($hbAge)) Minuten — Task Scheduler pruefen!"
+    }
+    if ($hb.status -eq "CRITICAL") {
+        $violations += "HEARTBEAT ($($hb.timestamp)): KRITISCHE Probleme zwischen Sessions!"
+        foreach ($check in $hb.checks.PSObject.Properties) {
+            if ($check.Value.status -eq "CRITICAL") {
+                $violations += "  $($check.Name): $($check.Value.detail)"
+            }
+        }
+    } elseif ($hb.status -eq "WARNING") {
+        $warns = ($hb.checks.PSObject.Properties | Where-Object { $_.Value.status -eq "WARNING" } |
+                  ForEach-Object { "$($_.Name): $($_.Value.detail)" }) -join "; "
+        $violations += "HEARTBEAT ($($hb.timestamp)): Warnungen: $warns"
+    }
+}
+```
+
+### Unterschiede macOS vs Windows
+
+| Aspekt | macOS | Windows |
+|--------|-------|---------|
+| Timer | `launchd` (StartInterval: 900) | Task Scheduler (RepetitionInterval: 15 Min) |
+| Benachrichtigung | `osascript` → Notification Center | `System.Windows.Forms.MessageBox` oder BurntToast |
+| Brew-Check | `brew outdated` (mit HOMEBREW_NO_AUTO_UPDATE=1) | NICHT vorhanden — Windows hat kein Homebrew |
+| Python-Check | `$PYTHON3 -c "import json; ..."` | `ConvertFrom-Json` (PowerShell-nativ, kein Python noetig) |
+| Pfade | `/Users/frank/.claude/` | `$env:USERPROFILE\.claude\` |
+| claude-mem Worker | `launchctl list | grep claude-mem` | NICHT vorhanden auf Windows (claude-mem ist macOS-only) |
+
+### Robustheit (was beim Portieren beachtet werden MUSS)
+
+1. **Script MUSS immer exit 0 / keine Exception** — darf nie den Task Scheduler blockieren
+2. **Atomares Schreiben** — temp → rename, nie direkt in heartbeat-status.json schreiben
+3. **JSON-Validierung** — ConvertFrom-Json in try/catch, nie annehmen dass JSON valide ist
+4. **Kein brew auf Windows** — den brew-Check weglassen, stattdessen ggf. `winget` oder `choco`
+5. **Kein claude-mem auf Windows** — den Worker-Check weglassen
+6. **Toast statt Popup** — `System.Windows.Forms.MessageBox` ist modal (blockiert!) → besser BurntToast-Modul verwenden wenn installiert, Fallback auf MessageBox
+7. **UTF-8** — `Out-File -Encoding utf8` ist PFLICHT (Windows Default ist cp1252!)

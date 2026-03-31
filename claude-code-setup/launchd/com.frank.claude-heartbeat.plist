@@ -6,11 +6,13 @@
     <key>Label</key>
     <string>com.frank.claude-heartbeat</string>
 
-    <!-- Program: the health check script -->
+    <!-- Program: wrapper ensures log directory exists before heartbeat runs -->
+    <!-- FIX 2026-03-31: Bug #7 — mkdir before script, so launchd can write stdout/stderr -->
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/frank/.claude/hooks/heartbeat.sh</string>
+        <string>-c</string>
+        <string>mkdir -p /Users/frank/.claude/logs/heartbeat &amp;&amp; exec /bin/bash /Users/frank/.claude/hooks/heartbeat.sh</string>
     </array>
 
     <!-- Run every 900 seconds (15 minutes) -->

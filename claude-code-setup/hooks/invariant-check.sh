@@ -89,6 +89,18 @@ HEARTBEAT_STATUS="$HOME/.claude/heartbeat-status.json"
 if [ -f "$HEARTBEAT_STATUS" ]; then
     hb_status=$(python3 -c "import json; d=json.load(open('$HEARTBEAT_STATUS')); print(d.get('status','UNKNOWN'))" 2>/dev/null)
     hb_time=$(python3 -c "import json; d=json.load(open('$HEARTBEAT_STATUS')); print(d.get('timestamp','?'))" 2>/dev/null)
+
+    # FIX 2026-03-31: Bug #4 — Check heartbeat status AGE.
+    # If heartbeat hasn't run in >30 min, the status is stale and untrustworthy.
+    if [ -n "$hb_time" ] && [ "$hb_time" != "?" ]; then
+        hb_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$hb_time" +%s 2>/dev/null || echo "")
+        if [ -n "$hb_epoch" ]; then
+            hb_age_min=$(( ($(date +%s) - hb_epoch) / 60 ))
+            if [ "$hb_age_min" -gt 30 ]; then
+                violations+=("HEARTBEAT: Letzter Check vor ${hb_age_min} Minuten — launchd Agent laueft moeglicherweise nicht! Pruefen: launchctl list | grep claude-heartbeat")
+            fi
+        fi
+    fi
     if [ "$hb_status" = "CRITICAL" ]; then
         # Extract critical check details
         hb_details=$(python3 -c "

@@ -34,8 +34,9 @@ else
 fi
 
 # 3. Check if any fix commits (fixing bugs is good work)
+# FIX 2026-03-31: Bug #5 — separate --grep flags instead of \| (not portable in basic regex)
 if [ -n "$since" ] && [ -d "$REPO_DIR/.git" ]; then
-    fix_commits=$(cd "$REPO_DIR" && git log --oneline --since="$since" --grep="fix\|bug\|hotfix" -i 2>/dev/null | wc -l | tr -d ' ')
+    fix_commits=$(cd "$REPO_DIR" && git log --oneline --since="$since" --grep="fix" --grep="bug" --grep="hotfix" -i 2>/dev/null | wc -l | tr -d ' ')
 fi
 if [ "$fix_commits" -gt 0 ] 2>/dev/null; then
     score=$((score + 1))
@@ -55,6 +56,10 @@ if [ "$score" -gt 10 ]; then score=10; fi
 # Build JSON line and append to JSONL file
 current_date=$(date '+%Y-%m-%d')
 current_time=$(date '+%H:%M:%S')
+# FIX 2026-03-31: Bug #6 — Sanitize disk_free (remove quotes/backslashes that could break JSON)
+disk_free=$(echo "$disk_free" | tr -d '"\\\n')
+# Ensure numeric values are never empty (JSON requires valid numbers)
+: "${commits:=0}" "${fix_commits:=0}" "${score:=5}"
 entry="{\"date\":\"$current_date\",\"time\":\"$current_time\",\"score\":$score,\"commits\":$commits,\"fix_commits\":$fix_commits,\"disk_free\":\"$disk_free\"}"
 
 echo "$entry" >> "$SCORE_FILE" 2>/dev/null

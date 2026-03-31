@@ -25,6 +25,19 @@
 set +e  # Never exit on error
 
 # ─────────────────────────────────────────────────────────────────────
+# PATH: launchd has minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin).
+# We must ensure python3 and brew are findable.
+# FIX 2026-03-31: Explicit PATH for launchd compatibility (Bug #1)
+# ─────────────────────────────────────────────────────────────────────
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+
+# Resolve python3 — prefer system python3 (always available via Xcode CLT)
+PYTHON3="/usr/bin/python3"
+if [ ! -x "$PYTHON3" ]; then
+    PYTHON3=$(command -v python3 2>/dev/null || echo "")
+fi
+
+# ─────────────────────────────────────────────────────────────────────
 # Configuration
 # ─────────────────────────────────────────────────────────────────────
 HEARTBEAT_DIR="$HOME/.claude"
@@ -94,7 +107,7 @@ check_config_integrity() {
 
     # Check settings.json
     if [ -f "$SETTINGS_JSON" ]; then
-        if ! python3 -c "import json; json.load(open('$SETTINGS_JSON'))" 2>/dev/null; then
+        if ! $PYTHON3 -c "import json; json.load(open('$SETTINGS_JSON'))" 2>/dev/null; then
             issues=$((issues + 1))
             details="${details}settings.json CORRUPT; "
             notify_critical "settings.json ist beschaedigt! Claude Code funktioniert nicht korrekt."
@@ -106,7 +119,7 @@ check_config_integrity() {
 
     # Check settings.local.json
     if [ -f "$SETTINGS_LOCAL" ]; then
-        if ! python3 -c "import json; json.load(open('$SETTINGS_LOCAL'))" 2>/dev/null; then
+        if ! $PYTHON3 -c "import json; json.load(open('$SETTINGS_LOCAL'))" 2>/dev/null; then
             issues=$((issues + 1))
             details="${details}settings.local.json CORRUPT; "
             notify_critical "settings.local.json ist beschaedigt!"
@@ -115,7 +128,7 @@ check_config_integrity() {
 
     # Check .mcp.json
     if [ -f "$MCP_JSON" ]; then
-        if ! python3 -c "import json; json.load(open('$MCP_JSON'))" 2>/dev/null; then
+        if ! $PYTHON3 -c "import json; json.load(open('$MCP_JSON'))" 2>/dev/null; then
             issues=$((issues + 1))
             details="${details}.mcp.json CORRUPT; "
             notify_critical ".mcp.json ist beschaedigt! MCP-Server starten nicht."
@@ -143,13 +156,18 @@ check_whiteboard() {
 }
 
 check_brew_outdated() {
-    if ! command -v /opt/homebrew/bin/brew &>/dev/null; then
+    if [ ! -x /opt/homebrew/bin/brew ]; then
         echo '"brew_outdated": {"status": "UNKNOWN", "detail": "Homebrew not found"}'
         return
     fi
 
+    # FIX 2026-03-31: Bug #2+#3 — disable auto-update and add 30s timeout
+    # brew outdated can trigger brew update (30+ seconds, needs network).
+    # HOMEBREW_NO_AUTO_UPDATE prevents that. timeout kills if stuck.
     local count
-    count=$(/opt/homebrew/bin/brew outdated --quiet 2>/dev/null | wc -l | tr -d ' ')
+    count=$(HOMEBREW_NO_AUTO_UPDATE=1 timeout 30 /opt/homebrew/bin/brew outdated --quiet 2>/dev/null | wc -l | tr -d ' ')
+    # If timeout killed it, count will be empty or 0
+    if [ -z "$count" ]; then count=0; fi
 
     if [ "$count" -ge "$BREW_OUTDATED_WARNING" ]; then
         echo "\"brew_outdated\": {\"status\": \"WARNING\", \"detail\": \"${count} packages outdated\"}"
@@ -233,7 +251,7 @@ if [ -n "$TMP_STATUS" ]; then
 ENDJSON
 
     # Validate the JSON we just wrote before replacing the status file
-    if python3 -c "import json; json.load(open('$TMP_STATUS'))" 2>/dev/null; then
+    if $PYTHON3 -c "import json; json.load(open('$TMP_STATUS'))" 2>/dev/null; then
         mv "$TMP_STATUS" "$STATUS_FILE" 2>/dev/null
     else
         log "ERROR: Generated status JSON is invalid — keeping old status file"
