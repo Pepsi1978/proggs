@@ -44,13 +44,9 @@ $goal = "unknown"
 if (Test-Path $GoalFile) {
     try {
         $goalRaw = (Get-Content $GoalFile -Raw).Trim()
-        # Truncate to 100 chars for JSON safety
+        # Truncate to 100 chars, remove newlines — Python handles JSON escaping
         $goal = $goalRaw.Substring(0, [Math]::Min(100, $goalRaw.Length))
-        # Escape quotes for JSON
-        $goal = $goal -replace '"', '\"'
-        $goal = $goal -replace '\\', '\\\\'
-        $goal = $goal -replace "`n", ' '
-        $goal = $goal -replace "`r", ''
+        $goal = $goal -replace '[\r\n]+', ' '
     } catch { $goal = "unknown" }
 }
 
@@ -92,19 +88,55 @@ if (Test-Path $GoalFile) {
     } catch { $durationMin = 0 }
 }
 
-# 6. Build the JSON line
-$timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ"
-$jsonLine = @"
-{"date":"$timestamp","turns":$turns,"hook_errors":$hookErrors,"commits":$commitCount,"duration_min":$durationMin,"goal":"$goal"}
-"@
+# 6. Build and append JSON line via Python (guarantees correct escaping)
+# Find Python: try python3, python, then full Windows path
+$pythonCmd = $null
+foreach ($candidate in @("python3", "python", "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe", "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe")) {
+    try {
+        $null = & $candidate --version 2>$null
+        if ($LASTEXITCODE -eq 0) { $pythonCmd = $candidate; break }
+    } catch { }
+}
 
-# 7. Append to scores file (atomic: write to temp, then append)
-try {
-    Add-Content -Path $ScoresFile -Value $jsonLine -Encoding UTF8 -NoNewline
-    Add-Content -Path $ScoresFile -Value "" -Encoding UTF8  # newline
-    Hook-Log "Session score written: turns=$turns errors=$hookErrors commits=$commitCount"
-} catch {
-    Hook-LogError "Failed to write session score: $_"
+$timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ"
+
+if ($pythonCmd) {
+    try {
+        # Python reads goal file DIRECTLY — no PowerShell string processing
+        & $pythonCmd -c @"
+import json, os, pathlib
+goal_path = os.path.join(os.environ.get('TEMP', '/tmp'), 'claude-session-goal.txt')
+goal = 'unknown'
+if os.path.exists(goal_path):
+    raw = pathlib.Path(goal_path).read_text(encoding='utf-8', errors='replace').strip()
+    goal = raw[:100].replace('\n', ' ').replace('\r', '')
+data = {
+    'date': '$timestamp',
+    'turns': $turns,
+    'hook_errors': $hookErrors,
+    'commits': $commitCount,
+    'duration_min': $durationMin,
+    'goal': goal
+}
+scores = r'$ScoresFile'
+line = json.dumps(data, ensure_ascii=False)
+with open(scores, 'a', encoding='utf-8') as f:
+    f.write(line + '\n')
+"@
+        Hook-Log "Session score written: turns=$turns errors=$hookErrors commits=$commitCount"
+    } catch {
+        Hook-LogError "Failed to write session score via Python: $_"
+    }
+} else {
+    # Fallback: PowerShell-only JSON (strips problematic chars)
+    $goalClean = $goal -replace '[\\"]', '_'
+    $jsonLine = "{`"date`":`"$timestamp`",`"turns`":$turns,`"hook_errors`":$hookErrors,`"commits`":$commitCount,`"duration_min`":$durationMin,`"goal`":`"$goalClean`"}"
+    try {
+        Add-Content -Path $ScoresFile -Value $jsonLine -Encoding UTF8
+        Hook-Log "Session score written (PS fallback): turns=$turns"
+    } catch {
+        Hook-LogError "Failed to write session score: $_"
+    }
 }
 
 exit 0

@@ -20,6 +20,10 @@ turns=0
 if [ -f "$COUNTER_FILE" ]; then
     turns=$(cat "$COUNTER_FILE" 2>/dev/null | tr -d '[:space:]')
     turns=${turns:-0}
+    # Validate: must be numeric, otherwise reset to 0
+    case "$turns" in
+        ''|*[!0-9]*) turns=0 ;;
+    esac
 fi
 
 # Skip trivial sessions
@@ -31,7 +35,7 @@ fi
 GOAL_FILE="${TMPDIR:-/tmp}/claude-session-goal.txt"
 goal="unknown"
 if [ -f "$GOAL_FILE" ]; then
-    goal=$(head -c 100 "$GOAL_FILE" 2>/dev/null | tr '"' "'" | tr '\n' ' ' | tr '\r' '')
+    goal=$(head -c 100 "$GOAL_FILE" 2>/dev/null | tr '"' "'" | tr '\n\r' '  ' | sed 's/\\/\\\\/g')
     goal=${goal:-unknown}
 fi
 

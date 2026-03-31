@@ -18,6 +18,10 @@ turn=0
 if [ -f "$COUNTER_FILE" ]; then
     turn=$(cat "$COUNTER_FILE" 2>/dev/null | tr -d '[:space:]')
     turn=${turn:-0}
+    # Validate: must be numeric, otherwise reset to 0
+    case "$turn" in
+        ''|*[!0-9]*) turn=0 ;;
+    esac
 fi
 
 # Skip for trivial sessions (<5 turns)
