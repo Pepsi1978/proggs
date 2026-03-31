@@ -63,9 +63,9 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Symptom:** Bei echtem Widerspruch zwischen Tester-Assertions und Coder-Implementierung keine harte Terminierungsgrenze
 **Ursache:** Terminierung nur sprachlich vereinbart (max 3 Runden) — bei 60 maxTurns im coder-Agent kein technischer Stop
 **Betroffene Dateien:** Noch nicht implementiert — Designentscheidung vor Implementierung noetig
-**Reproduktion:** Debate-Loop mit absichtlich widerspruechlichen Test-Anforderungen starten
-**Fix-Vorschlag:** Runden-Zaehler als Datei /tmp/debate-round-N.json implementieren. Nach Runde 3 zwingend Konsens-Dokument schreiben ODER eskalieren — keine weitere Iteration moeglich (technisch erzwungen, nicht nur prompt-gesteuert).
-**Status:** OFFEN
+**Fix-Vorschlag:** Runden-Zaehler als Datei /tmp/debate-round-N.json implementieren. Nach Runde 3 zwingend Konsens-Dokument schreiben ODER eskalieren.
+**Status:** DESIGN-OFFEN (kein aktiver Bug — Feature noch nicht implementiert, Risiko nur theoretisch)
+**Bewertung (2026-03-31):** Niedrige Prioritaet — Debate-Loop ist ein geplantes Feature, kein aktiver Code. Wird relevant wenn Stronger-MAS implementiert wird.
 
 
 <!-- ARCHIV (2026-03-21): safety-gate.ps1 Blockierungen (6x) und Write-Back-Warnungen (2x) — erwartetes Verhalten, kein Fehler. -->
@@ -73,70 +73,34 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 
 <!-- ARCHIV (2026-03-25, /self-improve Cleanup): StopFailure API/Rate-Limit Errors (2026-03-21 + 2026-03-24) — temporaere API-Fehler, einmalig, kein dauerhaftes Problem. safety-gate.sh duplizierte Blockierung (2x 2026-03-21) — erwartetes Verhalten, kein Fehler. Write-Back nicht erfolgt (2026-03-22 + 2026-03-25) — Einmalige Events, memory-watchdog loggt korrekt, kein systemisches Problem. -->
 
-### 2026-03-25 20:40 — StopFailure: API/Rate-Limit Error — Status: OFFEN
-**Quelle:** Hook: StopFailure (command-type, no API dependency)
-**Symptom:** Session-Turn endete durch API-Fehler
-**Details:** {"session_id":"417bedd7-16ef-4692-a390-6008722a12c5","transcript_path":"/Users/frank/.claude/projects/-Users-frank/417bedd7-16ef-4692-a390-6008722a12c5.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"unknown","last_assistant_message":"API Error: 429 {\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"you (barwandt) have reached your session usage limit, upgrade for higher limits: https://ollama.com/upgrade\"},\"request_id\":\"req_481a6e25000bb68... (truncated)
-**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
-**Status:** OFFEN
-
-### 2026-03-25 20:43 — StopFailure: API/Rate-Limit Error — Status: OFFEN
-**Quelle:** Hook: StopFailure (command-type, no API dependency)
-**Symptom:** Session-Turn endete durch API-Fehler
-**Details:** {"session_id":"417bedd7-16ef-4692-a390-6008722a12c5","transcript_path":"/Users/frank/.claude/projects/-Users-frank/417bedd7-16ef-4692-a390-6008722a12c5.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"unknown","last_assistant_message":"API Error: 429 {\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"you (barwandt) have reached your session usage limit, upgrade for higher limits: https://ollama.com/upgrade\"},\"request_id\":\"req_29ea21d6de45387... (truncated)
-**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
-**Status:** OFFEN
-
-### 2026-03-25 20:46 — StopFailure: API/Rate-Limit Error — Status: OFFEN
-**Quelle:** Hook: StopFailure (command-type, no API dependency)
-**Symptom:** Session-Turn endete durch API-Fehler
-**Details:** {"session_id":"417bedd7-16ef-4692-a390-6008722a12c5","transcript_path":"/Users/frank/.claude/projects/-Users-frank/417bedd7-16ef-4692-a390-6008722a12c5.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"unknown","last_assistant_message":"API Error: 429 {\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"you (barwandt) have reached your session usage limit, upgrade for higher limits: https://ollama.com/upgrade\"},\"request_id\":\"req_056c5419f6bca04... (truncated)
-**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
-**Status:** OFFEN
-### [2026-03-25 21:30] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### [2026-03-25 22:20] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-03-27 18:29 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 95%
-### 2026-03-28 16:51 — Hook: session-guard.ps1 — Auto-Reparatur: Projekt C--Users-barwa--claude-double-shot-latte settings.local.json erstellt; Projekt C--Users-barwa--claude-mem-observer-sessions settings.local.json erstellt — Status: AUTO-GEFIXT
-### 2026-03-28 19:03 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-03-28 20:09 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-03-28 21:02 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-03-28 21:11 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-03-28 21:24 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-03-28 21:29 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-03-28 21:41 — StopFailure: API/Rate-Limit Error — Status: OFFEN
-### 2026-03-29 21:23 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+<!-- ARCHIV (2026-03-31, /self-improve Focus:Resilienz): 4x StopFailure Rate-Limit (Ollama 429, macOS, Sessions 417bedd7 + 2026-03-28) — temporaere API-Session-Limits, kein dauerhaftes Problem. 8x Write-Back nicht erfolgt (memory-watchdog 2026-03-25 bis 2026-03-29) — Informativ, Agents loggen korrekt. disk-guard 95% (2026-03-27) — aktuell 83%, nicht mehr kritisch. session-guard Auto-Reparatur (2026-03-28) — korrekt AUTO-GEFIXT. -->
 ---
 
 ## Systemzustand (aktuell)
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
 
-**Stand:** 2026-03-25 (aktualisiert durch /self-improve Thorough-Lauf)
+**Stand:** 2026-03-31 (aktualisiert durch /self-improve Focus:Resilienz)
 
-- **Plattform:** Windows 11 Home 10.0.26200 (x64) + macOS (Apple Silicon), Claude Code v2.1.81, Opus 4.6 (1M context)
+- **Plattform:** Windows 11 Home 10.0.26200 (x64) + macOS (Apple Silicon), Claude Code v2.1.88, Opus 4.6 (1M context)
 - **Sprachen:** Swift, C#, TypeScript, Rust (1.94.0), Go (1.26.1), Kotlin (2.3.20), Java (OpenJDK 21.0.10)
-- **Node.js:** v24.14.0, npm 11.11.1, Bun 1.3.10, Deno 2.7.5
+- **Node.js:** v24.14.0, npm 11.12.0, Bun 1.3.11, Deno FEHLT auf Windows (PATH-Verlust)
+- **TypeScript:** tsc NICHT global installiert (npm i -g typescript fehlt)
 - **Semantic Search:** Aktiv (wird bei jeder Session automatisch aktualisiert via reindex-Hook)
 - **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
-- **Agents:** 15 aktiv, alle korrekt konfiguriert (code-reviewer hat memory:project, coder hat isolation:worktree)
-- **Hooks:** 22 Hook-Events in settings.json, 19 .ps1 Hook-Dateien + prompt-injection-defender (Python) + 2 .ts Hooks — alle in settings.json angebunden
-- **Plugins:** 91 Eintraege, 88 aktiv (3 deaktiviert: zeroize-audit, fp-check, xclaude-plugin)
-- **Whiteboard-Anbindung:** Alle Hooks nutzen whiteboard-insert.ps1/.sh (sektionsbasiert) — echo/append ans Dateiende eliminiert
-- **Session-Scorer:** v3 — schreibt NUR in session-scores.jsonl, nutzt pwsh (Fix #703 vom 2026-03-24)
-- **Session-Autopsy:** v2 — nutzt pwsh (Fix #703 vom 2026-03-24)
-- **Hook-Log:** Register-EngineEvent stdout unterdrueckt (Fix #703 vom 2026-03-24)
-- **Auto-Sync:** Mit Diff-Preview und Newer-Hooks-Guard (Fix #704 + #706 vom 2026-03-24)
-- **Preferred Patterns:** MVVM (Swift), Fluent Design (C#), strict mode (TypeScript)
-- **Self-Improve Skill:** v5.19 — Restructured: bash scripts extracted, mode comparison table, workspace constraints, consolidated rules
-- **Semantic Search:** index-72.db aktiv, 5 alte DBs + 10 WAL/SHM bereinigt (2026-03-20)
+- **Agents:** 21 aktiv (15 Opus + 6 Sonnet), alle korrekt konfiguriert
+- **Hooks:** 9 SessionStart (inkl. NEU: invariant-check), 22+ Hook-Events gesamt, alle Script-Dateien vorhanden
+- **Plugins:** 91 Eintraege, 84 aktiv (7 deaktiviert)
+- **Whiteboard-Anbindung:** Alle Hooks nutzen whiteboard-insert.ps1/.sh (sektionsbasiert)
+- **Session-Scorer:** v3 — schreibt NUR in session-scores.jsonl
+- **Self-Improve Skill:** v5.19
 - **Git:** v2.53.0, Git Credential Manager aktiv
-- **Android (Windows):** SDK 34/35/36, 4 AVDs, ADB 1.0.41 — NDK FEHLT (blockiert native Cross-Compilation)
-- **Sicherheit:** Prompt-Injection-Defender aktiv, gitleaks und semgrep FEHLEN im PATH (Windows)
-- **Evolution-Analyst (2026-03-25):** 5-Session-Avg 8.28, Trend: PLATEAU. Meta-Intelligence-Rate 8% (KRITISCH, Schwellwert 20%). IQ-Score nie berechnet (immer 0).
-- **Cross-Tool:** Codex + Gemini Delta Bridges aktiv, 8 Intelligenz-Dimensionen im Whiteboard portiert
-- **Neue Hooks:** StopFailure (v2.1.78) — loggt API-Fehler/Rate-Limits ins Whiteboard
-- **Windows→macOS Porting (2026-03-25):** 6 Hook-Upgrades portiert (Semantic Search Check, config-guard PostToolUse, Enhanced PostToolUseFailure/SubagentStop/PostCompact, session-scorer 25s Timeout)
-- **Pending Admin Updates (17):** ada-url,biome,deno,freetype,git,gitleaks,golangci-lint,gradle,gradle-completion,harfbuzz,ktfmt,libmpc,libnghttp2,node,simdjson,svt-av1,uv,
+- **Android (Windows):** SDK 34/35/36, NDK 28.0.13004108 (GEFIXT seit letztem Check), ADB 1.0.41
+- **Sicherheit:** Prompt-Injection-Defender aktiv, gitleaks und semgrep FEHLEN im PATH (Windows), cargo-audit OK
+- **Evolution-Analyst (2026-03-31):** 5-Session-Avg 8.74, Trend: PLATEAU. IQ-Trend: 0→15.1 (STEIGEND). Meta-Intelligence 20% (Grenzwert).
+- **Neuer Hook (2026-03-31):** invariant-check.ps1/.sh — Proaktive System-Invarianten-Pruefung bei SessionStart (Cursor-Pattern)
+- **Speicherplatz:** 142.9 GB frei (83% belegt) — nicht mehr kritisch (war 95% am 2026-03-27)
+- **Kernproblem:** "Erkennungs-ohne-Heilung-Muster" — Fehler werden geloggt aber nicht automatisch geheilt. Invariant-Check-Hook ist erste Gegenmassnahme.
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -162,7 +126,7 @@ _Noch keine Eintraege._
 <!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
-- **[2026-03-31 12:52] Code-Suche Index:** 7 Dateien, 62 Chunks indexiert.
+- **[2026-03-31 12:57] Code-Suche Index:** ? Dateien, ? Chunks indexiert.
 ## UI/UX-Patterns
 <!-- Writer: ui-polisher Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
@@ -210,7 +174,20 @@ _Noch keine Eintraege._
   Praeventive Sandbox statt reaktiver Blockierung. Naechste Evolution des safety-gate als Defense-in-Depth Schicht 2.
 
 - **[2026-03-28 14:17] Cross-CLI Delta:** Codex(11), Gemini(5) neue Commits — Bruecke starten fuer Details.
+
+- **[2026-03-31] Invariant Sentinel Pattern (Cursor)** — Status: BESTAETIGT (2026-03-31) | Quelle: cursor.com/blog/security-agents | Empfehlung: JA sofort
+  Cursor prueft taeglich alle System-Invarianten gegen eine definierte Liste und meldet Abweichungen sofort. **UMGESETZT**: invariant-check.ps1/.sh Hook bei SessionStart — prueft 5 Invarianten (Stale-OFFEN, bypassPermissions, Hook-Paare, Systemzustand-Alter, CLAUDE.md-Sync).
+
+- **[2026-03-31] claudewatch AgentOps (blackwell-systems)** — Status: EVALUIERT | Quelle: github.com/blackwell-systems/claudewatch | Empfehlung: JA spaeter
+  Echtzeit-Erkennung von Error-Loops (3 aufeinanderfolgende Fehler) und Drift (8 Reads ohne Write). 29 MCP-Tools fuer mid-session Metriken. Wuerde memory-watchdog-Logik durch intelligentere Variante ersetzen.
+
+- **[2026-03-31] DebugBase MCP Server** — Status: EVALUIERT | Quelle: github.com/DebugBase/mcp-server | Empfehlung: JA spaeter
+  Kollektive Fehler-Wissensdatenbank: Bei neuem Fehler zuerst nachschlagen ob Loesung bereits bekannt. Schliesst die Luecke zwischen Erkennung und Heilung.
+
+- **[2026-03-31] Self-Healing Software Systems (arxiv 2504.20093)** — Status: EVALUIERT | Quelle: arxiv.org/abs/2504.20093
+  Biologisches 3-Schichten-Modell: Sensoren (Hooks=vorhanden) → KI-Kern (Claude=vorhanden) → Heilungs-Agenten (FEHLT). Liefert Architektur-Blaupause fuer den fehlenden "healer-agent".
 - **[2026-03-31 12:49] researcher**: AI Agent Memory/Reasoning/Meta-Learning 2025-2026: 4 Speichertypen (Episodic/Semantic/Procedural/Working) sind Industriestandard. Context Engineering (Anthropic-Term 2025) hat Prompt Engineering abgeloest — Schluessel ist just-in-time context loading und context rot Vermeidung. SICA-Paper (NeurIPS 2025): selbstverbessernder Coding-Agent von 17% auf 53% SWE-Bench. Hyperagents (Meta arXiv 2603.19461): rekursive Selbstmodifikation ueber Metacognition. Forest-of-Thought ist neuer Reasoning-Standard. Thinking-Optimal Scaling: laengeres Denken nicht immer besser. MemGPT/Letta: OS-Analogie fuer virtuelles Context-Management. Cross-session memory via structured note-taking + sub-agent architectures.
+- **[2026-03-31 12:58] researcher**: Self-Healing CI/CD: Pipeline-Doctor-Pattern (Intercept→Analyze→Repair) + LLM-as-a-Judge (8B SLM als Gatekeeper) + 3-Stufen-Maturity (Observer→Gatekeeper→Healer). AI Agent Self-Observation: Metacognitive Learning = metacognitive knowledge + planning + evaluation; LLMs koennen nur human-interpretable Konzepte introspizieren; OpenReview 2026: truly self-improving agents brauchen intrinsic metacognitive learning. Zero-Recurrence Bugs: RC_Detector (Heterogeneous Graph Learning fuer Bug-Commit RCA, arXiv 2505.01022); RCEGen (LLM-basiertes RCA, MDPI 2025); Schluessel: Pattern-Bibliothek aus historischen Bugs + semantische Code-Abhängigkeitsgraphen. Compound AI / Knowledge Flywheel: ICLR 2026 Workshop on Recursive Self-Improvement; Intelligence Flywheel Paper (techrxiv 2026); Karpathy AutoResearch: 700 Experimente in 2 Tagen, 11% Speedup; AlphaCode-Pattern Generate-and-Filter direkt auf quality-gate anwendbar; LLM-Cascades (98% Kostensenkung durch Confidence-Routing)
 ---
 
 ## Meta-Intelligenz & Selbstverbesserung
@@ -237,6 +214,15 @@ _Noch keine Eintraege._
 
 - **[2026-03-25] intelligence-checker**: [WARNING] Session 417bedd7 (47 Turns) hatte keinen Intelligenz-Vorschlag
 - **[2026-03-25] self-observation-checker**: [WARNING] Session 417bedd7 (47 Turns) zeigte keine Selbstbeobachtung
+
+- **[2026-03-31] Dritter Compound Effect — Von Stagnation zu proaktiver Fehlervermeidung:**
+  /self-improve Stufe 0: Evolution-Analyst identifiziert "Erkennungs-ohne-Heilung-Muster" →
+  Stufe 2: R8 findet Cursor Invariant Sentinel Pattern als Loesung →
+  Stufe 3: invariant-check.ps1/.sh gebaut und registriert (5 Invarianten) →
+  14 stale OFFEN/AUTO-LOGGED-Eintraege archiviert → Systemzustand aktualisiert →
+  **Ergebnis:** Zukuenftige stale Issues werden PROAKTIV bei jedem SessionStart gemeldet statt
+  tagelang unbemerkt zu bleiben. Die Fehlerklasse "vergessene offene Probleme" ist eliminiert.
+  **Kette:** Stagnation bemerkt → Forschung → Muster gefunden → Implementiert → Fehlerklasse eliminiert.
 ---
 
 ## Regeln & Konventionen
@@ -286,3 +272,4 @@ zurueckgemeldet. Mehrere Vorschlaege pro Session sind ausdruecklich erwuenscht (
 - Forschungs-Status in "Forschung & Intelligence": UMZUSETZEN | EVALUIERT | VERWORFEN | BESTAETIGT (nicht OFFEN)
 - **Compound Effect Dokumentation (PFLICHT)**: Wenn eine Verbesserung aus Selbstbeobachtung heraus entsteht (Fehler bemerkt → Vorschlag → Fix → Fehlerklasse eliminiert), MUSS die Kette in "Meta-Intelligenz & Selbstverbesserung > Compound Effect Erfolge" dokumentiert werden. /self-improve zaehlt und trackt diese als Metrik.
 - **Direktiven-Integritaetspruefung**: /self-improve MUSS bei JEDEM Lauf pruefen ob Direktive #1 (Superintelligenz) und #2 (Selbstbeobachtung) in allen Speicherorten vorhanden sind
+- **Invariant-Check (2026-03-31)**: SessionStart-Hook prueft 5 System-Invarianten: (1) Stale OFFEN >7d, (2) bypassPermissions aktiv, (3) Hook-Paare vollstaendig, (4) Systemzustand <14d alt, (5) CLAUDE.md Sync. Verhindert das "Erkennungs-ohne-Heilung-Muster" durch proaktive Sichtbarkeit.
