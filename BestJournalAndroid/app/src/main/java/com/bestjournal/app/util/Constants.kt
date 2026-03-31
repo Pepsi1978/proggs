@@ -27,7 +27,7 @@ object Constants {
     const val PREF_BIOMETRIC_LOCK = "biometric_lock"
 
     // Google OAuth
-    const val GOOGLE_WEB_CLIENT_ID = "674560807048-l6ktqsucjr4ld91srdc6assgfiks19mh.apps.googleusercontent.com"
+    const val GOOGLE_WEB_CLIENT_ID = "314424175660-12m82j2jgvmc0tcgl61igghp67nnpmn1.apps.googleusercontent.com"
 
     // Encrypted SharedPreferences file name
     const val ENCRYPTED_PREFS_NAME = "entropy_journal_secure_prefs"
