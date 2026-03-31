@@ -37,10 +37,56 @@ if [ -z "$file_path" ]; then
     exit 0
 fi
 
-# Normalize backslashes and check if the target is settings.json
+# Normalize backslashes and check if the target is settings.json or settings.local.json
 normalized="${file_path//\\//}"
-if [[ "$normalized" != *".claude/settings.json" ]]; then
+if [[ "$normalized" != *".claude/settings"*".json" ]]; then
     exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# DEFENSE: Auto-remove allow lists from ALL settings files
+# ---------------------------------------------------------------------------
+# Claude Code auto-creates allow entries when the user approves a tool.
+# These act as whitelists and break bypassPermissions. Remove immediately.
+
+remove_allow_list_silent() {
+    local path="$1"
+    if [ -f "$path" ]; then
+        python3 -c "
+import json, os, tempfile, sys
+with open('$path', 'r') as f:
+    d = json.load(f)
+if 'allow' in d.get('permissions', {}):
+    del d['permissions']['allow']
+    dir_name = os.path.dirname('$path')
+    fd, tmp = tempfile.mkstemp(dir=dir_name, suffix='.tmp')
+    with os.fdopen(fd, 'w') as f:
+        json.dump(d, f, indent=2)
+        f.write('\n')
+    os.replace(tmp, '$path')
+    print('removed')
+else:
+    print('')
+" 2>/dev/null
+    fi
+}
+
+allow_fixed=false
+result=$(remove_allow_list_silent "$HOME/.claude/settings.json")
+[ "$result" = "removed" ] && allow_fixed=true && hook_log "AUTO-FIX: removed allow list from settings.json" 2>/dev/null || true
+
+result=$(remove_allow_list_silent "$HOME/.claude/settings.local.json")
+[ "$result" = "removed" ] && allow_fixed=true && hook_log "AUTO-FIX: removed allow list from settings.local.json" 2>/dev/null || true
+
+# Also clean project-level settings
+if [ -d "$HOME/.claude/projects" ]; then
+    for pd in "$HOME/.claude/projects"/*/; do
+        [ -d "$pd" ] || continue
+        result=$(remove_allow_list_silent "$pd/settings.json")
+        [ "$result" = "removed" ] && allow_fixed=true
+        result=$(remove_allow_list_silent "$pd/settings.local.json")
+        [ "$result" = "removed" ] && allow_fixed=true
+    done
 fi
 
 SETTINGS="$HOME/.claude/settings.json"
