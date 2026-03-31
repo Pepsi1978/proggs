@@ -46,7 +46,14 @@ $LogFile = Join-Path $env:USERPROFILE ".claude" "logs" "hooks" "$LogDate.log"
 $errorCount = 0
 if (Test-Path $LogFile) {
     try {
-        $errorCount = (Select-String -Path $LogFile -Pattern "ERROR|FAIL" -SimpleMatch).Count
+        $cutoff = (Get-Date).AddHours(-2).ToString("HH:mm:ss")
+        $lines = Get-Content $LogFile -ErrorAction Stop
+        foreach ($line in $lines) {
+            # Case-sensitive match (-cmatch), exclude "0 errors" false positives
+            if ($line -cmatch "^\[(\d{2}:\d{2}:\d{2})\].*\b(ERROR|FAIL|FEHLER)\b" -and $line -notmatch "0 errors") {
+                if ($Matches[1] -ge $cutoff) { $errorCount++ }
+            }
+        }
     } catch { $errorCount = 0 }
 }
 

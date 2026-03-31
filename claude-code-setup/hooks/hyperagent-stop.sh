@@ -47,7 +47,9 @@ LOG_DATE=$(date +%Y-%m-%d)
 LOG_FILE="$HOME/.claude/logs/hooks/$LOG_DATE.log"
 error_count=0
 if [ -f "$LOG_FILE" ]; then
-    error_count=$(grep -ci "error\|fail" "$LOG_FILE" 2>/dev/null || echo 0)
+    # Only count errors from last 2 hours (current session), not entire day
+    cutoff=$(date -v-2H +%H:%M:%S 2>/dev/null || date -d "2 hours ago" +%H:%M:%S 2>/dev/null || echo "00:00:00")
+    error_count=$(awk -v cutoff="$cutoff" '/^\[([0-9]{2}:[0-9]{2}:[0-9]{2})\].*ERROR|FAIL/ { match($0, /\[([0-9]{2}:[0-9]{2}:[0-9]{2})\]/, t); if (t[1] >= cutoff) c++ } END { print c+0 }' "$LOG_FILE" 2>/dev/null || echo 0)
 fi
 
 # Determine analysis depth

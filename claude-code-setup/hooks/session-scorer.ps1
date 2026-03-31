@@ -54,13 +54,20 @@ if (Test-Path $GoalFile) {
     } catch { $goal = "unknown" }
 }
 
-# 3. Hook errors today
+# 3. Hook errors in current session (last 2 hours, not entire day)
 $LogDate = Get-Date -Format "yyyy-MM-dd"
 $LogFile = Join-Path $env:USERPROFILE ".claude" "logs" "hooks" "$LogDate.log"
 $hookErrors = 0
 if (Test-Path $LogFile) {
     try {
-        $hookErrors = @(Select-String -Path $LogFile -Pattern "ERROR" -SimpleMatch).Count
+        $cutoff = (Get-Date).AddHours(-2).ToString("HH:mm:ss")
+        $lines = Get-Content $LogFile -ErrorAction Stop
+        foreach ($line in $lines) {
+            # Case-sensitive match (-cmatch), exclude "0 errors" false positives
+            if ($line -cmatch "^\[(\d{2}:\d{2}:\d{2})\].*\b(ERROR|FEHLER)\b" -and $line -notmatch "0 errors") {
+                if ($Matches[1] -ge $cutoff) { $hookErrors++ }
+            }
+        }
     } catch { $hookErrors = 0 }
 }
 
