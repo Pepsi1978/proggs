@@ -23,10 +23,11 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Entropy Journal App.
 - Bei Hilt-Aenderungen: `./gradlew clean assembleDebug`
 
 ## Geraete
-- Erstes Handy (Samsung): `RFCX70KTDFX`
-- Zweites Handy (Samsung): `R5CW206F0ZM`
-- Tablet: `3406105H803E8G`
+- Erstes Handy (Samsung, Windows): `RFCX70KTDFX`
+- Zweites Handy (Samsung, Windows): `R5CW206F0ZM`
+- Tablet (Windows): `3406105H803E8G`
 - Emulator: `emulator-5554`
+- Samsung (macOS): `R52W800205N`
 
 ## Dark Mode Farben (festgelegt)
 - Hintergrund: `#2C3930` (dunkles Waldgruen)
@@ -114,3 +115,19 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Entropy Journal App.
 - Abmelden: DB loeschen, Prefs atomar clearen, API-Keys/Theme/Biometric behalten
 - Sichern: Manueller Button "Tagebucheintraege sichern"
 - Feedback: dev.app.support@gmail.com + Bestaetigung an User
+
+## Kostenkontrolle (implementiert 2026-03-31)
+- Abo-Preise: €4,99/Monat, €39,99/Jahr (33% Ersparnis)
+- Dashboard-Limit: 16/Tag (still) → Cooldown 30 Min. → ab 20: Tageslimit
+- Entry-Limit fuer Analyse: 40 (Trial + Abo), 10 (Free)
+- Spam-Schutz: 25 KI-Aufrufe/Stunde
+- Eintraege: Unbegrenzt
+- Modell: gemini-2.5-flash ueber Firebase AI Logic
+- Token-Kosten: Input $0.30/1M, Output $2.50/1M
+- Geschaetzte Kosten pro Abo-Nutzer: ~€1.50-5.00/Monat
+
+## Google Play Developer Account
+- Entwicklername: Barwandt Digital Labs
+- Konto-ID: 6096203479331369923
+- Status: Identitaetspruefung ausstehend
+- Google Play Billing Produkt-IDs: `bestjournal_ai_monthly`, `bestjournal_ai_yearly`
