@@ -9,7 +9,7 @@ object Constants {
     // Sync
     const val SYNC_DEBOUNCE_MS = 30_000L
     const val ANALYSIS_DEBOUNCE_MS = 60_000L
-    const val DRIVE_BACKUP_FILENAME = "entropy_journal_backup.db"
+    const val DRIVE_BACKUP_FILENAME = "bestjournal_backup.db"
 
     // SharedPreferences keys
     const val PREF_TEXT_IMPROVEMENT_DEFAULT = "text_improvement_default"
