@@ -2925,3 +2925,101 @@ Forschungsergebnisse dienen nun als primärer Vektor für die Selbstverbesserung
 Dokumentation der Forschungs-Hub Integration abgeschlossen. Fokus auf Trae, SICA, Stronger-MAS und OPENDEV als neue Intelligenz-Vektoren.
 
 <!-- APPLIED: windows/claude-code=2026-03-27T15:58:34Z -->
+---
+
+## [MIRROR-2026-03-31-WIN-001] Hyperagent-System: Metacognitives Monitoring mit Session-Scoring
+<!-- SOURCE: claude-code | PLATFORM: windows | TIMESTAMP: 2026-03-31T12:00:00Z -->
+<!-- TARGETS: macos/claude-code,codex,gemini -->
+<!-- TYPE: agent,hook,rule,settings -->
+<!-- AFFECTS: agents/hyperagent.md, hooks/hyperagent-stop.{ps1,sh}, hooks/session-scorer.{ps1,sh}, rules/metacognitive-monitoring.md, settings.json -->
+<!-- APPLIED: macos/claude-code=PENDING windows/claude-code=2026-03-31 codex=PENDING gemini=PENDING -->
+
+### Was wurde geaendert?
+
+Neues **Hyperagent-System** implementiert — ein metacognitiver Meta-Agent nach dem
+Hyperagent-Pattern (Meta AI, arXiv 2603.19461). Das System beobachtet die eigene
+Arbeitsweise und verbessert sich automatisch ueber Sessions hinweg.
+
+### Warum?
+
+Die Forschungsanalyse (5 parallele Researcher, 31.03.2026) ergab: Unsere Programmierumgebung
+ist bei ~80% des Optimums. Die groesste Luecke war **Meta-Intelligenz** — das System hatte
+keine automatische Rueckkopplung die Fehler, Drift und Ineffizienzen erkennt und daraus lernt.
+Meta-Intelligenz ist die wichtigste der 8 Intelligenz-Dimensionen weil sie ALLE anderen verbessert.
+
+### Komponenten (6 Dateien)
+
+**1. Agent: `agents/hyperagent.md`**
+- Metacognitiver Meta-Agent der die Arbeitsweise analysiert
+- 5-Stufen-Analyse: Kontext → Intent-Drift → Effizienz → Memory-Validierung → Verbesserungen
+- Schreibt Session-Scores in `session-scores.jsonl` fuer Trend-Analyse
+- Sentinel-Dateien fuer Whiteboard-Integration
+- Kann manuell gespawnt werden fuer tiefe Analyse
+
+**2. Rule: `rules/metacognitive-monitoring.md`**
+- 4 Echtzeit-Tracker: Retry-Zaehler, Drift-Detektor, Korrektur-Zaehler, Wissens-Vertrauen
+- Alarmschwellen die automatisch Interventionen ausloesen
+- Session-Score-System mit 4 Dimensionen (Intent, Effizienz, Memory, Lernertrag)
+- Defense-in-Depth: 6 Absicherungsschichten
+- Compound-Gains-Theorie: Jede Analyse produziert mindestens 1 Verbesserung
+
+**3. Hook: `hooks/hyperagent-stop.ps1` (Windows) + `hooks/hyperagent-stop.sh` (macOS)**
+- Stop-Event Prompt-Hook (type: "prompt")
+- Injiziert metacognitive Analyse-Instruktionen am Ende jeder Claude-Antwort
+- Nur bei Sessions >5 Turns (triviale Sessions werden uebersprungen)
+- Liest Session-Goal und Turn-Counter fuer Kontext
+- Bestimmt automatisch Analyse-Tiefe (leicht vs. voll)
+
+**4. Hook: `hooks/session-scorer.ps1` (Windows) + `hooks/session-scorer.sh` (macOS)**
+- SessionEnd-Event Command-Hook
+- Sammelt quantitative Metriken: Turns, Hook-Errors, Commits, Dauer
+- Schreibt JSONL-Zeile in `~/.claude/session-scores.jsonl`
+- Ermoeglicht Trend-Analyse ueber beliebig viele Sessions
+
+### Portierung nach macOS
+
+1. Kopiere diese Dateien von `claude-code-setup/` nach `~/.claude/`:
+   - `agents/hyperagent.md` → `~/.claude/agents/hyperagent.md`
+   - `hooks/hyperagent-stop.sh` → `~/.claude/hooks/hyperagent-stop.sh` (chmod +x!)
+   - `hooks/session-scorer.sh` → `~/.claude/hooks/session-scorer.sh` (chmod +x!)
+   - `rules/metacognitive-monitoring.md` → `~/.claude/rules/metacognitive-monitoring.md`
+
+2. Hooks in settings.json registrieren (macOS-Pfade):
+   ```json
+   // In "Stop" Array anfuegen:
+   {"hooks": [{"type": "prompt", "command": "bash ~/.claude/hooks/hyperagent-stop.sh", "timeout": 5}]}
+
+   // In "SessionEnd" Array anfuegen:
+   {"hooks": [{"type": "command", "command": "bash ~/.claude/hooks/session-scorer.sh", "timeout": 10}]}
+   ```
+   (Die macOS settings.json im Setup-Repo hat diese Eintraege bereits.)
+
+3. Verifikation:
+   ```bash
+   # Pruefen ob Hooks registriert sind
+   cat ~/.claude/settings.json | python3 -c "import json,sys; d=json.load(sys.stdin); print([h for g in d['hooks']['Stop'] for h in g['hooks'] if 'hyperagent' in h.get('command','')])"
+
+   # Session-Scorer testen
+   echo '{"test":true}' >> ~/.claude/session-scores.jsonl && echo "OK"
+   ```
+
+### Wie der Hyperagent funktioniert (fuer Nicht-Programmierer)
+
+Stell dir einen unsichtbaren Assistenten vor der neben Claude sitzt und zuschaut:
+- "Hat Claude das gemacht was der Benutzer wollte?" (Intent-Check)
+- "Hat Claude unnoetig oft das Gleiche versucht?" (Effizienz-Check)
+- "Hat Claude veraltete Informationen benutzt?" (Memory-Check)
+- "Hat Claude etwas Neues gelernt das aufgeschrieben werden sollte?" (Lern-Check)
+
+Am Ende jeder Session gibt dieser Assistent eine Note (1-5) und Verbesserungsvorschlaege.
+Ueber die Zeit zeigt die Note ob das System wirklich intelligenter wird — oder nur gleich bleibt.
+
+### Deutsche Trigger-Map (fuer Benutzer)
+
+| Befehl | Was passiert |
+|--------|-------------|
+| "analysiere die Session" | Spawnt den Hyperagent fuer tiefe 5-Stufen-Analyse |
+| "wie war die Session?" | Gleich — Hyperagent mit Scoring |
+| "Session-Trend zeigen" | Liest die letzten N Session-Scores und zeigt Trend |
+| (automatisch bei >5 Turns) | Stop-Hook injiziert kurze metacognitive Erinnerung |
+| (automatisch bei Session-Ende) | Session-Scorer schreibt Metriken in JSONL |

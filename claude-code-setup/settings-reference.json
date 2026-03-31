@@ -12,7 +12,7 @@
     "ENABLE_TOOL_SEARCH": "1",
     "ENABLE_SECURITY_REMINDER": "0",
     "ECC_HOOK_PROFILE": "minimal",
-    "GITHUB_PERSONAL_ACCESS_TOKEN": "<REDACTED — set locally>"
+    "GITHUB_PERSONAL_ACCESS_TOKEN": "gho_REDACTED"
   },
   "permissions": {
     "defaultMode": "bypassPermissions"
@@ -232,6 +232,15 @@
           {
             "type": "command",
             "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/config-guard.ps1\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/hyperagent-stop.ps1\"",
             "timeout": 5
           }
         ]
@@ -516,5 +525,6 @@
   "effortLevel": "high",
   "autoUpdatesChannel": "latest",
   "skipDangerousModePermissionPrompt": true,
-  "_comment_PermissionRequest": "Intentionally removed -- caused bypassPermissions mode reset (2026-03-20)"
+  "_comment_PermissionRequest": "Intentionally removed -- caused bypassPermissions mode reset (2026-03-20)",
+  "model": "claude-opus-4-6"
 }

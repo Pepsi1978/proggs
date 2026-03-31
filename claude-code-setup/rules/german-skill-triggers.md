@@ -206,6 +206,18 @@ gestartet und der Agent-Prompt wird manuell im `prompt`-Parameter uebergeben. NI
 | "Reflektion" / "Reflect" | `claude-reflect:reflect` (Lernen) oder `reflexion:reflect` (Bewertung) — nachfragen! |
 | "Code Rabbit" | `coderabbit:review` |
 
+## 15. Metacognitive Analyse & Hyperagent
+
+| Deutsche Phrase | Agent/Hook | Was er WIRKLICH tut |
+|----------------|-----------|---------------------|
+| "analysiere die Session", "wie war die Session?", "Metacognition" | `hyperagent` Agent (manuell spawnen) | Tiefe 5-Stufen-Analyse: Intent-Drift, Effizienz, Memory-Aktualitaet, Verbesserungsvorschlaege, Session-Score |
+| "wie habe ich mich verbessert?", "Session-Trend", "Fortschritt" | Session-Scores lesen (`~/.claude/session-scores.jsonl`) | Quantitative Trend-Analyse ueber die letzten N Sessions |
+| "Superintelligenz recherchieren", "Verbesserungen finden" | `superintelligenz` Agent | Iterativer Internet-Forscher der in 3 Wellen nach System-Verbesserungen sucht (alle 3 Direktiven) |
+
+**Automatisch (kein Trigger noetig):**
+- **hyperagent-stop** Hook (Stop-Event): Injiziert metacognitive Analyse-Erinnerung bei jeder Antwort (>5 Turns)
+- **session-scorer** Hook (SessionEnd): Schreibt quantitative Session-Metriken in JSONL
+
 ## Proaktive Agents (kein Trigger noetig — laufen automatisch)
 
 Diese laufen automatisch nach Code-Aenderungen und sollen NICHT manuell getriggert werden:
@@ -215,3 +227,5 @@ Diese laufen automatisch nach Code-Aenderungen und sollen NICHT manuell getrigge
 | `code-simplifier` | Nach Edit/Write Tool-Calls | Vereinfacht geaenderten Code automatisch — KEIN manueller Skill |
 | `auto-verify-iterate` | Nach jeder Coding-Aufgabe | 5-Schritt-Verifikationsschleife (Pruefen→Verifizieren→Bewerten→Verbessern→Abschliessen) |
 | `auto-format` | Nach Edit/Write (async) | Formatiert Dateien automatisch |
+| `hyperagent-stop` | Bei jedem Stop-Event (>5 Turns) | Prompt-Injection fuer metacognitive Selbstanalyse |
+| `session-scorer` | Bei SessionEnd | Schreibt Turns, Fehler, Commits, Dauer in session-scores.jsonl |
