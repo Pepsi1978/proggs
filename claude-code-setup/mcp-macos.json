@@ -1,20 +1,39 @@
 {
-	"_comment": "MCP server configuration for macOS. Copy into ~/proggs/.mcp.json on macOS.",
-	"mcpServers": {
-		"code-review-graph": {
-			"command": "/opt/homebrew/bin/uvx",
-			"args": ["code-review-graph", "serve"]
-		},
-		"code-search": {
-			"command": "/opt/homebrew/bin/tsx",
-			"args": ["/Users/frank/proggs/mcp-code-search/src/index.ts"]
-		},
-		"think-tank": {
-			"command": "/opt/homebrew/bin/npx",
-			"args": ["-y", "mcp-think-tank@2.0.6"],
-			"env": {
-				"MCP_THINK_TANK_STORAGE": "/Users/frank/proggs/.think-tank"
-			}
-		}
-	}
+  "_comment": "MCP server configuration for macOS. Copy into ~/proggs/.mcp.json on macOS.",
+  "mcpServers": {
+    "code-review-graph": {
+      "command": "/opt/homebrew/bin/uvx",
+      "args": [
+        "code-review-graph",
+        "serve"
+      ]
+    },
+    "code-search": {
+      "command": "/opt/homebrew/bin/tsx",
+      "args": [
+        "/Users/frank/proggs/mcp-code-search/src/index.ts"
+      ]
+    },
+    "think-tank": {
+      "command": "/opt/homebrew/bin/npx",
+      "args": [
+        "-y",
+        "mcp-think-tank@2.0.6"
+      ],
+      "env": {
+        "MCP_THINK_TANK_STORAGE": "/Users/frank/proggs/.think-tank"
+      }
+    },
+    "debugbase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "debugbase-mcp"
+      ],
+      "env": {
+        "DEBUGBASE_API_KEY": "<NEEDS-API-KEY-FROM-debugbase.io>"
+      },
+      "disabled": true
+    }
+  }
 }

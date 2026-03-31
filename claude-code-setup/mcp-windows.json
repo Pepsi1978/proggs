@@ -1,20 +1,39 @@
 {
-	"_comment": "MCP server configuration for Windows. Auto-synced to ~/proggs/.mcp.json by auto-sync.ps1",
-	"mcpServers": {
-		"code-review-graph": {
-			"command": "C:/Users/barwa/.local/bin/uvx.exe",
-			"args": ["code-review-graph", "serve"]
-		},
-		"code-search": {
-			"command": "C:/Users/barwa/AppData/Roaming/npm/tsx.cmd",
-			"args": ["C:/Users/barwa/proggs/mcp-code-search/src/index.ts"]
-		},
-		"think-tank": {
-			"command": "C:/Program Files/nodejs/npx.cmd",
-			"args": ["-y", "mcp-think-tank@2.0.6"],
-			"env": {
-				"MCP_THINK_TANK_STORAGE": "C:/Users/barwa/proggs/.think-tank"
-			}
-		}
-	}
+  "_comment": "MCP server configuration for Windows. Auto-synced to ~/proggs/.mcp.json by auto-sync.ps1",
+  "mcpServers": {
+    "code-review-graph": {
+      "command": "C:/Users/barwa/.local/bin/uvx.exe",
+      "args": [
+        "code-review-graph",
+        "serve"
+      ]
+    },
+    "code-search": {
+      "command": "C:/Users/barwa/AppData/Roaming/npm/tsx.cmd",
+      "args": [
+        "C:/Users/barwa/proggs/mcp-code-search/src/index.ts"
+      ]
+    },
+    "think-tank": {
+      "command": "C:/Program Files/nodejs/npx.cmd",
+      "args": [
+        "-y",
+        "mcp-think-tank@2.0.6"
+      ],
+      "env": {
+        "MCP_THINK_TANK_STORAGE": "C:/Users/barwa/proggs/.think-tank"
+      }
+    },
+    "debugbase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "debugbase-mcp"
+      ],
+      "env": {
+        "DEBUGBASE_API_KEY": "<NEEDS-API-KEY-FROM-debugbase.io>"
+      },
+      "disabled": true
+    }
+  }
 }
