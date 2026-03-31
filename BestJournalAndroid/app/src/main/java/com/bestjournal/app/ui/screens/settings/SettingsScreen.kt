@@ -64,6 +64,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    var showSubscriptionSheet by remember { mutableStateOf(false) }
+
     val consentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { _ -> viewModel.syncNow() }
     uiState.consentIntent?.let { intent ->
         androidx.compose.runtime.LaunchedEffect(intent) { consentLauncher.launch(intent); viewModel.clearConsentIntent() }
@@ -260,7 +262,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
-                    onClick = { /* TODO: navigate to subscription screen */ },
+                    onClick = { showSubscriptionSheet = true },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
@@ -357,6 +359,16 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             text = { Text("M\u00f6chtest du dich wirklich abmelden?", color = MaterialTheme.colorScheme.onSurfaceVariant) },
             confirmButton = { Button(onClick = { viewModel.signOut(context) }, colors = ButtonDefaults.buttonColors(containerColor = NeonRed)) { Text("Abmelden") } },
             dismissButton = { OutlinedButton(onClick = { viewModel.showLogoutDialog(false) }) { Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+        )
+    }
+
+    if (showSubscriptionSheet) {
+        com.bestjournal.app.ui.components.AiLimitReachedSheet(
+            monthlyPrice = com.bestjournal.app.util.Constants.MONTHLY_PRICE_DISPLAY,
+            yearlyPrice = com.bestjournal.app.util.Constants.YEARLY_PRICE_DISPLAY,
+            onSubscribeMonthly = { showSubscriptionSheet = false },
+            onSubscribeYearly = { showSubscriptionSheet = false },
+            onDismiss = { showSubscriptionSheet = false }
         )
     }
 }
