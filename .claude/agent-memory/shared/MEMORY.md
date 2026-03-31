@@ -131,6 +131,22 @@ _Noch keine Eintraege._
 <!-- Writer: ui-polisher Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
+## Bewaehrte Loesungsmuster (Pheromon-Tabelle)
+<!-- Agents lesen diese Tabelle VOR komplexen Aufgaben und schreiben NACH erfolgreichen Aufgaben -->
+<!-- Bereinigung: /self-improve entfernt Eintraege aelter als 3 Monate -->
+
+| Datum | Aufgabentyp | Bewaehrter Ansatz | Erfolg |
+|-------|-------------|-------------------|--------|
+| 2026-03-31 | Multi-Datei-Batch-Edit | Python glob+re.sub statt parallele Coder-Agents | Hoch |
+| 2026-03-31 | Android-Ordner-Umbenennung | gradlew --stop + adb kill-server + cmd.exe ren (nicht git mv) | Hoch |
+| 2026-03-31 | Splash-Screen-Animation | Compose Keyframes + rememberUpdatedState fuer Audio-Sync | Hoch |
+| 2026-03-31 | Iterative Internet-Recherche | 3 Wellen: Breit → Tief → Kreativ, max 50 Ergebnisse/Researcher | Hoch |
+
+## Chaos-Test Ergebnisse
+<!-- chaos-tester Agent schreibt hierher -->
+
+*Noch keine Chaos-Tests durchgefuehrt. Naechster geplanter Lauf: Auf Abruf.*
+
 ## Forschung & Intelligence
 <!-- researcher, intelligence-researcher schreiben hierher -->
 

@@ -177,6 +177,16 @@
             "async": true
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/poka-yoke-json-validate.sh",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -195,6 +205,16 @@
           {
             "type": "command",
             "command": "bash \"$HOME/.claude/hooks/redact-secrets.sh\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/immune-check.sh",
             "timeout": 5
           }
         ]

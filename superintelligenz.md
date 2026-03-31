@@ -10,10 +10,10 @@
 
 | Direktive | Offene Vorschlaege | Umgesetzt | Verworfen |
 |-----------|-------------------|-----------|-----------|
-| Superintelligenz | 4 | 0 | 0 |
-| Selbstbeobachtung | 3 | 0 | 0 |
-| Resilient Bugfixing | 3 | 0 | 0 |
-| **Gesamt** | **10** | **0** | **0** |
+| Superintelligenz | 0 | 4 | 0 |
+| Selbstbeobachtung | 0 | 3 | 0 |
+| Resilient Bugfixing | 0 | 3 | 0 |
+| **Gesamt** | **0** | **10** | **0** |
 
 *Letzte Aktualisierung: 2026-03-31*
 *Anzahl Forschungslaeufe: 1*
@@ -55,7 +55,7 @@ Statt einer einzigen Loesungslinie probiert der Agent mehrere moegliche Wege gle
 **Abhaengigkeiten:** Keine
 **Risiko:** Hoehere Token-Kosten pro Aufgabe (~2-3x). Nur fuer Aufgaben mit >3 Dateien aktivieren.
 **Empfehlung:** Bald
-**Status:** OFFEN
+**Status:** UMGESETZT (2026-03-31)
 
 ---
 
@@ -84,7 +84,7 @@ Weniger "Trial and Error" beim Werkzeug-Einsatz. Seltener das falsche Tool waehl
 **Abhaengigkeiten:** Keine
 **Risiko:** Overhead durch Planung bei sehr einfachen Aufgaben (1-2 Tools). Nur bei >3 Tools aktivieren.
 **Empfehlung:** Sofort
-**Status:** OFFEN
+**Status:** UMGESETZT (2026-03-31)
 
 ---
 
@@ -113,7 +113,7 @@ Konkurrenz-Analyse: Windsurf hat hier einen klaren Vorsprung. Wir koennen das te
 **Abhaengigkeiten:** Keine
 **Risiko:** Langsamer bei grossen Dateien. Formatter muss installiert sein (ktlint, prettier).
 **Empfehlung:** Bald
-**Status:** OFFEN
+**Status:** UMGESETZT (2026-03-31)
 
 ---
 
@@ -142,7 +142,7 @@ Unser bestehendes MEMORY.md Whiteboard ist bereits ein einfaches "Pheromon"-Syst
 **Abhaengigkeiten:** Keine
 **Risiko:** Tabelle kann veralten. Braucht regelmaessige Bereinigung durch /self-improve.
 **Empfehlung:** Sofort
-**Status:** OFFEN
+**Status:** UMGESETZT (2026-03-31)
 
 ---
 
@@ -191,7 +191,7 @@ Wenn ein Agent seine Unsicherheit kennt, kann er automatisch entscheiden: "Ich b
 **Abhaengigkeiten:** Keine
 **Risiko:** Kann zu mehr Tool-Calls fuehren. Nur bei technisch prazisen Details anwenden, nicht bei allgemeinen Konzepten.
 **Empfehlung:** Sofort
-**Status:** OFFEN
+**Status:** UMGESETZT (2026-03-31)
 
 ---
 
@@ -221,7 +221,7 @@ Das Whiteboard hat bereits eine "Offene Fehler" Sektion — aber kein strukturie
 **Abhaengigkeiten:** Keine
 **Risiko:** Qualitaet der Eintraege muss gut sein. Schlechte Eintraege fuehren zu falschen Hinweisen.
 **Empfehlung:** Bald
-**Status:** OFFEN
+**Status:** UMGESETZT (2026-03-31)
 
 ---
 
@@ -250,7 +250,7 @@ Unsere Intent-Tracking Regel existiert bereits — sie prueft ob man vom ursprue
 **Abhaengigkeiten:** Keine (Erweiterung bestehender Regel)
 **Risiko:** Kann Aufgaben verlangsamen wenn zu haeufig pausiert wird. Rhythmus sorgfaeltig waehlen.
 **Empfehlung:** Sofort
-**Status:** OFFEN
+**Status:** UMGESETZT (2026-03-31)
 
 ---
 
@@ -299,7 +299,7 @@ Die meisten unserer Regeln sind REAKTIV (Fehler erklaeren und fixen). Poka-Yoke 
 **Abhaengigkeiten:** Keine
 **Risiko:** Hooks koennen legitime Befehle blockieren wenn zu aggressiv. Jeden Hook einzeln testen.
 **Empfehlung:** Bald
-**Status:** OFFEN
+**Status:** UMGESETZT (2026-03-31)
 
 ---
 
@@ -329,7 +329,7 @@ Netflix hatte eine geniale Idee: Statt zu warten bis der Server ausraesst, bring
 **Abhaengigkeiten:** Finding 8 (Poka-Yoke) — sinnvoll als Vorbereitung
 **Risiko:** Kann die echte Umgebung beschaedigen wenn nicht sorgfaeltig implementiert. Immer Backup-Mechanismus zuerst testen.
 **Empfehlung:** Spaeter (nach Finding 8)
-**Status:** OFFEN
+**Status:** UMGESETZT (2026-03-31)
 
 ---
 
@@ -359,7 +359,7 @@ Zero-Recurrence Rate fuer bekannte Fehler. Fehler die einmal aufgetreten sind we
 **Abhaengigkeiten:** Finding 6 (CBR Bug-Datenbank) — das Antigen-System baut auf der Bug-Datenbank auf
 **Risiko:** Die Antigen-Datei muss sorgfaeltig verwaltet werden. Falsch-positive koennen legitime Befehle blockieren.
 **Empfehlung:** Bald
-**Status:** OFFEN
+**Status:** UMGESETZT (2026-03-31)
 
 ---
 

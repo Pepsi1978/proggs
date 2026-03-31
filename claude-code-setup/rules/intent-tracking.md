@@ -36,3 +36,41 @@ Research shows periodic goal reminders reduce KL-divergence by 30% (arxiv 2510.0
 
 If you detect drift: Don't try to justify it. Read the goal file (`cat "${TMPDIR:-/tmp}/claude-session-goal.txt"`) and say:
 "Ich bin vom ursprünglichen Ziel abgewichen. Das Ziel war: [goal from file]. Soll ich zurückkehren?"
+
+## Metacognitive Self-Monitoring (Erweiterung — Finding 7)
+
+> Quelle: Superintelligenz Finding 7 — arXiv 2505.13763, Metacognitive AI Programming
+> Direktive: #2 Selbstbeobachtung
+
+Das Intent-Tracking oben prueft nur das SESSION-Ziel. Metacognitive Self-Monitoring
+geht einen Schritt weiter: Es prueft auch das AUFGABEN-Ziel waehrend der Arbeit.
+
+### Alle 5 Tool-Calls: Aktive Selbst-Pruefung
+
+Bei komplexen Aufgaben (>5 erwartete Tool-Calls) nach jedem 5. Tool-Call kurz
+innehalten und sich fragen:
+
+1. **Ziel-Check**: "Was wollte ich mit diesen 5 Schritten erreichen? Habe ich es erreicht?"
+2. **Richtungs-Check**: "Bin ich noch auf dem kuerzesten Weg zum Ziel?"
+3. **Effizienz-Check**: "Haette ich die letzten 5 Schritte effizienter machen koennen?"
+
+Wenn eine der Antworten NEIN ist: Explizit den Kurs korrigieren bevor weitergemacht wird.
+
+### Am Ende jeder Aufgabe: 1-Satz-Rueckblick
+
+Nach Abschluss einer Aufgabe (VOR den Intelligenz-Vorschlaegen) eine kurze
+Selbst-Bewertung formulieren:
+
+"**Selbst-Bewertung**: [Was habe ich gut gemacht] / [Was haette ich besser machen koennen]"
+
+Diese Bewertung wird NICHT dem Benutzer gezeigt (zu granular), aber sie fuettert
+die Selbstbeobachtungs-Direktive und kann als Intelligenz-Vorschlag formuliert
+werden wenn ein Muster erkennbar ist.
+
+### Zusammenspiel
+
+| Mechanismus | Prueft was | Frequenz | Quelle |
+|-------------|-----------|----------|--------|
+| Intent-Tracking | Session-Ziel (Makro) | Alle ~5 Turns passiv | intent-anker Hook |
+| Self-Monitoring | Aufgaben-Ziel (Mikro) | Alle 5 Tool-Calls aktiv | Diese Erweiterung |
+| Tool-Planning | Naechster Schritt (Nano) | Nach jedem Tool-Call | tool-planning.md |
