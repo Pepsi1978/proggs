@@ -37,9 +37,40 @@ Nach jedem Tool-Aufruf in der Kette eine 1-Satz-Pruefung:
 - Einfache 2-3-Schritt-Ketten → kein Plan noetig
 - Nur bei >3 Tools ODER wenn die Aufgabe komplex/mehrdeutig ist
 
+## Konkrete Beispiele
+
+### Beispiel 1 — GUTER Plan (Bug-Fix in Android-App)
+```
+Plan: Build-Fehler in SplashScreen.kt fixen — fehlender Import.
+Schritte: Read(SplashScreen.kt) → Grep(fehlende Klasse) → Edit(Import hinzufuegen) → Bash(gradlew build)
+Reihenfolge: Erst die Datei lesen um den Fehler zu sehen, dann den fehlenden Import finden, einfuegen, und Build pruefen.
+```
+Post-Check nach Read: "Ja, ich sehe den fehlenden Import in Zeile 15."
+Post-Check nach Grep: "Gefunden: Die Klasse liegt in androidx.compose.foundation."
+Post-Check nach Edit: "Import eingefuegt. Jetzt Build pruefen."
+Post-Check nach Bash: "Build erfolgreich — Fehler behoben."
+
+### Beispiel 2 — SCHLECHTER Ablauf (ohne Plan)
+```
+Read(SplashScreen.kt) → Read(Theme.kt) → Read(Navigation.kt) → Grep("import") →
+Read(build.gradle) → Edit(SplashScreen.kt) → Bash(build) → FEHLER → Read(SplashScreen.kt) →
+Edit(SplashScreen.kt) → Bash(build) → OK
+```
+10 Tool-Calls statt 4 — weil ohne Plan ziellos gesucht wurde.
+
+### Beispiel 3 — Wann KEIN Plan noetig ist
+```
+Benutzer: "Was steht in der README?"
+→ Read(README.md)  ← 1 Tool, kein Plan noetig
+```
+
 ## Zusammenspiel mit anderen Regeln
 
 - **Intent-Tracking** (`intent-tracking.md`): Der Tool-Plan ist eine Verfeinerung
   des Session-Ziels auf Aufgaben-Ebene.
 - **Metacognitive Self-Monitoring**: Der Post-Check nach jedem Tool ist eine
   Mikro-Version der alle-5-Tool-Calls-Pruefung.
+- **Confidence-Ampel** (`confidence-check.md`): Wenn ein Tool-Ergebnis unsicher ist
+  (gelb/rot), den Plan anpassen und nachschlagen statt weitermachen.
+- **Pheromon-Tabelle** (`swarm-success-tracking.md`): Nach einer komplexen Aufgabe
+  den erfolgreichen Plan als Muster in die Tabelle eintragen.
