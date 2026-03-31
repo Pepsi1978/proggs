@@ -4,3 +4,4 @@ tools/
 .env
 test_api.ts
 .mcp.json
+BestJournalAndroid/app/google-services.json
