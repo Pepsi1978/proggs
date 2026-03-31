@@ -132,6 +132,34 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                 }
             }
 
+            // Dashboard limit message
+            if (uiState.dashboardLimitMessage != null) {
+                item {
+                    GlassCard(glowIntensity = 0.1f) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "\u23F3",
+                                style = MaterialTheme.typography.headlineMedium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = uiState.dashboardLimitMessage!!,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            TextButton(onClick = { viewModel.dismissLimitMessage() }) {
+                                Text("Verstanden", color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
+            }
+
             if (blocks.isEmpty() && !uiState.isLoading) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {

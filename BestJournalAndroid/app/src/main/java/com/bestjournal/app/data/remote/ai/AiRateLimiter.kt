@@ -1,6 +1,7 @@
 package com.bestjournal.app.data.remote.ai
 
 import com.bestjournal.app.billing.SubscriptionState
+import com.bestjournal.app.util.Constants
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,12 +30,21 @@ class AiRateLimiter @Inject constructor(
     }
 
     fun getMaxEntriesForAnalysis(subscriptionState: SubscriptionState): Int {
-        if (subscriptionState is SubscriptionState.Subscribed) return 30
+        if (subscriptionState is SubscriptionState.Subscribed) return Constants.MAX_ENTRIES_SUBSCRIBED_ANALYSIS
         val phase = usageTracker.getCurrentPhase()
         return when (phase) {
-            AiPhase.HONEYMOON, AiPhase.EDUCATION -> Int.MAX_VALUE
-            AiPhase.FREEMIUM -> 10
+            AiPhase.HONEYMOON, AiPhase.EDUCATION -> Constants.MAX_ENTRIES_TRIAL_ANALYSIS
+            AiPhase.FREEMIUM -> Constants.MAX_ENTRIES_FREE_ANALYSIS
         }
+    }
+
+    fun checkDashboardAccess(): DashboardAccessResult {
+        return usageTracker.getDashboardAccessResult()
+    }
+
+    fun recordDashboardRefresh() {
+        usageTracker.recordDashboardRefresh()
+        usageTracker.recordHourlyAiUsage()
     }
 }
 

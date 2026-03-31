@@ -37,5 +37,19 @@ object Constants {
     const val HONEYMOON_USAGE_DAYS = 3
     const val FREE_WEEKLY_AI_LIMIT = 3
     const val MAX_ENTRIES_FREE_ANALYSIS = 10
-    const val MAX_ENTRIES_SUBSCRIBED_ANALYSIS = 30
+    const val MAX_ENTRIES_SUBSCRIBED_ANALYSIS = 40
+    const val MAX_ENTRIES_TRIAL_ANALYSIS = 40
+
+    // Dashboard daily limits
+    const val DASHBOARD_SILENT_LIMIT = 16
+    const val DASHBOARD_COOLDOWN_LIMIT = 20
+    const val DASHBOARD_COOLDOWN_MINUTES = 30
+
+    // Spam protection
+    const val SPAM_HOURLY_AI_LIMIT = 25
+
+    // Subscription pricing (display only — actual prices set in Google Play Console)
+    const val MONTHLY_PRICE_DISPLAY = "4,99\u00A0\u20AC"
+    const val YEARLY_PRICE_DISPLAY = "39,99\u00A0\u20AC"
+    const val YEARLY_MONTHLY_EQUIVALENT = "3,33\u00A0\u20AC"
 }

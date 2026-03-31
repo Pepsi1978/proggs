@@ -82,7 +82,7 @@ fun AiLimitReachedSheet(
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
-                Text("Jahresabo \u2014 $yearlyPrice/Jahr (spare 20%)")
+                Text("Jahresabo \u2014 $yearlyPrice/Jahr (spare 33%)")
             }
             Spacer(modifier = Modifier.height(12.dp))
             TextButton(onClick = onDismiss) {

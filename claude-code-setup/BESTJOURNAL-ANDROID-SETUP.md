@@ -62,7 +62,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 | KI | Gemini Developer API (AI Logic) |
 | Auth | Google Sign-In |
 | Windows SHA-1 | 03:03:2C:A7:C1:ED:5F:C2:E0:6C:51:84:59:08:F2:4D:C3:35:9B:FA |
-| macOS SHA-1 | TODO — beim ersten macOS-Build auslesen und in Firebase eintragen |
+| macOS SHA-1 | 50:DB:D4:95:94:3D:4F:00:83:F3:C9:0B:E0:B6:C4:5E:9D:54:16:AF |
 
 ## Unterschied zu BestJournalFrank
 

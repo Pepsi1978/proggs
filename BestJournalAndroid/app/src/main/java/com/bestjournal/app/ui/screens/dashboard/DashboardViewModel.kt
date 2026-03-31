@@ -2,7 +2,9 @@ package com.bestjournal.app.ui.screens.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bestjournal.app.data.remote.ai.AiRateLimiter
 import com.bestjournal.app.data.remote.ai.AiUsageTracker
+import com.bestjournal.app.data.remote.ai.DashboardAccessResult
 import com.bestjournal.app.data.repository.AdviceRepository
 import com.bestjournal.app.domain.usecase.AnalyzeEntropyUseCase
 import com.bestjournal.app.domain.usecase.GenerateAdviceUseCase
@@ -20,7 +22,8 @@ data class DashboardUiState(
     val selectedCategoryIndex: Int = 0,
     val errorMessage: String? = null,
     val canUndo: Boolean = false,
-    val showAiInfoBanner: Boolean = false
+    val showAiInfoBanner: Boolean = false,
+    val dashboardLimitMessage: String? = null
 )
 
 @HiltViewModel
@@ -28,7 +31,8 @@ class DashboardViewModel @Inject constructor(
     private val generateAdviceUseCase: GenerateAdviceUseCase,
     private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
     private val adviceRepository: AdviceRepository,
-    private val aiUsageTracker: AiUsageTracker
+    private val aiUsageTracker: AiUsageTracker,
+    private val aiRateLimiter: AiRateLimiter
 ) : ViewModel() {
 
     val adviceBlocks = generateAdviceUseCase()
@@ -48,8 +52,26 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun refreshDashboard() {
+        // Check dashboard daily limit before making API call
+        when (val access = aiRateLimiter.checkDashboardAccess()) {
+            is DashboardAccessResult.Allowed -> performRefresh()
+            is DashboardAccessResult.Cooldown -> {
+                _uiState.update {
+                    it.copy(dashboardLimitMessage = "Das System ist gerade ausgelastet. Bitte versuche es in ${access.minutesLeft} Minuten erneut.")
+                }
+            }
+            is DashboardAccessResult.DailyLimitReached -> {
+                _uiState.update {
+                    it.copy(dashboardLimitMessage = "Neue Aktualisierungen sind morgen wieder verf\u00fcgbar.")
+                }
+            }
+        }
+    }
+
+    private fun performRefresh() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null, dashboardLimitMessage = null)
+            aiRateLimiter.recordDashboardRefresh()
             analyzeEntropyUseCase(freshAnalysis = true)
                 .onSuccess {
                     _uiState.value = _uiState.value.copy(
@@ -80,6 +102,10 @@ class DashboardViewModel @Inject constructor(
     fun dismissAiInfoBanner() {
         aiUsageTracker.markAiInfoBannerShown()
         _uiState.update { it.copy(showAiInfoBanner = false) }
+    }
+
+    fun dismissLimitMessage() {
+        _uiState.update { it.copy(dashboardLimitMessage = null) }
     }
 
     fun clearError() {
