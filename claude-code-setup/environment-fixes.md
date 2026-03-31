@@ -275,6 +275,112 @@ die ueber das Bash-Tool ausgefuehrt werden, nicht nur fuer Git-Befehle.
 
 ---
 
+## 2026-03-30 — Ordner-Umbenennung schlaegt fehl bei laufenden Daemons (Windows)
+
+**Plattform:** Windows (aehnlich auf macOS wenn ADB/Gradle laufen)
+**Kontext:** Das Android-Projekt "EntropyJournal" wurde in "BestJournalFrank" umbenannt.
+Der Ordner wurde per `git mv` umbenannt waehrend Gradle-Daemon und ADB-Server noch
+Dateien im Ordner offen hatten. Ausserdem wurden die LFS-Pfade in `.gitattributes`
+nicht sofort an den neuen Ordnernamen angepasst.
+**Symptom:** 4x "Permission denied" beim Rename-Versuch. Nach erfolgreichem Rename
+wurde der Push von GitHub rejected weil eine 124MB .onnx-Datei nicht als LFS-Pointer
+sondern als regulaeres Git-Objekt gepusht wurde.
+**Root Cause:** Zwei unabhaengige Probleme:
+1. **File-Locking:** Gradle-Daemon haelt `.kotlin/`, `build/` und Cache-Dateien offen.
+   ADB-Server haelt Dateien im Projektordner offen fuer den USB-Debug-Kanal.
+   Beide Daemons muessen VOR dem Rename gestoppt werden.
+2. **LFS-Pfade:** Git-LFS-Regeln in `.gitattributes` sind pfadabhaengig
+   (z.B. `EntropyJournal/**/*.onnx filter=lfs`). Nach dem Rename stimmt der Pfad
+   nicht mehr, und grosse Dateien werden als regulaere Git-Objekte behandelt.
+**Fix:** Sichere Reihenfolge bei Ordner-Umbenennungen:
+```bash
+# 1. Externe Prozesse beenden
+./gradlew --stop          # Gradle-Daemon
+adb kill-server            # ADB-Server
+
+# 2. Rename mit Windows-nativem Befehl (nicht git mv!)
+cmd.exe //c "ren EntropyJournal BestJournalFrank"
+
+# 3. .gitattributes sofort anpassen
+# Alle LFS-Regeln auf neuen Pfad aendern
+
+# 4. LFS-Status pruefen
+git lfs status
+# Alle Dateien muessen "LFS -> LFS" zeigen
+
+# 5. Falls "Git:" statt "LFS:" angezeigt wird:
+git rm --cached DATEI
+git add DATEI  # Erzwingt LFS-Filter
+
+# 6. Commit + Push
+git add -A && git commit && git push
+```
+**Vermeidungsregel:** Wenn ein Projektordner umbenannt wird: IMMER zuerst alle Daemons
+stoppen (Gradle, ADB, Node, Cargo, etc.), DANN umbenennen, DANN sofort `.gitattributes`
+LFS-Pfade aktualisieren, DANN `git lfs status` pruefen, DANN erst committen.
+Vollstaendige Regel: `~/.claude/rules/folder-rename-safety.md`
+
+---
+
+## 2026-03-29 — Researcher-Agenten stuerzen bei zu vielen Ergebnissen ab (beide)
+
+**Plattform:** beide
+**Kontext:** Bei der QuizVerse-App sollten 5 Researcher-Agenten parallel je 100 Quiz-Fragen
+generieren (insgesamt 500 Fragen). Alle 5 Agenten liefen ueber 10 Minuten ohne Ergebnis
+und lieferten nie eine Antwort zurueck.
+**Symptom:** Alle 5 parallelen Researcher-Agenten liefen endlos (>10 Minuten) und lieferten
+kein einziges Ergebnis. Kein Fehler sichtbar, kein Timeout — einfach stille Haenger.
+**Root Cause:** Bei >50 Ergebnissen pro Agent wird der interne Kontext zu gross. Der Agent
+kann die gesammelten Daten nicht mehr in seinem Ausgabefenster unterbringen und haengt sich
+intern auf — ohne eine Fehlermeldung zu generieren. Das ist ein stiller Absturz, der von
+aussen wie ein endlos laufender Agent aussieht.
+**Fix:** Empirisch ermittelte Limits fuer JEDEN Researcher-Agenten:
+- **Max 50 Ergebnisse** pro Agent (Quiz-Fragen, Fakten, Datenpunkte, etc.)
+- **Max 15 WebFetch/WebSearch** Aufrufe pro Agent
+- **Max 10 Minuten** Laufzeit — danach gilt der Agent als abgestuerzt
+- **Prompt unter 2000 Woerter** — kein riesiger Kontext mitgeben
+```
+# FALSCH — alle crashen:
+5 Researcher mit je 100 Fragen = 500 Fragen total
+
+# RICHTIG — alle erfolgreich:
+10 Researcher mit je 50 Fragen = 500 Fragen total
+```
+**Vermeidungsregel:** Wenn ein Researcher-Agent mehr als 50 Datenpunkte sammeln soll:
+IMMER in mehrere Agents aufteilen (je max 50). Lieber 10 kleine Agents parallel als
+5 grosse Agents die abstuerzen. Vollstaendige Regel: `~/.claude/rules/researcher-robustness.md`
+
+---
+
+## 2026-03-28 — allow-Liste in Permissions blockiert bypassPermissions (beide)
+
+**Plattform:** beide
+**Kontext:** Die Claude Code Umgebung arbeitet im `bypassPermissions`-Modus, der ALLE
+Tools automatisch genehmigt. In der settings.json existierte zusaetzlich eine `allow`-Liste
+mit explizit erlaubten Tools (z.B. Bash, Read, Edit, GitHub-MCP-Permissions).
+**Symptom:** Neue Tools und MCP-Server-Permissions die NICHT in der allow-Liste standen
+wurden manchmal trotzdem zur Genehmigung vorgelegt, obwohl bypassPermissions aktiv war.
+Besonders bei neuen Plugins und MCP-Servern, die nach der letzten allow-Listen-Aktualisierung
+installiert wurden.
+**Root Cause:** Bei `defaultMode: "bypassPermissions"` mit gleichzeitig vorhandener `allow`-Liste
+interpretiert Claude Code die allow-Liste als **Whitelist**. Tools die NICHT in der Liste stehen,
+werden moeglicherweise blockiert — das widerspricht dem Zweck von bypassPermissions.
+Die allow-Liste ist ein Relikt aus der Zeit VOR bypassPermissions und sollte komplett entfernt werden.
+**Fix:** Die `allow`-Liste komplett aus der `permissions`-Sektion entfernen. Nur `defaultMode`
+behalten:
+```json
+"permissions": {
+    "defaultMode": "bypassPermissions"
+}
+```
+Der `session-guard`-Hook auf Windows prueft und entfernt die allow-Liste bei jedem Start
+automatisch (Defense in Depth).
+**Vermeidungsregel:** Bei `bypassPermissions` NIEMALS eine `allow`-Liste in der permissions-Sektion
+haben. Der session-guard Hook repariert das automatisch, aber die Referenz-Settings im
+Setup-Repo muessen ebenfalls sauber sein.
+
+---
+
 ## Template fuer neue Eintraege
 
 ```markdown

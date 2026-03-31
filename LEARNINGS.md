@@ -38,6 +38,12 @@
 - [Splash-Animation: Spring-Bounce vs Tween-Settle](#splash-animation-spring-bounce-vs-tween-settle)
 - [Scaffold NIE um den gesamten NavHost](#scaffold-nie-um-den-gesamten-navhost-wichtig) ⭐
 
+**Splash Screen & Animationen:**
+- [Papyrus-Textur als Bild-Hintergrund](#papyrus-textur-als-bild-hintergrund-fuer-ui-elemente)
+- [Handschrift-Font (Caveat) lokal einbinden](#handschrift-font-caveat-lokal-einbinden-wichtig) ⭐
+- [Heartbeat-Puls-Animation mit Tap-to-Excite](#heartbeat-puls-animation-mit-tap-to-excite)
+- [Fliegende Notebooks: Interaktive Canvas-Objekte](#fliegende-notebooks-interaktive-canvas-objekte)
+
 **Sonstiges:**
 - [Theme-Toggle](#theme-toggle-separates-sharedpreferences-fuer-quick-toggle)
 - [Hilt/Dagger](#hiltdagger)
@@ -264,3 +270,40 @@ NavHost(...) {
 - Splash und Login laufen vollstaendig isoliert — kein Padding, kein Layout-Shift
 - Die BottomBar erscheint erst NACH der vollstaendigen Transition zu "main"
 - **Gilt fuer JEDE App** mit Splash/Login/Onboarding + Hauptnavigation
+
+## Papyrus-Textur als Bild-Hintergrund fuer UI-Elemente
+- Statt Canvas-gezeichneter Hintergruende: PNG-Bild als `painterResource` laden
+- `Image(painter, contentScale = ContentScale.Crop)` fuer saubere Skalierung
+- Bild-Optimierung: Auf max 512px Breite + WebP/PNG komprimieren fuer Mobile Performance
+- Transparenz-Check: Hintergrund per Bildbearbeitungstool entfernen VOR dem Einbinden
+- Padding grosszuegig setzen um dekorative Raender (z.B. Papyrus-Rollen) nicht mit Text zu ueberdecken
+
+## Handschrift-Font (Caveat) lokal einbinden ⭐ WICHTIG
+- **Google Fonts Provider funktioniert NICHT zuverlaessig** auf Android — manchmal wird der Font
+  nicht geladen (Netzwerk-Timeout, Google Play Services fehlt, etc.)
+- **Loesung**: Font als lokale TTF-Datei einbinden (`res/font/caveat.ttf`)
+- Font-Family erstellen: `val CaveatFamily = FontFamily(Font(R.font.caveat))`
+- Direkt in `Text(fontFamily = CaveatFamily)` verwenden — kein Netzwerk noetig
+- **Gilt fuer JEDEN Custom-Font**: Immer lokal einbinden, nie auf Google Fonts Provider verlassen
+- Dancing Script war der erste Versuch, Caveat sieht natuerlicher aus (weniger "geschwungen")
+
+## Heartbeat-Puls-Animation mit Tap-to-Excite
+- `animateFloatAsState` mit `keyframes` fuer einen natuerlichen Herzschlag-Effekt
+- Normaler Puls: Sanftes Scale 1.0 -> 1.02 -> 1.0 (kaum sichtbar, lebendig)
+- Tap-to-Excite: Bei Beruehrung 3 schnelle starke Pulse (1.0 -> 1.15 -> 0.95 -> 1.1 -> 1.0)
+  dann zurueck zum normalen Puls
+- `Modifier.pointerInput` fuer Tap-Detection auf dem animierten Element
+- `LaunchedEffect(isExcited)` startet den erhoehten Puls und resettet nach Ablauf
+- **Wiederverwendbar** fuer: Logos, Buttons, Avatare, Notification-Icons — alles was "lebendig" wirken soll
+
+## Fliegende Notebooks: Interaktive Canvas-Objekte
+- Canvas-gezeichnete Objekte (Notebooks mit Fluegeln) die ueber den Bildschirm fliegen
+- `data class FlyingNotebook(x, y, size, rotation, speed, wingPhase, wobble)`
+- Animation mit `LaunchedEffect` + `withFrameNanos` fuer fluessige 60fps Bewegung
+- **Interaktivitaet**: `pointerInput { detectTapGestures }` + Distanz-Check zum Tap-Punkt
+  → Notebooks "fliehen" wenn man sie beruehrt (Speed x3, neue zufaellige Richtung)
+- **Groessen-Variation**: 8 Notebooks in 3 verschiedenen Groessen (klein, mittel, gross)
+  → sieht natuerlicher aus als einheitliche Groesse
+- Canvas-Zeichnung: Notebook-Body + Spiralbindung + Linien + animierte Fluegel
+  → `rotate(notebook.rotation)` fuer natuerliche Flugrichtung
+- **Performance**: `mutableStateListOf` fuer die Notebook-Liste, Position-Updates nur in `withFrameNanos`

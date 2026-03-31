@@ -1,7 +1,16 @@
 {
-	"_comment": "Complete hooks reference for Windows. Merge into ~/.claude/settings.json on Windows. Uses pwsh (PowerShell 7). Prompt-injection-defender requires Python 3. Bun at $USERPROFILE/.bun/bin/bun.exe.",
+	"_comment": "Complete hooks reference for Windows. Extracted from active settings.json. Uses pwsh (PowerShell 7). Prompt-injection-defender requires Python 3. Bun at $USERPROFILE/.bun/bin/bun.exe.",
 	"hooks": {
 		"SessionStart": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/session-guard.ps1\"",
+						"timeout": 10
+					}
+				]
+			},
 			{
 				"hooks": [
 					{
@@ -51,9 +60,19 @@
 			{
 				"hooks": [
 					{
-						"type": "prompt",
-						"prompt": "Semantic Search Health Check: Verify that mcp__code-search__search_status is available by checking if the tool exists in your tool list. If it does NOT exist or fails, tell the user IN GERMAN: 'Semantische Suche ist NICHT verfuegbar. Der MCP-Server code-search laeuft nicht. Moegliche Ursachen: tsx nicht installiert, .mcp.json falsch konfiguriert, oder better-sqlite3 nicht fuer Node.js kompiliert. Fix: npm install -g tsx && cd ~/proggs/mcp-code-search && npm install'. If it IS available, silently proceed -- do not mention it.",
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/semantic-search-check.ps1\"",
 						"timeout": 10
+					}
+				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/mcp-auth-check.ps1\"",
+						"timeout": 30,
+						"async": true
 					}
 				]
 			}
@@ -136,17 +155,6 @@
 				]
 			}
 		],
-		"Stop": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/config-guard.ps1\"",
-						"timeout": 5
-					}
-				]
-			}
-		],
 		"StopFailure": [
 			{
 				"hooks": [
@@ -169,17 +177,6 @@
 				]
 			}
 		],
-		"PostCompact": [
-			{
-				"hooks": [
-					{
-						"type": "prompt",
-						"prompt": "Context was just compacted. Read the session goal from the temp directory (on Windows: $env:TEMP/claude-session-goal.txt, on macOS: /tmp/claude-session-goal.txt). Also read `~/proggs/.claude/agent-memory/shared/MEMORY.md` for project conventions and open issues. Briefly state what you were working on before compaction and what the next step should be.",
-						"timeout": 10
-					}
-				]
-			}
-		],
 		"InstructionsLoaded": [
 			{
 				"hooks": [
@@ -192,6 +189,17 @@
 			}
 		],
 		"ConfigChange": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/config-guard.ps1\"",
+						"timeout": 5
+					}
+				]
+			}
+		],
+		"Stop": [
 			{
 				"hooks": [
 					{
@@ -254,6 +262,17 @@
 						"type": "command",
 						"command": "echo 'Worktree-Hook: Worktree entfernt. Whiteboard: ~/proggs/.claude/agent-memory/shared/MEMORY.md'",
 						"timeout": 3
+					}
+				]
+			}
+		],
+		"PostCompact": [
+			{
+				"hooks": [
+					{
+						"type": "prompt",
+						"prompt": "Context was just compacted. Read the session goal from the temp directory (on Windows: $env:TEMP/claude-session-goal.txt, on macOS: /tmp/claude-session-goal.txt). Also read `~/proggs/.claude/agent-memory/shared/MEMORY.md` for project conventions and open issues. Briefly state what you were working on before compaction and what the next step should be.",
+						"timeout": 10
 					}
 				]
 			}
