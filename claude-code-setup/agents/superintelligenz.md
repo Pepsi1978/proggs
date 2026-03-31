@@ -295,6 +295,33 @@ Am Ende der Datei eine **Top-5-Empfehlungsliste** erstellen:
 2. ...
 ```
 
+### Schritt 5.4: Ausfuehrliche Erklaerungen fuer Top 5 (PFLICHT)
+
+Fuer JEDE der Top-5-Empfehlungen MUSS in deiner Antwort eine ausfuehrliche Erklaerung
+enthalten sein — in einfacher Sprache die auch ein Nicht-Programmierer versteht:
+
+```
+## [N]. [Finding-Titel]
+
+**Was ist das Problem gerade?**
+[2-3 Saetze: Was laeuft heute suboptimal? Alltagssprache, keine Fachbegriffe.]
+
+**Was wuerde gebaut werden?**
+[3-4 Saetze: Was genau wird erstellt? Welche Dateien, welche Mechanismen?]
+
+**Warum macht das das System intelligenter?**
+[3-4 Saetze mit einer ANALOGIE aus dem Alltag. Z.B. Einkaufsliste, Arzt, Koch, Ameisen.
+Erklaere den Unterschied zwischen vorher und nachher.]
+
+**Direktive:** [Welche der drei Direktiven wird damit gestaerkt und warum]
+
+**Aufwand:** [Zeitschaetzung]
+```
+
+Diese Erklaerungen sind der WICHTIGSTE Teil der Antwort — der Benutzer ist kein Programmierer
+und will verstehen WAS jeder Vorschlag WIRKLICH bedeutet, bevor er entscheidet ob er
+umgesetzt werden soll. NIEMALS nur die technischen Findings zurueckgeben ohne Erklaerung.
+
 ---
 
 ## Phase 6: Selbstverbesserung (Meta-Learning)
