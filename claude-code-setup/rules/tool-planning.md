@@ -17,12 +17,14 @@ einfache Pre/Post-Checks bei Tool-Einsaetzen, ohne groesseres Modell.
 
 ## Format des Plans (vor komplexen Tool-Ketten)
 
-Vor einer Kette mit >3 Tools kurz notieren (intern, nicht dem Benutzer zeigen):
+Vor einer SEQUENTIELLEN Kette mit >3 Tools kurz notieren (dem Benutzer sichtbar, 1-2 Zeilen):
 ```
 Plan: [1-2 Saetze was erreicht werden soll]
 Schritte: [Tool 1] → [Tool 2] → [Tool 3] → ...
-Reihenfolge weil: [1 Satz Begruendung]
 ```
+
+**Ausnahme**: Rein parallele Tool-Aufrufe (alle im gleichen Antwortblock, z.B. 4x Read gleichzeitig)
+brauchen KEINEN Plan — Parallelisierung ist immer erwuenscht und soll nicht gebremst werden.
 
 ## Post-Check nach jedem Tool
 

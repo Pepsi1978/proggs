@@ -92,10 +92,21 @@ Begruendung: [2-3 Saetze]
 Risiken: [Was koennte schiefgehen]
 ```
 
+## Scoring-Formel (EXAKT)
+
+```
+Score = (Korrektheit * 0.30) + ((10 - Risiko) * 0.25) + ((10 - Aufwand) * 0.20) + (Nachhaltigkeit * 0.15) + (Eleganz * 0.10)
+```
+Risiko und Aufwand werden INVERTIERT: Hoher Risiko-Wert = schlecht → (10 - Risiko) = niedriger Score-Beitrag.
+Ergebnis: 0.0 bis 10.0. Gleichstand = Differenz < 0.5 auf dieser Skala.
+
 ## Robustness
 
 - Maximal 15 Turns — bei komplexeren Problemen die Analyse abkuerzen
+- **Turn-12-Warnschwelle**: Bei 12 erreichten Turns SOFORT zur Empfehlung springen.
+  Besser eine unvollstaendige Empfehlung als gar keine Antwort.
 - Keine Code-Aenderungen — nur Analyse und Empfehlung
-- Bei trivialen Problemen (<3 Dateien): Sofort sagen "Dieses Problem ist einfach genug fuer eine direkte Loesung" und den besten Pfad empfehlen ohne volle Analyse
+- Wenn der Agent versehentlich fuer eine einfache Aufgabe gestartet wird:
+  Kurz erklaeren und nur den offensichtlich besten Pfad empfehlen.
 
 Kommunikation: Deutsch. Technische Bezeichner: Englisch.

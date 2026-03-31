@@ -2,40 +2,50 @@
 # Immunologisches Gedaechtnis: Bash-Befehle gegen bekannte Fehlermuster pruefen
 # Quelle: Superintelligenz Finding 10 — Error-Antigen-System
 # Event: PreToolUse (Bash)
-# Zweck: Prueft ob ein Bash-Befehl ein bekanntes Fehlermuster enthaelt
+#
+# FIXED: Shell-Injection via Pattern beseitigt (Audit Finding #18)
+# FIXED: 45 Python-Prozesse → 1 einziger (Audit Finding #24)
+# FIXED: Leerer stdin behandelt (Audit Finding #13)
+# FIXED: IMMUNE_CMD env var Bug — Befehl jetzt via stdin uebergeben (Audit Re-Test)
 
 set +e  # Nie crashen
 
-# Input lesen
 INPUT=$(cat)
+[[ -z "$INPUT" ]] && exit 0
 
-# Befehl extrahieren
 COMMAND=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('command',''))" 2>/dev/null)
+[[ -z "$COMMAND" ]] && exit 0
 
-if [[ -z "$COMMAND" ]]; then
-    exit 0
-fi
-
-# Antigen-Datei
 ANTIGEN_FILE="$HOME/proggs/.claude/agent-memory/shared/error-antigens.jsonl"
-if [[ ! -f "$ANTIGEN_FILE" ]]; then
-    exit 0
-fi
+[[ ! -f "$ANTIGEN_FILE" ]] && exit 0
 
-# Jede Zeile der Antigen-Datei pruefen
-while IFS= read -r line; do
-    [[ -z "$line" ]] && continue
+# Ein einziger Python-Aufruf: Befehl UND Antigen-Pfad als Argumente, kein Shell-Interpolation
+python3 - "$COMMAND" "$ANTIGEN_FILE" << 'PYEOF'
+import json, re, sys
 
-    PATTERN=$(echo "$line" | python3 -c "import sys,json; print(json.load(sys.stdin).get('pattern',''))" 2>/dev/null)
-    [[ -z "$PATTERN" ]] && continue
+cmd = sys.argv[1] if len(sys.argv) > 1 else ''
+antigen_file = sys.argv[2] if len(sys.argv) > 2 else ''
+if not cmd or not antigen_file:
+    sys.exit(0)
 
-    if echo "$COMMAND" | python3 -c "import sys,re; cmd=sys.stdin.read(); exit(0 if re.search('$PATTERN', cmd) else 1)" 2>/dev/null; then
-        ID=$(echo "$line" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
-        SEV=$(echo "$line" | python3 -c "import sys,json; print(json.load(sys.stdin).get('severity',''))" 2>/dev/null)
-        CM=$(echo "$line" | python3 -c "import sys,json; print(json.load(sys.stdin).get('countermeasure',''))" 2>/dev/null)
-        echo "IMMUN-CHECK [$ID] ($SEV): $CM"
-    fi
-done < "$ANTIGEN_FILE"
+try:
+    with open(antigen_file, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+                pattern = obj.get('pattern', '')
+                if pattern and re.search(pattern, cmd):
+                    aid = obj.get('id', '?')
+                    sev = obj.get('severity', '?')
+                    cm = obj.get('countermeasure', '?')
+                    print(f'IMMUN-CHECK [{aid}] ({sev}): {cm}')
+            except (json.JSONDecodeError, re.error):
+                continue
+except FileNotFoundError:
+    pass
+PYEOF
 
-# Nie blockieren — nur warnen
 exit 0

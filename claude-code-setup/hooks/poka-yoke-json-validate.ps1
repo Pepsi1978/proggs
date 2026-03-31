@@ -7,7 +7,9 @@ param()
 
 $input_data = $null
 try {
-    $input_data = $input | ConvertFrom-Json -ErrorAction Stop
+    $hookInput = [Console]::In.ReadToEnd()
+    if (-not $hookInput -or $hookInput.Length -lt 5) { exit 0 }
+    $input_data = $hookInput | ConvertFrom-Json -ErrorAction Stop
 } catch {
     exit 0  # Kein JSON-Input = kein Problem
 }

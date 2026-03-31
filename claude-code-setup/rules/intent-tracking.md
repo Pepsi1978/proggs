@@ -12,7 +12,7 @@ A reminder marker is written every 5 turns.
 > - **Quick check**: Run `echo ${TMPDIR:-/tmp}` to find the correct directory.
 > - The reminder file is at the same location: `${TMPDIR:-/tmp}/claude-intent-reminder.txt`
 
-When working on a task that spans more than 10 tool calls:
+When working on a task that spans more than 5 tool calls:
 
 1. **At the start**: Read the goal file (use `cat "${TMPDIR:-/tmp}/claude-session-goal.txt"`) to recall the user's original request
 2. **Every ~5 turns** (when reminder file updates): Re-read the goal file and verify: "Am I still working toward this exact goal?"
@@ -52,20 +52,16 @@ innehalten und sich fragen:
 
 1. **Ziel-Check**: "Was wollte ich mit diesen 5 Schritten erreichen? Habe ich es erreicht?"
 2. **Richtungs-Check**: "Bin ich noch auf dem kuerzesten Weg zum Ziel?"
-3. **Effizienz-Check**: "Haette ich die letzten 5 Schritte effizienter machen koennen?"
 
+Diese Pruefung findet INTERN statt — nur ausgeben wenn eine Kurskorrektur noetig ist.
 Wenn eine der Antworten NEIN ist: Explizit den Kurs korrigieren bevor weitergemacht wird.
 
 ### Am Ende jeder Aufgabe: 1-Satz-Rueckblick
 
-Nach Abschluss einer Aufgabe (VOR den Intelligenz-Vorschlaegen) eine kurze
-Selbst-Bewertung formulieren:
-
-"**Selbst-Bewertung**: [Was habe ich gut gemacht] / [Was haette ich besser machen koennen]"
-
-Diese Bewertung wird NICHT dem Benutzer gezeigt (zu granular), aber sie fuettert
-die Selbstbeobachtungs-Direktive und kann als Intelligenz-Vorschlag formuliert
-werden wenn ein Muster erkennbar ist.
+Nach Abschluss einer Aufgabe (VOR den Intelligenz-Vorschlaegen) kurz reflektieren.
+Wenn ein WIEDERKEHRENDES Muster erkennbar ist (gleicher Fehler 2x, gleicher Umweg 2x):
+→ Als Feedback-Memory oder Whiteboard-Eintrag persistieren.
+→ Als Intelligenz-Vorschlag formulieren.
 
 ### Zusammenspiel
 

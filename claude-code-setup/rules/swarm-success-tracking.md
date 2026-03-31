@@ -56,9 +56,24 @@ NICHT eintragen wenn:
 - Einmaliger Ansatz der nicht uebertragbar ist
 - Ansatz hat NICHT gut funktioniert
 
+## Fallback wenn Tabelle fehlt
+
+Wenn die Sektion "Bewaehrte Loesungsmuster" in MEMORY.md nicht existiert
+(geloescht, Merge-Konflikt, korrupte Datei):
+1. Sektion mit leerem Header neu erstellen
+2. Ins Whiteboard schreiben: "Pheromon-Tabelle neu erstellt (war nicht vorhanden)"
+3. NICHT still fortfahren — das Fehlen der Tabelle ist ein Symptom fuer ein Problem
+
+## Groessenlimit
+
+Maximale Tabellengroesse: **20 Eintraege**.
+Bei Ueberschreiten: Den aeltesten "Mittel"-Eintrag entfernen.
+Wenn keine "Mittel"-Eintraege vorhanden: Den aeltesten Eintrag insgesamt entfernen.
+
 ## Bereinigung
 
 /self-improve bereinigt die Tabelle regelmaessig:
 - Eintraege aelter als 3 Monate entfernen (veraltet)
 - Doppelte Eintraege zusammenfuehren
 - Eintraege mit "Mittel" nach 1 Monat entfernen wenn kein "Hoch"-Update kam
+- Nie mehr als 20 Eintraege (sonst verdraengt die Tabelle andere Whiteboard-Sektionen)

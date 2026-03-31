@@ -12,9 +12,9 @@ und bei Unsicherheit SOFORT nachschlagen statt zu raten.
 
 | Farbe | Bedeutung | Aktion |
 |-------|-----------|--------|
-| **Gruen** | Information kommt aus frischer Quelle (Datei gerade gelesen, Web gerade gesucht, Tool-Output gerade gesehen) | Sicher verwenden |
-| **Gelb** | Information kommt aus der Erinnerung (fruehere Session, Training) | Im Zweifel nachschlagen, bei hohem Risiko immer nachschlagen |
-| **Rot** | Information ist eine Vermutung oder Schaetzung | **STOP** — zuerst nachschlagen (Read, Grep, WebSearch) bevor darauf aufgebaut wird |
+| **Gruen** | In diesem Antwortblock gelesen/ausgefuehrt ODER max 5 Turns zurueck in dieser Session | Sicher verwenden |
+| **Gelb** | Mehr als 5 Turns zurueck (gleiche Session) ODER aus frueherer Session/Training | Im Zweifel nachschlagen, bei hohem Risiko immer nachschlagen |
+| **Rot** | Information ist eine Vermutung oder Schaetzung | **STOP** — genau 1 Nachschlage-Aufruf (Read/Grep/WebSearch). Danach immer noch unklar? → Explizit als Schaetzung markieren |
 
 ## Wann die Ampel PFLICHT ist
 

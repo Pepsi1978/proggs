@@ -2,32 +2,36 @@
 # Cascade Format Hook: Lint-Pruefung nach jedem Edit/Write auf Code-Dateien
 # Quelle: Superintelligenz Finding 3 — Cascade Hooks Pattern (Windsurf-inspiriert)
 # Event: PostToolUse (Edit|Write)
-# Zweck: Fuehrt Linting auf geaenderten Code-Dateien aus und meldet Fehler.
 #
-# UNTERSCHIED zu auto-format:
-#   auto-format = Formatierung (Whitespace) — ASYNC, Fehler ignoriert
-#   cascade-format = LINT (Syntax, Imports) — SYNC, Fehler gemeldet
+# FIXED: Pipeline-Exit-Code-Bugs bei cargo/go (Audit Finding #1, #3)
+# FIXED: Shell-Injection via FILE_PATH (Audit Finding #2)
+# FIXED: ktlint --relative entfernt (Audit Finding #4)
+# FIXED: Tampermonkey .user.js Ausnahme (Audit Finding #6)
+# FIXED: Leerer stdin behandelt (Audit Finding #13)
 
 set +e  # Nie crashen
 
 INPUT=$(cat)
+[[ -z "$INPUT" ]] && exit 0
 
 FILE_PATH=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('file_path',''))" 2>/dev/null)
 
-if [[ -z "$FILE_PATH" || ! -f "$FILE_PATH" ]]; then
-    exit 0
-fi
+[[ -z "$FILE_PATH" || ! -f "$FILE_PATH" ]] && exit 0
 
 EXT="${FILE_PATH##*.}"
 EXT=$(echo "$EXT" | tr '[:upper:]' '[:lower:]')
 LINT_CMD=""
 LINT_FAILED=0
+RESULT=""
+
+# Tampermonkey .user.js: ueberspringen — nutzt eslint per CLAUDE.md
+[[ "$FILE_PATH" == *.user.js ]] && exit 0
 
 case "$EXT" in
     kt|kts)
         if command -v ktlint &>/dev/null; then
             LINT_CMD="ktlint"
-            RESULT=$(ktlint --relative "$FILE_PATH" 2>&1)
+            RESULT=$(ktlint "$FILE_PATH" 2>&1)
             [[ $? -ne 0 ]] && LINT_FAILED=1
         fi
         ;;
@@ -39,7 +43,8 @@ case "$EXT" in
         fi
         ;;
     json)
-        if python3 -c "import json; json.load(open('$FILE_PATH', encoding='utf-8'))" 2>/dev/null; then
+        # Sicher: FILE_PATH als Argument, nie interpoliert
+        if python3 -c "import json,sys; json.load(open(sys.argv[1], encoding='utf-8'))" -- "$FILE_PATH" 2>/dev/null; then
             :  # Valid JSON
         else
             LINT_CMD="json-validate"
@@ -58,17 +63,16 @@ case "$EXT" in
         if command -v go &>/dev/null; then
             DIR=$(dirname "$FILE_PATH")
             LINT_CMD="go vet"
-            RESULT=$(go vet "$DIR/..." 2>&1 | head -5)
-            [[ $? -ne 0 ]] && LINT_FAILED=1
+            # Fix: Exit-Code von go vet erfassen, nicht von head
+            FULL_RESULT=$(go vet "$DIR/..." 2>&1)
+            GO_EXIT=$?
+            RESULT=$(echo "$FULL_RESULT" | head -5)
+            [[ $GO_EXIT -ne 0 ]] && LINT_FAILED=1
         fi
         ;;
     rs)
-        CARGO=$(find "$(dirname "$FILE_PATH")" -maxdepth 3 -name "Cargo.toml" -print -quit 2>/dev/null)
-        if [[ -n "$CARGO" ]] && command -v cargo &>/dev/null; then
-            LINT_CMD="cargo check"
-            RESULT=$(cargo check --manifest-path "$CARGO" 2>&1 | head -5)
-            [[ $? -ne 0 ]] && LINT_FAILED=1
-        fi
+        # Rust: ausgeschlossen — cargo check zu langsam fuer 15s Hook-Timeout
+        # Manuell ausfuehren: cargo check
         ;;
 esac
 

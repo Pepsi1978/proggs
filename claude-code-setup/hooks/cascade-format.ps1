@@ -27,13 +27,16 @@ $lintResult = $null
 $lintCmd = ""
 $lintFailed = $false
 
+# Tampermonkey .user.js: ueberspringen — nutzt eslint per CLAUDE.md
+if ($filePath -match '\.user\.js$') { exit 0 }
+
 switch ($ext) {
-    # Kotlin: ktlint wenn installiert, sonst skip
+    # Kotlin: ktlint wenn installiert, sonst skip (kein --relative — entfernt in ktlint v1.x)
     { $_ -in 'kt', 'kts' } {
         $ktlint = Get-Command ktlint -ErrorAction SilentlyContinue
         if ($ktlint) {
             $lintCmd = "ktlint"
-            $lintResult = & ktlint --relative "$filePath" 2>&1
+            $lintResult = & ktlint "$filePath" 2>&1
             if ($LASTEXITCODE -ne 0) { $lintFailed = $true }
         }
     }
