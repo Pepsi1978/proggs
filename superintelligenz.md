@@ -8,12 +8,12 @@
 
 ## Status-Uebersicht
 
-| Direktive | Offene Vorschlaege | Umgesetzt | Verworfen |
-|-----------|-------------------|-----------|-----------|
-| Superintelligenz | 3 | 4 | 0 |
-| Selbstbeobachtung | 2 | 3 | 0 |
-| Resilient Bugfixing | 2 | 3 | 0 |
-| **Gesamt** | **7** | **10** | **0** |
+| Direktive | Offene Vorschlaege | Umgesetzt | Verworfen | Bereits vorhanden |
+|-----------|-------------------|-----------|-----------|-------------------|
+| Superintelligenz | 1 | 4 | 1 | 1 |
+| Selbstbeobachtung | 0 | 3 | 1 | 1 |
+| Resilient Bugfixing | 0 | 4 | 1 | 0 |
+| **Gesamt** | **1** | **11** | **3** | **2** |
 
 *Letzte Aktualisierung: 2026-03-31 (Lauf 2: macOS-Fokus)*
 *Anzahl Forschungslaeufe: 2*
@@ -174,7 +174,7 @@ Fuer das BestJournal-Projekt (Android in Kotlin) gibt es kein direktes Aequivale
 **Abhaengigkeiten:** Xcode muss installiert sein (SourceKit-LSP ist im Swift-Toolchain enthalten)
 **Risiko:** Nur fuer Swift-Code nuetzlich. Index muss nach Builds aktualisiert werden. macOS-only — keine Windows-Entsprechung moeglich.
 **Empfehlung:** Bald (wenn naechstes Swift-Projekt aktiv)
-**Status:** OFFEN
+**Status:** BEREITS VORHANDEN (swift-lsp@claude-plugins-official Plugin ist in settings.json aktiviert)
 
 ---
 
@@ -202,8 +202,8 @@ Claude Code kann nicht nur Code schreiben sondern auch die macOS-Arbeitsumgebung
 **Kreativitaets-Bonus:** Hammerspoon kann auf ANDERE macOS-Events reagieren: wenn ein bestimmter Prozess crashed, wenn ein Build fertig ist, wenn das Netzwerk sich veraendert. Das macht es zu einem natuerlichen Begleiter fuer Claude Code Hooks — Hammerspoon auf dem Mac-Level, Claude Hooks auf dem Agent-Level.
 **Abhaengigkeiten:** Hammerspoon muss installiert sein (kostenlos, Open Source)
 **Risiko:** Lua-Skripte koennen die macOS-Umgebung stark veraendern. Jeden Hammerspoon-Befehl vor Ausfuehren mit dem Benutzer abklaren.
-**Empfehlung:** Bald
-**Status:** OFFEN
+**Empfehlung:** VERWORFEN — macOS Sequoia hat eingebautes Window Tiling, Lua-Konfiguration fuer Nicht-Programmierer unzugaenglich
+**Status:** VERWORFEN (2026-03-31) — Alltagstauglichkeits-Pruefung: dauerhaft RAM-Verbrauch, Accessibility-Permission, macOS hat die Kernfunktion schon eingebaut
 
 ---
 
@@ -382,7 +382,7 @@ Der Benutzer muss nicht mehr staendig das Terminal beobachten. Claude kann bei l
 **Abhaengigkeiten:** Keine (afplay und osascript sind auf jedem Mac vorinstalliert)
 **Risiko:** osascript braucht Notification-Berechtigung im System (einmalige macOS-Anfrage). Kein Windows-Gegenstueck noetig (Windows-Hooks bereits vorhanden via .ps1).
 **Empfehlung:** Sofort — einfachstes macOS-spezifisches Upgrade in dieser Liste
-**Status:** OFFEN
+**Status:** BEREITS VORHANDEN (notify.sh + notify.ps1 existierten schon vor dieser Recherche)
 
 ---
 
@@ -411,8 +411,8 @@ Selbstbeobachtung auf Umgebungsebene: Claude sieht nicht nur den eigenen Code-Zu
 **Kreativitaets-Bonus:** Verbindet sich elegant mit dem bestehenden invariant-check.sh Hook. Homebrew-Zustand wird zur sechsten Invariante die bei jedem Session-Start geprueft wird. "Entwicklungsumgebung ist aktuell" wird zur messbaren Invariante — genau das was das Cursor Invariant Sentinel Pattern anstrebt.
 **Abhaengigkeiten:** Homebrew muss installiert sein (ist es bereits laut Systemzustand)
 **Risiko:** Homebrew-Upgrades koennen bestehende Funktionen brechen. Nur als Information-Tool nutzen, NIEMALS automatisch upgraden ohne Benutzer-Zustimmung.
-**Empfehlung:** Bald
-**Status:** OFFEN
+**Empfehlung:** VERWORFEN — Claude kann `brew outdated` bereits via Bash, MCP-Server (27 Stars, Python-Dependency) ist Overkill
+**Status:** VERWORFEN (2026-03-31) — Alltagstauglichkeits-Pruefung: brew outdated ist im heartbeat.sh integriert, kein separater MCP-Server noetig
 
 ---
 
@@ -552,8 +552,8 @@ Eliminiert eine ganze Klasse von Sicherheitsfehlern: versehentlich committete AP
 **Kreativitaets-Bonus:** Claude Code hat laut aktueller Dokumentation bereits eine eingebaute Keychain-Integration fuer Plugin-Credentials. ServeMyAPI erweitert das auf ALLE API-Keys projektuebergreifend. Kombiniert: Vollstaendige Key-Isolation vom Dateisystem. Kein Key landet je in einer Textdatei. Das ist Poka-Yoke (Finding 8) fuer Credentials.
 **Abhaengigkeiten:** macOS-only (Windows hat Windows Credential Manager — anderes Tool noetig)
 **Risiko:** Keychain-Zugriff braucht Benutzerberechtigung bei erster Verwendung. Bei Keychain-Korruption koennen Keys verloren gehen (Backup-Strategie noetig).
-**Empfehlung:** Sofort — einfach zu installieren, sofortiger Sicherheitsgewinn
-**Status:** OFFEN
+**Empfehlung:** VERWORFEN — Keychain-Popups bei jedem Prozess-Neustart stoeren den bypassPermissions-Workflow
+**Status:** VERWORFEN (2026-03-31) — Alltagstauglichkeits-Pruefung: macOS Keychain fragt bei jedem neuen node-Prozess um Erlaubnis
 
 ---
 
@@ -583,7 +583,7 @@ Unsere Entwicklungsumgebung prueft sich aktuell nur bei Session-Start (invariant
 **Abhaengigkeiten:** Finding 14 (macOS Notifications) empfohlen aber nicht Pflicht; launchd ist auf jedem Mac vorinstalliert
 **Risiko:** launchd plist-Fehler koennen zu CPU-Loops fuehren wenn das Skript immer wieder crasht. Plist muss mit StartInterval (nicht StartCalendarInterval) konfiguriert werden und Skript muss immer exit 0 liefern.
 **Empfehlung:** Bald (nach Finding 14)
-**Status:** OFFEN
+**Status:** UMGESETZT (2026-03-31) — heartbeat.sh + com.frank.claude-heartbeat.plist + invariant-check.sh Integration
 
 ---
 
@@ -602,15 +602,17 @@ Unsere Entwicklungsumgebung prueft sich aktuell nur bei Session-Start (invariant
 > Die 5 wichtigsten Vorschlaege die als NAECHSTES umgesetzt werden sollten.
 > Wird nach jedem Forschungslauf aktualisiert.
 
-| Rang | Finding | Direktive | Aufwand | Warum jetzt |
-|------|---------|-----------|---------|-------------|
-| **1** | Finding 14: macOS Notification Hooks (afplay + osascript) | D2 | 30 Min | Sofort umsetzbar, kein Risiko, sofortiger Mehrwert fuer jeden Arbeitsablauf — Claude meldet sich selbst |
-| **2** | Finding 16: ServeMyAPI Keychain MCP | D3 | 30 Min | Eliminiert eine ganze Fehlerklasse (API-Key-Leaks), einfache Installation, sofortiger Sicherheitsgewinn |
-| **3** | Finding 15: Homebrew MCP | D2+D3 | 30 Min | Selbstbeobachtung der macOS-Umgebung, ergaenzt invariant-check.sh um sechste Invariante |
-| **4** | Finding 11: SwiftLens MCP | D1 | 30 Min | Compiler-genaue Swift-Analyse fuer Swift/macOS-Projekte — eliminiert eine Klasse von Type-Fehler-Bugs |
-| **5** | Finding 17: launchd Heartbeat | D3 | 1 Tag | Dauerhafter Self-Healing-Mechanismus jenseits von Sessions — MacOS-native Ueberwachungsschicht |
+| Rang | Finding | Status | Anmerkung |
+|------|---------|--------|-----------|
+| ~~1~~ | ~~Finding 14: macOS Notification Hooks~~ | BEREITS VORHANDEN | notify.sh + notify.ps1 existierten schon |
+| ~~2~~ | ~~Finding 16: ServeMyAPI Keychain MCP~~ | VERWORFEN | Keychain-Popups bei jedem Prozess-Neustart |
+| ~~3~~ | ~~Finding 15: Homebrew MCP~~ | VERWORFEN | brew outdated in heartbeat.sh integriert |
+| ~~4~~ | ~~Finding 11: SwiftLens MCP~~ | BEREITS VORHANDEN | swift-lsp Plugin war schon aktiviert |
+| **5** | **Finding 17: launchd Heartbeat** | **UMGESETZT** | heartbeat.sh + launchd plist + invariant-check Integration |
 
-*Hinweis: Findings 1-10 aus Lauf 1 sind bereits umgesetzt. Neue Top-5 beziehen sich auf Findings 11-17 aus Lauf 2 (macOS-Fokus).*
+*Hinweis: Findings 1-10 aus Lauf 1 sind bereits umgesetzt. Von Findings 11-17 (macOS-Fokus) waren 2 schon vorhanden, 3 wurden nach Alltagstauglichkeits-Pruefung verworfen, 1 wurde umgesetzt, 1 wartet auf macOS 26.*
+
+**Einziger offener Vorschlag:** Finding 13 (Apple Foundation Models) — wartet auf macOS 26 (Tahoe).
 
 ---
 

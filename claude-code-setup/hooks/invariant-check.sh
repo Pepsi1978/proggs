@@ -84,6 +84,35 @@ if [ -f "$CLAUDE_REPO" ] && [ -f "$CLAUDE_HOME" ]; then
     fi
 fi
 
+# --- Invariant 6: Heartbeat-Status (between-session health) ---
+HEARTBEAT_STATUS="$HOME/.claude/heartbeat-status.json"
+if [ -f "$HEARTBEAT_STATUS" ]; then
+    hb_status=$(python3 -c "import json; d=json.load(open('$HEARTBEAT_STATUS')); print(d.get('status','UNKNOWN'))" 2>/dev/null)
+    hb_time=$(python3 -c "import json; d=json.load(open('$HEARTBEAT_STATUS')); print(d.get('timestamp','?'))" 2>/dev/null)
+    if [ "$hb_status" = "CRITICAL" ]; then
+        # Extract critical check details
+        hb_details=$(python3 -c "
+import json
+d = json.load(open('$HEARTBEAT_STATUS'))
+for name, info in d.get('checks', {}).items():
+    if info.get('status') == 'CRITICAL':
+        print(f'  {name}: {info.get(\"detail\", \"?\")}')" 2>/dev/null)
+        violations+=("HEARTBEAT ($hb_time): KRITISCHE Probleme zwischen Sessions erkannt:")
+        if [ -n "$hb_details" ]; then
+            while IFS= read -r line; do
+                violations+=("$line")
+            done <<< "$hb_details"
+        fi
+    elif [ "$hb_status" = "WARNING" ]; then
+        hb_warnings=$(python3 -c "
+import json
+d = json.load(open('$HEARTBEAT_STATUS'))
+warns = [f'{n}: {i.get(\"detail\",\"?\")}' for n,i in d.get('checks',{}).items() if i.get('status')=='WARNING']
+print('; '.join(warns))" 2>/dev/null)
+        violations+=("HEARTBEAT ($hb_time): Warnungen: $hb_warnings")
+    fi
+fi
+
 # --- Output ---
 if [ ${#violations[@]} -gt 0 ]; then
     echo ""

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Label: unique identifier for this launchd agent -->
+    <key>Label</key>
+    <string>com.frank.claude-heartbeat</string>
+
+    <!-- Program: the health check script -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/frank/.claude/hooks/heartbeat.sh</string>
+    </array>
+
+    <!-- Run every 900 seconds (15 minutes) -->
+    <key>StartInterval</key>
+    <integer>900</integer>
+
+    <!-- Do NOT run at login — wait for first interval -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <!-- Throttle: minimum 60 seconds between runs (safety net) -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <!-- Log output for debugging -->
+    <key>StandardOutPath</key>
+    <string>/Users/frank/.claude/logs/heartbeat/launchd-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/frank/.claude/logs/heartbeat/launchd-stderr.log</string>
+
+    <!-- Low priority — don't compete with real work -->
+    <key>LowPriorityIO</key>
+    <true/>
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>
