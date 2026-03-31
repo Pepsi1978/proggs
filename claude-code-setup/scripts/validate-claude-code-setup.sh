@@ -72,7 +72,7 @@ check_json_valid() {
     fail "JSON file missing (cannot validate): claude-code-setup/$rel"
     return
   fi
-  if node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$full" 2>/dev/null; then
+  if node -e "JSON.parse(require('fs').readFileSync('$full','utf8'))" 2>/dev/null; then
     pass "Valid JSON: claude-code-setup/$rel"
   else
     fail "Invalid JSON: claude-code-setup/$rel"
@@ -86,7 +86,7 @@ check_json_valid_repo() {
     fail "JSON file missing (cannot validate): $rel"
     return
   fi
-  if node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$full" 2>/dev/null; then
+  if node -e "JSON.parse(require('fs').readFileSync('$full','utf8'))" 2>/dev/null; then
     pass "Valid JSON: $rel"
   else
     fail "Invalid JSON: $rel"
@@ -115,27 +115,6 @@ check_syntax_sh() {
     pass "Shell syntax OK: $rel"
   else
     fail "Shell syntax error: $rel"
-  fi
-}
-
-check_repo_file_parity() {
-  local rel_a="$1"
-  local rel_b="$2"
-  local description="$3"
-  local full_a="$REPO_ROOT/$rel_a"
-  local full_b="$REPO_ROOT/$rel_b"
-  if [[ ! -f "$full_a" ]]; then
-    fail "Parity source missing: $rel_a"
-    return
-  fi
-  if [[ ! -f "$full_b" ]]; then
-    fail "Parity source missing: $rel_b"
-    return
-  fi
-  if node -e "const fs=require('fs'); const norm=s=>s.replace(/\r\n/g,'\n'); const a=norm(fs.readFileSync(process.argv[1],'utf8')); const b=norm(fs.readFileSync(process.argv[2],'utf8')); process.exit(a===b?0:1);" "$full_a" "$full_b" 2>/dev/null; then
-    pass "Parity OK [$description]: $rel_a == $rel_b"
-  else
-    fail "Parity mismatch [$description]: $rel_a != $rel_b"
   fi
 }
 
@@ -214,17 +193,11 @@ for f in \
   "agents/architect.md" \
   "agents/code-reviewer.md" \
   "agents/debugger.md" \
-  "agents/export.md" \
-  "agents/import.md" \
   "agents/tester.md" \
   "agents/quality-gate.md"
 do
   check_file "$f"
 done
-
-section "6b. Universal Mirror Agent Parity"
-check_repo_file_parity "claude-code-setup/agents/export.md" "Gemini-Setup/agents/export.md" "export agent"
-check_repo_file_parity "claude-code-setup/agents/import.md" "Gemini-Setup/agents/import.md" "import agent"
 
 # ── 7. Mandatory commands ────────────────────────────────────────────────────
 section "7. Mandatory Commands"

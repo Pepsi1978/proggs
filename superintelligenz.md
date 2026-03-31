@@ -10,13 +10,13 @@
 
 | Direktive | Offene Vorschlaege | Umgesetzt | Verworfen |
 |-----------|-------------------|-----------|-----------|
-| Superintelligenz | 0 | 4 | 0 |
-| Selbstbeobachtung | 0 | 3 | 0 |
-| Resilient Bugfixing | 0 | 3 | 0 |
-| **Gesamt** | **0** | **10** | **0** |
+| Superintelligenz | 3 | 4 | 0 |
+| Selbstbeobachtung | 2 | 3 | 0 |
+| Resilient Bugfixing | 2 | 3 | 0 |
+| **Gesamt** | **7** | **10** | **0** |
 
-*Letzte Aktualisierung: 2026-03-31*
-*Anzahl Forschungslaeufe: 1*
+*Letzte Aktualisierung: 2026-03-31 (Lauf 2: macOS-Fokus)*
+*Anzahl Forschungslaeufe: 2*
 
 ---
 
@@ -146,6 +146,97 @@ Unser bestehendes MEMORY.md Whiteboard ist bereits ein einfaches "Pheromon"-Syst
 
 ---
 
+---
+
+### 🍎 Finding 11: SwiftLens MCP — Compiler-genaue Swift-Code-Analyse fuer AI-Agenten
+**Direktive:** 1: Superintelligenz
+**Quelle(n):** [SwiftLens GitHub](https://github.com/swiftlens/swiftlens) | [SwiftLens auf LobeHub](https://lobehub.com/mcp/swiftlens-swiftlens) | [PulseMCP Eintrag](https://www.pulsemcp.com/servers/swift-sourcekit-lsp)
+**Entdeckt in:** Welle 1 (macOS-Fokus)
+**Was ist das? (fuer Nicht-Programmierer):**
+Wenn man Claude Code bittet, eine Swift-Datei zu aendern, sieht es den Code wie ein Texteditor: als Buchstaben und Woerter. SwiftLens gibt Claude eine viel tiefere Sicht — wie Xcode selbst. Es verbindet sich mit Apples eigenem Analyse-Werkzeug (SourceKit-LSP) und versteht Swift-Code auf Compiler-Ebene: wo wird eine Funktion aufgerufen, welche Typen sind kompatibel, wo gibt es Fehler. Damit kann Claude nicht nur Code schreiben sondern ihn wirklich VERSTEHEN.
+
+**Was bringt es uns konkret?:**
+Fuer das BestJournal-Projekt (Android in Kotlin) gibt es kein direktes Aequivalent — aber fuer jeden Swift/SwiftUI-Code auf macOS wird Claude zum Experten. Statt zu raten ob ein Refactoring funktioniert, weiss Claude durch SourceKit-LSP-Rueckmeldungen sofort ob Typen stimmen, ob Referenzen korrekt sind, und wo andere Stellen im Code angepasst werden muessen. Das eliminiert eine ganze Klasse von "das compile ich mal und schaue ob es klappt" Fehlern.
+
+**Aufwand:** 30 Min
+
+**Umsetzung in Claude Code:**
+- **Typ:** MCP-Server (Installation)
+- **Datei(en):** `~/proggs/.mcp.json` (macOS-Eintrag hinzufuegen)
+- **Schritte:**
+  1. SwiftLens installieren: `pip install swiftlens`
+  2. Swift-Projekte mit Index-Store bauen: `swift build -Xswiftc -index-store-path -Xswiftc .build/index/store`
+  3. MCP-Eintrag in `~/proggs/.mcp.json` hinzufuegen fuer macOS (Windows-Eintrag NICHT erstellen — macOS-only)
+  4. In `.mcp.json` unter einem macOS-Conditional-Kommentar dokumentieren warum nur macOS
+  5. Testen: Claude bitten eine Swift-Funktion zu finden, die eine bestimmte andere Funktion aufruft
+
+**Kreativitaets-Bonus:** SwiftLens laeuft komplett lokal — keine Cloud, keine Datenexfiltration. Das ist eine macOS-native Defense-in-Depth fuer Swift-Code: Fehler werden durch semantisches Verstaendnis verhindert, nicht nur durch Testen.
+**Abhaengigkeiten:** Xcode muss installiert sein (SourceKit-LSP ist im Swift-Toolchain enthalten)
+**Risiko:** Nur fuer Swift-Code nuetzlich. Index muss nach Builds aktualisiert werden. macOS-only — keine Windows-Entsprechung moeglich.
+**Empfehlung:** Bald (wenn naechstes Swift-Projekt aktiv)
+**Status:** OFFEN
+
+---
+
+### 🔨 Finding 12: Hammerspoon — macOS Automation als Claude-Code-Superkraft
+**Direktive:** 1: Superintelligenz
+**Quelle(n):** [Hammerspoon GitHub](https://github.com/Hammerspoon/hammerspoon) | [Hammerspoon Skill auf MCPMarket](https://mcpmarket.com/tools/skills/hammerspoon-macos-automation) | [AI + Hammerspoon Medium](https://medium.com/@business_37716/revolutionizing-workflow-automation-with-ai-and-hammerspoon-a834b8cf54f6)
+**Entdeckt in:** Welle 1 (macOS-Fokus)
+**Was ist das? (fuer Nicht-Programmierer):**
+Hammerspoon ist ein kostenloses macOS-Werkzeug das Lua-Skripte direkt mit dem Betriebssystem verbindet — Fensterpositionen, Tastenkuerzel, laufende Programme, Klemmbrett, Bildschirm-Layouts, Mikrofon und mehr. Es gibt bereits einen fertigen Claude-Code-Skill dafuer. Wenn Claude Code diesen Skill kennt, kann es auf Anfrage komplexe macOS-Automatisierungen bauen — zum Beispiel "positioniere das Terminal-Fenster links oben und den Browser rechts" oder "wenn ich Control+Shift+C druecke, oeffne Claude Code im Hintergrund".
+
+**Was bringt es uns konkret?:**
+Claude Code kann nicht nur Code schreiben sondern auch die macOS-Arbeitsumgebung des Benutzers intelligent gestalten. Aufgaben wie "richte meinen Entwickler-Desktop automatisch ein" oder "erstelle Tastenkuerzel fuer meine haeufigsten Claude-Aktionen" werden in Minuten erledigt statt in Stunden.
+
+**Aufwand:** 30 Min
+
+**Umsetzung in Claude Code:**
+- **Typ:** Skill (Installation eines bestehenden Skills)
+- **Datei(en):** `~/.claude/` (Skill wird ueber Claude Code Marketplace installiert)
+- **Schritte:**
+  1. Hammerspoon App installieren: `brew install --cask hammerspoon`
+  2. Skill installieren via Claude Code: `/install-skill plinde/claude-plugins/hammerspoon`
+  3. Skill testen: Claude bitten ein einfaches Window-Layout Skript zu erstellen
+  4. Hammerspoon Spoon fuer Development-Layout erstellen: Terminal links, Browser rechts, Claude Code Mitte
+
+**Kreativitaets-Bonus:** Hammerspoon kann auf ANDERE macOS-Events reagieren: wenn ein bestimmter Prozess crashed, wenn ein Build fertig ist, wenn das Netzwerk sich veraendert. Das macht es zu einem natuerlichen Begleiter fuer Claude Code Hooks — Hammerspoon auf dem Mac-Level, Claude Hooks auf dem Agent-Level.
+**Abhaengigkeiten:** Hammerspoon muss installiert sein (kostenlos, Open Source)
+**Risiko:** Lua-Skripte koennen die macOS-Umgebung stark veraendern. Jeden Hammerspoon-Befehl vor Ausfuehren mit dem Benutzer abklaren.
+**Empfehlung:** Bald
+**Status:** OFFEN
+
+---
+
+### 🏗️ Finding 13: Apple Foundation Models Framework — Kostenloser lokaler 3B-LLM fuer macOS
+**Direktive:** 1: Superintelligenz
+**Quelle(n):** [Apple Newsroom: Foundation Models Framework](https://www.apple.com/newsroom/2025/09/apples-foundation-models-framework-unlocks-new-intelligent-app-experiences/) | [Apple Developer Docs](https://developer.apple.com/documentation/FoundationModels) | [WWDC25 Video](https://developer.apple.com/videos/play/wwdc2025/286/)
+**Entdeckt in:** Welle 1 (macOS-Fokus)
+**Was ist das? (fuer Nicht-Programmierer):**
+Apple hat in macOS 26 ein komplett kostenloses 3-Milliarden-Parameter KI-Modell eingebaut, das direkt auf dem Geraet laeuft — ohne Internet, ohne Kosten, ohne Datenweitergabe. Dieses Modell kann Texte zusammenfassen, strukturierte Daten erzeugen (JSON-Ausgabe mit Swift-Typen), und eigene Werkzeuge aufrufen. Es ist mit wenigen Swift-Codezeilen nutzbar. Fuer Entwickler interessant: Bei Aufgaben die kleine und schnelle KI-Unterstuetzung brauchen (Kategorisieren, Kurzfassungen, einfache Entscheidungen) koennte dieses lokale Modell Claude-API-Anfragen ersetzen.
+
+**Was bringt es uns konkret?:**
+Fuer Hooks, Skripte und einfache Automatisierungen auf macOS koennte das Foundation Models Framework einen kostenfreien "kleinen Bruder" von Claude bereitstellen. Wenn ein Hook entscheiden muss ob ein Fehler kritisch oder harmlos ist, muss er dafuer kein API-Guthaben verbrauchen — er fragt das lokale Modell. Das reduziert API-Kosten und erhoht die Autonomie der Programmierumgebung.
+
+**Aufwand:** 1 Tag (Swift-Wrapper bauen)
+
+**Umsetzung in Claude Code:**
+- **Typ:** Config + neues Swift-Tool (macOS-only)
+- **Datei(en):** Neues Swift-Skript `~/proggs/tools/local-classifier.swift` als ausfuehrbares CLI
+- **Schritte:**
+  1. Voraussetzung pruefen: macOS 26+ und Apple-Intelligence-kompatibles Geraet (M1+ mit 8GB RAM)
+  2. Swift-CLI-Tool erstellen: nimmt einen String als Input, gibt Klassifizierung zurueck (z.B. "harmlos/kritisch/unklar")
+  3. In Hooks verwenden: Bei bestimmten Fehlermeldungen zuerst lokales Modell befragen, dann nur bei "kritisch" oder "unklar" eine Whiteboard-Meldung schreiben
+  4. Build-Skript erstellen: `swift build -c release && cp .build/release/local-classifier ~/proggs/tools/`
+  5. Hook-Integration: PostToolUse-Hook kann lokalen Classifier aufrufen
+
+**Kreativitaets-Bonus:** Das Foundation Models Framework unterstuetzt Tool Calling — das lokale Modell kann selbst bestimmen welche Daten es braucht. Kombiniert mit einem MCP-Server waere ein vollstaendig lokaler, kostenfreier AI-Assistent fuer einfache macOS-Aufgaben moeglich: die KI-Variante eines "Automator"-Workflows.
+**Abhaengigkeiten:** macOS 26+ (Sequoia Nachfolger) auf Apple Silicon, Apple Intelligence aktiviert
+**Risiko:** Modell ist klein (3B Parameter) — bei komplexen Aufgaben unzuverlaessig. Nur fuer einfache Klassifizierungen und Zusammenfassungen einsetzen, nicht fuer Coding-Aufgaben.
+**Empfehlung:** Spaeter (wenn macOS 26 verfuegbar)
+**Status:** OFFEN
+
+---
+
 ### Umgesetzte Vorschlaege
 
 *Noch keine umgesetzten Vorschlaege. Wenn ein Vorschlag implementiert wird, hierher verschieben
@@ -251,6 +342,77 @@ Unsere Intent-Tracking Regel existiert bereits — sie prueft ob man vom ursprue
 **Risiko:** Kann Aufgaben verlangsamen wenn zu haeufig pausiert wird. Rhythmus sorgfaeltig waehlen.
 **Empfehlung:** Sofort
 **Status:** UMGESETZT (2026-03-31)
+
+---
+
+---
+
+### 🔔 Finding 14: macOS Notification Hooks — Native System-Alerts fuer Agent-Events
+**Direktive:** 2: Selbstbeobachtung
+**Quelle(n):** [Claude Code Notifications Blog](https://khromov.se/claude-code-hooks-for-simple-macos-notifications/) | [Claude Code Notifications Tutorial](https://nakamasato.medium.com/claude-code-hooks-automating-macos-notifications-for-task-completion-42d200e751cc) | [macOS Notification MCP](https://github.com/devizor/macos-notification-mcp)
+**Entdeckt in:** Welle 1 + Welle 2 (macOS-Fokus)
+**Was ist das? (fuer Nicht-Programmierer):**
+Wenn Claude Code eine lange Aufgabe beendet, sieht der Benutzer es erst wenn er ins Terminal schaut. Auf macOS koennen Hooks so eingerichtet werden dass bei wichtigen Agent-Events (Aufgabe fertig, Fehler aufgetreten, Input noetig) automatisch eine native macOS-Benachrichtigung aufpoppt — mit Sound und Banner, genau wie eine App-Benachrichtigung. Drei Werkzeuge stehen bereit: `afplay` fuer Sound, `osascript` fuer Benachrichtigungen, oder das macOS Notification MCP fuer eine vollstaendige Integration. Das System beobachtet sich selbst und meldet seinen Status proaktiv.
+
+**Was bringt es uns konkret?:**
+Der Benutzer muss nicht mehr staendig das Terminal beobachten. Claude kann bei langen Aufgaben (Build, Recherche, Self-Improve) komplett im Hintergrund laufen und meldet sich nur wenn seine Arbeit erledigt ist oder wenn er eine Entscheidung braucht. Das ist Selbstbeobachtung die nach aussen kommuniziert wird.
+
+**Aufwand:** 30 Min
+
+**Umsetzung in Claude Code:**
+- **Typ:** Hook (2 neue Hooks, macOS-only .sh-Dateien)
+- **Datei(en):** `~/.claude/hooks/notify-stop.sh`, `~/.claude/hooks/notify-input-needed.sh`
+- **Schritte:**
+  1. Stop-Hook erstellen: Bei jedem Agent-Stop einen Sound abspielen und Banner zeigen
+     ```bash
+     #!/bin/bash
+     afplay /System/Library/Sounds/Glass.aiff
+     osascript -e 'display notification "Claude ist fertig" with title "Claude Code" sound name "Glass"'
+     ```
+  2. Input-Hook erstellen: Wenn Claude wartet, anderen Sound und andere Meldung
+     ```bash
+     #!/bin/bash
+     afplay /System/Library/Sounds/Ping.aiff
+     osascript -e 'display notification "Claude braucht Eingabe" with title "Claude Code" sound name "Ping"'
+     ```
+  3. Hooks in `~/.claude/settings.json` registrieren (Stop und PreToolUse mit input-type filter)
+  4. Optional: macOS Notification MCP installieren fuer Antwort-Funktion (Benutzer antwortet direkt aus der Benachrichtigung)
+
+**Kreativitaets-Bonus:** Unterschiedliche Sounds fuer unterschiedliche Events — Glass fuer Erfolg, Sosumi fuer Fehler, Ping fuer Input-noetig. Das Betriebssystem selbst kommuniziert den Agent-Status. Genau das macht macOS-nativ: Audio-Feedback als Informationskanal, nicht nur visuell.
+**Abhaengigkeiten:** Keine (afplay und osascript sind auf jedem Mac vorinstalliert)
+**Risiko:** osascript braucht Notification-Berechtigung im System (einmalige macOS-Anfrage). Kein Windows-Gegenstueck noetig (Windows-Hooks bereits vorhanden via .ps1).
+**Empfehlung:** Sofort — einfachstes macOS-spezifisches Upgrade in dieser Liste
+**Status:** OFFEN
+
+---
+
+### 🍺 Finding 15: Homebrew MCP — Intelligente Paketpflege als Self-Healing-Schicht
+**Direktive:** 2: Selbstbeobachtung + 3: Resilient Bugfixing
+**Quelle(n):** [Homebrew MCP GitHub](https://github.com/jeannier/homebrew-mcp) | [Homebrew Security Audit](https://brew.sh/2024/07/30/homebrew-security-audit/)
+**Entdeckt in:** Welle 2 (macOS-Fokus)
+**Was ist das? (fuer Nicht-Programmierer):**
+Homebrew ist der Paketmanager von macOS — er installiert und verwaltet Entwicklerwerkzeuge wie Node.js, Python, Git, Go und hunderte andere. Wenn diese Pakete veralten, entstehen Sicherheitsluecken und Kompatibilitaetsprobleme. Der Homebrew MCP Server gibt Claude Code direkten Zugriff auf Homebrew-Befehle: Welche Pakete sind veraltet? Welche haben Sicherheitswarnungen? Das Besondere: Claude kann selbst "brew outdated" aufrufen und erkennen wenn die Entwicklungsumgebung Pflege braucht — ohne dass der Benutzer daran denken muss.
+
+**Was bringt es uns konkret?:**
+Selbstbeobachtung auf Umgebungsebene: Claude sieht nicht nur den eigenen Code-Zustand sondern auch den Zustand der macOS-Entwicklungsumgebung. Veraltete Pakete, die Fehler verursachen koennen, werden PROAKTIV gemeldet — nicht erst wenn der Build fehlt.
+
+**Aufwand:** 30 Min
+
+**Umsetzung in Claude Code:**
+- **Typ:** MCP-Server (Installation) + Rule-Erweiterung
+- **Datei(en):** `~/proggs/.mcp.json` (macOS-Eintrag), neue Regel `~/.claude/rules/homebrew-health.md`
+- **Schritte:**
+  1. Homebrew MCP installieren: `npm install -g homebrew-mcp` oder via npx
+  2. MCP-Eintrag in `~/proggs/.mcp.json` hinzufuegen (macOS-only)
+  3. Regel erstellen: Bei Session-Start (oder einmal pro Woche) `brew outdated` pruefen
+  4. Wenn kritische Pakete veraltet: Automatisch ins Whiteboard loggen unter "Systemzustand"
+  5. Optional: `brew audit` in invariant-check.sh integrieren fuer automatische Sicherheitspruefung
+
+**Kreativitaets-Bonus:** Verbindet sich elegant mit dem bestehenden invariant-check.sh Hook. Homebrew-Zustand wird zur sechsten Invariante die bei jedem Session-Start geprueft wird. "Entwicklungsumgebung ist aktuell" wird zur messbaren Invariante — genau das was das Cursor Invariant Sentinel Pattern anstrebt.
+**Abhaengigkeiten:** Homebrew muss installiert sein (ist es bereits laut Systemzustand)
+**Risiko:** Homebrew-Upgrades koennen bestehende Funktionen brechen. Nur als Information-Tool nutzen, NIEMALS automatisch upgraden ohne Benutzer-Zustimmung.
+**Empfehlung:** Bald
+**Status:** OFFEN
 
 ---
 
@@ -363,6 +525,68 @@ Zero-Recurrence Rate fuer bekannte Fehler. Fehler die einmal aufgetreten sind we
 
 ---
 
+---
+
+### 🔑 Finding 16: ServeMyAPI — Keychain-gestuetzte API-Key-Verwaltung fuer macOS
+**Direktive:** 3: Resilient Bugfixing
+**Quelle(n):** [ServeMyAPI GitHub](https://github.com/Jktfe/serveMyAPI) | [ServeMyAPI auf Playbooks](https://playbooks.com/mcp/jktfe-servemyapi-macos-keychain) | [Dev.to: API Keys falsch gespeichert](https://dev.to/the_seventeen/why-every-mcp-setup-guide-is-teaching-you-to-store-api-keys-wrong-4ghf)
+**Entdeckt in:** Welle 2 (macOS-Fokus)
+**Was ist das? (fuer Nicht-Programmierer):**
+Die meisten Anleitungen sagen: "Trage deinen API-Key in die .env-Datei ein". Das ist so als wuerde man den Haustuerschluessel unter die Fussmatte legen. Auf macOS gibt es einen sicheren Tresor: die Keychain. ServeMyAPI ist ein MCP-Server der alle API-Keys (Anthropic, OpenAI, GitHub, Google usw.) sicher im macOS-Tresor speichert. Claude Code kann dann ueber natuerliche Sprache nach Keys fragen: "Gib mir den Anthropic API-Key." Der Key kommt sicher aus dem Tresor, erscheint nie in einer Textdatei und kann nicht versehentlich in Git committed werden.
+
+**Was bringt es uns konkret?:**
+Eliminiert eine ganze Klasse von Sicherheitsfehlern: versehentlich committete API-Keys. Das ist Zero-Recurrence fuer eine der haaufigsten und gefaehrlichsten Entwickler-Fehler. Ausserdem: Ein einziger Key in der Keychain ist sofort in ALLEN Projekten verfuegbar — kein manuelles Kopieren von .env-Dateien mehr.
+
+**Aufwand:** 30 Min
+
+**Umsetzung in Claude Code:**
+- **Typ:** MCP-Server (Installation, macOS-only)
+- **Datei(en):** `~/proggs/.mcp.json` (macOS-Eintrag hinzufuegen)
+- **Schritte:**
+  1. ServeMyAPI installieren: `npx -y serveMyAPI` oder via Smithery
+  2. MCP-Eintrag in `~/proggs/.mcp.json` fuer macOS hinzufuegen
+  3. Bestehende API-Keys migrieren: Jeden Key aus .env-Dateien in die Keychain verschieben via ServeMyAPI-Befehle
+  4. Regel erstellen: ".env-Dateien mit API-Keys sind verboten — stets ServeMyAPI verwenden"
+  5. Bestehende .env-Dateien auf API-Keys pruefen und bereinigen (git history ebenfalls pruefen)
+
+**Kreativitaets-Bonus:** Claude Code hat laut aktueller Dokumentation bereits eine eingebaute Keychain-Integration fuer Plugin-Credentials. ServeMyAPI erweitert das auf ALLE API-Keys projektuebergreifend. Kombiniert: Vollstaendige Key-Isolation vom Dateisystem. Kein Key landet je in einer Textdatei. Das ist Poka-Yoke (Finding 8) fuer Credentials.
+**Abhaengigkeiten:** macOS-only (Windows hat Windows Credential Manager — anderes Tool noetig)
+**Risiko:** Keychain-Zugriff braucht Benutzerberechtigung bei erster Verwendung. Bei Keychain-Korruption koennen Keys verloren gehen (Backup-Strategie noetig).
+**Empfehlung:** Sofort — einfach zu installieren, sofortiger Sicherheitsgewinn
+**Status:** OFFEN
+
+---
+
+### ⚡ Finding 17: launchd Heartbeat — Autonome Gesundheitsueberwachung der Entwicklungsumgebung
+**Direktive:** 3: Resilient Bugfixing
+**Quelle(n):** [PAIArchitecture GitHub](https://github.com/MaxHarar/PAIArchitecture) | [launchd Tutorial](https://www.launchd.info/) | [Apple: Creating Launch Daemons and Agents](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html)
+**Entdeckt in:** Welle 3 (macOS-Fokus — kreative Synthese)
+**Was ist das? (fuer Nicht-Programmierer):**
+macOS hat ein eingebautes Werkzeug namens launchd — es ist wie ein automatischer Waecker der Aufgaben zu bestimmten Zeiten oder Intervallen startet. Eine Community-Implementierung (PAIArchitecture) nutzt das fuer einen "Heartbeat": Alle N Minuten laueft ein Skript das prueft ob alle wichtigen Dienste der Claude-Code-Umgebung noch laufen (MCP-Server, Hooks, Index). Wenn etwas fehlt, repariert es sich selbst. Das Besondere an macOS: launchd ist robuster als cron und startet auch nach einem System-Crash automatisch neu.
+
+**Was bringt es uns konkret?:**
+Unsere Entwicklungsumgebung prueft sich aktuell nur bei Session-Start (invariant-check.sh). Mit einem launchd-Heartbeat wird sie DAUERHAFT und AUTOMATISCH ueberwacht — auch zwischen Sessions. Wenn der semantische Suchindex abstuerzt oder ein MCP-Server stoppt, wird das sofort entdeckt und gemeldet (via macOS Notification), nicht erst beim naechsten Start.
+
+**Aufwand:** 1 Tag
+
+**Umsetzung in Claude Code:**
+- **Typ:** macOS launchd Agent + Shell-Skript
+- **Datei(en):** `~/Library/LaunchAgents/com.claudecode.heartbeat.plist`, `~/.claude/hooks/heartbeat.sh`
+- **Schritte:**
+  1. Heartbeat-Skript erstellen (`heartbeat.sh`): Prueft ob claude-mem, semantic search und Whiteboard erreichbar sind
+  2. launchd plist erstellen: Alle 15 Minuten heartbeat.sh ausfuehren
+  3. plist laden: `launchctl load ~/Library/LaunchAgents/com.claudecode.heartbeat.plist`
+  4. Wenn Fehler: macOS Notification (via osascript) + Whiteboard-Eintrag
+  5. Self-Healing: Wenn MCP-Server gestoppt, automatisch neu starten (nur sichere Dienste)
+
+**Kreativitaets-Bonus:** Das Herzschlag-Muster kommt aus der Medizin: Ein regelmaessiger Puls ist der sicherste Beweis dass ein System noch lebt. Statt darauf zu warten dass ein Dienst abstuerzt und Fehler wirft, prueft der Heartbeat aktiv ob alles am Leben ist. Kombiniert mit Finding 14 (macOS Notifications): Wenn der Heartbeat einen "toten" Dienst findet, hoert man es sofort.
+**Abhaengigkeiten:** Finding 14 (macOS Notifications) empfohlen aber nicht Pflicht; launchd ist auf jedem Mac vorinstalliert
+**Risiko:** launchd plist-Fehler koennen zu CPU-Loops fuehren wenn das Skript immer wieder crasht. Plist muss mit StartInterval (nicht StartCalendarInterval) konfiguriert werden und Skript muss immer exit 0 liefern.
+**Empfehlung:** Bald (nach Finding 14)
+**Status:** OFFEN
+
+---
+
 ### Umgesetzte Vorschlaege
 
 *Noch keine umgesetzten Vorschlaege.*
@@ -380,11 +604,13 @@ Zero-Recurrence Rate fuer bekannte Fehler. Fehler die einmal aufgetreten sind we
 
 | Rang | Finding | Direktive | Aufwand | Warum jetzt |
 |------|---------|-----------|---------|-------------|
-| **1** | Finding 2: ToolTree (Tool-Planungs-Regel) | D1 | 1 Stunde | Sofort umsetzbar, kein Risiko, direkte Effizienzsteigerung bei jeder Aufgabe |
-| **2** | Finding 5: Confidence-Tracking Ampel | D2 | 30 Min | Sofort umsetzbar, verhindert die haeufigste Fehlerquelle (selbstbewusstes Falschraten) |
-| **3** | Finding 7: Metacognitive Self-Monitoring | D2 | 30 Min | Erweiterung bestehender Regel, staerkt Intent-Tracking, kein Risiko |
-| **4** | Finding 4: Swarm-Pheromon-Tabelle | D1 | 30 Min | Kleiner Aufwand, grossen langfristigen Lerneffekt fuer alle parallelen Agenten |
-| **5** | Finding 8: Poka-Yoke Hooks | D3 | 1 Stunde | Verhindert Fehler strukturell statt reaktiv — staerkster Resilient-Bugfixing Ansatz |
+| **1** | Finding 14: macOS Notification Hooks (afplay + osascript) | D2 | 30 Min | Sofort umsetzbar, kein Risiko, sofortiger Mehrwert fuer jeden Arbeitsablauf — Claude meldet sich selbst |
+| **2** | Finding 16: ServeMyAPI Keychain MCP | D3 | 30 Min | Eliminiert eine ganze Fehlerklasse (API-Key-Leaks), einfache Installation, sofortiger Sicherheitsgewinn |
+| **3** | Finding 15: Homebrew MCP | D2+D3 | 30 Min | Selbstbeobachtung der macOS-Umgebung, ergaenzt invariant-check.sh um sechste Invariante |
+| **4** | Finding 11: SwiftLens MCP | D1 | 30 Min | Compiler-genaue Swift-Analyse fuer Swift/macOS-Projekte — eliminiert eine Klasse von Type-Fehler-Bugs |
+| **5** | Finding 17: launchd Heartbeat | D3 | 1 Tag | Dauerhafter Self-Healing-Mechanismus jenseits von Sessions — MacOS-native Ueberwachungsschicht |
+
+*Hinweis: Findings 1-10 aus Lauf 1 sind bereits umgesetzt. Neue Top-5 beziehen sich auf Findings 11-17 aus Lauf 2 (macOS-Fokus).*
 
 ---
 
@@ -404,6 +630,18 @@ Zero-Recurrence Rate fuer bekannte Fehler. Fehler die einmal aufgetreten sind we
 - [2026-03-31] Deliberate Practice / Spaced Repetition fuer AI — Kein Finding (zu weit von Claude Code Kontext entfernt)
 - [2026-03-31] Case-Based Reasoning (CBR) fuer LLM Agenten — 1 Finding (Bug-Datenbank + Immunsystem)
 - [2026-03-31] Immunologisches Gedaechtnis / Artificial Immune System — 1 Finding (Antigen-System)
+- [2026-03-31] macOS CoreML on-device AI / Claude Code — 1 Finding (Apple Foundation Models Framework, Finding 13)
+- [2026-03-31] macOS Accessibility API fuer Entwickler — Kein eigenstaendiges Finding (zu spezifisch fuer UI-Automatisierung, nicht fuer Claude Code Kern)
+- [2026-03-31] Hammerspoon macOS Automation — 1 Finding (Skill auf MCPMarket bereits vorhanden, Finding 12)
+- [2026-03-31] SwiftLens / SourceKit-LSP MCP — 1 Finding (compiler-grade Swift-Analyse, Finding 11)
+- [2026-03-31] macOS Notification Center fuer Agent-Status — 1 Finding (afplay+osascript Hooks, Finding 14)
+- [2026-03-31] macOS Keychain fuer API-Keys / ServeMyAPI — 1 Finding (Zero-Config Secrets, Finding 16)
+- [2026-03-31] Homebrew MCP Server — 1 Finding (Paketpflege als Selbstbeobachtung, Finding 15)
+- [2026-03-31] macOS launchd fuer Self-Healing — 1 Finding (Heartbeat-Pattern, Finding 17)
+- [2026-03-31] macOS DTrace / Instruments Performance-Profiling — Kein Finding (zu aufwendig fuer Claude Code Context, DTrace erfordert SIP-Deaktivierung)
+- [2026-03-31] macOS Quick Look Plugins fuer Code-Preview — Kein Finding (passiv, kein direkter Claude Code Mehrwert)
+- [2026-03-31] Xcode 26.3 Claude Agent SDK Integration — Kein separates Finding (ist Xcode-intern, Claude Code CLI profitiert indirekt; kein separates Setup noetig)
+- [2026-03-31] macOS oslog / Unified Logging als Agent-Observability — Kein Finding (zu viel macOS-Systemwissen noetig, praktischer Nutzen gering gegenueber bestehenden Whiteboard-Logs)
 
 ---
 
@@ -418,3 +656,7 @@ Zero-Recurrence Rate fuer bekannte Fehler. Fehler die einmal aufgetreten sind we
 - [2026-03-31] **Naechstes Mal probieren:** Gezielt nach Anthropic-internen Blog-Posts suchen ("Anthropic blog agent architecture 2026") und nach GitHub-Repos von konkreten Implementierungen suchen (z.B. `site:github.com MCTS claude agent`).
 - [2026-03-31] **Naechstes Mal probieren:** Suche nach SWE-bench Leaderboard aktualisieren — welche neuen Techniken haben 2026 Top-Scores erreicht? Das sind bewaehrte Methoden.
 - [2026-03-31] **Qualitaets-Beobachtung:** 10 Findings in 3 Wellen. Die ersten 6 Suchen (Welle 1) lieferten breite Orientierung. Welle 2 lieferte 60% der besten Findings. Welle 3 lieferte die kreativsten (Immunsystem, CBR-Details). Optimale Verteilung bestaetigt den 3-Wellen-Ansatz.
+- [2026-03-31] **Funktioniert gut (Lauf 2):** Plattform-fokussierter Suchrahmen (macOS-Fokus) lieferte konkrete, sofort installierbare MCP-Server und Hooks statt abstrakte Konzepte. Empfehlung: Naechster Lauf mit Kotlin/Android-Fokus oder TypeScript-Fokus.
+- [2026-03-31] **Funktioniert gut (Lauf 2):** GitHub-Suche nach Community-Projekten (PAIArchitecture, SwiftLens, ServeMyAPI) brachte kreative Muster die offizielle Doku nicht hat. GitHub ist Pflichtquelle fuer Implementation-Suchen.
+- [2026-03-31] **Nicht effektiv (Lauf 2):** WebFetch auf GitHub wird durch den intercept-github-fetch.sh Hook blockiert — stattdessen WebSearch mit Repo-Name nutzen oder `gh repo view` via Bash. Zeitverschwendung durch Blockierung vermeiden.
+- [2026-03-31] **Naechstes Mal probieren:** macOS-Shortcuts App und Automator als Agent-Trigger untersuchen (wurde in diesem Lauf nicht recherchiert — moeglicherweise Low-Code Alternative zu Hammerspoon).
