@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -43,7 +44,10 @@ data class JournalUiState(
     val searchQuery: String = "",
     val isSearchActive: Boolean = false,
     val errorMessage: String? = null,
-    val syncStatus: SyncStatus = SyncStatus.IDLE
+    val syncStatus: SyncStatus = SyncStatus.IDLE,
+    val showAiLimitReached: Boolean = false,
+    val remainingFreeUses: Int = 3,
+    val aiPhase: String = "HONEYMOON"
 )
 
 enum class SyncStatus { IDLE, SYNCING, SYNCED, ERROR }
@@ -84,6 +88,12 @@ class JournalViewModel @Inject constructor(
         if (encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")?.isNotBlank() == true) {
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
         }
+
+        // Initialize AI usage state
+        _uiState.update { it.copy(
+            remainingFreeUses = aiUsageTracker.getRemainingFreeUses(),
+            aiPhase = aiUsageTracker.getCurrentPhase().name
+        ) }
 
         // Backfill summaries for existing entries that don't have one yet
         viewModelScope.launch {
@@ -160,13 +170,25 @@ class JournalViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(recordingState = RecordingState.IMPROVING)
 
         viewModelScope.launch {
+            // Check rate limit before calling AI
+            val access = aiRateLimiter.checkAccess(billingManager.subscriptionState.value)
+            if (access is AiAccessResult.LimitReached) {
+                _uiState.update { it.copy(
+                    recordingState = RecordingState.PREVIEW,
+                    showAiLimitReached = true
+                ) }
+                return@launch
+            }
+
             improveTextUseCase(rawText)
                 .onSuccess { improved ->
-                    _uiState.value = _uiState.value.copy(
+                    aiUsageTracker.recordAiUsage()
+                    _uiState.update { it.copy(
                         recordingState = RecordingState.PREVIEW,
                         improvedText = improved,
-                        isImproveEnabled = true
-                    )
+                        isImproveEnabled = true,
+                        remainingFreeUses = aiUsageTracker.getRemainingFreeUses()
+                    ) }
                 }
                 .onFailure { error ->
                     _uiState.value = _uiState.value.copy(
@@ -210,6 +232,7 @@ class JournalViewModel @Inject constructor(
                 audioDurationSeconds = durationSeconds.value
             )
             val savedId = saveJournalEntryUseCase(entry)
+            aiUsageTracker.recordUsageDay()
             resetState()
             // Generate summary in background (non-blocking)
             launch { summarizeEntryUseCase(savedId, displayText) }
@@ -230,6 +253,10 @@ class JournalViewModel @Inject constructor(
 
     fun dismissPreview() {
         resetState()
+    }
+
+    fun dismissAiLimitReached() {
+        _uiState.update { it.copy(showAiLimitReached = false) }
     }
 
     fun setSearchQuery(query: String) {

@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.bestjournal.app.domain.model.Advice
 import com.bestjournal.app.domain.model.AdvicePriority
 import com.bestjournal.app.ui.components.AdviceCategoryCard
+import com.bestjournal.app.ui.components.AiInfoBanner
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.components.NeonDivider
 import com.bestjournal.app.ui.components.ParticleBackground
@@ -111,6 +112,14 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             Icon(Icons.Rounded.Refresh, "Aktualisieren", tint = MaterialTheme.colorScheme.primary)
                         }
                     }
+                }
+            }
+
+            if (uiState.showAiInfoBanner) {
+                item {
+                    AiInfoBanner(
+                        onDismiss = { viewModel.dismissAiInfoBanner() }
+                    )
                 }
             }
 

@@ -2,6 +2,7 @@ package com.bestjournal.app.ui.screens.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bestjournal.app.data.remote.ai.AiUsageTracker
 import com.bestjournal.app.data.repository.AdviceRepository
 import com.bestjournal.app.domain.usecase.AnalyzeEntropyUseCase
 import com.bestjournal.app.domain.usecase.GenerateAdviceUseCase
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -17,14 +19,16 @@ data class DashboardUiState(
     val isLoading: Boolean = false,
     val selectedCategoryIndex: Int = 0,
     val errorMessage: String? = null,
-    val canUndo: Boolean = false
+    val canUndo: Boolean = false,
+    val showAiInfoBanner: Boolean = false
 )
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val generateAdviceUseCase: GenerateAdviceUseCase,
     private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
-    private val adviceRepository: AdviceRepository
+    private val adviceRepository: AdviceRepository,
+    private val aiUsageTracker: AiUsageTracker
 ) : ViewModel() {
 
     val adviceBlocks = generateAdviceUseCase()
@@ -32,6 +36,12 @@ class DashboardViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState
+
+    init {
+        if (aiUsageTracker.shouldShowAiInfoBanner()) {
+            _uiState.update { it.copy(showAiInfoBanner = true) }
+        }
+    }
 
     fun selectCategory(index: Int) {
         _uiState.value = _uiState.value.copy(selectedCategoryIndex = index)
@@ -65,6 +75,11 @@ class DashboardViewModel @Inject constructor(
                 selectedCategoryIndex = 0
             )
         }
+    }
+
+    fun dismissAiInfoBanner() {
+        aiUsageTracker.markAiInfoBannerShown()
+        _uiState.update { it.copy(showAiInfoBanner = false) }
     }
 
     fun clearError() {
