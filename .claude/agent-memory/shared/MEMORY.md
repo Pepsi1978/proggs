@@ -74,6 +74,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 <!-- ARCHIV (2026-03-25, /self-improve Cleanup): StopFailure API/Rate-Limit Errors (2026-03-21 + 2026-03-24) — temporaere API-Fehler, einmalig, kein dauerhaftes Problem. safety-gate.sh duplizierte Blockierung (2x 2026-03-21) — erwartetes Verhalten, kein Fehler. Write-Back nicht erfolgt (2026-03-22 + 2026-03-25) — Einmalige Events, memory-watchdog loggt korrekt, kein systemisches Problem. -->
 
 <!-- ARCHIV (2026-03-31, /self-improve Focus:Resilienz): 4x StopFailure Rate-Limit (Ollama 429, macOS, Sessions 417bedd7 + 2026-03-28) — temporaere API-Session-Limits, kein dauerhaftes Problem. 8x Write-Back nicht erfolgt (memory-watchdog 2026-03-25 bis 2026-03-29) — Informativ, Agents loggen korrekt. disk-guard 95% (2026-03-27) — aktuell 83%, nicht mehr kritisch. session-guard Auto-Reparatur (2026-03-28) — korrekt AUTO-GEFIXT. -->
+### 2026-03-31 18:29 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 96%
 ---
 
 ## Systemzustand (aktuell)
@@ -95,12 +96,14 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Session-Scorer:** v3 — schreibt NUR in session-scores.jsonl
 - **Self-Improve Skill:** v5.19
 - **Git:** v2.53.0, Git Credential Manager aktiv
-- **Android (Windows):** SDK 34/35/36, NDK 28.0.13004108 (GEFIXT seit letztem Check), ADB 1.0.41
+- **Android (Windows):** SDK 34/35/36, NDK 28.0.13004108, ADB 1.0.41
 - **Sicherheit:** Prompt-Injection-Defender aktiv, gitleaks und semgrep FEHLEN im PATH (Windows), cargo-audit OK
 - **Evolution-Analyst (2026-03-31):** 5-Session-Avg 8.74, Trend: PLATEAU. IQ-Trend: 0→15.1 (STEIGEND). Meta-Intelligence 20% (Grenzwert).
 - **Neuer Hook (2026-03-31):** invariant-check.ps1/.sh — Proaktive System-Invarianten-Pruefung bei SessionStart (Cursor-Pattern)
-- **Speicherplatz:** 142.9 GB frei (83% belegt) — nicht mehr kritisch (war 95% am 2026-03-27)
-- **Kernproblem:** "Erkennungs-ohne-Heilung-Muster" — Fehler werden geloggt aber nicht automatisch geheilt. Invariant-Check-Hook ist erste Gegenmassnahme.
+- **Speicherplatz (macOS):** 22 GB frei (36% belegt) — reichlich Platz
+- **Cross-Tool:** Codex + Gemini Delta Bridges aktiv, 8 Intelligenz-Dimensionen im Whiteboard portiert
+- **macOS-Update (2026-03-31):** Claude Code v2.1.83, Node v25.8.1, npm 11.11.1, Bun 1.3.11, Go 1.26.1, Swift 6.3, Rust/Cargo 1.94.0 (→1.94.1 verfuegbar), 25 Homebrew-Pakete veraltet
+- **macOS Settings-Fix (2026-03-31):** allow-Liste entfernt (war Whitelist-Blocker bei bypassPermissions), 2 fehlende Hooks hinzugefuegt (mcp-auth-check, doctor-lite), tote Plugins deaktiviert (boostvolt, FlineDev)
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -237,6 +240,7 @@ _Noch keine Eintraege._
 
 - **[2026-03-25] intelligence-checker**: [WARNING] Session 417bedd7 (47 Turns) hatte keinen Intelligenz-Vorschlag
 - **[2026-03-25] self-observation-checker**: [WARNING] Session 417bedd7 (47 Turns) zeigte keine Selbstbeobachtung
+<<<<<<< Updated upstream
 
 - **[2026-03-31] Dritter Compound Effect — Von Stagnation zu proaktiver Fehlervermeidung:**
   /self-improve Stufe 0: Evolution-Analyst identifiziert "Erkennungs-ohne-Heilung-Muster" →
@@ -246,6 +250,10 @@ _Noch keine Eintraege._
   **Ergebnis:** Zukuenftige stale Issues werden PROAKTIV bei jedem SessionStart gemeldet statt
   tagelang unbemerkt zu bleiben. Die Fehlerklasse "vergessene offene Probleme" ist eliminiert.
   **Kette:** Stagnation bemerkt → Forschung → Muster gefunden → Implementiert → Fehlerklasse eliminiert.
+=======
+- **[2026-03-28] intelligence-checker**: [WARNING] Session c2cc1369 (84 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-03-28] self-observation-checker**: [WARNING] Session c2cc1369 (84 Turns) zeigte keine Selbstbeobachtung
+>>>>>>> Stashed changes
 ---
 
 ## Regeln & Konventionen
