@@ -41,16 +41,14 @@ object Constants {
     const val MAX_ENTRIES_SUBSCRIBED_ANALYSIS = 40
     const val MAX_ENTRIES_TRIAL_ANALYSIS = 20
 
-    // Trial daily limits (4-tier model)
+    // Trial daily limits (4-tier: Premium→Lite→Cooldown→Hard)
     const val TRIAL_PREMIUM_LIMIT = 20 // 1-20: Flash 2.5
-    const val TRIAL_STANDARD_LIMIT = 80 // 21-80: Flash 2.5 Lite
-    const val TRIAL_COOLDOWN_AT = 81 // 81st call: 30-min cooldown
+    const val TRIAL_COOLDOWN_AT = 81 // 21-80: Lite, 81st: 30-min cooldown
     const val TRIAL_HARD_LIMIT = 101 // 101+: blocked for the day
 
-    // Subscriber daily limits (4-tier model, higher than trial)
+    // Subscriber daily limits (4-tier, higher than trial)
     const val SUB_PREMIUM_LIMIT = 30 // 1-30: Flash 2.5
-    const val SUB_STANDARD_LIMIT = 100 // 31-100: Flash 2.5 Lite
-    const val SUB_COOLDOWN_AT = 101 // 101st call: 30-min cooldown
+    const val SUB_COOLDOWN_AT = 101 // 31-100: Lite, 101st: 30-min cooldown
     const val SUB_HARD_LIMIT = 151 // 151+: blocked for the day
 
     // Cooldown duration (shared)

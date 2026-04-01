@@ -248,7 +248,9 @@ constructor(
                             activityContext.startActivity(intent)
                             Runtime.getRuntime().exit(0)
                         }
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        android.util.Log.e("Settings", "Auto-restore failed", e)
+                    }
                 }
                 .onFailure { error ->
                     _uiState.value =
@@ -285,7 +287,9 @@ constructor(
             context.deleteDatabase("entropy_journal_db")
             context.getDatabasePath("entropy_journal_db-wal")?.delete()
             context.getDatabasePath("entropy_journal_db-shm")?.delete()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.e("Settings", "Sign-out cleanup failed", e)
+        }
 
         // Restart the app process so Room clears its in-memory cache
         val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)

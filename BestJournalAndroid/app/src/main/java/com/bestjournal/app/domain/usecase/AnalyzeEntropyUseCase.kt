@@ -10,13 +10,21 @@ class AnalyzeEntropyUseCase
 constructor(
     private val journalRepository: JournalRepository,
     private val adviceRepository: AdviceRepository,
+    private val aiRateLimiter: com.bestjournal.app.data.remote.ai.AiRateLimiter,
+    private val billingManager: com.bestjournal.app.billing.BillingManager,
 ) {
     suspend operator fun invoke(
         freshAnalysis: Boolean = false,
         modelName: String = com.bestjournal.app.data.remote.ai.FirebaseAiService.MODEL_FLASH,
     ): Result<Unit> {
-        val entries = journalRepository.getAllEntries().first()
-        if (entries.isEmpty()) return Result.failure(Exception("Keine Tagebucheinträge vorhanden"))
+        val allEntries = journalRepository.getAllEntries().first()
+        if (allEntries.isEmpty())
+            return Result.failure(Exception("Keine Tagebucheinträge vorhanden"))
+
+        // M-4 fix: Apply MAX_ENTRIES limit based on subscription tier to control API costs
+        val maxEntries =
+            aiRateLimiter.getMaxEntriesForAnalysis(billingManager.subscriptionState.value)
+        val entries = allEntries.takeLast(maxEntries)
 
         val total = entries.size
         val allText =

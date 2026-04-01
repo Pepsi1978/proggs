@@ -223,13 +223,8 @@ constructor(
                 }
                 is TieredAccessResult.Allowed -> {
                     // Record usage BEFORE the API call to prevent race conditions
+                    // M-3: Weekly tracking is now handled inside RateLimiter
                     aiRateLimiter.recordTextImprovement()
-                    if (
-                        aiUsageTracker.getCurrentPhase() ==
-                            com.bestjournal.app.data.remote.ai.AiPhase.FREEMIUM
-                    ) {
-                        aiUsageTracker.recordWeeklyTextUse()
-                    }
                     improveTextUseCase(rawText, access.modelName)
                         .onSuccess { improved ->
                             _uiState.update {
@@ -242,12 +237,15 @@ constructor(
                             }
                         }
                         .onFailure { error ->
-                            _uiState.value =
-                                _uiState.value.copy(
+                            _uiState.update {
+                                it.copy(
                                     recordingState = RecordingState.PREVIEW,
                                     errorMessage =
                                         "Textverbesserung fehlgeschlagen: ${error.message}",
+                                    // H-3 fix: Update counter display even on failure
+                                    remainingFreeUses = aiUsageTracker.getRemainingFreeTextUses(),
                                 )
+                            }
                         }
                 }
             }
@@ -355,13 +353,8 @@ constructor(
             val subscriptionState = billingManager.subscriptionState.value
             val access = aiRateLimiter.checkDashboardAccess(subscriptionState)
             if (access is TieredAccessResult.Allowed) {
+                // M-3: Weekly tracking is now handled inside RateLimiter
                 aiRateLimiter.recordDashboardRefresh()
-                if (
-                    aiUsageTracker.getCurrentPhase() ==
-                        com.bestjournal.app.data.remote.ai.AiPhase.FREEMIUM
-                ) {
-                    aiUsageTracker.recordWeeklyDashboardUse()
-                }
                 analyzeEntropyUseCase(modelName = access.modelName)
             }
             // If not allowed (cooldown/limit), silently skip — user can manually refresh

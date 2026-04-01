@@ -82,13 +82,20 @@ class AiRateLimiter @Inject constructor(private val usageTracker: AiUsageTracker
         }
     }
 
+    // M-3 fix: Centralize ALL recording here so callers can't forget weekly tracking
     fun recordDashboardRefresh() {
         usageTracker.recordDashboardRefresh()
         usageTracker.recordHourlyAiUsage()
+        if (usageTracker.getCurrentPhase() == AiPhase.FREEMIUM) {
+            usageTracker.recordWeeklyDashboardUse()
+        }
     }
 
     fun recordTextImprovement() {
         usageTracker.recordTextImprovement()
         usageTracker.recordHourlyAiUsage()
+        if (usageTracker.getCurrentPhase() == AiPhase.FREEMIUM) {
+            usageTracker.recordWeeklyTextUse()
+        }
     }
 }
