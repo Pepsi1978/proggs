@@ -125,6 +125,36 @@ print('; '.join(warns))" 2>/dev/null)
     fi
 fi
 
+# --- Invariant 7: Hook type/field consistency (Self-Healing) ---
+# A hook with type:"prompt" MUST have a "prompt" field (string).
+# A hook with type:"command" MUST have a "command" field.
+# If type:"prompt" has "command" but no "prompt", auto-fix to type:"command".
+SETTINGS_MAIN="$HOME/.claude/settings.json"
+if [ -f "$SETTINGS_MAIN" ]; then
+    fix_result=$(python3 -c "
+import json, sys
+path = '$SETTINGS_MAIN'
+with open(path) as f:
+    data = json.load(f)
+fixed = 0
+hooks = data.get('hooks', {})
+for event, entries in hooks.items():
+    for entry in entries:
+        for hook in entry.get('hooks', []):
+            if hook.get('type') == 'prompt' and 'command' in hook and 'prompt' not in hook:
+                hook['type'] = 'command'
+                fixed += 1
+if fixed > 0:
+    with open(path, 'w') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write('\n')
+print(fixed)
+" 2>/dev/null)
+    if [ "$fix_result" -gt 0 ] 2>/dev/null; then
+        violations+=("HOOKS-SCHEMA: $fix_result Hook(s) mit type:prompt+command statt type:command gefunden und AUTO-REPARIERT!")
+    fi
+fi
+
 # --- Output ---
 if [ ${#violations[@]} -gt 0 ]; then
     echo ""

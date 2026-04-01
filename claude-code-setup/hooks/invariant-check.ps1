@@ -88,6 +88,41 @@ if ((Test-Path $claudeRepo) -and (Test-Path $claudeHome)) {
     }
 }
 
+# --- Invariant 6: Heartbeat-Status ---
+$heartbeatStatus = Join-Path $env:USERPROFILE ".claude\heartbeat-status.json"
+if (Test-Path $heartbeatStatus) {
+    try {
+        $hb = Get-Content $heartbeatStatus -Raw | ConvertFrom-Json
+        if ($hb.status -eq "CRITICAL") {
+            $violations += "HEARTBEAT: KRITISCHE Probleme zwischen Sessions erkannt!"
+        }
+    } catch {}
+}
+
+# --- Invariant 7: Hook type/field consistency (Self-Healing) ---
+$settingsMain = Join-Path $env:USERPROFILE ".claude\settings.json"
+if (Test-Path $settingsMain) {
+    try {
+        $settingsRaw = Get-Content $settingsMain -Raw -Encoding UTF8
+        $settings = $settingsRaw | ConvertFrom-Json
+        $fixCount = 0
+        foreach ($event in $settings.hooks.PSObject.Properties) {
+            foreach ($entry in $event.Value) {
+                foreach ($hook in $entry.hooks) {
+                    if ($hook.type -eq "prompt" -and $hook.PSObject.Properties["command"] -and -not $hook.PSObject.Properties["prompt"]) {
+                        $hook.type = "command"
+                        $fixCount++
+                    }
+                }
+            }
+        }
+        if ($fixCount -gt 0) {
+            $settings | ConvertTo-Json -Depth 10 | Set-Content $settingsMain -Encoding UTF8
+            $violations += "HOOKS-SCHEMA: $fixCount Hook(s) mit type:prompt+command statt type:command gefunden und AUTO-REPARIERT!"
+        }
+    } catch {}
+}
+
 # --- Output ---
 if ($violations.Count -gt 0) {
     Write-Host ""
