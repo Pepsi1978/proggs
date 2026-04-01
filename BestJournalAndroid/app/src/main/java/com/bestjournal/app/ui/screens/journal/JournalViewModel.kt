@@ -81,6 +81,10 @@ constructor(
     private val billingManager: BillingManager,
 ) : ViewModel() {
 
+    fun launchSubscription(activity: android.app.Activity, isYearly: Boolean) {
+        billingManager.launchPurchaseFlow(activity, isYearly)
+    }
+
     val entries =
         journalRepository
             .getAllEntries()

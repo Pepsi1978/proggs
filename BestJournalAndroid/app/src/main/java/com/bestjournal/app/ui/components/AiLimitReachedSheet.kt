@@ -52,15 +52,15 @@ fun AiLimitReachedSheet(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                "Deine kostenlosen KI-Nutzungen sind aufgebraucht",
+                "Dein Wochenlimit ist erreicht",
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Mit dem Premium-Abo erh\u00e4ltst du bis zu 150 KI-Aufrufe pro Tag:\n" +
-                    "Textverbesserung, Zusammenfassungen und Lebensratschl\u00e4ge \u2014 in voller Qualit\u00e4t.",
+                "Ohne Abo hast du 5\u00A0Textverbesserungen und 5\u00A0Dashboard-Aktualisierungen pro Woche.\n" +
+                    "Mit dem Premium-Abo: bis zu 150 pro Tag \u2014 in voller Qualit\u00e4t.",
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

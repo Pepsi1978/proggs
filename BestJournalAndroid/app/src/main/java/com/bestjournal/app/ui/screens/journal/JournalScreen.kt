@@ -12,20 +12,22 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
@@ -43,7 +45,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -58,8 +59,6 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
@@ -70,10 +69,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 import androidx.core.content.ContextCompat
 import com.bestjournal.app.ui.components.AnimatedMicButton
-import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.components.ShimmerLoadingEffect
 import com.bestjournal.app.ui.components.SunMoonToggle
 import com.bestjournal.app.ui.components.TimelineItem
@@ -81,14 +78,11 @@ import com.bestjournal.app.ui.components.TimelinePosition
 import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
-import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.DateTimeFormatter as DTFormatter
+import kotlinx.coroutines.delay
 
 @Composable
-fun JournalScreen(
-    viewModel: JournalViewModel,
-    onEntryClick: (Long) -> Unit
-) {
+fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long) -> Unit) {
     val entries by viewModel.entries.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val amplitude by viewModel.amplitude.collectAsState()
@@ -96,13 +90,13 @@ fun JournalScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            viewModel.toggleRecording()
+    val permissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted
+            ->
+            if (isGranted) {
+                viewModel.toggleRecording()
+            }
         }
-    }
 
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
@@ -115,9 +109,9 @@ fun JournalScreen(
         if (uiState.recordingState == RecordingState.RECORDING) {
             viewModel.toggleRecording()
         } else {
-            val hasPermission = ContextCompat.checkSelfPermission(
-                context, Manifest.permission.RECORD_AUDIO
-            ) == PackageManager.PERMISSION_GRANTED
+            val hasPermission =
+                ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                    PackageManager.PERMISSION_GRANTED
             if (hasPermission) {
                 viewModel.toggleRecording()
             } else {
@@ -128,52 +122,54 @@ fun JournalScreen(
 
     var showSyncLegend by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Search bar
             AnimatedVisibility(visible = uiState.isSearchActive) {
                 TextField(
                     value = uiState.searchQuery,
                     onValueChange = { viewModel.setSearchQuery(it) },
-                    placeholder = { Text("Eintr\u00e4ge durchsuchen...", color = MaterialTheme.colorScheme.outline) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                        unfocusedIndicatorColor = Color.Transparent
-                    ),
+                    placeholder = {
+                        Text(
+                            "Eintr\u00e4ge durchsuchen...",
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors =
+                        TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = Color.Transparent,
+                        ),
                     trailingIcon = {
                         IconButton(onClick = { viewModel.toggleSearch() }) {
-                            Icon(Icons.Rounded.Close, "Suche schlie\u00dfen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Icon(
+                                Icons.Rounded.Close,
+                                "Suche schlie\u00dfen",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     },
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
                 )
             }
 
             // Sync status + search toggle
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "Tagebuch",
                         style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     SunMoonToggle()
@@ -181,24 +177,30 @@ fun JournalScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { showSyncLegend = true }) {
                         Icon(
-                            imageVector = when (uiState.syncStatus) {
-                                SyncStatus.SYNCED -> Icons.Rounded.CloudDone
-                                SyncStatus.ERROR -> Icons.Rounded.CloudOff
-                                SyncStatus.SYNCING -> Icons.Rounded.Cloud
-                                else -> Icons.Rounded.Cloud
-                            },
+                            imageVector =
+                                when (uiState.syncStatus) {
+                                    SyncStatus.SYNCED -> Icons.Rounded.CloudDone
+                                    SyncStatus.ERROR -> Icons.Rounded.CloudOff
+                                    SyncStatus.SYNCING -> Icons.Rounded.Cloud
+                                    else -> Icons.Rounded.Cloud
+                                },
                             contentDescription = "Sync-Status",
-                            tint = when (uiState.syncStatus) {
-                                SyncStatus.SYNCED -> NeonEmerald
-                                SyncStatus.SYNCING -> NeonCyan
-                                SyncStatus.ERROR -> NeonRed
-                                else -> MaterialTheme.colorScheme.outline
-                            },
-                            modifier = Modifier.size(20.dp)
+                            tint =
+                                when (uiState.syncStatus) {
+                                    SyncStatus.SYNCED -> NeonEmerald
+                                    SyncStatus.SYNCING -> NeonCyan
+                                    SyncStatus.ERROR -> NeonRed
+                                    else -> MaterialTheme.colorScheme.outline
+                                },
+                            modifier = Modifier.size(20.dp),
                         )
                     }
                     IconButton(onClick = { viewModel.toggleSearch() }) {
-                        Icon(Icons.Rounded.Search, "Suchen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(
+                            Icons.Rounded.Search,
+                            "Suchen",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -210,30 +212,44 @@ fun JournalScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     ShimmerLoadingEffect(height = 16.dp, modifier = Modifier.fillMaxWidth(0.7f))
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Transkribiere...", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Transkribiere...",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                 }
             }
 
             if (entries.isEmpty() && uiState.recordingState == RecordingState.IDLE) {
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Noch keine Eintr\u00e4ge", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.outline)
+                        Text(
+                            "Noch keine Eintr\u00e4ge",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Tippe auf das Mikrofon um zu starten", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center)
+                        Text(
+                            "Tippe auf das Mikrofon um zu starten",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.outline,
+                            textAlign = TextAlign.Center,
+                        )
                     }
                 }
             } else {
                 // Group entries by time period
-                val groupedEntries = remember(entries) {
-                    entries.groupBy { DTFormatter.getSectionLabel(it.timestamp) }
-                }
+                val groupedEntries =
+                    remember(entries) {
+                        entries.groupBy { DTFormatter.getSectionLabel(it.timestamp) }
+                    }
 
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
                     groupedEntries.forEach { (sectionLabel, sectionEntries) ->
                         // Section header
@@ -242,34 +258,33 @@ fun JournalScreen(
                                 Text(
                                     text = sectionLabel,
                                     style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.primary,
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(1.dp)
-                                        .background(MaterialTheme.colorScheme.outlineVariant)
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                            .height(1.dp)
+                                            .background(MaterialTheme.colorScheme.outlineVariant)
                                 )
                             }
                         }
 
                         // Entries with timeline position
-                        items(
-                            count = sectionEntries.size,
-                            key = { sectionEntries[it].id }
-                        ) { index ->
-                            val position = when {
-                                sectionEntries.size == 1 -> TimelinePosition.ONLY
-                                index == 0 -> TimelinePosition.FIRST
-                                index == sectionEntries.lastIndex -> TimelinePosition.LAST
-                                else -> TimelinePosition.MIDDLE
-                            }
+                        items(count = sectionEntries.size, key = { sectionEntries[it].id }) { index
+                            ->
+                            val position =
+                                when {
+                                    sectionEntries.size == 1 -> TimelinePosition.ONLY
+                                    index == 0 -> TimelinePosition.FIRST
+                                    index == sectionEntries.lastIndex -> TimelinePosition.LAST
+                                    else -> TimelinePosition.MIDDLE
+                                }
                             TimelineItem(
                                 entry = sectionEntries[index],
                                 onClick = { onEntryClick(sectionEntries[index].id) },
                                 position = position,
-                                modifier = Modifier.padding(vertical = 6.dp)
+                                modifier = Modifier.padding(vertical = 6.dp),
                             )
                         }
                     }
@@ -285,22 +300,20 @@ fun JournalScreen(
             visible = uiState.recordingState == RecordingState.RECORDING,
             enter = fadeIn() + slideInVertically { it },
             exit = fadeOut() + slideOutVertically { it },
-            modifier = Modifier.align(Alignment.BottomCenter)
+            modifier = Modifier.align(Alignment.BottomCenter),
         ) {
             RecordingOverlay(
                 amplitude = amplitude,
                 durationSeconds = duration,
-                transcriptionModel = "Lokales Whisper-Modell"
+                transcriptionModel = "Lokales Whisper-Modell",
             )
         }
 
         // Text entry + Mic buttons
         Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Text entry button (left)
             FloatingActionButton(
@@ -309,27 +322,27 @@ fun JournalScreen(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 shape = CircleShape,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp)
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp),
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Edit,
                     contentDescription = "Text eingeben",
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(28.dp),
                 )
             }
 
             // Divider
             Box(
-                modifier = Modifier
-                    .height(32.dp)
-                    .width(1.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant)
+                modifier =
+                    Modifier.height(32.dp)
+                        .width(1.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant)
             )
 
             // Mic button (right)
             AnimatedMicButton(
                 isRecording = uiState.recordingState == RecordingState.RECORDING,
-                onClick = onMicClick
+                onClick = onMicClick,
             )
         }
 
@@ -344,18 +357,36 @@ fun JournalScreen(
                 onToggleVersion = { useImproved -> viewModel.setUseImprovedText(useImproved) },
                 onTextEdit = { viewModel.updatePreviewText(it) },
                 onSave = { viewModel.saveEntry() },
-                onDismiss = { viewModel.dismissPreview() }
+                onDismiss = { viewModel.dismissPreview() },
+            )
+        }
+
+        // AI limit reached — show subscription sheet
+        if (uiState.showAiLimitReached) {
+            val activity = context as? android.app.Activity
+            com.bestjournal.app.ui.components.AiLimitReachedSheet(
+                monthlyPrice = com.bestjournal.app.util.Constants.MONTHLY_PRICE_DISPLAY,
+                yearlyPrice = com.bestjournal.app.util.Constants.YEARLY_PRICE_DISPLAY,
+                onSubscribeMonthly = {
+                    viewModel.dismissAiLimitReached()
+                    activity?.let { viewModel.launchSubscription(it, isYearly = false) }
+                },
+                onSubscribeYearly = {
+                    viewModel.dismissAiLimitReached()
+                    activity?.let { viewModel.launchSubscription(it, isYearly = true) }
+                },
+                onDismiss = { viewModel.dismissAiLimitReached() },
             )
         }
 
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp),
         ) { data ->
             Snackbar(
                 snackbarData = data,
                 containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface
+                contentColor = MaterialTheme.colorScheme.onSurface,
             )
         }
 
@@ -363,36 +394,72 @@ fun JournalScreen(
             AlertDialog(
                 onDismissRequest = { showSyncLegend = false },
                 containerColor = MaterialTheme.colorScheme.surface,
-                title = { Text("Google Drive Backup", color = MaterialTheme.colorScheme.onSurface) },
+                title = {
+                    Text("Google Drive Backup", color = MaterialTheme.colorScheme.onSurface)
+                },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.CloudDone, null, tint = NeonEmerald, modifier = Modifier.size(24.dp))
+                            Icon(
+                                Icons.Rounded.CloudDone,
+                                null,
+                                tint = NeonEmerald,
+                                modifier = Modifier.size(24.dp),
+                            )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Backup aktuell \u2014 alle Eintr\u00e4ge gesichert", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "Backup aktuell \u2014 alle Eintr\u00e4ge gesichert",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.Cloud, null, tint = NeonCyan, modifier = Modifier.size(24.dp))
+                            Icon(
+                                Icons.Rounded.Cloud,
+                                null,
+                                tint = NeonCyan,
+                                modifier = Modifier.size(24.dp),
+                            )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Backup wird hochgeladen\u2026", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "Backup wird hochgeladen\u2026",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.Cloud, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(24.dp))
+                            Icon(
+                                Icons.Rounded.Cloud,
+                                null,
+                                tint = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.size(24.dp),
+                            )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Nicht mit Google verbunden", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "Nicht mit Google verbunden",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.CloudOff, null, tint = NeonRed, modifier = Modifier.size(24.dp))
+                            Icon(
+                                Icons.Rounded.CloudOff,
+                                null,
+                                tint = NeonRed,
+                                modifier = Modifier.size(24.dp),
+                            )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Backup fehlgeschlagen!", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "Backup fehlgeschlagen!",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
                         }
                     }
                 },
                 confirmButton = {
-                    OutlinedButton(onClick = { showSyncLegend = false }) {
-                        Text("OK")
-                    }
-                }
+                    OutlinedButton(onClick = { showSyncLegend = false }) { Text("OK") }
+                },
             )
         }
     }
@@ -408,7 +475,7 @@ private fun PreviewDialog(
     onToggleVersion: (Boolean) -> Unit,
     onTextEdit: (String) -> Unit,
     onSave: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val showingImproved = isUsingImproved && improvedText != null
     val displayText = if (showingImproved) improvedText!! else rawText
@@ -456,7 +523,7 @@ private fun PreviewDialog(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("Neuer Eintrag", color = MaterialTheme.colorScheme.onSurface)
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -464,14 +531,14 @@ private fun PreviewDialog(
                         Text(
                             text = if (showingImproved) "Verbessert" else "Original",
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     Text(
                         text = "\u270F\uFE0F",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.outline,
                     )
                 }
             }
@@ -484,31 +551,33 @@ private fun PreviewDialog(
                         lastEditTime = System.currentTimeMillis()
                         onTextEdit(newText)
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 300.dp)
-                        .focusRequester(focusRequester)
-                        .onFocusChanged { state ->
-                            isFocused = state.isFocused
-                            if (state.isFocused) hadFocusOnce = true
-                            if (state.isFocused) lastEditTime = System.currentTimeMillis()
-                        },
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        color = MaterialTheme.colorScheme.onSurface
-                    ),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        cursorColor = MaterialTheme.colorScheme.primary
-                    ),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .heightIn(max = 300.dp)
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { state ->
+                                isFocused = state.isFocused
+                                if (state.isFocused) hadFocusOnce = true
+                                if (state.isFocused) lastEditTime = System.currentTimeMillis()
+                            },
+                    textStyle =
+                        MaterialTheme.typography.bodyLarge.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                    colors =
+                        TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                        ),
                     placeholder = {
                         Text(
                             "Tippe hier, um den Text zu bearbeiten...",
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.outline,
                         )
-                    }
+                    },
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -518,10 +587,15 @@ private fun PreviewDialog(
                     OutlinedButton(
                         onClick = { onToggleVersion(!showingImproved) },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                        colors =
+                            ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.primary
+                            ),
                     ) {
                         Text(
-                            text = if (showingImproved) "\u21A9 Original anzeigen" else "\u2728 Verbesserte Version anzeigen"
+                            text =
+                                if (showingImproved) "\u21A9 Original anzeigen"
+                                else "\u2728 Verbesserte Version anzeigen"
                         )
                     }
                 }
@@ -530,10 +604,11 @@ private fun PreviewDialog(
                     Button(
                         onClick = onImproveClick,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            ),
                     ) {
                         Text("\u2728 Text verbessern")
                     }
@@ -542,17 +617,22 @@ private fun PreviewDialog(
                 if (isImproving) {
                     ShimmerLoadingEffect(height = 16.dp)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Optimiere Text...", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Optimiere Text...",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                 }
             }
         },
         confirmButton = {
             Button(
                 onClick = onSave,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
             ) {
                 Text(if (showingImproved) "Verbessert speichern" else "Speichern")
             }
@@ -560,8 +640,13 @@ private fun PreviewDialog(
         dismissButton = {
             OutlinedButton(
                 onClick = onDismiss,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
-            ) { Text("Verwerfen") }
-        }
+                colors =
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+            ) {
+                Text("Verwerfen")
+            }
+        },
     )
 }
