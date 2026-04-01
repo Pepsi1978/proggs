@@ -44,13 +44,11 @@ $text
     """
             .trim()
 
-    private var currentModelName: String = FirebaseAiService.MODEL_FLASH
-
-    private suspend fun rewriteChunk(text: String): String {
+    private suspend fun rewriteChunk(text: String, modelName: String): String {
         val result =
             firebaseAiService.generateContent(
                 prompt = buildPrompt(text),
-                modelName = currentModelName,
+                modelName = modelName,
                 temperature = TEMPERATURE,
                 maxOutputTokens = MAX_OUTPUT_TOKENS,
             )
@@ -115,10 +113,9 @@ $text
         rawText: String,
         modelName: String = FirebaseAiService.MODEL_FLASH,
     ): Result<String> {
-        currentModelName = modelName
         return try {
             // First attempt: one-shot
-            val oneShot = rewriteChunk(rawText)
+            val oneShot = rewriteChunk(rawText, modelName)
             val ratio = oneShot.length.toDouble() / maxOf(1, rawText.length)
 
             // If result is long enough, accept it
@@ -129,7 +126,7 @@ $text
             // Text was truncated — split into chunks and process in parallel
             val chunks = splitIntoChunks(rawText)
             val results = coroutineScope {
-                chunks.map { chunk -> async { rewriteChunk(chunk) } }.map { it.await() }
+                chunks.map { chunk -> async { rewriteChunk(chunk, modelName) } }.map { it.await() }
             }
 
             Result.success(results.joinToString("\n\n").trim())

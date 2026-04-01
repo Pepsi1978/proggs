@@ -114,12 +114,16 @@ constructor(
         }
 
         // Backfill summaries for existing entries that don't have one yet
+        // Capped at 5 per startup to prevent cost explosion, uses Lite model
         viewModelScope.launch {
             entries.collect { list ->
-                val missing = list.filter {
-                    (it.summary.isNullOrBlank() || it.title.isNullOrBlank()) &&
-                        it.displayText.isNotBlank()
-                }
+                val missing =
+                    list
+                        .filter {
+                            (it.summary.isNullOrBlank() || it.title.isNullOrBlank()) &&
+                                it.displayText.isNotBlank()
+                        }
+                        .take(5) // Cap backfill to prevent unlimited AI calls on startup
                 if (missing.isNotEmpty()) {
                     for (entry in missing) {
                         launch { summarizeEntryUseCase(entry.id, entry.displayText) }
@@ -214,16 +218,16 @@ constructor(
                     return@launch
                 }
                 is TieredAccessResult.Allowed -> {
+                    // Record usage BEFORE the API call to prevent race conditions
+                    aiRateLimiter.recordTextImprovement()
+                    if (
+                        aiUsageTracker.getCurrentPhase() ==
+                            com.bestjournal.app.data.remote.ai.AiPhase.FREEMIUM
+                    ) {
+                        aiUsageTracker.recordWeeklyTextUse()
+                    }
                     improveTextUseCase(rawText, access.modelName)
                         .onSuccess { improved ->
-                            aiRateLimiter.recordTextImprovement()
-                            // Track weekly usage for free users
-                            if (
-                                aiUsageTracker.getCurrentPhase() ==
-                                    com.bestjournal.app.data.remote.ai.AiPhase.FREEMIUM
-                            ) {
-                                aiUsageTracker.recordWeeklyTextUse()
-                            }
                             _uiState.update {
                                 it.copy(
                                     recordingState = RecordingState.PREVIEW,
@@ -343,7 +347,20 @@ constructor(
         analysisDebounceJob?.cancel()
         analysisDebounceJob = viewModelScope.launch {
             delay(60_000)
-            analyzeEntropyUseCase()
+            // Check rate limit before automatic background analysis
+            val subscriptionState = billingManager.subscriptionState.value
+            val access = aiRateLimiter.checkDashboardAccess(subscriptionState)
+            if (access is TieredAccessResult.Allowed) {
+                aiRateLimiter.recordDashboardRefresh()
+                if (
+                    aiUsageTracker.getCurrentPhase() ==
+                        com.bestjournal.app.data.remote.ai.AiPhase.FREEMIUM
+                ) {
+                    aiUsageTracker.recordWeeklyDashboardUse()
+                }
+                analyzeEntropyUseCase(modelName = access.modelName)
+            }
+            // If not allowed (cooldown/limit), silently skip — user can manually refresh
         }
     }
 }
