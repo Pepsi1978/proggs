@@ -1,13 +1,13 @@
 package com.bestjournal.app.ui.screens.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,9 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Undo
 import androidx.compose.material3.AlertDialog
@@ -72,36 +70,42 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
     val isDark = LocalIsDarkTheme.current
     var showLegendDialog by remember { mutableStateOf(false) }
     var selectedAdvice by remember { mutableStateOf<Pair<Advice, String>?>(null) }
-    var selectedCategoryBlock by remember { mutableStateOf<com.bestjournal.app.domain.model.AdviceBlock?>(null) }
+    var selectedCategoryBlock by remember {
+        mutableStateOf<com.bestjournal.app.domain.model.AdviceBlock?>(null)
+    }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         if (isDark) {
             ParticleBackground()
         }
 
         LazyColumn(
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Title bar
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Dashboard", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+                        Text(
+                            "Dashboard",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         com.bestjournal.app.ui.components.SunMoonToggle()
                     }
                     Row {
                         IconButton(onClick = { showLegendDialog = true }) {
-                            Icon(Icons.Rounded.Info, "Legende", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Icon(
+                                Icons.Rounded.Info,
+                                "Legende",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                         if (uiState.canUndo) {
                             IconButton(onClick = { viewModel.undoDashboard() }) {
@@ -109,25 +113,29 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             }
                         }
                         IconButton(onClick = { viewModel.refreshDashboard() }) {
-                            Icon(Icons.Rounded.Refresh, "Aktualisieren", tint = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                Icons.Rounded.Refresh,
+                                "Aktualisieren",
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
                         }
                     }
                 }
             }
 
             if (uiState.showAiInfoBanner) {
-                item {
-                    AiInfoBanner(
-                        onDismiss = { viewModel.dismissAiInfoBanner() }
-                    )
-                }
+                item { AiInfoBanner(onDismiss = { viewModel.dismissAiInfoBanner() }) }
             }
 
             if (uiState.isLoading) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         ShimmerLoadingEffect(height = 60.dp, cornerRadius = 16.dp)
-                        Text("Dashboard wird aktualisiert...", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "Dashboard wird aktualisiert...",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
                     }
                 }
             }
@@ -138,18 +146,15 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     GlassCard(glowIntensity = 0.1f) {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Text(
-                                text = "\u23F3",
-                                style = MaterialTheme.typography.headlineMedium
-                            )
+                            Text(text = "\u23F3", style = MaterialTheme.typography.headlineMedium)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = uiState.dashboardLimitMessage!!,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
+                                textAlign = TextAlign.Center,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             TextButton(onClick = { viewModel.dismissLimitMessage() }) {
@@ -160,13 +165,50 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                 }
             }
 
+            // Analysis error message
+            if (uiState.errorMessage != null) {
+                item {
+                    GlassCard(glowColor = NeonRed, glowIntensity = 0.15f) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(text = "⚠️", style = MaterialTheme.typography.headlineMedium)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = uiState.errorMessage!!,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            TextButton(onClick = { viewModel.clearError() }) {
+                                Text("Schließen", color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
+            }
+
             if (blocks.isEmpty() && !uiState.isLoading) {
                 item {
-                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Noch keine Analyse", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.outline)
+                            Text(
+                                "Noch keine Analyse",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.outline,
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("Erstelle Tagebucheintr\u00e4ge,\ndann analysiert die KI deine Muster.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center)
+                            Text(
+                                "Erstelle Tagebucheintr\u00e4ge,\ndann analysiert die KI deine Muster.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.outline,
+                                textAlign = TextAlign.Center,
+                            )
                         }
                     }
                 }
@@ -185,14 +227,26 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                 PulsingOrb(entropyLevel = avgEntropy, size = 48.dp)
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
-                                    Text("Gesamtanalyse", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        "Gesamtanalyse",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
                                     if (entryCount > 0) {
-                                        Text("Basierend auf $entryCount Eintr\u00e4gen", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                                        Text(
+                                            "Basierend auf $entryCount Eintr\u00e4gen",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.outline,
+                                        )
                                     }
                                 }
                             }
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text(text = overallAnalysis, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = overallAnalysis,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
                 }
@@ -206,12 +260,12 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             override fun onPostScroll(
                                 consumed: Offset,
                                 available: Offset,
-                                source: NestedScrollSource
+                                source: NestedScrollSource,
                             ): Offset = Offset(available.x, 0f)
 
                             override suspend fun onPostFling(
                                 consumed: Velocity,
-                                available: Velocity
+                                available: Velocity,
                             ): Velocity = Velocity(available.x, 0f)
                         }
                     }
@@ -219,7 +273,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
                         LazyRow(
                             contentPadding = PaddingValues(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             itemsIndexed(blocks) { index, block ->
                                 AdviceCategoryCard(
@@ -228,7 +282,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                     onClick = {
                                         viewModel.selectCategory(index)
                                         selectedCategoryBlock = block
-                                    }
+                                    },
                                 )
                             }
                         }
@@ -243,35 +297,50 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     Spacer(modifier = Modifier.height(8.dp))
                     NeonDivider()
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Empfehlungen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Empfehlungen",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
 
                 // Collect all advices from all blocks with their category name
-                val allAdvicesWithCategory = blocks.flatMap { block ->
-                    block.advices.map { advice -> Triple(advice, block.categoryName, block.entropyLevel) }
-                }.sortedBy { (advice, _, _) ->
-                    when (advice.priority) {
-                        AdvicePriority.HIGH -> 0
-                        AdvicePriority.MEDIUM -> 1
-                        AdvicePriority.LOW -> 2
-                    }
-                }
+                val allAdvicesWithCategory =
+                    blocks
+                        .flatMap { block ->
+                            block.advices.map { advice ->
+                                Triple(advice, block.categoryName, block.entropyLevel)
+                            }
+                        }
+                        .sortedBy { (advice, _, _) ->
+                            when (advice.priority) {
+                                AdvicePriority.HIGH -> 0
+                                AdvicePriority.MEDIUM -> 1
+                                AdvicePriority.LOW -> 2
+                            }
+                        }
 
                 itemsIndexed(allAdvicesWithCategory) { _, (advice, catName, _) ->
                     AdviceCard(
                         advice = advice,
                         categoryName = catName,
-                        onClick = { selectedAdvice = Pair(advice, catName) }
+                        onClick = { selectedAdvice = Pair(advice, catName) },
                     )
                 }
             }
         }
     }
 
-    if (showLegendDialog) { LegendDialog(onDismiss = { showLegendDialog = false }) }
+    if (showLegendDialog) {
+        LegendDialog(onDismiss = { showLegendDialog = false })
+    }
 
     selectedAdvice?.let { (advice, catName) ->
-        AdviceDerivationDialog(advice = advice, categoryName = catName, onDismiss = { selectedAdvice = null })
+        AdviceDerivationDialog(
+            advice = advice,
+            categoryName = catName,
+            onDismiss = { selectedAdvice = null },
+        )
     }
 
     selectedCategoryBlock?.let { block ->
@@ -293,7 +362,11 @@ private fun LegendDot(color: androidx.compose.ui.graphics.Color, label: String) 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(color))
         Spacer(modifier = Modifier.width(6.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -305,54 +378,103 @@ private fun LegendDialog(onDismiss: () -> Unit) {
         title = { Text("Legende", color = MaterialTheme.colorScheme.onSurface) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Entropie-Skala", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                Text("Der Halbkreis unter jeder Kategorie zeigt die Belastungsintensit\u00e4t:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Entropie-Skala",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    "Der Halbkreis unter jeder Kategorie zeigt die Belastungsintensit\u00e4t:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     LegendDot(color = NeonRed, label = "Hoch (67\u2013100%) \u2014 Sofort handeln")
-                    LegendDot(color = NeonAmber, label = "Mittel (34\u201366%) \u2014 Aufmerksamkeit n\u00f6tig")
-                    LegendDot(color = NeonEmerald, label = "Niedrig (0\u201333%) \u2014 Guter Zustand")
+                    LegendDot(
+                        color = NeonAmber,
+                        label = "Mittel (34\u201366%) \u2014 Aufmerksamkeit n\u00f6tig",
+                    )
+                    LegendDot(
+                        color = NeonEmerald,
+                        label = "Niedrig (0\u201333%) \u2014 Guter Zustand",
+                    )
                 }
                 NeonDivider()
-                Text("Priorit\u00e4t der Ratschl\u00e4ge", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    "Priorit\u00e4t der Ratschl\u00e4ge",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("\uD83D\uDD34 Rot = Dringend \u2014 Sofort handeln", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                    Text("\uD83D\uDFE0 Orange = Mittel \u2014 Bald angehen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                    Text("\uD83D\uDD35 Blau = Niedrig \u2014 Beobachten", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        "\uD83D\uDD34 Rot = Dringend \u2014 Sofort handeln",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        "\uD83D\uDFE0 Orange = Mittel \u2014 Bald angehen",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        "\uD83D\uDD35 Blau = Niedrig \u2014 Beobachten",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
                 NeonDivider()
-                Text("Kategorien", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                Text("Kategorien werden dynamisch erstellt \u2014 die KI erkennt Themen in deinen Eintr\u00e4gen und erstellt passende Kategorien. Neue Themen f\u00fchren automatisch zu neuen Symbolen.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Kategorien",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    "Kategorien werden dynamisch erstellt \u2014 die KI erkennt Themen in deinen Eintr\u00e4gen und erstellt passende Kategorien. Neue Themen f\u00fchren automatisch zu neuen Symbolen.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Verstanden", color = MaterialTheme.colorScheme.primary) } }
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Verstanden", color = MaterialTheme.colorScheme.primary)
+            }
+        },
     )
 }
 
 @Composable
-private fun CategoryDetailDialog(block: com.bestjournal.app.domain.model.AdviceBlock, onDismiss: () -> Unit) {
-    val levelLabel = when {
-        block.entropyLevel < 0.33f -> "Niedrig"
-        block.entropyLevel < 0.66f -> "Mittel"
-        else -> "Hoch"
-    }
-    val levelColor = when {
-        block.entropyLevel < 0.33f -> NeonEmerald
-        block.entropyLevel < 0.66f -> NeonAmber
-        else -> NeonRed
-    }
-    val urgency = when {
-        block.entropyLevel >= 0.67f -> "Dringend \u2014 Sofort handeln"
-        block.entropyLevel >= 0.34f -> "Aufmerksamkeit n\u00f6tig"
-        else -> "Guter Zustand \u2014 Beobachten"
-    }
-
-    val sortedAdvices = block.advices.sortedBy {
-        when (it.priority) {
-            AdvicePriority.HIGH -> 0
-            AdvicePriority.MEDIUM -> 1
-            AdvicePriority.LOW -> 2
+private fun CategoryDetailDialog(
+    block: com.bestjournal.app.domain.model.AdviceBlock,
+    onDismiss: () -> Unit,
+) {
+    val levelLabel =
+        when {
+            block.entropyLevel < 0.33f -> "Niedrig"
+            block.entropyLevel < 0.66f -> "Mittel"
+            else -> "Hoch"
         }
-    }
+    val levelColor =
+        when {
+            block.entropyLevel < 0.33f -> NeonEmerald
+            block.entropyLevel < 0.66f -> NeonAmber
+            else -> NeonRed
+        }
+    val urgency =
+        when {
+            block.entropyLevel >= 0.67f -> "Dringend \u2014 Sofort handeln"
+            block.entropyLevel >= 0.34f -> "Aufmerksamkeit n\u00f6tig"
+            else -> "Guter Zustand \u2014 Beobachten"
+        }
+
+    val sortedAdvices =
+        block.advices.sortedBy {
+            when (it.priority) {
+                AdvicePriority.HIGH -> 0
+                AdvicePriority.MEDIUM -> 1
+                AdvicePriority.LOW -> 2
+            }
+        }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -361,13 +483,20 @@ private fun CategoryDetailDialog(block: com.bestjournal.app.domain.model.AdviceB
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = com.bestjournal.app.ui.components.getIconForCategory(block.categoryIcon),
+                        imageVector =
+                            com.bestjournal.app.ui.components.getIconForCategory(
+                                block.categoryIcon
+                            ),
                         contentDescription = null,
                         tint = levelColor,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(28.dp),
                     )
                     Spacer(modifier = Modifier.width(10.dp))
-                    Text(block.categoryName, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        block.categoryName,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Surface(shape = RoundedCornerShape(8.dp), color = levelColor.copy(alpha = 0.15f)) {
@@ -375,39 +504,65 @@ private fun CategoryDetailDialog(block: com.bestjournal.app.domain.model.AdviceB
                         "$levelLabel (${(block.entropyLevel * 100).toInt()}%) \u2014 $urgency",
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelMedium,
-                        color = levelColor
+                        color = levelColor,
                     )
                 }
             }
         },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth().height(400.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier =
+                    Modifier.fillMaxWidth().height(400.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(block.categorySummary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    block.categorySummary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Empfehlungen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    "Empfehlungen",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
 
                 sortedAdvices.forEach { advice ->
-                    val dot = when (advice.priority) {
-                        AdvicePriority.HIGH -> "\uD83D\uDD34"
-                        AdvicePriority.MEDIUM -> "\uD83D\uDFE0"
-                        AdvicePriority.LOW -> "\uD83D\uDD35"
-                    }
+                    val dot =
+                        when (advice.priority) {
+                            AdvicePriority.HIGH -> "\uD83D\uDD34"
+                            AdvicePriority.MEDIUM -> "\uD83D\uDFE0"
+                            AdvicePriority.LOW -> "\uD83D\uDD35"
+                        }
                     Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                        Text("$dot ${advice.title}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            "$dot ${advice.title}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(advice.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            advice.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         if (advice.connection.isNotBlank()) {
-                            Text("\u2197 ${advice.connection}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                            Text(
+                                "\u2197 ${advice.connection}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            )
                         }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = MaterialTheme.colorScheme.primary) } }
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Schlie\u00dfen", color = MaterialTheme.colorScheme.primary)
+            }
+        },
     )
 }
 
@@ -418,47 +573,105 @@ private fun AdviceDerivationDialog(advice: Advice, categoryName: String, onDismi
         containerColor = MaterialTheme.colorScheme.surface,
         title = {
             Column {
-                Text(advice.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.primaryContainer) {
-                    Text(categoryName, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Text(
+                    advice.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Text(
+                        categoryName,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
                 }
             }
         },
         text = {
-            Column(modifier = Modifier.fillMaxWidth().height(350.dp).verticalScroll(rememberScrollState())) {
-                Text(advice.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(
+                modifier =
+                    Modifier.fillMaxWidth().height(350.dp).verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    advice.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
                 if (advice.derivation.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Hergeleitet aus:", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Hergeleitet aus:",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
 
                     advice.derivation.forEach { entry ->
                         Row(modifier = Modifier.padding(vertical = 4.dp)) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(24.dp)) {
-                                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-                                Box(modifier = Modifier.width(2.dp).height(40.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)))
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.width(24.dp),
+                            ) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary)
+                                )
+                                Box(
+                                    modifier =
+                                        Modifier.width(2.dp)
+                                            .height(40.dp)
+                                            .background(
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                            )
+                                )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
-                                Text(entry.date, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                                Text(
+                                    entry.date,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text(entry.summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                                Text(
+                                    entry.summary,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
                             }
                         }
                     }
                 } else {
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("Aktualisiere das Dashboard f\u00fcr eine detaillierte Herleitung.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                    Text(
+                        "Aktualisiere das Dashboard f\u00fcr eine detaillierte Herleitung.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
                 }
 
                 if (advice.connection.isNotBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("\u2197 Verbindung: ${advice.connection}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                    Text(
+                        "\u2197 Verbindung: ${advice.connection}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                    )
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = MaterialTheme.colorScheme.primary) } }
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Schlie\u00dfen", color = MaterialTheme.colorScheme.primary)
+            }
+        },
     )
 }
 
@@ -466,35 +679,61 @@ private fun AdviceDerivationDialog(advice: Advice, categoryName: String, onDismi
 private fun AdviceCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
     GlassCard(
         modifier = Modifier.clickable { onClick() },
-        glowColor = when (advice.priority) {
-            AdvicePriority.HIGH -> NeonRed
-            AdvicePriority.MEDIUM -> NeonAmber
-            AdvicePriority.LOW -> NeonCyan
-        },
-        glowIntensity = 0.1f
+        glowColor =
+            when (advice.priority) {
+                AdvicePriority.HIGH -> NeonRed
+                AdvicePriority.MEDIUM -> NeonAmber
+                AdvicePriority.LOW -> NeonCyan
+            },
+        glowIntensity = 0.1f,
     ) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(
-                    text = when (advice.priority) {
-                        AdvicePriority.HIGH -> "\uD83D\uDD34"
-                        AdvicePriority.MEDIUM -> "\uD83D\uDFE0"
-                        AdvicePriority.LOW -> "\uD83D\uDD35"
-                    }
+                    text =
+                        when (advice.priority) {
+                            AdvicePriority.HIGH -> "\uD83D\uDD34"
+                            AdvicePriority.MEDIUM -> "\uD83D\uDFE0"
+                            AdvicePriority.LOW -> "\uD83D\uDD35"
+                        }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = advice.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                Text(
+                    text = advice.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
                 if (categoryName.isNotBlank()) {
-                    Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-                        Text(categoryName, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    ) {
+                        Text(
+                            categoryName,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
                     }
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
-            Text(text = advice.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = advice.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             if (advice.connection.isNotBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
-                Text(text = "\u2197 ${advice.connection}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                Text(
+                    text = "\u2197 ${advice.connection}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                )
             }
         }
     }

@@ -6,28 +6,26 @@ import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.data.repository.JournalRepository
 import com.bestjournal.app.domain.model.JournalEntry
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class EntryDetailUiState(
     val entry: JournalEntry? = null,
     val editedDisplayText: String = "",
-    val isEditing: Boolean = false,
-    val showOriginalText: Boolean = true,
     val showDeleteDialog: Boolean = false,
     val isDeleted: Boolean = false,
-    val isSaving: Boolean = false
+    val isSaving: Boolean = false,
 )
 
 @HiltViewModel
-class EntryDetailViewModel @Inject constructor(
-    private val journalRepository: JournalRepository,
-    savedStateHandle: SavedStateHandle
-) : ViewModel() {
+class EntryDetailViewModel
+@Inject
+constructor(private val journalRepository: JournalRepository, savedStateHandle: SavedStateHandle) :
+    ViewModel() {
 
     private val _uiState = MutableStateFlow(EntryDetailUiState())
     val uiState: StateFlow<EntryDetailUiState> = _uiState
@@ -42,18 +40,13 @@ class EntryDetailViewModel @Inject constructor(
     private fun loadEntry() {
         viewModelScope.launch {
             val entry = journalRepository.getEntryById(entryId)
-            _uiState.value = _uiState.value.copy(
-                entry = entry,
-                editedDisplayText = entry?.displayText ?: ""
-            )
+            _uiState.value =
+                _uiState.value.copy(entry = entry, editedDisplayText = entry?.displayText ?: "")
         }
     }
 
     fun updateDisplayText(newText: String) {
-        _uiState.value = _uiState.value.copy(
-            editedDisplayText = newText,
-            isEditing = true
-        )
+        _uiState.value = _uiState.value.copy(editedDisplayText = newText)
         // Debounced auto-save after 1.5 seconds of inactivity
         autoSaveJob?.cancel()
         autoSaveJob = viewModelScope.launch {
@@ -66,23 +59,17 @@ class EntryDetailViewModel @Inject constructor(
         val state = _uiState.value
         val entry = state.entry ?: return
         val newText = state.editedDisplayText.trim()
-        if (newText == entry.displayText) {
-            _uiState.value = state.copy(isEditing = false)
-            return
-        }
+        if (newText == entry.displayText) return
 
         _uiState.value = state.copy(isSaving = true)
-        val updatedEntry = entry.copy(
-            displayText = newText,
-            rawText = if (!entry.isImproved) newText else entry.rawText,
-            improvedText = if (entry.isImproved) newText else entry.improvedText
-        )
+        val updatedEntry =
+            entry.copy(
+                displayText = newText,
+                rawText = if (!entry.isImproved) newText else entry.rawText,
+                improvedText = if (entry.isImproved) newText else entry.improvedText,
+            )
         journalRepository.updateEntry(updatedEntry)
-        _uiState.value = _uiState.value.copy(
-            entry = updatedEntry,
-            isEditing = false,
-            isSaving = false
-        )
+        _uiState.value = _uiState.value.copy(entry = updatedEntry, isSaving = false)
     }
 
     fun saveNow() {
@@ -92,25 +79,13 @@ class EntryDetailViewModel @Inject constructor(
 
     fun updateRawText(newText: String) {
         val entry = _uiState.value.entry ?: return
-        _uiState.value = _uiState.value.copy(
-            entry = entry.copy(rawText = newText)
-        )
+        _uiState.value = _uiState.value.copy(entry = entry.copy(rawText = newText))
         autoSaveJob?.cancel()
         autoSaveJob = viewModelScope.launch {
             delay(1500)
             val current = _uiState.value.entry ?: return@launch
             journalRepository.updateEntry(current)
         }
-    }
-
-    fun toggleTextVersion() {
-        val state = _uiState.value
-        val entry = state.entry ?: return
-        val showOriginal = !state.showOriginalText
-        _uiState.value = state.copy(
-            showOriginalText = showOriginal,
-            editedDisplayText = if (showOriginal) entry.rawText else entry.displayText
-        )
     }
 
     fun showDeleteDialog(show: Boolean) {

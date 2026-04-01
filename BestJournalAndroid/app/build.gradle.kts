@@ -20,9 +20,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        ksp {
-            arg("room.schemaLocation", "$projectDir/schemas")
-        }
+        ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 
     buildTypes {
@@ -31,7 +29,7 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
         debug {
@@ -45,9 +43,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+    kotlinOptions { jvmTarget = "17" }
 
     buildFeatures {
         compose = true
@@ -62,9 +58,9 @@ android {
         }
     }
 
-    androidResources {
-        noCompress += listOf("onnx", "txt")
-    }
+    testOptions { unitTests.all { it.useJUnitPlatform() } }
+
+    androidResources { noCompress += listOf("onnx", "txt") }
 }
 
 dependencies {
@@ -134,4 +130,11 @@ dependencies {
 
     // Google Play Billing
     implementation(libs.play.billing)
+
+    // Unit Testing
+    testImplementation(libs.junit5.api)
+    testRuntimeOnly(libs.junit5.engine)
+    testImplementation(libs.junit5.params)
+    testImplementation(libs.mockk)
+    testImplementation(libs.coroutines.test)
 }

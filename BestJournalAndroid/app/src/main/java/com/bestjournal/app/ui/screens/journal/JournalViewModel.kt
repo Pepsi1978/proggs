@@ -51,8 +51,6 @@ data class JournalUiState(
     val errorMessage: String? = null,
     val syncStatus: SyncStatus = SyncStatus.IDLE,
     val showAiLimitReached: Boolean = false,
-    val remainingFreeUses: Int = 5,
-    val aiPhase: String = "TRIAL",
 )
 
 enum class SyncStatus {
@@ -107,14 +105,6 @@ constructor(
             encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")?.isNotBlank() == true
         ) {
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
-        }
-
-        // Initialize AI usage state
-        _uiState.update {
-            it.copy(
-                remainingFreeUses = aiUsageTracker.getRemainingFreeTextUses(),
-                aiPhase = aiUsageTracker.getCurrentPhase().name,
-            )
         }
 
         // Backfill summaries for existing entries that don't have one yet
@@ -232,7 +222,6 @@ constructor(
                                     recordingState = RecordingState.PREVIEW,
                                     improvedText = improved,
                                     isImproveEnabled = true,
-                                    remainingFreeUses = aiUsageTracker.getRemainingFreeTextUses(),
                                 )
                             }
                         }
@@ -242,8 +231,6 @@ constructor(
                                     recordingState = RecordingState.PREVIEW,
                                     errorMessage =
                                         "Textverbesserung fehlgeschlagen: ${error.message}",
-                                    // H-3 fix: Update counter display even on failure
-                                    remainingFreeUses = aiUsageTracker.getRemainingFreeTextUses(),
                                 )
                             }
                         }
