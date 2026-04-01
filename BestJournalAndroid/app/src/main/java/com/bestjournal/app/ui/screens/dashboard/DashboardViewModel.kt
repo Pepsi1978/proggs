@@ -88,6 +88,13 @@ constructor(
                     dashboardLimitMessage = null,
                 )
             aiRateLimiter.recordDashboardRefresh()
+            // Track weekly usage for free users
+            if (
+                aiUsageTracker.getCurrentPhase() ==
+                    com.bestjournal.app.data.remote.ai.AiPhase.FREEMIUM
+            ) {
+                aiUsageTracker.recordWeeklyDashboardUse()
+            }
             analyzeEntropyUseCase(freshAnalysis = true, modelName = modelName)
                 .onSuccess {
                     _uiState.value =

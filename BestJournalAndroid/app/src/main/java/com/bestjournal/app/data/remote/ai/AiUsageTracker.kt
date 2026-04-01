@@ -155,6 +155,7 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
                 .putInt(KEY_DASHBOARD_DAILY_COUNT, 0)
                 .putString(KEY_DASHBOARD_DAILY_DATE, today)
                 .putLong(KEY_DASHBOARD_COOLDOWN_UNTIL, 0L)
+                .putBoolean("${KEY_DASHBOARD_COOLDOWN_UNTIL}_served", false)
                 .apply()
         }
     }
@@ -197,6 +198,7 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
                 .putInt(KEY_TEXT_DAILY_COUNT, 0)
                 .putString(KEY_TEXT_DAILY_DATE, today)
                 .putLong(KEY_TEXT_COOLDOWN_UNTIL, 0L)
+                .putBoolean("${KEY_TEXT_COOLDOWN_UNTIL}_served", false)
                 .apply()
         }
     }
@@ -220,15 +222,23 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
         return when {
             count < premiumLimit -> TieredAccessResult.Allowed(FirebaseAiService.MODEL_FLASH)
             count < cooldownAt -> TieredAccessResult.Allowed(FirebaseAiService.MODEL_FLASH_LITE)
-            count == cooldownAt -> {
-                // Exactly at cooldown threshold: start 30-min cooldown
-                val cooldownMs = Constants.COOLDOWN_MINUTES * 60_000L
-                prefs.edit().putLong(cooldownKey, System.currentTimeMillis() + cooldownMs).apply()
-                TieredAccessResult.Cooldown(Constants.COOLDOWN_MINUTES, count)
+            count < hardLimit -> {
+                // Post-premium tier: check if cooldown was already served
+                val cooldownServed = prefs.getBoolean("${cooldownKey}_served", false)
+                if (!cooldownServed && count >= cooldownAt) {
+                    // First time hitting cooldown threshold: start 30-min cooldown
+                    val cooldownMs = Constants.COOLDOWN_MINUTES * 60_000L
+                    prefs
+                        .edit()
+                        .putLong(cooldownKey, System.currentTimeMillis() + cooldownMs)
+                        .putBoolean("${cooldownKey}_served", true)
+                        .apply()
+                    TieredAccessResult.Cooldown(Constants.COOLDOWN_MINUTES, count)
+                } else {
+                    // Cooldown already served — extended tier with Lite
+                    TieredAccessResult.Allowed(FirebaseAiService.MODEL_FLASH_LITE)
+                }
             }
-            count < hardLimit ->
-                // Post-cooldown extended tier
-                TieredAccessResult.Allowed(FirebaseAiService.MODEL_FLASH_LITE)
             else -> TieredAccessResult.HardLimitReached
         }
     }
