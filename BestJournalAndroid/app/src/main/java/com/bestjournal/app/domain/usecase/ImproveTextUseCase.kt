@@ -1,13 +1,11 @@
 package com.bestjournal.app.domain.usecase
 
 import com.bestjournal.app.data.remote.ai.FirebaseAiService
+import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import javax.inject.Inject
 
-class ImproveTextUseCase @Inject constructor(
-    private val firebaseAiService: FirebaseAiService
-) {
+class ImproveTextUseCase @Inject constructor(private val firebaseAiService: FirebaseAiService) {
     companion object {
         private const val TEMPERATURE = 0.4f
         private const val MAX_OUTPUT_TOKENS = 8192
@@ -15,7 +13,8 @@ class ImproveTextUseCase @Inject constructor(
         private const val CHUNK_MAX_CHARS = 3500
     }
 
-    private fun buildPrompt(text: String): String = """
+    private fun buildPrompt(text: String): String =
+        """
 Du bist ein deutscher Textredakteur für diktierte Spracheingaben.
 
 AUFGABE:
@@ -42,20 +41,25 @@ Keine Kommentare. Keine Erklärungen. Kein Präfix.
 
 TEXT:
 $text
-    """.trim()
+    """
+            .trim()
+
+    private var currentModelName: String = FirebaseAiService.MODEL_FLASH
 
     private suspend fun rewriteChunk(text: String): String {
-        val result = firebaseAiService.generateContent(
-            prompt = buildPrompt(text),
-            temperature = TEMPERATURE,
-            maxOutputTokens = MAX_OUTPUT_TOKENS
-        )
+        val result =
+            firebaseAiService.generateContent(
+                prompt = buildPrompt(text),
+                modelName = currentModelName,
+                temperature = TEMPERATURE,
+                maxOutputTokens = MAX_OUTPUT_TOKENS,
+            )
         return result.getOrNull()?.trim() ?: text
     }
 
     /**
-     * Split text into chunks by paragraphs, respecting sentence boundaries.
-     * Mirrors the Tampermonkey chatgpt.user.js splitIntoChunksByParagraphs logic.
+     * Split text into chunks by paragraphs, respecting sentence boundaries. Mirrors the
+     * Tampermonkey chatgpt.user.js splitIntoChunksByParagraphs logic.
      */
     private fun splitIntoChunks(text: String): List<String> {
         if (text.length <= CHUNK_MAX_CHARS) return listOf(text)
@@ -69,7 +73,10 @@ $text
             if (p.isEmpty()) continue
 
             if (p.length > CHUNK_MAX_CHARS) {
-                if (buffer.isNotBlank()) { chunks.add(buffer); buffer = "" }
+                if (buffer.isNotBlank()) {
+                    chunks.add(buffer)
+                    buffer = ""
+                }
                 // Split long paragraph at sentence boundaries
                 var start = 0
                 while (start < p.length) {
@@ -77,12 +84,13 @@ $text
                     if (end < p.length) {
                         val windowStart = maxOf(start, end - (CHUNK_MAX_CHARS / 2))
                         val slice = p.substring(windowStart, end)
-                        val lastBreak = maxOf(
-                            slice.lastIndexOf('.'),
-                            slice.lastIndexOf('!'),
-                            slice.lastIndexOf('?'),
-                            slice.lastIndexOf(';')
-                        )
+                        val lastBreak =
+                            maxOf(
+                                slice.lastIndexOf('.'),
+                                slice.lastIndexOf('!'),
+                                slice.lastIndexOf('?'),
+                                slice.lastIndexOf(';'),
+                            )
                         if (lastBreak > -1) end = windowStart + lastBreak + 1
                     }
                     chunks.add(p.substring(start, end).trim())
@@ -103,7 +111,11 @@ $text
         return if (chunks.isNotEmpty()) chunks else listOf(text)
     }
 
-    suspend operator fun invoke(rawText: String): Result<String> {
+    suspend operator fun invoke(
+        rawText: String,
+        modelName: String = FirebaseAiService.MODEL_FLASH,
+    ): Result<String> {
+        currentModelName = modelName
         return try {
             // First attempt: one-shot
             val oneShot = rewriteChunk(rawText)
@@ -117,9 +129,7 @@ $text
             // Text was truncated — split into chunks and process in parallel
             val chunks = splitIntoChunks(rawText)
             val results = coroutineScope {
-                chunks.map { chunk ->
-                    async { rewriteChunk(chunk) }
-                }.map { it.await() }
+                chunks.map { chunk -> async { rewriteChunk(chunk) } }.map { it.await() }
             }
 
             Result.success(results.joinToString("\n\n").trim())

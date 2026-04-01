@@ -27,29 +27,40 @@ object Constants {
     const val PREF_BIOMETRIC_LOCK = "biometric_lock"
 
     // Google OAuth
-    const val GOOGLE_WEB_CLIENT_ID = "314424175660-12m82j2jgvmc0tcgl61igghp67nnpmn1.apps.googleusercontent.com"
+    const val GOOGLE_WEB_CLIENT_ID =
+        "314424175660-12m82j2jgvmc0tcgl61igghp67nnpmn1.apps.googleusercontent.com"
 
     // Encrypted SharedPreferences file name
     const val ENCRYPTED_PREFS_NAME = "entropy_journal_secure_prefs"
 
     // Freemium
     const val TRIAL_USAGE_DAYS = 7
-    const val HONEYMOON_USAGE_DAYS = 3
-    const val FREE_WEEKLY_AI_LIMIT = 3
-    const val MAX_ENTRIES_FREE_ANALYSIS = 10
+    const val FREE_WEEKLY_DASHBOARD_LIMIT = 5
+    const val FREE_WEEKLY_TEXT_LIMIT = 5
+    const val MAX_ENTRIES_FREE_ANALYSIS = 20
     const val MAX_ENTRIES_SUBSCRIBED_ANALYSIS = 40
-    const val MAX_ENTRIES_TRIAL_ANALYSIS = 40
+    const val MAX_ENTRIES_TRIAL_ANALYSIS = 20
 
-    // Dashboard daily limits
-    const val DASHBOARD_SILENT_LIMIT = 16
-    const val DASHBOARD_COOLDOWN_LIMIT = 20
-    const val DASHBOARD_COOLDOWN_MINUTES = 30
+    // Trial daily limits (4-tier model)
+    const val TRIAL_PREMIUM_LIMIT = 20 // 1-20: Flash 2.5
+    const val TRIAL_STANDARD_LIMIT = 80 // 21-80: Flash 2.5 Lite
+    const val TRIAL_COOLDOWN_AT = 81 // 81st call: 30-min cooldown
+    const val TRIAL_HARD_LIMIT = 101 // 101+: blocked for the day
+
+    // Subscriber daily limits (4-tier model, higher than trial)
+    const val SUB_PREMIUM_LIMIT = 30 // 1-30: Flash 2.5
+    const val SUB_STANDARD_LIMIT = 100 // 31-100: Flash 2.5 Lite
+    const val SUB_COOLDOWN_AT = 101 // 101st call: 30-min cooldown
+    const val SUB_HARD_LIMIT = 151 // 151+: blocked for the day
+
+    // Cooldown duration (shared)
+    const val COOLDOWN_MINUTES = 30
 
     // Spam protection
-    const val SPAM_HOURLY_AI_LIMIT = 25
+    const val SPAM_HOURLY_AI_LIMIT = 30
 
     // Subscription pricing (display only — actual prices set in Google Play Console)
-    const val MONTHLY_PRICE_DISPLAY = "4,99\u00A0\u20AC"
-    const val YEARLY_PRICE_DISPLAY = "39,99\u00A0\u20AC"
-    const val YEARLY_MONTHLY_EQUIVALENT = "3,33\u00A0\u20AC"
+    const val MONTHLY_PRICE_DISPLAY = "3,99\u00A0\u20AC"
+    const val YEARLY_PRICE_DISPLAY = "29,99\u00A0\u20AC"
+    const val YEARLY_MONTHLY_EQUIVALENT = "2,50\u00A0\u20AC"
 }

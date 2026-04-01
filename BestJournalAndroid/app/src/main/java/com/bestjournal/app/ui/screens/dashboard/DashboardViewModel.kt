@@ -2,20 +2,21 @@ package com.bestjournal.app.ui.screens.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.data.remote.ai.AiRateLimiter
 import com.bestjournal.app.data.remote.ai.AiUsageTracker
-import com.bestjournal.app.data.remote.ai.DashboardAccessResult
+import com.bestjournal.app.data.remote.ai.TieredAccessResult
 import com.bestjournal.app.data.repository.AdviceRepository
 import com.bestjournal.app.domain.usecase.AnalyzeEntropyUseCase
 import com.bestjournal.app.domain.usecase.GenerateAdviceUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class DashboardUiState(
     val isLoading: Boolean = false,
@@ -23,20 +24,24 @@ data class DashboardUiState(
     val errorMessage: String? = null,
     val canUndo: Boolean = false,
     val showAiInfoBanner: Boolean = false,
-    val dashboardLimitMessage: String? = null
+    val dashboardLimitMessage: String? = null,
 )
 
 @HiltViewModel
-class DashboardViewModel @Inject constructor(
+class DashboardViewModel
+@Inject
+constructor(
     private val generateAdviceUseCase: GenerateAdviceUseCase,
     private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
     private val adviceRepository: AdviceRepository,
     private val aiUsageTracker: AiUsageTracker,
-    private val aiRateLimiter: AiRateLimiter
+    private val aiRateLimiter: AiRateLimiter,
+    private val billingManager: BillingManager,
 ) : ViewModel() {
 
-    val adviceBlocks = generateAdviceUseCase()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val adviceBlocks =
+        generateAdviceUseCase()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState
@@ -52,39 +57,52 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun refreshDashboard() {
-        // Check dashboard daily limit before making API call
-        when (val access = aiRateLimiter.checkDashboardAccess()) {
-            is DashboardAccessResult.Allowed -> performRefresh()
-            is DashboardAccessResult.Cooldown -> {
+        val subscriptionState = billingManager.subscriptionState.value
+        when (val access = aiRateLimiter.checkDashboardAccess(subscriptionState)) {
+            is TieredAccessResult.Allowed -> performRefresh(access.modelName)
+            is TieredAccessResult.Cooldown -> {
                 _uiState.update {
-                    it.copy(dashboardLimitMessage = "Das System ist gerade ausgelastet. Bitte versuche es in ${access.minutesLeft} Minuten erneut.")
+                    it.copy(
+                        dashboardLimitMessage =
+                            "Du hast heute schon ${access.totalToday} Aktualisierungen gemacht \u2014 nicht schlecht! Kurze Pause, in ${access.minutesLeft} Minuten geht\u2019s weiter."
+                    )
                 }
             }
-            is DashboardAccessResult.DailyLimitReached -> {
+            is TieredAccessResult.HardLimitReached -> {
                 _uiState.update {
-                    it.copy(dashboardLimitMessage = "Neue Aktualisierungen sind morgen wieder verf\u00fcgbar.")
+                    it.copy(
+                        dashboardLimitMessage =
+                            "Userlimit erreicht \u2014 neue Aktualisierungen morgen wieder verf\u00fcgbar."
+                    )
                 }
             }
         }
     }
 
-    private fun performRefresh() {
+    private fun performRefresh(modelName: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null, dashboardLimitMessage = null)
+            _uiState.value =
+                _uiState.value.copy(
+                    isLoading = true,
+                    errorMessage = null,
+                    dashboardLimitMessage = null,
+                )
             aiRateLimiter.recordDashboardRefresh()
-            analyzeEntropyUseCase(freshAnalysis = true)
+            analyzeEntropyUseCase(freshAnalysis = true, modelName = modelName)
                 .onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        canUndo = adviceRepository.canUndo,
-                        selectedCategoryIndex = 0
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isLoading = false,
+                            canUndo = adviceRepository.canUndo,
+                            selectedCategoryIndex = 0,
+                        )
                 }
                 .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = error.message ?: "Analyse fehlgeschlagen"
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isLoading = false,
+                            errorMessage = error.message ?: "Analyse fehlgeschlagen",
+                        )
                 }
         }
     }
@@ -92,10 +110,7 @@ class DashboardViewModel @Inject constructor(
     fun undoDashboard() {
         viewModelScope.launch {
             val success = adviceRepository.undoLastRefresh()
-            _uiState.value = _uiState.value.copy(
-                canUndo = false,
-                selectedCategoryIndex = 0
-            )
+            _uiState.value = _uiState.value.copy(canUndo = false, selectedCategoryIndex = 0)
         }
     }
 

@@ -31,64 +31,58 @@ fun AiLimitReachedSheet(
     yearlyPrice: String,
     onSubscribeMonthly: () -> Unit,
     onSubscribeYearly: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Icon(
                 Icons.Rounded.AutoAwesome,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                "Deine KI-Nutzungen f\u00fcr diese Woche sind aufgebraucht",
+                "Deine kostenlosen KI-Nutzungen sind aufgebraucht",
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Mit dem Premium-Abo bekommst du unbegrenzte KI-Power:\n" +
-                "Textverbesserung, Zusammenfassungen und Lebensratschl\u00e4ge \u2014 ohne Limit.",
+                "Mit dem Premium-Abo erh\u00e4ltst du bis zu 150 KI-Aufrufe pro Tag:\n" +
+                    "Textverbesserung, Zusammenfassungen und Lebensratschl\u00e4ge \u2014 in voller Qualit\u00e4t.",
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(24.dp))
-            OutlinedButton(
-                onClick = onSubscribeMonthly,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            OutlinedButton(onClick = onSubscribeMonthly, modifier = Modifier.fillMaxWidth()) {
                 Text("Monatsabo \u2014 $monthlyPrice/Monat")
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = onSubscribeYearly,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
+                colors =
+                    ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
-                Text("Jahresabo \u2014 $yearlyPrice/Jahr (spare 33%)")
+                Text("Jahresabo \u2014 $yearlyPrice/Jahr (spare 37%)")
             }
             Spacer(modifier = Modifier.height(12.dp))
             TextButton(onClick = onDismiss) {
                 Text(
                     "Nein danke, weiter ohne KI",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Spacer(modifier = Modifier.height(24.dp))

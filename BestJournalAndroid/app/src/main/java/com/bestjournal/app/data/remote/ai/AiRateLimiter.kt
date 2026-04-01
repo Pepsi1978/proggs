@@ -6,49 +6,75 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class AiRateLimiter @Inject constructor(
-    private val usageTracker: AiUsageTracker
-) {
-    fun checkAccess(subscriptionState: SubscriptionState): AiAccessResult {
-        if (subscriptionState is SubscriptionState.Subscribed) {
-            return AiAccessResult.Allowed
-        }
+class AiRateLimiter @Inject constructor(private val usageTracker: AiUsageTracker) {
+    fun checkDashboardAccess(subscriptionState: SubscriptionState): TieredAccessResult {
         val phase = usageTracker.getCurrentPhase()
-        return when (phase) {
-            AiPhase.HONEYMOON, AiPhase.EDUCATION -> AiAccessResult.Allowed
-            AiPhase.FREEMIUM -> {
-                if (usageTracker.isAiAllowedForFreeUser()) {
-                    AiAccessResult.Allowed
+        return when {
+            subscriptionState is SubscriptionState.Subscribed ->
+                usageTracker.getDashboardAccessResult(
+                    premiumLimit = Constants.SUB_PREMIUM_LIMIT,
+                    cooldownAt = Constants.SUB_COOLDOWN_AT,
+                    hardLimit = Constants.SUB_HARD_LIMIT,
+                )
+            phase == AiPhase.TRIAL ->
+                usageTracker.getDashboardAccessResult(
+                    premiumLimit = Constants.TRIAL_PREMIUM_LIMIT,
+                    cooldownAt = Constants.TRIAL_COOLDOWN_AT,
+                    hardLimit = Constants.TRIAL_HARD_LIMIT,
+                )
+            else -> {
+                // FREEMIUM: weekly limit, always Lite
+                if (usageTracker.isFreeDashboardAllowed()) {
+                    TieredAccessResult.Allowed(FirebaseAiService.MODEL_FLASH_LITE)
                 } else {
-                    AiAccessResult.LimitReached(
-                        weeklyUsed = usageTracker.getWeeklyAiUsageCount(),
-                        weeklyLimit = AiUsageTracker.FREE_WEEKLY_LIMIT
-                    )
+                    TieredAccessResult.HardLimitReached
+                }
+            }
+        }
+    }
+
+    fun checkTextAccess(subscriptionState: SubscriptionState): TieredAccessResult {
+        val phase = usageTracker.getCurrentPhase()
+        return when {
+            subscriptionState is SubscriptionState.Subscribed ->
+                usageTracker.getTextAccessResult(
+                    premiumLimit = Constants.SUB_PREMIUM_LIMIT,
+                    cooldownAt = Constants.SUB_COOLDOWN_AT,
+                    hardLimit = Constants.SUB_HARD_LIMIT,
+                )
+            phase == AiPhase.TRIAL ->
+                usageTracker.getTextAccessResult(
+                    premiumLimit = Constants.TRIAL_PREMIUM_LIMIT,
+                    cooldownAt = Constants.TRIAL_COOLDOWN_AT,
+                    hardLimit = Constants.TRIAL_HARD_LIMIT,
+                )
+            else -> {
+                // FREEMIUM: weekly limit, always Lite
+                if (usageTracker.isFreeTextAllowed()) {
+                    TieredAccessResult.Allowed(FirebaseAiService.MODEL_FLASH_LITE)
+                } else {
+                    TieredAccessResult.HardLimitReached
                 }
             }
         }
     }
 
     fun getMaxEntriesForAnalysis(subscriptionState: SubscriptionState): Int {
-        if (subscriptionState is SubscriptionState.Subscribed) return Constants.MAX_ENTRIES_SUBSCRIBED_ANALYSIS
-        val phase = usageTracker.getCurrentPhase()
-        return when (phase) {
-            AiPhase.HONEYMOON, AiPhase.EDUCATION -> Constants.MAX_ENTRIES_TRIAL_ANALYSIS
+        if (subscriptionState is SubscriptionState.Subscribed)
+            return Constants.MAX_ENTRIES_SUBSCRIBED_ANALYSIS
+        return when (usageTracker.getCurrentPhase()) {
+            AiPhase.TRIAL -> Constants.MAX_ENTRIES_TRIAL_ANALYSIS
             AiPhase.FREEMIUM -> Constants.MAX_ENTRIES_FREE_ANALYSIS
         }
-    }
-
-    fun checkDashboardAccess(): DashboardAccessResult {
-        return usageTracker.getDashboardAccessResult()
     }
 
     fun recordDashboardRefresh() {
         usageTracker.recordDashboardRefresh()
         usageTracker.recordHourlyAiUsage()
     }
-}
 
-sealed class AiAccessResult {
-    data object Allowed : AiAccessResult()
-    data class LimitReached(val weeklyUsed: Int, val weeklyLimit: Int) : AiAccessResult()
+    fun recordTextImprovement() {
+        usageTracker.recordTextImprovement()
+        usageTracker.recordHourlyAiUsage()
+    }
 }
