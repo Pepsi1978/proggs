@@ -1,6 +1,6 @@
 # Moshi
--keep class com.entropyjournal.data.remote.** { *; }
--keepclassmembers class com.entropyjournal.data.remote.** { *; }
+-keep class com.bestjournal.app.data.remote.** { *; }
+-keepclassmembers class com.bestjournal.app.data.remote.** { *; }
 
 # Retrofit
 -keepattributes Signature

@@ -5,3 +5,6 @@ tools/
 test_api.ts
 .mcp.json
 BestJournalAndroid/app/google-services.json
+BestJournalAndroid/local.properties
+BestJournalAndroid/*.jks
+BestJournalAndroid/**/*.jks

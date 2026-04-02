@@ -1,6 +1,6 @@
-# Entropy Journal — Session-Regeln
+# Best Journal — Session-Regeln
 
-Diese Regeln gelten fuer JEDE Arbeitssession an der Entropy Journal App.
+Diese Regeln gelten fuer JEDE Arbeitssession an der Best Journal App.
 
 ## Versionierung (PFLICHT)
 - Bei JEDEM Commit die Version erhoehen in BEIDEN Stellen:
@@ -19,7 +19,7 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Entropy Journal App.
 ## Build & Install (PFLICHT)
 - Nach jeder Aenderung: `./gradlew assembleDebug`
 - Auf dem Handy installieren: `adb -s [DEVICE] install -r app/build/outputs/apk/debug/app-debug.apk`
-- App stoppen und neu starten: `adb -s [DEVICE] shell am force-stop com.entropyjournal.debug`
+- App stoppen und neu starten: `adb -s [DEVICE] shell am force-stop com.bestjournal.app.debug`
 - Bei Hilt-Aenderungen: `./gradlew clean assembleDebug`
 
 ## Geraete
@@ -59,7 +59,7 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Entropy Journal App.
 - Projektname: "Tagebuch"
 - Projekt-ID: `674560807048`
 - Web-Client-ID: `674560807048-l6ktqsucjr4ld91srdc6assgfiks19mh.apps.googleusercontent.com`
-- Android-Client: Paketname `com.entropyjournal.debug`, SHA-1 vom Debug-Keystore
+- Android-Client: Paketname `com.bestjournal.app.debug`, SHA-1 vom Debug-Keystore
 - Google Drive API: aktiviert
 - Gmail API: aktiviert (fuer Feedback-Funktion)
 - Testnutzer: barwandt@gmail.com
