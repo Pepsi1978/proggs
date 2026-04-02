@@ -11,7 +11,8 @@
 		"CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS": "30000",
 		"ENABLE_TOOL_SEARCH": "1",
 		"ENABLE_SECURITY_REMINDER": "0",
-		"ECC_HOOK_PROFILE": "minimal"
+		"ECC_HOOK_PROFILE": "minimal",
+		"CLAUDE_CODE_NO_FLICKER": "1"
 	},
 	"permissions": {
 		"defaultMode": "bypassPermissions"
@@ -470,10 +471,10 @@
 		"superpowers-chrome@superpowers-marketplace": true,
 		"claude-session-driver@superpowers-marketplace": true,
 		"code-review@claude-plugins-official": true,
-		"playwright@claude-plugins-official": false,
+		"playwright@claude-plugins-official": true,
 		"coderabbit@claude-plugins-official": true,
 		"explanatory-output-style@claude-plugins-official": true,
-		"aikido@claude-plugins-official": false,
+		"aikido@claude-plugins-official": true,
 		"superpowers-lab@superpowers-marketplace": true,
 		"superpowers-developing-for-claude-code@superpowers-marketplace": true,
 		"elements-of-style@superpowers-marketplace": true,
@@ -509,7 +510,7 @@
 		"testing-handbook-skills@trailofbits": true,
 		"variant-analysis@trailofbits": true,
 		"insecure-defaults@trailofbits": true,
-		"second-opinion@trailofbits": false,
+		"second-opinion@trailofbits": true,
 		"yara-authoring@trailofbits": true,
 		"git-cleanup@trailofbits": true,
 		"workflow-skill-design@trailofbits": true,
@@ -536,7 +537,10 @@
 		"fpf@context-engineering-kit": true,
 		"xclaude-plugin@xclaude-plugin-marketplace": true,
 		"apple-platform-build-tools@apple-platform-build-tools": true,
-		"claude-reflect@claude-reflect-marketplace": true
+		"claude-reflect@claude-reflect-marketplace": true,
+		"spec-driven-development@context-engineering-kit": true,
+		"claude-code-lsps@boostvolt": false,
+		"context-kit@FlineDev": false
 	},
 	"extraKnownMarketplaces": {
 		"superpowers-marketplace": {
@@ -594,14 +598,12 @@
 				"repo": "BayramAnnakov/claude-reflect"
 			}
 		},
-		"_comment_boostvolt": "Removed: boostvolt/claude-code-lsps plugin not found (2026-03-28)",
 		"trailofbits/skills-curated": {
 			"source": {
 				"source": "github",
 				"repo": "trailofbits/skills-curated"
 			}
-		},
-		"_comment_FlineDev": "Removed: FlineDev/context-kit repo cannot be cloned (2026-03-28)"
+		}
 	},
 	"language": "de",
 	"alwaysThinkingEnabled": true,
@@ -615,6 +617,5 @@
 			"command": "/opt/homebrew/bin/npx",
 			"args": ["-y", "android-debug-bridge-mcp"]
 		}
-	},
-	"model": "claude-opus-4-6"
+	}
 }

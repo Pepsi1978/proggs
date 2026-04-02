@@ -74,38 +74,51 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 <!-- ARCHIV (2026-03-25, /self-improve Cleanup): StopFailure API/Rate-Limit Errors (2026-03-21 + 2026-03-24) — temporaere API-Fehler, einmalig, kein dauerhaftes Problem. safety-gate.sh duplizierte Blockierung (2x 2026-03-21) — erwartetes Verhalten, kein Fehler. Write-Back nicht erfolgt (2026-03-22 + 2026-03-25) — Einmalige Events, memory-watchdog loggt korrekt, kein systemisches Problem. -->
 
 <!-- ARCHIV (2026-03-31, /self-improve Focus:Resilienz): 4x StopFailure Rate-Limit (Ollama 429, macOS, Sessions 417bedd7 + 2026-03-28) — temporaere API-Session-Limits, kein dauerhaftes Problem. 8x Write-Back nicht erfolgt (memory-watchdog 2026-03-25 bis 2026-03-29) — Informativ, Agents loggen korrekt. disk-guard 95% (2026-03-27) — aktuell 83%, nicht mehr kritisch. session-guard Auto-Reparatur (2026-03-28) — korrekt AUTO-GEFIXT. -->
-### 2026-03-31 18:29 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 96%
-### [2026-03-31 18:48] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-03-31 18:52 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 96%
+<!-- ARCHIV (2026-04-02): 8x disk-guard 96-97% (2026-03-31 bis 2026-04-02) — Speicherplatz dauerhaft kritisch, siehe aktiven Eintrag unten. 3x Write-Back AUTO-LOGGED (2026-03-31 bis 2026-04-01) — informativ, kein Fehler. 2x StopFailure authentication_failed (coder-Agents in Worktree, 2026-04-01 21:48 + 22:50) — Worktree-Agents verlieren Auth-Kontext, temporaer, Session laeuft normal weiter. -->
+
+### 2026-04-02 — Speicherplatz war KRITISCH (97%) — bereinigt
+**Quelle:** Hook: disk-guard.sh (8 Meldungen seit 2026-03-31)
+**Fix:** Gradle clean + Build-Cache-Bereinigung. Jetzt 16 GB frei (42%).
+**Status:** GEFIXT (2026-04-02)
+
+### 2026-04-02 — Meta-Intelligence-Kollaps (50% → 10%) — hyperagent-stop.sh Bug
+**Quelle:** evolution-analyst Trend-Analyse
+**Symptom:** 9/10 letzten Sessions ohne Meta-Intelligence >=2, Intelligenz-Vorschlaege fehlend
+**Ursache:** hyperagent-stop.sh hat bei stale Goal (>2h) kompletten Hook uebersprungen (exit 0)
+**Fix:** exit 0 → goal="" (Hook laeuft weiter). Zusaetzlich: Volle-Analyse-Schwelle 20→12 Turns, Error-Schwelle 3→2.
+**Betroffene Dateien:** ~/.claude/hooks/hyperagent-stop.sh, claude-code-setup/hooks/hyperagent-stop.sh
+**Status:** GEFIXT (2026-04-02)
+<!-- ARCHIV: safety-gate.sh blockierte rm -rf waehrend /self-improve Cache-Cleanup (2026-04-02 18:51) — erwartetes Verhalten -->
 ---
 
 ## Systemzustand (aktuell)
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
 
-**Stand:** 2026-03-31 (aktualisiert durch /self-improve Focus:Resilienz)
+**Stand:** 2026-04-02 (aktualisiert durch /self-improve Standard)
 
-- **Plattform:** Windows 11 Home 10.0.26200 (x64) + macOS (Apple Silicon), Claude Code v2.1.88, Opus 4.6 (1M context)
-- **Sprachen:** Swift, C#, TypeScript, Rust (1.94.0), Go (1.26.1), Kotlin (2.3.20), Java (OpenJDK 21.0.10)
-- **Node.js:** v24.14.0, npm 11.12.0, Bun 1.3.11, Deno FEHLT auf Windows (PATH-Verlust)
-- **TypeScript:** tsc NICHT global installiert (npm i -g typescript fehlt)
-- **Semantic Search:** Aktiv (wird bei jeder Session automatisch aktualisiert via reindex-Hook)
+- **Plattform:** Windows 11 Home 10.0.26200 (x64) + macOS (Apple Silicon), Claude Code v2.1.83 (macOS, Update auf v2.1.90 verfuegbar), Opus 4.6 (1M context)
+- **Sprachen:** Swift 6.3, C#, TypeScript, Rust 1.94.1, Go 1.26.1, Kotlin 2.3.20, Java OpenJDK 17.0.18, Python 3.14.3
+- **Node.js:** v25.8.2 (macOS), npm 11.11.1, Bun 1.3.11, Deno vorhanden (macOS)
+- **Semantic Search:** Aktiv, Ollama 0.19.0 laeuft
 - **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
 - **Agents:** 21 aktiv (15 Opus + 6 Sonnet), alle korrekt konfiguriert
-- **Hooks:** 9 SessionStart (inkl. NEU: invariant-check), 22+ Hook-Events gesamt, alle Script-Dateien vorhanden
-- **Plugins:** 91 Eintraege, 84 aktiv (7 deaktiviert)
+- **Hooks:** 9 SessionStart (inkl. invariant-check), 22+ Hook-Events gesamt. **Fix 2026-04-02:** hyperagent-stop.sh Bug gefixt (stale-goal exit → goal-clear)
+- **Plugins:** 92 Eintraege, 87 aktiv (5 deaktiviert: asana, serena, slack, stripe, supabase)
 - **Whiteboard-Anbindung:** Alle Hooks nutzen whiteboard-insert.ps1/.sh (sektionsbasiert)
 - **Session-Scorer:** v3 — schreibt NUR in session-scores.jsonl
 - **Self-Improve Skill:** v5.19
 - **Git:** v2.53.0, Git Credential Manager aktiv
-- **Android (Windows):** SDK 34/35/36, NDK 28.0.13004108, ADB 1.0.41
-- **Sicherheit:** Prompt-Injection-Defender aktiv, gitleaks und semgrep FEHLEN im PATH (Windows), cargo-audit OK
-- **Evolution-Analyst (2026-03-31):** 5-Session-Avg 8.74, Trend: PLATEAU. IQ-Trend: 0→15.1 (STEIGEND). Meta-Intelligence 20% (Grenzwert).
+- **Sicherheit:** Prompt-Injection-Defender aktiv, cargo-audit 0.22.1 OK, Axios Supply-Chain SAUBER (geprueft 2026-04-02)
+- **Evolution-Analyst (2026-04-02):** Quality 8.66 (PLATEAU), IQ 89.5 (STEIGEND), Meta-Intelligence 10% (KOLLAPS → Bug gefixt), Corrections fast null
+- **Speicherplatz (macOS):** 16 GB frei (42%) — bereinigt, stabil
+- **Pending Shell-Updates (macOS):** Claude Code CLI v2.1.90, node, deno, powershell, uv, xz, harfbuzz, util-linux, codex
 - **Neuer Hook (2026-03-31):** invariant-check.ps1/.sh — Proaktive System-Invarianten-Pruefung bei SessionStart (Cursor-Pattern)
 - **Speicherplatz (macOS):** 22 GB frei (36% belegt) — reichlich Platz
 - **Cross-Tool:** Codex + Gemini Delta Bridges aktiv, 8 Intelligenz-Dimensionen im Whiteboard portiert
 - **macOS-Update (2026-03-31):** Claude Code v2.1.83, Node v25.8.1, npm 11.11.1, Bun 1.3.11, Go 1.26.1, Swift 6.3, Rust/Cargo 1.94.0 (→1.94.1 verfuegbar), 25 Homebrew-Pakete veraltet
 - **macOS Settings-Fix (2026-03-31):** allow-Liste entfernt (war Whitelist-Blocker bei bypassPermissions), 2 fehlende Hooks hinzugefuegt (mcp-auth-check, doctor-lite), tote Plugins deaktiviert (boostvolt, FlineDev)
+- **Pending Admin Updates (8):** deno,harfbuzz,node,powershell,util-linux,uv,xz,codex,
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -216,6 +229,18 @@ _Noch keine Eintraege._
 - **[2026-03-31 12:49] researcher**: AI Agent Memory/Reasoning/Meta-Learning 2025-2026: 4 Speichertypen (Episodic/Semantic/Procedural/Working) sind Industriestandard. Context Engineering (Anthropic-Term 2025) hat Prompt Engineering abgeloest — Schluessel ist just-in-time context loading und context rot Vermeidung. SICA-Paper (NeurIPS 2025): selbstverbessernder Coding-Agent von 17% auf 53% SWE-Bench. Hyperagents (Meta arXiv 2603.19461): rekursive Selbstmodifikation ueber Metacognition. Forest-of-Thought ist neuer Reasoning-Standard. Thinking-Optimal Scaling: laengeres Denken nicht immer besser. MemGPT/Letta: OS-Analogie fuer virtuelles Context-Management. Cross-session memory via structured note-taking + sub-agent architectures.
 - **[2026-03-31 12:58] researcher**: Self-Healing CI/CD: Pipeline-Doctor-Pattern (Intercept→Analyze→Repair) + LLM-as-a-Judge (8B SLM als Gatekeeper) + 3-Stufen-Maturity (Observer→Gatekeeper→Healer). AI Agent Self-Observation: Metacognitive Learning = metacognitive knowledge + planning + evaluation; LLMs koennen nur human-interpretable Konzepte introspizieren; OpenReview 2026: truly self-improving agents brauchen intrinsic metacognitive learning. Zero-Recurrence Bugs: RC_Detector (Heterogeneous Graph Learning fuer Bug-Commit RCA, arXiv 2505.01022); RCEGen (LLM-basiertes RCA, MDPI 2025); Schluessel: Pattern-Bibliothek aus historischen Bugs + semantische Code-Abhängigkeitsgraphen. Compound AI / Knowledge Flywheel: ICLR 2026 Workshop on Recursive Self-Improvement; Intelligence Flywheel Paper (techrxiv 2026); Karpathy AutoResearch: 700 Experimente in 2 Tagen, 11% Speedup; AlphaCode-Pattern Generate-and-Filter direkt auf quality-gate anwendbar; LLM-Cascades (98% Kostensenkung durch Confidence-Routing)
 - **[2026-03-31 13:15] researcher**: Windsurf Memories: IDE-only, kein API, gespeichert in ~/.codeium/windsurf/memories/ als workspace-lokale Dateien, kein eigenstaendiger Zugriff ausserhalb des IDEs moeglich. Beste Windsurf-Alternativen fuer Claude Code CLI: (1) claude-mem Plugin (BEREITS INSTALLIERT laut System) automatisch via Hooks, kein manueller Aufwand, 95% Token-Kompression, SQLite-lokal; (2) Mem0 MCP — pip install mem0-mcp-server, Cloud-API, 90% weniger Tokens, automatisch; (3) neural-memory MCP — pip install neural-memory, SQLite-lokal, kein Cloud, brain-like Assoziationen ABER manuelles Speichern noetig; (4) Letta Code — memory-first coding agent built on MemGPT. Fazit: claude-mem ist der Windsurf-naeheste Ansatz fuer Claude Code CLI weil es automatisch via Lifecycle-Hooks arbeitet.
+
+- **[2026-04-02] ACE: Agentic Context Engineering (ICLR 2026, arxiv 2510.04618)** — Status: EVALUIERT | Empfehlung: JA sofort
+  Kontext als lebendes Playbook: Generator→Reflector→Curator Loop. +10.6% Benchmarks, 83.6% weniger Token. Direkt auf MEMORY.md anwendbar: Session=Generator, Hyperagent=Reflector, /self-improve=Curator.
+
+- **[2026-04-02] Code Pathfinder MCP (codepathfinder.dev)** — Status: EVALUIERT | Empfehlung: JA spaeter
+  Open-Source Call-Graph MCP-Server im Anthropic Registry. 6 Tools (find_symbol, get_callers, get_callees). Nur Python-Support — fuer Kotlin/Swift nicht nutzbar.
+
+- **[2026-04-02] ARIS: Autonome Forschungsschleife (AAAI 2026)** — Status: EVALUIERT | Empfehlung: JA spaeter
+  Markdown-only Skills fuer autonome Nacht-Recherche. Zero Dependencies. Cross-Modell Review-Schleifen adaptierbar.
+
+- **[2026-04-02] Awesome Context Engineering Sammlung** — Status: EVALUIERT | Empfehlung: JA sofort (als Forschungsquelle)
+  100+ Papers zu Write/Select/Compress/Isolate Paradigma. Context Engineering hat Prompt Engineering als Industriestandard abgeloest.
 ---
 
 ## Meta-Intelligenz & Selbstverbesserung
@@ -242,7 +267,8 @@ _Noch keine Eintraege._
 
 - **[2026-03-25] intelligence-checker**: [WARNING] Session 417bedd7 (47 Turns) hatte keinen Intelligenz-Vorschlag
 - **[2026-03-25] self-observation-checker**: [WARNING] Session 417bedd7 (47 Turns) zeigte keine Selbstbeobachtung
-<<<<<<< Updated upstream
+- **[2026-03-28] intelligence-checker**: [WARNING] Session c2cc1369 (84 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-03-28] self-observation-checker**: [WARNING] Session c2cc1369 (84 Turns) zeigte keine Selbstbeobachtung
 
 - **[2026-03-31] Dritter Compound Effect — Von Stagnation zu proaktiver Fehlervermeidung:**
   /self-improve Stufe 0: Evolution-Analyst identifiziert "Erkennungs-ohne-Heilung-Muster" →
@@ -252,10 +278,19 @@ _Noch keine Eintraege._
   **Ergebnis:** Zukuenftige stale Issues werden PROAKTIV bei jedem SessionStart gemeldet statt
   tagelang unbemerkt zu bleiben. Die Fehlerklasse "vergessene offene Probleme" ist eliminiert.
   **Kette:** Stagnation bemerkt → Forschung → Muster gefunden → Implementiert → Fehlerklasse eliminiert.
-=======
-- **[2026-03-28] intelligence-checker**: [WARNING] Session c2cc1369 (84 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-03-28] self-observation-checker**: [WARNING] Session c2cc1369 (84 Turns) zeigte keine Selbstbeobachtung
->>>>>>> Stashed changes
+- **[2026-04-01] intelligence-checker**: [WARNING] Session b4b10f73 (28 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-01] self-observation-checker**: [WARNING] Session b4b10f73 (28 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-01] intelligence-checker**: [WARNING] Session f4871ea5 (19 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-01] self-observation-checker**: [WARNING] Session f4871ea5 (19 Turns) zeigte keine Selbstbeobachtung
+
+- **[2026-04-02] Vierter Compound Effect — Von Meta-Intelligence-Kollaps zur Root Cause:**
+  /self-improve Stufe 0: Evolution-Analyst findet Meta-Intelligence-Kollaps (50%→10%) →
+  Stufe 3: hyperagent-stop.sh untersucht → Bug gefunden: `exit 0` bei stale Goal (>2h) →
+  Fix: `exit 0` → `goal=""` (Hook laeuft weiter, nur Goal-Text verschwindet) →
+  Zusaetzlich: Volle-Analyse-Schwelle 20→12 Turns, Error-Schwelle 3→2 →
+  **Ergebnis:** Alle zukuenftigen Sessions (auch lange!) bekommen metacognitiven Prompt.
+  Die Fehlerklasse "stille Hook-Deaktivierung durch Timeout-Bedingungen" ist identifiziert.
+  **Kette:** Trend-Analyse → Daten-Korrelation → Code-Inspektion → Root Cause → Bug-Fix → Fehlerklasse eliminiert.
 ---
 
 ## Regeln & Konventionen

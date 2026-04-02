@@ -42,7 +42,7 @@ if [ -f "$GOAL_FILE" ]; then
         goal_age=$(( $(date +%s) - $(stat -c %Y "$GOAL_FILE" 2>/dev/null || echo 0) ))
     fi
     if [ "$goal_age" -gt 7200 ] 2>/dev/null; then
-        exit 0
+        goal=""  # Goal is stale — clear it but DON'T skip the hook
     fi
 fi
 
@@ -58,7 +58,7 @@ fi
 
 # Determine analysis depth
 depth="leicht"
-if [ "$turn" -gt 20 ] 2>/dev/null || [ "$error_count" -gt 3 ] 2>/dev/null; then
+if [ "$turn" -gt 12 ] 2>/dev/null || [ "$error_count" -gt 2 ] 2>/dev/null; then
     depth="voll"
 fi
 
