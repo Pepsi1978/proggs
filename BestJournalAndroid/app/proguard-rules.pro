@@ -26,6 +26,9 @@
 -keep class com.google.android.libraries.identity.googleid.** { *; }
 -keep class androidx.credentials.** { *; }
 
+# Sherpa-ONNX (local Whisper — JNI, fields accessed from native C++)
+-keep class com.k2fsa.sherpa.onnx.** { *; }
+
 # Firebase
 -keep class com.google.firebase.** { *; }
 -keep class com.google.android.gms.** { *; }
