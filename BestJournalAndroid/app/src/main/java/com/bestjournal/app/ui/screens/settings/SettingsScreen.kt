@@ -469,27 +469,57 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Premium-Funktionen verwalten",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Textverbesserung, Zusammenfassungen und Lebensratschl\u00e4ge",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Button(
-                    onClick = { showSubscriptionSheet = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        ),
-                ) {
-                    Text("Abo verwalten")
+                if (uiState.isSubscribed) {
+                    Text(
+                        text = "Premium-Abo aktiv",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Du nutzt Best Journal Premium mit voller KI-Qualit\u00e4t.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = {
+                            val intent =
+                                android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(
+                                        "https://play.google.com/store/account/subscriptions"
+                                    ),
+                                )
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Abo im Play Store verwalten")
+                    }
+                } else {
+                    Text(
+                        text = "Premium-Funktionen freischalten",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Textverbesserung, Zusammenfassungen und Lebensratschl\u00e4ge",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = { showSubscriptionSheet = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            ),
+                    ) {
+                        Text("Premium abonnieren")
+                    }
                 }
             }
         }

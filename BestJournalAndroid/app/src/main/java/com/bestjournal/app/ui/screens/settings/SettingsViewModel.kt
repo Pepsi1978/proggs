@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.billing.BillingManager
+import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.remote.googledrive.NeedConsentException
 import com.bestjournal.app.domain.model.UserProfile
 import com.bestjournal.app.domain.usecase.SignInWithGoogleUseCase
@@ -32,6 +33,7 @@ data class SettingsUiState(
     val syncMessage: String? = null,
     val showLogoutDialog: Boolean = false,
     val consentIntent: Intent? = null,
+    val isSubscribed: Boolean = false,
 )
 
 @HiltViewModel
@@ -72,6 +74,12 @@ constructor(
     init {
         loadSettings()
         encryptedPrefs.registerOnSharedPreferenceChangeListener(prefsListener)
+        viewModelScope.launch {
+            billingManager.subscriptionState.collect { state ->
+                _uiState.value =
+                    _uiState.value.copy(isSubscribed = state is SubscriptionState.Subscribed)
+            }
+        }
     }
 
     override fun onCleared() {
