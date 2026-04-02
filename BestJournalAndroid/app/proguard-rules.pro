@@ -29,6 +29,29 @@
 # Sherpa-ONNX (local Whisper — JNI, fields accessed from native C++)
 -keep class com.k2fsa.sherpa.onnx.** { *; }
 
+# Moshi (reflection-based adapter factory)
+-keep class com.squareup.moshi.** { *; }
+-keepclassmembers class * {
+    @com.squareup.moshi.Json <fields>;
+}
+
+# OkHttp
+-keep class okhttp3.** { *; }
+-dontwarn okhttp3.**
+
+# Google Play Billing (AIDL)
+-keep class com.android.billingclient.** { *; }
+-keep class com.android.vending.billing.** { *; }
+
+# Security Crypto (EncryptedSharedPreferences)
+-keep class androidx.security.crypto.** { *; }
+
+# Biometric
+-keep class androidx.biometric.** { *; }
+
 # Firebase
 -keep class com.google.firebase.** { *; }
 -keep class com.google.android.gms.** { *; }
+
+# Gson (used by Google API client for JSON parsing)
+-keep class com.google.gson.** { *; }
