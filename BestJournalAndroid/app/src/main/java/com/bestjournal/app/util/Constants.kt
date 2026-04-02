@@ -2,7 +2,7 @@ package com.bestjournal.app.util
 
 object Constants {
     // Audio recording
-    const val DEFAULT_MAX_RECORDING_DURATION_MINUTES = 5
+    const val MAX_RECORDING_DURATION_MINUTES = 15
     const val AUDIO_SAMPLE_RATE = 16000
     const val AUDIO_CHANNELS = 1
 

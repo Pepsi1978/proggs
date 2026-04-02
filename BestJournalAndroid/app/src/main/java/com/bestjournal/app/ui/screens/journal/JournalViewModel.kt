@@ -153,6 +153,14 @@ constructor(
                     )
             }
         }
+
+        // Auto-stop after max duration
+        viewModelScope.launch {
+            delay(com.bestjournal.app.util.Constants.MAX_RECORDING_DURATION_MINUTES * 60 * 1000L)
+            if (_uiState.value.recordingState == RecordingState.RECORDING) {
+                stopRecording()
+            }
+        }
     }
 
     private fun stopRecording() {

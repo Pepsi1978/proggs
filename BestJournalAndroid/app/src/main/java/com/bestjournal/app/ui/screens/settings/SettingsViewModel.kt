@@ -152,11 +152,6 @@ constructor(
         _uiState.value = _uiState.value.copy(textImprovementDefault = enabled)
     }
 
-    fun updateMaxRecordingDuration(minutes: Int) {
-        encryptedPrefs.edit().putInt(Constants.PREF_MAX_RECORDING_DURATION, minutes).apply()
-        _uiState.value = _uiState.value.copy(maxRecordingDuration = minutes)
-    }
-
     fun updateAutoUpdateDashboard(enabled: Boolean) {
         encryptedPrefs.edit().putBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, enabled).apply()
         _uiState.value = _uiState.value.copy(autoUpdateDashboard = enabled)

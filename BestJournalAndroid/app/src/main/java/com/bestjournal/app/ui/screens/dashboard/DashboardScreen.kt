@@ -26,6 +26,8 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Undo
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -173,17 +175,34 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            Text(text = "⚠️", style = MaterialTheme.typography.headlineMedium)
+                            Text(text = "\u2615", style = MaterialTheme.typography.headlineMedium)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = uiState.errorMessage!!,
+                                text =
+                                    "Gemini ist gerade nicht erreichbar \u2014 bitte versuch es gleich nochmal.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = {
+                                    viewModel.clearError()
+                                    viewModel.refreshDashboard()
+                                },
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    ),
+                            ) {
+                                Text("Nochmal versuchen")
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
                             TextButton(onClick = { viewModel.clearError() }) {
-                                Text("Schließen", color = MaterialTheme.colorScheme.primary)
+                                Text(
+                                    "Sp\u00e4ter",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }

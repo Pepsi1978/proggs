@@ -32,8 +32,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -533,23 +531,6 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "Max. Aufnahmedauer: ${uiState.maxRecordingDuration} Min.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Slider(
-                    value = uiState.maxRecordingDuration.toFloat(),
-                    onValueChange = { viewModel.updateMaxRecordingDuration(it.toInt()) },
-                    valueRange = 1f..10f,
-                    steps = 8,
-                    colors =
-                        SliderDefaults.colors(
-                            thumbColor = MaterialTheme.colorScheme.primary,
-                            activeTrackColor = MaterialTheme.colorScheme.primary,
-                        ),
-                )
-                Spacer(modifier = Modifier.height(4.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
