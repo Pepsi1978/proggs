@@ -112,9 +112,17 @@ verstehen und uebernehmen koennen. Voller Kontext, exakte Fehlermeldungen, Code-
 - NIEMALS Shell-Updates waehrend laufender Arbeit oder mitten in einer Aufgabe ausfuehren.
 - VOR Shell-Updates: Benutzer WARNEN und um explizite Bestaetigung bitten.
 - Reihenfolge: Alle Aufgaben erledigen → Ergebnisse committen/pushen → Benutzer warnen → Bestaetigung abwarten → Shell-Updates als letzten Schritt.
-- **NACH Shell-Updates: PATH-Verifizierung ist PFLICHT** — Shell-Updates koennen den Windows User PATH zerstoeren.
-  - SOFORT nach jedem Shell-Update den Windows User PATH pruefen: `pwsh -NoProfile -Command '[Environment]::GetEnvironmentVariable("PATH", "User")'`
-  - Alle folgenden Verzeichnisse MUESSEN im User PATH vorhanden sein (Referenzliste):
+- **Claude Code CLI Update — WICHTIG:** Claude Code ist als **Standalone-Binary** installiert (`~/.local/bin/claude`), NICHT als npm-Paket. Updates IMMER ueber `claude update`, NIEMALS ueber `npm update -g @anthropic-ai/claude-code`. Falls eine npm-Doppelung entsteht (`/opt/homebrew/bin/claude`): Sofort bereinigen mit `npm -g uninstall @anthropic-ai/claude-code`.
+- **NACH Shell-Updates: PATH-Verifizierung ist PFLICHT** — Shell-Updates koennen den PATH auf BEIDEN Plattformen zerstoeren.
+  - **Automatischer Check (bevorzugt):**
+    ```bash
+    bash ~/.claude/hooks/path-verify.sh --fix     # macOS/Linux — prueft + repariert
+    pwsh ~/.claude/hooks/path-verify.ps1 -Fix     # Windows — prueft + repariert
+    ```
+    Das Skript prueft ALLE kritischen Tools (git, node, rust, go, swift, kotlin, claude, etc.),
+    alle PATH-Verzeichnisse und Umgebungsvariablen. Mit `--fix` werden fehlende Eintraege
+    automatisch und persistent repariert (.zshrc bzw. Windows User PATH).
+  - **Windows-spezifisch:** Alle folgenden Verzeichnisse MUESSEN im User PATH vorhanden sein:
     ```
     %USERPROFILE%\bin                                          # python/python3 Wrapper
     %USERPROFILE%\.local\bin                                   # uvx, pipx
