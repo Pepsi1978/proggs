@@ -13,49 +13,63 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class AuthRepository @Inject constructor(
+class AuthRepository
+@Inject
+constructor(
     private val credentialManager: CredentialManager,
     private val encryptedPrefs: SharedPreferences,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
 ) {
     suspend fun signIn(activityContext: Context): Result<UserProfile> {
         return try {
-            val googleIdOption = GetGoogleIdOption.Builder()
-                .setFilterByAuthorizedAccounts(false)
-                .setServerClientId(Constants.GOOGLE_WEB_CLIENT_ID)
-                .build()
+            android.util.Log.d("AuthRepo", "Starting sign-in...")
+            val googleIdOption =
+                GetGoogleIdOption.Builder()
+                    .setFilterByAuthorizedAccounts(false)
+                    .setServerClientId(Constants.GOOGLE_WEB_CLIENT_ID)
+                    .build()
 
-            val request = GetCredentialRequest.Builder()
-                .addCredentialOption(googleIdOption)
-                .build()
+            val request = GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
 
+            android.util.Log.d("AuthRepo", "Calling getCredential...")
             val result = credentialManager.getCredential(activityContext, request)
+            android.util.Log.d("AuthRepo", "Got credential type: ${result.credential.type}")
             val credential = result.credential
             val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+            android.util.Log.d("AuthRepo", "Got Google ID: ${googleIdTokenCredential.id}")
 
-            val profile = UserProfile(
-                displayName = googleIdTokenCredential.displayName ?: "",
-                email = googleIdTokenCredential.id,
-                avatarUrl = googleIdTokenCredential.profilePictureUri?.toString(),
-                isSignedIn = true
-            )
+            val profile =
+                UserProfile(
+                    displayName = googleIdTokenCredential.displayName ?: "",
+                    email = googleIdTokenCredential.id,
+                    avatarUrl = googleIdTokenCredential.profilePictureUri?.toString(),
+                    isSignedIn = true,
+                )
 
             saveProfile(profile)
+            android.util.Log.d("AuthRepo", "Sign-in SUCCESS: ${profile.email}")
             Result.success(profile)
         } catch (e: Exception) {
+            android.util.Log.e(
+                "AuthRepo",
+                "Sign-in FAILED: ${e.javaClass.simpleName}: ${e.message}",
+                e,
+            )
             Result.failure(e)
         }
     }
 
     fun getStoredProfile(): UserProfile? {
         val name = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_NAME, null) ?: return null
-        val email = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null) ?: return null
+        val email =
+            encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null) ?: return null
         return UserProfile(
             displayName = name,
             email = email,
             avatarUrl = encryptedPrefs.getString(Constants.PREF_GOOGLE_AVATAR_URL, null),
-            lastSyncTimestamp = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L).takeIf { it > 0 },
-            isSignedIn = true
+            lastSyncTimestamp =
+                encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L).takeIf { it > 0 },
+            isSignedIn = true,
         )
     }
 
@@ -64,7 +78,8 @@ class AuthRepository @Inject constructor(
     }
 
     fun signOut() {
-        encryptedPrefs.edit()
+        encryptedPrefs
+            .edit()
             .remove(Constants.PREF_GOOGLE_ACCOUNT_NAME)
             .remove(Constants.PREF_GOOGLE_ACCOUNT_EMAIL)
             .remove(Constants.PREF_GOOGLE_AVATAR_URL)
@@ -73,7 +88,8 @@ class AuthRepository @Inject constructor(
     }
 
     private fun saveProfile(profile: UserProfile) {
-        encryptedPrefs.edit()
+        encryptedPrefs
+            .edit()
             .putString(Constants.PREF_GOOGLE_ACCOUNT_NAME, profile.displayName)
             .putString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, profile.email)
             .putString(Constants.PREF_GOOGLE_AVATAR_URL, profile.avatarUrl)

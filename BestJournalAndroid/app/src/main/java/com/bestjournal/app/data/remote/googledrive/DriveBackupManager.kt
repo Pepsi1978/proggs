@@ -13,70 +13,82 @@ import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.DriveScopes
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-class NeedConsentException(val consentIntent: Intent) : Exception("Drive-Zugriff muss erlaubt werden")
+class NeedConsentException(val consentIntent: Intent) :
+    Exception("Drive-Zugriff muss erlaubt werden")
 
 @Singleton
-class DriveBackupManager @Inject constructor(
+class DriveBackupManager
+@Inject
+constructor(
     @ApplicationContext private val context: Context,
-    private val encryptedPrefs: SharedPreferences
+    private val encryptedPrefs: SharedPreferences,
 ) {
-    private suspend fun getDriveService(): Drive = withContext(Dispatchers.IO) {
-        val accountEmail = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null)
-            ?: throw IllegalStateException("Nicht angemeldet")
+    private suspend fun getDriveService(): Drive =
+        withContext(Dispatchers.IO) {
+            val accountEmail =
+                encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null)
+                    ?: throw IllegalStateException("Nicht angemeldet")
 
-        val account = Account(accountEmail, "com.google")
-        val scope = "oauth2:${DriveScopes.DRIVE_APPDATA}"
-        val token = GoogleAuthUtil.getToken(context, account, scope)
+            val account = Account(accountEmail, "com.google")
+            val scope = "oauth2:${DriveScopes.DRIVE_APPDATA}"
+            val token = GoogleAuthUtil.getToken(context, account, scope)
 
-        Drive.Builder(
-            NetHttpTransport(),
-            GsonFactory.getDefaultInstance()
-        ) { request ->
-            request.headers.authorization = "Bearer $token"
+            Drive.Builder(NetHttpTransport(), GsonFactory.getDefaultInstance()) { request ->
+                    request.headers.authorization = "Bearer $token"
+                }
+                .setApplicationName("Journal")
+                .build()
         }
-            .setApplicationName("Journal")
-            .build()
-    }
 
-    suspend fun backup(databaseFile: File): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val driveService = getDriveService()
+    suspend fun backup(databaseFile: File): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                val driveService = getDriveService()
 
-            val existingFiles = driveService.files().list()
-                .setSpaces("appDataFolder")
-                .setQ("name = '${Constants.DRIVE_BACKUP_FILENAME}'")
-                .setFields("files(id)")
-                .execute()
+                val existingFiles =
+                    driveService
+                        .files()
+                        .list()
+                        .setSpaces("appDataFolder")
+                        .setQ("name = '${Constants.DRIVE_BACKUP_FILENAME}'")
+                        .setFields("files(id)")
+                        .execute()
 
-            existingFiles.files?.forEach { file ->
-                driveService.files().delete(file.id).execute()
+                existingFiles.files?.forEach { file ->
+                    driveService.files().delete(file.id).execute()
+                }
+
+                val fileMetadata =
+                    com.google.api.services.drive.model.File().apply {
+                        name = Constants.DRIVE_BACKUP_FILENAME
+                        parents = listOf("appDataFolder")
+                    }
+
+                val mediaContent = FileContent("application/octet-stream", databaseFile)
+                driveService.files().create(fileMetadata, mediaContent).setFields("id").execute()
+
+                encryptedPrefs
+                    .edit()
+                    .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
+                    .apply()
+
+                Result.success(Unit)
+            } catch (e: UserRecoverableAuthException) {
+                android.util.Log.e("DriveBackup", "Backup needs consent: ${e.message}")
+                Result.failure(NeedConsentException(e.intent ?: Intent()))
+            } catch (e: Exception) {
+                android.util.Log.e(
+                    "DriveBackup",
+                    "Backup FAILED: ${e.javaClass.simpleName}: ${e.message}",
+                    e,
+                )
+                Result.failure(e)
             }
-
-            val fileMetadata = com.google.api.services.drive.model.File().apply {
-                name = Constants.DRIVE_BACKUP_FILENAME
-                parents = listOf("appDataFolder")
-            }
-
-            val mediaContent = FileContent("application/octet-stream", databaseFile)
-            driveService.files().create(fileMetadata, mediaContent)
-                .setFields("id")
-                .execute()
-
-            encryptedPrefs.edit()
-                .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
-                .apply()
-
-            Result.success(Unit)
-        } catch (e: UserRecoverableAuthException) {
-            Result.failure(NeedConsentException(e.intent ?: Intent()))
-        } catch (e: Exception) {
-            Result.failure(e)
         }
-    }
 }

@@ -239,25 +239,39 @@ constructor(
         viewModelScope.launch {
             signInUseCase(activityContext)
                 .onSuccess { profile ->
+                    android.util.Log.e("SIGNIN", "=== onSuccess called: ${profile.email} ===")
                     _uiState.value = _uiState.value.copy(userProfile = profile, syncMessage = null)
                     // Auto-restore backup
                     try {
-                        if (syncUseCase.hasBackup()) {
-                            syncUseCase.restore()
-                            // Restart to load restored database
-                            val intent =
-                                activityContext.packageManager.getLaunchIntentForPackage(
-                                    activityContext.packageName
-                                )
-                            intent?.addFlags(
-                                android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
-                                    android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        android.util.Log.e("AutoRestore", "Checking for backup...")
+                        val hasBackup = syncUseCase.hasBackup()
+                        android.util.Log.w("AutoRestore", "hasBackup = $hasBackup")
+                        if (hasBackup) {
+                            val result = syncUseCase.restore()
+                            android.util.Log.w(
+                                "AutoRestore",
+                                "restore result: success=${result.isSuccess}, failure=${result.exceptionOrNull()?.message}",
                             )
-                            activityContext.startActivity(intent)
-                            Runtime.getRuntime().exit(0)
+                            if (result.isSuccess) {
+                                // Restart to load restored database
+                                val intent =
+                                    activityContext.packageManager.getLaunchIntentForPackage(
+                                        activityContext.packageName
+                                    )
+                                intent?.addFlags(
+                                    android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                                        android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                )
+                                activityContext.startActivity(intent)
+                                Runtime.getRuntime().exit(0)
+                            }
                         }
                     } catch (e: Exception) {
-                        android.util.Log.e("Settings", "Auto-restore failed", e)
+                        android.util.Log.e(
+                            "AutoRestore",
+                            "Auto-restore CRASHED: ${e.javaClass.simpleName}: ${e.message}",
+                            e,
+                        )
                     }
                 }
                 .onFailure { error ->
