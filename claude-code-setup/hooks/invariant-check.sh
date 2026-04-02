@@ -155,6 +155,28 @@ print(fixed)
     fi
 fi
 
+# --- Invariant 8: Stale-Exit-Scanner (Hook-Dateien auf stille Deaktivierung pruefen) ---
+HOOKS_DIR_SCAN="$HOME/.claude/hooks"
+if [ -d "$HOOKS_DIR_SCAN" ]; then
+    stale_exit_hooks=""
+    for hookfile in "$HOOKS_DIR_SCAN"/*.sh; do
+        [ -f "$hookfile" ] || continue
+        # Pruefe ob die Datei sowohl eine Zeitpruefung als auch ein bedingtes exit 0 hat
+        if grep -q -E 'age|stale|7200|3600|expired' "$hookfile" 2>/dev/null; then
+            if grep -q 'exit 0' "$hookfile" 2>/dev/null; then
+                base=$(basename "$hookfile")
+                # Ausnahme: hyperagent-stop.sh ist bereits gefixt (2026-04-02)
+                [ "$base" = "hyperagent-stop.sh" ] && continue
+                stale_exit_hooks="$stale_exit_hooks $base"
+            fi
+        fi
+    done
+    stale_exit_hooks=$(echo "$stale_exit_hooks" | xargs)
+    if [ -n "$stale_exit_hooks" ]; then
+        violations+=("STALE-EXIT: Hooks mit potenziellem Stale-Exit-Bug: $stale_exit_hooks")
+    fi
+fi
+
 # --- Output ---
 if [ ${#violations[@]} -gt 0 ]; then
     echo ""
