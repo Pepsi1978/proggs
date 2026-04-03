@@ -84,37 +84,24 @@ fi
 # ─── Schritt 4: Shell-Hooks (.sh) kopieren und ausführbar machen ──────────────
 step "4/11" "Shell-Hooks (.sh) nach ~/.claude/hooks/ kopieren"
 
-SH_HOOKS=(
-    admin-setup.sh
-    agent-resource-lock.sh
-    auto-format.sh
-    auto-sync.sh
-    config-guard.sh
-    disk-guard.sh
-    hook-log.sh
-    intent-anker.sh
-    memory-watchdog.sh
-    notify.sh
-    pending-admin-updates.sh
-    reindex-codebase.sh
-    safety-gate.sh
-    session-cleanup.sh
-    stopfailure-logger.sh
-    subagent-context.sh
-    whiteboard-insert.sh
-    writeback-enforcer.sh
-)
-
-for hook in "${SH_HOOKS[@]}"; do
-    SRC="$SCRIPT_DIR/hooks/$hook"
-    if [ -f "$SRC" ]; then
-        cp "$SRC" ~/.claude/hooks/
-        chmod +x ~/.claude/hooks/"$hook"
-        ok "$hook"
-    else
-        warn "$hook nicht gefunden — übersprungen"
-    fi
+# Copy ALL .sh hooks (no hardcoded list — future-proof)
+SH_COUNT=0
+for hook in "$SCRIPT_DIR/hooks/"*.sh; do
+    [ -f "$hook" ] || continue
+    cp "$hook" ~/.claude/hooks/
+    chmod +x ~/.claude/hooks/"$(basename "$hook")"
+    SH_COUNT=$((SH_COUNT + 1))
 done
+ok "$SH_COUNT Shell-Hooks kopiert"
+
+# Also copy .ps1 hooks as reference (for cross-platform parity checks)
+PS1_COUNT=0
+for hook in "$SCRIPT_DIR/hooks/"*.ps1; do
+    [ -f "$hook" ] || continue
+    cp "$hook" ~/.claude/hooks/
+    PS1_COUNT=$((PS1_COUNT + 1))
+done
+ok "$PS1_COUNT PowerShell-Hooks als Referenz kopiert"
 
 # ─── Schritt 5: TypeScript-Hooks kopieren und ausführbar machen ───────────────
 step "5/11" "TypeScript-Hooks (.ts) nach ~/.claude/hooks/ kopieren"
@@ -265,6 +252,53 @@ else
     warn "Befehl: claude plugin install kylehughes/apple-platform-build-tools-claude-code-plugin"
 fi
 
+# ─── Schritt 12: Git pre-push Hook installieren (auto fetch+rebase) ───────────
+step "12" "Git pre-push Hook installieren"
+
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+GIT_HOOKS_DIR="$REPO_DIR/.git/hooks"
+if [ -d "$GIT_HOOKS_DIR" ]; then
+    cat > "$GIT_HOOKS_DIR/pre-push" <<'PREPUSH'
+#!/bin/sh
+# Pre-push hook: automatic fetch + rebase BEFORE push
+# Prevents push rejections when other CLIs (Codex, Gemini) pushed in the meantime
+# Installed by setup-macos.sh — reinstall after every clone
+
+REMOTE="$1"
+if [ "$REMOTE" = "origin" ] || [ -z "$REMOTE" ]; then
+    if git fetch origin 2>/dev/null; then
+        REMOTE_MAIN=$(git rev-parse origin/main 2>/dev/null) || true
+        BASE=$(git merge-base HEAD origin/main 2>/dev/null) || true
+        if [ -n "$REMOTE_MAIN" ] && [ -n "$BASE" ] && [ "$BASE" != "$REMOTE_MAIN" ]; then
+            echo "[pre-push] Behind origin/main — rebasing..."
+            DIRTY=0
+            if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+                git stash --quiet 2>/dev/null
+                DIRTY=1
+            fi
+            if git rebase origin/main --quiet 2>/dev/null; then
+                echo "[pre-push] Rebase successful."
+            else
+                echo "[pre-push] ERROR: Rebase conflict! Push aborted."
+                echo "[pre-push] Fix: git rebase --abort && git fetch origin && git rebase origin/main"
+                git rebase --abort 2>/dev/null
+                [ "$DIRTY" -eq 1 ] && git stash pop --quiet 2>/dev/null
+                exit 1
+            fi
+            [ "$DIRTY" -eq 1 ] && git stash pop --quiet 2>/dev/null
+        fi
+    fi
+fi
+# Git LFS pre-push check
+command -v git-lfs >/dev/null 2>&1 || { printf >&2 "\n%s\n\n" "This repository is configured for Git LFS but 'git-lfs' was not found on your path."; exit 2; }
+git lfs pre-push "$@"
+PREPUSH
+    chmod +x "$GIT_HOOKS_DIR/pre-push"
+    ok "Git pre-push Hook installiert (auto fetch+rebase + LFS)"
+else
+    warn ".git/hooks nicht gefunden — pre-push Hook nicht installiert"
+fi
+
 # ─── Zusammenfassung ──────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}╔══════════════════════════════════════════════╗${RESET}"
@@ -273,7 +307,8 @@ echo -e "${BOLD}╚════════════════════�
 echo ""
 echo -e "${GREEN}Was wurde kopiert:${RESET}"
 echo "  • settings.json          → ~/.claude/settings.json (mit macOS-Hooks)"
-echo "  • ${#SH_HOOKS[@]} Shell-Hooks (.sh)    → ~/.claude/hooks/ (chmod +x)"
+echo "  • $SH_COUNT Shell-Hooks (.sh)     → ~/.claude/hooks/ (chmod +x)"
+echo "  • $PS1_COUNT PowerShell-Hooks (.ps1) → ~/.claude/hooks/ (Referenz)"
 echo "  • ${#TS_HOOKS[@]} TypeScript-Hooks (.ts)→ ~/.claude/hooks/ (chmod +x)"
 echo "  • prompt-injection-defender → ~/.claude/hooks/prompt-injection-defender/"
 echo "  • Agents                 → ~/.claude/agents/"
