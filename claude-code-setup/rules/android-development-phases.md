@@ -125,17 +125,30 @@ als OAuth-Client eingetragen werden.
 5. **Feature-Branches optional**: Bei kleinen Features direkt auf main,
    bei grossen Features eigener Branch empfohlen
 
+### Neue Features waehrend Phase 2 (NORMAL und ERWUENSCHT)
+Phase 2 ist OFFEN — der Benutzer wird waehrend der Arbeit neue Feature-Ideen haben.
+Das ist kein Problem, das ist der kreative Prozess. Claude:
+- Nimmt neue Feature-Wuensche jederzeit entgegen
+- Baut sie ein ohne den "Plan" als starr zu behandeln
+- Zaehlt den Feature-Stand entsprechend hoch
+- Fragt NICHT "aber das war nicht geplant" — es ist Phase 2, alles darf
+
+### Wann ist Phase 2 fertig?
+**NUR der Benutzer entscheidet wann Phase 2 fertig ist.**
+Claude darf NICHT sagen "ich glaube wir sind fertig" oder "sollen wir zu Phase 3?".
+Der Benutzer wird klar kommunizieren: "Phase 2 ist fertig" oder "wir koennen zu R8".
+Erst dann beginnt der Uebergang zu Phase 3.
+
 ### Was Claude kommunizieren muss
 - Bei jedem Feature: "Phase 2 (Debug) — arbeite an Feature X"
 - Bei Version-Bumps: "Version hochgezaehlt auf v0.X.Y (Build N)"
-- Wenn der Benutzer Release/R8/Store erwaehnt: "Wir sind noch in Phase 2 (Debug).
-  Alle Features muessen erst fertig sein. Soll ich den Feature-Status pruefen?"
+- Wenn der Benutzer Release/R8/Store erwaehnt ohne explizit Phase 2 zu beenden:
+  Kurz nachfragen: "Soll Phase 2 damit abgeschlossen sein?"
 
-### Ausgangs-Kriterium (ALLE muessen erfuellt sein)
-- [ ] Alle geplanten Features sind implementiert und getestet (Debug)
+### Ausgangs-Kriterium
+- [ ] **Benutzer sagt explizit**: "Phase 2 ist fertig" / "wir koennen zu R8" / "Features sind komplett"
 - [ ] App laeuft stabil auf mindestens einem echten Geraet
 - [ ] Keine bekannten Crashes oder schweren Bugs
-- [ ] Benutzer bestaetigt: "Features sind komplett"
 
 ### Was Claude NICHT tun darf
 - Keinen Release-Build starten
