@@ -1,5 +1,5 @@
 {
-	"cleanupPeriodDays": 99999,
+	"cleanupPeriodDays": 1825,
 	"env": {
 		"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
 		"DISABLE_COST_WARNINGS": "1",
@@ -100,6 +100,15 @@
 						"type": "command",
 						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/invariant-check.ps1\"",
 						"timeout": 10
+					}
+				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/path-health-check.ps1\"",
+						"timeout": 5
 					}
 				]
 			}
@@ -386,7 +395,12 @@
 		]
 	},
 	"worktree": {
-		"symlinkDirectories": ["node_modules", ".cache", ".gradle", "build"]
+		"symlinkDirectories": [
+			"node_modules",
+			".cache",
+			".gradle",
+			"build"
+		]
 	},
 	"enabledPlugins": {
 		"swift-lsp@claude-plugins-official": true,

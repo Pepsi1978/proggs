@@ -103,6 +103,15 @@
 				"hooks": [
 					{
 						"type": "command",
+						"command": "bash ~/.claude/hooks/path-health-check.sh",
+						"timeout": 5
+					}
+				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
 						"command": "bash \"$HOME/.claude/hooks/invariant-check.sh\"",
 						"timeout": 10
 					}
