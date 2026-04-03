@@ -107,8 +107,8 @@ constructor(
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
         }
 
-        // Backfill summaries for existing entries that don't have one yet
-        // Capped at 5 per startup to prevent cost explosion, uses Lite model
+        // Backfill summaries for existing entries without title/summary.
+        // Sequential with pauses to avoid hitting Gemini rate limits.
         viewModelScope.launch {
             entries.collect { list ->
                 val missing =
@@ -117,11 +117,10 @@ constructor(
                             (it.summary.isNullOrBlank() || it.title.isNullOrBlank()) &&
                                 it.displayText.isNotBlank()
                         }
-                        .take(5) // Cap backfill to prevent unlimited AI calls on startup
-                if (missing.isNotEmpty()) {
-                    for (entry in missing) {
-                        launch { summarizeEntryUseCase(entry.id, entry.displayText) }
-                    }
+                        .take(3)
+                for (entry in missing) {
+                    summarizeEntryUseCase(entry.id, entry.displayText)
+                    delay(3_000)
                 }
                 return@collect
             }
@@ -287,6 +286,7 @@ constructor(
             // Generate summary in background (non-blocking)
             launch { summarizeEntryUseCase(savedId, displayText) }
             triggerSync()
+            resetManualRefreshCounter()
             triggerDebouncedAnalysis()
         }
     }
@@ -340,19 +340,33 @@ constructor(
         }
     }
 
+    private fun resetManualRefreshCounter() {
+        val autoUpdate = encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true)
+        // Auto-update uses 1 of 4, leaving 3 manual. No auto-update = all 4 manual.
+        val manualLeft =
+            if (autoUpdate) Constants.MAX_REFRESHES_PER_ENTRY - 1
+            else Constants.MAX_REFRESHES_PER_ENTRY
+        encryptedPrefs.edit().putInt(Constants.PREF_MANUAL_REFRESHES_LEFT, manualLeft).apply()
+    }
+
     private fun triggerDebouncedAnalysis() {
+        val autoUpdate = encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true)
+        if (!autoUpdate) return
+
         analysisDebounceJob?.cancel()
         analysisDebounceJob = viewModelScope.launch {
-            delay(60_000)
-            // Check rate limit before automatic background analysis
-            val subscriptionState = billingManager.subscriptionState.value
-            val access = aiRateLimiter.checkDashboardAccess(subscriptionState)
-            if (access is TieredAccessResult.Allowed) {
-                // M-3: Weekly tracking is now handled inside RateLimiter
-                aiRateLimiter.recordDashboardRefresh()
-                analyzeEntropyUseCase(modelName = access.modelName)
+            encryptedPrefs.edit().putBoolean(Constants.PREF_DASHBOARD_UPDATING, true).apply()
+            delay(3_000)
+            try {
+                val subscriptionState = billingManager.subscriptionState.value
+                val access = aiRateLimiter.checkDashboardAccess(subscriptionState)
+                if (access is TieredAccessResult.Allowed) {
+                    aiRateLimiter.recordDashboardRefresh()
+                    analyzeEntropyUseCase(freshAnalysis = true, modelName = access.modelName)
+                }
+            } finally {
+                encryptedPrefs.edit().putBoolean(Constants.PREF_DASHBOARD_UPDATING, false).apply()
             }
-            // If not allowed (cooldown/limit), silently skip — user can manually refresh
         }
     }
 }

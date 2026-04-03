@@ -43,7 +43,19 @@ class FirebaseAiService @Inject constructor() {
         return try {
             val model = createModel(modelName, temperature, maxOutputTokens, systemPrompt)
             val response = model.generateContent(prompt)
-            val text = response.text
+            // Try response.text first; if it throws (e.g. MAX_TOKENS),
+            // fall back to reading partial text from candidates directly.
+            val text =
+                try {
+                    response.text
+                } catch (_: Exception) {
+                    response.candidates
+                        ?.firstOrNull()
+                        ?.content
+                        ?.parts
+                        ?.filterIsInstance<com.google.firebase.ai.type.TextPart>()
+                        ?.joinToString("") { it.text }
+                }
             if (text != null) {
                 Result.success(text)
             } else {

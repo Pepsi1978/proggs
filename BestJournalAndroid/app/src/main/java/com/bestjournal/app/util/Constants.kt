@@ -15,6 +15,8 @@ object Constants {
     const val PREF_TEXT_IMPROVEMENT_DEFAULT = "text_improvement_default"
     const val PREF_MAX_RECORDING_DURATION = "max_recording_duration"
     const val PREF_AUTO_UPDATE_DASHBOARD = "auto_update_dashboard"
+    const val PREF_MANUAL_REFRESHES_LEFT = "manual_refreshes_left"
+    const val MAX_REFRESHES_PER_ENTRY = 5
     const val PREF_GOOGLE_ACCOUNT_NAME = "google_account_name"
     const val PREF_GOOGLE_ACCOUNT_EMAIL = "google_account_email"
     const val PREF_GOOGLE_AVATAR_URL = "google_avatar_url"
@@ -25,6 +27,7 @@ object Constants {
     const val PREF_LATITUDE = "location_latitude"
     const val PREF_LONGITUDE = "location_longitude"
     const val PREF_BIOMETRIC_LOCK = "biometric_lock"
+    const val PREF_DASHBOARD_UPDATING = "dashboard_updating"
 
     // Google OAuth
     const val GOOGLE_WEB_CLIENT_ID =

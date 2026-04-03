@@ -12,8 +12,9 @@ class BestJournalApp : Application() {
     override fun onCreate() {
         super.onCreate()
         FirebaseApp.initializeApp(this)
-        FirebaseAppCheck.getInstance().installAppCheckProviderFactory(
-            PlayIntegrityAppCheckProviderFactory.getInstance()
-        )
+        // Play Integrity validates Play Store installs. For sideloaded builds
+        // it fails silently — Firebase AI still works without enforced App Check.
+        FirebaseAppCheck.getInstance()
+            .installAppCheckProviderFactory(PlayIntegrityAppCheckProviderFactory.getInstance())
     }
 }

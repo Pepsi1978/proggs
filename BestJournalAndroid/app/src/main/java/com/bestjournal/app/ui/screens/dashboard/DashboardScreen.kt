@@ -134,7 +134,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         ShimmerLoadingEffect(height = 60.dp, cornerRadius = 16.dp)
                         Text(
-                            "Dashboard wird aktualisiert...",
+                            "Einen Moment bitte \u2014 dein Dashboard wird gerade aktualisiert\u2026",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
                         )

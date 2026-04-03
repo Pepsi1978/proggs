@@ -570,7 +570,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            "Automatisch aktualisieren",
+                            "Automatisch aktualisieren bei neuem Tagebucheintrag",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
