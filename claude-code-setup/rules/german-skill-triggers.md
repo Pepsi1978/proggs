@@ -149,7 +149,8 @@ auf den Skill der aehnlich klingt.
 | "erstelle einen Skill", "neuer Skill" | `skill-creator:skill-creator` | Gefuehrte Skill-Erstellung mit Qualitaetspruefung (PFLICHT laut CLAUDE.md) |
 | "Skill verbessern", "Skill fixen" | `skill-improver:skill-improver` | Iterative Fix-Review-Schleifen bis Qualitaet stimmt |
 | "erstelle ein Plugin", "neues Plugin" | `plugin-dev:create-plugin` | Gefuehrte End-to-End Plugin-Erstellung |
-| "erstelle einen Hook" | `hookify:hookify` | Erstellt Hooks aus Konversationsanalyse oder expliziten Regeln |
+| "erstelle einen Hook", "neuer Hook", "Hook bauen" | `hook-forge` → dann `hookify:hookify` | **hook-forge ZUERST** (Template + Checkliste + exit-0-Pflicht), dann hookify fuer Konversationsanalyse. hook-forge stellt sicher dass der Hook resilient ist (3 Direktiven) |
+| "Hook fixen", "Hook reparieren" (grundlegender Rewrite) | `hook-forge` | Nur bei grundlegendem Rewrite, nicht bei kleinen Edits |
 | "CLAUDE.md verbessern", "Regeln prüfen" | `claude-md-management:claude-md-improver` | Auditiert und verbessert CLAUDE.md-Dateien |
 
 ## 13. Qualitaet & Verifikation (automatische Trigger!)

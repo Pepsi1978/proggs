@@ -7,7 +7,7 @@
 		"CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000",
 		"CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "95",
 		"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
-		"CLAUDE_CODE_EFFORT_LEVEL": "high",
+		"CLAUDE_CODE_EFFORT_LEVEL": "medium",
 		"CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS": "30000",
 		"ENABLE_TOOL_SEARCH": "1",
 		"ENABLE_SECURITY_REMINDER": "0",
@@ -237,6 +237,16 @@
 						"type": "command",
 						"command": "bash ~/.claude/hooks/poka-yoke-git-push.sh",
 						"timeout": 5
+					}
+				]
+			},
+			{
+				"matcher": "Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash ~/.claude/hooks/hook-exit0-guard.sh",
+						"timeout": 10
 					}
 				]
 			}
@@ -607,7 +617,7 @@
 	},
 	"language": "de",
 	"alwaysThinkingEnabled": true,
-	"effortLevel": "high",
+	"effortLevel": "medium",
 	"autoUpdatesChannel": "latest",
 	"skipDangerousModePermissionPrompt": true,
 	"_comment_PermissionRequest": "Intentionally removed — caused bypassPermissions mode reset (2026-03-20)",
