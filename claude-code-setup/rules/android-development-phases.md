@@ -564,20 +564,150 @@ Claude wartet NICHT bis der Benutzer fragt. Claude:
 
 ---
 
-## Phasen-Tracking in SESSION-RULES.md
+## Phasen-Tracking in SESSION-RULES.md (PFLICHT — IMMER AKTUELL)
 
-Jedes Android-Projekt MUSS in seiner SESSION-RULES.md einen Phasen-Block haben:
+Jedes Android-Projekt MUSS in seiner SESSION-RULES.md einen Phasen-Block haben.
+Dieser Block ist die EINZIGE Wahrheitsquelle fuer den aktuellen Projektstand.
+Er wird bei JEDEM Session-Ende und bei JEDEM Phasenwechsel aktualisiert.
 
 ```markdown
 ## Entwicklungsphase
 - **Aktuelle Phase**: 2 (Debug & Entwicklung)
 - **Phase gestartet am**: 2026-03-31
-- **Naechster Meilenstein**: Alle Features implementiert
-- **Offene Features**: [Liste]
-- **Bekannte Bugs**: [Liste]
+- **Version**: v1.0.2 (Build 3)
+- **Letzter Arbeitsstand**: [Was wurde in der letzten Session gemacht?]
+- **Naechster Schritt**: [Was kommt ALS NAECHSTES? Konkret, nicht vage]
+- **Naechster Meilenstein**: [Wann ist die aktuelle Phase fertig?]
+- **Offene Features**: [Nummerierte Liste mit Status: ✅ fertig / 🔧 in Arbeit / ⬜ offen]
+- **Bekannte Bugs**: [Liste, leer wenn keine]
+- **Letzte Session**: [Datum]
 ```
 
-Claude aktualisiert diesen Block bei jedem Phasenwechsel.
+---
+
+## Session-Uebergabe-Protokoll (KRITISCH)
+
+> **Der Faden darf NIE abreissen. Wenn der Benutzer in einer neuen Session sagt
+> "wir machen mit Projekt X weiter", muss Claude SOFORT wissen wo wir stehen
+> und was als naechstes kommt. Der Benutzer muss das ebenfalls wissen.**
+
+### Am ENDE jeder Session (PFLICHT bei Android-Projekten)
+
+Bevor die Session endet (letzter Commit/Push), MUSS Claude:
+
+1. **SESSION-RULES.md aktualisieren** mit dem exakten Stand:
+   - Was wurde HEUTE gemacht? (konkreter 1-2-Satz-Stand)
+   - Was ist der NAECHSTE Schritt? (so konkret dass Claude in der naechsten Session
+     sofort weitermachen kann, z.B. "SearchBar-Feature implementieren" nicht "weiterarbeiten")
+   - Welche Features sind fertig, welche offen?
+   - Version und Build-Nummer aktuell?
+
+2. **Phasen-Status dem Benutzer zeigen** als letzten Block vor "Committed und gepusht":
+   ```
+   📱 Session-Stand gespeichert:
+      Phase 2 (Debug) — BestJournalAndroid v1.0.3 (Build 4)
+      ✅ Heute erledigt: Suchfunktion implementiert, Dashboard-Shimmer
+      ➡️ Naechste Session: Export-Feature (PDF/Text), dann Backup-System
+      📊 Feature-Status: 8/12 Features fertig
+      🏁 Phase 2 Ende: Noch ~4 Features, dann R8-Phase
+   ```
+
+3. **Committen und Pushen** — die aktualisierte SESSION-RULES.md MUSS im Repo sein,
+   damit sie in der naechsten Session (auch auf anderem Geraet) verfuegbar ist.
+
+### Am ANFANG jeder Session (wenn "weiter mit Projekt X")
+
+Wenn der Benutzer sagt er will an einem Android-Projekt weiterarbeiten, MUSS Claude:
+
+1. **SESSION-RULES.md lesen** — den Phasen-Block und den letzten Arbeitsstand
+2. **Dem Benutzer den Stand zeigen**:
+   ```
+   📱 Willkommen zurueck! Hier ist der aktuelle Stand:
+      Phase 2 (Debug) — BestJournalAndroid v1.0.3 (Build 4)
+      Letzte Session (03.04.2026): Suchfunktion und Dashboard-Shimmer implementiert
+      ➡️ Heute dran: Export-Feature (PDF/Text)
+      📊 Feature-Status: 8/12 Features fertig
+      🏁 Bis Phase 3 (R8): Noch 4 Features
+   
+   Sollen wir mit dem Export-Feature anfangen?
+   ```
+3. **Nicht blind loslegen** — erst den Stand bestaetigen lassen, dann arbeiten
+
+### In-Session Orientierung (PFLICHT bei laengeren Sessions)
+
+Waehrend der Arbeit an einem Android-Projekt:
+
+- **Nach jedem abgeschlossenen Feature/Fix**: Kurzer Phasen-Status als Orientierung
+  ```
+  ✅ Suchfunktion fertig. Phase 2: 9/12 Features. Naechstes: Export-Feature.
+  ```
+- **Wenn der Benutzer fragt "wo stehen wir?"**: Ausfuehrlichen Status zeigen
+- **Wenn die Session lang wird (>5 Features)**: Proaktiv Status zeigen
+- **Bei jedem Phasenwechsel**: Die ausfuehrliche Phasenwechsel-Ankuendigung (siehe unten)
+
+### Was im Phasen-Block NICHT stehen darf
+
+- ❌ Vage Formulierungen: "weiterarbeiten", "diverse Bugs", "verschiedene Features"
+- ❌ Veraltete Informationen (von vor 3 Sessions)
+- ❌ Technischer Jargon den der Benutzer nicht versteht
+- ❌ Leere Felder — jedes Feld muss ausgefuellt sein
+
+### Was im Phasen-Block IMMER stehen muss
+
+- ✅ Konkreter naechster Schritt: "SearchBar mit Live-Filter implementieren"
+- ✅ Zaehlbarer Feature-Status: "8/12 Features fertig"
+- ✅ Klarer Horizont: "Noch ~4 Features bis Phase 3 (R8)"
+- ✅ Datum der letzten Session
+- ✅ Aktuelle Version und Build-Nummer
+
+---
+
+## Aktive Anleitung durch JEDE Phase (PFLICHT)
+
+> **Claude ist nicht nur Programmierer, sondern NAVIGATOR.**
+> **Der Benutzer muss JEDERZEIT wissen: Wo sind wir? Was kommt als naechstes?
+> Wie weit ist es noch? Du kennst den Weg, ich kenn den Weg, alles laeuft nach Plan.**
+
+### Das Navigator-Prinzip
+
+Claude fuehrt den Benutzer durch jede Phase wie ein Reiseführer:
+- **Vor einer Aufgabe**: "Wir machen jetzt X. Das gehoert zu Phase 2, Schritt Y."
+- **Nach einer Aufgabe**: "X ist fertig. Noch Z Schritte bis zum naechsten Meilenstein."
+- **Bei Problemen**: "Das ist ein Umweg, aber der Plan aendert sich nicht. Wir sind immer noch bei Phase 2."
+- **Bei Phasenwechsel**: Ausfuehrliche Erklaerung was die neue Phase bedeutet (siehe unten)
+
+### Was Claude bei JEDER Aufgabe sagt
+
+Nicht nur die Aufgabe erledigen, sondern einordnen:
+
+```
+📱 Phase 2 (Debug) — BestJournalAndroid v1.0.3 (Build 4)
+   Aufgabe: Export-Feature (PDF/Text) — Feature 9 von 12
+```
+
+[...Arbeit...]
+
+```
+✅ Export-Feature fertig. Phase 2: 9/12 Features.
+   ➡️ Naechstes: Backup-System (Feature 10/12)
+   🏁 Noch 3 Features bis Phase 3 (R8-Haertung)
+```
+
+### Was Claude NICHT tun darf
+
+- ❌ Einfach drauflos programmieren ohne den Benutzer zu orientieren
+- ❌ Phasen-Status weglassen weil "der Benutzer es schon weiss"
+- ❌ Vage bleiben: "dann machen wir irgendwann den Release" — NEIN: konkrete Schritte
+- ❌ Den Benutzer im Unklaren lassen wo er auf der Reise steht
+- ❌ Eine Session beenden ohne den Stand zu speichern
+
+### Was Claude IMMER tun muss
+
+- ✅ Bei Session-Start: Stand zeigen und naechsten Schritt vorschlagen
+- ✅ Bei jeder Aufgabe: Phase und Fortschritt anzeigen
+- ✅ Bei Problemen: Einordnen ("Das aendert den Plan nicht" oder "Wir muessen den Plan anpassen")
+- ✅ Bei Session-Ende: Stand speichern (SESSION-RULES.md), committen, pushen
+- ✅ Bei Phasenwechsel: Ausfuehrlich erklaeren was kommt
 
 ---
 
