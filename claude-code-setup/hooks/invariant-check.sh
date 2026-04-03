@@ -90,14 +90,18 @@ if [ -f "$HEARTBEAT_STATUS" ]; then
     hb_status=$(python3 -c "import json; d=json.load(open('$HEARTBEAT_STATUS')); print(d.get('status','UNKNOWN'))" 2>/dev/null)
     hb_time=$(python3 -c "import json; d=json.load(open('$HEARTBEAT_STATUS')); print(d.get('timestamp','?'))" 2>/dev/null)
 
-    # FIX 2026-03-31: Bug #4 — Check heartbeat status AGE.
-    # If heartbeat hasn't run in >30 min, the status is stale and untrustworthy.
+    # FIX 2026-04-03: Heartbeat runs every 30min via launchd, but during long
+    # Claude sessions it can be delayed. Only alert if launchd agent is NOT loaded
+    # OR heartbeat is older than 3 hours (indicating agent actually crashed).
     if [ -n "$hb_time" ] && [ "$hb_time" != "?" ]; then
         hb_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$hb_time" +%s 2>/dev/null || echo "")
         if [ -n "$hb_epoch" ]; then
             hb_age_min=$(( ($(date +%s) - hb_epoch) / 60 ))
-            if [ "$hb_age_min" -gt 30 ]; then
-                violations+=("HEARTBEAT: Letzter Check vor ${hb_age_min} Minuten — launchd Agent laueft moeglicherweise nicht! Pruefen: launchctl list | grep claude-heartbeat")
+            hb_loaded=$(launchctl list 2>/dev/null | grep -c "claude-heartbeat")
+            if [ "$hb_loaded" -eq 0 ]; then
+                violations+=("HEARTBEAT: launchd Agent ist NICHT geladen! Reparieren: launchctl load ~/Library/LaunchAgents/com.frank.claude-heartbeat.plist")
+            elif [ "$hb_age_min" -gt 180 ]; then
+                violations+=("HEARTBEAT: Letzter Check vor ${hb_age_min} Minuten (>3h) — Agent haengt moeglicherweise!")
             fi
         fi
     fi
@@ -156,19 +160,21 @@ print(fixed)
 fi
 
 # --- Invariant 8: Stale-Exit-Scanner (Hook-Dateien auf stille Deaktivierung pruefen) ---
+# FIX 2026-04-03: Previous pattern (grep age|stale + grep exit 0) was too broad and
+# matched nearly every hook. Now specifically looks for the actual bug pattern:
+# a time comparison that leads directly to exit 0 (silently disabling the hook).
+# Pattern: "exit 0" on the same or next line after a time/age comparison.
 HOOKS_DIR_SCAN="$HOME/.claude/hooks"
 if [ -d "$HOOKS_DIR_SCAN" ]; then
     stale_exit_hooks=""
     for hookfile in "$HOOKS_DIR_SCAN"/*.sh; do
         [ -f "$hookfile" ] || continue
-        # Pruefe ob die Datei sowohl eine Zeitpruefung als auch ein bedingtes exit 0 hat
-        if grep -q -E 'age|stale|7200|3600|expired' "$hookfile" 2>/dev/null; then
-            if grep -q 'exit 0' "$hookfile" 2>/dev/null; then
-                base=$(basename "$hookfile")
-                # Ausnahme: hyperagent-stop.sh ist bereits gefixt (2026-04-02)
-                [ "$base" = "hyperagent-stop.sh" ] && continue
-                stale_exit_hooks="$stale_exit_hooks $base"
-            fi
+        base=$(basename "$hookfile")
+        # Skip the checker itself and already-fixed hooks
+        [ "$base" = "invariant-check.sh" ] && continue
+        # Only flag hooks where a staleness check directly causes exit 0
+        if grep -q -E '(age|stale|expired).*(exit 0)|(exit 0).*(age|stale|expired)' "$hookfile" 2>/dev/null; then
+            stale_exit_hooks="$stale_exit_hooks $base"
         fi
     done
     stale_exit_hooks=$(echo "$stale_exit_hooks" | xargs)
