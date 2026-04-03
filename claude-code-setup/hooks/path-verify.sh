@@ -118,6 +118,40 @@ if [ "$(uname -s)" = "Darwin" ]; then
 fi
 
 # ===========================================================
+# ORPHANED PYTHON INSTALLATIONS (Poka-Yoke)
+# Root Cause: When switching Python managers (official installer -> uv/pyenv/brew),
+# the old installation may be partially removed, leaving pip without python.
+# ===========================================================
+orphaned_python=()
+
+# Check PATH entries with pip but no python
+IFS=':' read -ra path_dirs <<< "$PATH"
+for dir in "${path_dirs[@]}"; do
+    if [ -f "$dir/pip" ] || [ -f "$dir/pip3" ]; then
+        parent_dir=$(dirname "$dir")
+        if [ ! -f "$parent_dir/python" ] && [ ! -f "$parent_dir/python3" ] && [ ! -f "$dir/python" ] && [ ! -f "$dir/python3" ]; then
+            orphaned_python+=("ORPHANED pip: $dir has pip but no python in $parent_dir")
+        fi
+    fi
+done
+
+# Check PATH entries pointing to non-existent directories (tool installations only)
+ghost_dirs=()
+for dir in "${path_dirs[@]}"; do
+    if [ -n "$dir" ] && [ ! -d "$dir" ]; then
+        case "$dir" in
+            *Python*|*python*|*node*|*npm*|*cargo*|*rustup*|*Go*|*go*|*gradle*|*kotlin*|*Android*|*bun*)
+                ghost_dirs+=("GHOST-PATH: $dir does not exist")
+                ;;
+        esac
+    fi
+done
+
+if [ ${#orphaned_python[@]} -gt 0 ] || [ ${#ghost_dirs[@]} -gt 0 ]; then
+    warnings+=("${orphaned_python[@]}" "${ghost_dirs[@]}")
+fi
+
+# ===========================================================
 # ENVIRONMENT-VARIABLEN
 # ===========================================================
 env_missing=()
