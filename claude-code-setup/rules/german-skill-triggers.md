@@ -193,6 +193,198 @@ gestartet und der Agent-Prompt wird manuell im `prompt`-Parameter uebergeben. NI
 
 ---
 
+## 16. Browser-Automatisierung (browser-use CLI)
+
+**KEIN MCP-Server — direkte CLI-Aufrufe per Bash (spart Token).**
+Vollstaendige Regel: `~/.claude/rules/browser-use-cli.md`
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "oeffne im Browser", "geh auf die Seite", "oeffne die URL" | `browser-use --headed --profile open URL` | Oeffnet Chrome mit echtem Profil (alle Logins aktiv) |
+| "browser use", "Browser Use", "mit dem Browser" | Browser-Use CLI aktivieren | Sichtbarer Chrome mit Profil |
+| "pruefe das auf der Webseite", "ueberprüf das selber" | open + state + screenshot | Seite oeffnen, Zustand lesen, Screenshot |
+| "trag das auf Firebase ein", "gib das dort ein" | open + navigate + input | Auf Seite navigieren und Wert eintragen |
+| "klick da drauf", "klick auf den Link" | `browser-use click [INDEX]` | Element anklicken (Index aus state) |
+| "was steht auf der Seite?", "schau dir die Seite an" | `browser-use --json state` | Seiteninhalt und klickbare Elemente auslesen |
+| "mach einen Screenshot" | `browser-use screenshot` | Screenshot der aktuellen Seite |
+| "schliess den Browser" | `browser-use close` | Browser sauber beenden |
+| "oeffne meinen Chrome", "mein Chrome" | `browser-use --headed --profile open` | Chrome mit Profil oeffnen |
+
+**PFLICHT**: Jeder Aufruf braucht `PYTHONIOENCODING=utf-8` Prefix (Windows-Encoding-Fix).
+**PFLICHT**: `--headed` immer setzen (Sichtbarkeitsregel). `--profile` immer wenn Login noetig.
+**ACHTUNG**: Chrome muss geschlossen sein fuer `--profile`, sonst Profil-Lock-Fehler.
+
+## 17. NotebookLM CLI (Google NotebookLM Automatisierung)
+
+**KEIN MCP-Server — direkte CLI-Aufrufe per Bash (spart Token).**
+Vollstaendige Regel: `~/.claude/rules/notebooklm-cli.md`
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "NotebookLM", "Notebook LM", "neues Notebook" | NotebookLM CLI aktivieren | Pre-Flight-Check (Auth + Notebook), dann Befehl |
+| "erstell ein NotebookLM zu [Thema]" | `create` + `use` + ggf. `source add-research` | Neues Notebook mit Quellen erstellen |
+| "fueg das als Quelle hinzu", "Quelle hinzufuegen" | `source add [URL/Datei/YouTube]` | Quelle zum aktiven Notebook hinzufuegen |
+| "recherchier das in NotebookLM" | `source add-research "Suchbegriff"` | Web-Recherche und automatisch als Quellen hinzufuegen |
+| "mach einen Podcast", "Deep Dive", "generier Audio" | `generate audio` + `download audio` | NotebookLM-Podcast generieren und herunterladen |
+| "mach ein Video daraus" | `generate video` + `download video` | Video generieren und herunterladen |
+| "erstell ein Quiz", "Quiz machen" | `generate quiz` + `download quiz` | Quiz aus Notebook-Quellen erstellen |
+| "Lernkarten", "Flashcards erstellen" | `generate flashcards` + `download flashcards` | Lernkarten generieren |
+| "Mind-Map erstellen" | `generate mind-map` + `download mind-map` | Mind-Map aus Quellen generieren |
+| "mach eine Praesentation", "Slides" | `generate slide-deck` + `download slide-deck` | Praesentation erstellen |
+| "fass das Notebook zusammen" | `summary` | KI-Zusammenfassung aller Quellen |
+| "frag das Notebook", "was sagen die Quellen" | `ask "Frage"` | Frage an NotebookLM stellen |
+| "Infografik erstellen" | `generate infographic` + `download infographic` | Infografik generieren |
+| "schreib einen Report", "Blog-Post" | `generate report` + `download report` | Report/Blog/Study-Guide erstellen |
+| "YouTube-Video als Quelle" | `source add --type youtube URL` | YouTube-Transkript als Quelle |
+| "PDF als Quelle" | `source add --type file pfad.pdf` | PDF-Datei als Quelle |
+
+**PFLICHT**: Jeder Aufruf braucht `PYTHONIOENCODING=utf-8` Prefix (Windows-Encoding-Fix).
+**PFLICHT**: Pre-Flight-Check (Auth + aktives Notebook) vor dem ersten Befehl jeder Session.
+**ACHTUNG**: Login ist interaktiv — Benutzer muss `! notebooklm login` selbst ausfuehren.
+
+## 18. CLI Dev-Tools (Tier 1+2+3 — installiert 2026-04-04)
+
+> **13 CLI-Tools fuer Codebase-Analyse, Git-Workflow, Security und Benchmarking.**
+> **Alle via `~/bin/` Symlinks im PATH. Kein Shell-Neustart noetig.**
+> **Bei fehlendem Tool: `pwsh ~/.claude/hooks/path-verify.ps1 -Fix` repariert automatisch.**
+
+### bat — `cat` mit Syntax-Highlighting (Rust)
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "zeig die Datei", "zeig mir den Code" | `bat [DATEI]` | Datei mit Syntax-Highlighting und Zeilennummern anzeigen |
+| "zeig die Datei mit Farben", "Syntax-Highlighting" | `bat [DATEI]` | Identisch — bat hat immer Highlighting aktiv |
+| "zeig nur Zeile 10 bis 20" | `bat -r 10:20 [DATEI]` | Nur den angegebenen Zeilenbereich anzeigen |
+| "welche Sprache erkennt bat?" | `bat --list-languages` | Alle unterstuetzten Sprachen auflisten |
+
+### fd — schnelles `find` (Rust)
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "finde alle Kotlin-Dateien", "such nach .kt Dateien" | `fd -e kt` | Alle Dateien mit Endung `.kt` finden (rekursiv, schnell) |
+| "finde Dateien die X heissen", "wo ist die Datei X?" | `fd "PATTERN"` | Dateien deren Name das Pattern enthaelt |
+| "finde grosse Dateien", "Dateien ueber 10MB" | `fd --size +10m` | Dateien groesser als 10MB finden |
+| "finde Dateien die heute geaendert wurden" | `fd --changed-within 1d` | Kuerzlich geaenderte Dateien |
+| "finde und loesche alle .tmp Dateien" | `fd -e tmp -x rm {}` | Dateien finden und Befehl darauf ausfuehren |
+
+### fzf — Fuzzy-Finder
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "fuzzy suche", "interaktiv suchen" | `fzf` | Interaktiver Fuzzy-Finder ueber stdin |
+| "Datei interaktiv waehlen" | `fd \| fzf` | Datei aus dem Projekt interaktiv auswaehlen |
+| "Git Branch waehlen" | `git branch \| fzf` | Branch interaktiv auswaehlen |
+
+### delta — Git-Diff-Viewer
+
+**Delta ist als Git-Pager konfiguriert und laeuft automatisch bei jedem `git diff` und `git log -p`.**
+**Kein manueller Trigger noetig — delta ist immer aktiv.**
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "zeig den Diff", "was hat sich geaendert?" | `git diff` | Delta zeigt side-by-side Diff mit Syntax-Highlighting |
+| "zeig den letzten Commit" | `git log -p -1` | Letzter Commit mit delta-formatiertem Diff |
+| "Diff ohne Farben", "roher Diff" | `git --no-pager diff` | Delta umgehen, rohen Diff anzeigen |
+
+### tokei — Code-Statistiken
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "wie viele Zeilen Code?", "Code-Statistik" | `tokei` | Zeilen, Dateien, Sprachen im aktuellen Projekt zaehlen |
+| "Projekt-Ueberblick", "wie gross ist das Projekt?" | `tokei --sort lines` | Statistik sortiert nach Zeilenanzahl |
+| "wie viel Kotlin?", "Sprachen-Verteilung" | `tokei` | Aufschluesselung nach Sprachen mit Code/Kommentar/Leer-Zeilen |
+| "Statistik fuer einen Ordner" | `tokei [PFAD]` | Statistik fuer ein bestimmtes Unterverzeichnis |
+
+### shellcheck — Shell-Script-Linter
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "pruefe das Shell-Script", "lint das .sh Script" | `shellcheck [DATEI.sh]` | Shell-Script auf Fehler, Warnungen und Best Practices pruefen |
+| "alle Shell-Scripts pruefen" | `fd -e sh -x shellcheck {}` | ALLE .sh-Dateien im Projekt pruefen |
+| "ist der Hook korrekt?", "Hook pruefen" | `shellcheck [HOOK.sh]` | Hook-Script auf Shell-Fehler pruefen (Poka-Yoke Stufe 1) |
+
+**WICHTIG fuer Direktive #3**: shellcheck MUSS vor jedem Commit von `.sh`-Dateien laufen.
+Es faengt Fehler ab die sonst erst beim Hook-Ausfuehren crashen wuerden.
+
+### hyperfine — CLI-Benchmarking
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "wie schnell ist das?", "Benchmark", "Performance messen" | `hyperfine "BEFEHL"` | Befehl mehrfach ausfuehren und Durchschnittszeit messen |
+| "vergleiche zwei Befehle", "was ist schneller?" | `hyperfine "BEFEHL_A" "BEFEHL_B"` | Zwei Befehle gegeneinander benchmarken |
+| "Build-Zeit messen" | `hyperfine "./gradlew assembleDebug"` | Build-Dauer praezsie messen (mit Warmup) |
+
+### dust — Disk-Usage-Analyse (Rust)
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "was braucht Speicherplatz?", "Speicherverbrauch" | `dust` | Verzeichnisbaum mit Groessen anzeigen (top-down) |
+| "groesste Ordner finden" | `dust -d 2` | Nur 2 Ebenen tief, groesste Ordner zuerst |
+| "wie gross ist das Projekt?", "Projektgroesse" | `dust [PFAD]` | Speicherverbrauch eines bestimmten Ordners |
+
+### duf — Disk-Free-Ueberblick
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "wie viel Platz habe ich?", "Festplatte voll?" | `duf` | Alle Laufwerke mit freiem/belegtem Speicher anzeigen |
+| "Speicherplatz pruefen" | `duf` | Uebersichtliche Tabelle aller Mountpoints |
+
+### lazygit — Git-TUI
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "lazygit", "Git-UI", "Git visuell" | `lazygit` | Interaktives Git-Terminal-UI oeffnen |
+| "Git-Aenderungen visuell sehen" | `lazygit` | Staging, Commits, Branches, Stash visuell verwalten |
+
+**HINWEIS**: lazygit ist INTERAKTIV — der Benutzer muss `! lazygit` im Prompt eingeben
+damit es in seiner Shell laeuft. Claude kann es nicht direkt ausfuehren.
+
+### shfmt — Shell-Script-Formatter
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "formatiere das Shell-Script" | `shfmt -w [DATEI.sh]` | Shell-Script automatisch formatieren (in-place) |
+| "alle Shell-Scripts formatieren" | `shfmt -w -l .` | Alle .sh-Dateien im Projekt formatieren |
+| "Shell-Stil pruefen (ohne aendern)" | `shfmt -d [DATEI.sh]` | Diff anzeigen was geaendert wuerde (dry-run) |
+
+**Best Practice**: `shfmt` + `shellcheck` zusammen fuer saubere Shell-Scripts:
+Erst `shfmt -w` (formatieren), dann `shellcheck` (pruefen).
+
+### trivy — Security-Scanner
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "scanne auf Sicherheitsluecken", "Vulnerability-Scan" | `trivy fs .` | Aktuelles Verzeichnis auf bekannte CVEs in Dependencies scannen |
+| "sind meine Dependencies sicher?" | `trivy fs .` | Prueft package.json, Cargo.toml, go.mod, build.gradle etc. |
+| "Docker-Image scannen" | `trivy image [IMAGE]` | Container-Image auf Vulnerabilities scannen |
+| "geheime Schluessel suchen", "Secrets scannen" | `trivy fs --scanners secret .` | Dateien nach hartkodierten Secrets/API-Keys durchsuchen |
+
+**Entscheidungshilfe Trivy vs Gitleaks**:
+- **trivy**: Scannt Dependencies (CVEs) UND Secrets UND Fehlkonfigurationen — breiter Scope
+- **gitleaks**: Scannt NUR Secrets, aber tiefer (auch Git-History) — spezialisiert
+
+### glow — Markdown-Renderer
+
+| Deutsche Phrase | Aktion | Was passiert |
+|----------------|--------|-------------|
+| "zeig die README", "README huebsch anzeigen" | `glow README.md` | Markdown-Datei gerendert im Terminal anzeigen |
+| "zeig das Whiteboard", "MEMORY huebsch" | `glow .claude/agent-memory/shared/MEMORY.md` | Whiteboard gerendert anzeigen |
+| "Markdown im Terminal anzeigen" | `glow [DATEI.md]` | Beliebige .md-Datei gerendert anzeigen |
+
+---
+
+### Zusammenspiel der CLI-Tools (Kombinations-Trigger)
+
+| Deutsche Phrase | Kombination | Was passiert |
+|----------------|------------|-------------|
+| "Projekt-Ueberblick", "zeig mir alles" | `tokei` + `duf` + `dust -d 2` | Code-Statistik + Speicher + Verzeichnisgroessen |
+| "ist das Projekt sauber?", "Qualitaetscheck" | `shellcheck` + `trivy fs .` + `gitleaks detect` | Shell-Lint + Security-Scan + Secret-Scan |
+| "Shell-Scripts aufraemen" | `shfmt -w` + `shellcheck` | Erst formatieren, dann auf Fehler pruefen |
+| "wie schnell baut das Projekt?" | `hyperfine "./gradlew assembleDebug"` | Build-Zeit praezsie messen |
+| "finde alle grossen Dateien" | `fd --size +10m` oder `dust` | Grosse Dateien per Name oder Verzeichnisbaum |
+
+---
+
 ## Whisper Speech-to-Text Korrekturen
 
 | Whisper hoert | Gemeint ist |
@@ -206,6 +398,26 @@ gestartet und der Agent-Prompt wird manuell im `prompt`-Parameter uebergeben. NI
 | "Brainstorm" | `superpowers:brainstorming` |
 | "Reflektion" / "Reflect" | `claude-reflect:reflect` (Lernen) oder `reflexion:reflect` (Bewertung) — nachfragen! |
 | "Code Rabbit" | `coderabbit:review` |
+| "Browser Use" / "Browser Juice" / "Browser News" | **browser-use** CLI |
+| "brause use" / "Brause Juse" | **browser-use** CLI |
+| "Notebook LM" / "Notebook Ellem" / "Notebook Ellen" | **notebooklm** CLI |
+| "Not Book LM" / "Notbuch LM" | **notebooklm** CLI |
+| "Deep Dive" / "Podcast" (im Kontext von NotebookLM) | `notebooklm generate audio` |
+| "Lernkarten" / "Flashkards" | `notebooklm generate flashcards` |
+| "Mindmap" / "Mind Map" (im Kontext von NotebookLM) | `notebooklm generate mind-map` |
+| "Bett" / "Bat" / "Bätt" | **bat** CLI (cat mit Highlighting) |
+| "FD" / "Eff-Dee" / "Äff Dee" | **fd** CLI (schnelles find) |
+| "Fuzzy" / "Fuzzy Finder" / "Fuzzy Find" | **fzf** CLI |
+| "Delta" / "Delle Ta" | **delta** CLI (Git-Diff-Viewer) |
+| "Tokai" / "Tokäi" / "Token" (im CLI-Kontext) | **tokei** CLI (Code-Statistiken) |
+| "Shell Check" / "Schell Check" / "Shell Tschek" | **shellcheck** CLI (Shell-Linter) |
+| "Hyperfein" / "Hyper Fine" / "Hyperfine" | **hyperfine** CLI (Benchmarking) |
+| "Dust" / "Dast" | **dust** CLI (Disk-Usage) |
+| "Duff" / "Doof" / "DUF" | **duf** CLI (Disk-Free) |
+| "Lazy Git" / "Leisy Git" / "Läsi Git" | **lazygit** CLI (Git-TUI) |
+| "Shell Format" / "Shell FMT" / "SHFMT" | **shfmt** CLI (Shell-Formatter) |
+| "Trivy" / "Triffy" / "Trivi" | **trivy** CLI (Security-Scanner) |
+| "Glow" / "Gloh" | **glow** CLI (Markdown-Renderer) |
 
 ## 15. Metacognitive Analyse & Hyperagent
 
