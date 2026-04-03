@@ -2,6 +2,15 @@
 
 Diese Regeln gelten fuer JEDE Arbeitssession an der Best Journal App.
 
+## Entwicklungsphase (IMMER AKTUELL HALTEN)
+- **Aktuelle Phase**: 2 (Debug & Entwicklung)
+- **Phase gestartet am**: 2026-03-31
+- **Naechster Meilenstein**: Alle Features implementiert und stabil
+- **Version**: v1.0.2 (Build 3)
+- **Offene Features**: [vom Benutzer zu definieren]
+- **Bekannte Bugs**: [vom Benutzer zu definieren]
+- **Phasen-Referenz**: `~/.claude/rules/android-development-phases.md`
+
 ## Versionierung (PFLICHT)
 - Bei JEDEM Commit die Version erhoehen in BEIDEN Stellen:
   1. `app/build.gradle.kts` → `versionCode` + `versionName`
