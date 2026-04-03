@@ -181,7 +181,7 @@ namespace TerminalVoiceOverlay
             {
                 _trayIcon!.Visible = false;
                 _overlayWindow?.Close();
-                Environment.Exit(1); // Exit code != 0 — watchdog restarts overlay
+                Environment.Exit(0); // Exit code 0 — watchdog stops cleanly
             });
 
             _trayIcon.ContextMenuStrip = menu;
