@@ -89,6 +89,8 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Betroffene Dateien:** ~/.claude/hooks/hyperagent-stop.sh, claude-code-setup/hooks/hyperagent-stop.sh
 **Status:** GEFIXT (2026-04-02)
 <!-- ARCHIV: safety-gate.sh blockierte rm -rf waehrend /self-improve Cache-Cleanup (2026-04-02 18:51) — erwartetes Verhalten -->
+### 2026-04-03 18:51 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-03 18:52 — Hook: session-guard.ps1 — Auto-Reparatur: settings.local.json defaultMode repariert (war: ); Projekt -Users-barwa settings.local.json erstellt; Projekt C--Users-barwa settings.local.json erstellt; Projekt C--Users-barwa--claude-double-shot-latte settings.local.json erstellt; Projekt C--Users-barwa--claude-mem-observer-sessions settings.local.json erstellt; allow-Liste aus settings.local.json entfernt — Status: AUTO-GEFIXT
 ---
 
 ## Systemzustand (aktuell)
@@ -144,7 +146,7 @@ _Noch keine Eintraege._
 <!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
-- **[2026-03-31 13:23] Code-Suche Index:** ? Dateien, ? Chunks indexiert.
+- **[2026-04-03 18:53] Code-Suche Index:** 315 Dateien, 133 Chunks indexiert.
 ## UI/UX-Patterns
 <!-- Writer: ui-polisher Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._

@@ -17,6 +17,7 @@
 	"permissions": {
 		"defaultMode": "bypassPermissions"
 	},
+	"model": "claude-opus-4-6",
 	"enableAllProjectMcpServers": true,
 	"hooks": {
 		"SessionStart": [
@@ -132,6 +133,16 @@
 						"type": "command",
 						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/redact-secrets.ps1\"",
 						"timeout": 5
+					}
+				]
+			},
+			{
+				"matcher": "Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/poka-yoke-git-push.ps1\"",
+						"timeout": 10
 					}
 				]
 			}
@@ -366,7 +377,12 @@
 		]
 	},
 	"worktree": {
-		"symlinkDirectories": ["node_modules", ".cache", ".gradle", "build"]
+		"symlinkDirectories": [
+			"node_modules",
+			".cache",
+			".gradle",
+			"build"
+		]
 	},
 	"enabledPlugins": {
 		"swift-lsp@claude-plugins-official": true,
@@ -391,7 +407,7 @@
 		"superpowers-chrome@superpowers-marketplace": true,
 		"claude-session-driver@superpowers-marketplace": true,
 		"code-review@claude-plugins-official": true,
-		"playwright@claude-plugins-official": true,
+		"playwright@claude-plugins-official": false,
 		"explanatory-output-style@claude-plugins-official": true,
 		"superpowers-lab@superpowers-marketplace": true,
 		"superpowers-developing-for-claude-code@superpowers-marketplace": true,
@@ -452,14 +468,10 @@
 		"tech-stack@context-engineering-kit": true,
 		"mcp@context-engineering-kit": true,
 		"fpf@context-engineering-kit": true,
-		"claude-code-lsps@boostvolt": false,
 		"xclaude-plugin@xclaude-plugin-marketplace": false,
 		"claude-reflect@claude-reflect-marketplace": true,
 		"coderabbit@claude-plugins-official": true,
-		"aikido@claude-plugins-official": true,
-		"spec-driven-development@context-engineering-kit": false,
-		"context-kit@FlineDev": false,
-		"second-opinion@trailofbits": false
+		"second-opinion@trailofbits": true
 	},
 	"extraKnownMarketplaces": {
 		"superpowers-marketplace": {
@@ -499,6 +511,12 @@
 				"repo": "NeoLabHQ/context-engineering-kit"
 			}
 		},
+		"boostvolt": {
+			"source": {
+				"source": "github",
+				"repo": "boostvolt/claude-code-lsps"
+			}
+		},
 		"xclaude-plugin-marketplace": {
 			"source": {
 				"source": "github",
@@ -522,13 +540,19 @@
 				"source": "github",
 				"repo": "trailofbits/skills-curated"
 			}
+		},
+		"FlineDev": {
+			"source": {
+				"source": "github",
+				"repo": "FlineDev/context-kit"
+			}
 		}
 	},
 	"language": "de",
 	"alwaysThinkingEnabled": true,
 	"effortLevel": "high",
 	"autoUpdatesChannel": "latest",
+	"autoDreamEnabled": true,
 	"skipDangerousModePermissionPrompt": true,
-	"_comment_PermissionRequest": "Intentionally removed -- caused bypassPermissions mode reset (2026-03-20)",
-	"model": "claude-opus-4-6"
+	"_comment_PermissionRequest": "Intentionally removed -- caused bypassPermissions mode reset (2026-03-20)"
 }
