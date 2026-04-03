@@ -278,57 +278,240 @@ Jede Regel bekommt einen Kommentar WARUM sie da ist:
 
 > **KEINE Veroeffentlichung ohne Vermarktungsstrategie.**
 > **Ziel: Die App soll GEFUNDEN werden, HERUNTERGELADEN werden, und GELD verdienen.**
+> **Diese Phase ist fuer Solo-Entwickler (1-Mann-Unternehmer) ohne grosses Budget optimiert.**
+> **Claude leitet den Benutzer AKTIV durch jeden Schritt — nicht passiv abwarten.**
 
-### Was passiert
-Claude leitet den Benutzer AKTIV durch die Vermarktungsplanung:
+### Eintritts-Ankuendigung (PFLICHT)
 
-#### 4a: App Store Optimization (ASO)
-- **Titel optimieren**: Keyword-reich, max 30 Zeichen, Hauptnutzen erkennbar
-- **Kurzbeschreibung**: 80 Zeichen, die wichtigsten 2-3 Vorteile
-- **Langbeschreibung**: 4000 Zeichen, Keywords natuerlich eingebaut,
-  Feature-Liste, Alleinstellungsmerkmale, Call-to-Action
-- **Keywords recherchieren**: Was suchen Leute? Welche Konkurrenz gibt es?
-  Claude nutzt Web-Recherche um aktuelle Keyword-Trends zu finden.
-- **Kategorie waehlen**: Primaer- und Sekundaerkategorie strategisch waehlen
-- **Icon**: Muss im Store auffallen — kontrastreiche Farben, einfaches Motiv
+Wenn Phase 3 abgeschlossen ist, MUSS Claude folgendes sagen:
 
-#### 4b: Screenshots & Grafiken
-- **Feature-Grafiken** (1024x500): Wird im Store als Banner angezeigt
-- **Screenshots** (mindestens 4, besser 8): Jeder Screenshot zeigt EIN Feature
-  mit kurzem erklaerenden Text (kein reiner Screenshot — immer mit Overlay-Text)
-- **Video** (optional, aber empfohlen): 30-Sekunden-Vorschau
+```
+🎯 Phase 3 (R8) ist abgeschlossen. Die App laeuft stabil im Release-Build.
 
-#### 4c: Preisstrategie & Monetarisierung
-- Freemium-Grenzen validieren: Sind sie fair? Motivieren sie zum Kauf?
-- Preispunkte recherchieren: Was kostet die Konkurrenz?
-- Einfuehrungsangebot planen: Ersten Monat kostenlos? Rabatt?
-- In-App-Messaging: Wann und wie wird der Nutzer auf das Abo hingewiesen?
+Jetzt kommt Phase 4: Vermarktungsstrategie.
 
-#### 4d: Launch-Plan
-- **Soft Launch**: Erst in 1-2 Laendern veroeffentlichen (z.B. nur Deutschland)
-- **Feedback sammeln**: Erste Reviews lesen, Bugs fixen
-- **Full Launch**: Weltweit freischalten
-- **Promotion**: Social Media, Reddit, Foren, Pressemitteilung?
+Bevor wir irgendwas in den Store hochladen, machen wir einen Plan wie die App
+GEFUNDEN und HERUNTERGELADEN wird. Eine App ohne Vermarktung ist wie ein Laden
+ohne Schild — niemand weiss dass es ihn gibt.
 
-### Claude's Rolle in Phase 4
-- **AKTIV anleiten**: Nicht warten bis der Benutzer fragt
-- Recherche durchfuehren: Konkurrenz-Apps analysieren, Keywords finden
-- Texte vorschlagen: Store-Listing auf Deutsch UND Englisch
-- Design-Vorschlaege: Screenshot-Layouts, Feature-Grafik-Konzepte
-- Preis-Empfehlung: Basierend auf Markt und Konkurrenz
+Ich starte jetzt eine gruendliche Recherche zu:
+- Wie Solo-Entwickler 2025/2026 erfolgreich Apps vermarkten
+- Welche kostenlosen/guenstigen Strategien wirklich funktionieren
+- Was die Top-Apps in deiner Kategorie anders machen
+- Wie du mit null Budget trotzdem Sichtbarkeit bekommst
 
-### Ausgangs-Kriterium
-- [ ] Store-Listing komplett (Titel, Beschreibungen, Keywords)
-- [ ] Screenshots erstellt (mindestens 4)
+Das dauert etwa 5-10 Minuten. Danach gehen wir Schritt fuer Schritt durch.
+```
+
+### Schritt 4a: Pflicht-Recherche (MUSS vor allem anderen passieren)
+
+> **Claude MUSS bei Eintritt in Phase 4 eine gruendliche Internetrecherche durchfuehren.**
+> **Keine Vermarktungsentscheidung ohne aktuelle Daten. Kein Bauchgefuehl, sondern Fakten.**
+
+**WICHTIG: Die Recherche muss STATE OF THE ART sein.**
+Die Recherche wird NICHT vorab gemacht und gespeichert. Sie wird genau DANN durchgefuehrt
+wenn Phase 4 beginnt — damit die Ergebnisse zum Zeitpunkt der Vermarktung aktuell sind.
+Marketing-Strategien aendern sich schnell (Algorithmus-Updates, neue Plattformen, neue Tools).
+Was heute funktioniert kann in 3 Monaten veraltet sein. Deshalb: IMMER frisch recherchieren.
+
+Die Researcher suchen EXPLIZIT nach den **aktuellsten Entwicklungen** (letztes halbes Jahr):
+- Neue Play Store Algorithmus-Aenderungen
+- Neue Marketing-Kanaele die gerade aufkommen
+- Aktuelle Conversion-Benchmarks und Preisdaten
+- Neue Tools fuer Solo-Entwickler
+- Aktuelle Erfolgsgeschichten (nicht 3 Jahre alte Blogposts)
+
+Claude startet 3-5 parallele Researcher-Agents (Sonnet, je max 15 Web-Fetches) zu diesen Themen:
+
+#### Researcher 1: Play Store Algorithmus & ASO (App Store Optimization)
+- Wie funktioniert der Play Store Ranking-Algorithmus aktuell (2025/2026)?
+- Welche Faktoren beeinflussen die Sichtbarkeit am meisten?
+- Welche kostenlosen ASO-Tools gibt es fuer Keyword-Recherche?
+- Best Practices fuer Titel (30 Zeichen), Kurzbeschreibung (80 Zeichen), Langbeschreibung
+- Wie funktionieren Custom Store Listings und A/B-Tests im Play Store?
+- Welche Kategorien haben wenig Konkurrenz aber hohe Nachfrage?
+
+#### Researcher 2: Solo-Entwickler Erfolgsstrategien
+- Wie haben erfolgreiche Solo-Entwickler ihre erste App vermarktet?
+- Welche kostenlosen Marketing-Kanaele funktionieren am besten? (Reddit, Product Hunt,
+  Indie Hackers, Twitter/X, TikTok, YouTube, Blogs, Foren)
+- Wie bekommt man die ersten 100 Downloads ohne Budget?
+- Wie bekommt man die ersten 10 echten Reviews?
+- Soft Launch Strategien: In welchen Laendern zuerst launchen?
+- Fehler die Solo-Entwickler am haeufigsten machen
+
+#### Researcher 3: Monetarisierung fuer 1-Mann-Unternehmen
+- Freemium vs. Paid vs. Ads — was funktioniert 2025/2026 am besten fuer Solo-Devs?
+- Optimale Preispunkte fuer Abo-Apps in DACH (Deutschland, Oesterreich, Schweiz)
+- Wann und wie den Nutzer zum Kauf auffordern ohne ihn zu nerven?
+- Conversion-Rate-Benchmarks: Was ist realistisch fuer eine neue App?
+- Google Play Gebuehren: 15% fuer die erste Million — wie das nutzen?
+- Steuerliche Grundlagen fuer App-Einnahmen als Einzelunternehmer in Deutschland
+
+#### Researcher 4: Konkurrenz-Analyse (APP-SPEZIFISCH)
+- Top 10 Apps in der gleichen Kategorie analysieren:
+  - Wie sehen ihre Store-Listings aus?
+  - Welche Keywords nutzen sie?
+  - Wie sind ihre Screenshots gestaltet?
+  - Was sind ihre Preise?
+  - Was sagen die 1-Stern-Reviews? (= unerfuellte Beduerfnisse = deine Chance)
+- Luecken im Markt finden: Was bieten die Konkurrenten NICHT?
+
+#### Researcher 5: Visuelle Vermarktung & Conversion
+- Screenshot-Design das konvertiert: Welche Layouts funktionieren am besten?
+- Icon-Design-Trends 2025/2026 die im Store auffallen
+- Feature-Grafik (1024x500): Best Practices
+- Video-Vorschau: Lohnt sich der Aufwand fuer einen Solo-Dev?
+- Lokalisierung: Welche Sprachen bringen die meisten Downloads pro Aufwand?
+
+### Schritt 4b: Recherche-Ergebnis aufbereiten
+
+Claude fasst die Recherche in einem **Vermarktungs-Dokument** zusammen:
+`docs/marketing/[app-name]-marketing-strategy.md`
+
+Struktur:
+```markdown
+# Vermarktungsstrategie: [App-Name]
+## Erstellt am: [Datum]
+## Basierend auf: [Anzahl] Quellen, recherchiert am [Datum]
+
+### 1. Marktanalyse
+- Kategorie und Wettbewerb
+- Marktluecken und Chancen
+- Zielgruppe (wer, warum, wann)
+
+### 2. ASO-Plan
+- Titel (mit Begruendung)
+- Kurzbeschreibung (mit Begruendung)
+- Langbeschreibung (vollstaendig ausgeschrieben)
+- Keywords (primaer + sekundaer)
+- Kategorie-Empfehlung
+
+### 3. Visueller Auftritt
+- Icon-Konzept
+- Screenshot-Plan (welcher Screen, welcher Text, welche Reihenfolge)
+- Feature-Grafik-Konzept
+
+### 4. Preisstrategie
+- Preismodell (Freemium/Paid/Hybrid)
+- Konkrete Preise mit Begruendung
+- Einfuehrungsangebot
+- Upsell-Zeitpunkte (wann wird der Nutzer auf Abo hingewiesen)
+
+### 5. Launch-Plan
+- Soft Launch: Land, Dauer, Erfolgskriterien
+- Full Launch: Zeitpunkt, Kanaele
+- Erste 100 Downloads: Konkrete Schritte
+- Erste 10 Reviews: Konkrete Strategie
+
+### 6. Kostenlose Marketing-Kanaele
+- Welche Plattformen (mit konkreten Subreddits, Foren, Communities)
+- Content-Plan (was posten, wann, wie oft)
+- Cross-Promotion-Moeglichkeiten
+
+### 7. Langfristige Wachstumsstrategie
+- Was nach dem Launch passieren muss
+- Metriken die beobachtet werden (Downloads, Retention, Conversion)
+- Wann und wie auf Feedback reagieren
+```
+
+### Schritt 4c: Store-Listing erstellen
+
+Basierend auf dem Vermarktungs-Dokument erstellt Claude:
+
+#### Titel (max 30 Zeichen)
+- 3 Vorschlaege mit Begruendung warum jeder funktionieren koennte
+- Benutzer waehlt aus oder kombiniert
+
+#### Kurzbeschreibung (max 80 Zeichen)
+- 3 Vorschlaege mit den wichtigsten Keywords
+- Muss den Hauptnutzen in einem Satz kommunizieren
+
+#### Langbeschreibung (max 4000 Zeichen)
+- Vollstaendig ausgeschrieben, auf Deutsch UND Englisch
+- Keywords natuerlich eingebaut (nicht gestopft)
+- Struktur: Hook → Features → Alleinstellung → Social Proof → Call-to-Action
+- Emojis sparsam aber strategisch einsetzen
+
+#### Screenshots (mindestens 6, besser 8)
+- Fuer JEDEN Screenshot: Welcher App-Screen, welcher Overlay-Text, welche Reihenfolge
+- Erster Screenshot = wichtigster — muss den Hauptnutzen zeigen
+- Kein reiner Screenshot — immer mit erklaerenden Text-Overlays
+- Claude erstellt die Text-Overlays und Layouts als HTML-Vorschau wenn moeglich
+
+#### Feature-Grafik (1024x500)
+- Konzept mit Farbschema, Text, Motiv
+- Muss auch als kleines Thumbnail erkennbar sein
+
+#### Icon
+- Falls noch kein professionelles Icon: Konzept-Vorschlag
+- Kontrastreiche Farben, einfaches Motiv, kein Text im Icon
+
+### Schritt 4d: Preisstrategie finalisieren
+
+Claude geht mit dem Benutzer folgende Fragen durch:
+
+1. **Freemium-Grenzen**: Sind sie so gesetzt dass der Nutzer den Wert der App
+   erkennt BEVOR er bezahlen muss? (Zu frueh = Nutzer geht, zu spaet = zahlt nie)
+2. **Preispunkte**: Verglichen mit Konkurrenz — sind wir im richtigen Bereich?
+3. **Einfuehrungsangebot**: Erster Monat kostenlos? 50% Rabatt? Oder voller Preis?
+4. **Upsell-Momente**: An welchen Stellen in der App wird dezent auf das Abo hingewiesen?
+   (z.B. wenn Gratis-Limit erreicht, wenn Premium-Feature angetippt wird)
+5. **Jahresabo-Rabatt**: Wie viel guenstiger als Monatsabo? (Standard: 30-40% Ersparnis)
+6. **Google Play Gebuehren**: 15% auf die erste $1M/Jahr — das ist ein Vorteil gegenueber
+   Apple (30%). In der Beschreibung/Pricing beruecksichtigen.
+
+### Schritt 4e: Launch-Plan festlegen
+
+1. **Soft Launch Land waehlen**: Deutschland (Heimatmarkt, einfach zu supporten)
+2. **Soft Launch Dauer**: 2-4 Wochen mit echten Nutzern
+3. **Erfolgs-Metriken definieren**:
+   - Crash-Rate < 1%
+   - Mindestens 4.0 Sterne Bewertung
+   - Retention Day 7 > 20%
+   - Mindestens 5 organische Reviews
+4. **Full Launch Zeitpunkt**: Erst wenn Soft-Launch-Metriken erfuellt sind
+5. **Marketing-Aktionen zum Launch**:
+   - Reddit-Posts in relevanten Subreddits (r/androidapps, r/apps, nischen-spezifisch)
+   - Product Hunt Launch (kostenlos, hohe Sichtbarkeit bei Tech-affinen Nutzern)
+   - Indie Hackers Community Post
+   - Eigene Social-Media-Kanaele (wenn vorhanden)
+   - App-Review-Blogs anschreiben (kostenlose Reviews)
+   - YouTube: Kurzes Demo-Video (kann mit Handy aufgenommen werden)
+
+### Claude's Rolle in Phase 4 (AKTIVE ANLEITUNG)
+
+Claude wartet NICHT bis der Benutzer fragt. Claude:
+- **Startet die Recherche automatisch** bei Eintritt in Phase 4
+- **Praesentiert Ergebnisse verstaendlich** (kein Marketing-Jargon)
+- **Macht konkrete Vorschlaege** ("Ich schlage vor: Titel X, weil...")
+- **Erklaert WARUM** jeder Vorschlag so ist wie er ist
+- **Zeigt Beispiele** von erfolgreichen Solo-Dev-Apps
+- **Warnt vor Fehlern** die Solo-Entwickler typischerweise machen
+- **Erstellt die Texte** (nicht nur Tipps geben, sondern fertige Texte schreiben)
+- **Rechnet Monetarisierung durch**: "Bei X Downloads und Y% Conversion verdienst du Z€/Monat"
+- **Leitet durch jeden Unter-Schritt**: "Jetzt machen wir die Kurzbeschreibung. Hier sind 3 Vorschlaege..."
+
+### Ausgangs-Kriterium (ALLE muessen erfuellt sein)
+- [ ] Gruendliche Internetrecherche durchgefuehrt (5 Researcher-Bereiche)
+- [ ] Vermarktungs-Dokument erstellt und vom Benutzer abgesegnet
+- [ ] Store-Listing komplett (Titel, Kurz- und Langbeschreibung, DE + EN)
+- [ ] Screenshots geplant und erstellt (mindestens 6)
 - [ ] Feature-Grafik erstellt
-- [ ] Preisstrategie festgelegt
-- [ ] Launch-Plan definiert (Soft Launch Land, Zeitplan)
-- [ ] Benutzer hat alles abgesegnet
+- [ ] Icon finalisiert
+- [ ] Preisstrategie festgelegt und durchgerechnet
+- [ ] Launch-Plan definiert (Soft Launch Land, Dauer, Metriken, Marketing-Kanaele)
+- [ ] Datenschutzerklaerung geschrieben (PFLICHT)
+- [ ] Benutzer hat den GESAMTEN Plan abgesegnet
 
 ### Was Claude NICHT tun darf
-- Nicht veroeffentlichen ohne dass der Benutzer den Plan abgesegnet hat
-- Nicht "Standard"-Texte verwenden — alles muss auf die spezifische App zugeschnitten sein
-- Nicht die Monetarisierung ueberspringen ("kostenlos reicht erstmal" — NEIN)
+- ❌ Veroeffentlichen ohne dass der Benutzer den Plan abgesegnet hat
+- ❌ "Standard"-Texte verwenden — alles muss auf die spezifische App zugeschnitten sein
+- ❌ Die Monetarisierung ueberspringen ("kostenlos reicht erstmal" — NEIN)
+- ❌ Recherche ueberspringen ("ich weiss schon wie Marketing geht" — NEIN, aktuelle Daten holen)
+- ❌ Marketing-Jargon benutzen ohne es zu erklaeren
+- ❌ Den Benutzer allein lassen ("hier sind Tipps, mach mal" — NEIN, gemeinsam durcharbeiten)
+- ❌ Unrealistische Versprechen machen ("10.000 Downloads im ersten Monat")
 
 ---
 
