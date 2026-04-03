@@ -28,3 +28,5 @@ try {
 } catch {
     Hook-LogWarn "notify.ps1: Toast notification failed: $_"
 }
+
+exit 0

@@ -89,7 +89,7 @@ if ! git pull --rebase --quiet 2>/dev/null; then
     entry="### $(date '+%Y-%m-%d %H:%M') — Hook: auto-sync.sh — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: OFFEN"
     insert_whiteboard_entry "Offene Fehler & Probleme" "$entry"
     write_status "Auto-Sync: FEHLER beim Pull (Merge-Konflikt?). Bitte manuell pruefen: cd ~/proggs; git status"
-    exit 1
+    exit 0  # SessionStart hooks must NEVER return exit 1 — error already logged to whiteboard
 fi
 
 write_status "Auto-Sync: Git Pull erfolgreich."
@@ -304,3 +304,5 @@ fi
 hook_log "sync complete:$synced"
 write_status "Auto-Sync: Lokale Konfiguration aktualisiert:$synced"
 write_status "Auto-Sync: Hinweis -- CLAUDE.md und Rules werden erst nach Neustart von Claude Code wirksam."
+
+exit 0

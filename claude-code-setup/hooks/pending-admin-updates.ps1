@@ -90,3 +90,5 @@ try {
 } catch {}
 
 Write-Output "Pending-Admin-Updates: Script erstellt auf Desktop ($($commands.Count) Updates: $updateList)"
+
+exit 0

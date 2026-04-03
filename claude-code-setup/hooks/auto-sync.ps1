@@ -79,7 +79,7 @@ if ($LASTEXITCODE -ne 0) {
     $entry = "### $(Get-Date -Format 'yyyy-MM-dd HH:mm') — Hook: auto-sync.ps1 — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: OFFEN"
     Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
     Write-Status "Auto-Sync: FEHLER beim Pull (Merge-Konflikt?). Bitte manuell pruefen: cd ~/proggs; git status"
-    exit 1
+    exit 0  # SessionStart hooks must NEVER return exit 1 — error already logged to whiteboard
 }
 
 Write-Status "Auto-Sync: Git Pull erfolgreich."
@@ -296,3 +296,5 @@ Write-Status "Auto-Sync: Hinweis -- CLAUDE.md und Rules werden erst nach Neustar
 } finally {
     Pop-Location
 }
+
+exit 0

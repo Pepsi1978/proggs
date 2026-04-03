@@ -90,3 +90,5 @@ try {
 } catch {
     Write-Output "Reindex-Hook: EXCEPTION — $($_.Exception.Message)"
 }
+
+exit 0

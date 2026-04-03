@@ -144,3 +144,5 @@ if ($sentinelFiles.Count -gt 0) {
 }
 # If no sentinel files exist, that's OK — not every subagent is a senior agent.
 # The memory-watchdog.ps1 handles the "should have written but didn't" case.
+
+exit 0
