@@ -134,20 +134,133 @@ Das ist kein Problem, das ist der kreative Prozess. Claude:
 - Fragt NICHT "aber das war nicht geplant" — es ist Phase 2, alles darf
 
 ### Wann ist Phase 2 fertig?
-**NUR der Benutzer entscheidet wann Phase 2 fertig ist.**
+**NUR der Benutzer entscheidet wann Phase 2 Richtung R8 geht.**
 Claude darf NICHT sagen "ich glaube wir sind fertig" oder "sollen wir zu Phase 3?".
 Der Benutzer wird klar kommunizieren: "Phase 2 ist fertig" oder "wir koennen zu R8".
-Erst dann beginnt der Uebergang zu Phase 3.
+
+**WICHTIG: Phase 2 hat einen EXPLIZITEN letzten Schritt — die R8-Vorbereitung.**
+Wenn der Benutzer sagt "R8", "Store", "Release" oder aehnliches:
+1. Claude fragt: "Soll Phase 2 damit abgeschlossen sein?"
+2. Wenn der Benutzer JA sagt, beginnt der **R8-Vorbereitungs-Scan** (siehe unten)
+3. Phase 2 ist ERST abgeschlossen wenn die App R8-resistent vorbereitet ist
+4. Erst DANACH wechseln wir zu Phase 3 (wo R8 tatsaechlich eingeschaltet wird)
+
+### Letzter Schritt Phase 2: R8-Vorbereitungs-Scan (PFLICHT vor Phase 3)
+
+> **Dieser Scan passiert NOCH IN Phase 2 — er ist der Abschluss, nicht der Anfang von Phase 3.**
+> **Ziel: Die App wird R8-resistent VORBEREITET, bevor R8 ueberhaupt eingeschaltet wird.**
+> **Bei BestJournal hat genau dieser Schritt gefehlt — R8 wurde eingeschaltet und alles crashte.**
+
+Wenn der Benutzer bestaetigt dass Features komplett sind, sagt Claude:
+
+```
+📱 Phase 2 (Debug) — Letzter Schritt: R8-Vorbereitung
+
+Bevor wir R8 einschalten, mache ich jetzt einen vollstaendigen Scan der App.
+Ich pruefe JEDE Stelle die R8 kaputt machen koennte und bereite die App vor,
+damit der Release-Build in Phase 3 beim ersten Mal funktioniert.
+
+Das umfasst:
+1. JNI/Native Libraries → Keep-Regeln schreiben
+2. Reflection/Serialisierung → Keep-Regeln schreiben
+3. Third-Party-Libraries → bekannte R8-Probleme pruefen
+4. Billing/Firebase → spezielle Keep-Regeln
+5. Alle ProGuard-Regeln in proguard-rules.pro eintragen
+
+R8 wird dabei NICHT eingeschaltet — nur die Vorbereitung.
+Wenn alles vorbereitet ist, ist Phase 2 abgeschlossen und Phase 3 beginnt.
+```
+
+#### Scan-Ablauf (alles noch mit isMinifyEnabled = false!)
+
+**1. JNI/Native Libraries scannen**
+```
+Grep nach: System.loadLibrary, extern, native, .so-Dateien
+→ Fuer jede gefundene: -keep class mit allen Feldern und Methoden
+```
+
+**2. Reflection-Nutzung scannen**
+```
+Grep nach: Class.forName, .getDeclaredField, .getDeclaredMethod,
+           @SerializedName, @Json, @Keep, @Entity, @Dao
+→ Fuer jede gefundene: -keep-Regel oder @Keep-Annotation
+```
+
+**3. Serialisierung scannen**
+```
+Grep nach: Moshi, Gson, Kotlinx.Serialization, Retrofit-Interfaces
+→ Fuer jede Model-Klasse: -keep mit allen Feldern
+→ Fuer Retrofit-Interfaces: -keep interface
+```
+
+**4. Third-Party-Libraries pruefen**
+```
+Jede Library in libs.versions.toml einzeln pruefen:
+- Hat die Library eigene ProGuard-Regeln? (consumer-rules.pro)
+- Braucht sie zusaetzliche -keep-Regeln?
+- Bekannte R8-Probleme? (GitHub Issues der Library pruefen)
+```
+
+**5. Android-Komponenten scannen**
+```
+Grep nach: BroadcastReceiver, ContentProvider, Service, Activity die
+           nicht im Manifest stehen oder dynamisch registriert werden
+```
+
+**6. Billing/Payment scannen (wenn vorhanden)**
+```
+- Google Play Billing AIDL-Interfaces
+- BillingClient Callback-Klassen
+- Purchase/SkuDetails-Klassen
+```
+
+**7. Firebase scannen (wenn vorhanden)**
+```
+- Firebase SDK consumer-rules verifizieren
+- AppCheck Provider-Klassen
+- Crashlytics-Mapping
+```
+
+**8. ProGuard-Regeln schreiben**
+Alle gefundenen Risiken als `-keep`-Regeln in `proguard-rules.pro` eintragen.
+Jede Regel bekommt einen Kommentar WARUM sie da ist:
+```
+# ===== R8-Vorbereitungs-Scan vom [Datum] =====
+# Gefundene Risiken: [Anzahl]
+# JNI: [Liste]
+# Reflection: [Liste]
+# Serialisierung: [Liste]
+# Third-Party: [Liste]
+# ==============================================
+
+# Sherpa-ONNX: JNI-Klassen — R8 wuerde native Felder strippen
+-keep class com.k2fsa.sherpa.onnx.** { *; }
+```
+
+**9. Scan-Ergebnis dem Benutzer zeigen**
+```
+✅ R8-Vorbereitungs-Scan abgeschlossen:
+   - [N] JNI-Risiken gefunden und abgesichert
+   - [N] Reflection-Stellen abgesichert
+   - [N] Third-Party-Libraries geprueft
+   - [N] ProGuard-Regeln geschrieben
+   
+   Phase 2 ist damit abgeschlossen.
+   ➡️ Phase 3: R8 wird jetzt eingeschaltet und der Release-Build getestet.
+```
 
 ### Was Claude kommunizieren muss
 - Bei jedem Feature: "Phase 2 (Debug) — arbeite an Feature X"
 - Bei Version-Bumps: "Version hochgezaehlt auf v0.X.Y (Build N)"
-- Wenn der Benutzer Release/R8/Store erwaehnt ohne explizit Phase 2 zu beenden:
-  Kurz nachfragen: "Soll Phase 2 damit abgeschlossen sein?"
+- Wenn der Benutzer "R8", "Store" oder "Release" erwaehnt:
+  Nachfragen: "Soll Phase 2 damit abgeschlossen sein?"
+- Wenn Benutzer JA sagt: R8-Vorbereitungs-Scan starten (letzter Schritt Phase 2)
 
 ### Ausgangs-Kriterium
 - [ ] **Benutzer sagt explizit**: "Phase 2 ist fertig" / "wir koennen zu R8" / "Features sind komplett"
-- [ ] App laeuft stabil auf mindestens einem echten Geraet
+- [ ] **R8-Vorbereitungs-Scan durchgefuehrt** (PFLICHT — Phase 2 ist NICHT fertig ohne diesen Scan)
+- [ ] **ProGuard-Regeln geschrieben** fuer alle gefundenen Risiken
+- [ ] App laeuft stabil auf mindestens einem echten Geraet (Debug)
 - [ ] Keine bekannten Crashes oder schweren Bugs
 
 ### Was Claude NICHT tun darf
@@ -161,101 +274,29 @@ Erst dann beginnt der Uebergang zu Phase 3.
 
 ## Phase 3: R8-Haertung & Release-Build
 
-> **ACHTUNG: Dies ist die kritischste Phase. Hier ist bei BestJournal alles schiefgegangen.**
-> **Claude MUSS den Benutzer AUSFUEHRLICH informieren bevor diese Phase beginnt.**
+> **Phase 3 beginnt NACHDEM Phase 2 abgeschlossen ist — inklusive R8-Vorbereitungs-Scan.**
+> **Der Scan und die ProGuard-Regeln wurden bereits in Phase 2 geschrieben.**
+> **Phase 3 schaltet R8 EIN und testet ob die Vorbereitung funktioniert hat.**
 
 ### Eintritts-Ankuendigung (PFLICHT)
 
-Wenn der Benutzer bestaetigt dass Phase 2 abgeschlossen ist, MUSS Claude folgendes sagen:
-
 ```
-⚠️ Wir treten jetzt in Phase 3 ein: R8-Haertung & Release-Build.
+🔧 Phase 3: R8-Haertung & Release-Build
 
-Das bedeutet:
-- Ich werde jetzt die GESAMTE App-Struktur scannen
-- Dabei pruefe ich JEDE Library, JEDE JNI-Verbindung, JEDE Reflection-Nutzung
-- Fuer alles was R8 kaputt machen koennte, schreibe ich vorab ProGuard-Regeln
-- Erst DANACH machen wir den ersten Release-Build
-- Wenn der Release-Build crasht, debuggen wir das HIER — nicht spaeter
+Die R8-Vorbereitung aus Phase 2 ist abgeschlossen. Alle ProGuard-Regeln stehen.
+Jetzt schalten wir R8 ein und pruefen ob alles haelt.
 
-Phase 3 kann 1-3 Sessions dauern. Danach ist die App release-faehig.
-```
+Schritte:
+1. R8 einschalten (isMinifyEnabled = true)
+2. Release-Build erstellen
+3. Auf echtem Geraet testen — JEDEN Screen
+4. Bei Crash: fehlende Keep-Regel ergaenzen und erneut bauen
+5. Billing/Abos im Release-Build testen
 
-### Schritt 3a: R8-Vorbereitungs-Scan (VOR dem ersten Release-Build)
-
-Claude fuehrt einen VOLLSTAENDIGEN Scan durch:
-
-#### 1. JNI/Native Libraries pruefen
-```
-Grep nach: System.loadLibrary, extern, native, .so-Dateien
-→ Fuer jede gefundene: -keep class mit allen Feldern und Methoden
+Wenn alles stabil laeuft, ist die App release-faehig.
 ```
 
-#### 2. Reflection-Nutzung pruefen
-```
-Grep nach: Class.forName, .getDeclaredField, .getDeclaredMethod,
-           @SerializedName, @Json, @Keep, @Entity, @Dao
-→ Fuer jede gefundene: -keep-Regel oder @Keep-Annotation
-```
-
-#### 3. Serialisierung pruefen
-```
-Grep nach: Moshi, Gson, Kotlinx.Serialization, Retrofit-Interfaces
-→ Fuer jede Model-Klasse: -keep mit allen Feldern
-→ Fuer Retrofit-Interfaces: -keep interface
-```
-
-#### 4. Third-Party-Libraries pruefen
-```
-Jede Library in libs.versions.toml einzeln pruefen:
-- Hat die Library eigene ProGuard-Regeln? (consumer-rules.pro)
-- Braucht sie zusaetzliche -keep-Regeln?
-- Bekannte R8-Probleme? (GitHub Issues der Library pruefen)
-```
-
-#### 5. Android-Komponenten pruefen
-```
-Grep nach: BroadcastReceiver, ContentProvider, Service, Activity die
-           nicht im Manifest stehen oder dynamisch registriert werden
-→ Sicherstellen dass R8 sie nicht entfernt
-```
-
-#### 6. Billing/Payment pruefen (wenn vorhanden)
-```
-- Google Play Billing AIDL-Interfaces muessen erhalten bleiben
-- BillingClient Callback-Klassen muessen erhalten bleiben
-- Alle Purchase/SkuDetails-Klassen muessen erhalten bleiben
-```
-
-#### 7. Firebase pruefen (wenn vorhanden)
-```
-- Firebase SDK hat eigene consumer-rules — verifizieren dass sie greifen
-- AppCheck Provider-Klassen muessen erhalten bleiben
-- Crashlytics-Mapping-Upload konfigurieren
-```
-
-#### Scan-Ergebnis dokumentieren
-Das Ergebnis wird als Kommentar-Block in `proguard-rules.pro` geschrieben:
-```
-# ===== R8-Scan vom [Datum] =====
-# Gefundene Risiken: [Anzahl]
-# JNI: [Liste]
-# Reflection: [Liste]
-# Serialisierung: [Liste]
-# Third-Party: [Liste]
-# ================================
-```
-
-### Schritt 3b: ProGuard-Regeln schreiben
-
-Basierend auf dem Scan alle noeotigen `-keep`-Regeln schreiben.
-Jede Regel bekommt einen Kommentar WARUM sie da ist:
-```
-# Sherpa-ONNX: JNI-Klassen — R8 wuerde native Felder strippen
--keep class com.k2fsa.sherpa.onnx.** { *; }
-```
-
-### Schritt 3c: Erster Release-Build
+### Schritt 3a: R8 einschalten und Release-Build
 
 ```bash
 ./gradlew assembleRelease
