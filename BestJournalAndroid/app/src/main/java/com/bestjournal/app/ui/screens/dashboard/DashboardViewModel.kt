@@ -53,22 +53,20 @@ constructor(
         if (aiUsageTracker.shouldShowAiInfoBanner()) {
             _uiState.update { it.copy(showAiInfoBanner = true) }
         }
-        // Show loading if auto-update from JournalViewModel is still running
-        if (encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)) {
-            _uiState.update { it.copy(isLoading = true) }
-            viewModelScope.launch {
-                // Poll until the flag clears (max 30s)
-                repeat(30) {
-                    kotlinx.coroutines.delay(1_000)
-                    if (!encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)) {
-                        _uiState.update { it.copy(isLoading = false) }
-                        return@launch
-                    }
+        // Continuously poll the auto-update flag so the loading indicator
+        // appears even if the user navigates to the dashboard mid-update.
+        viewModelScope.launch {
+            while (true) {
+                val updating = encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
+                if (updating != _uiState.value.isLoading && !manualRefreshActive) {
+                    _uiState.update { it.copy(isLoading = updating) }
                 }
-                _uiState.update { it.copy(isLoading = false) }
+                kotlinx.coroutines.delay(500)
             }
         }
     }
+
+    private var manualRefreshActive = false
 
     fun selectCategory(index: Int) {
         _uiState.value = _uiState.value.copy(selectedCategoryIndex = index)
@@ -116,6 +114,7 @@ constructor(
 
     private fun performRefresh(modelName: String, remainingRefreshes: Int = -1) {
         viewModelScope.launch {
+            manualRefreshActive = true
             _uiState.value =
                 _uiState.value.copy(
                     isLoading = true,
@@ -134,6 +133,11 @@ constructor(
                             .apply()
                         _uiState.update { it.copy(manualRefreshesLeft = newRemaining) }
                     }
+                    encryptedPrefs
+                        .edit()
+                        .putLong(Constants.PREF_DASHBOARD_LAST_UPDATED, System.currentTimeMillis())
+                        .apply()
+                    manualRefreshActive = false
                     _uiState.value =
                         _uiState.value.copy(
                             isLoading = false,
@@ -143,6 +147,7 @@ constructor(
                 }
                 .onFailure { error ->
                     // Failed refresh does NOT count — user keeps their remaining refreshes
+                    manualRefreshActive = false
                     _uiState.value =
                         _uiState.value.copy(
                             isLoading = false,
@@ -170,5 +175,12 @@ constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    fun getLastUpdatedText(): String? {
+        val ts = encryptedPrefs.getLong(Constants.PREF_DASHBOARD_LAST_UPDATED, 0L)
+        if (ts == 0L) return null
+        val sdf = java.text.SimpleDateFormat("dd.MM. 'um' HH:mm", java.util.Locale.GERMAN)
+        return "Letzte Aktualisierung am ${sdf.format(java.util.Date(ts))}"
     }
 }

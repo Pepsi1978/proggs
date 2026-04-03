@@ -92,7 +92,10 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f),
+                    ) {
                         Text(
                             "Dashboard",
                             style = MaterialTheme.typography.headlineMedium,
@@ -100,6 +103,17 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         com.bestjournal.app.ui.components.SunMoonToggle()
+                        val lastUpdated =
+                            remember(uiState.isLoading) { viewModel.getLastUpdatedText() }
+                        if (lastUpdated != null) {
+                            Spacer(modifier = Modifier.weight(0.5f))
+                            Text(
+                                text = lastUpdated,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.weight(0.5f))
+                        }
                     }
                     Row {
                         IconButton(onClick = { showLegendDialog = true }) {
@@ -131,12 +145,14 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
             if (uiState.isLoading) {
                 item {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(contentAlignment = Alignment.Center) {
                         ShimmerLoadingEffect(height = 60.dp, cornerRadius = 16.dp)
                         Text(
                             "Einen Moment bitte \u2014 dein Dashboard wird gerade aktualisiert\u2026",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp),
                         )
                     }
                 }

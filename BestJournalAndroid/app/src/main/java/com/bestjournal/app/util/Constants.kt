@@ -28,6 +28,7 @@ object Constants {
     const val PREF_LONGITUDE = "location_longitude"
     const val PREF_BIOMETRIC_LOCK = "biometric_lock"
     const val PREF_DASHBOARD_UPDATING = "dashboard_updating"
+    const val PREF_DASHBOARD_LAST_UPDATED = "dashboard_last_updated"
 
     // Google OAuth
     const val GOOGLE_WEB_CLIENT_ID =

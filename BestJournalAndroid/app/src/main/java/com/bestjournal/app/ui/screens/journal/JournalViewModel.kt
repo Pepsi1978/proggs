@@ -351,6 +351,7 @@ constructor(
 
     private fun triggerDebouncedAnalysis() {
         val autoUpdate = encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true)
+        android.util.Log.d("DashboardAuto", "triggerDebouncedAnalysis: autoUpdate=$autoUpdate")
         if (!autoUpdate) return
 
         analysisDebounceJob?.cancel()
@@ -360,9 +361,17 @@ constructor(
             try {
                 val subscriptionState = billingManager.subscriptionState.value
                 val access = aiRateLimiter.checkDashboardAccess(subscriptionState)
+                android.util.Log.d(
+                    "DashboardAuto",
+                    "access=$access, subscription=$subscriptionState",
+                )
                 if (access is TieredAccessResult.Allowed) {
                     aiRateLimiter.recordDashboardRefresh()
                     analyzeEntropyUseCase(freshAnalysis = true, modelName = access.modelName)
+                    encryptedPrefs
+                        .edit()
+                        .putLong(Constants.PREF_DASHBOARD_LAST_UPDATED, System.currentTimeMillis())
+                        .apply()
                 }
             } finally {
                 encryptedPrefs.edit().putBoolean(Constants.PREF_DASHBOARD_UPDATING, false).apply()
