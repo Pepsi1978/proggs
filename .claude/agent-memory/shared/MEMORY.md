@@ -89,34 +89,48 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Betroffene Dateien:** ~/.claude/hooks/hyperagent-stop.sh, claude-code-setup/hooks/hyperagent-stop.sh
 **Status:** GEFIXT (2026-04-02)
 <!-- ARCHIV: safety-gate.sh blockierte rm -rf waehrend /self-improve Cache-Cleanup (2026-04-02 18:51) — erwartetes Verhalten -->
-### 2026-04-03 18:51 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-03 18:52 — Hook: session-guard.ps1 — Auto-Reparatur: settings.local.json defaultMode repariert (war: ); Projekt -Users-barwa settings.local.json erstellt; Projekt C--Users-barwa settings.local.json erstellt; Projekt C--Users-barwa--claude-double-shot-latte settings.local.json erstellt; Projekt C--Users-barwa--claude-mem-observer-sessions settings.local.json erstellt; allow-Liste aus settings.local.json entfernt — Status: AUTO-GEFIXT
+### 2026-04-03 — IQ-Score in session-scorer immer 0 — seit 24.03 ungefixt
+**Quelle:** Traumsession-Konsolidierung (evolution-analyst + session-scores.jsonl Analyse)
+**Symptom:** `iq_score` ist in ALLEN Session-Score-Eintraegen 0 (altes Format) oder schwankt unrealistisch (0, 14, 32, 89) im neuen Format
+**Ursache:** Die IQ-Score-Berechnung in session-scorer wurde nie korrekt implementiert oder der Berechnungs-Hook fehlt
+**Betroffene Dateien:** `~/.claude/hooks/session-scorer.ps1`, `~/.claude/hooks/session-scorer.sh`, `claude-code-setup/hooks/session-scorer.*`
+**Fix-Vorschlag:** IQ-Score-Logik im session-scorer pruefen — entweder korrekt implementieren oder Feld entfernen wenn es nicht berechenbar ist
+**Status:** OFFEN (seit 2026-03-24, Prioritaet HOCH — verhindert Meta-Intelligence-Messung)
+
+### 2026-04-03 — Meta-Intelligence Score = 0 seit 26.03 — Erholung nach hyperagent-fix pruefen
+**Quelle:** Traumsession-Konsolidierung (session-scores.jsonl Trend-Analyse)
+**Symptom:** meta_intelligence_score ist in allen Sessions nach 26.03 gleich 0
+**Ursache:** Wahrscheinlich Nachwirkung des hyperagent-stop.sh Bugs (exit 0 bei stale goal). Bug wurde am 02.04 gefixt, aber Scoring-Erholung nicht bestaetigt
+**Betroffene Dateien:** `~/.claude/hooks/hyperagent-stop.ps1/.sh`, session-scorer
+**Fix-Vorschlag:** In naechsten 3-5 Sessions beobachten ob meta_intelligence_score > 0 wird. Falls nicht: session-scorer Logik fuer meta_intelligence debuggen
+**Status:** BEOBACHTUNG (Fix deployed, Wirkung noch nicht bestaetigt)
+
+<!-- ARCHIV (2026-04-03): memory-watchdog Write-Back 3x nicht erfolgt + session-guard Auto-Reparatur settings.local.json — beides einmalige Events, korrekt AUTO-LOGGED/AUTO-GEFIXT -->
 ---
 
 ## Systemzustand (aktuell)
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
 
-**Stand:** 2026-04-02 (aktualisiert durch /self-improve Standard)
+**Stand:** 2026-04-03 (aktualisiert durch Traumsession-Konsolidierung)
 
-- **Plattform:** Windows 11 Home 10.0.26200 (x64) + macOS (Apple Silicon), Claude Code v2.1.83 (macOS, Update auf v2.1.90 verfuegbar), Opus 4.6 (1M context)
+- **Plattform:** Windows 11 Home 10.0.26200 (x64) + macOS (Apple Silicon), Claude Code v2.1.91 (Windows), v2.1.83 (macOS, Update verfuegbar), Opus 4.6 (1M context)
 - **Sprachen:** Swift 6.3, C#, TypeScript, Rust 1.94.1, Go 1.26.1, Kotlin 2.3.20, Java OpenJDK 17.0.18, Python 3.14.3
 - **Node.js:** v25.8.2 (macOS), npm 11.11.1, Bun 1.3.11, Deno vorhanden (macOS)
 - **Semantic Search:** Aktiv, Ollama 0.19.0 laeuft
 - **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
-- **Agents:** 21 aktiv (15 Opus + 6 Sonnet), alle korrekt konfiguriert
-- **Hooks:** 9 SessionStart (inkl. invariant-check), 22+ Hook-Events gesamt. **Fix 2026-04-02:** hyperagent-stop.sh Bug gefixt (stale-goal exit → goal-clear)
+- **Agents:** 26 aktiv (5 neu seit 31.03: chaos-tester, healer, hyperagent, mcts-planner, superintelligenz)
+- **Hooks:** 39 PS1, 42 SH, 9 SessionStart. **Fix 2026-04-02:** hyperagent-stop.sh Bug gefixt
 - **Plugins:** 92 Eintraege, 87 aktiv (5 deaktiviert: asana, serena, slack, stripe, supabase)
+- **Rules:** 49 in ~/.claude/rules/
 - **Whiteboard-Anbindung:** Alle Hooks nutzen whiteboard-insert.ps1/.sh (sektionsbasiert)
-- **Session-Scorer:** v3 — schreibt NUR in session-scores.jsonl
+- **Session-Scorer:** v3 — schreibt NUR in session-scores.jsonl. **BUG:** IQ-Score immer 0 oder unrealistisch
 - **Self-Improve Skill:** v5.19
 - **Git:** v2.53.0, Git Credential Manager aktiv
 - **Sicherheit:** Prompt-Injection-Defender aktiv, cargo-audit 0.22.1 OK, Axios Supply-Chain SAUBER (geprueft 2026-04-02)
-- **Evolution-Analyst (2026-04-02):** Quality 8.66 (PLATEAU), IQ 89.5 (STEIGEND), Meta-Intelligence 10% (KOLLAPS → Bug gefixt), Corrections fast null
+- **Traumsession-Analyse (2026-04-03):** Quality 8.7 (PLATEAU), Meta-Intelligence 0 (ALARM — hyperagent-fix wirkt noch nicht), IQ-Score buggy (OFFEN)
 - **Speicherplatz (macOS):** 16 GB frei (42%) — bereinigt, stabil
 - **Pending Shell-Updates (macOS):** Claude Code CLI v2.1.90, node, deno, powershell, uv, xz, harfbuzz, util-linux, codex
-- **Neuer Hook (2026-03-31):** invariant-check.ps1/.sh — Proaktive System-Invarianten-Pruefung bei SessionStart (Cursor-Pattern)
-- **Speicherplatz (macOS):** 22 GB frei (36% belegt) — reichlich Platz
 - **Cross-Tool:** Codex + Gemini Delta Bridges aktiv, 8 Intelligenz-Dimensionen im Whiteboard portiert
 - **macOS-Update (2026-03-31):** Claude Code v2.1.83, Node v25.8.1, npm 11.11.1, Bun 1.3.11, Go 1.26.1, Swift 6.3, Rust/Cargo 1.94.0 (→1.94.1 verfuegbar), 25 Homebrew-Pakete veraltet
 - **macOS Settings-Fix (2026-03-31):** allow-Liste entfernt (war Whitelist-Blocker bei bypassPermissions), 2 fehlende Hooks hinzugefuegt (mcp-auth-check, doctor-lite), tote Plugins deaktiviert (boostvolt, FlineDev)
@@ -146,7 +160,7 @@ _Noch keine Eintraege._
 <!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
-- **[2026-04-03 18:53] Code-Suche Index:** 315 Dateien, 133 Chunks indexiert.
+- **[2026-04-03 19:37] Code-Suche Index:** ? Dateien, ? Chunks indexiert.
 ## UI/UX-Patterns
 <!-- Writer: ui-polisher Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
@@ -161,6 +175,7 @@ _Noch keine Eintraege._
 | 2026-03-31 | Android-Ordner-Umbenennung | gradlew --stop + adb kill-server + cmd.exe ren (nicht git mv) | Hoch |
 | 2026-03-31 | Splash-Screen-Animation | Compose Keyframes + rememberUpdatedState fuer Audio-Sync | Hoch |
 | 2026-03-31 | Iterative Internet-Recherche | 3 Wellen: Breit → Tief → Kreativ, max 50 Ergebnisse/Researcher | Hoch |
+| 2026-04-03 | Memory-Konsolidierung (Traumsession) | 3 Agents parallel (episodic + claude-mem + scores) → Whiteboard-Update → Memory-Cleanup | Hoch |
 
 ## Chaos-Test Ergebnisse
 <!-- chaos-tester Agent schreibt hierher -->
@@ -293,6 +308,9 @@ _Noch keine Eintraege._
   **Ergebnis:** Alle zukuenftigen Sessions (auch lange!) bekommen metacognitiven Prompt.
   Die Fehlerklasse "stille Hook-Deaktivierung durch Timeout-Bedingungen" ist identifiziert.
   **Kette:** Trend-Analyse → Daten-Korrelation → Code-Inspektion → Root Cause → Bug-Fix → Fehlerklasse eliminiert.
+- **[2026-04-03] intelligence-checker**: [WARNING] Session 2363a77c (21 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-03] self-observation-checker**: [WARNING] Session 2363a77c (21 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-03] intelligence-checker**: [WARNING] Session 2363a77c (36 Turns) hatte keinen Intelligenz-Vorschlag
 ---
 
 ## Regeln & Konventionen

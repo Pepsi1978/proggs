@@ -112,7 +112,10 @@ verstehen und uebernehmen koennen. Voller Kontext, exakte Fehlermeldungen, Code-
 - NIEMALS Shell-Updates waehrend laufender Arbeit oder mitten in einer Aufgabe ausfuehren.
 - VOR Shell-Updates: Benutzer WARNEN und um explizite Bestaetigung bitten.
 - Reihenfolge: Alle Aufgaben erledigen → Ergebnisse committen/pushen → Benutzer warnen → Bestaetigung abwarten → Shell-Updates als letzten Schritt.
-- **Claude Code CLI Update — WICHTIG:** Claude Code ist als **Standalone-Binary** installiert (`~/.local/bin/claude`), NICHT als npm-Paket. Updates IMMER ueber `claude update`, NIEMALS ueber `npm update -g @anthropic-ai/claude-code`. Falls eine npm-Doppelung entsteht (`/opt/homebrew/bin/claude`): Sofort bereinigen mit `npm -g uninstall @anthropic-ai/claude-code`.
+- **Claude Code CLI Update — WICHTIG:**
+  - **macOS**: Claude Code ist als **Standalone-Binary** installiert (`~/.local/bin/claude`), NICHT als npm-Paket. Updates ueber `claude update`. Falls eine npm-Doppelung entsteht (`/opt/homebrew/bin/claude`): Sofort bereinigen mit `npm -g uninstall @anthropic-ai/claude-code`.
+  - **Windows**: Claude Code ist als **npm-Paket** installiert (`%APPDATA%\npm\claude`). Updates ueber `npm update -g @anthropic-ai/claude-code` oder `claude update`. Das ist die offizielle Installationsmethode auf Windows.
+  - **NIEMALS** Git-Bash-Pfade (`/c/Users/...`) an Python weitergeben — Python versteht nur native Windows-Pfade. Immer `os.path.expanduser()` verwenden (siehe `~/.claude/rules/python-paths-windows.md`).
 - **NACH Shell-Updates: PATH-Verifizierung ist PFLICHT** — Shell-Updates koennen den PATH auf BEIDEN Plattformen zerstoeren.
   - **Automatischer Check (bevorzugt):**
     ```bash

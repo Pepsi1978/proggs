@@ -48,6 +48,16 @@ TRUSTED_PATH_PREFIXES = [
     "package.json",
     "tsconfig.json",
     ".mcp.json",
+    # Official npm packages (global installs) — code from trusted publishers,
+    # not user-supplied content. These naturally contain keywords like
+    # "clear context", "reset memory" etc. as part of legitimate functionality.
+    "node_modules/@anthropic-ai/",
+    "node_modules/@anthropic/",
+    "node_modules/@openai/",
+    "node_modules/@google/",
+    "node_modules/firebase-tools/",
+    "node_modules/semgrep/",
+    "node_modules/typescript/",
 ]
 
 TRUSTED_PATH_PATTERNS = [
@@ -65,6 +75,11 @@ TRUSTED_PATH_PATTERNS = [
     re.compile(r"memory[/\\].*\.md$", re.IGNORECASE),
     # SKILL.md files
     re.compile(r"SKILL\.md$", re.IGNORECASE),
+    # Global npm packages — official code from package registries.
+    # Matches both Unix (/node_modules/@scope/) and Windows (\node_modules\@scope\)
+    # paths, including Git Bash format (/c/Users/.../AppData/Roaming/npm/node_modules/)
+    re.compile(r"node_modules[/\\]@(anthropic|openai|google|biomejs|steipete)[/\\]", re.IGNORECASE),
+    re.compile(r"[/\\]npm[/\\]node_modules[/\\]", re.IGNORECASE),
 ]
 
 
