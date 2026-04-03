@@ -78,6 +78,21 @@ check_cmd "rustc" "Rust Compiler" "rustup.rs"
 check_cmd "cargo" "Cargo" "rustup.rs"
 check_path_dir "$HOME/.cargo/bin" "Cargo bin"
 
+# --- Dev-Analyse-Tools (Tier 1+2, installiert 2026-04-04) ---
+check_cmd "bat" "bat (cat mit Highlighting)" "brew install bat / cargo install bat"
+check_cmd "fd" "fd (schnelles find)" "brew install fd / cargo install fd-find"
+check_cmd "fzf" "fzf (Fuzzy-Finder)" "brew install fzf"
+check_cmd "delta" "delta (Git-Diff-Viewer)" "brew install git-delta"
+check_cmd "tokei" "tokei (Code-Statistiken)" "brew install tokei / cargo install tokei"
+check_cmd "shellcheck" "shellcheck (Shell-Linter)" "brew install shellcheck"
+check_cmd "hyperfine" "hyperfine (Benchmarking)" "brew install hyperfine / cargo install hyperfine"
+check_cmd "dust" "dust (Disk-Usage)" "brew install dust / cargo install du-dust"
+check_cmd "duf" "duf (Disk-Free)" "brew install duf"
+check_cmd "lazygit" "lazygit (Git-TUI)" "brew install lazygit"
+check_cmd "shfmt" "shfmt (Shell-Formatter)" "brew install shfmt / go install mvdan.cc/sh/v3/cmd/shfmt@latest"
+check_cmd "trivy" "trivy (Security-Scanner)" "brew install trivy"
+check_cmd "glow" "glow (Markdown-Renderer)" "brew install glow"
+
 # --- Go ---
 check_cmd "go" "Go" "brew install go"
 check_path_dir "$HOME/go/bin" "Go bin (GOPATH)"
@@ -115,40 +130,6 @@ if [ "$(uname -s)" = "Darwin" ]; then
     # Homebrew Pfade
     check_path_dir "/opt/homebrew/bin" "Homebrew (Apple Silicon)"
     check_path_dir "/usr/local/bin" "Homebrew (Intel)"
-fi
-
-# ===========================================================
-# ORPHANED PYTHON INSTALLATIONS (Poka-Yoke)
-# Root Cause: When switching Python managers (official installer -> uv/pyenv/brew),
-# the old installation may be partially removed, leaving pip without python.
-# ===========================================================
-orphaned_python=()
-
-# Check PATH entries with pip but no python
-IFS=':' read -ra path_dirs <<< "$PATH"
-for dir in "${path_dirs[@]}"; do
-    if [ -f "$dir/pip" ] || [ -f "$dir/pip3" ]; then
-        parent_dir=$(dirname "$dir")
-        if [ ! -f "$parent_dir/python" ] && [ ! -f "$parent_dir/python3" ] && [ ! -f "$dir/python" ] && [ ! -f "$dir/python3" ]; then
-            orphaned_python+=("ORPHANED pip: $dir has pip but no python in $parent_dir")
-        fi
-    fi
-done
-
-# Check PATH entries pointing to non-existent directories (tool installations only)
-ghost_dirs=()
-for dir in "${path_dirs[@]}"; do
-    if [ -n "$dir" ] && [ ! -d "$dir" ]; then
-        case "$dir" in
-            *Python*|*python*|*node*|*npm*|*cargo*|*rustup*|*Go*|*go*|*gradle*|*kotlin*|*Android*|*bun*)
-                ghost_dirs+=("GHOST-PATH: $dir does not exist")
-                ;;
-        esac
-    fi
-done
-
-if [ ${#orphaned_python[@]} -gt 0 ] || [ ${#ghost_dirs[@]} -gt 0 ]; then
-    warnings+=("${orphaned_python[@]}" "${ghost_dirs[@]}")
 fi
 
 # ===========================================================

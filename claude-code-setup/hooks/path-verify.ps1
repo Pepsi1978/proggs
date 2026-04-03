@@ -55,6 +55,21 @@ $null = Test-CommandExists "go" "Go" "winget install GoLang.Go"
 $null = Test-CommandExists "claude" "Claude Code CLI" "npm install -g @anthropic-ai/claude-code"
 $null = Test-CommandExists "bun" "Bun" "npm install -g bun"
 
+# --- Dev-Analyse-Tools (Tier 1+2, installiert 2026-04-04) ---
+$null = Test-CommandExists "bat" "bat (cat mit Highlighting)" "winget install sharkdp.bat"
+$null = Test-CommandExists "fd" "fd (schnelles find)" "winget install sharkdp.fd"
+$null = Test-CommandExists "fzf" "fzf (Fuzzy-Finder)" "winget install junegunn.fzf"
+$null = Test-CommandExists "delta" "delta (Git-Diff-Viewer)" "winget install dandavison.delta"
+$null = Test-CommandExists "tokei" "tokei (Code-Statistiken)" "cargo install tokei"
+$null = Test-CommandExists "shellcheck" "shellcheck (Shell-Linter)" "winget install koalaman.shellcheck"
+$null = Test-CommandExists "hyperfine" "hyperfine (Benchmarking)" "cargo install hyperfine"
+$null = Test-CommandExists "dust" "dust (Disk-Usage)" "cargo install du-dust"
+$null = Test-CommandExists "duf" "duf (Disk-Free)" "winget install muesli.duf"
+$null = Test-CommandExists "lazygit" "lazygit (Git-TUI)" "winget install JesseDuffield.lazygit"
+$null = Test-CommandExists "shfmt" "shfmt (Shell-Formatter)" "go install mvdan.cc/sh/v3/cmd/shfmt@latest"
+$null = Test-CommandExists "trivy" "trivy (Security-Scanner)" "winget install AquaSecurity.Trivy"
+$null = Test-CommandExists "glow" "glow (Markdown-Renderer)" "winget install charmbracelet.glow"
+
 # --- Windows-spezifische Pfade (REFERENZLISTE aus CLAUDE.md) ---
 $requiredPaths = @(
     @{ Path = "$env:USERPROFILE\bin";                                    Desc = "Python/python3 Wrapper" },
