@@ -95,9 +95,65 @@ Nie nur EINE Absicherung. Immer mindestens 2-3 Schichten:
 - Schicht 3: Selbstheilend (Fix automatisch wiederherstellen nach Updates)
 - Schicht 4: Upstream (Bug beim Verursacher melden fuer permanenten Fix)
 
-### 5. Memory speichern
+### 5. Poka-Yoke: Fehler durch Design unmoeglich machen
+
+> **Poka-Yoke** (jap. ポカヨケ, "Fehlervermeidung") ist ein Prinzip aus dem Toyota-Produktionssystem:
+> Gestalte den Prozess so, dass Fehler gar nicht erst entstehen koennen — statt sie nachtraeglich
+> zu finden und zu reparieren. In dieser Programmierumgebung bedeutet das:
+
+**Kernprinzip**: Wenn ein Fehler passiert ist, frage nicht nur "Wie fixe ich das?" sondern:
+**"Wie gestalte ich den Prozess so um, dass dieser Fehler UNMOEGLICH wird?"**
+
+#### Die 3 Poka-Yoke-Stufen (von schwach zu stark)
+
+| Stufe | Name | Beschreibung | Beispiel |
+|-------|------|-------------|----------|
+| **1** | **Warnung** | System warnt wenn ein Fehler droht, laesst ihn aber zu | `hook-exit0-guard` warnt bei fehlendem `exit 0` im Commit |
+| **2** | **Erzwingung** | System verhindert den Fehler aktiv | Pre-Push-Hook rejected Push ohne vorheriges `fetch+rebase` |
+| **3** | **Eliminierung** | Fehler kann konzeptionell nicht mehr auftreten | Hook-Template hat `exit 0` eingebaut — man muesste es aktiv ENTFERNEN um den Fehler zu machen |
+
+**Ziel**: So viele Fehlerquellen wie moeglich auf **Stufe 3 (Eliminierung)** bringen.
+Stufe 1 (Warnung) ist besser als nichts, aber Stufe 3 ist das Ideal.
+
+#### Wann Poka-Yoke anwenden (PFLICHT)
+
+Bei JEDEM Bugfix pruefen:
+1. **Kann ich den Fehler durch ein Template eliminieren?** (Stufe 3)
+   - Beispiel: Hook-Template mit eingebautem `exit 0` → Fehler kann nicht mehr passieren
+   - Beispiel: JSON-Validierung direkt im Write-Workflow → kaputtes JSON unmoeglich
+2. **Kann ich den Fehler durch einen Guard erzwingen?** (Stufe 2)
+   - Beispiel: Pre-Push-Hook erzwingt `fetch+rebase` → Push-Rejection unmoeglich
+   - Beispiel: Config-Guard blockiert Aenderungen an `defaultMode` → Permission-Reset unmoeglich
+3. **Kann ich zumindest warnen?** (Stufe 1)
+   - Beispiel: Disk-Guard warnt bei <5GB Speicher → Speicherueberlauf frueh erkannt
+   - Beispiel: Session-Guard warnt bei falscher Permission → schnelle Korrektur
+
+#### Bestehende Poka-Yoke-Mechanismen im System
+
+| Mechanismus | Stufe | Was er verhindert |
+|-------------|-------|------------------|
+| `hook-forge` Skill (Templates) | 3 — Eliminierung | Hooks ohne exit 0, ohne try/catch, ohne Logging |
+| `hook-exit0-guard` (Pre-Commit) | 1 — Warnung | Vergessenes exit 0 bei Hook-Commits |
+| `poka-yoke-git-push` (Pre-Push) | 2 — Erzwingung | Push ohne fetch+rebase |
+| `config-guard` (PostToolUse) | 2 — Erzwingung | Aenderungen an bypassPermissions |
+| `session-guard` (SessionStart) | 3 — Eliminierung | Falsche Permission-Einstellungen (repariert automatisch) |
+| `safety-gate` (PreToolUse) | 2 — Erzwingung | Destruktive Befehle (rm -rf, DROP TABLE) |
+| `redact-secrets` (PreToolUse) | 2 — Erzwingung | Secrets in Tool-Ausgaben |
+| Hook-Templates (ps1/sh) | 3 — Eliminierung | Fehlerhafte Hook-Grundstruktur |
+| Python-Batch statt Agents (Regel) | 3 — Eliminierung | Inkonsistente Multi-Datei-Edits |
+| 3-Dateien-Regel (Settings) | 1 — Warnung | Vergessene Settings-Synchronisation |
+
+#### Poka-Yoke bei neuen Features (nicht nur bei Bugfixes)
+
+Auch bei NEUEN Features pruefen: "Welche Fehler koennte ein Benutzer oder Agent machen?"
+und praventive Mechanismen einbauen BEVOR der erste Fehler passiert. Das ist der Unterschied
+zwischen reaktivem Bugfixing (Fehler passiert → Fix) und proaktivem Poka-Yoke (Fehler kann
+gar nicht erst passieren).
+
+### 6. Memory speichern
 - Feedback-Memory mit: Was war der Fehler, was war die Root Cause, was ist der Fix
 - Muster-Erkennung: "Wenn ich in Zukunft [Muster X] sehe, muss ich [Check Y] machen"
+- **Poka-Yoke-Check**: Wurde der Prozess so umgestaltet dass der Fehler UNMOEGLICH wird? (Stufe 3 anstreben)
 
 ## Beispiel: claude-mem Hook-Fehler (2026-03-22)
 
