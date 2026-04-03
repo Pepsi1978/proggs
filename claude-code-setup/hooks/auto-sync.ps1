@@ -189,8 +189,16 @@ if (Test-Path $hooksDir) {
     }
 
     # Copy hook subdirectories (e.g. prompt-injection-defender/)
+    # Guard: skip nested duplicates where a subdir has the same name as its parent
+    # (prevents recursive nesting like defender/defender/defender/...)
     $hookSubdirs = @(Get-ChildItem $hooksDir -Directory -ErrorAction SilentlyContinue)
     foreach ($subdir in $hookSubdirs) {
+        # Remove self-nested duplicates from SOURCE before copying
+        $nestedSelf = Join-Path $subdir.FullName $subdir.Name
+        if (Test-Path $nestedSelf) {
+            Remove-Item $nestedSelf -Recurse -Force -ErrorAction SilentlyContinue
+            Hook-Log "Removed self-nested duplicate: $nestedSelf"
+        }
         Copy-Item $subdir.FullName $destHooks -Recurse -Force
     }
 
