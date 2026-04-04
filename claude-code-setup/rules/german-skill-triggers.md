@@ -195,28 +195,7 @@ gestartet und der Agent-Prompt wird manuell im `prompt`-Parameter uebergeben. NI
 
 ---
 
-## 16. Browser-Automatisierung (browser-use CLI)
-
-**KEIN MCP-Server — direkte CLI-Aufrufe per Bash (spart Token).**
-Vollstaendige Regel: `~/.claude/rules/browser-use-cli.md`
-
-| Deutsche Phrase | Aktion | Was passiert |
-|----------------|--------|-------------|
-| "oeffne im Browser", "geh auf die Seite", "oeffne die URL" | `browser-use --headed --profile open URL` | Oeffnet Chrome mit echtem Profil (alle Logins aktiv) |
-| "browser use", "Browser Use", "mit dem Browser" | Browser-Use CLI aktivieren | Sichtbarer Chrome mit Profil |
-| "pruefe das auf der Webseite", "ueberprüf das selber" | open + state + screenshot | Seite oeffnen, Zustand lesen, Screenshot |
-| "trag das auf Firebase ein", "gib das dort ein" | open + navigate + input | Auf Seite navigieren und Wert eintragen |
-| "klick da drauf", "klick auf den Link" | `browser-use click [INDEX]` | Element anklicken (Index aus state) |
-| "was steht auf der Seite?", "schau dir die Seite an" | `browser-use --json state` | Seiteninhalt und klickbare Elemente auslesen |
-| "mach einen Screenshot" | `browser-use screenshot` | Screenshot der aktuellen Seite |
-| "schliess den Browser" | `browser-use close` | Browser sauber beenden |
-| "oeffne meinen Chrome", "mein Chrome" | `browser-use --headed --profile open` | Chrome mit Profil oeffnen |
-
-**PFLICHT**: Jeder Aufruf braucht `PYTHONIOENCODING=utf-8` Prefix (Windows-Encoding-Fix).
-**PFLICHT**: `--headed` immer setzen (Sichtbarkeitsregel). `--profile` immer wenn Login noetig.
-**ACHTUNG**: Chrome muss geschlossen sein fuer `--profile`, sonst Profil-Lock-Fehler.
-
-## 17. NotebookLM CLI (Google NotebookLM Automatisierung)
+## 16. NotebookLM CLI (Google NotebookLM Automatisierung)
 
 **KEIN MCP-Server — direkte CLI-Aufrufe per Bash (spart Token).**
 Vollstaendige Regel: `~/.claude/rules/notebooklm-cli.md`
@@ -400,8 +379,6 @@ Erst `shfmt -w` (formatieren), dann `shellcheck` (pruefen).
 | "Brainstorm" | `superpowers:brainstorming` |
 | "Reflektion" / "Reflect" | `claude-reflect:reflect` (Lernen) oder `reflexion:reflect` (Bewertung) — nachfragen! |
 | "Code Rabbit" | `coderabbit:review` |
-| "Browser Use" / "Browser Juice" / "Browser News" | **browser-use** CLI |
-| "brause use" / "Brause Juse" | **browser-use** CLI |
 | "Notebook LM" / "Notebook Ellem" / "Notebook Ellen" | **notebooklm** CLI |
 | "Not Book LM" / "Notbuch LM" | **notebooklm** CLI |
 | "Deep Dive" / "Podcast" (im Kontext von NotebookLM) | `notebooklm generate audio` |
