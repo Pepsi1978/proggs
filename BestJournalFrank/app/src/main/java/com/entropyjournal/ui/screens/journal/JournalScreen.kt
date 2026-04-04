@@ -93,8 +93,14 @@ fun JournalScreen(
     viewModel: JournalViewModel,
     onEntryClick: (Long) -> Unit
 ) {
-    val entries by viewModel.entries.collectAsState()
+    val allEntries by viewModel.entries.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val searchResults by viewModel.searchEntries(uiState.searchQuery).collectAsState(initial = emptyList())
+    val entries = if (uiState.isSearchActive && uiState.searchQuery.isNotBlank()) {
+        searchResults
+    } else {
+        allEntries
+    }
     val amplitude by viewModel.amplitude.collectAsState()
     val duration by viewModel.durationSeconds.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
