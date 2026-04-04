@@ -72,6 +72,14 @@ Trajectories werden periodisch (via /self-improve oder manuell) auf 3 Muster-Typ
 2. **Wiederkehrende Fehler** (gleicher Fehlertyp in 2+ Sessions) → ALARM, Poka-Yoke-Regel noetig
 3. **Ineffiziente Ablaeufe** (15 Tool-Calls wo 5 gereicht haetten) → Workflow-Optimierung vorschlagen
 
+## Zusammenspiel mit anderen Systemen
+
+- **ACE-Curator** verbessert BESTEHENDE Regeln (aus Session-Scores, Bug-Cases, Feedback)
+- **Trajectory-Analyzer** entdeckt NEUE Regeln und Agents (aus Tool-Call-Sequenzen)
+- ACE ist reaktiv (aus Fehlern lernen), AutoRefine ist proaktiv (aus Erfolgen lernen)
+- Sicherheit: Nur-Lese-Analyse, Haeufigkeits-Filter (min. 2x), Benutzer-Bestaetigung PFLICHT,
+  ACE-Sperrliste wird respektiert, JSONL-Format (korrupte Zeile ≠ Datenverlust)
+
 ## Groessenlimits (durch /self-improve geprueft)
 
 | Speicher | Max. Eintraege | Pruning |

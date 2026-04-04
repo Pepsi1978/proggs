@@ -92,10 +92,9 @@ Das ist noch im gruenen Bereich, aber nahe am Warnwert.
 | Schicht | Mechanismus | Was es schuetzt |
 |---------|-------------|----------------|
 | 1 | ACE-PROTECTED-ZONE Marker | Kern-Inhalte koennen nicht automatisch geaendert werden |
-| 2 | Git-Versionierung | CLAUDE.md im Repo, jederzeit wiederherstellbar |
-| 3 | Git-Versionierung | Jede Aenderung ist rueckgaengig machbar |
-| 4 | claude-code-setup/ Backup | Rules und Agents werden ins Repo kopiert |
-| 5 | Diese Regel | Claude weiss WIE die Architektur funktioniert |
+| 2 | Git-Versionierung | CLAUDE.md im Repo, jede Aenderung rueckgaengig machbar |
+| 3 | claude-code-setup/ Backup | Rules und Agents werden ins Repo kopiert |
+| 4 | Diese Regel (on-demand) | Claude weiss WIE die Architektur funktioniert |
 
 ## Was NIEMALS passieren darf
 
