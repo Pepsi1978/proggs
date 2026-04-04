@@ -136,7 +136,7 @@ class JournalViewModel @Inject constructor(
                 .onSuccess { text ->
                     _uiState.value = _uiState.value.copy(
                         recordingState = RecordingState.PREVIEW,
-                        rawText = text,
+                        rawText = text.trim(),
                         showPreviewDialog = true
                     )
                     audioFile.delete()
@@ -266,10 +266,18 @@ class JournalViewModel @Inject constructor(
     }
 
     private fun triggerDebouncedAnalysis() {
+        val autoUpdate = encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true)
+        if (!autoUpdate) return
+
         analysisDebounceJob?.cancel()
         analysisDebounceJob = viewModelScope.launch {
-            delay(60_000)
-            analyzeEntropyUseCase()
+            encryptedPrefs.edit().putBoolean(Constants.PREF_DASHBOARD_UPDATING, true).apply()
+            try {
+                delay(3_000)
+                analyzeEntropyUseCase(freshAnalysis = true)
+            } finally {
+                encryptedPrefs.edit().putBoolean(Constants.PREF_DASHBOARD_UPDATING, false).apply()
+            }
         }
     }
 }

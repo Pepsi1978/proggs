@@ -36,12 +36,28 @@ class DashboardViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState
 
+    private var manualRefreshActive = false
+
+    init {
+        // Poll for background dashboard updates triggered by JournalViewModel
+        viewModelScope.launch {
+            while (true) {
+                val updating = encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
+                if (updating != _uiState.value.isLoading && !manualRefreshActive) {
+                    _uiState.value = _uiState.value.copy(isLoading = updating)
+                }
+                kotlinx.coroutines.delay(500)
+            }
+        }
+    }
+
     fun selectCategory(index: Int) {
         _uiState.value = _uiState.value.copy(selectedCategoryIndex = index)
     }
 
     fun refreshDashboard() {
         viewModelScope.launch {
+            manualRefreshActive = true
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             analyzeEntropyUseCase(freshAnalysis = true)
                 .onSuccess {
@@ -60,6 +76,7 @@ class DashboardViewModel @Inject constructor(
                         errorMessage = error.message ?: "Analyse fehlgeschlagen"
                     )
                 }
+            manualRefreshActive = false
         }
     }
 

@@ -129,9 +129,29 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
             if (uiState.isLoading) {
                 item {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ShimmerLoadingEffect(height = 60.dp, cornerRadius = 16.dp)
-                        Text("Dashboard wird aktualisiert...", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        ShimmerLoadingEffect(height = 80.dp, cornerRadius = 16.dp)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        ) {
+                            Text(
+                                "Bitte warten",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "Dashboard wird aktualisiert",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 }
             }
@@ -497,18 +517,11 @@ private fun TopActionsBlock(actions: List<TopAction>) {
                     style = MaterialTheme.typography.headlineMedium,
                 )
                 Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(
-                        "Top 5 Massnahmen",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = NeonAmber,
-                    )
-                    Text(
-                        "Staerkste Entropie-Senkung",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(
+                    "Top 5 Massnahmen",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = NeonAmber,
+                )
             }
             Spacer(modifier = Modifier.height(16.dp))
             actions.forEachIndexed { index, action ->
@@ -548,7 +561,7 @@ private fun TopActionsBlock(actions: List<TopAction>) {
                             text = action.description,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 3,
+                            maxLines = 4,
                         )
                     }
                 }

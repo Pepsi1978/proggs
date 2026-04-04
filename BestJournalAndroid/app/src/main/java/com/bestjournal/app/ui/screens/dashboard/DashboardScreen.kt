@@ -748,18 +748,11 @@ private fun TopActionsBlock(actions: List<TopAction>) {
                     style = MaterialTheme.typography.headlineMedium,
                 )
                 Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(
-                        "Top 5 Massnahmen",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = NeonAmber,
-                    )
-                    Text(
-                        "Staerkste Entropie-Senkung",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(
+                    "Top 5 Massnahmen",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = NeonAmber,
+                )
             }
             Spacer(modifier = Modifier.height(16.dp))
             actions.forEachIndexed { index, action ->
@@ -767,7 +760,6 @@ private fun TopActionsBlock(actions: List<TopAction>) {
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
-                    // Large bold number
                     Box(
                         modifier = Modifier
                             .size(32.dp)
@@ -800,7 +792,7 @@ private fun TopActionsBlock(actions: List<TopAction>) {
                             text = action.description,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 3,
+                            maxLines = 4,
                         )
                     }
                 }

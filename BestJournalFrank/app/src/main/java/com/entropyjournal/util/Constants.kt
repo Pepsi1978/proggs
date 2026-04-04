@@ -10,7 +10,7 @@ object Constants {
     const val GROQ_LANGUAGE = "de"
 
     // Audio recording
-    const val DEFAULT_MAX_RECORDING_DURATION_MINUTES = 5
+    const val DEFAULT_MAX_RECORDING_DURATION_MINUTES = 15
     const val AUDIO_SAMPLE_RATE = 16000
     const val AUDIO_CHANNELS = 1
 
@@ -37,6 +37,7 @@ object Constants {
     const val PREF_LONGITUDE = "location_longitude"
     const val PREF_BIOMETRIC_LOCK = "biometric_lock"
     const val PREF_DASHBOARD_LAST_UPDATED = "dashboard_last_updated"
+    const val PREF_DASHBOARD_UPDATING = "dashboard_updating"
 
     // Google OAuth
     const val GOOGLE_WEB_CLIENT_ID = "674560807048-l6ktqsucjr4ld91srdc6assgfiks19mh.apps.googleusercontent.com"

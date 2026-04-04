@@ -177,7 +177,7 @@ constructor(
                     _uiState.value =
                         _uiState.value.copy(
                             recordingState = RecordingState.PREVIEW,
-                            rawText = text,
+                            rawText = text.trim(),
                             showPreviewDialog = true,
                         )
                     audioFile.delete()
