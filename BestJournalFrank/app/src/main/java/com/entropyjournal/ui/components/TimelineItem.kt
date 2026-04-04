@@ -24,8 +24,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.entropyjournal.domain.model.JournalEntry
 import com.entropyjournal.ui.theme.CosmosLayer
@@ -45,8 +50,10 @@ fun TimelineItem(
     entry: JournalEntry,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    position: TimelinePosition = TimelinePosition.ONLY
+    position: TimelinePosition = TimelinePosition.ONLY,
+    searchQuery: String = ""
 ) {
+    val highlightColor = if (isSystemInDarkTheme()) Color(0x44FFFFFF) else Color(0xFFFFEB3B)
     val lineColor = MaterialTheme.colorScheme.outlineVariant
     val dotColor = when (entry.moodTag) {
         "positiv" -> NeonEmerald
@@ -101,7 +108,7 @@ fun TimelineItem(
             Column {
                 if (!entry.title.isNullOrBlank()) {
                     Text(
-                        text = entry.title,
+                        text = highlightMatches(entry.title, searchQuery, highlightColor),
                         style = MaterialTheme.typography.titleSmall.copy(textDecoration = TextDecoration.Underline),
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
@@ -122,7 +129,7 @@ fun TimelineItem(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = entry.displayText,
+                    text = highlightMatches(entry.displayText, searchQuery, highlightColor),
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 4,
                     overflow = TextOverflow.Ellipsis
@@ -151,5 +158,21 @@ fun TimelineItem(
                 }
             }
         }
+    }
+}
+
+internal fun highlightMatches(text: String, query: String, highlightColor: Color) = buildAnnotatedString {
+    if (query.isBlank()) { append(text); return@buildAnnotatedString }
+    val lowerText = text.lowercase()
+    val lowerQuery = query.lowercase()
+    var start = 0
+    while (start < text.length) {
+        val index = lowerText.indexOf(lowerQuery, start)
+        if (index == -1) { append(text.substring(start)); break }
+        append(text.substring(start, index))
+        withStyle(SpanStyle(background = highlightColor)) {
+            append(text.substring(index, index + query.length))
+        }
+        start = index + query.length
     }
 }

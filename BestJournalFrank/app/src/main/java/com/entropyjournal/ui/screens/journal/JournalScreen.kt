@@ -284,7 +284,8 @@ fun JournalScreen(
                                 entry = sectionEntries[index],
                                 onClick = { onEntryClick(sectionEntries[index].id) },
                                 position = position,
-                                modifier = Modifier.padding(vertical = 6.dp)
+                                modifier = Modifier.padding(vertical = 6.dp),
+                                searchQuery = if (uiState.isSearchActive) uiState.searchQuery else ""
                             )
                         }
                     }

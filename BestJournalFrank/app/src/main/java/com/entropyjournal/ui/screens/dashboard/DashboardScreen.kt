@@ -114,6 +114,17 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         }
                     }
                 }
+
+                val lastUpdated = remember(uiState.isLoading) { viewModel.getLastUpdatedText() }
+                if (lastUpdated != null) {
+                    Text(
+                        text = lastUpdated,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
 
             if (uiState.isLoading) {
