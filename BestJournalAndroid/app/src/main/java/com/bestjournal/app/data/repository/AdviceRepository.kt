@@ -106,7 +106,7 @@ constructor(
           "top_massnahmen": [
             {
               "titel": "Kurzer, prägnanter Titel der Maßnahme",
-              "beschreibung": "Konkrete Beschreibung in 2 Zeilen — was genau tun und warum es die Entropie stark senkt"
+              "beschreibung": "Max. 17 Wörter — kurz und knackig: was genau tun und warum"
             }
           ],
           "kategorien": [
@@ -139,12 +139,11 @@ constructor(
         5 wichtigsten, allumfassendsten Maßnahmen, die die persönliche Entropie des
         Tagebuchschreibers in der Zukunft am STÄRKSTEN und NACHHALTIGSTEN senken würden.
         - Genau 5 Maßnahmen, sortiert nach Stärke der Entropie-Senkung (stärkste zuerst).
-        - Jede Maßnahme in 2 Zeilen: Was genau tun + warum es die Entropie stark senkt.
-        - Diese Maßnahmen sollen KATEGORIEÜBERGREIFEND sein — sie fassen die wichtigsten
-          Erkenntnisse aus ALLEN Kategorien zusammen.
-        - Sei konkret und direkt — keine Allgemeinplätze wie "mehr Sport" sondern
-          "Täglich 20 Minuten spazieren gehen nach der Arbeit" basierend auf den Einträgen.
-        - Denke ganzheitlich: Welche 5 Veränderungen hätten den größten Dominoeffekt?
+        - STRIKT: Jede Beschreibung MAXIMAL 17 Wörter. Kurz, knackig, ein Satz. Nicht mehr.
+          Beispiel: "Jeden Abend 10 Minuten Atemübung vor dem Schlafen senkt Stress und verbessert Schlafqualität."
+        - Diese Maßnahmen sollen KATEGORIEÜBERGREIFEND sein — die wichtigsten Erkenntnisse aus ALLEN Kategorien.
+        - Konkret und direkt — keine Allgemeinplätze, sondern basierend auf den Einträgen.
+        - Ganzheitlich denken: Welche 5 Veränderungen hätten den größten Dominoeffekt?
 
         Regeln:
         - Schreibe auf Deutsch, einfach und direkt, ohne Floskeln und ohne Fremdwörter.
