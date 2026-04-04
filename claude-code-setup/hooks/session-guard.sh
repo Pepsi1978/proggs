@@ -164,6 +164,33 @@ os.replace(tmp, '$SETTINGS')
 fi
 
 # =============================================
+# CHECK 4: Model — MUST be opus[1m] (1M context)
+# =============================================
+# Without explicit model key, Claude Code defaults to 200k context.
+# The user always wants 1M context window (opus[1m]).
+
+if [ -f "$SETTINGS" ]; then
+    current_model=$(python3 -c "import json; d=json.load(open('$SETTINGS')); print(d.get('model',''))" 2>/dev/null)
+    if [ "$current_model" != "opus[1m]" ]; then
+        python3 -c "
+import json, os, tempfile
+with open('$SETTINGS', 'r') as f:
+    d = json.load(f)
+old = d.get('model', '(not set)')
+d['model'] = 'opus[1m]'
+dir_name = os.path.dirname('$SETTINGS')
+fd, tmp = tempfile.mkstemp(dir=dir_name, suffix='.tmp')
+with os.fdopen(fd, 'w') as f:
+    json.dump(d, f, indent=2)
+    f.write('\n')
+os.replace(tmp, '$SETTINGS')
+" 2>/dev/null
+        fixes+=("model repariert (war: ${current_model:-nicht gesetzt}, jetzt: opus[1m])")
+        hook_log "AUTO-FIX: model restored to opus[1m] (was: ${current_model:-missing})" 2>/dev/null || true
+    fi
+fi
+
+# =============================================
 # REPORT
 # =============================================
 

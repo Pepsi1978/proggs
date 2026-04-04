@@ -194,7 +194,43 @@ try {
 }
 
 # ================================================
-# CHECK 4: Workspace Directory — MUST be ~/proggs/
+# CHECK 4: Model — MUST be opus[1m] (1M context)
+# ================================================
+# Without explicit model key, Claude Code defaults to 200k context.
+# The user always wants 1M context window (opus[1m]).
+
+try {
+    if (Test-Path $settingsPath) {
+        $raw = Get-Content $settingsPath -Raw -Encoding UTF8
+        $parsed = $raw | ConvertFrom-Json
+        $currentModel = $parsed.model
+        if ($currentModel -ne 'opus[1m]') {
+            if ($null -eq $currentModel -or $currentModel -eq '') {
+                # No model key exists — add it
+                $hashData = $raw | ConvertFrom-Json -AsHashtable
+                $hashData["model"] = "opus[1m]"
+                $tmpFile = "$settingsPath.tmp"
+                ($hashData | ConvertTo-Json -Depth 20) | Out-File -FilePath $tmpFile -Encoding UTF8 -NoNewline
+                Move-Item -Path $tmpFile -Destination $settingsPath -Force
+                $fixes += "model hinzugefuegt: opus[1m] (war: nicht gesetzt)"
+                Hook-Log "AUTO-FIX: model set to opus[1m] (was missing)"
+            } else {
+                # Wrong model — fix it
+                $fixed = $raw -replace '"model"\s*:\s*"[^"]*"', '"model": "opus[1m]"'
+                $tmpFile = "$settingsPath.tmp"
+                [System.IO.File]::WriteAllText($tmpFile, $fixed, [System.Text.Encoding]::UTF8)
+                Move-Item -Path $tmpFile -Destination $settingsPath -Force
+                $fixes += "model repariert (war: $currentModel, jetzt: opus[1m])"
+                Hook-Log "AUTO-FIX: model restored to opus[1m] (was: $currentModel)"
+            }
+        }
+    }
+} catch {
+    Hook-LogWarn "model check failed: $_"
+}
+
+# ================================================
+# CHECK 5: Workspace Directory — MUST be ~/proggs/
 # ================================================
 
 $expectedDir = Join-Path $env:USERPROFILE "proggs"
