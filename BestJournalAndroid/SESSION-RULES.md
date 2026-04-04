@@ -64,11 +64,13 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Best Journal App.
 - Unten: Dashboard | Tagebuch | Einstellungen
 - Tag/Nacht-Toggle: Gelbes Symbol (#FFD54F) rechts neben "Tagebuch" und "Dashboard"
 
-## Google Cloud Projekt
-- Projektname: "Tagebuch"
-- Projekt-ID: `674560807048`
-- Web-Client-ID: `674560807048-l6ktqsucjr4ld91srdc6assgfiks19mh.apps.googleusercontent.com`
-- Android-Client: Paketname `com.bestjournal.app.debug`, SHA-1 vom Debug-Keystore
+## Firebase / Google Cloud Projekt
+- Firebase-Projektname: "bestjurnal"
+- Firebase-Projekt-ID: `bestjurnal-a15b9`
+- Projektnummer: `314424175660`
+- Web-Client-ID: `314424175660-12m82j2jgvmc0tcgl61igghp67nnpmn1.apps.googleusercontent.com`
+- Android-Client (Release): Paketname `com.bestjournal.app`
+- Android-Client (Debug): Paketname `com.bestjournal.app.debug`
 - Google Drive API: aktiviert
 - Gmail API: aktiviert (fuer Feedback-Funktion)
 - Testnutzer: barwandt@gmail.com

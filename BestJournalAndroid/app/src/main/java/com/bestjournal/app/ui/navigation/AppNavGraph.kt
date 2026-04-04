@@ -21,6 +21,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import android.net.Uri
 import com.bestjournal.app.ui.screens.dashboard.DashboardScreen
 import com.bestjournal.app.ui.screens.entrydetail.EntryDetailScreen
 import com.bestjournal.app.ui.screens.journal.JournalScreen
@@ -111,8 +112,9 @@ fun AppNavGraph(
                         0 -> DashboardScreen(viewModel = hiltViewModel())
                         1 -> JournalScreen(
                             viewModel = hiltViewModel(),
-                            onEntryClick = { entryId ->
-                                navController.navigate("entry_detail/$entryId")
+                            onEntryClick = { entryId, searchQuery ->
+                                val encodedQuery = Uri.encode(searchQuery)
+                                navController.navigate("entry_detail/$entryId?searchQuery=$encodedQuery")
                             }
                         )
                         2 -> SettingsScreen(
@@ -129,14 +131,19 @@ fun AppNavGraph(
         }
 
         composable(
-            "entry_detail/{entryId}",
-            arguments = listOf(navArgument("entryId") { type = NavType.LongType }),
+            "entry_detail/{entryId}?searchQuery={searchQuery}",
+            arguments = listOf(
+                navArgument("entryId") { type = NavType.LongType },
+                navArgument("searchQuery") { type = NavType.StringType; defaultValue = "" }
+            ),
             enterTransition = { slideInHorizontally { it } + fadeIn() },
             exitTransition = { slideOutHorizontally { it } + fadeOut() }
-        ) {
+        ) { backStackEntry ->
+            val searchQuery = backStackEntry.arguments?.getString("searchQuery") ?: ""
             EntryDetailScreen(
                 viewModel = hiltViewModel(),
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                searchQuery = searchQuery
             )
         }
     }

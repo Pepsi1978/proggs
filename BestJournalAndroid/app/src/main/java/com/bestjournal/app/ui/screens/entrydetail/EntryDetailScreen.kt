@@ -53,8 +53,14 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
+import com.bestjournal.app.ui.components.highlightMatches
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -68,13 +74,22 @@ import com.bestjournal.app.util.DateTimeFormatter
 @Composable
 fun EntryDetailScreen(
     viewModel: EntryDetailViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    searchQuery: String = ""
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     var lastEditTime by remember { mutableLongStateOf(0L) }
     var isFocused by remember { mutableStateOf(false) }
+    val highlightColor = if (isSystemInDarkTheme()) Color(0x44FFFFFF) else Color(0xFFFFEB3B)
+    val searchHighlight = if (searchQuery.isNotBlank()) {
+        VisualTransformation { text ->
+            TransformedText(highlightMatches(text.text, searchQuery, highlightColor), OffsetMapping.Identity)
+        }
+    } else {
+        VisualTransformation.None
+    }
 
     // Auto-clear focus after 5 seconds of inactivity
     LaunchedEffect(lastEditTime) {
@@ -158,11 +173,19 @@ fun EntryDetailScreen(
                                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
-                                    Text(
-                                        bulletText,
-                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
+                                    if (searchQuery.isNotBlank()) {
+                                        Text(
+                                            text = highlightMatches(bulletText, searchQuery, highlightColor),
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    } else {
+                                        Text(
+                                            bulletText,
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -258,6 +281,7 @@ fun EntryDetailScreen(
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(
                                     color = MaterialTheme.colorScheme.onSurface
                                 ),
+                                visualTransformation = searchHighlight,
                                 colors = textFieldColors
                             )
                         } else {
@@ -277,6 +301,7 @@ fun EntryDetailScreen(
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(
                                     color = MaterialTheme.colorScheme.onSurface
                                 ),
+                                visualTransformation = searchHighlight,
                                 colors = textFieldColors
                             )
                         }

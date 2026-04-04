@@ -82,7 +82,7 @@ import com.bestjournal.app.util.DateTimeFormatter as DTFormatter
 import kotlinx.coroutines.delay
 
 @Composable
-fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long) -> Unit) {
+fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> Unit) {
     val allEntries by viewModel.entries.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val searchResults by
@@ -290,9 +290,10 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long) -> Unit) {
                                 }
                             TimelineItem(
                                 entry = sectionEntries[index],
-                                onClick = { onEntryClick(sectionEntries[index].id) },
+                                onClick = { onEntryClick(sectionEntries[index].id, if (uiState.isSearchActive) uiState.searchQuery else "") },
                                 position = position,
                                 modifier = Modifier.padding(vertical = 6.dp),
+                                searchQuery = if (uiState.isSearchActive) uiState.searchQuery else "",
                             )
                         }
                     }

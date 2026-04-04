@@ -37,7 +37,9 @@ object SunCalculator {
             val decl = 0.006918 - 0.399912 * cos(gamma) + 0.070257 * sin(gamma) - 0.006758 * cos(2 * gamma) + 0.000907 * sin(2 * gamma) - 0.002697 * cos(3 * gamma) + 0.00148 * sin(3 * gamma)
 
             val latRad = Math.toRadians(latitude)
-            val zenith = Math.toRadians(90.833)
+            // Civil twilight (96°): dark mode ON when truly dark (evening),
+            // OFF when dawn begins (morning) — not at the sun's horizon crossing
+            val zenith = Math.toRadians(96.0)
 
             val cosHa = (cos(zenith) / (cos(latRad) * cos(decl)) - tan(latRad) * tan(decl))
 

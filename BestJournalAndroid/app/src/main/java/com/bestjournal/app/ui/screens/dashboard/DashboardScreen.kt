@@ -103,17 +103,6 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         com.bestjournal.app.ui.components.SunMoonToggle()
-                        val lastUpdated =
-                            remember(uiState.isLoading) { viewModel.getLastUpdatedText() }
-                        if (lastUpdated != null) {
-                            Spacer(modifier = Modifier.weight(0.5f))
-                            Text(
-                                text = lastUpdated,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.weight(0.5f))
-                        }
                     }
                     Row {
                         IconButton(onClick = { showLegendDialog = true }) {
@@ -137,6 +126,17 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         }
                     }
                 }
+                val lastUpdated =
+                    remember(uiState.isLoading) { viewModel.getLastUpdatedText() }
+                if (lastUpdated != null) {
+                    Text(
+                        text = lastUpdated,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
 
             if (uiState.showAiInfoBanner) {
@@ -145,15 +145,29 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
             if (uiState.isLoading) {
                 item {
-                    Box(contentAlignment = Alignment.Center) {
-                        ShimmerLoadingEffect(height = 60.dp, cornerRadius = 16.dp)
-                        Text(
-                            "Einen Moment bitte \u2014 dein Dashboard wird gerade aktualisiert\u2026",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center,
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        ShimmerLoadingEffect(height = 80.dp, cornerRadius = 16.dp)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.padding(horizontal = 16.dp),
-                        )
+                        ) {
+                            Text(
+                                "Bitte warten",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "Dashboard wird aktualisiert",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 }
             }
