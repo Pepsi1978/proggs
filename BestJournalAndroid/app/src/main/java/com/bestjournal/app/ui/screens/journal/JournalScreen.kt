@@ -61,9 +61,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -129,6 +133,16 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
     }
 
     var showSyncLegend by remember { mutableStateOf(false) }
+    val searchFocusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    // Auto-focus search field when search opens (opens keyboard)
+    LaunchedEffect(uiState.isSearchActive) {
+        if (uiState.isSearchActive) {
+            delay(100) // Wait for AnimatedVisibility to render
+            searchFocusRequester.requestFocus()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -143,7 +157,10 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                             color = MaterialTheme.colorScheme.outline,
                         )
                     },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                        .focusRequester(searchFocusRequester),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                     colors =
                         TextFieldDefaults.colors(
                             focusedContainerColor = MaterialTheme.colorScheme.surface,
