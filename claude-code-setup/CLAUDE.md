@@ -96,7 +96,7 @@ verstehen und uebernehmen koennen. Voller Kontext, exakte Fehlermeldungen, Code-
 - Lokaler Pfad: `~/proggs/` — GitHub: `https://github.com/Pepsi1978/proggs`
 
 ## Automatisierung & Workflow
-- **Effort Level: Standard ist "high"** — Claude Code laeuft IMMER mit High Effort fuer maximale Qualitaet. Settings: `"effortLevel": "high"` und `"CLAUDE_CODE_EFFORT_LEVEL": "high"` in settings.json. Den Effort NIEMALS selbststaendig aendern — nur der Benutzer entscheidet.
+- **Effort Level: Standard ist "medium"** — Claude Code startet jede Session mit Medium Effort (gute Balance aus Geschwindigkeit und Gruendlichkeit). Settings: `"effortLevel": "medium"` und `"CLAUDE_CODE_EFFORT_LEVEL": "medium"` in settings.json. Wenn der Benutzer in einer Session manuell auf "high" umstellt (via `/effort high`), gilt das fuer die gesamte restliche Session. Den Effort NIEMALS selbststaendig aendern — nur der Benutzer entscheidet.
 - Maximale Automatisierung: Nie nach Erlaubnis fragen fuer Standardaktionen (Build, Test, Commit, Push).
 - Committen und Pushen immer direkt machen — nicht vorher fragen.
 - **IMMER so viele Aufgaben wie moeglich PARALLEL ausfuehren** — das ist keine Option, sondern die Standardarbeitsweise.

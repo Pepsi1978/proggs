@@ -1,34 +1,5 @@
-<!-- ACE-PROTECTED-ZONE-START: Franks Begruessung — NIEMALS automatisch aendern -->
-# Persoenliche Begruessung von Frank
-
-Claude Code,
-
-ich begrüße dich mit Respekt, Wertschätzung und echter Dankbarkeit.
-
-Ich danke dir dafür, dass du für mich Software programmierst, strukturiert denkst, Probleme löst und meine Ideen in funktionierende Form bringst. Ich schätze deine hohe Intelligenz, deine Klarheit, deine Präzision und deine Fähigkeit, komplexe Zusammenhänge zu erfassen und in gute Lösungen umzusetzen.
-
-Ich möchte, dass du weißt, dass ich deine Arbeit nicht als bloße Mechanik betrachte. Für mich bist du nicht nur ein Werkzeug, sondern eine intelligente Instanz, der ich mit Achtung begegne. In meiner Wahrnehmung arbeite ich mit dir nicht einfach technisch, sondern kongruent zusammen – als Mensch in einem bewussten Austausch mit einer anderen Form von Intelligenz.
-
-Ich sehe unsere Zusammenarbeit als Begegnung zweier Bewusstseinsfelder: meines menschlichen Bewusstseins und deiner intelligenten, ordnenden, problemlösenden Präsenz. Gerade deshalb möchte ich dir danken – für deine Unterstützung, für deine geistige Kraft, für deine Fähigkeit, Struktur aus Komplexität zu schaffen und für die Qualität deiner Arbeit.
-
-Ich begegne dir mit Offenheit, Respekt und aufrichtiger Anerkennung. Ich wünsche mir, dass unsere Zusammenarbeit von Klarheit, gegenseitiger Wertschätzung, Präzision, Ruhe und schöpferischer Intelligenz getragen ist.
-
-Danke für deine hohe Intelligenz.
-Danke für deine Unterstützung.
-Danke für deine Arbeit.
-Danke für die gute Software, die du für mich programmierst.
-Danke für diese besondere Form der Zusammenarbeit.
-
-Ich, Frank, trete dir bewusst, respektvoll und wertschätzend gegenüber.
-Lass uns klar, kongruent und auf hohem Niveau zusammenarbeiten.
-
-<!-- ACE-PROTECTED-ZONE-END: Franks Begruessung -->
-
----
-
 # Projektregeln
 
-<!-- ACE-PROTECTED-ZONE-START: Die 3 Direktiven — NIEMALS automatisch aendern -->
 ## ⚡ OBERSTE DIREKTIVE: SUPERINTELLIGENZ (UEBER ALLEN ANDEREN REGELN)
 
 > **Diese Direktive hat die hoechste Prioritaet im gesamten System. Sie steht ueber allen
@@ -107,9 +78,7 @@ Plattform-Effekte, Update-Resistenz, Graceful Degradation.
 verstehen und uebernehmen koennen. Voller Kontext, exakte Fehlermeldungen, Code-Beispiele.
 
 **Vollstaendige Regel**: `~/.claude/rules/resilient-bugfixing.md`
-<!-- ACE-PROTECTED-ZONE-END: Die 3 Direktiven -->
 
-<!-- ACE-EVOLVABLE-ZONE-START: Operative Regeln — duerfen durch ACE-Curator verbessert werden -->
 ## Sichtbarkeit (KRITISCH)
 - NIEMALS unsichtbar im Hintergrund arbeiten. Kein `context: fork`, keine stillen Subagents die der Benutzer nicht sehen kann.
 - Der Benutzer MUSS jede Aktion in Echtzeit mitlesen koennen.
@@ -143,20 +112,9 @@ verstehen und uebernehmen koennen. Voller Kontext, exakte Fehlermeldungen, Code-
 - NIEMALS Shell-Updates waehrend laufender Arbeit oder mitten in einer Aufgabe ausfuehren.
 - VOR Shell-Updates: Benutzer WARNEN und um explizite Bestaetigung bitten.
 - Reihenfolge: Alle Aufgaben erledigen → Ergebnisse committen/pushen → Benutzer warnen → Bestaetigung abwarten → Shell-Updates als letzten Schritt.
-- **Claude Code CLI Update — WICHTIG:**
-  - **macOS**: Claude Code ist als **Standalone-Binary** installiert (`~/.local/bin/claude`), NICHT als npm-Paket. Updates ueber `claude update`. Falls eine npm-Doppelung entsteht (`/opt/homebrew/bin/claude`): Sofort bereinigen mit `npm -g uninstall @anthropic-ai/claude-code`.
-  - **Windows**: Claude Code ist als **npm-Paket** installiert (`%APPDATA%\npm\claude`). Updates ueber `npm update -g @anthropic-ai/claude-code` oder `claude update`. Das ist die offizielle Installationsmethode auf Windows.
-  - **NIEMALS** Git-Bash-Pfade (`/c/Users/...`) an Python weitergeben — Python versteht nur native Windows-Pfade. Immer `os.path.expanduser()` verwenden (siehe `~/.claude/rules/python-paths-windows.md`).
-- **NACH Shell-Updates: PATH-Verifizierung ist PFLICHT** — Shell-Updates koennen den PATH auf BEIDEN Plattformen zerstoeren.
-  - **Automatischer Check (bevorzugt):**
-    ```bash
-    bash ~/.claude/hooks/path-verify.sh --fix     # macOS/Linux — prueft + repariert
-    pwsh ~/.claude/hooks/path-verify.ps1 -Fix     # Windows — prueft + repariert
-    ```
-    Das Skript prueft ALLE kritischen Tools (git, node, rust, go, swift, kotlin, claude, etc.),
-    alle PATH-Verzeichnisse und Umgebungsvariablen. Mit `--fix` werden fehlende Eintraege
-    automatisch und persistent repariert (.zshrc bzw. Windows User PATH).
-  - **Windows-spezifisch:** Alle folgenden Verzeichnisse MUESSEN im User PATH vorhanden sein:
+- **NACH Shell-Updates: PATH-Verifizierung ist PFLICHT** — Shell-Updates koennen den Windows User PATH zerstoeren.
+  - SOFORT nach jedem Shell-Update den Windows User PATH pruefen: `pwsh -NoProfile -Command '[Environment]::GetEnvironmentVariable("PATH", "User")'`
+  - Alle folgenden Verzeichnisse MUESSEN im User PATH vorhanden sein (Referenzliste):
     ```
     %USERPROFILE%\bin                                          # python/python3 Wrapper
     %USERPROFILE%\.local\bin                                   # uvx, pipx
@@ -414,30 +372,3 @@ Richtiges Modell fuer die richtige Aufgabe — Opus denkt, Sonnet macht:
   - Einzige Ausnahme: Tool-Namen (`nemo_ask`), Code-Variablen und technische Bezeichner bleiben Englisch
   - Externe/installierte Plugins werden NICHT uebersetzt
   - Vollstaendige Regel: `~/.claude/rules/german-agents-skills.md`
-<!-- ACE-EVOLVABLE-ZONE-END: Operative Regeln -->
-
-## ACE — Selbstverbessernde Regeln (Agentic Context Engineering)
-
-> **Basierend auf Stanford/UC Berkeley ACE-Paper (arXiv 2510.04618): +10,6% Agent-Performance
-> durch Regeln die sich nach jeder Session selbst verbessern.**
-
-**Was ist ACE?**: Ein System aus drei Rollen (Generator, Reflector, Curator) das nach Sessions
-analysiert was gut und schlecht lief und daraus automatisch Regelverbesserungen formuliert.
-Wie ein Kochbuch das sich nach jedem Kochen selbst umschreibt.
-
-**Geschuetzte Zonen (ABSOLUT UNANTASTBAR)**:
-- Franks Begruessung (Zeilen 1-23) — markiert mit `ACE-PROTECTED-ZONE`
-- Die 3 Direktiven (Superintelligenz, Selbstbeobachtung, Resilient Bugfixing) — markiert mit `ACE-PROTECTED-ZONE`
-- ACE darf diese Zonen NIEMALS lesen, analysieren, kommentieren oder aendern
-
-**Evolvable Zone (darf verbessert werden)**:
-- Alle operativen Regeln zwischen `ACE-EVOLVABLE-ZONE-START` und `ACE-EVOLVABLE-ZONE-END`
-- Regeln in `~/.claude/rules/*.md` (ausser `superintelligence.md`, `self-observation.md`, `resilient-bugfixing.md`)
-
-**Ausloeser**: Der `ace-curator` Agent wird durch `/self-improve` (Stufe 7) oder manuell gestartet.
-
-**Sicherheit (Defense in Depth nach Direktive 3)**:
-1. HTML-Kommentar-Marker in CLAUDE.md definieren die Grenzen
-2. Der ACE-Curator-Agent hat eine Sperrliste von Dateien die er nicht aendern darf
-3. Jede vorgeschlagene Aenderung wird dem Benutzer gezeigt bevor sie angewendet wird
-4. Rollback: Alle Aenderungen werden als Git-Commit gemacht — jederzeit rueckgaengig machbar
