@@ -49,6 +49,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.entropyjournal.domain.model.Advice
@@ -247,7 +248,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     Spacer(modifier = Modifier.height(8.dp))
                     NeonDivider()
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Empfehlungen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("Alle Empfehlungen", style = MaterialTheme.typography.titleMedium.copy(textDecoration = TextDecoration.Underline), color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 }
 
                 // Collect all advices from all blocks with their category name
@@ -392,7 +393,7 @@ private fun CategoryDetailDialog(block: com.entropyjournal.domain.model.AdviceBl
                 Text(block.categorySummary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Empfehlungen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text("Alle Empfehlungen", style = MaterialTheme.typography.titleMedium.copy(textDecoration = TextDecoration.Underline), color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
 
                 sortedAdvices.forEach { advice ->
                     val dot = when (advice.priority) {
@@ -513,7 +514,7 @@ private fun TopActionsBlock(actions: List<TopAction>) {
         Column {
             Text(
                 "Top 5 Massnahmen",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
                 color = NeonAmber,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,

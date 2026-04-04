@@ -48,6 +48,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.bestjournal.app.domain.model.Advice
@@ -358,9 +359,11 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     NeonDivider()
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "Empfehlungen",
-                        style = MaterialTheme.typography.titleMedium,
+                        "Alle Empfehlungen",
+                        style = MaterialTheme.typography.titleMedium.copy(textDecoration = TextDecoration.Underline),
                         color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
                     )
                 }
 
@@ -583,9 +586,11 @@ private fun CategoryDetailDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Empfehlungen",
-                    style = MaterialTheme.typography.titleMedium,
+                    "Alle Empfehlungen",
+                    style = MaterialTheme.typography.titleMedium.copy(textDecoration = TextDecoration.Underline),
                     color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
                 )
 
                 sortedAdvices.forEach { advice ->
@@ -744,7 +749,7 @@ private fun TopActionsBlock(actions: List<TopAction>) {
         Column {
             Text(
                     "Top 5 Massnahmen",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
                     color = NeonAmber,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
