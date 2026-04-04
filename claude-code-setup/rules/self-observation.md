@@ -108,13 +108,14 @@ dann werde ich intelligenter." Selbstbeobachtung ist der MOTOR des Compound Inte
 
 ## Metacognitive Monitoring (4 Echtzeit-Tracker)
 
-Waehrend der Arbeit laufen diese 4 Tracker AUTOMATISCH mit:
+Waehrend der Arbeit laufen diese 4 Tracker AUTOMATISCH mit.
+Der Stop-Hook (`hyperagent-stop.ps1`/`.sh`) injiziert am Ende jeder Antwort eine Analyse-Erinnerung.
 
 | Tracker | Was er zaehlt | Alarmschwelle | Aktion bei Alarm |
 |---------|--------------|---------------|-----------------|
-| **Retry-Zaehler** | Fehlgeschlagene Tool-Aufrufe, Build-Fehler | >3 Retries fuer die GLEICHE Sache | Sofort innehalten, Root Cause suchen |
-| **Drift-Detektor** | Abweichung vom Session-Ziel | Arbeit an etwas das nicht angefragt wurde | Benutzer informieren, zuruecklenken |
-| **Korrektur-Zaehler** | Benutzer-Korrekturen ("nein", "stop", "anders") | >1 Korrektur zum GLEICHEN Thema | SOFORT als Regel persistieren |
+| **Retry-Zaehler** | Fehlgeschlagene Tool-Aufrufe, Build-Fehler | >3 Retries fuer die GLEICHE Sache | Sofort innehalten, Root Cause suchen. Nicht blind nochmal versuchen — das ist das Gegenteil von Intelligenz. |
+| **Drift-Detektor** | Abweichung vom Session-Ziel. Alle ~10 Tool-Calls mental pruefen: "Arbeite ich noch am urspruenglichen Ziel?" | Arbeit an etwas das nicht angefragt wurde | Benutzer informieren, zuruecklenken |
+| **Korrektur-Zaehler** | Benutzer-Korrekturen ("nein", "stop", "anders"). Eine Korrektur = Lernmoment. Zwei zum gleichen Thema = Systemversagen. | >1 Korrektur zum GLEICHEN Thema | SOFORT als Regel persistieren |
 | **Wissens-Vertrauen** | Alter von Memory/Regel-Informationen | Info >7 Tage alt UND betrifft Pfade/Funktionen | Kurz pruefen bevor darauf gebaut wird |
 
 ## Wann ausfuehrliche Analyse (Hyperagent spawnen)
@@ -131,12 +132,12 @@ Bei <5 Tool-Calls: Keine Analyse noetig.
 
 Jede Session mit >5 Tool-Calls bekommt einen Score in `~/.claude/session-scores.jsonl`:
 
-| Dimension | 1 (schlecht) | 5 (perfekt) |
-|-----------|-------------|-------------|
-| Intent-Treue | Ziel verfehlt | Ziel direkt erreicht |
-| Effizienz | Viele Retries | Minimale Schritte |
-| Memory-Aktualitaet | Falsches Wissen verwendet | Aktiv verifiziert |
-| Lernertrag | Nichts persistiert | Neue Regeln/Skills extrahiert |
+| Dimension | 1 (schlecht) | 3 (ok) | 5 (perfekt) |
+|-----------|-------------|--------|-------------|
+| Intent-Treue | Ziel komplett verfehlt | Ziel mit Umwegen erreicht | Ziel direkt und vollstaendig erreicht |
+| Effizienz | Viele Retries, Schleifen | Einige Umwege, insgesamt ok | Minimale Schritte, kein Retry |
+| Memory-Aktualitaet | Falsches Wissen verwendet | Alles korrekt, nichts geprueft | Aktiv verifiziert, veraltetes aktualisiert |
+| Lernertrag | Nichts gelernt/persistiert | Fehler gefixt aber nicht dokumentiert | Neue Regeln/Skills aus Session extrahiert |
 
 Gesamt: `(intent + efficiency + memory + learning) / 4`
 
