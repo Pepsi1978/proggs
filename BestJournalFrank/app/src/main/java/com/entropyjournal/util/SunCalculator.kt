@@ -24,6 +24,11 @@ object SunCalculator {
         return currentHour < times.sunriseHour || currentHour > times.sunsetHour
     }
 
+    /**
+     * Asymmetric twilight calculation:
+     * - Morning (dark→light): Civil twilight at 96° — switch to light when dawn begins
+     * - Evening (light→dark): Nautical twilight at 102° — switch to dark when truly dark
+     */
     fun calculate(latitude: Double, longitude: Double): SunTimes? {
         return try {
             val cal = Calendar.getInstance()
@@ -37,16 +42,22 @@ object SunCalculator {
             val decl = 0.006918 - 0.399912 * cos(gamma) + 0.070257 * sin(gamma) - 0.006758 * cos(2 * gamma) + 0.000907 * sin(2 * gamma) - 0.002697 * cos(3 * gamma) + 0.00148 * sin(3 * gamma)
 
             val latRad = Math.toRadians(latitude)
-            val zenith = Math.toRadians(90.833)
 
-            val cosHa = (cos(zenith) / (cos(latRad) * cos(decl)) - tan(latRad) * tan(decl))
+            // Morning: civil twilight (96°) — light mode when dawn begins
+            val zenithMorning = Math.toRadians(96.0)
+            val cosHaMorning = (cos(zenithMorning) / (cos(latRad) * cos(decl)) - tan(latRad) * tan(decl))
+            if (cosHaMorning > 1.0 || cosHaMorning < -1.0) return null
 
-            if (cosHa > 1.0 || cosHa < -1.0) return null // No sunrise/sunset (polar)
+            // Evening: nautical twilight (102°) — dark mode when truly dark
+            val zenithEvening = Math.toRadians(102.0)
+            val cosHaEvening = (cos(zenithEvening) / (cos(latRad) * cos(decl)) - tan(latRad) * tan(decl))
+            if (cosHaEvening > 1.0 || cosHaEvening < -1.0) return null
 
-            val ha = Math.toDegrees(acos(cosHa))
+            val haMorning = Math.toDegrees(acos(cosHaMorning))
+            val haEvening = Math.toDegrees(acos(cosHaEvening))
 
-            val sunriseMin = 720.0 - 4.0 * (longitude + ha) - eqTime
-            val sunsetMin = 720.0 - 4.0 * (longitude - ha) - eqTime
+            val sunriseMin = 720.0 - 4.0 * (longitude + haMorning) - eqTime
+            val sunsetMin = 720.0 - 4.0 * (longitude - haEvening) - eqTime
 
             val sunriseHour = sunriseMin / 60.0 + tzOffset
             val sunsetHour = sunsetMin / 60.0 + tzOffset

@@ -62,8 +62,12 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -136,13 +140,22 @@ fun JournalScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             // Search bar
             AnimatedVisibility(visible = uiState.isSearchActive) {
+                val searchFocusRequester = remember { FocusRequester() }
+                val focusManager = LocalFocusManager.current
+
+                LaunchedEffect(Unit) {
+                    delay(100)
+                    searchFocusRequester.requestFocus()
+                }
+
                 TextField(
                     value = uiState.searchQuery,
                     onValueChange = { viewModel.setSearchQuery(it) },
                     placeholder = { Text("Eintr\u00e4ge durchsuchen...", color = MaterialTheme.colorScheme.outline) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .focusRequester(searchFocusRequester),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surface,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surface,
@@ -157,6 +170,8 @@ fun JournalScreen(
                         }
                     },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                     shape = RoundedCornerShape(12.dp)
                 )
             }
