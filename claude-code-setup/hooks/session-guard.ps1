@@ -170,7 +170,31 @@ try {
 }
 
 # ================================================
-# CHECK 3: Workspace Directory — MUST be ~/proggs/
+# CHECK 3: Effort Level — MUST reset to "medium"
+# ================================================
+# effortLevel is persistent in settings.json. /effort high stays across sessions.
+# Rule: Every new session starts with "medium". This check enforces that.
+
+try {
+    if (Test-Path $settingsPath) {
+        $raw = Get-Content $settingsPath -Raw -Encoding UTF8
+        $parsed = $raw | ConvertFrom-Json
+        if ($parsed.effortLevel -and $parsed.effortLevel -ne 'medium') {
+            $oldEffort = $parsed.effortLevel
+            $fixed = $raw -replace '"effortLevel"\s*:\s*"[^"]*"', '"effortLevel": "medium"'
+            $tmpFile = "$settingsPath.tmp"
+            [System.IO.File]::WriteAllText($tmpFile, $fixed, [System.Text.Encoding]::UTF8)
+            Move-Item -Path $tmpFile -Destination $settingsPath -Force
+            $fixes += "effortLevel zurueckgesetzt (war: $oldEffort, jetzt: medium)"
+            Hook-Log "AUTO-FIX: effortLevel reset to medium (was: $oldEffort)"
+        }
+    }
+} catch {
+    Hook-LogWarn "effortLevel check failed: $_"
+}
+
+# ================================================
+# CHECK 4: Workspace Directory — MUST be ~/proggs/
 # ================================================
 
 $expectedDir = Join-Path $env:USERPROFILE "proggs"
