@@ -48,6 +48,10 @@ Kurz, klar, am Ende der Antwort, maximal 2-3 Saetze:
 ### 1. Root Cause finden (nicht nur Symptom fixen)
 - Den eigentlichen Ausloeser identifizieren, nicht nur das sichtbare Problem
 - Frage: "Was ist die TIEFSTE Ursache?" — mindestens 3x "Warum?" fragen
+- **Fehlerlokalisierung auf Funktions-Level** (arxiv 2604.00167): Zuerst die betroffene
+  FUNKTION benennen (nicht nur die Datei und nicht nur die exakte Zeile). Empirisch
+  hoechste Repair-Rate bei function-level Lokalisierung. File-level ist zu ungenau,
+  line-level verliert Kontext.
 - Beispiel: Hook-Fehler → Symptom ist der Fehler, Root Cause ist die Race Condition
 
 ### 2. Verwandte Fehlerquellen suchen (PFLICHT)

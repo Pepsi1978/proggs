@@ -110,13 +110,18 @@ goal = 'unknown'
 if os.path.exists(goal_path):
     raw = pathlib.Path(goal_path).read_text(encoding='utf-8', errors='replace').strip()
     goal = raw[:100].replace('\n', ' ').replace('\r', '')
+efficiency = min($commitCount / max($turns, 1) * 100, 40)
+quality = max(0, 30 - $hookErrors * 10)
+duration_bonus = min($durationMin / 3, 30)
+iq_score = max(0, min(100, round(efficiency + quality + duration_bonus)))
 data = {
     'date': '$timestamp',
     'turns': $turns,
     'hook_errors': $hookErrors,
     'commits': $commitCount,
     'duration_min': $durationMin,
-    'goal': goal
+    'goal': goal,
+    'iq_score': iq_score
 }
 scores = r'$ScoresFile'
 line = json.dumps(data, ensure_ascii=False)
@@ -130,7 +135,11 @@ with open(scores, 'a', encoding='utf-8') as f:
 } else {
     # Fallback: PowerShell-only JSON (strips problematic chars)
     $goalClean = $goal -replace '[\\"]', '_'
-    $jsonLine = "{`"date`":`"$timestamp`",`"turns`":$turns,`"hook_errors`":$hookErrors,`"commits`":$commitCount,`"duration_min`":$durationMin,`"goal`":`"$goalClean`"}"
+    $efficiency = [Math]::Min($commitCount / [Math]::Max($turns, 1) * 100, 40)
+    $quality = [Math]::Max(0, 30 - $hookErrors * 10)
+    $durationBonus = [Math]::Min($durationMin / 3, 30)
+    $iqScore = [Math]::Max(0, [Math]::Min(100, [Math]::Round($efficiency + $quality + $durationBonus)))
+    $jsonLine = "{`"date`":`"$timestamp`",`"turns`":$turns,`"hook_errors`":$hookErrors,`"commits`":$commitCount,`"duration_min`":$durationMin,`"goal`":`"$goalClean`",`"iq_score`":$iqScore}"
     try {
         Add-Content -Path $ScoresFile -Value $jsonLine -Encoding UTF8
         Hook-Log "Session score written (PS fallback): turns=$turns"

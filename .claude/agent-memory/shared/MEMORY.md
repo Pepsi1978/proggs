@@ -92,10 +92,10 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-03 — IQ-Score in session-scorer immer 0 — seit 24.03 ungefixt
 **Quelle:** Traumsession-Konsolidierung (evolution-analyst + session-scores.jsonl Analyse)
 **Symptom:** `iq_score` ist in ALLEN Session-Score-Eintraegen 0 (altes Format) oder schwankt unrealistisch (0, 14, 32, 89) im neuen Format
-**Ursache:** Die IQ-Score-Berechnung in session-scorer wurde nie korrekt implementiert oder der Berechnungs-Hook fehlt
+**Ursache:** Die IQ-Score-Berechnung in session-scorer war NIE implementiert — das Feld wurde schlicht nicht geschrieben
 **Betroffene Dateien:** `~/.claude/hooks/session-scorer.ps1`, `~/.claude/hooks/session-scorer.sh`, `claude-code-setup/hooks/session-scorer.*`
-**Fix-Vorschlag:** IQ-Score-Logik im session-scorer pruefen — entweder korrekt implementieren oder Feld entfernen wenn es nicht berechenbar ist
-**Status:** OFFEN (seit 2026-03-24, Prioritaet HOCH — verhindert Meta-Intelligence-Messung)
+**Fix:** IQ-Score-Berechnung in session-scorer.ps1 implementiert (2026-04-04): efficiency(40) + quality(30) + duration(30) = 0-100
+**Status:** GEFIXT (2026-04-04) — .sh-Version muss noch auf macOS aktualisiert werden
 
 ### 2026-04-03 — Meta-Intelligence Score = 0 seit 26.03 — Erholung nach hyperagent-fix pruefen
 **Quelle:** Traumsession-Konsolidierung (session-scores.jsonl Trend-Analyse)
@@ -112,29 +112,26 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
 
-**Stand:** 2026-04-03 (aktualisiert durch Traumsession-Konsolidierung)
+**Stand:** 2026-04-04 (aktualisiert durch /self-improve auf Windows)
 
-- **Plattform:** Windows 11 Home 10.0.26200 (x64) + macOS (Apple Silicon), Claude Code v2.1.91 (Windows), v2.1.83 (macOS, Update verfuegbar), Opus 4.6 (1M context)
-- **Sprachen:** Swift 6.3, C#, TypeScript, Rust 1.94.1, Go 1.26.1, Kotlin 2.3.20, Java OpenJDK 17.0.18, Python 3.14.3
-- **Node.js:** v25.8.2 (macOS), npm 11.11.1, Bun 1.3.11, Deno vorhanden (macOS)
-- **Semantic Search:** Aktiv, Ollama 0.19.0 laeuft
+- **Plattform:** Windows 11 Home 10.0.26200 (x64), Claude Code v2.1.92, Opus 4.6 (1M context)
+- **Sprachen:** Rust 1.94.0, Go 1.26.1, Kotlin 2.3.20, Java OpenJDK 21.0.10, Python 3.13.12
+- **Node.js:** v24.14.0, npm 11.12.0, Bun 1.3.11
+- **Effort Level:** medium (Standard), High per /effort high
 - **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
-- **Agents:** 26 aktiv (5 neu seit 31.03: chaos-tester, healer, hyperagent, mcts-planner, superintelligenz)
-- **Hooks:** 39 PS1, 42 SH, 9 SessionStart. **Fix 2026-04-02:** hyperagent-stop.sh Bug gefixt
-- **Plugins:** 92 Eintraege, 87 aktiv (5 deaktiviert: asana, serena, slack, stripe, supabase)
-- **Rules:** 49 in ~/.claude/rules/
+- **Agents:** 29 aktiv (3 neu seit 03.04: ace-curator, experience-retriever, trajectory-analyzer)
+- **Hooks:** 46 PS1, 46 SH, 10 SessionStart. 4 neue Registrierungen (04.04)
+- **Rules:** 57 in ~/.claude/rules/ (9 neu seit 03.04, inkl. hook-exit-safety)
+- **Skills:** 21 in ~/.claude/commands/ (14 neu seit 03.04)
+- **Plugins:** 88 installiert, 91 aktiviert
 - **Whiteboard-Anbindung:** Alle Hooks nutzen whiteboard-insert.ps1/.sh (sektionsbasiert)
-- **Session-Scorer:** v3 — schreibt NUR in session-scores.jsonl. **BUG:** IQ-Score immer 0 oder unrealistisch
+- **Session-Scorer:** v4 — schreibt jetzt iq_score (0-100) basierend auf efficiency+quality+duration
 - **Self-Improve Skill:** v5.19
 - **Git:** v2.53.0, Git Credential Manager aktiv
-- **Sicherheit:** Prompt-Injection-Defender aktiv, cargo-audit 0.22.1 OK, Axios Supply-Chain SAUBER (geprueft 2026-04-02)
-- **Traumsession-Analyse (2026-04-03):** Quality 8.7 (PLATEAU), Meta-Intelligence 0 (ALARM — hyperagent-fix wirkt noch nicht), IQ-Score buggy (OFFEN)
-- **Speicherplatz (macOS):** 16 GB frei (42%) — bereinigt, stabil
-- **Pending Shell-Updates (macOS):** Claude Code CLI v2.1.90, node, deno, powershell, uv, xz, harfbuzz, util-linux, codex
-- **Cross-Tool:** Codex + Gemini Delta Bridges aktiv, 8 Intelligenz-Dimensionen im Whiteboard portiert
-- **macOS-Update (2026-03-31):** Claude Code v2.1.83, Node v25.8.1, npm 11.11.1, Bun 1.3.11, Go 1.26.1, Swift 6.3, Rust/Cargo 1.94.0 (→1.94.1 verfuegbar), 25 Homebrew-Pakete veraltet
-- **macOS Settings-Fix (2026-03-31):** allow-Liste entfernt (war Whitelist-Blocker bei bypassPermissions), 2 fehlende Hooks hinzugefuegt (mcp-auth-check, doctor-lite), tote Plugins deaktiviert (boostvolt, FlineDev)
-- **Pending Admin Updates (8):** deno,harfbuzz,node,powershell,util-linux,uv,xz,codex,
+- **Sicherheit:** Alle CVEs gepatcht (v2.1.92), Prompt-Injection-Defender aktiv
+- **Speicherplatz (Windows):** 139 GB frei (84%) — stabil
+- **PATH:** Alle kritischen Verzeichnisse vorhanden (verifiziert 04.04)
+- **Cross-Platform Sync:** Alle Rules, Agents, Skills, Hooks synchron zwischen Setup-Repo und lokal
 ---
 
 ## Erkenntnisse aus Code Reviews

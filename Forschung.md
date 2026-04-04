@@ -47,6 +47,31 @@ Wird von /self-improve Stufe 0b und Stufe 5C gelesen und ausgewertet.
 - **Beschreibung:** 100+ Papers und Implementierungen zu Context Engineering (Write/Select/Compress/Isolate). Nachfolger von Prompt Engineering als Industriestandard 2025-2026.
 - **Status:** EVALUIERT — Als Forschungsquelle fuer naechste R8-Laeufe
 
+### [2026-04-04] Cursor Debug Mode 2.2 — Hypothesen-gesteuertes Runtime-Debugging
+- **Quelle:** cursor.com/blog/debug-mode + Cursor Changelog 2.2
+- **Beschreibung:** Agent formuliert mehrere Hypothesen, instrumentiert Code mit Logging, wartet auf Ausfuehrung, analysiert echte Laufzeitdaten. Gegenteil von Trial-and-Error.
+- **Status:** UMZUSETZEN — Als Regel fuer debugger-Agent (30 Min)
+
+### [2026-04-04] Multi-Agent Judging — Automatische Loesungs-Bewertung
+- **Quelle:** Cursor 2.2 Changelog + arxiv 2507.21028
+- **Beschreibung:** Judge-Agent bewertet parallel erzeugte Loesungen strukturiert nach Korrektheit, Sicherheit, Effizienz. Macht PASS/FAIL auditierbar.
+- **Status:** GEPLANT — Quality-Gate um Judge-Phase erweitern (1 Std)
+
+### [2026-04-04] SWE-CI — Dual-Agent CI-Maintenance-Loop (arxiv 2603.03823)
+- **Quelle:** arxiv.org/abs/2603.03823
+- **Beschreibung:** Architect analysiert CI-Feedback und schreibt Requirements, Programmer implementiert, Schleife bis gruen. Erster Benchmark fuer langfristige Wartbarkeit.
+- **Status:** EVALUIERT — Adaptierbar als maintenance-loop Agent
+
+### [2026-04-04] Fault Localization Granularity (arxiv 2604.00167)
+- **Quelle:** arxiv.org/abs/2604.00167
+- **Beschreibung:** Function-level Fehlerlokalisierung hat hoechste Repair-Rate. File-level zu ungenau, line-level verliert Kontext.
+- **Status:** UMGESETZT — In resilient-bugfixing.md als Regel hinzugefuegt (2026-04-04)
+
+### [2026-04-04] SWE-Bench Pro — Long-Horizon Benchmark (arxiv 2509.16941)
+- **Quelle:** arxiv.org/abs/2509.16941
+- **Beschreibung:** Neues Schwierigkeits-Level ueber SWE-Bench Verified. Testet langfristige Softwareentwicklung. Claude fuehrt mit 45-48%.
+- **Status:** EVALUIERT — Als Benchmark-Referenz behalten
+
 ## Abgeleitete Intelligenz-Vorschlaege
 <!-- Konkrete Aktionen die aus der Forschung abgeleitet wurden -->
 
