@@ -73,46 +73,6 @@ constructor(
     }
 
     fun refreshDashboard() {
-        val remaining =
-            encryptedPrefs.getInt(
-                Constants.PREF_MANUAL_REFRESHES_LEFT,
-                Constants.MAX_REFRESHES_PER_ENTRY,
-            )
-        if (remaining <= 0) {
-            _uiState.update {
-                it.copy(
-                    dashboardLimitMessage =
-                        "Aktualisierungslimit erreicht. Schreibe einen neuen Tagebucheintrag \u2014 das Dashboard wird dann automatisch aktualisiert."
-                )
-            }
-            return
-        }
-
-        val subscriptionState = billingManager.subscriptionState.value
-        when (val access = aiRateLimiter.checkDashboardAccess(subscriptionState)) {
-            is TieredAccessResult.Allowed -> {
-                performRefresh(access.modelName, remaining)
-            }
-            is TieredAccessResult.Cooldown -> {
-                _uiState.update {
-                    it.copy(
-                        dashboardLimitMessage =
-                            "Du hast heute schon ${access.totalToday} Aktualisierungen gemacht \u2014 nicht schlecht! Kurze Pause, in ${access.minutesLeft} Minuten geht\u2019s weiter."
-                    )
-                }
-            }
-            is TieredAccessResult.HardLimitReached -> {
-                _uiState.update {
-                    it.copy(
-                        dashboardLimitMessage =
-                            "Userlimit erreicht \u2014 neue Aktualisierungen morgen wieder verf\u00fcgbar."
-                    )
-                }
-            }
-        }
-    }
-
-    private fun performRefresh(modelName: String, remainingRefreshes: Int = -1) {
         viewModelScope.launch {
             manualRefreshActive = true
             _uiState.value =
@@ -121,18 +81,8 @@ constructor(
                     errorMessage = null,
                     dashboardLimitMessage = null,
                 )
-            aiRateLimiter.recordDashboardRefresh()
-            analyzeEntropyUseCase(freshAnalysis = true, modelName = modelName)
+            analyzeEntropyUseCase(freshAnalysis = true)
                 .onSuccess {
-                    // Only count successful refreshes against the limit
-                    if (remainingRefreshes > 0) {
-                        val newRemaining = remainingRefreshes - 1
-                        encryptedPrefs
-                            .edit()
-                            .putInt(Constants.PREF_MANUAL_REFRESHES_LEFT, newRemaining)
-                            .apply()
-                        _uiState.update { it.copy(manualRefreshesLeft = newRemaining) }
-                    }
                     encryptedPrefs
                         .edit()
                         .putLong(Constants.PREF_DASHBOARD_LAST_UPDATED, System.currentTimeMillis())
@@ -146,7 +96,6 @@ constructor(
                         )
                 }
                 .onFailure { error ->
-                    // Failed refresh does NOT count — user keeps their remaining refreshes
                     manualRefreshActive = false
                     _uiState.value =
                         _uiState.value.copy(

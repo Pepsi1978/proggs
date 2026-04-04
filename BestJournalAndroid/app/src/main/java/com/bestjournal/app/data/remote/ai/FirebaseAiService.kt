@@ -17,7 +17,7 @@ class FirebaseAiService @Inject constructor() {
     }
 
     private fun createModel(
-        modelName: String = MODEL_FLASH,
+        modelName: String = MODEL_FLASH_LITE,
         temperature: Float = 0.4f,
         maxOutputTokens: Int = 8192,
         systemPrompt: String? = null,
@@ -35,7 +35,7 @@ class FirebaseAiService @Inject constructor() {
 
     suspend fun generateContent(
         prompt: String,
-        modelName: String = MODEL_FLASH,
+        modelName: String = MODEL_FLASH_LITE,
         temperature: Float = 0.4f,
         maxOutputTokens: Int = 8192,
         systemPrompt: String? = null,

@@ -15,7 +15,7 @@ constructor(
 ) {
     suspend operator fun invoke(
         freshAnalysis: Boolean = false,
-        modelName: String = com.bestjournal.app.data.remote.ai.FirebaseAiService.MODEL_FLASH,
+        modelName: String = com.bestjournal.app.data.remote.ai.FirebaseAiService.MODEL_FLASH_LITE,
     ): Result<Unit> {
         val allEntries = journalRepository.getAllEntries().first()
         if (allEntries.isEmpty())

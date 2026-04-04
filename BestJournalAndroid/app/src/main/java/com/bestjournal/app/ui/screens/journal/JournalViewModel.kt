@@ -5,9 +5,6 @@ import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.billing.BillingManager
-import com.bestjournal.app.data.remote.ai.AiRateLimiter
-import com.bestjournal.app.data.remote.ai.AiUsageTracker
-import com.bestjournal.app.data.remote.ai.TieredAccessResult
 import com.bestjournal.app.data.repository.JournalRepository
 import com.bestjournal.app.domain.model.JournalEntry
 import com.bestjournal.app.domain.usecase.AnalyzeEntropyUseCase
@@ -74,8 +71,6 @@ constructor(
     private val syncWithDriveUseCase: SyncWithDriveUseCase,
     @ApplicationContext private val context: Context,
     private val encryptedPrefs: SharedPreferences,
-    private val aiRateLimiter: AiRateLimiter,
-    private val aiUsageTracker: AiUsageTracker,
     private val billingManager: BillingManager,
 ) : ViewModel() {
 
@@ -200,49 +195,25 @@ constructor(
         _uiState.value = _uiState.value.copy(recordingState = RecordingState.IMPROVING)
 
         viewModelScope.launch {
-            val subscriptionState = billingManager.subscriptionState.value
-            when (val access = aiRateLimiter.checkTextAccess(subscriptionState)) {
-                is TieredAccessResult.HardLimitReached -> {
+            improveTextUseCase(rawText)
+                .onSuccess { improved ->
                     _uiState.update {
-                        it.copy(recordingState = RecordingState.PREVIEW, showAiLimitReached = true)
+                        it.copy(
+                            recordingState = RecordingState.PREVIEW,
+                            improvedText = improved,
+                            isImproveEnabled = true,
+                        )
                     }
-                    return@launch
                 }
-                is TieredAccessResult.Cooldown -> {
+                .onFailure { error ->
                     _uiState.update {
                         it.copy(
                             recordingState = RecordingState.PREVIEW,
                             errorMessage =
-                                "Du hast heute schon ${access.totalToday} Textverbesserungen gemacht \u2014 kurze Pause, in ${access.minutesLeft} Minuten geht\u2019s weiter.",
+                                "Textverbesserung fehlgeschlagen: ${error.message}",
                         )
                     }
-                    return@launch
                 }
-                is TieredAccessResult.Allowed -> {
-                    // Record usage BEFORE the API call to prevent race conditions
-                    // M-3: Weekly tracking is now handled inside RateLimiter
-                    aiRateLimiter.recordTextImprovement()
-                    improveTextUseCase(rawText, access.modelName)
-                        .onSuccess { improved ->
-                            _uiState.update {
-                                it.copy(
-                                    recordingState = RecordingState.PREVIEW,
-                                    improvedText = improved,
-                                    isImproveEnabled = true,
-                                )
-                            }
-                        }
-                        .onFailure { error ->
-                            _uiState.update {
-                                it.copy(
-                                    recordingState = RecordingState.PREVIEW,
-                                    errorMessage =
-                                        "Textverbesserung fehlgeschlagen: ${error.message}",
-                                )
-                            }
-                        }
-                }
-            }
         }
     }
 
@@ -281,12 +252,10 @@ constructor(
                     audioDurationSeconds = durationSeconds.value,
                 )
             val savedId = saveJournalEntryUseCase(entry)
-            aiUsageTracker.recordUsageDay()
             resetState()
             // Generate summary in background (non-blocking)
             launch { summarizeEntryUseCase(savedId, displayText) }
             triggerSync()
-            resetManualRefreshCounter()
             triggerDebouncedAnalysis()
         }
     }
@@ -340,39 +309,20 @@ constructor(
         }
     }
 
-    private fun resetManualRefreshCounter() {
-        val autoUpdate = encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true)
-        // Auto-update uses 1 of 4, leaving 3 manual. No auto-update = all 4 manual.
-        val manualLeft =
-            if (autoUpdate) Constants.MAX_REFRESHES_PER_ENTRY - 1
-            else Constants.MAX_REFRESHES_PER_ENTRY
-        encryptedPrefs.edit().putInt(Constants.PREF_MANUAL_REFRESHES_LEFT, manualLeft).apply()
-    }
-
     private fun triggerDebouncedAnalysis() {
         val autoUpdate = encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true)
-        android.util.Log.d("DashboardAuto", "triggerDebouncedAnalysis: autoUpdate=$autoUpdate")
         if (!autoUpdate) return
 
         analysisDebounceJob?.cancel()
         analysisDebounceJob = viewModelScope.launch {
             encryptedPrefs.edit().putBoolean(Constants.PREF_DASHBOARD_UPDATING, true).apply()
-            delay(3_000)
             try {
-                val subscriptionState = billingManager.subscriptionState.value
-                val access = aiRateLimiter.checkDashboardAccess(subscriptionState)
-                android.util.Log.d(
-                    "DashboardAuto",
-                    "access=$access, subscription=$subscriptionState",
-                )
-                if (access is TieredAccessResult.Allowed) {
-                    aiRateLimiter.recordDashboardRefresh()
-                    analyzeEntropyUseCase(freshAnalysis = true, modelName = access.modelName)
-                    encryptedPrefs
-                        .edit()
-                        .putLong(Constants.PREF_DASHBOARD_LAST_UPDATED, System.currentTimeMillis())
-                        .apply()
-                }
+                delay(3_000)
+                analyzeEntropyUseCase(freshAnalysis = true)
+                encryptedPrefs
+                    .edit()
+                    .putLong(Constants.PREF_DASHBOARD_LAST_UPDATED, System.currentTimeMillis())
+                    .apply()
             } finally {
                 encryptedPrefs.edit().putBoolean(Constants.PREF_DASHBOARD_UPDATING, false).apply()
             }

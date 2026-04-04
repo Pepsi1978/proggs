@@ -186,7 +186,7 @@ constructor(
         allEntriesText: String,
         entryCount: Int,
         freshAnalysis: Boolean = false,
-        modelName: String = FirebaseAiService.MODEL_FLASH,
+        modelName: String = FirebaseAiService.MODEL_FLASH_LITE,
     ): Result<Unit> {
         return try {
             // Save current state for undo before refreshing
