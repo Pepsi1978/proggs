@@ -117,6 +117,16 @@ Waehrend der Arbeit laufen diese 4 Tracker AUTOMATISCH mit:
 | **Korrektur-Zaehler** | Benutzer-Korrekturen ("nein", "stop", "anders") | >1 Korrektur zum GLEICHEN Thema | SOFORT als Regel persistieren |
 | **Wissens-Vertrauen** | Alter von Memory/Regel-Informationen | Info >7 Tage alt UND betrifft Pfade/Funktionen | Kurz pruefen bevor darauf gebaut wird |
 
+## Wann ausfuehrliche Analyse (Hyperagent spawnen)
+
+- Session mit >20 Tool-Calls
+- Session mit >2 Benutzer-Korrekturen
+- Session mit >3 Build-Fehlern
+- Auf explizite Anfrage des Benutzers
+
+Bei 5-20 Tool-Calls: Leichte Analyse (2-3 Saetze inline + 1 Vorschlag).
+Bei <5 Tool-Calls: Keine Analyse noetig.
+
 ## Session-Score (nach nicht-trivialen Sessions)
 
 Jede Session mit >5 Tool-Calls bekommt einen Score in `~/.claude/session-scores.jsonl`:
@@ -129,6 +139,14 @@ Jede Session mit >5 Tool-Calls bekommt einen Score in `~/.claude/session-scores.
 | Lernertrag | Nichts persistiert | Neue Regeln/Skills extrahiert |
 
 Gesamt: `(intent + efficiency + memory + learning) / 4`
+
+## Compound Gains (Ziel jeder Analyse)
+
+Jede metacognitive Analyse soll mindestens EINEN dieser Outputs produzieren:
+1. **Neue Regel** → Verhindert zukuenftigen Fehler
+2. **Memory-Update** → Aktualisiert veraltetes Wissen
+3. **Skill-Kandidat** → Neues wiederverwendbares Pattern
+4. **Prozess-Verbesserung** → Effizienterer Workflow
 
 ## Schutz dieser Direktive
 

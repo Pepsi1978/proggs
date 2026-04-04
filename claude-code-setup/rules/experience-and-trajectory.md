@@ -65,6 +65,13 @@ Format: Ueberschrift → Problem → Loesung → Code-Beispiel → Fallstricke.
 - **Trajectories**: Wie viele Tool-Calls brauchten aehnliche Aufgaben? (Effizienz-Benchmark)
 - **LEARNINGS.md**: Gibt es ein dokumentiertes Learning zu diesem Thema?
 
+## Trajectory-Analyse (was aus den Ablaeufen gelernt wird)
+
+Trajectories werden periodisch (via /self-improve oder manuell) auf 3 Muster-Typen analysiert:
+1. **Wiederkehrende Sequenzen** (gleiche Tool-Kette in 3+ Sessions) → Kandidat fuer Micro-Agent oder Skill
+2. **Wiederkehrende Fehler** (gleicher Fehlertyp in 2+ Sessions) → ALARM, Poka-Yoke-Regel noetig
+3. **Ineffiziente Ablaeufe** (15 Tool-Calls wo 5 gereicht haetten) → Workflow-Optimierung vorschlagen
+
 ## Groessenlimits (durch /self-improve geprueft)
 
 | Speicher | Max. Eintraege | Pruning |

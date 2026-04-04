@@ -225,10 +225,6 @@ Vollstaendige Regel: `~/.claude/rules/notebooklm-cli.md`
 
 ## 18. CLI Dev-Tools (Tier 1+2+3 — installiert 2026-04-04)
 
-> **13 CLI-Tools fuer Codebase-Analyse, Git-Workflow, Security und Benchmarking.**
-> **Alle via `~/bin/` Symlinks im PATH. Kein Shell-Neustart noetig.**
-> **Bei fehlendem Tool: `pwsh ~/.claude/hooks/path-verify.ps1 -Fix` repariert automatisch.**
-
 Installierte CLI-Tools (alle im PATH via `~/bin/`): `bat` (cat+Highlighting), `fd` (schnelles find),
 `fzf` (Fuzzy-Finder), `delta` (Git-Diff, laeuft automatisch als Pager), `tokei` (Code-Statistiken),
 `shellcheck` (Shell-Linter — PFLICHT vor .sh-Commits), `hyperfine` (Benchmarking),

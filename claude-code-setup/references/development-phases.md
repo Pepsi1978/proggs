@@ -28,6 +28,39 @@
 | **CLI-Tool** | Package Manager (npm/cargo/brew), GitHub Releases, awesome-lists |
 | **Open Source** | GitHub-Sichtbarkeit, README-Design, Contributing Guide |
 
+## Phasen-Anzeige (PFLICHT — ALLE Projekttypen)
+
+Fuer Android: `📱 Phase [N] ([Name]) — [Projekt] v[Version] (Build [N])`
+Fuer andere: `📦 Phase [N] ([Name]) — [Projekt] v[Version] | [Projekttyp]`
+
+## SESSION-RULES.md Template (fuer neue Projekte)
+
+```markdown
+## Entwicklungsphase (IMMER AKTUELL HALTEN)
+- **Aktuelle Phase**: 1 (Projekt-Setup)
+- **Phase gestartet am**: [Datum]
+- **Projekttyp**: [Android/Kotlin | C#/WPF | Swift/macOS | Web/TS | Rust | Go | Tampermonkey]
+- **Version**: v0.1.0
+- **Letzter Arbeitsstand**: Projekt gerade erstellt
+- **Naechster Schritt**: [Erster konkreter Schritt]
+- **Bekannte Bugs**: keine
+- **Letzte Session**: [Datum]
+```
+
+## Session-Uebergabe-Protokoll (ALLE Projekttypen)
+
+**Am ENDE jeder Session**: SESSION-RULES.md aktualisieren, Phasen-Status zeigen, committen.
+**Am ANFANG jeder Session**: SESSION-RULES.md lesen, Stand zeigen, bestaetigen lassen.
+**Navigator-Prinzip**: Vor Aufgabe einordnen, nach Aufgabe Fortschritt zeigen, bei Problemen Plan bestaetigen.
+
+## Verbotene Phasen-Spruenge
+
+| Von | Nach | Erlaubt? | Warum |
+|-----|------|----------|-------|
+| 2 | 4 | **NEIN** | Keine Vermarktung ohne Haertung |
+| 2 | 5 | **NEIN** | Kein Release ohne Haertung UND Vermarktung |
+| 3 | 5 | **NEIN** | Kein Release ohne Vermarktungsstrategie |
+
 ## Phasen-Uebersicht
 
 | Phase | Name | Kernaufgabe | Dauer (typisch) |
