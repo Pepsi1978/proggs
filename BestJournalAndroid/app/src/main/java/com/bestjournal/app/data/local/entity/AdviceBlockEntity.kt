@@ -13,6 +13,7 @@ data class AdviceBlockEntity(
     val categorySummary: String,
     val adviceJson: String,
     val overallAnalysis: String,
+    val topActionsJson: String = "[]",
     val lastUpdated: Long,
     val basedOnEntryCount: Int
 )

@@ -9,6 +9,7 @@ data class AdviceBlock(
     val categorySummary: String,
     val advices: List<Advice>,
     val overallAnalysis: String,
+    val topActions: List<TopAction> = emptyList(),
     val lastUpdated: Long,
     val basedOnEntryCount: Int
 )
@@ -24,6 +25,11 @@ data class Advice(
 data class DerivationEntry(
     val date: String,
     val summary: String
+)
+
+data class TopAction(
+    val title: String,
+    val description: String
 )
 
 enum class AdvicePriority(val label: String) {

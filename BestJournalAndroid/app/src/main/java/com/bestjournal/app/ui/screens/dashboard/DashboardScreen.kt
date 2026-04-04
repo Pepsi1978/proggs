@@ -64,6 +64,9 @@ import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
+import com.bestjournal.app.domain.model.TopAction
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Brush
 
 @Composable
 fun DashboardScreen(viewModel: DashboardViewModel) {
@@ -264,6 +267,14 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
             }
 
             if (blocks.isNotEmpty()) {
+                // Top-5 Entropy-Reducing Actions — visually prominent block
+                val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
+                if (topActions.isNotEmpty()) {
+                    item {
+                        TopActionsBlock(actions = topActions)
+                    }
+                }
+
                 // Overall analysis
                 item {
                     val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
@@ -722,6 +733,83 @@ private fun AdviceDerivationDialog(advice: Advice, categoryName: String, onDismi
             }
         },
     )
+}
+
+@Composable
+private fun TopActionsBlock(actions: List<TopAction>) {
+    GlassCard(
+        glowColor = NeonAmber,
+        glowIntensity = 0.3f,
+    ) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "\u26A1",
+                    style = MaterialTheme.typography.headlineMedium,
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(
+                        "Top 5 Massnahmen",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = NeonAmber,
+                    )
+                    Text(
+                        "Staerkste Entropie-Senkung",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            actions.forEachIndexed { index, action ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    // Large bold number
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(
+                                when (index) {
+                                    0 -> NeonRed
+                                    1 -> NeonAmber
+                                    2 -> NeonAmber.copy(alpha = 0.8f)
+                                    else -> NeonCyan
+                                }
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "${index + 1}",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.surface,
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = action.title,
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = action.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 3,
+                        )
+                    }
+                }
+                if (index < actions.lastIndex) {
+                    NeonDivider()
+                }
+            }
+        }
+    }
 }
 
 @Composable

@@ -7,6 +7,7 @@ import com.bestjournal.app.domain.model.Advice
 import com.bestjournal.app.domain.model.AdviceBlock
 import com.bestjournal.app.domain.model.AdvicePriority
 import com.bestjournal.app.domain.model.DerivationEntry
+import com.bestjournal.app.domain.model.TopAction
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -102,6 +103,12 @@ constructor(
         JSON-Schema:
         {
           "gesamtanalyse": "Ausführlicher, empathischer Text (8–12 Sätze)...",
+          "top_massnahmen": [
+            {
+              "titel": "Kurzer, prägnanter Titel der Maßnahme",
+              "beschreibung": "Konkrete Beschreibung in 2 Zeilen — was genau tun und warum es die Entropie stark senkt"
+            }
+          ],
           "kategorien": [
             {
               "name": "Kategoriename",
@@ -126,6 +133,18 @@ constructor(
             }
           ]
         }
+
+        TOP-5-MASSNAHMEN (PFLICHT — "top_massnahmen"):
+        Identifiziere aus ALLEN Einträgen, der Gesamtanalyse und allen Kategorien die
+        5 wichtigsten, allumfassendsten Maßnahmen, die die persönliche Entropie des
+        Tagebuchschreibers in der Zukunft am STÄRKSTEN und NACHHALTIGSTEN senken würden.
+        - Genau 5 Maßnahmen, sortiert nach Stärke der Entropie-Senkung (stärkste zuerst).
+        - Jede Maßnahme in 2 Zeilen: Was genau tun + warum es die Entropie stark senkt.
+        - Diese Maßnahmen sollen KATEGORIEÜBERGREIFEND sein — sie fassen die wichtigsten
+          Erkenntnisse aus ALLEN Kategorien zusammen.
+        - Sei konkret und direkt — keine Allgemeinplätze wie "mehr Sport" sondern
+          "Täglich 20 Minuten spazieren gehen nach der Arbeit" basierend auf den Einträgen.
+        - Denke ganzheitlich: Welche 5 Veränderungen hätten den größten Dominoeffekt?
 
         Regeln:
         - Schreibe auf Deutsch, einfach und direkt, ohne Floskeln und ohne Fremdwörter.
@@ -261,6 +280,7 @@ constructor(
     private fun parseAdviceJson(jsonString: String, entryCount: Int): List<AdviceBlockEntity> {
         val json = JSONObject(jsonString)
         val overallAnalysis = json.getString("gesamtanalyse")
+        val topActionsJson = json.optJSONArray("top_massnahmen")?.toString() ?: "[]"
         val categories = json.getJSONArray("kategorien")
         val now = System.currentTimeMillis()
 
@@ -276,6 +296,7 @@ constructor(
                 categorySummary = cat.getString("zusammenfassung"),
                 adviceJson = adviceArray.toString(),
                 overallAnalysis = overallAnalysis,
+                topActionsJson = topActionsJson,
                 lastUpdated = now,
                 basedOnEntryCount = entryCount,
             )
@@ -322,6 +343,20 @@ private fun AdviceBlockEntity.toDomain(): AdviceBlock {
             emptyList()
         }
 
+    val topActions =
+        try {
+            val array = JSONArray(topActionsJson)
+            (0 until array.length()).map { i ->
+                val obj = array.getJSONObject(i)
+                TopAction(
+                    title = obj.getString("titel"),
+                    description = obj.getString("beschreibung"),
+                )
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+
     return AdviceBlock(
         id = id,
         categoryName = categoryName,
@@ -331,6 +366,7 @@ private fun AdviceBlockEntity.toDomain(): AdviceBlock {
         categorySummary = categorySummary,
         advices = advices,
         overallAnalysis = overallAnalysis,
+        topActions = topActions,
         lastUpdated = lastUpdated,
         basedOnEntryCount = basedOnEntryCount,
     )
