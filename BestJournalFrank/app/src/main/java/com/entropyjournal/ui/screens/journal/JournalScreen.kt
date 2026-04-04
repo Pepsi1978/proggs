@@ -218,23 +218,7 @@ fun JournalScreen(
                 }
             }
 
-            // Transcribing state
-            if (uiState.recordingState == RecordingState.TRANSCRIBING) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                ) {
-                    ShimmerLoadingEffect(height = 80.dp, cornerRadius = 16.dp)
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    ) {
-                        Text("Bitte warten", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("Sprache wird transkribiert", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
-                    }
-                }
-            }
+            // Transcribing state — no visual indicator needed (transcription is near-instant)
 
             if (entries.isEmpty() && uiState.recordingState == RecordingState.IDLE) {
                 Box(

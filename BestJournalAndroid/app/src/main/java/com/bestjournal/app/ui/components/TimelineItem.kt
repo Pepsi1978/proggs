@@ -127,11 +127,7 @@ fun TimelineItem(
                     Spacer(modifier = Modifier.height(2.dp))
                 }
                 Text(
-                    text = DateTimeFormatter.formatFull(entry.timestamp),
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Text(
-                    text = DateTimeFormatter.formatRelative(entry.timestamp),
+                    text = "${DateTimeFormatter.formatFull(entry.timestamp)} · ${DateTimeFormatter.formatRelative(entry.timestamp)}",
                     style = MaterialTheme.typography.labelMedium,
                     color = TextMuted
                 )

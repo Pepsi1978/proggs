@@ -148,12 +148,7 @@ fun EntryDetailScreen(
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
                         Text(
-                            DateTimeFormatter.formatFull(entry.timestamp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                        Text(
-                            DateTimeFormatter.formatRelative(entry.timestamp),
+                            "${DateTimeFormatter.formatFull(entry.timestamp)} · ${DateTimeFormatter.formatRelative(entry.timestamp)}",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.outline
                         )
