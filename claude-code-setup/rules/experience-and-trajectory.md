@@ -80,9 +80,16 @@ Trajectories werden periodisch (via /self-improve oder manuell) auf 3 Muster-Typ
 | trajectories.jsonl | 100 | Aelteste zuerst |
 | bug-cases.jsonl | 100 | Nie automatisch loeschen |
 
+## Timing
+
+- **Experience Store**: Nach Abschluss jeder nicht-trivialen Aufgabe sofort schreiben
+- **Trajectories**: Als LETZTER Schritt vor Session-Ende schreiben (nach dem letzten Commit)
+- **LEARNINGS.md**: Sofort wenn ein neues projektuebergreifendes Learning erkannt wird
+
 ## Was NIEMALS passieren darf
 
 - ❌ Session beenden ohne Erfahrung zu speichern (bei >5 Tool-Calls)
 - ❌ Komplexe Aufgabe starten ohne Erfahrungen zu pruefen
 - ❌ success_score beschoenigen — ehrlich bewerten
 - ❌ JSONL-Dateien mit sed/awk bearbeiten (nur Python oder Append)
+- ❌ Trajectory-Analyzer darf NIEMALS automatisch Regeln oder Agents aendern — NUR vorschlagen

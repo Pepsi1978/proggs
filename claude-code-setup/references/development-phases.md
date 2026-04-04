@@ -28,6 +28,15 @@
 | **CLI-Tool** | Package Manager (npm/cargo/brew), GitHub Releases, awesome-lists |
 | **Open Source** | GitHub-Sichtbarkeit, README-Design, Contributing Guide |
 
+### Wann Phase 4 NICHT noetig ist (Ausnahmen)
+
+| Projekttyp | Phase 4 ueberspringen? |
+|------------|----------------------|
+| Persoenliches Tool (nur fuer sich selbst) | Ja — direkt zu Phase 5 |
+| Internes Firmen-Tool | Ja — direkt zu Phase 5 |
+| Open-Source-Library (kein Endnutzer-Produkt) | Verkuerzt: nur README + GitHub-Sichtbarkeit |
+| Alles was Nutzer/Kunden erreichen soll | **NEIN — Phase 4 ist PFLICHT** |
+
 ## Phasen-Anzeige (PFLICHT — ALLE Projekttypen)
 
 Fuer Android: `📱 Phase [N] ([Name]) — [Projekt] v[Version] (Build [N])`

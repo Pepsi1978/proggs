@@ -140,6 +140,11 @@ Jede Session mit >5 Tool-Calls bekommt einen Score in `~/.claude/session-scores.
 
 Gesamt: `(intent + efficiency + memory + learning) / 4`
 
+### Trend-Interpretation
+- **Steigender Trend** (letzte 5 Sessions > vorherige 5) = System wird intelligenter
+- **Fallender Trend** = ALARM — `/self-improve` muss ran
+- **Stagnation** = Plateau — kreativere Verbesserungen noetig
+
 ## Compound Gains (Ziel jeder Analyse)
 
 Jede metacognitive Analyse soll mindestens EINEN dieser Outputs produzieren:

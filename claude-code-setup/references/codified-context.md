@@ -17,7 +17,7 @@ und stellt sicher, dass sie bewusst gepflegt wird statt zufaellig zu wachsen.
 
 **Abruf-Hooks**: CLAUDE.md enthaelt Verweise auf spezialisierte Regeln:
 - "Vollstaendige Regel: `~/.claude/rules/self-observation.md`"
-- "Fuer Android-spezifische Details siehe `android-development-phases.md`"
+- "Fuer Android-spezifische Details siehe `android-phase-trigger.md` → laedt `references/development-phases.md`"
 Diese Verweise sind wie ein Bibliothekskatalog — sie sagen Claude WO das
 Detailwissen liegt, ohne es direkt in CLAUDE.md zu kopieren.
 
@@ -30,8 +30,8 @@ Detailwissen liegt, ohne es direkt in CLAUDE.md zu kopieren.
 
 **Namenskonvention**: `[thema]-[spezifik].md`
 - `fetch-rebase-before-push.md` — Git-Workflow
-- `android-development-phases.md` — Android-spezifisch
-- `experience-store.md` — Erfahrungsspeicher
+- `android-phase-trigger.md` — Android-Trigger (laedt Reference on-demand)
+- `experience-and-trajectory.md` — Erfahrungsspeicher + Trajectories
 - `ace-protected-zones.md` — ACE-Schutz
 
 ### Schicht 3: On-Demand-Wissen (Agents + Speicher)
