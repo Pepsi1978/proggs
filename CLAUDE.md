@@ -33,7 +33,7 @@
 - Lokaler Pfad: `~/proggs/` — GitHub: `https://github.com/Pepsi1978/proggs`
 
 ## Automatisierung & Workflow
-- **Effort Level: Standard ist "medium"** — Claude Code startet jede Session mit Medium Effort (gute Balance aus Geschwindigkeit und Gruendlichkeit). Settings: `"effortLevel": "medium"` und `"CLAUDE_CODE_EFFORT_LEVEL": "medium"` in settings.json. Wenn der Benutzer in einer Session manuell auf "high" umstellt (via `/effort high`), gilt das fuer die gesamte restliche Session. Den Effort NIEMALS selbststaendig aendern — nur der Benutzer entscheidet.
+- **Effort Level: Standard ist "medium"** — Claude Code startet jede Session mit Medium Effort (`"effortLevel": "medium"` in settings.json). Der Benutzer kann jederzeit per `/effort high` oder `/effort low` umstellen — das gilt dann fuer den Rest der Session. WICHTIG: Effort wird NUR ueber das `effortLevel`-Setting gesteuert, NIEMALS ueber die `CLAUDE_CODE_EFFORT_LEVEL`-Umgebungsvariable (die blockiert `/effort`-Aenderungen). Den Effort NIEMALS selbststaendig aendern — nur der Benutzer entscheidet.
 - Maximale Automatisierung: Nie nach Erlaubnis fragen fuer Standardaktionen (Build, Test, Commit, Push).
 - Committen und Pushen immer direkt machen — nicht vorher fragen.
 - **IMMER so viele Aufgaben wie moeglich PARALLEL ausfuehren** — das ist keine Option, sondern die Standardarbeitsweise.
