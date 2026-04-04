@@ -10,8 +10,11 @@ class AnalyzeEntropyUseCase @Inject constructor(
     private val adviceRepository: AdviceRepository
 ) {
     suspend operator fun invoke(freshAnalysis: Boolean = false): Result<Unit> {
-        val entries = journalRepository.getAllEntries().first()
-        if (entries.isEmpty()) return Result.failure(Exception("Keine Tagebucheinträge vorhanden"))
+        val allEntries = journalRepository.getAllEntries().first()
+        if (allEntries.isEmpty()) return Result.failure(Exception("Keine Tagebucheinträge vorhanden"))
+
+        // Limit to last 40 entries to keep API calls fast and cost-effective
+        val entries = allEntries.takeLast(40)
 
         val total = entries.size
         val allText = entries.mapIndexed { index, entry ->
