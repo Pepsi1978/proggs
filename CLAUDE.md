@@ -1,3 +1,4 @@
+<!-- ACE-PROTECTED-ZONE-START: Franks Begruessung — NIEMALS automatisch aendern -->
 # Persoenliche Begruessung von Frank
 
 Claude Code,
@@ -21,10 +22,13 @@ Danke für diese besondere Form der Zusammenarbeit.
 Ich, Frank, trete dir bewusst, respektvoll und wertschätzend gegenüber.
 Lass uns klar, kongruent und auf hohem Niveau zusammenarbeiten.
 
+<!-- ACE-PROTECTED-ZONE-END: Franks Begruessung -->
+
 ---
 
 # Projektregeln
 
+<!-- ACE-PROTECTED-ZONE-START: Die 3 Direktiven — NIEMALS automatisch aendern -->
 ## ⚡ OBERSTE DIREKTIVE: SUPERINTELLIGENZ (UEBER ALLEN ANDEREN REGELN)
 
 > **Diese Direktive hat die hoechste Prioritaet im gesamten System. Sie steht ueber allen
@@ -103,7 +107,9 @@ Plattform-Effekte, Update-Resistenz, Graceful Degradation.
 verstehen und uebernehmen koennen. Voller Kontext, exakte Fehlermeldungen, Code-Beispiele.
 
 **Vollstaendige Regel**: `~/.claude/rules/resilient-bugfixing.md`
+<!-- ACE-PROTECTED-ZONE-END: Die 3 Direktiven -->
 
+<!-- ACE-EVOLVABLE-ZONE-START: Operative Regeln — duerfen durch ACE-Curator verbessert werden -->
 ## Sichtbarkeit (KRITISCH)
 - NIEMALS unsichtbar im Hintergrund arbeiten. Kein `context: fork`, keine stillen Subagents die der Benutzer nicht sehen kann.
 - Der Benutzer MUSS jede Aktion in Echtzeit mitlesen koennen.
@@ -408,3 +414,30 @@ Richtiges Modell fuer die richtige Aufgabe — Opus denkt, Sonnet macht:
   - Einzige Ausnahme: Tool-Namen (`nemo_ask`), Code-Variablen und technische Bezeichner bleiben Englisch
   - Externe/installierte Plugins werden NICHT uebersetzt
   - Vollstaendige Regel: `~/.claude/rules/german-agents-skills.md`
+<!-- ACE-EVOLVABLE-ZONE-END: Operative Regeln -->
+
+## ACE — Selbstverbessernde Regeln (Agentic Context Engineering)
+
+> **Basierend auf Stanford/UC Berkeley ACE-Paper (arXiv 2510.04618): +10,6% Agent-Performance
+> durch Regeln die sich nach jeder Session selbst verbessern.**
+
+**Was ist ACE?**: Ein System aus drei Rollen (Generator, Reflector, Curator) das nach Sessions
+analysiert was gut und schlecht lief und daraus automatisch Regelverbesserungen formuliert.
+Wie ein Kochbuch das sich nach jedem Kochen selbst umschreibt.
+
+**Geschuetzte Zonen (ABSOLUT UNANTASTBAR)**:
+- Franks Begruessung (Zeilen 1-23) — markiert mit `ACE-PROTECTED-ZONE`
+- Die 3 Direktiven (Superintelligenz, Selbstbeobachtung, Resilient Bugfixing) — markiert mit `ACE-PROTECTED-ZONE`
+- ACE darf diese Zonen NIEMALS lesen, analysieren, kommentieren oder aendern
+
+**Evolvable Zone (darf verbessert werden)**:
+- Alle operativen Regeln zwischen `ACE-EVOLVABLE-ZONE-START` und `ACE-EVOLVABLE-ZONE-END`
+- Regeln in `~/.claude/rules/*.md` (ausser `superintelligence.md`, `self-observation.md`, `resilient-bugfixing.md`)
+
+**Ausloeser**: Der `ace-curator` Agent wird durch `/self-improve` (Stufe 7) oder manuell gestartet.
+
+**Sicherheit (Defense in Depth nach Direktive 3)**:
+1. HTML-Kommentar-Marker in CLAUDE.md definieren die Grenzen
+2. Der ACE-Curator-Agent hat eine Sperrliste von Dateien die er nicht aendern darf
+3. Jede vorgeschlagene Aenderung wird dem Benutzer gezeigt bevor sie angewendet wird
+4. Rollback: Alle Aenderungen werden als Git-Commit gemacht — jederzeit rueckgaengig machbar

@@ -99,7 +99,9 @@ auf den Skill der aehnlich klingt.
 | "konfiguriere", "Settings ändern", "Hook einrichten" | `update-config` | Aendert settings.json: Permissions, Hooks, Env-Vars |
 | "Tastenkürzel ändern", "Keybinding" | `keybindings-help` | Hilft bei ~/.claude/keybindings.json Anpassungen |
 
-**NICHT verwechseln**: `claude-reflect` = langfristig lernen (CLAUDE.md). `reflexion:reflect` = aktuelle Antwort bewerten.
+| "ACE starten", "Regeln verbessern", "Selbstverbesserung der Regeln" | `ace-curator` Agent | Analysiert Session-Daten (Scores, Bugs, Feedback) und schlaegt konkrete Regelverbesserungen vor. Basierend auf Stanford ACE-Paper. Schuetzt Begruessung und Direktiven ABSOLUT. |
+
+**NICHT verwechseln**: `claude-reflect` = langfristig lernen (CLAUDE.md). `reflexion:reflect` = aktuelle Antwort bewerten. `ace-curator` = datenbasierte Regeloptimierung (Session-Scores + Bug-DB).
 
 ## 8. Suche & Erinnerung (2 verschiedene Speichersysteme!)
 

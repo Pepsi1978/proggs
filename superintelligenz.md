@@ -10,13 +10,13 @@
 
 | Direktive | Offene Vorschlaege | Umgesetzt | Verworfen | Bereits vorhanden |
 |-----------|-------------------|-----------|-----------|-------------------|
-| Superintelligenz | 1 | 4 | 1 | 1 |
-| Selbstbeobachtung | 0 | 3 | 1 | 1 |
-| Resilient Bugfixing | 0 | 4 | 1 | 0 |
-| **Gesamt** | **1** | **11** | **3** | **2** |
+| Superintelligenz | 5 | 4 | 1 | 1 |
+| Selbstbeobachtung | 2 | 3 | 1 | 1 |
+| Resilient Bugfixing | 1 | 4 | 1 | 0 |
+| **Gesamt** | **8** | **11** | **3** | **2** |
 
-*Letzte Aktualisierung: 2026-03-31 (Lauf 2: macOS-Fokus)*
-*Anzahl Forschungslaeufe: 2*
+*Letzte Aktualisierung: 2026-04-04 (Lauf 3: Selbstlernende + Selbstheilende Systeme 2025/2026)*
+*Anzahl Forschungslaeufe: 3*
 
 ---
 
@@ -597,22 +597,208 @@ Unsere Entwicklungsumgebung prueft sich aktuell nur bei Session-Start (invariant
 
 ---
 
+---
+
+## NEUE FINDINGS — Lauf 3 (2026-04-04): Selbstlernende + Selbstheilende Systeme
+
+---
+
+### Finding 18: SICA — Ein Agent der sich selbst verbessert (ohne extra Training)
+**Direktive:** 1: Superintelligenz
+**Quelle(n):** [SICA arXiv 2504.15228](https://arxiv.org/abs/2504.15228) | [SICA GitHub](https://github.com/MaximeRobeyns/self_improving_coding_agent) | [ICLR 2025 Workshop Paper](https://openreview.net/pdf?id=rShJCyLsOr)
+**Entdeckt in:** Welle 1
+**Was ist das? (fuer Nicht-Programmierer):**
+Stell dir vor, ein Handwerker schaut sich seine eigene Arbeit an und verbessert seine Werkzeuge selbst — nicht weil jemand ihn darum bittet, sondern weil er aus Erfahrung weiss was besser funktioniert. SICA (Self-Improving Coding Agent) macht genau das: Der Agent liest seine eigenen vergangenen Loesungsversuche, findet seine Schwachstellen und aendert seinen eigenen Code um besser zu werden. Resultat: Performance von 17% auf 53% auf dem SWE-Bench-Benchmark (Standard-Messung fuer Coding-Agenten) — ohne dass jemand den Agenten extra trainiert hat.
+
+**Was bringt es uns konkret?:**
+Claude Code koennte nach bestimmten Sessions seinen eigenen Agenten-Code (die .md-Dateien in ~/.claude/agents/) analysieren und Schwachstellen identifizieren. /self-improve wuerde nicht nur externe Fixes anwenden sondern auch die Agenten-Prompts selbst evolutionaer verbessern — eine fundamentale Steigerung der System-Intelligenz.
+
+**Aufwand:** 1-2 Tage
+
+**Umsetzung in Claude Code:**
+- **Typ:** Agent-Upgrade (neuer Modus fuer /self-improve)
+- **Datei(en):** `~/.claude/commands/self-improve.md` (Erweiterung), `~/.claude/agents/self-evaluator.md` (neu)
+- **Schritte:**
+  1. Neuen Agenten `self-evaluator` erstellen: Liest alle ~/.claude/agents/*.md Dateien und vergleicht sie mit Session-Score-Daten aus session-scores.jsonl
+  2. Identifiziert Agenten mit niedrigem Erfolgs-Score (aus Whiteboard-Daten)
+  3. Generiert konkrete Verbesserungsvorschlaege fuer die schwachen Agenten
+  4. Schreibt Verbesserungen in neuen Agent-Versions-Branch (Backup der alten Version behalten)
+  5. Evaluiert neue Version nach 3 Sessions — bei Verschlechterung automatisch zurueck zur alten Version
+  6. Ergebnisse in MEMORY.md unter "Agenten-Evolution" loggen
+
+**Kreativitaets-Bonus:** SICA eliminiert die Trennung zwischen Meta-Agent (der verbessert) und Target-Agent (der verbessert wird) — es ist derselbe Agent. Fuer Claude Code: /self-improve wuerde nicht nur Regeln schreiben sondern aktiv seine eigene Agentenflotte optimieren. Das ist echter Compound Intelligence Effect.
+**Abhaengigkeiten:** Keine — session-scores.jsonl und Whiteboard existieren bereits
+**Risiko:** Agenten koennen sich in ungewollte Richtungen entwickeln. Immer Backup vor Aenderung, immer A/B-Test ueber mehrere Sessions.
+**Empfehlung:** Bald
+**Status:** OFFEN
+
+---
+
+### Finding 19: ACE — System-Prompts die sich selbst verbessern
+**Direktive:** 1: Superintelligenz
+**Quelle(n):** [ACE arXiv 2510.04618](https://arxiv.org/abs/2510.04618) | [ACE GitHub](https://github.com/ace-agent/ace) | [VentureBeat Artikel](https://venturebeat.com/ai/ace-prevents-context-collapse-with-evolving-playbooks-for-self-improving-ai)
+**Entdeckt in:** Welle 1
+**Was ist das? (fuer Nicht-Programmierer):**
+Stell dir vor, ein Kochbuch das sich selbst neu schreibt: Wenn ein Rezept schlecht funktioniert, streicht das Buch es heraus und ergaenzt bessere Techniken — ohne dass der Koch eingreifen muss. ACE (Agentic Context Engineering) macht genau das mit System-Prompts. Es behandelt den System-Prompt nicht als fixen Text sondern als ein "lebendes Handbuch" das aus jedem Einsatz lernt. Drei spezialisierte Mini-Agenten arbeiten zusammen: Generator (probiert Loesungen), Reflector (analysiert was funktioniert), Curator (destilliert Erkenntnisse in den Prompt). Ergebnis: +10.6% bessere Performance auf Agenten-Benchmarks ohne extra Training.
+
+**Was bringt es uns konkret?:**
+CLAUDE.md und ~/.claude/rules/*.md koennen zu echten ACE-Playbooks werden: Dateien die sich automatisch verbessern basierend auf dem was in Sessions gut oder schlecht lief. Das ist der Unterschied zwischen statischen Regeln (die veralten) und lebendigen Regeln (die wachsen). Direkte Verbindung zu unserer Selbstbeobachtungs-Direktive.
+
+**Aufwand:** 1 Tag
+
+**Umsetzung in Claude Code:**
+- **Typ:** Agent-Set (3 spezialisierte Mikro-Agenten) + Erweiterung von /self-improve
+- **Datei(en):** `~/.claude/agents/ace-generator.md`, `~/.claude/agents/ace-reflector.md`, `~/.claude/agents/ace-curator.md`
+- **Schritte:**
+  1. Generator-Agent: Nach jeder Session analysiert er die Session-Aktionen und generiert "Was hat gut funktioniert / was nicht?" als Kandidaten-Erkenntnisse
+  2. Reflector-Agent: Filtert die Kandidaten — behalt nur Erkenntnisse die in mehreren Sessions aufgetaucht sind (Konsistenzpruefung)
+  3. Curator-Agent: Formuliert die gefilterten Erkenntnisse als konkrete Regel-Updates fuer CLAUDE.md oder ~/.claude/rules/
+  4. /self-improve-Integration: Die 3 Mikro-Agenten als optionaler Schritt in /self-improve einbauen (Stufe 7: "ACE-Regeloptimierung")
+  5. Brevity Bias verhindern: Regelaenderungen werden immer HINZUGEFUEGT, nie still ueberschrieben (Versions-History bewahren)
+
+**Kreativitaets-Bonus:** ACE loest das "Context Collapse"-Problem — wenn man Regeln iterativ umschreibt verliert man Details. Die drei Rollen (Generate/Reflect/Curate) sind wie das Immunsystem: Erfahrungen erzeugen (Generate), bewerten (Reflect), als Gedaechtnis verewigen (Curate). Verbindung zu Finding 10 (Immunologisches Gedaechtnis).
+**Abhaengigkeiten:** Keine neuen — session-scores.jsonl und MEMORY.md existieren bereits
+**Risiko:** Automatische Regelaenderungen koennen ungewollte Seiteneffekte haben. Jede Regelaenderung muss reviewt werden bevor sie aktiv wird. Kein "stilles" Aendern von CLAUDE.md.
+**Empfehlung:** Sofort — hoechster Impact aller neuen Findings
+**Status:** OFFEN
+
+---
+
+### Finding 20: JitRL + MemRL — Lernen ohne Training: Wie ein Agent aus Erfahrung wird
+**Direktive:** 1: Superintelligenz + 2: Selbstbeobachtung
+**Quelle(n):** [JitRL arXiv 2601.18510](https://arxiv.org/abs/2601.18510) | [MemRL arXiv 2601.03192](https://arxiv.org/abs/2601.03192) | [MemRL GitHub](https://github.com/MemTensor/MemRL)
+**Entdeckt in:** Welle 2 + 3
+**Was ist das? (fuer Nicht-Programmierer):**
+Normale KI-Modelle lernen nur einmal beim Training — danach sind sie "eingefroren". JitRL (Just-In-Time Reinforcement Learning) und MemRL loesen dieses Problem elegant ohne teures Neu-Training: Das Modell selbst bleibt unveraendert, aber es speichert alle vergangenen Erfahrungen mit Erfolgs-Bewertungen. Wenn aehnliche Aufgaben kommen, waehlt es automatisch Aktionen die in der Vergangenheit gut funktioniert haben. Wie ein Arzt der nicht jeden Fall neu studiert sondern auf seine Patientenakten zurueckgreift. JitRL erreicht damit State-of-the-Art unter allen trainingsfreien Methoden.
+
+**Was bringt es uns konkret?:**
+Unser session-scores.jsonl und bug-cases.jsonl sind bereits ein primitives Gedaechtnis. Mit dem JitRL/MemRL-Prinzip koennte ein "Experience Retriever" Agenten vor aehnlichen Aufgaben warnen: "Ich hatte eine aehnliche Aufgabe vor 3 Sessions — das hat gut funktioniert." Das macht Claude Code messbar besser bei wiederkehrenden Aufgaben-Typen.
+
+**Aufwand:** 1 Tag
+
+**Umsetzung in Claude Code:**
+- **Typ:** Hook + Agent
+- **Datei(en):** `.claude/agent-memory/shared/experience-store.jsonl` (neue Datei), `~/.claude/agents/experience-retriever.md`
+- **Schritte:**
+  1. Neue Datei `experience-store.jsonl`: Jeder Eintrag speichert Aufgaben-Typ, verwendete Strategie, Erfolgs-Score, Anzahl Tool-Calls, Fehlerzahl
+  2. SessionEnd-Hook: Schreibt automatisch nach jeder Session einen Eintrag in experience-store.jsonl
+  3. `experience-retriever` Agent: Vor komplexen Aufgaben relevante vergangene Erfahrungen abrufen (semantische Aehnlichkeit via Tags)
+  4. Ausgabe als "Erfahrungs-Hinweis": "Bei aehnlichen Aufgaben hat Strategie X gut funktioniert — Erfolgsquote 87%"
+  5. Pruning: Nach 100 Eintraegen die aeltesten mit schlechten Scores loeschen (Groessenlimit)
+
+**Kreativitaets-Bonus:** JitRL modifiziert nicht das Modell sondern das Gedaechtnis — das ist genau das was wir haben: Whiteboard, session-scores, bug-cases. Wir koennen das JitRL-Prinzip komplett ohne Modell-Aenderung implementieren, indem wir nur die Datenstruktur und den Retrieval-Mechanismus verbessern. Training-Free Learning auf Basis bestehender Infrastruktur.
+**Abhaengigkeiten:** session-scores.jsonl und bug-cases.jsonl existieren bereits
+**Risiko:** Falsche "Erfahrungen" koennen in die falsche Richtung fuehren. Qualitaet der gespeicherten Erfahrungen ist entscheidend.
+**Empfehlung:** Bald
+**Status:** OFFEN
+
+---
+
+### Finding 21: AutoRefine — Agenten die aus vergangenen Fehlern strukturiertes Wissen erzeugen
+**Direktive:** 2: Selbstbeobachtung
+**Quelle(n):** [AutoRefine arXiv 2601.22758](https://arxiv.org/abs/2601.22758)
+**Entdeckt in:** Welle 3
+**Was ist das? (fuer Nicht-Programmierer):**
+Stell dir einen Sporttrainer vor der nach jedem Spiel nicht nur sagt "das war gut/schlecht" sondern konkrete Drill-Uebungen formuliert die die spezifischen Schwaechen beheben. AutoRefine macht das fuer KI-Agenten: Es analysiert vergangene Arbeitsprotokolle ("Trajectories" — wie der Agent vorgegangen ist) und extrahiert daraus zwei Arten von Wissen: spezialisierte Unter-Agenten fuer haeufige Teilaufgaben und konkrete Code-Snippets/Guidelines fuer wiederkehrende Muster. Das Ergebnis: 20-73% weniger Schritte bei gleichen Aufgaben, weil der Agent nicht mehr von vorne anfaengt.
+
+**Was bringt es uns konkret?:**
+Unsere hook-Bibliothek und rules-Dateien wachsen bisher durch manuelle Entscheidungen. AutoRefine wuerde diesen Prozess automatisieren: Jede Session erzeugt Trajectories (was hat Claude wie getan), AutoRefine analysiert Muster und schlaegt automatisch neue Regeln oder Micro-Agenten vor. Das ist Selbstbeobachtung die sich selbst in System-Verbesserungen uebersetzt.
+
+**Aufwand:** 1-2 Tage
+
+**Umsetzung in Claude Code:**
+- **Typ:** Agent (neuer `trajectory-analyzer` Agent, periodisch)
+- **Datei(en):** `~/.claude/agents/trajectory-analyzer.md`, `.claude/agent-memory/shared/trajectories.jsonl`
+- **Schritte:**
+  1. Session-Protokoll als Trajectory speichern: Tool-Call-Sequenz + Ergebnis pro Session
+  2. `trajectory-analyzer` Agent (wochentlich via /self-improve): Alle Trajectories der letzten 7 Tage analysieren
+  3. Muster-Erkennung: Welche Tool-Sequenzen tauchen immer wieder auf? Welche fuehren zu Fehlern?
+  4. Skill-Extraktion: Haeufige Sequenzen → Kandidat fuer neuen Micro-Agenten
+  5. Guideline-Extraktion: Fehlermuster → Kandidat fuer neue Regel in ~/.claude/rules/
+  6. Vorschlaege dem Benutzer praesentieren (nicht automatisch implementieren)
+
+**Kreativitaets-Bonus:** AutoRefine trennt "procedural knowledge" (was tun) von "declarative knowledge" (was gilt) — genau die Trennung zwischen unseren Agents (Prozeduren) und Rules (Deklarationen). Das Modell ist bereits in der Infrastruktur angelegt. AutoRefine liefert die Methode um diesen Prozess zu automatisieren.
+**Abhaengigkeiten:** JitRL experience-store als ergaenzende Datenquelle empfohlen
+**Risiko:** Trajectory-Analyse kann viel Kontext verbrauchen. Nur auf zusammengefasste Daten (nicht rohe Logs) anwenden.
+**Empfehlung:** Spaeter (nach ACE und JitRL)
+**Status:** OFFEN
+
+---
+
+### Finding 22: Codified Context — Dreigliedriges Kontext-Infrastruktur-System fuer Claude Code
+**Direktive:** 1: Superintelligenz
+**Quelle(n):** [Codified Context arXiv 2602.20478](https://arxiv.org/abs/2602.20478)
+**Entdeckt in:** Welle 4
+**Was ist das? (fuer Nicht-Programmierer):**
+Ein Entwickler-Team hat mit Claude Code ein 108.000-Zeilen-System gebaut — und dabei entdeckt dass eine einzige CLAUDE.md-Datei bei grossen Projekten nicht ausreicht. Sie haben eine dreigliedrige Infrastruktur erfunden: (1) eine kompakte "Verfassung" mit Kern-Regeln und Abruf-Hooks (wie ein Index), (2) 19 spezialisierte Domain-Experten-Agenten (jeder kennt nur seinen Teilbereich), (3) 34 "On-Demand"-Spezifikationsdokumente die nur geladen werden wenn sie gebraucht werden. Die Metapher: Nicht alles in einem Buch — sondern eine Bibliothek mit Bibliothekar.
+
+**Was bringt es uns konkret?:**
+Unser CLAUDE.md waechst stetig und nimmt immer mehr Kontext-Fenster ein. Das Codified-Context-Prinzip wuerde bedeuten: Eine schlanke CLAUDE.md als "Verfassung" + spezialisierte Rules die nur geladen werden wenn relevant + ein "On-Demand"-System fuer Projektspezifisches Wissen. Das reduziert Kontext-Verbrauch und macht das System skalierbarer.
+
+**Aufwand:** 1 Tag
+
+**Umsetzung in Claude Code:**
+- **Typ:** Config-Umbau + neue Agent-Struktur
+- **Datei(en):** Refactoring von `~/CLAUDE.md` und `~/.claude/rules/*.md`
+- **Schritte:**
+  1. CLAUDE.md in "Verfassung" (max 200 Zeilen Kern-Regeln + Verweise) und "Domain-Spezifikationen" (separate .md Dateien) aufteilen
+  2. "Retrieval Hooks" in CLAUDE.md: Kurze Verweise wie "Bei Android-Entwicklung: lies android-development-phases.md"
+  3. Spezialisierte Domain-Experten-Agenten erstellen: android-expert, swift-expert, typescript-expert — jeder kennt nur sein Gebiet
+  4. On-Demand-Spezifikationen: Projekt-Details nicht in CLAUDE.md sondern in PROJECT-SPEC.md pro Projekt
+  5. Messen: Kontext-Verbrauch vor und nach dem Umbau vergleichen
+
+**Kreativitaets-Bonus:** Das Paper wurde mit Claude Code als einzigem Code-Generator erstellt — ueber 283 Sessions. Es ist also konkrete Evidenz dass das System skaliert. Die Autoren haben 4 Fallstudien dokumentiert wo das System Fehler VERHINDERT hat die bei monolithischen Prompts aufgetreten waeren. Direkter Beweis fuer besseres Resilient Bugfixing durch Kontext-Infrastruktur.
+**Abhaengigkeiten:** Keine — aber Finding 19 (ACE) ergaenzt sich gut: ACE verbessert den Inhalt, Codified Context verbessert die Struktur
+**Risiko:** Umbau erfordert Aufmerksamkeit um nichts zu verlieren. Neue Abruf-Logik muss getestet werden.
+**Empfehlung:** Bald — direkte Qualitaetsverbesserung fuer bestehende Infrastruktur
+**Status:** OFFEN
+
+---
+
+### Finding 23: Self-Healing Sidecar Pattern — Selbstreparatur als Begleiter-Prozess
+**Direktive:** 3: Resilient Bugfixing
+**Quelle(n):** [Self-Healing Software Systems: Lessons from Nature arXiv 2504.20093](https://arxiv.org/abs/2504.20093) | [AI-Powered Self-Healing Enterprise Apps](https://journalwjarr.com/sites/default/files/fulltext_pdf/WJARR-2025-1682.pdf)
+**Entdeckt in:** Welle 2
+**Was ist das? (fuer Nicht-Programmierer):**
+Stell dir vor du haettest neben jedem Mitarbeiter einen zweiten unsichtbaren Mitarbeiter der nur eines tut: beobachten und sofort eingreifen wenn etwas schiefgeht — ohne dass der erste Mitarbeiter es merkt. Das nennt sich "Sidecar Pattern" aus der Kubernetes-Welt. Ein kleiner Begleit-Prozess laeuft neben dem Haupt-Prozess und uebernimmt genau eine Aufgabe: Fehler erkennen und reparieren. Forschungsmessungen 2025: 76.5% Effektivitaet bei der automatischen Reparatur, nur 4-7% Performance-Overhead, MTTR-Reduktion von Stunden auf Minuten.
+
+**Was bringt es uns konkret?:**
+Unser bestehender heartbeat.sh (launchd Heartbeat, Finding 17) ist bereits ein primitives Sidecar. Mit dem Sidecar-Pattern formalisiert und erweitert: Verschiedene Sidecars fuer verschiedene Aufgaben — einer prueft Hooks, einer prueft MCP-Server, einer prueft settings.json-Integritaet. Jedes Sidecar ist eigenstaendig und kann den anderen nicht stoeren.
+
+**Aufwand:** 1 Tag
+
+**Umsetzung in Claude Code:**
+- **Typ:** Hook-Set-Erweiterung + Windows-Sidecar (Task Scheduler)
+- **Datei(en):** `~/.claude/hooks/sidecar-hooks.ps1` / `.sh`, Windows Task Scheduler XML-Import
+- **Schritte:**
+  1. Windows-Sidecar via Task Scheduler: Alle 15 Min prueft ein PowerShell-Skript kritische Dateien (settings.json lesbar? MEMORY.md korrumpert? Hook-Dateien vorhanden?)
+  2. macOS-Sidecar via launchd (heartbeat.sh erweitern): Selbe Pruefung, andere Implementierung
+  3. Sidecar-Aktionen: Bei Problem → Whiteboard-Log → macOS/Windows-Notification → ggf. Auto-Repair aus Backup
+  4. Backup-System: Kritische Dateien (settings.json, CLAUDE.md) werden bei jeder Aenderung automatisch versioniert (max. 5 Versionen)
+  5. Deadlock-Erkennung: Wenn Hook 3x hintereinander gleichen Fehler wirft → Hook deaktivieren und ins Whiteboard loggen
+
+**Kreativitaets-Bonus:** Das biologische Vorbild (Finding 10, Immunsystem) und das technische Muster (Sidecar) ermoeglichen jetzt ein konkretes Implementierungsrezept. Das Immunsystem hat auch spezialisierte Zellen (B-Zellen fuer Antikoerper, T-Zellen fuer Abtoemng) — genau wie spezialisierte Sidecars. Diese Verbindung war das zentrale Synthesis-Ergebnis aus Welle 5.
+**Abhaengigkeiten:** Finding 17 (launchd Heartbeat) — Windows-Teil ist neu, macOS-Teil ist Erweiterung
+**Risiko:** Task Scheduler auf Windows braucht Admin-Rechte fuer systemweite Tasks. Als User-Task laeuft er nur wenn der Benutzer angemeldet ist.
+**Empfehlung:** Bald (nach ACE)
+**Status:** OFFEN
+
+---
+
 ## Top 5 Empfehlungen (nach Impact sortiert)
 
 > Die 5 wichtigsten Vorschlaege die als NAECHSTES umgesetzt werden sollten.
 > Wird nach jedem Forschungslauf aktualisiert.
 
-| Rang | Finding | Status | Anmerkung |
-|------|---------|--------|-----------|
-| ~~1~~ | ~~Finding 14: macOS Notification Hooks~~ | BEREITS VORHANDEN | notify.sh + notify.ps1 existierten schon |
-| ~~2~~ | ~~Finding 16: ServeMyAPI Keychain MCP~~ | VERWORFEN | Keychain-Popups bei jedem Prozess-Neustart |
-| ~~3~~ | ~~Finding 15: Homebrew MCP~~ | VERWORFEN | brew outdated in heartbeat.sh integriert |
-| ~~4~~ | ~~Finding 11: SwiftLens MCP~~ | BEREITS VORHANDEN | swift-lsp Plugin war schon aktiviert |
-| **5** | **Finding 17: launchd Heartbeat** | **UMGESETZT** | heartbeat.sh + launchd plist + invariant-check Integration |
+| Rang | Finding | Direktive | Aufwand | Warum zuerst? |
+|------|---------|-----------|---------|---------------|
+| **1** | **Finding 19: ACE — Sich selbst verbessernde System-Prompts** | D1 Superintelligenz | 1 Tag | Hoechster ROI: CLAUDE.md und Rules werden lebendig statt statisch. +10% Performance ohne Modell-Aenderung. Sofort umsetzbar. |
+| **2** | **Finding 22: Codified Context — Dreigliedrige Kontext-Infrastruktur** | D1 Superintelligenz | 1 Tag | CLAUDE.md-Skalierbarkeit: Bei 49 Rules und wachsendem CLAUDE.md droht Kontext-Explosion. Umbau jetzt verhindert spaetere Krise. |
+| **3** | **Finding 18: SICA — Agenten verbessern sich selbst** | D1 Superintelligenz | 2 Tage | Fundamental: /self-improve bekommt eine Dimension die heute fehlt — die Agenten-Prompts selbst evolvieren. Compound Effect exponentiell. |
+| **4** | **Finding 20: JitRL/MemRL — Erfahrungs-basiertes Lernen** | D1 + D2 | 1 Tag | Training-Free: Kein Modell-Training noetig, baut direkt auf session-scores.jsonl und bug-cases.jsonl auf. Sofort nutzbare Infrastruktur. |
+| **5** | **Finding 23: Self-Healing Sidecar Pattern** | D3 Resilient Bugfixing | 1 Tag | Luecke schliessen: Windows hat noch keinen Background-Health-Check (nur macOS heartbeat). Sidecar schliesst diese Plattform-Luecke. |
 
-*Hinweis: Findings 1-10 aus Lauf 1 sind bereits umgesetzt. Von Findings 11-17 (macOS-Fokus) waren 2 schon vorhanden, 3 wurden nach Alltagstauglichkeits-Pruefung verworfen, 1 wurde umgesetzt, 1 wartet auf macOS 26.*
-
-**Einziger offener Vorschlag:** Finding 13 (Apple Foundation Models) — wartet auf macOS 26 (Tahoe).
+*Lauf 3 Findings 18-23: 6 neue Findings. Finding 13 (Apple Foundation Models) weiterhin offen, wartet auf macOS 26 (Tahoe).*
 
 ---
 
@@ -662,3 +848,23 @@ Unsere Entwicklungsumgebung prueft sich aktuell nur bei Session-Start (invariant
 - [2026-03-31] **Funktioniert gut (Lauf 2):** GitHub-Suche nach Community-Projekten (PAIArchitecture, SwiftLens, ServeMyAPI) brachte kreative Muster die offizielle Doku nicht hat. GitHub ist Pflichtquelle fuer Implementation-Suchen.
 - [2026-03-31] **Nicht effektiv (Lauf 2):** WebFetch auf GitHub wird durch den intercept-github-fetch.sh Hook blockiert — stattdessen WebSearch mit Repo-Name nutzen oder `gh repo view` via Bash. Zeitverschwendung durch Blockierung vermeiden.
 - [2026-03-31] **Naechstes Mal probieren:** macOS-Shortcuts App und Automator als Agent-Trigger untersuchen (wurde in diesem Lauf nicht recherchiert — moeglicherweise Low-Code Alternative zu Hammerspoon).
+
+- [2026-04-04] SICA (Self-Improving Coding Agent) arXiv 2504.15228 — 1 Finding (18)
+- [2026-04-04] ACE (Agentic Context Engineering) arXiv 2510.04618 — 1 Finding (19)
+- [2026-04-04] JitRL (Just-In-Time RL) arXiv 2601.18510 + MemRL arXiv 2601.03192 — 1 kombiniertes Finding (20)
+- [2026-04-04] AutoRefine arXiv 2601.22758 — 1 Finding (21)
+- [2026-04-04] Codified Context Infrastructure arXiv 2602.20478 — 1 Finding (22)
+- [2026-04-04] Self-Healing Sidecar Pattern arXiv 2504.20093 — 1 Finding (23)
+- [2026-04-04] CASCADE (Cumulative Agentic Skill Creation) arXiv 2512.23880 — In Finding 19/21 integriert, kein separates Finding (Ueberschneidung mit ACE/AutoRefine)
+- [2026-04-04] EXIF (Automated Skill Discovery) arXiv 2506.04287 — In Finding 20 integriert
+- [2026-04-04] Continual Memory Architectures (CMA) arXiv 2601.09913 — Kein eigenstaendiges Finding (zu infrastruktur-nah, JitRL/MemRL decken den Kern ab)
+- [2026-04-04] Global Workspace Theory fuer KI-Agenten — Kein Finding (zu philosophisch, kein direktes Umsetzungs-Rezept fuer Claude Code Hooks/Agents)
+- [2026-04-04] Chaos Engineering 2.0 (AI-gesteuertes Chaos Engineering) — BEREITS in Finding 9 abgedeckt (chaos-tester Agent umgesetzt 2026-03-31)
+- [2026-04-04] Self-Healing Machine Learning Framework arXiv 2411.00186 — Kein eigenstaendiges Finding (deckt ML-Training-Bereich, nicht Agent-Infrastruktur)
+- [2026-04-04] Cost-Aware LLM Routing (Haiku/Sonnet/Opus) — Kein neues Finding (bestehende Geschwindigkeitsstufen-Tabelle in CLAUDE.md deckt das ab)
+- [2026-04-04] RL from Build/Test Feedback (RLEF arXiv 2410.02089) — Kein eigenstaendiges Finding (interessant fuer Modell-Training, nicht fuer inference-time Agenten wie Claude Code)
+
+- [2026-04-04] **Funktioniert gut:** Direkte arXiv-Suche nach 2601/2602 Papieren (Januar-Februar 2026) lieferte die aktuellsten Findings — besser als nach Themen-Keywords zu suchen.
+- [2026-04-04] **Funktioniert gut:** "Combining" verwandter Findings (JitRL+MemRL als Finding 20) reduziert Duplikate bei hoher konzeptueller Aehnlichkeit.
+- [2026-04-04] **Nicht effektiv:** Global Workspace Theory Suche — lieferte viel philosophische Theorie aber kein konkretes Implementierungs-Rezept fuer Claude Code.
+- [2026-04-04] **Naechstes Mal probieren:** Direkt nach "Claude Code extensions agents hooks 2026" suchen — konkrete Community-Implementierungen statt theoretische Papers.
