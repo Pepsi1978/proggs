@@ -357,10 +357,9 @@ Richtiges Modell fuer die richtige Aufgabe — Opus denkt, Sonnet macht:
 - Fehlende Plugins/Skills dem Benutzer melden und nach Bestaetigung nachinstallieren
 - Manuell: `bash claude-code-setup/setup.sh` (macOS) oder `powershell claude-code-setup/setup.ps1` (Windows)
 
-## Synchronisation der CLAUDE.md
-- Die CLAUDE.md existiert lokal (`~/CLAUDE.md`) und im Repository (`~/proggs/CLAUDE.md`)
-- Bei jeder Aenderung muessen **beide Versionen synchron** gehalten werden
-- Workflow: Datei bearbeiten → beide Kopien aktualisieren → committen → pushen
+## CLAUDE.md Speicherort
+- Die CLAUDE.md existiert NUR im Repository: `~/proggs/CLAUDE.md`
+- Es gibt KEINE Kopie im Home-Verzeichnis (`~/CLAUDE.md`) mehr — das Duplikat wurde am 2026-04-04 entfernt um ~8.700 Tokens Kontext zu sparen.
 
 ## Sprache
 - Kommunikation mit dem Benutzer auf Deutsch.
