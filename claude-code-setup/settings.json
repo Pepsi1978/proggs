@@ -385,6 +385,16 @@
 				"hooks": [
 					{
 						"type": "command",
+						"command": "bash ~/.claude/hooks/experience-logger.sh",
+						"timeout": 15,
+						"async": true
+					}
+				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
 						"command": "bash ~/.claude/hooks/pending-admin-updates.sh",
 						"timeout": 15,
 						"async": true

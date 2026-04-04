@@ -10,10 +10,10 @@
 
 | Direktive | Offene Vorschlaege | Umgesetzt | Verworfen | Bereits vorhanden |
 |-----------|-------------------|-----------|-----------|-------------------|
-| Superintelligenz | 5 | 4 | 1 | 1 |
-| Selbstbeobachtung | 2 | 3 | 1 | 1 |
+| Superintelligenz | 3 | 6 | 1 | 1 |
+| Selbstbeobachtung | 1 | 4 | 1 | 1 |
 | Resilient Bugfixing | 1 | 4 | 1 | 0 |
-| **Gesamt** | **8** | **11** | **3** | **2** |
+| **Gesamt** | **5** | **14** | **3** | **2** |
 
 *Letzte Aktualisierung: 2026-04-04 (Lauf 3: Selbstlernende + Selbstheilende Systeme 2025/2026)*
 *Anzahl Forschungslaeufe: 3*
@@ -690,7 +690,7 @@ Unser session-scores.jsonl und bug-cases.jsonl sind bereits ein primitives Gedae
 **Abhaengigkeiten:** session-scores.jsonl und bug-cases.jsonl existieren bereits
 **Risiko:** Falsche "Erfahrungen" koennen in die falsche Richtung fuehren. Qualitaet der gespeicherten Erfahrungen ist entscheidend.
 **Empfehlung:** Bald
-**Status:** OFFEN
+**Status:** UMGESETZT (2026-04-04) — experience-store.jsonl + experience-retriever Agent + experience-logger Hook (ps1+sh) + experience-store Rule
 
 ---
 
@@ -721,7 +721,7 @@ Unsere hook-Bibliothek und rules-Dateien wachsen bisher durch manuelle Entscheid
 **Abhaengigkeiten:** JitRL experience-store als ergaenzende Datenquelle empfohlen
 **Risiko:** Trajectory-Analyse kann viel Kontext verbrauchen. Nur auf zusammengefasste Daten (nicht rohe Logs) anwenden.
 **Empfehlung:** Spaeter (nach ACE und JitRL)
-**Status:** OFFEN
+**Status:** UMGESETZT (2026-04-04) — trajectories.jsonl + trajectory-analyzer Agent + trajectory-analysis Rule
 
 ---
 
@@ -751,7 +751,7 @@ Unser CLAUDE.md waechst stetig und nimmt immer mehr Kontext-Fenster ein. Das Cod
 **Abhaengigkeiten:** Keine — aber Finding 19 (ACE) ergaenzt sich gut: ACE verbessert den Inhalt, Codified Context verbessert die Struktur
 **Risiko:** Umbau erfordert Aufmerksamkeit um nichts zu verlieren. Neue Abruf-Logik muss getestet werden.
 **Empfehlung:** Bald — direkte Qualitaetsverbesserung fuer bestehende Infrastruktur
-**Status:** OFFEN
+**Status:** UMGESETZT (2026-04-04) — codified-context Rule formalisiert bestehende 3-Schichten-Architektur
 
 ---
 
