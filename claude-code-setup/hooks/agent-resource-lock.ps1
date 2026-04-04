@@ -78,5 +78,3 @@ switch ($Action) {
         }
     }
 }
-
-exit 0
