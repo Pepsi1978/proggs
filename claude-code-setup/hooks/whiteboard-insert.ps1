@@ -182,3 +182,5 @@ function Insert-WhiteboardEntry {
         $mutex.Dispose()
     }
 }
+
+exit 0

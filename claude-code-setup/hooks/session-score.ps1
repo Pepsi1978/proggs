@@ -70,3 +70,5 @@ Hook-Log "score=$score commits=$recentCommits fixes=$fixCommits disk=${freeGB}GB
 # Output valid JSON for Claude Code hook validation
 # Use Write-Host for log display (stderr), not Write-Output (stdout parsed as JSON)
 Write-Host "Session-Score: $score/10 (Commits: $recentCommits, Fixes: $fixCommits)"
+
+exit 0

@@ -84,3 +84,5 @@ trap {
 }
 
 Hook-Log "started"
+
+exit 0

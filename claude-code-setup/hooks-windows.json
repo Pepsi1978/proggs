@@ -1,5 +1,5 @@
 {
-  "_comment": "Complete hooks reference for Windows. Extracted from active settings.json. Uses pwsh (PowerShell 7). Prompt-injection-defender requires Python 3. Bun at $USERPROFILE/.bun/bin/bun.exe.",
+  "_comment": "Complete hooks reference for Windows. Extracted from active settings.json. Uses pwsh (PowerShell 7).",
   "hooks": {
     "SessionStart": [
       {
@@ -143,16 +143,6 @@
             "type": "command",
             "command": "pwsh -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/poka-yoke-git-push.ps1\"",
             "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/poka-yoke-git-push.ps1\"",
-            "timeout": 10
           }
         ]
       },

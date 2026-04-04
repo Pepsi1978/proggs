@@ -59,3 +59,5 @@ try {
 Write-Host ""
 Write-Host "=== Setup Complete ===" -ForegroundColor Cyan
 Write-Host "Restart your terminal for PATH changes to take effect." -ForegroundColor Yellow
+
+exit 0
