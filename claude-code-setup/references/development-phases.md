@@ -1,8 +1,32 @@
-# Android-App-Entwicklung: 6-Phasen-Fahrplan (KRITISCH)
+# 6-Phasen-Fahrplan: ALLE Projekte + Android-Spezifika (KRITISCH)
 
-> **Diese Regel gilt fuer JEDE Android-App die in diesem System entwickelt wird.**
+> **Diese Regel gilt fuer JEDES Projekt das in diesem System entwickelt wird.**
 > **Claude MUSS immer wissen und kommunizieren in welcher Phase sich das Projekt befindet.**
 > **Phasen duerfen NICHT uebersprungen werden. Jede Phase hat klare Eingangs- und Ausgangskriterien.**
+> **Fuer Android-Projekte enthaelt dieses Dokument zusaetzliche Details (R8, ProGuard, Billing, etc.).**
+> **Fuer andere Projekttypen gelten die generischen Abschnitte.**
+
+## Plattform-spezifische Haertung (Phase 3 — andere Projekttypen als Android)
+
+| Projekttyp | Phase-3-Besonderheiten |
+|------------|----------------------|
+| **C#/WPF** | `dotnet publish -c Release`, Trimming pruefen (aehnlich R8!), Code-Signing, Installer (WiX/InnoSetup/MSIX) |
+| **Swift/macOS** | `xcodebuild -configuration Release`, Notarization, Hardened Runtime, DMG/ZIP |
+| **Web/TypeScript** | `npm run build`, Bundle-Groesse, Environment Vars, Security Headers, SSL |
+| **Rust** | `cargo build --release`, Clippy streng, Binary-Groesse, Cross-Compilation |
+| **Go** | `go build -ldflags="-s -w"`, go vet + staticcheck, Cross-Compilation |
+| **Tampermonkey** | Version-Bump, console.log entfernen, @match pruefen, @grant minimieren |
+
+## Phase 4: Vermarktung (andere Projekttypen)
+
+| Projekttyp | Recherche-Fokus |
+|------------|----------------|
+| **C#/WPF** | Windows-Distribution (Microsoft Store vs. Website vs. Winget), Installer-Practices |
+| **Swift/macOS** | Mac App Store ASO, Notarization-Workflow, Indie-Mac-Communities |
+| **Web/TypeScript** | SEO, Product Hunt, Indie Hackers, Landing Page Best Practices |
+| **Tampermonkey** | GreasyFork/OpenUserJS Listing, Reddit-Communities |
+| **CLI-Tool** | Package Manager (npm/cargo/brew), GitHub Releases, awesome-lists |
+| **Open Source** | GitHub-Sichtbarkeit, README-Design, Contributing Guide |
 
 ## Phasen-Uebersicht
 

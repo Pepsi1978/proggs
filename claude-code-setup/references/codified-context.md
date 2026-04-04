@@ -10,7 +10,7 @@ Unser System hat bereits eine dreigliedrige Architektur — diese Regel formalis
 und stellt sicher, dass sie bewusst gepflegt wird statt zufaellig zu wachsen.
 
 ### Schicht 1: Verfassung (CLAUDE.md)
-**Datei**: `~/proggs/CLAUDE.md` (und Sync-Kopie `~/CLAUDE.md`)
+**Datei**: `~/proggs/CLAUDE.md` (einzige Kopie — Duplikat ~/CLAUDE.md wurde am 2026-04-04 entfernt)
 **Zweck**: Kern-Regeln die IMMER geladen werden — die "Verfassung" des Systems.
 **Inhalt**: Die 3 Direktiven, Franks Begruessung, grundlegende Arbeitsregeln.
 **Groesse**: So kompakt wie moeglich. Jede Zeile muss ihren Platz rechtfertigen.
@@ -92,7 +92,7 @@ Das ist noch im gruenen Bereich, aber nahe am Warnwert.
 | Schicht | Mechanismus | Was es schuetzt |
 |---------|-------------|----------------|
 | 1 | ACE-PROTECTED-ZONE Marker | Kern-Inhalte koennen nicht automatisch geaendert werden |
-| 2 | Sync-Kopie (~/CLAUDE.md ↔ ~/proggs/CLAUDE.md) | Selbst wenn eine Kopie kaputt geht |
+| 2 | Git-Versionierung | CLAUDE.md im Repo, jederzeit wiederherstellbar |
 | 3 | Git-Versionierung | Jede Aenderung ist rueckgaengig machbar |
 | 4 | claude-code-setup/ Backup | Rules und Agents werden ins Repo kopiert |
 | 5 | Diese Regel | Claude weiss WIE die Architektur funktioniert |
