@@ -232,16 +232,29 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
 
             // Transcribing state
             if (uiState.recordingState == RecordingState.TRANSCRIBING) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    ShimmerLoadingEffect(height = 20.dp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    ShimmerLoadingEffect(height = 16.dp, modifier = Modifier.fillMaxWidth(0.7f))
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "Transkribiere...",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                ) {
+                    ShimmerLoadingEffect(height = 80.dp, cornerRadius = 16.dp)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    ) {
+                        Text(
+                            "Bitte warten",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Sprache wird transkribiert",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
             }
 
@@ -641,13 +654,18 @@ private fun PreviewDialog(
                 }
 
                 if (isImproving) {
-                    ShimmerLoadingEffect(height = 16.dp)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "Optimiere Text...",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        ShimmerLoadingEffect(height = 60.dp, cornerRadius = 12.dp)
+                        Text(
+                            "KI verbessert Text \u2014 bitte warten",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.titleSmall,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
             }
         },

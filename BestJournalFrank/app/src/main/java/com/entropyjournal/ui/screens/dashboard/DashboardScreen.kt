@@ -561,7 +561,6 @@ private fun TopActionsBlock(actions: List<TopAction>) {
                             text = action.description,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 4,
                         )
                     }
                 }
