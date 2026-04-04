@@ -742,16 +742,12 @@ private fun TopActionsBlock(actions: List<TopAction>) {
         glowIntensity = 0.3f,
     ) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "\u26A1",
-                    style = MaterialTheme.typography.headlineMedium,
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
+            Text(
                     "Top 5 Massnahmen",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = NeonAmber,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
