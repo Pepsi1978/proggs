@@ -53,7 +53,6 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
@@ -82,7 +81,8 @@ fun EntryDetailScreen(
     val focusRequester = remember { FocusRequester() }
     var lastEditTime by remember { mutableLongStateOf(0L) }
     var isFocused by remember { mutableStateOf(false) }
-    val highlightColor = if (isSystemInDarkTheme()) Color(0x44FFFFFF) else Color(0xFFFFEB3B)
+    val isDark = com.bestjournal.app.ui.theme.LocalIsDarkTheme.current
+    val highlightColor = if (isDark) Color(0x44FFFFFF) else Color(0xFFFFEB3B)
     val searchHighlight = if (searchQuery.isNotBlank()) {
         VisualTransformation { text ->
             TransformedText(highlightMatches(text.text, searchQuery, highlightColor), OffsetMapping.Identity)

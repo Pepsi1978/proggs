@@ -31,8 +31,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.isSystemInDarkTheme
 import com.bestjournal.app.domain.model.JournalEntry
+import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.CosmosLayer
 import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonEmerald
@@ -53,7 +53,7 @@ fun TimelineItem(
     position: TimelinePosition = TimelinePosition.ONLY,
     searchQuery: String = ""
 ) {
-    val highlightColor = if (isSystemInDarkTheme()) Color(0x44FFFFFF) else Color(0xFFFFEB3B)
+    val highlightColor = if (LocalIsDarkTheme.current) Color(0x44FFFFFF) else Color(0xFFFFEB3B)
     val lineColor = MaterialTheme.colorScheme.outlineVariant
     val dotColor = when (entry.moodTag) {
         "positiv" -> NeonEmerald
