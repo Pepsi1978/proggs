@@ -69,6 +69,11 @@ class DashboardViewModel @Inject constructor(
                         canUndo = adviceRepository.canUndo,
                         selectedCategoryIndex = 0
                     )
+                    // Auto-hide undo button after 5 seconds
+                    if (adviceRepository.canUndo) {
+                        kotlinx.coroutines.delay(5_000)
+                        _uiState.value = _uiState.value.copy(canUndo = false)
+                    }
                 }
                 .onFailure { error ->
                     _uiState.value = _uiState.value.copy(

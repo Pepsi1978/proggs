@@ -106,7 +106,7 @@ constructor(
           "top_massnahmen": [
             {
               "titel": "Kurzer, prägnanter Titel der Maßnahme",
-              "beschreibung": "Max. 17 Wörter — kurz und knackig: was genau tun und warum"
+              "beschreibung": "Max. 25 Wörter — kurz und knackig: was genau tun und warum"
             }
           ],
           "kategorien": [
@@ -139,7 +139,7 @@ constructor(
         5 wichtigsten, allumfassendsten Maßnahmen, die die persönliche Entropie des
         Tagebuchschreibers in der Zukunft am STÄRKSTEN und NACHHALTIGSTEN senken würden.
         - Genau 5 Maßnahmen, sortiert nach Stärke der Entropie-Senkung (stärkste zuerst).
-        - STRIKT: Jede Beschreibung MAXIMAL 17 Wörter. Kurz, knackig, ein Satz. Nicht mehr.
+        - STRIKT: Jede Beschreibung MAXIMAL 25 Wörter. Kurz, knackig, ein Satz. Nicht mehr.
           Beispiel: "Jeden Abend 10 Minuten Atemübung vor dem Schlafen senkt Stress und verbessert Schlafqualität."
         - Diese Maßnahmen sollen KATEGORIEÜBERGREIFEND sein — die wichtigsten Erkenntnisse aus ALLEN Kategorien.
         - Konkret und direkt — keine Allgemeinplätze, sondern basierend auf den Einträgen.
