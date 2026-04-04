@@ -24,7 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.entropyjournal.ui.theme.LocalIsDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -53,7 +53,7 @@ fun TimelineItem(
     position: TimelinePosition = TimelinePosition.ONLY,
     searchQuery: String = ""
 ) {
-    val highlightColor = if (isSystemInDarkTheme()) Color(0x44FFFFFF) else Color(0xFFFFEB3B)
+    val highlightColor = if (LocalIsDarkTheme.current) Color(0x44FFFFFF) else Color(0xFFFFEB3B)
     val lineColor = MaterialTheme.colorScheme.outlineVariant
     val dotColor = when (entry.moodTag) {
         "positiv" -> NeonEmerald

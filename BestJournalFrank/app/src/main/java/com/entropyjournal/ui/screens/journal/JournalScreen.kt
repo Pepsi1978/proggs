@@ -91,7 +91,7 @@ import com.entropyjournal.util.DateTimeFormatter as DTFormatter
 @Composable
 fun JournalScreen(
     viewModel: JournalViewModel,
-    onEntryClick: (Long) -> Unit
+    onEntryClick: (Long, String) -> Unit
 ) {
     val allEntries by viewModel.entries.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -279,7 +279,7 @@ fun JournalScreen(
                             }
                             TimelineItem(
                                 entry = sectionEntries[index],
-                                onClick = { onEntryClick(sectionEntries[index].id) },
+                                onClick = { onEntryClick(sectionEntries[index].id, if (uiState.isSearchActive) uiState.searchQuery else "") },
                                 position = position,
                                 modifier = Modifier.padding(vertical = 6.dp),
                                 searchQuery = if (uiState.isSearchActive) uiState.searchQuery else ""

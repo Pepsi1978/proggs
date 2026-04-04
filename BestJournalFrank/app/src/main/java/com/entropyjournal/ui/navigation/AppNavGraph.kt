@@ -111,8 +111,8 @@ fun AppNavGraph(
                         0 -> DashboardScreen(viewModel = hiltViewModel())
                         1 -> JournalScreen(
                             viewModel = hiltViewModel(),
-                            onEntryClick = { entryId ->
-                                navController.navigate("entry_detail/$entryId")
+                            onEntryClick = { entryId, query ->
+                                navController.navigate("entry_detail/$entryId?q=$query")
                             }
                         )
                         2 -> SettingsScreen(
@@ -129,14 +129,18 @@ fun AppNavGraph(
         }
 
         composable(
-            "entry_detail/{entryId}",
-            arguments = listOf(navArgument("entryId") { type = NavType.LongType }),
+            "entry_detail/{entryId}?q={searchQuery}",
+            arguments = listOf(
+                navArgument("entryId") { type = NavType.LongType },
+                navArgument("searchQuery") { type = NavType.StringType; defaultValue = "" }
+            ),
             enterTransition = { slideInHorizontally { it } + fadeIn() },
             exitTransition = { slideOutHorizontally { it } + fadeOut() }
-        ) {
+        ) { backStackEntry ->
             EntryDetailScreen(
                 viewModel = hiltViewModel(),
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                searchQuery = backStackEntry.arguments?.getString("searchQuery") ?: ""
             )
         }
     }

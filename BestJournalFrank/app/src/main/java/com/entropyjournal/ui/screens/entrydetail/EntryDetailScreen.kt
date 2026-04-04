@@ -68,10 +68,23 @@ import com.entropyjournal.util.DateTimeFormatter
 @Composable
 fun EntryDetailScreen(
     viewModel: EntryDetailViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    searchQuery: String = ""
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
+    val isDark = com.entropyjournal.ui.theme.LocalIsDarkTheme.current
+    val highlightColor = if (isDark) Color(0x44FFFFFF) else Color(0xFFFFEB3B)
+    val searchHighlight = if (searchQuery.isNotBlank()) {
+        androidx.compose.ui.text.input.VisualTransformation { text ->
+            androidx.compose.ui.text.input.TransformedText(
+                com.entropyjournal.ui.components.highlightMatches(text.text, searchQuery, highlightColor),
+                androidx.compose.ui.text.input.OffsetMapping.Identity
+            )
+        }
+    } else {
+        androidx.compose.ui.text.input.VisualTransformation.None
+    }
     val focusRequester = remember { FocusRequester() }
     var lastEditTime by remember { mutableLongStateOf(0L) }
     var isFocused by remember { mutableStateOf(false) }
@@ -253,7 +266,8 @@ fun EntryDetailScreen(
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(
                                     color = MaterialTheme.colorScheme.onSurface
                                 ),
-                                colors = textFieldColors
+                                colors = textFieldColors,
+                                visualTransformation = searchHighlight
                             )
                         } else {
                             TextField(
@@ -272,7 +286,8 @@ fun EntryDetailScreen(
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(
                                     color = MaterialTheme.colorScheme.onSurface
                                 ),
-                                colors = textFieldColors
+                                colors = textFieldColors,
+                                visualTransformation = searchHighlight
                             )
                         }
                         if (uiState.isSaving) {
