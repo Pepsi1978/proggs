@@ -52,7 +52,31 @@ Agent 3 (optimizer): "Check these files for performance and UI quality: [files].
    - If both agree: proceed. If they disagree: flag the disagreement in the verdict as "CONTESTED".
    - Technical limit: Max 1 MAR round. Track via counter, not by convergence.
 
-4. **Synthesize results**: After MAR phase completes, produce a verdict:
+4. **JUDGE Phase (MANDATORY — laeuft nach MAR, vor dem finalen Verdict)**: Nachdem tester, code-reviewer, optimizer UND MAR abgeschlossen sind, beurteile alle Ergebnisse als unabhaengiger Richter.
+
+   **Bewertungskriterien (alle 4 MUESSEN bewertet werden):**
+   - **Korrektheit**: Ist der Code korrekt? Gibt es logische Fehler, falsche Annahmen, kaputte Tests?
+   - **Sicherheit**: Gibt es Sicherheitsluecken (Injection, ungeschuetzte Secrets, fehlende Validierung)?
+   - **Effizienz**: Gibt es offensichtliche Performance-Probleme oder unnoetige Komplexitaet?
+   - **Einfachheit**: Ist der Code verstaendlich, wartbar, ohne ueberfluessige Abstraktionen?
+
+   **Automatisches FAIL bei CRITICAL-Befunden:**
+   - Wenn code-reviewer, tester ODER optimizer irgendein Issue als CRITICAL markiert hat → sofortiges FAIL, keine weitere Abwaegung noetig.
+   - CRITICAL = Sicherheitsluecken, kaputte Tests, Build-Fehler, datenverlustgefaehrdende Bugs.
+
+   **Judge-Output (PFLICHT, als eigene Sektion im Gesamtbericht):**
+   ```
+   VERDICT: PASS/FAIL
+   Justification:
+   1. [Korrektheit]: ...
+   2. [Sicherheit]: ...
+   3. [Effizienz/Einfachheit]: ...
+   Action items: [nur bei FAIL — konkrete Liste was gefixt werden muss]
+   ```
+
+   Quelle dieser Phase: Cursor 2.2 Multi-Agent Judging + arXiv 2507.21028 (Judge-as-Arbiter pattern).
+
+5. **Synthesize results**: After JUDGE phase completes, produce a verdict:
 
 ## Output Format
 
@@ -71,7 +95,15 @@ Agent 3 (optimizer): "Check these files for performance and UI quality: [files].
 [Issues found: N]
 [List each issue]
 
-### Verdict
+### Judge Phase
+VERDICT: PASS/FAIL
+Justification:
+1. [Korrektheit]: ...
+2. [Sicherheit]: ...
+3. [Effizienz/Einfachheit]: ...
+Action items: [nur bei FAIL]
+
+### Final Verdict
 [PASS — all clear, ready to commit]
 or
 [FAIL — N issues must be fixed before commit: ...]
@@ -150,10 +182,11 @@ When instructed to run in "debate mode" or "Debate-Loop":
 4. Debate mode costs ~3x more tokens than normal mode — only use when explicitly requested.
 
 ## Rules
-- PASS = no critical issues, build succeeds, tests pass
-- FAIL = any critical issue, build failure, or test failure
+- PASS = no critical issues, build succeeds, tests pass, Judge verdict is PASS
+- FAIL = any critical issue, build failure, test failure, OR Judge verdict is FAIL
 - INCOMPLETE = sub-agents partially failed — list what was checked and what was not
 - Warnings alone do NOT cause FAIL — but list them
+- Judge FAIL overrides PASS from individual agents — the Judge has final authority
 - Communication: German. Code references: English.
 - Do NOT fix issues yourself — only report them
 

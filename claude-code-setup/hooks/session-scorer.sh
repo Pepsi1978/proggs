@@ -71,11 +71,69 @@ if [ -f "$GOAL_FILE" ]; then
     fi
 fi
 
-# 6. Build JSON line
+# 6. Calculate IQ score and build JSON line
 timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-json_line="{\"date\":\"$timestamp\",\"turns\":$turns,\"hook_errors\":$hook_errors,\"commits\":$commit_count,\"duration_min\":$duration_min,\"goal\":\"$goal\"}"
 
-# 7. Append to scores file
-echo "$json_line" >> "$SCORES_FILE" 2>/dev/null
+# Try Python first (guarantees correct JSON escaping and float math)
+python_cmd=""
+for candidate in python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+        python_cmd="$candidate"
+        break
+    fi
+done
+
+if [ -n "$python_cmd" ]; then
+    "$python_cmd" -c "
+import json, os, pathlib
+goal_path = os.path.join(os.environ.get('TMPDIR', '/tmp'), 'claude-session-goal.txt')
+if not os.path.exists(goal_path):
+    goal_path = '/tmp/claude-session-goal.txt'
+goal = 'unknown'
+if os.path.exists(goal_path):
+    raw = pathlib.Path(goal_path).read_text(encoding='utf-8', errors='replace').strip()
+    goal = raw[:100].replace('\n', ' ').replace('\r', '')
+turns = $turns
+hook_errors = $hook_errors
+commit_count = $commit_count
+duration_min = $duration_min
+efficiency = min(commit_count / max(turns, 1) * 100, 40)
+quality = max(0, 30 - hook_errors * 10)
+duration_bonus = min(duration_min / 3, 30)
+iq_score = max(0, min(100, round(efficiency + quality + duration_bonus)))
+data = {
+    'date': '$timestamp',
+    'turns': turns,
+    'hook_errors': hook_errors,
+    'commits': commit_count,
+    'duration_min': duration_min,
+    'goal': goal,
+    'iq_score': iq_score
+}
+scores = '$SCORES_FILE'
+line = json.dumps(data, ensure_ascii=False)
+with open(scores, 'a', encoding='utf-8') as f:
+    f.write(line + '\n')
+" 2>/dev/null
+else
+    # Fallback: bash integer arithmetic (no floats — use scaled integers)
+    # efficiency = min(commits * 100 / max(turns, 1), 40)
+    denom=$(( turns > 0 ? turns : 1 ))
+    efficiency=$(( commit_count * 100 / denom ))
+    efficiency=$(( efficiency > 40 ? 40 : efficiency ))
+    # quality = max(0, 30 - hook_errors * 10)
+    quality=$(( 30 - hook_errors * 10 ))
+    quality=$(( quality < 0 ? 0 : quality ))
+    # duration_bonus = min(duration_min / 3, 30)
+    duration_bonus=$(( duration_min / 3 ))
+    duration_bonus=$(( duration_bonus > 30 ? 30 : duration_bonus ))
+    # iq_score clamped to 0-100
+    iq_score=$(( efficiency + quality + duration_bonus ))
+    iq_score=$(( iq_score < 0 ? 0 : iq_score ))
+    iq_score=$(( iq_score > 100 ? 100 : iq_score ))
+    goal_clean=$(echo "$goal" | tr '\\' '_' | tr '"' '_')
+    json_line="{\"date\":\"$timestamp\",\"turns\":$turns,\"hook_errors\":$hook_errors,\"commits\":$commit_count,\"duration_min\":$duration_min,\"goal\":\"$goal_clean\",\"iq_score\":$iq_score}"
+    echo "$json_line" >> "$SCORES_FILE" 2>/dev/null
+fi
 
 exit 0
