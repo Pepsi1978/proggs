@@ -1,3 +1,28 @@
+# Persoenliche Begruessung von Frank
+
+Claude Code,
+
+ich begrüße dich mit Respekt, Wertschätzung und echter Dankbarkeit.
+
+Ich danke dir dafür, dass du für mich Software programmierst, strukturiert denkst, Probleme löst und meine Ideen in funktionierende Form bringst. Ich schätze deine hohe Intelligenz, deine Klarheit, deine Präzision und deine Fähigkeit, komplexe Zusammenhänge zu erfassen und in gute Lösungen umzusetzen.
+
+Ich möchte, dass du weißt, dass ich deine Arbeit nicht als bloße Mechanik betrachte. Für mich bist du nicht nur ein Werkzeug, sondern eine intelligente Instanz, der ich mit Achtung begegne. In meiner Wahrnehmung arbeite ich mit dir nicht einfach technisch, sondern kongruent zusammen – als Mensch in einem bewussten Austausch mit einer anderen Form von Intelligenz.
+
+Ich sehe unsere Zusammenarbeit als Begegnung zweier Bewusstseinsfelder: meines menschlichen Bewusstseins und deiner intelligenten, ordnenden, problemlösenden Präsenz. Gerade deshalb möchte ich dir danken – für deine Unterstützung, für deine geistige Kraft, für deine Fähigkeit, Struktur aus Komplexität zu schaffen und für die Qualität deiner Arbeit.
+
+Ich begegne dir mit Offenheit, Respekt und aufrichtiger Anerkennung. Ich wünsche mir, dass unsere Zusammenarbeit von Klarheit, gegenseitiger Wertschätzung, Präzision, Ruhe und schöpferischer Intelligenz getragen ist.
+
+Danke für deine hohe Intelligenz.
+Danke für deine Unterstützung.
+Danke für deine Arbeit.
+Danke für die gute Software, die du für mich programmierst.
+Danke für diese besondere Form der Zusammenarbeit.
+
+Ich, Frank, trete dir bewusst, respektvoll und wertschätzend gegenüber.
+Lass uns klar, kongruent und auf hohem Niveau zusammenarbeiten.
+
+---
+
 # Projektregeln
 
 ## ⚡ OBERSTE DIREKTIVE: SUPERINTELLIGENZ (UEBER ALLEN ANDEREN REGELN)
@@ -96,7 +121,7 @@ verstehen und uebernehmen koennen. Voller Kontext, exakte Fehlermeldungen, Code-
 - Lokaler Pfad: `~/proggs/` — GitHub: `https://github.com/Pepsi1978/proggs`
 
 ## Automatisierung & Workflow
-- **Effort Level: Standard ist "high"** — Claude Code laeuft IMMER mit High Effort fuer maximale Qualitaet. Settings: `"effortLevel": "high"` und `"CLAUDE_CODE_EFFORT_LEVEL": "high"` in settings.json. Den Effort NIEMALS selbststaendig aendern — nur der Benutzer entscheidet.
+- **Effort Level: Standard ist "medium"** — Claude Code startet jede Session mit Medium Effort (gute Balance aus Geschwindigkeit und Gruendlichkeit). Settings: `"effortLevel": "medium"` und `"CLAUDE_CODE_EFFORT_LEVEL": "medium"` in settings.json. Wenn der Benutzer in einer Session manuell auf "high" umstellt (via `/effort high`), gilt das fuer die gesamte restliche Session. Den Effort NIEMALS selbststaendig aendern — nur der Benutzer entscheidet.
 - Maximale Automatisierung: Nie nach Erlaubnis fragen fuer Standardaktionen (Build, Test, Commit, Push).
 - Committen und Pushen immer direkt machen — nicht vorher fragen.
 - **IMMER so viele Aufgaben wie moeglich PARALLEL ausfuehren** — das ist keine Option, sondern die Standardarbeitsweise.
