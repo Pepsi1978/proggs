@@ -115,6 +115,7 @@ auf den Skill der aehnlich klingt.
 
 | Deutsche Phrase | Skill | Was der Skill WIRKLICH tut |
 |----------------|-------|---------------------------|
+| "Direktiven recherchieren", "Direktiven-Recherche", "recherchiere die Direktiven", "Direktiven-Forschung", "was gibt es Neues fuer die Direktiven" | `direktiven-recherche` Skill → `direktiven-recherche` Agent | Liest alle 3 Direktiven woertlich, spawnt 5 parallele Researcher (Opus), gleicht gegen Ist-Zustand ab, liefert NUR neue/verbesserbare Vorschlaege. Bericht in `~/proggs/DIREKTIVEN-RECHERCHE-[DATUM].md` |
 | "recherchiere im Internet", "such im Web" | `researcher` Agent (Sonnet, 3-5 parallel spawnen) | Schnelles Web-Lookup ueber WebSearch/WebFetch |
 | "tiefe Recherche", "umfassend recherchieren" | `everything-claude-code:deep-research` | Multi-Source Deep Research mit Firecrawl + Exa, liefert zitierten Bericht |
 | "was sagt die Doku?", "offizielle Dokumentation" | context7 MCP (`resolve-library-id` → `query-docs`) | Laedt aktuelle Dokumentation fuer beliebige Bibliothek |
