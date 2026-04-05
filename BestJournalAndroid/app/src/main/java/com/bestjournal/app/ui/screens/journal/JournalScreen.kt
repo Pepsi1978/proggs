@@ -191,14 +191,21 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Tagebuch",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        SunMoonToggle()
+                    }
                     Text(
-                        text = "Tagebuch",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
+                        text = "${allEntries.size} Eintr\u00e4ge",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    SunMoonToggle()
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { showSyncLegend = true }) {
