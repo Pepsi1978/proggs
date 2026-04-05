@@ -488,9 +488,25 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             soundsPrefs.edit().putBoolean(Constants.PREF_SOUNDS_ENABLED, enabled).apply()
                             if (enabled) {
                                 try {
-                                    val tg = android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 40)
-                                    tg.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 50)
-                                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ tg.release() }, 100)
+                                    // Clean click via AudioTrack — single instance, proper release
+                                    val sr = 44100; val ms = 30; val n = sr * ms / 1000
+                                    val s = ShortArray(n)
+                                    for (i in 0 until n) {
+                                        val pos = i.toDouble() / n
+                                        val env = if (pos < 0.1) pos / 0.1 else kotlin.math.exp(-8.0 * (pos - 0.1))
+                                        s[i] = (Short.MAX_VALUE * 0.6 * env * kotlin.math.sin(2 * Math.PI * 1500.0 * i / sr)).toInt().toShort()
+                                    }
+                                    val t = android.media.AudioTrack(
+                                        android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build(),
+                                        android.media.AudioFormat.Builder().setSampleRate(sr).setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT).setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO).build(),
+                                        n * 2, android.media.AudioTrack.MODE_STATIC, android.media.AudioManager.AUDIO_SESSION_ID_GENERATE)
+                                    t.write(s, 0, n)
+                                    t.setNotificationMarkerPosition(n)
+                                    t.setPlaybackPositionUpdateListener(object : android.media.AudioTrack.OnPlaybackPositionUpdateListener {
+                                        override fun onMarkerReached(track: android.media.AudioTrack?) { track?.release() }
+                                        override fun onPeriodicNotification(track: android.media.AudioTrack?) {}
+                                    })
+                                    t.play()
                                 } catch (_: Exception) {}
                             }
                         },
