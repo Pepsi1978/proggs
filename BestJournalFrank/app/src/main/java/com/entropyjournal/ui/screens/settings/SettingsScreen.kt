@@ -194,7 +194,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.Palette, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("Erscheinungsbild", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Dunkelmodus — Sun | Moon icon
+                // Dunkelmodus � Sun | Moon icon
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                         SettingsSunMoonIcon(isDark = uiState.isDarkTheme)
@@ -204,11 +204,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             Text(if (uiState.isDarkTheme) "Aktiv" else "Aus", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    Switch(checked = uiState.isDarkTheme, onCheckedChange = { if (uiState.followSystem) viewModel.updateFollowSystem(false); viewModel.updateDarkTheme(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
+                    Switch(checked = uiState.isDarkTheme, onCheckedChange = { if (it) playClick(); if (uiState.followSystem) viewModel.updateFollowSystem(false); viewModel.updateDarkTheme(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // System folgen — Light phone (sun) | divider | Dark phone (moon)
+                // System folgen � Light phone (sun) | divider | Dark phone (moon)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                         SettingsPhoneIcon(isDark = uiState.isDarkTheme)
@@ -218,7 +218,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             Text("Automatisch", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    Switch(checked = uiState.followSystem, onCheckedChange = { viewModel.updateFollowSystem(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
+                    Switch(checked = uiState.followSystem, onCheckedChange = { if (it) playClick(); viewModel.updateFollowSystem(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 val locationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -235,7 +235,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         } catch (_: Exception) {}
                     }
                 }
-                // Sonnenauf-/untergang — Sun | Moon based on actual time
+                // Sonnenauf-/untergang � Sun | Moon based on actual time
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                         SettingsSunMoonIcon(isDark = uiState.isDarkTheme)
@@ -246,6 +246,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         }
                     }
                     Switch(checked = uiState.followSun, onCheckedChange = { enabled ->
+                        if (enabled) playClick()
                         if (enabled) {
                             val hasPerm = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
                             if (hasPerm) {
@@ -269,7 +270,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             }
         }
 
-        // Töne
+        // T�ne
         GlassCard {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -309,7 +310,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             soundsPrefs.edit().putBoolean(Constants.PREF_SOUNDS_ENABLED, enabled).apply()
                             if (enabled) {
                                 try {
-                                    // Clean click via AudioTrack — single instance, proper release
+                                    // Clean click via AudioTrack � single instance, proper release
                                     val sr = 44100; val ms = 30; val n = sr * ms / 1000
                                     val s = ShortArray(n)
                                     for (i in 0 until n) {
@@ -345,7 +346,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 Text("W\u00e4hle, wie die KI deine Eintr\u00e4ge analysiert", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(12.dp))
 
-                val scenarioNames = listOf("Räume dein Leben auf", "Szenario 2", "Szenario 3", "Persönliche Ziele", "Individuelle Analyse")
+                val scenarioNames = listOf("R�ume dein Leben auf", "Szenario 2", "Szenario 3", "Pers�nliche Ziele", "Individuelle Analyse")
                 val scenarioPrefs = remember {
                     val masterKey = androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC)
                     androidx.security.crypto.EncryptedSharedPreferences.create(
@@ -363,6 +364,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
                             .clickable {
                                 currentScenario = index
+                                playClick()
                                 scenarioPrefs.edit().putInt(Constants.PREF_DASHBOARD_SCENARIO, index).apply()
                                 if (index == 4) showCustomPromptDialog = true
                             }.padding(vertical = 8.dp),
@@ -372,6 +374,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             selected = currentScenario == index,
                             onClick = {
                                 currentScenario = index
+                                playClick()
                                 scenarioPrefs.edit().putInt(Constants.PREF_DASHBOARD_SCENARIO, index).apply()
                                 if (index == 4) showCustomPromptDialog = true
                             },
@@ -398,7 +401,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         title = { Text("Individuelle Analyse", style = MaterialTheme.typography.titleLarge) },
                         text = {
                             Column {
-                                Text("Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheinträge konzentrieren?", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheintr�ge konzentrieren?", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(modifier = Modifier.height(12.dp))
                                 OutlinedTextField(
                                     value = promptText,
@@ -440,6 +443,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         }
                     }
                     Switch(checked = uiState.biometricLock, onCheckedChange = { enabled ->
+                        if (enabled) playClick()
                         // Require biometric auth before toggling the lock on or off
                         val activity = context as? com.entropyjournal.MainActivity
                         if (activity != null) {
@@ -505,12 +509,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) { Text("Textverbesserung", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface); Text("Standardm\u00e4\u00dfig aktivieren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    Switch(checked = uiState.textImprovementDefault, onCheckedChange = { viewModel.updateTextImprovementDefault(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
+                    Switch(checked = uiState.textImprovementDefault, onCheckedChange = { if (it) playClick(); viewModel.updateTextImprovementDefault(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) { Text("Dashboard", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface); Text("Automatisch aktualisieren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    Switch(checked = uiState.autoUpdateDashboard, onCheckedChange = { viewModel.updateAutoUpdateDashboard(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
+                    Switch(checked = uiState.autoUpdateDashboard, onCheckedChange = { if (it) playClick(); viewModel.updateAutoUpdateDashboard(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
                 }
             }
         }
@@ -634,22 +638,22 @@ private fun GoogleLogo(modifier: Modifier = Modifier) {
         val radius = (size.minDimension - strokeW) / 2f
         val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
 
-        // Blue arc (right, top-right) — 315° to 85° (sweep 130°)
+        // Blue arc (right, top-right) � 315� to 85� (sweep 130�)
         drawArc(color = googleBlue, startAngle = -45f, sweepAngle = 130f, useCenter = false,
             style = Stroke(width = strokeW, cap = StrokeCap.Butt),
             topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius),
             size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
-        // Green arc (bottom-right) — 85° to 175° (sweep 90°)
+        // Green arc (bottom-right) � 85� to 175� (sweep 90�)
         drawArc(color = googleGreen, startAngle = 85f, sweepAngle = 90f, useCenter = false,
             style = Stroke(width = strokeW, cap = StrokeCap.Butt),
             topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius),
             size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
-        // Yellow arc (bottom-left) — 175° to 225° (sweep 50°)
+        // Yellow arc (bottom-left) � 175� to 225� (sweep 50�)
         drawArc(color = googleYellow, startAngle = 175f, sweepAngle = 50f, useCenter = false,
             style = Stroke(width = strokeW, cap = StrokeCap.Butt),
             topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius),
             size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2))
-        // Red arc (top-left, top) — 225° to 315° (sweep 90°)
+        // Red arc (top-left, top) � 225� to 315� (sweep 90�)
         drawArc(color = googleRed, startAngle = 225f, sweepAngle = 90f, useCenter = false,
             style = Stroke(width = strokeW, cap = StrokeCap.Butt),
             topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius),
@@ -802,7 +806,7 @@ private fun FeedbackDialog(
                                     errorMessage = error
                                 }
                             } catch (e: com.entropyjournal.data.remote.FeedbackNeedConsentException) {
-                                // Gmail permission needed — show consent screen
+                                // Gmail permission needed � show consent screen
                                 isSending = false
                                 try { context.startActivity(e.consentIntent) } catch (_: Exception) {}
                                 errorMessage = "Bitte Gmail-Zugriff erlauben und erneut versuchen."

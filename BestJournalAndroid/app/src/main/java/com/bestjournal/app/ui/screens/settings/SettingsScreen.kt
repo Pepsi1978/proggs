@@ -83,7 +83,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Click sound helper â€” plays only when sounds are enabled
+    // Click sound helper — plays only when sounds are enabled
     val clickPrefs = remember {
         val mk = androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC)
         androidx.security.crypto.EncryptedSharedPreferences.create(
@@ -266,7 +266,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 }
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Dunkelmodus â€” Sun | Moon icon
+                // Dunkelmodus — Sun | Moon icon
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -294,6 +294,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Switch(
                         checked = uiState.isDarkTheme,
                         onCheckedChange = {
+                            if (it) playClick()
                             if (uiState.followSystem) viewModel.updateFollowSystem(false)
                             viewModel.updateDarkTheme(it)
                         },
@@ -305,7 +306,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // System folgen â€” Light phone (sun) | divider | Dark phone (moon)
+                // System folgen — Light phone (sun) | divider | Dark phone (moon)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -332,7 +333,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Switch(
                         checked = uiState.followSystem,
-                        onCheckedChange = { viewModel.updateFollowSystem(it) },
+                        onCheckedChange = { if (it) playClick(); viewModel.updateFollowSystem(it) },
                         colors =
                             SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -365,7 +366,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             } catch (_: Exception) {}
                         }
                     }
-                // Sonnenauf-/untergang â€” Sun | Moon based on actual time
+                // Sonnenauf-/untergang — Sun | Moon based on actual time
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -393,6 +394,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Switch(
                         checked = uiState.followSun,
                         onCheckedChange = { enabled ->
+                            if (enabled) playClick()
                             if (enabled) {
                                 val hasPerm =
                                     androidx.core.content.ContextCompat.checkSelfPermission(
@@ -437,7 +439,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             }
         }
 
-        // TÃ¶ne
+        // Töne
         GlassCard {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -488,7 +490,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             soundsPrefs.edit().putBoolean(Constants.PREF_SOUNDS_ENABLED, enabled).apply()
                             if (enabled) {
                                 try {
-                                    // Clean click via AudioTrack â€” single instance, proper release
+                                    // Clean click via AudioTrack — single instance, proper release
                                     val sr = 44100; val ms = 30; val n = sr * ms / 1000
                                     val s = ShortArray(n)
                                     for (i in 0 until n) {
@@ -534,10 +536,10 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 val scenarioNames = listOf(
-                    "RÃ¤ume dein Leben auf",
+                    "Räume dein Leben auf",
                     "Szenario 2",
                     "Szenario 3",
-                    "PersÃ¶nliche Ziele",
+                    "Persönliche Ziele",
                     "Individuelle Analyse"
                 )
                 val scenarioPrefs = remember {
@@ -561,6 +563,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             .clip(RoundedCornerShape(8.dp))
                             .clickable {
                                 currentScenario = index
+                                playClick()
                                 scenarioPrefs.edit().putInt(Constants.PREF_DASHBOARD_SCENARIO, index).apply()
                                 if (index == 4) showCustomPromptDialog = true
                             }
@@ -571,6 +574,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             selected = currentScenario == index,
                             onClick = {
                                 currentScenario = index
+                                playClick()
                                 scenarioPrefs.edit().putInt(Constants.PREF_DASHBOARD_SCENARIO, index).apply()
                                 if (index == 4) showCustomPromptDialog = true
                             },
@@ -604,7 +608,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         text = {
                             Column {
                                 Text(
-                                    "Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner TagebucheintrÃ¤ge konzentrieren?",
+                                    "Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheinträge konzentrieren?",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -679,6 +683,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Switch(
                         checked = uiState.biometricLock,
                         onCheckedChange = { enabled ->
+                            if (enabled) playClick()
                             // Require biometric auth before toggling the lock on or off
                             val activity = context as? com.bestjournal.app.MainActivity
                             if (activity != null) {
@@ -798,7 +803,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Switch(
                         checked = uiState.textImprovementDefault,
-                        onCheckedChange = { viewModel.updateTextImprovementDefault(it) },
+                        onCheckedChange = { if (it) playClick(); viewModel.updateTextImprovementDefault(it) },
                         colors =
                             SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -825,7 +830,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Switch(
                         checked = uiState.autoUpdateDashboard,
-                        onCheckedChange = { viewModel.updateAutoUpdateDashboard(it) },
+                        onCheckedChange = { if (it) playClick(); viewModel.updateAutoUpdateDashboard(it) },
                         colors =
                             SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -993,7 +998,7 @@ private fun GoogleLogo(modifier: Modifier = Modifier) {
         val radius = (size.minDimension - strokeW) / 2f
         val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
 
-        // Blue arc (right, top-right) â€” 315Â° to 85Â° (sweep 130Â°)
+        // Blue arc (right, top-right) — 315° to 85° (sweep 130°)
         drawArc(
             color = googleBlue,
             startAngle = -45f,
@@ -1003,7 +1008,7 @@ private fun GoogleLogo(modifier: Modifier = Modifier) {
             topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius),
             size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
         )
-        // Green arc (bottom-right) â€” 85Â° to 175Â° (sweep 90Â°)
+        // Green arc (bottom-right) — 85° to 175° (sweep 90°)
         drawArc(
             color = googleGreen,
             startAngle = 85f,
@@ -1013,7 +1018,7 @@ private fun GoogleLogo(modifier: Modifier = Modifier) {
             topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius),
             size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
         )
-        // Yellow arc (bottom-left) â€” 175Â° to 225Â° (sweep 50Â°)
+        // Yellow arc (bottom-left) — 175° to 225° (sweep 50°)
         drawArc(
             color = googleYellow,
             startAngle = 175f,
@@ -1023,7 +1028,7 @@ private fun GoogleLogo(modifier: Modifier = Modifier) {
             topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius),
             size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
         )
-        // Red arc (top-left, top) â€” 225Â° to 315Â° (sweep 90Â°)
+        // Red arc (top-left, top) — 225° to 315° (sweep 90°)
         drawArc(
             color = googleRed,
             startAngle = 225f,
@@ -1275,7 +1280,7 @@ private fun FeedbackDialog(
                                 }
                             } catch (
                                 e: com.bestjournal.app.data.remote.FeedbackNeedConsentException) {
-                                // Gmail permission needed â€” show consent screen
+                                // Gmail permission needed — show consent screen
                                 isSending = false
                                 try {
                                     context.startActivity(e.consentIntent)
