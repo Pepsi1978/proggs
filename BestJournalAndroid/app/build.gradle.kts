@@ -145,6 +145,7 @@ dependencies {
     implementation(libs.firebase.appcheck.playintegrity)
     implementation(libs.firebase.appcheck.debug)
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.config)
 
     // Google Play Billing
     implementation(libs.play.billing)
