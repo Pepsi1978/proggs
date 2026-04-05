@@ -173,7 +173,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             }
                         }
                         OutlinedButton(
-                            onClick = { playClick(); viewModel.showLogoutDialog(true) },
+                            onClick = { viewModel.showLogoutDialog(true) },
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonRed),
                         ) {
                             Text("Abmelden")
@@ -198,7 +198,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         horizontalArrangement = Arrangement.Center,
                     ) {
                         Button(
-                            onClick = { playClick(); viewModel.syncNow() },
+                            onClick = { viewModel.syncNow() },
                             enabled = !uiState.isSyncing,
                             colors =
                                 ButtonDefaults.buttonColors(
@@ -242,7 +242,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
-                        onClick = { playClick(); viewModel.signIn(context) },
+                        onClick = { viewModel.signIn(context) },
                         modifier = Modifier.fillMaxWidth(),
                         colors =
                             ButtonDefaults.buttonColors(
@@ -332,7 +332,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Switch(
                         checked = uiState.followSystem,
-                        onCheckedChange = { if (it) playClick(); viewModel.updateFollowSystem(it) },
+                        onCheckedChange = { viewModel.updateFollowSystem(it) },
                         colors =
                             SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -750,7 +750,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
-                        onClick = { playClick(); showSubscriptionSheet = true },
+                        onClick = { showSubscriptionSheet = true },
                         modifier = Modifier.fillMaxWidth(),
                         colors =
                             ButtonDefaults.buttonColors(
@@ -791,7 +791,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Switch(
                         checked = uiState.textImprovementDefault,
-                        onCheckedChange = { if (it) playClick(); viewModel.updateTextImprovementDefault(it) },
+                        onCheckedChange = { viewModel.updateTextImprovementDefault(it) },
                         colors =
                             SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -818,7 +818,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Switch(
                         checked = uiState.autoUpdateDashboard,
-                        onCheckedChange = { if (it) playClick(); viewModel.updateAutoUpdateDashboard(it) },
+                        onCheckedChange = { viewModel.updateAutoUpdateDashboard(it) },
                         colors =
                             SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary

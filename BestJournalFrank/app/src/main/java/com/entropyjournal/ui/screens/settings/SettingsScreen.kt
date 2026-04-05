@@ -152,7 +152,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                                 Text(profile.email, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        OutlinedButton(onClick = { playClick(); viewModel.showLogoutDialog(true) }, colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonRed)) { Text("Abmelden") }
+                        OutlinedButton(onClick = { viewModel.showLogoutDialog(true) }, colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonRed)) { Text("Abmelden") }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     uiState.lastSyncTimestamp?.let { ts ->
@@ -162,7 +162,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                         Button(
-                            onClick = { playClick(); viewModel.syncNow() },
+                            onClick = { viewModel.syncNow() },
                             enabled = !uiState.isSyncing,
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
                         ) { Text(if (uiState.isSyncing) "Wird gesichert..." else "Tagebucheintr\u00e4ge sichern") }
@@ -180,7 +180,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
-                        onClick = { playClick(); viewModel.signIn(context) },
+                        onClick = { viewModel.signIn(context) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
                     ) { Text("Mit Google anmelden") }
