@@ -488,18 +488,9 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             soundsPrefs.edit().putBoolean(Constants.PREF_SOUNDS_ENABLED, enabled).apply()
                             if (enabled) {
                                 try {
-                                    // Short click sound — like a physical switch
-                                    val sr = 44100; val n = sr * 15 / 1000 // 15ms
-                                    val s = ShortArray(n)
-                                    for (i in 0 until n) {
-                                        val env = if (i < 3) i.toDouble() / 3 else (n - i).toDouble() / n
-                                        s[i] = (Short.MAX_VALUE * 0.7 * env * kotlin.math.sin(2 * Math.PI * 2000.0 * i / sr)).toInt().toShort()
-                                    }
-                                    val t = android.media.AudioTrack(
-                                        android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build(),
-                                        android.media.AudioFormat.Builder().setSampleRate(sr).setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT).setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO).build(),
-                                        n * 2, android.media.AudioTrack.MODE_STATIC, android.media.AudioManager.AUDIO_SESSION_ID_GENERATE)
-                                    t.write(s, 0, n); t.play()
+                                    val tg = android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 40)
+                                    tg.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 50)
+                                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ tg.release() }, 100)
                                 } catch (_: Exception) {}
                             }
                         },
