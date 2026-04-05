@@ -1098,7 +1098,7 @@ private fun SettingsSoundIcon(isEnabled: Boolean) {
         }
         Divider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.height(16.dp).width(1.dp))
         androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp)) {
-            Icon(Icons.Rounded.VolumeOff, "Ton aus", tint = if (!isEnabled) activeColor else mutedGray, modifier = Modifier.size(offSize))
+            Icon(Icons.Rounded.VolumeOff, "Ton aus", tint = if (!isEnabled) Color(0xFFEF4444) else mutedGray, modifier = Modifier.size(offSize))
         }
     }
 }
