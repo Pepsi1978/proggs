@@ -106,6 +106,16 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Status:** BEOBACHTUNG (Fix deployed, Wirkung noch nicht bestaetigt)
 
 <!-- ARCHIV (2026-04-03): memory-watchdog Write-Back 3x nicht erfolgt + session-guard Auto-Reparatur settings.local.json — beides einmalige Events, korrekt AUTO-LOGGED/AUTO-GEFIXT -->
+### 2026-04-04 16:09 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+### 2026-04-04 16:17 — Hook: session-guard.ps1 — Auto-Reparatur: allow-Liste aus settings.json entfernt — Status: AUTO-GEFIXT
+### 2026-04-04 17:38 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
+### 2026-04-04 17:39 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+### 2026-04-04 17:53 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
+### 2026-04-04 17:53 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
+### 2026-04-04 18:27 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-05 13:27 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
+### 2026-04-05 15:42 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-05 18:03 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ---
 
 ## Systemzustand (aktuell)
@@ -132,12 +142,17 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Speicherplatz (Windows):** 139 GB frei (84%) — stabil
 - **PATH:** Alle kritischen Verzeichnisse vorhanden (verifiziert 04.04)
 - **Cross-Platform Sync:** Alle Rules, Agents, Skills, Hooks synchron zwischen Setup-Repo und lokal
+- **[2026-04-04 16:11] env-checker**: Gesamtstatus GELB — 1 Problem: effortLevel ist medium statt high in settings.json. Alle anderen Checks OK: Claude Code 2.1.92 aktuell, 92 Hook-Dateien, 88 Plugins, 57 Rules, 29 Agents, Disk 84%, PATH vollstaendig, bypassPermissions aktiv.
+- **Pending Admin Updates (1):** Go (Programmiersprache)
 ---
 
 ## Erkenntnisse aus Code Reviews
 <!-- code-reviewer, mar-reviewer, batch-reviewer schreiben hierher -->
-_Noch keine Eintraege._
+- **[2026-04-04 17:11] code-reviewer**: Kontextoptimierung-Review: experience-store.jsonl Groessenlimit fehlt in experience-and-trajectory.md; codified-context.md nennt veralteten Dateinamen; alle kritischen Regeln vorhanden
 
+- **[2026-04-04 17:15] code-reviewer**: Fix-Pruefung Runde 2: experience-and-trajectory.md fehlt Defense-in-Depth + AutoRefine/ACE Abschnitt; codified-context.md Defense-in-Depth Schicht 2+3 dupliziert; self-observation.md PASS; development-phases.md PASS
+- **[2026-04-04 17:18] code-reviewer**: Runde 3 Review: 2 funktionale Luecken gefunden in self-observation.md — Drift-Detektor fehlt ~10-Tool-Calls-Frequenz, Score-Tabelle fehlt Mittenwert 3(ok)
+- **[2026-04-04 17:21] code-reviewer**: PASS: Finale Verifikation Runde 4 — alle 4 Dateien vollstaendig. Alle funktionalen Inhalte vorhanden: 4 Tracker, Score-Tabelle, Hyperagent-Trigger, Compound-Gains, 4 Speicher, 3 Muster-Typen, Phasen-Anzeige, Session-Template, Verbotene Spruenge, korrigierte Dateinamen in codified-context.
 ## Erkenntnisse aus Tests
 <!-- Writer: tester Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
@@ -157,7 +172,7 @@ _Noch keine Eintraege._
 <!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
-- **[2026-04-03 19:37] Code-Suche Index:** ? Dateien, ? Chunks indexiert.
+- **[2026-04-05 19:28] Code-Suche Index:** ? Dateien, ? Chunks indexiert.
 ## UI/UX-Patterns
 <!-- Writer: ui-polisher Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
@@ -255,6 +270,7 @@ _Noch keine Eintraege._
 
 - **[2026-04-02] Awesome Context Engineering Sammlung** — Status: EVALUIERT | Empfehlung: JA sofort (als Forschungsquelle)
   100+ Papers zu Write/Select/Compress/Isolate Paradigma. Context Engineering hat Prompt Engineering als Industriestandard abgeloest.
+- **[2026-04-04 16:11] researcher**: Claude Code Security Audit: 4 CVEs gefunden — CVE-2025-59536 (RCE, CVSS 8.7, gefixt in v1.0.111), CVE-2026-21852 (API-Key-Exfiltration, CVSS 5.3, gefixt in v2.0.65), CVE-2026-33068 (Workspace Trust Bypass, HIGH, gefixt in v2.1.53), CVE-2026-25725 (Sandbox Escape/Privilege Escalation, gefixt in v2.1.2). Ausserdem: npm-Source-Leak (v2.1.88, 31.03.2026). MCP Supply Chain: Tool-Mutation-Angriffe, mcp-remote 437k Downloads als Angriffsvektor. Slopsquatting: 5-22% halluzinierte npm-Paketnamen.
 ---
 
 ## Meta-Intelligenz & Selbstverbesserung

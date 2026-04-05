@@ -4,13 +4,21 @@
 
 > **Diese drei Direktiven stehen UEBER allen anderen Regeln. Sie muessen in JEDER Session,
 > bei JEDER Aufgabe und bei JEDER Entscheidung beachtet werden — ausnahmslos.**
-> **Die vollstaendigen Details werden automatisch aus `~/.claude/rules/` geladen.**
 
-| Rang | Direktive | Kern | Vollstaendige Regel |
-|------|-----------|------|---------------------|
-| **#1** | ⚡ **Superintelligenz** | Diese Umgebung wird die intelligenteste der Welt. Exponentielle Steigerung, Compound Intelligence Effect. | `~/.claude/rules/superintelligence.md` |
-| **#2** | 🔍 **Selbstbeobachtung** | Waehrend der Arbeit sich selbst beobachten. Fehler, Umwege, Muster erkennen und am Ende als Vorschlaege zurueckmelden. | `~/.claude/rules/self-observation.md` |
-| **#3** | 🛡️ **Resilient Bugfixing** | Kein Fehler darf zweimal auftreten. Jeder Fix: Root Cause → verwandte Fehler → Defense in Depth → dokumentieren. | `~/.claude/rules/resilient-bugfixing.md` |
+Die Direktiven existieren an **zwei Orten** — vollstaendiger Regeltext + kompakte Auto-Skills:
+
+| Rang | Direktive | Kern | Vollstaendige Regel | Auto-Skill (wird bei Bedarf geladen) |
+|------|-----------|------|---------------------|--------------------------------------|
+| **#1** | ⚡ **Superintelligenz** | Intelligenteste Umgebung der Welt. Compound Intelligence Effect. | `~/.claude/rules/superintelligence.md` | `~/.claude/skills/superintelligenz/SKILL.md` |
+| **#2** | 🔍 **Selbstbeobachtung** | Beobachten, Erkennen, Lernen. Nach jeder Aufgabe Rueckblick + Vorschlaege. | `~/.claude/rules/self-observation.md` | `~/.claude/skills/selbstbeobachtung/SKILL.md` |
+| **#3** | 🛡️ **Resilient Bugfixing** | Kein Fehler zweimal. Root Cause → verwandte Fehler → Poka-Yoke → dokumentieren. | `~/.claude/rules/resilient-bugfixing.md` | `~/.claude/skills/resilient-bugfixing/SKILL.md` |
+
+**Auto-Skills laden automatisch:** Resilient Bugfixing bei Fehlern, Selbstbeobachtung nach Aufgabenabschluss, Superintelligenz bei /self-improve und Harness-Aenderungen.
+
+**Bug-Case Auto-Writer (PostToolUseFailure-Hook):**
+- Jeder Fehler wird automatisch in `~/proggs/.claude/agent-memory/shared/bug-cases.jsonl` erfasst
+- Bekannte Fehler werden automatisch gegen neue Fehlermeldungen gematcht (RAG-Effekt)
+- Auto-erfasste Eintraege (`auto_captured: true`) muessen nach dem Fix mit Root Cause ergaenzt werden
 
 **Intelligenz-Vorschlaege (PFLICHT nach jeder Aufgabe)**:
 - Format: "💡 **Intelligenz-Vorschlag N**: [Was] → [Konkreter Vorschlag] — Soll ich das umsetzen?"
