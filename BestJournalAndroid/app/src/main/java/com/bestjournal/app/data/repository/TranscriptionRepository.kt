@@ -27,8 +27,7 @@ class TranscriptionRepository @Inject constructor(
 ) {
     suspend fun transcribeAudio(audioFile: File): Result<TranscriptionResult> {
         // Only use Groq for subscribed users — key comes from Firebase Remote Config
-        // TODO: Re-enable subscription check before release
-        val isSubscribed = true // TEMP: encryptedPrefs.getBoolean("is_subscribed", false)
+        val isSubscribed = encryptedPrefs.getBoolean("is_subscribed", false)
         if (isSubscribed) {
             try {
                 val remoteConfig = FirebaseRemoteConfig.getInstance()
