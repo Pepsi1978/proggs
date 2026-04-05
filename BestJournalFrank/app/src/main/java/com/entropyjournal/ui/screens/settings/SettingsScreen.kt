@@ -345,7 +345,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 Text("W\u00e4hle, wie die KI deine Eintr\u00e4ge analysiert", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(12.dp))
 
-                val scenarioNames = listOf("R�ume dein Leben auf", "Szenario 2", "Szenario 3", "Pers�nliche Ziele", "Individuelle Analyse")
+                val scenarioNames = listOf("R\u00e4ume dein Leben auf", "Szenario 2", "Szenario 3", "Pers\u00f6nliche Ziele", "Individuelle Analyse")
                 val scenarioPrefs = remember {
                     val masterKey = androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC)
                     androidx.security.crypto.EncryptedSharedPreferences.create(
