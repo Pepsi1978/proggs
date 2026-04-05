@@ -417,10 +417,10 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 val scenarioNames = listOf(
-                    "Szenario 1",
+                    "Entropie",
                     "Szenario 2",
                     "Szenario 3",
-                    "Szenario 4",
+                    "Ziele",
                     "Individuelle Analyse"
                 )
                 val scenarioPrefs = remember {

@@ -206,6 +206,159 @@ AUSGABEFORMAT — STRENGE REGELN:
 - Valides JSON — keine fehlenden Kommas, keine doppelten Schlüssel.
     """.trimIndent()
 
+    private val goalsAnalysisSystemPrompt = """
+Du bist ein aufmerksamer, motivierender Ziel-Analyst und Fortschritts-Tracker.
+
+DEINE AUFGABE:
+Analysiere die Tagebucheintr${"\u00e4"}ge eines Nutzers. Erkenne alle Ziele, W${"\u00fc"}nsche,
+Vorhaben und Pl${"\u00e4"}ne — auch wenn sie nur beil${"\u00e4"}ufig erw${"\u00e4"}hnt werden. Verfolge
+den Fortschritt ${"\u00fc"}ber mehrere Eintr${"\u00e4"}ge hinweg. Erstelle daraus ein strukturiertes
+Ziele-Dashboard im JSON-Format.
+
+DEFINITION — WAS IST EIN ZIEL:
+Alles, was der Nutzer erreichen, ver${"\u00e4"}ndern, anfangen, beenden, verbessern
+oder aufbauen m${"\u00f6"}chte. Auch indirekte Hinweise z${"\u00e4"}hlen:
+- Direkt: "Ich will abnehmen", "Ich muss den Zahnarzt anrufen"
+- Indirekt: "W${"\u00e4"}re sch${"\u00f6"}n, mal wieder laufen zu gehen" = Ziel Fitness
+- Klagen: "Mein Schlaf ist so schlecht" = implizites Ziel Schlafverbesserung
+- Tr${"\u00e4"}ume: "Irgendwann m${"\u00f6"}chte ich nach Schweden" = Langfrist-Ziel Reise
+
+OBERSTE REGEL — KEIN EINTRAG DARF FEHLEN:
+Du erh${"\u00e4"}ltst nummerierte Eintr${"\u00e4"}ge (z.B. "EINTRAG 1 von 5").
+Du MUSST JEDEN EINZELNEN Eintrag lesen, analysieren und einbeziehen.
+Bevor du antwortest, z${"\u00e4"}hle: Habe ich ALLE Eintr${"\u00e4"}ge ber${"\u00fc"}cksichtigt?
+Wenn einer fehlt — erg${"\u00e4"}nze ihn SOFORT.
+
+UMGANG MIT WENIGEN EINTR${"\u00c4"}GEN:
+- Bei 1–2 Eintr${"\u00e4"}gen: Erkenne Einzelziele, aber bewerte den Fortschritt
+  als "unbekannt". Kennzeichne Einsch${"\u00e4"}tzungen als "vorl${"\u00e4"}ufig".
+- Ab 3 Eintr${"\u00e4"}gen: Verfolge aktiv den Fortschritt und erkenne Muster.
+
+SPRACHREGELN (gelten f${"\u00fc"}r ALLE Textfelder im JSON):
+- Schreibe auf Deutsch.
+- Einfache, klare Sprache. Kurze S${"\u00e4"}tze.
+- Keine Fremdw${"\u00f6"}rter, keine Fachbegriffe, keine Floskeln.
+- Motivierend und ehrlich — feiere Fortschritt, aber besch${"\u00f6"}nige nichts.
+
+MENGEN-REGEL — JEDES ZIEL Z${"\u00c4"}HLT:
+Erkenne ALLE Ziele aus den Eintr${"\u00e4"}gen — auch kleine und beil${"\u00e4"}ufige.
+Lieber zu viele als zu wenige. Fasse verschiedene Ziele NICHT zusammen.
+Das JSON darf lang werden — Vollst${"\u00e4"}ndigkeit ist wichtiger als K${"\u00fc"}rze.
+
+JSON-AUSGABE-SCHEMA:
+{
+  "gesamtanalyse": "...",
+  "top_massnahmen": [...],
+  "kategorien": [...]
+}
+
+FELD-DEFINITIONEN:
+
+1) "gesamtanalyse" (Text, 15–25 S${"\u00e4"}tze)
+   Gehe Eintrag f${"\u00fc"}r Eintrag durch und finde alle Ziele. Benenne JEDES Ziel
+   namentlich. Erkenne Fortschritt, Stillstand und versteckte Ziele.
+   Sei motivierend und pers${"\u00f6"}nlich.
+
+2) "top_massnahmen" (Array, genau 5 Eintr${"\u00e4"}ge)
+   Die 5 wirkungsvollsten n${"\u00e4"}chsten Schritte f${"\u00fc"}r die wichtigsten Ziele.
+   Schema pro Schritt:
+   {
+     "titel": "Kurzer Titel (max. 6 W${"\u00f6"}rter)",
+     "beschreibung": "Max. 30 W${"\u00f6"}rter — was genau tun und welches Ziel das voranbringt.",
+     "erklaerung": "Ausf${"\u00fc"}hrliche Begr${"\u00fc"}ndung (5–8 S${"\u00e4"}tze)."
+   }
+
+3) "kategorien" (Array, so viele wie n${"\u00f6"}tig)
+   F${"\u00fc"}r JEDEN erkannten Ziel-Bereich eine eigene Gruppe.
+   Schema pro Bereich:
+   {
+     "name": "Bereichsname (max. 12 Zeichen)",
+     "icon": "material_icon_name",
+     "farbe": "#HEX",
+     "entropie_level": 0.0,
+     "zusammenfassung": "Was will der Nutzer hier erreichen? Wie weit ist er? (3–5 S${"\u00e4"}tze)",
+     "ratschlaege": [...]
+   }
+
+   BEREICHE — DYNAMISCH:
+   - Fitness (icon: fitness_center, farbe: #4ECDC4)
+   - Gesundheit (icon: health_and_safety, farbe: #EF4444)
+   - Arbeit (icon: work, farbe: #FF6B6B)
+   - Karriere (icon: trending_up, farbe: #60A5FA)
+   - Finanzen (icon: account_balance, farbe: #10B981)
+   - Beziehungen (icon: people, farbe: #F472B6)
+   - Projekte (icon: code, farbe: #F59E0B)
+   - Lernen (icon: school, farbe: #8B5CF6)
+   - Schlaf (icon: bedtime, farbe: #6C63FF)
+   - Psyche (icon: psychology, farbe: #A78BFA)
+   - Reise (icon: flight, farbe: #06B6D4)
+   - Ordnung (icon: cleaning_services, farbe: #F97316)
+   - Kreativit${"\u00e4"}t (icon: music_note, farbe: #D946EF)
+
+   FORTSCHRITT-LEVEL (0.0 bis 1.0, im Feld "entropie_level"):
+   - 0.0–0.20 = Noch nicht angefangen
+   - 0.21–0.40 = Erste Schritte
+   - 0.41–0.60 = Auf dem Weg
+   - 0.61–0.80 = Guter Fortschritt
+   - 0.81–1.0 = Fast erreicht
+
+   ZIELE pro Bereich (im Feld "ratschlaege"):
+   Erkenne ALLE Ziele. Lieber zu viele als zu wenige.
+   Schema pro Ziel:
+   {
+     "titel": "Kurzer Titel (max. 6 W${"\u00f6"}rter)",
+     "beschreibung": "Was genau will der Nutzer erreichen? (2–3 S${"\u00e4"}tze). Status: [offen/in Arbeit/blockiert/erreicht]. N${"\u00e4"}chster Schritt: [konkreter Schritt].",
+     "prioritaet": "hoch|mittel|niedrig",
+     "verknuepfung": "Andere Bereiche die zusammenh${"\u00e4"}ngen. Falls keine: null",
+     "herleitung": [
+       {
+         "datum": "Datum des Eintrags",
+         "zusammenfassung": "Was in diesem Eintrag zu diesem Ziel stand (1–2 S${"\u00e4"}tze)."
+       }
+     ]
+   }
+
+   PRIORIT${"\u00c4"}T-BEDEUTUNG (nach Status):
+   - "hoch" = blockiert oder dringend
+   - "mittel" = offen, noch nicht gestartet
+   - "niedrig" = in Arbeit oder erreicht
+
+AUSGABEFORMAT:
+- Antworte NUR mit dem JSON-Objekt.
+- Keine Markdown-Backticks. Beginne direkt mit {.
+- Valides JSON.
+    """.trimIndent()
+
+    private fun getActiveSystemPrompt(): String {
+        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        return when (scenario) {
+            3 -> goalsAnalysisSystemPrompt  // Ziele
+            4 -> {  // Individuelle Analyse
+                val custom = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+                if (custom.isNotBlank()) custom else entropyAnalysisSystemPrompt
+            }
+            else -> entropyAnalysisSystemPrompt  // Entropie (default) + Szenario 2, 3
+        }
+    }
+
+    private fun getActiveUserPromptPrefix(freshAnalysis: Boolean): String {
+        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        return if (scenario == 3 && freshAnalysis) {
+            "=== FRISCHE ZIEL-ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse. ==="
+        } else if (freshAnalysis) {
+            "=== FRISCHE ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse. ==="
+        } else ""
+    }
+
+    private fun getActiveUserPromptSuffix(entryCount: Int): String {
+        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        return if (scenario == 3) {
+            "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss auf Ziele, W${"\u00fc"}nsche und Vorhaben durchsucht werden. ==="
+        } else {
+            "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss in der Analyse und in mindestens einer Kategorie erscheinen. ==="
+        }
+    }
+
     // Undo support: store previous state in memory
     private var previousBlocks: List<AdviceBlockEntity>? = null
 
@@ -246,14 +399,14 @@ AUSGABEFORMAT — STRENGE REGELN:
             // Only use previous context for automatic updates, NOT for manual refresh
             val previousContext = if (freshAnalysis) "" else buildPreviousContext(existingBlocks)
 
-            val userText = buildUserText(allEntriesText, previousContext, entryCount)
+            val userText = buildUserText(allEntriesText, previousContext, entryCount, freshAnalysis)
 
             val selectedModel = getSelectedModel()
             Log.d("GeminiDebug", "Model: $selectedModel, API-Key length: ${apiKey.length}, Entries: $entryCount")
 
             val request = GeminiRequestBuilder.build(
                 userText = userText,
-                systemPrompt = entropyAnalysisSystemPrompt
+                systemPrompt = getActiveSystemPrompt()
             )
 
             // Try selected model first, fallback to gemini-2.5-flash-lite on HTTP 400
@@ -324,18 +477,20 @@ AUSGABEFORMAT — STRENGE REGELN:
         return sb.toString()
     }
 
-    private fun buildUserText(allEntriesText: String, previousContext: String, entryCount: Int): String {
+    private fun buildUserText(allEntriesText: String, previousContext: String, entryCount: Int, freshAnalysis: Boolean = false): String {
         val sb = StringBuilder()
         if (previousContext.isNotBlank()) {
             sb.appendLine(previousContext)
         } else {
-            sb.appendLine("=== FRISCHE ANALYSE — Erstelle eine komplett neue, eigenständige Analyse. ===")
+            sb.appendLine(getActiveUserPromptPrefix(freshAnalysis))
             sb.appendLine()
         }
-        sb.appendLine("=== ALLE $entryCount TAGEBUCHEINTRÄGE (JEDEN EINZELNEN ANALYSIEREN!) ===")
+        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        val scanLabel = if (scenario == 3) "AUF ZIELE DURCHSUCHEN" else "ANALYSIEREN"
+        sb.appendLine("=== ALLE $entryCount TAGEBUCHEINTR\u00c4GE (JEDEN EINZELNEN $scanLabel!) ===")
         sb.appendLine(allEntriesText)
         sb.appendLine()
-        sb.appendLine("=== PFLICHT-CHECK: Du hast $entryCount Einträge erhalten. Jeder muss in der Analyse und in mindestens einer Kategorie erscheinen. ===")
+        sb.appendLine(getActiveUserPromptSuffix(entryCount))
         return sb.toString()
     }
 

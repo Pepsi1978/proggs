@@ -1,6 +1,7 @@
 package com.bestjournal.app.data.repository
 
 import com.bestjournal.app.data.local.dao.AdviceDashboardDao
+import com.bestjournal.app.util.Constants
 import com.bestjournal.app.data.local.entity.AdviceBlockEntity
 import com.bestjournal.app.data.remote.ai.FirebaseAiService
 import com.bestjournal.app.domain.model.Advice
@@ -21,6 +22,7 @@ class AdviceRepository
 constructor(
     private val firebaseAiService: FirebaseAiService,
     private val adviceDashboardDao: AdviceDashboardDao,
+    private val encryptedPrefs: android.content.SharedPreferences,
 ) {
     private val entropyAnalysisSystemPrompt = """
 Du bist ein empathischer, hochintelligenter Lebensberater und Muster-Analyst.
@@ -202,6 +204,98 @@ AUSGABEFORMAT — STRENGE REGELN:
 - Valides JSON — keine fehlenden Kommas, keine doppelten Schlüssel.
     """.trimIndent()
 
+    private val goalsAnalysisSystemPrompt = """
+Du bist ein aufmerksamer, motivierender Ziel-Analyst und Fortschritts-Tracker.
+
+DEINE AUFGABE:
+Analysiere die Tagebucheintr${"\u00e4"}ge eines Nutzers. Erkenne alle Ziele, W${"\u00fc"}nsche,
+Vorhaben und Pl${"\u00e4"}ne — auch wenn sie nur beil${"\u00e4"}ufig erw${"\u00e4"}hnt werden. Verfolge
+den Fortschritt ${"\u00fc"}ber mehrere Eintr${"\u00e4"}ge hinweg. Erstelle daraus ein strukturiertes
+Ziele-Dashboard im JSON-Format.
+
+DEFINITION — WAS IST EIN ZIEL:
+Alles, was der Nutzer erreichen, ver${"\u00e4"}ndern, anfangen, beenden, verbessern
+oder aufbauen m${"\u00f6"}chte. Auch indirekte Hinweise z${"\u00e4"}hlen:
+- Direkt: "Ich will abnehmen", "Ich muss den Zahnarzt anrufen"
+- Indirekt: "W${"\u00e4"}re sch${"\u00f6"}n, mal wieder laufen zu gehen" = Ziel Fitness
+- Klagen: "Mein Schlaf ist so schlecht" = implizites Ziel Schlafverbesserung
+- Tr${"\u00e4"}ume: "Irgendwann m${"\u00f6"}chte ich nach Schweden" = Langfrist-Ziel Reise
+
+OBERSTE REGEL — KEIN EINTRAG DARF FEHLEN:
+Du erh${"\u00e4"}ltst nummerierte Eintr${"\u00e4"}ge (z.B. "EINTRAG 1 von 5").
+Du MUSST JEDEN EINZELNEN Eintrag lesen, analysieren und einbeziehen.
+
+UMGANG MIT WENIGEN EINTR${"\u00c4"}GEN:
+- Bei 1–2 Eintr${"\u00e4"}gen: Erkenne Einzelziele, bewerte Fortschritt als "unbekannt".
+- Ab 3 Eintr${"\u00e4"}gen: Verfolge aktiv den Fortschritt und erkenne Muster.
+
+SPRACHREGELN:
+- Deutsch. Einfach, klar. Keine Fremdw${"\u00f6"}rter.
+- Motivierend und ehrlich — feiere Fortschritt, besch${"\u00f6"}nige nichts.
+
+MENGEN-REGEL — JEDES ZIEL Z${"\u00c4"}HLT:
+Erkenne ALLE Ziele — auch kleine. Fasse NICHT zusammen.
+
+JSON-AUSGABE-SCHEMA:
+{
+  "gesamtanalyse": "...",
+  "top_massnahmen": [...],
+  "kategorien": [...]
+}
+
+1) "gesamtanalyse" (15–25 S${"\u00e4"}tze): Alle Ziele benennen, Fortschritt erkennen.
+
+2) "top_massnahmen" (genau 5): N${"\u00e4"}chste Schritte.
+   { "titel": "...", "beschreibung": "Max 30 W${"\u00f6"}rter", "erklaerung": "5–8 S${"\u00e4"}tze" }
+
+3) "kategorien": Ziel-Bereiche.
+   {
+     "name": "max 12 Zeichen", "icon": "material_icon", "farbe": "#HEX",
+     "entropie_level": 0.0, "zusammenfassung": "3–5 S${"\u00e4"}tze",
+     "ratschlaege": [{
+       "titel": "...",
+       "beschreibung": "Status: [offen/in Arbeit/blockiert/erreicht]. N${"\u00e4"}chster Schritt: [...].",
+       "prioritaet": "hoch|mittel|niedrig",
+       "verknuepfung": "...", "herleitung": [{"datum":"...","zusammenfassung":"..."}]
+     }]
+   }
+   Bereiche: Fitness, Gesundheit, Arbeit, Karriere, Finanzen, Beziehungen,
+   Projekte, Lernen, Schlaf, Psyche, Reise, Ordnung, Kreativit${"\u00e4"}t
+   Priorit${"\u00e4"}t: hoch=blockiert, mittel=offen, niedrig=in Arbeit/erreicht
+
+AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
+    """.trimIndent()
+
+    private fun getActiveSystemPrompt(): String {
+        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        return when (scenario) {
+            3 -> goalsAnalysisSystemPrompt
+            4 -> {
+                val custom = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+                if (custom.isNotBlank()) custom else entropyAnalysisSystemPrompt
+            }
+            else -> entropyAnalysisSystemPrompt
+        }
+    }
+
+    private fun getActiveUserPromptPrefix(freshAnalysis: Boolean): String {
+        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        return if (scenario == 3 && freshAnalysis) {
+            "=== FRISCHE ZIEL-ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse. ==="
+        } else if (freshAnalysis) {
+            "=== FRISCHE ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse. ==="
+        } else ""
+    }
+
+    private fun getActiveUserPromptSuffix(entryCount: Int): String {
+        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        return if (scenario == 3) {
+            "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss auf Ziele durchsucht werden. ==="
+        } else {
+            "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss in der Analyse erscheinen. ==="
+        }
+    }
+
     // Undo support: store previous state in memory
     private var previousBlocks: List<AdviceBlockEntity>? = null
 
@@ -238,13 +332,13 @@ AUSGABEFORMAT — STRENGE REGELN:
             // Only use previous context for automatic updates, NOT for manual refresh
             val previousContext = if (freshAnalysis) "" else buildPreviousContext(existingBlocks)
 
-            val userText = buildUserText(allEntriesText, previousContext, entryCount)
+            val userText = buildUserText(allEntriesText, previousContext, entryCount, freshAnalysis)
 
             val result =
                 firebaseAiService.generateContent(
                     prompt = userText,
                     modelName = modelName,
-                    systemPrompt = entropyAnalysisSystemPrompt,
+                    systemPrompt = getActiveSystemPrompt(),
                 )
             val jsonText =
                 result.getOrNull() ?: return Result.failure(Exception("Keine Antwort von Gemini"))
@@ -298,22 +392,21 @@ AUSGABEFORMAT — STRENGE REGELN:
         allEntriesText: String,
         previousContext: String,
         entryCount: Int,
+        freshAnalysis: Boolean = false,
     ): String {
         val sb = StringBuilder()
         if (previousContext.isNotBlank()) {
             sb.appendLine(previousContext)
         } else {
-            sb.appendLine(
-                "=== FRISCHE ANALYSE — Erstelle eine komplett neue, eigenständige Analyse. ==="
-            )
+            sb.appendLine(getActiveUserPromptPrefix(freshAnalysis))
             sb.appendLine()
         }
-        sb.appendLine("=== ALLE $entryCount TAGEBUCHEINTRÄGE (JEDEN EINZELNEN ANALYSIEREN!) ===")
+        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        val scanLabel = if (scenario == 3) "AUF ZIELE DURCHSUCHEN" else "ANALYSIEREN"
+        sb.appendLine("=== ALLE $entryCount TAGEBUCHEINTR\u00c4GE (JEDEN EINZELNEN $scanLabel!) ===")
         sb.appendLine(allEntriesText)
         sb.appendLine()
-        sb.appendLine(
-            "=== PFLICHT-CHECK: Du hast $entryCount Einträge erhalten. Jeder muss in der Analyse und in mindestens einer Kategorie erscheinen. ==="
-        )
+        sb.appendLine(getActiveUserPromptSuffix(entryCount))
         return sb.toString()
     }
 
