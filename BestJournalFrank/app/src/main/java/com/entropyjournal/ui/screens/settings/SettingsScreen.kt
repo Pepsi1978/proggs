@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VolumeOff
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -282,9 +283,17 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             soundsPrefs.edit().putBoolean(Constants.PREF_SOUNDS_ENABLED, enabled).apply()
                             if (enabled) {
                                 try {
-                                    val tg = android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 80)
-                                    tg.startTone(android.media.ToneGenerator.TONE_PROP_ACK, 150)
-                                    tg.release()
+                                    val sr = 44100; val ms = 100; val n = sr * ms / 1000
+                                    val s = ShortArray(n)
+                                    for (i in 0 until n) {
+                                        val fade = if (i < n/8) i.toDouble()/(n/8) else if (i > n*7/8) (n-i).toDouble()/(n/8) else 1.0
+                                        s[i] = (Short.MAX_VALUE * 0.4 * fade * kotlin.math.sin(2 * Math.PI * 1320.0 * i / sr)).toInt().toShort()
+                                    }
+                                    val t = android.media.AudioTrack(
+                                        android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC).build(),
+                                        android.media.AudioFormat.Builder().setSampleRate(sr).setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT).setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO).build(),
+                                        n * 2, android.media.AudioTrack.MODE_STATIC, android.media.AudioManager.AUDIO_SESSION_ID_GENERATE)
+                                    t.write(s, 0, n); t.play()
                                 } catch (_: Exception) {}
                             }
                         },
