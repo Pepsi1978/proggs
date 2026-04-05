@@ -282,21 +282,13 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
                     GlassCard(glowIntensity = 0.2f) {
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
+                            Text(
+                                "Gesamtanalyse",
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                PulsingOrb(entropyLevel = avgEntropy, size = 36.dp)
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    "Gesamtanalyse",
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                PulsingOrb(entropyLevel = avgEntropy, size = 36.dp)
-                            }
+                                textAlign = TextAlign.Center,
+                            )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 text = overallAnalysis,
