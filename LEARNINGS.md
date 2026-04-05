@@ -334,3 +334,192 @@ LazyColumn scrollt nicht fluessig — sichtbare Ruckler auf Samsung S23 Ultra un
 4. **Canvas-Animationen**: Max 15-20 Objekte, Trig-Operationen minimieren
 5. **`Modifier.shadow()` erzwingt Compositing-Layer** — bei vielen Karten Elevation niedrig halten (4dp statt 8dp)
 6. **Brush-Objekte in Modifier-Extensions koennen nicht `remember`t werden** — akzeptabler Overhead, aber bewusst sein
+
+---
+
+## ADB Install & Datenverlust (KRITISCH)
+
+> Quelle: Best Journal Session 2026-04-05 — Daten verloren nach adb uninstall auf S23 Ultra
+
+### Problem
+`adb uninstall` loescht ALLE App-Daten: SharedPreferences, Room-Datenbank, interne Dateien.
+Nach Neuinstallation sind API-Keys, Modellauswahl, Login-Status und Tagebucheintraege weg.
+
+### Wann passiert das?
+Wenn die Debug-APK mit einem **anderen Debug-Keystore** signiert ist als die installierte Version
+(z.B. anderer Rechner, neuer Keystore). Android zeigt `INSTALL_FAILED_UPDATE_INCOMPATIBLE`
+und die einzige Loesung ist Deinstallation.
+
+### Regeln
+1. **VOR `adb uninstall` IMMER den Benutzer warnen** — "Alle App-Daten gehen verloren"
+2. **Backup anbieten** — "Tagebucheintraege sichern" vor der Deinstallation
+3. **Debug-Keystore synchron halten** — gleichen `~/.android/debug.keystore` auf allen Rechnern
+4. **Fallback fuer fehlende SharedPreferences** — App muss mit leeren Prefs sauber starten
+5. **Default-Werte muessen funktionieren** — Default-Gemini-Modell muss ein stabiles Modell sein, nicht ein Preview
+
+---
+
+## WAL-Checkpoint bei SQLite-Backup (Room + Google Drive)
+
+> Quelle: Best Journal Session 2026-04-05 — 7 Eintraege gesichert, nur 6 wiederhergestellt
+
+### Problem
+Room verwendet WAL-Modus (Write-Ahead Log). Neue Eintraege landen zuerst in der `-wal`-Datei,
+nicht in der Haupt-`.db`-Datei. Das Backup kopiert nur die Haupt-Datei → neue Eintraege fehlen.
+
+### Falscher Ansatz
+```kotlin
+// FALSCH — Room haelt die DB offen, Checkpoint kann blockiert sein
+database.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").close()
+```
+
+### Richtiger Ansatz
+```kotlin
+// RICHTIG — Room schliessen, eigene Verbindung oeffnen, Checkpoint ausfuehren
+database.close()
+val db = SQLiteDatabase.openDatabase(dbFile.path, null, OPEN_READWRITE)
+val cursor = db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null)
+cursor.moveToFirst()  // WICHTIG: Checkpoint wird erst bei moveToFirst() ausgefuehrt!
+val busy = cursor.getInt(0)  // 0 = OK, 1 = blockiert
+cursor.close()
+db.close()
+```
+
+### Regeln
+1. **Room IMMER schliessen** bevor der WAL-Checkpoint ausgefuehrt wird
+2. **rawQuery + moveToFirst()** statt `query().close()` — der Cursor muss gelesen werden
+3. **Checkpoint-Ergebnis pruefen** — `busy=1` bedeutet Daten koennten fehlen
+4. **Nach Restore: WAL + SHM loeschen** bevor die Backup-DB eingespielt wird
+
+---
+
+## HorizontalPager vs. Swipe-Geste in scrollbaren Layouts
+
+> Quelle: Best Journal Session 2026-04-05 — Text sprang beim Tab-Wechsel
+
+### Problem
+`HorizontalPager` in einer `verticalScroll`-Column verursacht Layout-Probleme:
+- Text startet 20+ Zeilen tiefer als erwartet
+- Beim Seiten-Wechsel springt der Text nach oben (visueller Sprung-Effekt)
+- Die Pager-Hoehe aendert sich dynamisch und verschiebt den Scroll-State
+
+### Loesung: Swipe-Geste statt Pager
+```kotlin
+// Statt HorizontalPager — einfache Gesten-Erkennung
+GlassCard(
+    modifier = if (hasPages) Modifier.pointerInput(Unit) {
+        detectHorizontalDragGestures { _, dragAmount ->
+            if (dragAmount < -40) selectedTab = 1  // links wischen
+            if (dragAmount > 40) selectedTab = 0   // rechts wischen
+        }
+    } else Modifier
+) {
+    // Normaler if/else fuer den Inhalt — kein Pager noetig
+    if (selectedTab == 1) { OriginalContent() } else { ImprovedContent() }
+}
+```
+
+### Regeln
+1. **HorizontalPager NICHT in scrollbaren Layouts** verwenden — Layout-Konflikte
+2. **`detectHorizontalDragGestures`** ist leichtgewichtig und verursacht keine Hoehen-Probleme
+3. **`beyondViewportPageCount = 1`** hilft NICHT — das Grundproblem bleibt
+
+---
+
+## Dual-Device Debug-Workflow (S23 Ultra + Fold 6)
+
+> Quelle: Best Journal Session 2026-04-05 — Paralleles Testen auf 2 Geraeten
+
+### Setup
+- S23 Ultra (`R5CW206F0ZM`): Android-Version (BestJournalAndroid)
+- Fold 6 (`RFCX70KTDFX`): Frank-Version (BestJournalFrank)
+- Beide gleichzeitig per USB angeschlossen
+
+### Workflow (PFLICHT nach jeder Code-Aenderung)
+```bash
+# Parallel bauen
+./gradlew assembleDebug  # in beiden Projektverzeichnissen
+
+# Installieren + SOFORT neu starten (Benutzer oeffnet nie manuell!)
+adb -s R5CW206F0ZM install -r .../app-debug.apk && \
+adb -s R5CW206F0ZM shell am force-stop com.bestjournal.app.debug && \
+adb -s R5CW206F0ZM shell am start -n com.bestjournal.app.debug/com.bestjournal.app.MainActivity
+
+adb -s RFCX70KTDFX install -r .../app-debug.apk && \
+adb -s RFCX70KTDFX shell am force-stop com.entropyjournal.debug && \
+adb -s RFCX70KTDFX shell am start -n com.entropyjournal.debug/com.entropyjournal.MainActivity
+```
+
+### Regeln
+1. **Nach JEDEM Install automatisch starten** — `force-stop` + `am start`
+2. **Parallel installieren** — beide adb-Befehle koennen gleichzeitig laufen
+3. **Device-IDs aus SESSION-RULES.md** — nicht raten oder hardcoden
+
+---
+
+## ADB Binary-Dateien ueber run-as extrahieren
+
+> Quelle: Best Journal Session 2026-04-05 — SQLite-DB vom Geraet herunterladen
+
+### Problem
+`adb shell run-as com.app cat databases/db.file` korrumpiert binaere Dateien (Null-Bytes etc.).
+
+### Loesung: Base64-Encoding
+```bash
+# Auf dem Geraet Base64-kodieren, dann lokal dekodieren
+adb -s DEVICE shell "run-as com.app sh -c 'base64 databases/mydb.db'" > /tmp/db_b64.txt
+python3 -c "
+import base64
+data = base64.b64decode(open('/tmp/db_b64.txt').read().strip())
+open('/tmp/mydb.db', 'wb').write(data)
+"
+# Jetzt kann die DB lokal mit sqlite3/Python analysiert werden
+```
+
+---
+
+## Gemini API Fehlerbehandlung (Model-Fallback + klare Meldungen)
+
+> Quelle: Best Journal Session 2026-04-05 — HTTP 400 ohne sichtbare Fehlermeldung
+
+### Problem
+1. Dashboard zeigte "Erstelle Tagebucheintraege" statt der echten Fehlermeldung
+2. Default-Modell `gemini-3-flash-preview` funktionierte nicht mit allen API-Keys
+3. Vertauschte API-Keys (Groq ↔ Gemini) gaben nur kryptisches "HTTP 400"
+
+### Regeln
+1. **Fehlermeldungen IMMER anzeigen** — nie hinter generischen Texten verstecken
+2. **Default-Modell muss ein stabiles, allgemein verfuegbares Modell sein** (z.B. `gemini-2.5-flash-lite`)
+3. **Model-Fallback einbauen** — bei HTTP 400 automatisch auf Default-Modell wechseln
+4. **HTTP-Status-Codes uebersetzen** — 400 = "Modell nicht verfuegbar", 401 = "Key ungueltig", 429 = "Zu viele Anfragen"
+5. **API-Key-Laenge loggen** — hilft sofort beim Erkennen vertauschter Keys (Gemini = 39 Zeichen)
+
+---
+
+## Klammerstruktur in grossen Compose-Dateien
+
+> Quelle: Best Journal Session 2026-04-05 — Falsche Klammer entfernt, TopActionsBlock kaputt
+
+### Problem
+In DashboardScreen.kt (800+ Zeilen) war eine ueberzaehlige `}` vorhanden. Beim Entfernen
+wurde die FALSCHE Klammer entfernt → Column schloss zu frueh → Items stapelten sich uebereinander.
+
+### Diagnose-Tool
+```python
+# Klammerbalance pruefen — findet sofort wo es bricht
+with open('Datei.kt', 'r') as f:
+    lines = f.readlines()
+depth = 0
+for i, line in enumerate(lines, 1):
+    for ch in line:
+        if ch == '{': depth += 1
+        elif ch == '}': depth -= 1
+    if depth < 0:
+        print(f'Line {i}: depth went negative ({depth})')
+print(f'Final depth: {depth}')
+```
+
+### Regeln
+1. **VOR dem Entfernen einer Klammer: Klammerbalance-Script laufen lassen**
+2. **NACH dem Edit: Nochmal pruefen** — depth muss am Ende 0 sein
+3. **Bei grossen Compose-Dateien (500+ Zeilen)**: Immer die umgebende Funktion identifizieren bevor eine Klammer angefasst wird
