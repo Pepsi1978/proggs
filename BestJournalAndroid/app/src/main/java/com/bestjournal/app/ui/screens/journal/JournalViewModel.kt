@@ -163,8 +163,8 @@ constructor(
                 }
                 val track = android.media.AudioTrack(
                     android.media.AudioAttributes.Builder()
-                        .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
-                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
                         .build(),
                     android.media.AudioFormat.Builder()
                         .setSampleRate(sampleRate)
