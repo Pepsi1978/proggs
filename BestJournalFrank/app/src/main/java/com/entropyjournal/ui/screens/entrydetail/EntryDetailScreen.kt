@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,14 +37,13 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -210,39 +208,35 @@ fun EntryDetailScreen(
                 }
 
                 val hasImproved = entry.isImproved && entry.improvedText != null
-                val pagerState = rememberPagerState(pageCount = { if (hasImproved) 2 else 1 })
-                val coroutineScope = rememberCoroutineScope()
+                var selectedTab by remember { mutableIntStateOf(0) }
+                val isShowingOriginal = selectedTab == 1 && hasImproved
 
                 if (hasImproved) {
                     TabRow(
-                        selectedTabIndex = pagerState.currentPage,
+                        selectedTabIndex = selectedTab,
                         containerColor = Color.Transparent,
                         contentColor = MaterialTheme.colorScheme.primary,
                         indicator = { tabPositions ->
-                            if (pagerState.currentPage < tabPositions.size) {
+                            if (selectedTab < tabPositions.size) {
                                 SecondaryIndicator(
-                                    Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
                     ) {
-                        Tab(selected = pagerState.currentPage == 0, onClick = {
-                            coroutineScope.launch { pagerState.animateScrollToPage(0) }
-                        }) {
+                        Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
                             Text(
                                 "Verbessert",
                                 modifier = Modifier.padding(8.dp),
-                                color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                color = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                             )
                         }
-                        Tab(selected = pagerState.currentPage == 1, onClick = {
-                            coroutineScope.launch { pagerState.animateScrollToPage(1) }
-                        }) {
+                        Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
                             Text(
                                 "Original",
                                 modifier = Modifier.padding(8.dp),
-                                color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                color = if (selectedTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                             )
                         }
                     }
@@ -256,57 +250,57 @@ fun EntryDetailScreen(
                     cursorColor = MaterialTheme.colorScheme.primary
                 )
 
-                GlassCard {
+                GlassCard(
+                    modifier = if (hasImproved) Modifier.pointerInput(Unit) {
+                        detectHorizontalDragGestures { _, dragAmount ->
+                            if (dragAmount < -40) selectedTab = 1
+                            if (dragAmount > 40) selectedTab = 0
+                        }
+                    } else Modifier
+                ) {
                     Column {
-                        HorizontalPager(
-                            state = pagerState,
-                            userScrollEnabled = hasImproved,
-                            beyondViewportPageCount = 1,
-                        ) { page ->
-                            val isOriginalPage = page == 1
-                            if (isOriginalPage) {
-                                var editedRawText by remember(entry.rawText) { mutableStateOf(entry.rawText) }
-                                TextField(
-                                    value = editedRawText,
-                                    onValueChange = { newText ->
-                                        editedRawText = newText
-                                        lastEditTime = System.currentTimeMillis()
-                                        viewModel.updateRawText(newText)
+                        if (isShowingOriginal) {
+                            var editedRawText by remember(entry.rawText) { mutableStateOf(entry.rawText) }
+                            TextField(
+                                value = editedRawText,
+                                onValueChange = { newText ->
+                                    editedRawText = newText
+                                    lastEditTime = System.currentTimeMillis()
+                                    viewModel.updateRawText(newText)
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester)
+                                    .onFocusChanged { state ->
+                                        isFocused = state.isFocused
+                                        if (state.isFocused) lastEditTime = System.currentTimeMillis()
                                     },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .focusRequester(focusRequester)
-                                        .onFocusChanged { state ->
-                                            isFocused = state.isFocused
-                                            if (state.isFocused) lastEditTime = System.currentTimeMillis()
-                                        },
-                                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    ),
-                                    colors = textFieldColors,
-                                    visualTransformation = searchHighlight
-                                )
-                            } else {
-                                TextField(
-                                    value = uiState.editedDisplayText,
-                                    onValueChange = {
-                                        lastEditTime = System.currentTimeMillis()
-                                        viewModel.updateDisplayText(it)
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.onSurface
+                                ),
+                                colors = textFieldColors,
+                                visualTransformation = searchHighlight
+                            )
+                        } else {
+                            TextField(
+                                value = uiState.editedDisplayText,
+                                onValueChange = {
+                                    lastEditTime = System.currentTimeMillis()
+                                    viewModel.updateDisplayText(it)
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester)
+                                    .onFocusChanged { state ->
+                                        isFocused = state.isFocused
+                                        if (state.isFocused) lastEditTime = System.currentTimeMillis()
                                     },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .focusRequester(focusRequester)
-                                        .onFocusChanged { state ->
-                                            isFocused = state.isFocused
-                                            if (state.isFocused) lastEditTime = System.currentTimeMillis()
-                                        },
-                                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    ),
-                                    colors = textFieldColors,
-                                    visualTransformation = searchHighlight
-                                )
-                            }
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.onSurface
+                                ),
+                                colors = textFieldColors,
+                                visualTransformation = searchHighlight
+                            )
                         }
                         if (uiState.isSaving) {
                             Text(
