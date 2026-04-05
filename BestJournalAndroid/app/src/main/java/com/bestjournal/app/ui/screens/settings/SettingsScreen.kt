@@ -83,6 +83,33 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    // Click sound helper — plays only when sounds are enabled
+    val clickPrefs = remember {
+        val mk = androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC)
+        androidx.security.crypto.EncryptedSharedPreferences.create(
+            Constants.ENCRYPTED_PREFS_NAME, mk, context,
+            androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
+    val playClick = remember { {
+        if (clickPrefs.getBoolean(Constants.PREF_SOUNDS_ENABLED, true)) {
+            try {
+                val sr = 44100; val n = sr * 15 / 1000
+                val s = ShortArray(n)
+                for (i in 0 until n) {
+                    val env = if (i < 3) i.toDouble() / 3 else (n - i).toDouble() / n
+                    s[i] = (Short.MAX_VALUE * 0.7 * env * kotlin.math.sin(2 * Math.PI * 2000.0 * i / sr)).toInt().toShort()
+                }
+                val t = android.media.AudioTrack(
+                    android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build(),
+                    android.media.AudioFormat.Builder().setSampleRate(sr).setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT).setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO).build(),
+                    n * 2, android.media.AudioTrack.MODE_STATIC, android.media.AudioManager.AUDIO_SESSION_ID_GENERATE)
+                t.write(s, 0, n); t.play()
+            } catch (_: Exception) {}
+        }
+    } }
+
     var showSubscriptionSheet by remember { mutableStateOf(false) }
 
     val consentLauncher =
@@ -146,7 +173,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             }
                         }
                         OutlinedButton(
-                            onClick = { viewModel.showLogoutDialog(true) },
+                            onClick = { playClick(); viewModel.showLogoutDialog(true) },
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonRed),
                         ) {
                             Text("Abmelden")
@@ -171,7 +198,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         horizontalArrangement = Arrangement.Center,
                     ) {
                         Button(
-                            onClick = { viewModel.syncNow() },
+                            onClick = { playClick(); viewModel.syncNow() },
                             enabled = !uiState.isSyncing,
                             colors =
                                 ButtonDefaults.buttonColors(
@@ -215,7 +242,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
-                        onClick = { viewModel.signIn(context) },
+                        onClick = { playClick(); viewModel.signIn(context) },
                         modifier = Modifier.fillMaxWidth(),
                         colors =
                             ButtonDefaults.buttonColors(
@@ -267,6 +294,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Switch(
                         checked = uiState.isDarkTheme,
                         onCheckedChange = {
+                            playClick()
                             if (uiState.followSystem) viewModel.updateFollowSystem(false)
                             viewModel.updateDarkTheme(it)
                         },
@@ -305,7 +333,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Switch(
                         checked = uiState.followSystem,
-                        onCheckedChange = { viewModel.updateFollowSystem(it) },
+                        onCheckedChange = { playClick(); viewModel.updateFollowSystem(it) },
                         colors =
                             SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -366,6 +394,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Switch(
                         checked = uiState.followSun,
                         onCheckedChange = { enabled ->
+                            playClick()
                             if (enabled) {
                                 val hasPerm =
                                     androidx.core.content.ContextCompat.checkSelfPermission(
@@ -457,6 +486,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Switch(
                         checked = soundsEnabled,
                         onCheckedChange = { enabled ->
+                            playClick()
                             soundsEnabled = enabled
                             soundsPrefs.edit().putBoolean(Constants.PREF_SOUNDS_ENABLED, enabled).apply()
                             if (enabled) {
@@ -645,6 +675,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Switch(
                         checked = uiState.biometricLock,
                         onCheckedChange = { enabled ->
+                            playClick()
                             // Require biometric auth before toggling the lock on or off
                             val activity = context as? com.bestjournal.app.MainActivity
                             if (activity != null) {
@@ -723,7 +754,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
-                        onClick = { showSubscriptionSheet = true },
+                        onClick = { playClick(); showSubscriptionSheet = true },
                         modifier = Modifier.fillMaxWidth(),
                         colors =
                             ButtonDefaults.buttonColors(
@@ -764,7 +795,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Switch(
                         checked = uiState.textImprovementDefault,
-                        onCheckedChange = { viewModel.updateTextImprovementDefault(it) },
+                        onCheckedChange = { playClick(); viewModel.updateTextImprovementDefault(it) },
                         colors =
                             SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -791,7 +822,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Switch(
                         checked = uiState.autoUpdateDashboard,
-                        onCheckedChange = { viewModel.updateAutoUpdateDashboard(it) },
+                        onCheckedChange = { playClick(); viewModel.updateAutoUpdateDashboard(it) },
                         colors =
                             SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
