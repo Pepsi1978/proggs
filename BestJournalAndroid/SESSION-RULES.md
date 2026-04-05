@@ -6,7 +6,7 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Best Journal App.
 - **Aktuelle Phase**: 2 (Debug & Entwicklung)
 - **Phase gestartet am**: 2026-03-31
 - **Naechster Meilenstein**: Alle Features implementiert und stabil
-- **Version**: v1.0.2 (Build 3)
+- **Version**: v0.5.0 (Build 50)
 - **Offene Features**: [vom Benutzer zu definieren]
 - **Bekannte Bugs**: [vom Benutzer zu definieren]
 - **Phasen-Referenz**: `~/.claude/rules/android-development-phases.md`
@@ -28,8 +28,10 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Best Journal App.
 ## Build & Install (PFLICHT)
 - Nach jeder Aenderung: `./gradlew assembleDebug`
 - Auf dem Handy installieren: `adb -s [DEVICE] install -r app/build/outputs/apk/debug/app-debug.apk`
-- App stoppen und neu starten: `adb -s [DEVICE] shell am force-stop com.bestjournal.app.debug`
+- **IMMER nach Install automatisch neu starten**: `adb -s [DEVICE] shell am force-stop com.bestjournal.app.debug && adb -s [DEVICE] shell am start -n com.bestjournal.app.debug/com.bestjournal.app.MainActivity`
+- Der Benutzer soll die App NIEMALS manuell oeffnen muessen nach einer Installation.
 - Bei Hilt-Aenderungen: `./gradlew clean assembleDebug`
+- **Versionierung**: Bei JEDEM Commit versionCode+1 erhoehen in build.gradle.kts UND SettingsScreen.kt
 
 ## Geraete
 - Erstes Handy (Samsung, Windows): `RFCX70KTDFX`

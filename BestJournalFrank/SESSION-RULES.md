@@ -19,8 +19,10 @@ Diese Regeln gelten fuer JEDE Arbeitssession an der Entropy Journal App.
 ## Build & Install (PFLICHT)
 - Nach jeder Aenderung: `./gradlew assembleDebug`
 - Auf dem Handy installieren: `adb -s [DEVICE] install -r app/build/outputs/apk/debug/app-debug.apk`
-- App stoppen und neu starten: `adb -s [DEVICE] shell am force-stop com.entropyjournal.debug`
+- **IMMER nach Install automatisch neu starten**: `adb -s [DEVICE] shell am force-stop com.entropyjournal.debug && adb -s [DEVICE] shell am start -n com.entropyjournal.debug/com.entropyjournal.MainActivity`
+- Der Benutzer soll die App NIEMALS manuell oeffnen muessen nach einer Installation.
 - Bei Hilt-Aenderungen: `./gradlew clean assembleDebug`
+- **Versionierung**: Bei JEDEM Commit versionCode+1 erhoehen in build.gradle.kts UND SettingsScreen.kt
 
 ## Geraete
 - Erstes Handy (Samsung): `RFCX70KTDFX`
