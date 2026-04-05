@@ -23,28 +23,30 @@ constructor(
         val dbFile = context.getDatabasePath(dbName)
         if (!dbFile.exists()) return Result.failure(Exception("Datenbank nicht gefunden"))
 
-        // Close Room's connection so WAL checkpoint can fully flush all data
-        database.close()
-
-        // Force WAL checkpoint — moves ALL pending writes from WAL into the main .db file
-        val db = android.database.sqlite.SQLiteDatabase.openDatabase(
-            dbFile.path, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE
-        )
-        val checkpointCursor = db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null)
-        if (checkpointCursor.moveToFirst()) {
-            val busy = checkpointCursor.getInt(0)
-            val log = checkpointCursor.getInt(1)
-            val checkpointed = checkpointCursor.getInt(2)
-            Log.d("SyncDebug", "WAL checkpoint: busy=$busy, log=$log, checkpointed=$checkpointed")
+        // Force WAL checkpoint via Room's own connection — do NOT close Room (breaks saves!)
+        try {
+            val roomDb = database.openHelper.writableDatabase
+            val cursor = roomDb.query("PRAGMA wal_checkpoint(TRUNCATE)")
+            if (cursor.moveToFirst()) {
+                Log.d("SyncDebug", "WAL checkpoint: busy=${cursor.getInt(0)}, log=${cursor.getInt(1)}, checkpointed=${cursor.getInt(2)}")
+            }
+            cursor.close()
+        } catch (e: Exception) {
+            Log.w("SyncDebug", "WAL checkpoint failed: ${e.message}")
         }
-        checkpointCursor.close()
 
-        // Count entries to verify backup completeness
-        val countCursor = db.rawQuery("SELECT COUNT(*) FROM journal_entries", null)
-        countCursor.moveToFirst()
-        val entryCount = countCursor.getInt(0)
-        countCursor.close()
-        db.close()
+        // Count entries for logging
+        val entryCount = try {
+            val db = android.database.sqlite.SQLiteDatabase.openDatabase(
+                dbFile.path, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
+            )
+            val c = db.rawQuery("SELECT COUNT(*) FROM journal_entries", null)
+            c.moveToFirst()
+            val count = c.getInt(0)
+            c.close()
+            db.close()
+            count
+        } catch (_: Exception) { -1 }
 
         Log.d("SyncDebug", "Backup: $entryCount Eintraege, Datei: ${dbFile.length()} Bytes")
 

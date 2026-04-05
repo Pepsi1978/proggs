@@ -206,18 +206,16 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                         Icon(
                             imageVector =
                                 when (uiState.syncStatus) {
-                                    SyncStatus.SYNCED -> Icons.Rounded.CloudDone
                                     SyncStatus.ERROR -> Icons.Rounded.CloudOff
                                     SyncStatus.SYNCING -> Icons.Rounded.Cloud
-                                    else -> Icons.Rounded.Cloud
+                                    else -> Icons.Rounded.CloudDone
                                 },
                             contentDescription = "Sync-Status",
                             tint =
                                 when (uiState.syncStatus) {
-                                    SyncStatus.SYNCED -> NeonEmerald
                                     SyncStatus.SYNCING -> NeonCyan
                                     SyncStatus.ERROR -> NeonRed
-                                    else -> MaterialTheme.colorScheme.outline
+                                    else -> NeonEmerald
                                 },
                             modifier = Modifier.size(20.dp),
                         )
@@ -343,7 +341,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
             RecordingOverlay(
                 amplitude = amplitude,
                 durationSeconds = duration,
-                transcriptionModel = "Lokales Whisper-Modell",
+                transcriptionModel = uiState.transcriptionModel,
             )
         }
 
@@ -391,6 +389,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                 improvedText = uiState.improvedText,
                 isImproving = uiState.recordingState == RecordingState.IMPROVING,
                 isUsingImproved = uiState.isImproveEnabled,
+                transcriptionModel = uiState.transcriptionModel,
                 onImproveClick = { viewModel.improveText() },
                 onToggleVersion = { useImproved -> viewModel.setUseImprovedText(useImproved) },
                 onTextEdit = { viewModel.updatePreviewText(it) },
@@ -467,20 +466,6 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                Icons.Rounded.Cloud,
-                                null,
-                                tint = MaterialTheme.colorScheme.outline,
-                                modifier = Modifier.size(24.dp),
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "Nicht mit Google verbunden",
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
                                 Icons.Rounded.CloudOff,
                                 null,
                                 tint = NeonRed,
@@ -509,6 +494,7 @@ private fun PreviewDialog(
     improvedText: String?,
     isImproving: Boolean,
     isUsingImproved: Boolean,
+    transcriptionModel: String = "",
     onImproveClick: () -> Unit,
     onToggleVersion: (Boolean) -> Unit,
     onTextEdit: (String) -> Unit,
@@ -617,6 +603,15 @@ private fun PreviewDialog(
                         )
                     },
                 )
+
+                if (transcriptionModel.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Transkribiert mit $transcriptionModel",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 

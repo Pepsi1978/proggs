@@ -14,15 +14,21 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class TranscriptionResult(
+    val text: String,
+    val model: String
+)
+
 @Singleton
 class TranscriptionRepository @Inject constructor(
     private val localWhisper: LocalWhisperTranscriber,
     private val groqApi: GroqApi,
     private val encryptedPrefs: SharedPreferences
 ) {
-    suspend fun transcribeAudio(audioFile: File): Result<String> {
+    suspend fun transcribeAudio(audioFile: File): Result<TranscriptionResult> {
         // Only use Groq for subscribed users — key comes from Firebase Remote Config
-        val isSubscribed = encryptedPrefs.getBoolean("is_subscribed", false)
+        // TODO: Re-enable subscription check before release
+        val isSubscribed = true // TEMP: encryptedPrefs.getBoolean("is_subscribed", false)
         if (isSubscribed) {
             try {
                 val remoteConfig = FirebaseRemoteConfig.getInstance()
@@ -43,16 +49,17 @@ class TranscriptionRepository @Inject constructor(
                         responseFormat = "json".toRequestBody("text/plain".toMediaType())
                     )
                     if (response.text.isNotBlank()) {
-                        return Result.success(response.text)
+                        return Result.success(TranscriptionResult(response.text, "Groq Whisper Large V3"))
                     }
                 }
             } catch (e: Exception) {
-                // Groq failed (rate limit, network, server error) — fall through to local Whisper
                 Log.w("Transcription", "Groq failed, falling back to local Whisper: ${e.message}")
             }
         }
 
         // Fallback: ALWAYS works — local offline Whisper via sherpa-onnx
-        return localWhisper.transcribe(audioFile)
+        return localWhisper.transcribe(audioFile).map {
+            TranscriptionResult(it, "Lokales Whisper-Modell")
+        }
     }
 }

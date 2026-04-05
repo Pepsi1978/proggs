@@ -48,6 +48,7 @@ data class JournalUiState(
     val errorMessage: String? = null,
     val syncStatus: SyncStatus = SyncStatus.IDLE,
     val showAiLimitReached: Boolean = false,
+    val transcriptionModel: String = "Lokales Whisper-Modell",
 )
 
 enum class SyncStatus {
@@ -135,8 +136,11 @@ constructor(
     private fun startRecording() {
         val audioFile = File(context.cacheDir, "recording_${System.currentTimeMillis()}.wav")
         currentAudioFile = audioFile
-        _uiState.value =
-            _uiState.value.copy(recordingState = RecordingState.RECORDING, errorMessage = null)
+        _uiState.value = _uiState.value.copy(
+            recordingState = RecordingState.RECORDING,
+            errorMessage = null,
+            transcriptionModel = ""
+        )
 
         recordingJob = viewModelScope.launch {
             // Play tone FIRST, then start recording after tone finishes
@@ -208,12 +212,13 @@ constructor(
 
             val audioFile = currentAudioFile ?: return@launch
             transcribeAudioUseCase(audioFile)
-                .onSuccess { text ->
+                .onSuccess { result ->
                     _uiState.value =
                         _uiState.value.copy(
                             recordingState = RecordingState.PREVIEW,
-                            rawText = text.trim(),
+                            rawText = result.text.trim(),
                             showPreviewDialog = true,
+                            transcriptionModel = result.model,
                         )
                     audioFile.delete()
                 }
@@ -271,6 +276,7 @@ constructor(
     }
 
     fun saveEntry() {
+        android.util.Log.d("SaveEntry", "saveEntry called, rawText=${_uiState.value.rawText.take(30)}")
         val state = _uiState.value
         val displayText =
             if (state.isImproveEnabled && state.improvedText != null) {
@@ -279,9 +285,12 @@ constructor(
                 state.rawText
             }
 
+        if (displayText.isBlank()) return
+
         _uiState.value = state.copy(recordingState = RecordingState.SAVING)
 
-        viewModelScope.launch {
+        // Use independent scope — viewModelScope can be cancelled by Android
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             val entry =
                 JournalEntry(
                     timestamp = System.currentTimeMillis(),
@@ -291,12 +300,26 @@ constructor(
                     displayText = displayText,
                     audioDurationSeconds = durationSeconds.value,
                 )
-            val savedId = saveJournalEntryUseCase(entry)
-            resetState()
-            // Generate summary in background (non-blocking)
-            launch { summarizeEntryUseCase(savedId, displayText) }
-            triggerSync()
-            triggerDebouncedAnalysis()
+            try {
+                android.util.Log.d("SaveEntry", "Saving entry, displayText=${displayText.take(30)}")
+                val savedId = saveJournalEntryUseCase(entry)
+                android.util.Log.d("SaveEntry", "Entry saved with id=$savedId")
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    resetState()
+                }
+                // Background tasks — best effort
+                try { summarizeEntryUseCase(savedId, displayText) } catch (_: Exception) {}
+                try { triggerSync() } catch (_: Exception) {}
+                try { triggerDebouncedAnalysis() } catch (_: Exception) {}
+            } catch (e: Exception) {
+                android.util.Log.e("SaveEntry", "SAVE FAILED: ${e.javaClass.simpleName}: ${e.message}", e)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        recordingState = RecordingState.PREVIEW,
+                        errorMessage = "Speichern fehlgeschlagen: ${e.message}"
+                    )
+                }
+            }
         }
     }
 

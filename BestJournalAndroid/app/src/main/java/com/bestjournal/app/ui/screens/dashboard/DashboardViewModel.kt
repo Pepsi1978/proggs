@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 
 data class DashboardUiState(
     val isLoading: Boolean = false,
+    val isAutoUpdate: Boolean = false,
     val selectedCategoryIndex: Int = 0,
     val errorMessage: String? = null,
     val canUndo: Boolean = false,
@@ -59,7 +60,7 @@ constructor(
             while (true) {
                 val updating = encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
                 if (updating != _uiState.value.isLoading && !manualRefreshActive) {
-                    _uiState.update { it.copy(isLoading = updating) }
+                    _uiState.update { it.copy(isLoading = updating, isAutoUpdate = updating) }
                 }
                 kotlinx.coroutines.delay(500)
             }
@@ -78,6 +79,7 @@ constructor(
             _uiState.value =
                 _uiState.value.copy(
                     isLoading = true,
+                    isAutoUpdate = false,
                     errorMessage = null,
                     dashboardLimitMessage = null,
                 )

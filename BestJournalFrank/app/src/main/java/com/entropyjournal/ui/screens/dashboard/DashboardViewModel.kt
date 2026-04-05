@@ -17,6 +17,7 @@ import javax.inject.Inject
 
 data class DashboardUiState(
     val isLoading: Boolean = false,
+    val isAutoUpdate: Boolean = false,
     val selectedCategoryIndex: Int = 0,
     val errorMessage: String? = null,
     val canUndo: Boolean = false
@@ -44,7 +45,7 @@ class DashboardViewModel @Inject constructor(
             while (true) {
                 val updating = encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
                 if (updating != _uiState.value.isLoading && !manualRefreshActive) {
-                    _uiState.value = _uiState.value.copy(isLoading = updating)
+                    _uiState.value = _uiState.value.copy(isLoading = updating, isAutoUpdate = updating)
                 }
                 kotlinx.coroutines.delay(500)
             }
@@ -58,7 +59,7 @@ class DashboardViewModel @Inject constructor(
     fun refreshDashboard() {
         viewModelScope.launch {
             manualRefreshActive = true
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, isAutoUpdate = false, errorMessage = null)
             analyzeEntropyUseCase(freshAnalysis = true)
                 .onSuccess {
                     encryptedPrefs.edit()
