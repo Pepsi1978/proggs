@@ -164,7 +164,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "Dashboard wird aktualisiert",
+                                "KI-Dashboard wird aktualisiert",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
