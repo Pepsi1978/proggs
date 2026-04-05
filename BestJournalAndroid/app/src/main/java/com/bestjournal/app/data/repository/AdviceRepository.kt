@@ -152,7 +152,7 @@ constructor(
         Regeln:
         - Schreibe auf Deutsch, einfach und direkt, ohne Floskeln und ohne Fremdwörter.
         - Jeder Ratschlag muss sich auf konkrete Muster aus den Einträgen beziehen.
-        - Mindestens 3 Ratschläge pro Kategorie, gerne mehr (5–8) wenn die Datenlage es hergibt.
+        - So viele Ratschläge pro Kategorie wie die Datenlage hergibt — keine Obergrenze. Je mehr relevante Empfehlungen, desto besser.
         - Erstelle für JEDES erkannte Thema eine eigene Kategorie — auch wenn nur EIN Eintrag davon handelt.
         - Wenn 5 Einträge vorliegen, müssen die Themen aus ALLEN 5 Einträgen als Kategorien erscheinen.
         - Innerhalb eines Eintrags können MEHRERE Themen vorkommen — jedes wird eine eigene Kategorie.
