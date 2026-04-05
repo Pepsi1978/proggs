@@ -28,6 +28,7 @@ import com.entropyjournal.ui.theme.LocalIsDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -109,7 +110,7 @@ fun TimelineItem(
                 if (!entry.title.isNullOrBlank()) {
                     Text(
                         text = highlightMatches(entry.title, searchQuery, highlightColor),
-                        style = MaterialTheme.typography.titleSmall.copy(textDecoration = TextDecoration.Underline),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis

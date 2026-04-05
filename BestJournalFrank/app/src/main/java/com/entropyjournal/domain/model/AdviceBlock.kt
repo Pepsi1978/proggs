@@ -29,7 +29,8 @@ data class DerivationEntry(
 
 data class TopAction(
     val title: String,
-    val description: String
+    val description: String,
+    val detailedDescription: String = ""
 )
 
 enum class AdvicePriority(val label: String) {

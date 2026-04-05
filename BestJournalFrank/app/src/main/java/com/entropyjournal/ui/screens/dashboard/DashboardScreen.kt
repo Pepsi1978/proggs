@@ -122,8 +122,6 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         text = lastUpdated,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
                     )
                 }
             }
@@ -192,10 +190,14 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
                     GlassCard(glowIntensity = 0.2f) {
                         Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                            ) {
                                 PulsingOrb(entropyLevel = avgEntropy, size = 48.dp)
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Column {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text("Gesamtanalyse", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                                     if (entryCount > 0) {
                                         Text("Basierend auf $entryCount Eintr\u00e4gen", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
@@ -251,10 +253,10 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
                 // ALL recommendations from ALL categories, sorted by priority
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     NeonDivider()
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Alle Empfehlungen", style = MaterialTheme.typography.titleMedium.copy(textDecoration = TextDecoration.Underline), color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Alle Empfehlungen", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline), color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 }
 
                 // Collect all advices from all blocks with their category name
@@ -399,7 +401,7 @@ private fun CategoryDetailDialog(block: com.entropyjournal.domain.model.AdviceBl
                 Text(block.categorySummary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Alle Empfehlungen", style = MaterialTheme.typography.titleMedium.copy(textDecoration = TextDecoration.Underline), color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Text("Alle Empfehlungen", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline), color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
 
                 sortedAdvices.forEach { advice ->
                     val dot = when (advice.priority) {
@@ -513,6 +515,8 @@ private fun AdviceCard(advice: Advice, categoryName: String = "", onClick: () ->
 
 @Composable
 private fun TopActionsBlock(actions: List<TopAction>) {
+    var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
+
     GlassCard(
         glowColor = NeonAmber,
         glowIntensity = 0.3f,
@@ -528,7 +532,11 @@ private fun TopActionsBlock(actions: List<TopAction>) {
             Spacer(modifier = Modifier.height(16.dp))
             actions.forEachIndexed { index, action ->
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { selectedAction = index to action }
+                        .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
                     Box(
@@ -572,4 +580,74 @@ private fun TopActionsBlock(actions: List<TopAction>) {
             }
         }
     }
+
+    selectedAction?.let { (index, action) ->
+        TopActionDetailDialog(
+            action = action,
+            index = index,
+            onDismiss = { selectedAction = null },
+        )
+    }
+}
+
+@Composable
+private fun TopActionDetailDialog(action: TopAction, index: Int, onDismiss: () -> Unit) {
+    val dotColor = when (index) {
+        0 -> NeonRed
+        1 -> NeonAmber
+        2 -> NeonAmber.copy(alpha = 0.8f)
+        else -> NeonCyan
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(dotColor),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "${index + 1}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.surface,
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = action.title,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = action.description,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                if (action.detailedDescription.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    NeonDivider()
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = action.detailedDescription,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Schlie\u00dfen", color = MaterialTheme.colorScheme.primary)
+            }
+        },
+    )
 }

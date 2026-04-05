@@ -106,7 +106,8 @@ constructor(
           "top_massnahmen": [
             {
               "titel": "Kurzer, prägnanter Titel der Maßnahme",
-              "beschreibung": "Max. 30 Wörter — kurz und knackig: was genau tun und warum"
+              "beschreibung": "Max. 30 Wörter — kurz und knackig: was genau tun und warum",
+              "erklaerung": "Ausführliche Erklärung (5–8 Sätze): Warum ist diese Maßnahme wichtig? Was genau soll der Nutzer tun? Welche Einträge haben zu dieser Empfehlung geführt? Welcher positive Effekt ist zu erwarten?"
             }
           ],
           "kategorien": [
@@ -141,6 +142,9 @@ constructor(
         - Genau 5 Maßnahmen, sortiert nach Stärke der Entropie-Senkung (stärkste zuerst).
         - STRIKT: Jede Beschreibung MAXIMAL 30 Wörter. Kurz, knackig, ein Satz. Nicht mehr.
           Beispiel: "Jeden Abend 10 Minuten Atemübung vor dem Schlafen senkt Stress und verbessert Schlafqualität."
+        - Jede Maßnahme hat ZUSÄTZLICH eine ausführliche "erklaerung" (5–8 Sätze):
+          Erkläre WARUM diese Maßnahme wichtig ist, WAS genau zu tun ist, WELCHE Einträge
+          dazu geführt haben und WELCHEN positiven Effekt der Nutzer erwarten kann.
         - Diese Maßnahmen sollen KATEGORIEÜBERGREIFEND sein — die wichtigsten Erkenntnisse aus ALLEN Kategorien.
         - Konkret und direkt — keine Allgemeinplätze, sondern basierend auf den Einträgen.
         - Ganzheitlich denken: Welche 5 Veränderungen hätten den größten Dominoeffekt?
@@ -350,6 +354,7 @@ private fun AdviceBlockEntity.toDomain(): AdviceBlock {
                 TopAction(
                     title = obj.getString("titel"),
                     description = obj.getString("beschreibung"),
+                    detailedDescription = obj.optString("erklaerung", ""),
                 )
             }
         } catch (_: Exception) {
