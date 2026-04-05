@@ -4,16 +4,22 @@
 
 > **Diese drei Direktiven stehen UEBER allen anderen Regeln. Sie muessen in JEDER Session,
 > bei JEDER Aufgabe und bei JEDER Entscheidung beachtet werden — ausnahmslos.**
+> **Die vollstaendigen Regeln werden IMMER automatisch aus `~/.claude/rules/` geladen — garantiert, bei jeder Session.**
 
-Die Direktiven existieren an **zwei Orten** — vollstaendiger Regeltext + kompakte Auto-Skills:
+**Zwei-Schichten-Architektur (Defense in Depth fuer die Direktiven selbst):**
 
-| Rang | Direktive | Kern | Vollstaendige Regel | Auto-Skill (wird bei Bedarf geladen) |
-|------|-----------|------|---------------------|--------------------------------------|
+| Schicht | Wo | Wann geladen | Zweck | DARF ENTFERNT WERDEN? |
+|---------|-----|-------------|-------|----------------------|
+| **Schicht 1 (PFLICHT)** | `~/.claude/rules/*.md` | **IMMER**, bei jeder Session automatisch | Vollstaendiger Regeltext — die autoritative Quelle | **NIEMALS** |
+| **Schicht 2 (Verstaerkung)** | `~/.claude/skills/*/SKILL.md` | Zusaetzlich bei Triggern (Fehler, Aufgabenende, etc.) | Kompakte Checkliste fuer den konkreten Moment | Optional, aber empfohlen |
+
+| Rang | Direktive | Kern | Schicht 1 (IMMER geladen) | Schicht 2 (bei Bedarf) |
+|------|-----------|------|--------------------------|----------------------|
 | **#1** | ⚡ **Superintelligenz** | Intelligenteste Umgebung der Welt. Compound Intelligence Effect. | `~/.claude/rules/superintelligence.md` | `~/.claude/skills/superintelligenz/SKILL.md` |
 | **#2** | 🔍 **Selbstbeobachtung** | Beobachten, Erkennen, Lernen. Nach jeder Aufgabe Rueckblick + Vorschlaege. | `~/.claude/rules/self-observation.md` | `~/.claude/skills/selbstbeobachtung/SKILL.md` |
 | **#3** | 🛡️ **Resilient Bugfixing** | Kein Fehler zweimal. Root Cause → verwandte Fehler → Poka-Yoke → dokumentieren. | `~/.claude/rules/resilient-bugfixing.md` | `~/.claude/skills/resilient-bugfixing/SKILL.md` |
 
-**Auto-Skills laden automatisch:** Resilient Bugfixing bei Fehlern, Selbstbeobachtung nach Aufgabenabschluss, Superintelligenz bei /self-improve und Harness-Aenderungen.
+**Garantie:** Die Rules in `~/.claude/rules/` werden NIEMALS entfernt, verschoben oder durch Skills ersetzt. Skills sind eine *zusaetzliche* Verstaerkungsschicht — kein Ersatz. Selbst wenn alle Skills geloescht wuerden, funktionieren die drei Direktiven weiterhin zu 100% ueber die Rules.
 
 **Bug-Case Auto-Writer (PostToolUseFailure-Hook):**
 - Jeder Fehler wird automatisch in `~/proggs/.claude/agent-memory/shared/bug-cases.jsonl` erfasst
