@@ -114,12 +114,50 @@ class JournalViewModel @Inject constructor(
         currentAudioFile = audioFile
         _uiState.value = _uiState.value.copy(recordingState = RecordingState.RECORDING, errorMessage = null)
 
-        // Play a short beep to signal recording start
+        // Play a clean recording-start signal (dual beep like a real voice recorder)
         try {
-            val toneGen = android.media.ToneGenerator(android.media.AudioManager.STREAM_NOTIFICATION, 80)
-            toneGen.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 150)
-            toneGen.release()
-        } catch (_: Exception) { /* Beep is optional */ }
+            val sampleRate = 44100
+            val beepMs = 120
+            val pauseMs = 80
+            val beepSamples = sampleRate * beepMs / 1000
+            val pauseSamples = sampleRate * pauseMs / 1000
+            val totalSamples = beepSamples * 2 + pauseSamples
+            val samples = ShortArray(totalSamples)
+            val freq = 880.0
+            for (beep in 0..1) {
+                val offset = if (beep == 0) 0 else beepSamples + pauseSamples
+                for (i in 0 until beepSamples) {
+                    val t = i.toDouble() / sampleRate
+                    val fadeLen = beepSamples / 8
+                    val envelope = when {
+                        i < fadeLen -> i.toDouble() / fadeLen
+                        i > beepSamples - fadeLen -> (beepSamples - i).toDouble() / fadeLen
+                        else -> 1.0
+                    }
+                    samples[offset + i] = (Short.MAX_VALUE * 0.5 * envelope * kotlin.math.sin(2 * Math.PI * freq * t)).toInt().toShort()
+                }
+            }
+            val track = android.media.AudioTrack(
+                android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build(),
+                android.media.AudioFormat.Builder()
+                    .setSampleRate(sampleRate)
+                    .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                    .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
+                    .build(),
+                totalSamples * 2,
+                android.media.AudioTrack.MODE_STATIC,
+                android.media.AudioManager.AUDIO_SESSION_ID_GENERATE
+            )
+            track.write(samples, 0, totalSamples)
+            track.play()
+            viewModelScope.launch {
+                kotlinx.coroutines.delay(((beepMs * 2 + pauseMs) + 50).toLong())
+                track.release()
+            }
+        } catch (_: Exception) { /* Sound is optional */ }
 
         recordingJob = viewModelScope.launch {
             try {
