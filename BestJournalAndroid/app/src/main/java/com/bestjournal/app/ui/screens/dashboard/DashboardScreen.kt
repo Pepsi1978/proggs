@@ -281,14 +281,18 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     val entryCount = blocks.firstOrNull()?.basedOnEntryCount ?: 0
 
                     GlassCard(glowIntensity = 0.2f) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                            PulsingOrb(entropyLevel = avgEntropy, size = 48.dp)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "Gesamtanalyse",
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    PulsingOrb(entropyLevel = avgEntropy, size = 28.dp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "Gesamtanalyse",
+                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            }
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 text = overallAnalysis,
