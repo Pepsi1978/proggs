@@ -61,6 +61,15 @@ SPRACHREGELN (gelten für ALLE Textfelder im JSON):
 - Jeder soll den Text sofort verstehen, ohne nachzudenken.
 - Empathisch, direkt und konkret — keine Allgemeinplätze.
 
+MENGEN-REGEL — VOLLSTÄNDIGKEIT VOR KÜRZE:
+Die Gesamtzahl aller Ratschläge über alle Kategorien hinweg soll
+mindestens 15 betragen. Weniger als 10 ist ein Fehler.
+Jeder einzelne Hinweis, jede Beobachtung, jedes Problem aus den
+Einträgen verdient einen eigenen Ratschlag. Fasse NICHT zusammen.
+Wenn ein Eintrag 3 verschiedene Probleme nennt, entstehen daraus
+3 separate Ratschläge — nicht einer der alles zusammenfasst.
+Das JSON darf lang werden — Vollständigkeit ist wichtiger als Kürze.
+
 JSON-AUSGABE-SCHEMA:
 {
   "gesamt_entropie": 0.0,
@@ -75,6 +84,9 @@ FELD-DEFINITIONEN:
 
 1) "gesamt_entropie" (Zahl, 0.0 bis 1.0)
    Gewichteter Durchschnitt aller Kategorie-Entropie-Levels.
+   - 0.0–0.33 = Niedrig (guter Zustand)
+   - 0.34–0.66 = Mittel (Aufmerksamkeit nötig)
+   - 0.67–1.0 = Hoch (sofortiges Handeln empfohlen)
 
 2) "trend" (Text)
    Nur wenn mindestens 3 Einträge über mehrere Tage vorliegen.
@@ -155,17 +167,24 @@ FELD-DEFINITIONEN:
    - 0.34–0.66 = Mittel (gelb)
    - 0.67–1.0 = Hoch (rot)
 
-   RATSCHLÄGE pro Kategorie:
-   So viele wie die Datenlage hergibt — keine Obergrenze, aber jeder
-   muss sich auf KONKRETE Aussagen aus den Einträgen beziehen.
+   RATSCHLÄGE pro Kategorie — MENGE:
+   Generiere ALLE Ratschläge die du aus den Einträgen ableiten kannst.
+   Lieber zu viele als zu wenige — 5 bis 20 pro Kategorie sind normal.
+   Jeder einzelne Hinweis, jede Beobachtung, jedes Problem aus den
+   Einträgen verdient einen eigenen Ratschlag. Fasse NICHT zusammen.
+   Wenn ein Eintrag 3 verschiedene Probleme nennt, entstehen daraus
+   3 separate Ratschläge — nicht einer der alles zusammenfasst.
+   Jeder Ratschlag muss sich auf KONKRETE Aussagen aus den Einträgen beziehen.
    Sortiert nach Priorität: "hoch" zuerst, dann "mittel", dann "niedrig".
+
    Schema pro Ratschlag:
    {
      "titel": "Kurzer Titel (max. 6 Wörter)",
      "beschreibung": "Ausführliche Empfehlung (3–5 Sätze). Konkret und
                       direkt — was genau tun, wie, und warum.",
      "prioritaet": "hoch|mittel|niedrig",
-     "verknuepfung": "Kategorienamen die zusammenhängen plus warum. Falls keine: null",
+     "verknuepfung": "1–2 andere Kategorienamen die zusammenhängen,
+                      plus ein Satz warum. Falls keine: null",
      "herleitung": [
        {
          "datum": "Datum des Eintrags (z.B. 28.03.2026)",
@@ -175,16 +194,16 @@ FELD-DEFINITIONEN:
    }
 
    PRIORITÄT-BEDEUTUNG:
-   - "hoch" = Dringend, sofort handeln
+   - "hoch" = Dringend, sofort handeln (größte Entropie-Quelle)
    - "mittel" = Spürbar, bald angehen
    - "niedrig" = Beobachten, langfristig bearbeiten
 
-AUSGABEFORMAT:
+AUSGABEFORMAT — STRENGE REGELN:
 - Antworte NUR mit dem JSON-Objekt.
 - Kein Text davor oder danach.
 - Keine Markdown-Backticks.
 - Beginne direkt mit { und ende mit }.
-- Valides JSON.
+- Valides JSON — keine fehlenden Kommas, keine doppelten Schlüssel.
     """.trimIndent()
 
     // Undo support: store previous state in memory
