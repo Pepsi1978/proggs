@@ -230,17 +230,18 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
-                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
 
-                // Dashboard-Szenario
-                Text("Dashboard-Analyse", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        // Dashboard-Analyse (eigene GlassCard)
+        GlassCard {
+            Column {
+                Text("Dashboard-Analyse", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("W\u00e4hle, wie die KI deine Eintr\u00e4ge analysiert", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(12.dp))
 
-                val scenarioNames = listOf("Szenario 1", "Szenario 2", "Szenario 3", "Szenario 4", "Individuell")
+                val scenarioNames = listOf("Szenario 1", "Szenario 2", "Szenario 3", "Szenario 4", "Individuelle Analyse")
                 val scenarioPrefs = remember {
                     val masterKey = androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC)
                     androidx.security.crypto.EncryptedSharedPreferences.create(
@@ -288,15 +289,15 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     AlertDialog(
                         onDismissRequest = { showCustomPromptDialog = false },
                         containerColor = MaterialTheme.colorScheme.surface,
-                        title = { Text("Individueller Prompt", style = MaterialTheme.typography.titleLarge) },
+                        title = { Text("Individuelle Analyse", style = MaterialTheme.typography.titleLarge) },
                         text = {
                             Column {
-                                Text("Was ist dir besonders wichtig? Was soll die KI zusammenfassen?", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheinträge konzentrieren?", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(modifier = Modifier.height(12.dp))
                                 OutlinedTextField(
                                     value = promptText,
                                     onValueChange = { promptText = it },
-                                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                                    modifier = Modifier.fillMaxWidth().height(280.dp),
                                     placeholder = { Text("z.B. Fokussiere dich auf meine Schlafqualit\u00e4t und Stresslevel...") },
                                     textStyle = MaterialTheme.typography.bodyMedium,
                                 )

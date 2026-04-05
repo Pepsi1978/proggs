@@ -396,15 +396,17 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
-                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
 
+        // Dashboard-Analyse (eigene GlassCard)
+        GlassCard {
+            Column {
                 // Dashboard-Szenario
                 Text(
                     "Dashboard-Analyse",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -419,7 +421,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     "Szenario 2",
                     "Szenario 3",
                     "Szenario 4",
-                    "Individuell"
+                    "Individuelle Analyse"
                 )
                 val scenarioPrefs = remember {
                     val masterKey = androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC)
@@ -466,7 +468,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             )
                             if (index == 4) {
                                 Text(
-                                    "Eigenen Prompt eingeben",
+                                    "Eigenen Analyse-Fokus festlegen",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -482,12 +484,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         onDismissRequest = { showCustomPromptDialog = false },
                         containerColor = MaterialTheme.colorScheme.surface,
                         title = {
-                            Text("Individueller Prompt", style = MaterialTheme.typography.titleLarge)
+                            Text("Individuelle Analyse", style = MaterialTheme.typography.titleLarge)
                         },
                         text = {
                             Column {
                                 Text(
-                                    "Was ist dir besonders wichtig? Was soll die KI zusammenfassen?",
+                                    "Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheinträge konzentrieren?",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -495,7 +497,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                                 OutlinedTextField(
                                     value = promptText,
                                     onValueChange = { promptText = it },
-                                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                                    modifier = Modifier.fillMaxWidth().height(280.dp),
                                     placeholder = { Text("z.B. Fokussiere dich auf meine Schlafqualit\u00e4t und Stresslevel...") },
                                     textStyle = MaterialTheme.typography.bodyMedium,
                                 )
