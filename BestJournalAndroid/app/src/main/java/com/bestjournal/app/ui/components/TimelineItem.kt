@@ -136,8 +136,16 @@ fun TimelineItem(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 if (searchQuery.isNotBlank()) {
+                    // Show text starting from the first match so the highlight is visible
+                    val matchIndex = entry.displayText.lowercase().indexOf(searchQuery.lowercase())
+                    val snippetStart = if (matchIndex > 50) {
+                        // Find the start of the line or go back ~50 chars
+                        val lineStart = entry.displayText.lastIndexOf('\n', matchIndex - 1)
+                        if (lineStart >= 0) lineStart + 1 else (matchIndex - 50).coerceAtLeast(0)
+                    } else 0
+                    val snippetText = if (snippetStart > 0) "\u2026 " + entry.displayText.substring(snippetStart) else entry.displayText
                     Text(
-                        text = highlightMatches(entry.displayText, searchQuery, highlightColor),
+                        text = highlightMatches(snippetText, searchQuery, highlightColor),
                         style = MaterialTheme.typography.bodyLarge,
                         maxLines = 4,
                         overflow = TextOverflow.Ellipsis
