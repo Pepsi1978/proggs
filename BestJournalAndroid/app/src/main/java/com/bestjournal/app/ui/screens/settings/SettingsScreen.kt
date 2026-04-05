@@ -414,7 +414,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
         GlassCard {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.VolumeUp, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Rounded.MusicNote, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("T\u00f6ne", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 }
@@ -461,14 +461,15 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             soundsPrefs.edit().putBoolean(Constants.PREF_SOUNDS_ENABLED, enabled).apply()
                             if (enabled) {
                                 try {
-                                    val sr = 44100; val ms = 200; val n = sr * ms / 1000
+                                    // Short click sound — like a physical switch
+                                    val sr = 44100; val n = sr * 15 / 1000 // 15ms
                                     val s = ShortArray(n)
                                     for (i in 0 until n) {
-                                        val fade = if (i < n/8) i.toDouble()/(n/8) else if (i > n*7/8) (n-i).toDouble()/(n/8) else 1.0
-                                        s[i] = (Short.MAX_VALUE * 0.4 * fade * kotlin.math.sin(2 * Math.PI * 440.0 * i / sr)).toInt().toShort()
+                                        val env = if (i < 3) i.toDouble() / 3 else (n - i).toDouble() / n
+                                        s[i] = (Short.MAX_VALUE * 0.7 * env * kotlin.math.sin(2 * Math.PI * 2000.0 * i / sr)).toInt().toShort()
                                     }
                                     val t = android.media.AudioTrack(
-                                        android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC).build(),
+                                        android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build(),
                                         android.media.AudioFormat.Builder().setSampleRate(sr).setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT).setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO).build(),
                                         n * 2, android.media.AudioTrack.MODE_STATIC, android.media.AudioManager.AUDIO_SESSION_ID_GENERATE)
                                     t.write(s, 0, n); t.play()
