@@ -29,6 +29,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.Email
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.Fingerprint
@@ -102,11 +110,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
         // 1. Konto
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    "Konto",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Person, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Konto", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 if (uiState.userProfile != null) {
                     val profile = uiState.userProfile!!
@@ -221,11 +229,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
         // 2. Erscheinungsbild
         GlassCard {
             Column {
-                Text(
-                    "Erscheinungsbild",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Palette, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Erscheinungsbild", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Dunkelmodus — Sun | Moon icon
@@ -403,11 +411,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
         GlassCard {
             Column {
                 // Dashboard-Szenario
-                Text(
-                    "Dashboard-Analyse",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Dashboard, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Dashboard-Analyse", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     "W\u00e4hle, wie die KI deine Eintr\u00e4ge analysiert",
@@ -522,11 +530,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
         // 3. Sicherheit
         GlassCard {
             Column {
-                Text(
-                    "Sicherheit",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Security, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Sicherheit", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -592,11 +600,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
         // 4. KI-Abo
         GlassCard {
             Column {
-                Text(
-                    "KI-Abo",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Star, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("KI-Abo", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 if (uiState.isSubscribed) {
                     Text(
@@ -656,11 +664,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
         // 5. Aufnahme
         GlassCard {
             Column {
-                Text(
-                    "Aufnahme",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Mic, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Aufnahme", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -723,11 +731,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
         var feedbackSent by remember { mutableStateOf(false) }
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column {
-                Text(
-                    "Feedback",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Email, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Feedback", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     "Anregungen, W\u00fcnsche, Verbesserungsvorschl\u00e4ge, Bugs melden \uD83D\uDC1E",
@@ -790,11 +798,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
         // 7. Ueber die App
         GlassCard {
             Column {
-                Text(
-                    "\u00dcber die App",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("\u00dcber die App", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "Best Journal v0.5.0",
