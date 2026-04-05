@@ -461,11 +461,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             soundsPrefs.edit().putBoolean(Constants.PREF_SOUNDS_ENABLED, enabled).apply()
                             if (enabled) {
                                 try {
-                                    val sr = 44100; val ms = 100; val n = sr * ms / 1000
+                                    val sr = 44100; val ms = 200; val n = sr * ms / 1000
                                     val s = ShortArray(n)
                                     for (i in 0 until n) {
                                         val fade = if (i < n/8) i.toDouble()/(n/8) else if (i > n*7/8) (n-i).toDouble()/(n/8) else 1.0
-                                        s[i] = (Short.MAX_VALUE * 0.4 * fade * kotlin.math.sin(2 * Math.PI * 1320.0 * i / sr)).toInt().toShort()
+                                        s[i] = (Short.MAX_VALUE * 0.4 * fade * kotlin.math.sin(2 * Math.PI * 440.0 * i / sr)).toInt().toShort()
                                     }
                                     val t = android.media.AudioTrack(
                                         android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC).build(),
