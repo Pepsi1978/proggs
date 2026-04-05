@@ -398,7 +398,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         title = { Text("Individuelle Analyse", style = MaterialTheme.typography.titleLarge) },
                         text = {
                             Column {
-                                Text("Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheintr�ge konzentrieren?", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheintr\u00e4ge konzentrieren?", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(modifier = Modifier.height(12.dp))
                                 OutlinedTextField(
                                     value = promptText,
