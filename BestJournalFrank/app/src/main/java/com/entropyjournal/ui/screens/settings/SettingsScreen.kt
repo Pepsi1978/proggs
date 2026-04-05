@@ -241,7 +241,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 Text("W\u00e4hle, wie die KI deine Eintr\u00e4ge analysiert", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(12.dp))
 
-                val scenarioNames = listOf("Entropie", "Szenario 2", "Szenario 3", "Ziele", "Individuelle Analyse")
+                val scenarioNames = listOf("Räume dein Leben auf", "Szenario 2", "Szenario 3", "Persönliche Ziele", "Individuelle Analyse")
                 val scenarioPrefs = remember {
                     val masterKey = androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC)
                     androidx.security.crypto.EncryptedSharedPreferences.create(
@@ -276,8 +276,10 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(name, style = MaterialTheme.typography.bodyLarge, color = if (currentScenario == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-                            if (index == 4) {
-                                Text("Eigenen Analyse-Fokus festlegen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            when (index) {
+                                0 -> Text("Erkennt Stress, Unordnung und Belastung", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                3 -> Text("Erkennt Ziele, W\u00fcnsche und Fortschritte", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                4 -> Text("Eigenen Analyse-Fokus festlegen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }

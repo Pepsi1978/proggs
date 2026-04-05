@@ -37,6 +37,10 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.Composable
@@ -269,48 +273,60 @@ fun EntryDetailScreen(
                     } else Modifier
                 ) {
                     Column {
-                        if (isShowingOriginal) {
-                            var editedRawText by remember(entry.rawText) { mutableStateOf(entry.rawText) }
-                            TextField(
-                                value = editedRawText,
-                                onValueChange = { newText ->
-                                    editedRawText = newText
-                                    lastEditTime = System.currentTimeMillis()
-                                    viewModel.updateRawText(newText)
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(focusRequester)
-                                    .onFocusChanged { state ->
-                                        isFocused = state.isFocused
-                                        if (state.isFocused) lastEditTime = System.currentTimeMillis()
+                        AnimatedContent(
+                            targetState = isShowingOriginal,
+                            transitionSpec = {
+                                if (targetState) {
+                                    slideInHorizontally { it } togetherWith slideOutHorizontally { -it }
+                                } else {
+                                    slideInHorizontally { -it } togetherWith slideOutHorizontally { it }
+                                }
+                            },
+                            label = "tab_slide"
+                        ) { showOriginal ->
+                            if (showOriginal) {
+                                var editedRawText by remember(entry.rawText) { mutableStateOf(entry.rawText) }
+                                TextField(
+                                    value = editedRawText,
+                                    onValueChange = { newText ->
+                                        editedRawText = newText
+                                        lastEditTime = System.currentTimeMillis()
+                                        viewModel.updateRawText(newText)
                                     },
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                    color = MaterialTheme.colorScheme.onSurface
-                                ),
-                                visualTransformation = searchHighlight,
-                                colors = textFieldColors
-                            )
-                        } else {
-                            TextField(
-                                value = uiState.editedDisplayText,
-                                onValueChange = {
-                                    lastEditTime = System.currentTimeMillis()
-                                    viewModel.updateDisplayText(it)
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(focusRequester)
-                                    .onFocusChanged { state ->
-                                        isFocused = state.isFocused
-                                        if (state.isFocused) lastEditTime = System.currentTimeMillis()
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .focusRequester(focusRequester)
+                                        .onFocusChanged { state ->
+                                            isFocused = state.isFocused
+                                            if (state.isFocused) lastEditTime = System.currentTimeMillis()
+                                        },
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    ),
+                                    visualTransformation = searchHighlight,
+                                    colors = textFieldColors
+                                )
+                            } else {
+                                TextField(
+                                    value = uiState.editedDisplayText,
+                                    onValueChange = {
+                                        lastEditTime = System.currentTimeMillis()
+                                        viewModel.updateDisplayText(it)
                                     },
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                    color = MaterialTheme.colorScheme.onSurface
-                                ),
-                                visualTransformation = searchHighlight,
-                                colors = textFieldColors
-                            )
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .focusRequester(focusRequester)
+                                        .onFocusChanged { state ->
+                                            isFocused = state.isFocused
+                                            if (state.isFocused) lastEditTime = System.currentTimeMillis()
+                                        },
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    ),
+                                    visualTransformation = searchHighlight,
+                                    colors = textFieldColors
+                                )
+                            }
                         }
                         if (uiState.isSaving) {
                             Text(
