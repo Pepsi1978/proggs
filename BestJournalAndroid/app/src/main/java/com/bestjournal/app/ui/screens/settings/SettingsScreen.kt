@@ -294,7 +294,6 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Switch(
                         checked = uiState.isDarkTheme,
                         onCheckedChange = {
-                            playClick()
                             if (uiState.followSystem) viewModel.updateFollowSystem(false)
                             viewModel.updateDarkTheme(it)
                         },
@@ -333,7 +332,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Switch(
                         checked = uiState.followSystem,
-                        onCheckedChange = { playClick(); viewModel.updateFollowSystem(it) },
+                        onCheckedChange = { if (it) playClick(); viewModel.updateFollowSystem(it) },
                         colors =
                             SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -394,7 +393,6 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Switch(
                         checked = uiState.followSun,
                         onCheckedChange = { enabled ->
-                            playClick()
                             if (enabled) {
                                 val hasPerm =
                                     androidx.core.content.ContextCompat.checkSelfPermission(
@@ -486,7 +484,6 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Switch(
                         checked = soundsEnabled,
                         onCheckedChange = { enabled ->
-                            playClick()
                             soundsEnabled = enabled
                             soundsPrefs.edit().putBoolean(Constants.PREF_SOUNDS_ENABLED, enabled).apply()
                             if (enabled) {
@@ -675,7 +672,6 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Switch(
                         checked = uiState.biometricLock,
                         onCheckedChange = { enabled ->
-                            playClick()
                             // Require biometric auth before toggling the lock on or off
                             val activity = context as? com.bestjournal.app.MainActivity
                             if (activity != null) {
@@ -795,7 +791,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Switch(
                         checked = uiState.textImprovementDefault,
-                        onCheckedChange = { playClick(); viewModel.updateTextImprovementDefault(it) },
+                        onCheckedChange = { if (it) playClick(); viewModel.updateTextImprovementDefault(it) },
                         colors =
                             SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -822,7 +818,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Switch(
                         checked = uiState.autoUpdateDashboard,
-                        onCheckedChange = { playClick(); viewModel.updateAutoUpdateDashboard(it) },
+                        onCheckedChange = { if (it) playClick(); viewModel.updateAutoUpdateDashboard(it) },
                         colors =
                             SwitchDefaults.colors(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
