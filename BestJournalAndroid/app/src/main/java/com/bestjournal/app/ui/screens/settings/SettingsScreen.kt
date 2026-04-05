@@ -494,7 +494,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                                     for (i in 0 until n) {
                                         val pos = i.toDouble() / n
                                         val env = if (pos < 0.1) pos / 0.1 else kotlin.math.exp(-8.0 * (pos - 0.1))
-                                        s[i] = (Short.MAX_VALUE * 0.6 * env * kotlin.math.sin(2 * Math.PI * 1500.0 * i / sr)).toInt().toShort()
+                                        s[i] = (Short.MAX_VALUE * 0.6 * env * kotlin.math.sin(2 * Math.PI * 600.0 * i / sr)).toInt().toShort()
                                     }
                                     val t = android.media.AudioTrack(
                                         android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build(),
