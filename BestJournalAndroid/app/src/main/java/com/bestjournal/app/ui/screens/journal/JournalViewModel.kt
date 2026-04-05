@@ -138,53 +138,45 @@ constructor(
         _uiState.value =
             _uiState.value.copy(recordingState = RecordingState.RECORDING, errorMessage = null)
 
-        // Play a clean recording-start signal (dual beep like a real voice recorder)
-        try {
-            val sampleRate = 44100
-            val beepMs = 120
-            val pauseMs = 80
-            val beepSamples = sampleRate * beepMs / 1000
-            val pauseSamples = sampleRate * pauseMs / 1000
-            val totalSamples = beepSamples * 2 + pauseSamples
-            val samples = ShortArray(totalSamples)
-            val freq = 880.0 // A5 note — clear and pleasant
-            for (beep in 0..1) {
-                val offset = if (beep == 0) 0 else beepSamples + pauseSamples
+        recordingJob = viewModelScope.launch {
+            // Play tone FIRST, then start recording after tone finishes
+            val beepMs = 150
+            try {
+                val sampleRate = 44100
+                val beepSamples = sampleRate * beepMs / 1000
+                val samples = ShortArray(beepSamples)
+                val freq = 880.0
+                val fadeLen = beepSamples / 8
                 for (i in 0 until beepSamples) {
                     val t = i.toDouble() / sampleRate
-                    val fadeLen = beepSamples / 8
                     val envelope = when {
                         i < fadeLen -> i.toDouble() / fadeLen
                         i > beepSamples - fadeLen -> (beepSamples - i).toDouble() / fadeLen
                         else -> 1.0
                     }
-                    samples[offset + i] = (Short.MAX_VALUE * 0.5 * envelope * kotlin.math.sin(2 * Math.PI * freq * t)).toInt().toShort()
+                    samples[i] = (Short.MAX_VALUE * 0.5 * envelope * kotlin.math.sin(2 * Math.PI * freq * t)).toInt().toShort()
                 }
-            }
-            val track = android.media.AudioTrack(
-                android.media.AudioAttributes.Builder()
-                    .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
-                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build(),
-                android.media.AudioFormat.Builder()
-                    .setSampleRate(sampleRate)
-                    .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
-                    .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
-                    .build(),
-                totalSamples * 2,
-                android.media.AudioTrack.MODE_STATIC,
-                android.media.AudioManager.AUDIO_SESSION_ID_GENERATE
-            )
-            track.write(samples, 0, totalSamples)
-            track.play()
-            // Release after playback completes
-            viewModelScope.launch {
-                kotlinx.coroutines.delay(((beepMs * 2 + pauseMs) + 50).toLong())
+                val track = android.media.AudioTrack(
+                    android.media.AudioAttributes.Builder()
+                        .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build(),
+                    android.media.AudioFormat.Builder()
+                        .setSampleRate(sampleRate)
+                        .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                        .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
+                        .build(),
+                    beepSamples * 2,
+                    android.media.AudioTrack.MODE_STATIC,
+                    android.media.AudioManager.AUDIO_SESSION_ID_GENERATE
+                )
+                track.write(samples, 0, beepSamples)
+                track.play()
+                kotlinx.coroutines.delay(beepMs.toLong() + 100) // Wait for tone to finish
                 track.release()
-            }
-        } catch (_: Exception) { /* Sound is optional — don't block recording */ }
+            } catch (_: Exception) { /* Tone is optional */ }
 
-        recordingJob = viewModelScope.launch {
+            // NOW start recording — tone is done
             try {
                 recordAudioUseCase.startRecording(audioFile)
             } catch (e: Exception) {
