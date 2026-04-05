@@ -60,5 +60,5 @@ object Constants {
         GeminiModel("gemini-2.0-flash", "Gemini 2.0 Flash", "\$0.10 / \$0.40"),
     )
 
-    val DEFAULT_GEMINI_MODEL = GEMINI_FLASH_MODELS.first().id
+    val DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
 }

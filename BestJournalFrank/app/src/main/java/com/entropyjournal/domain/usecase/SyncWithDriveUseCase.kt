@@ -1,6 +1,7 @@
 package com.entropyjournal.domain.usecase
 
 import android.content.Context
+import android.util.Log
 import com.entropyjournal.data.local.AppDatabase
 import com.entropyjournal.data.remote.googledrive.DriveBackupManager
 import com.entropyjournal.data.remote.googledrive.DriveRestoreManager
@@ -20,8 +21,33 @@ class SyncWithDriveUseCase @Inject constructor(
         val dbFile = context.getDatabasePath(dbName)
         if (!dbFile.exists()) return Result.failure(Exception("Datenbank nicht gefunden"))
 
-        // Force WAL checkpoint so all entries are written to the main database file
-        database.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").close()
+        // Close Room's connection so WAL checkpoint can fully flush
+        database.close()
+
+        // Force WAL checkpoint — moves all WAL data into the main .db file
+        val db = android.database.sqlite.SQLiteDatabase.openDatabase(
+            dbFile.path, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE
+        )
+        val checkpointCursor = db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null)
+        if (checkpointCursor.moveToFirst()) {
+            val busy = checkpointCursor.getInt(0)
+            val log = checkpointCursor.getInt(1)
+            val checkpointed = checkpointCursor.getInt(2)
+            Log.d("SyncDebug", "WAL checkpoint: busy=$busy, log=$log, checkpointed=$checkpointed")
+            if (busy != 0) {
+                Log.w("SyncDebug", "WAL checkpoint war busy — manche Daten koennten fehlen!")
+            }
+        }
+        checkpointCursor.close()
+
+        // Count entries after checkpoint
+        val countCursor = db.rawQuery("SELECT COUNT(*) FROM journal_entries", null)
+        countCursor.moveToFirst()
+        val entryCount = countCursor.getInt(0)
+        countCursor.close()
+        db.close()
+
+        Log.d("SyncDebug", "Backup: $entryCount Eintraege in DB, Datei: ${dbFile.length()} Bytes")
 
         return driveBackupManager.backup(dbFile)
     }
@@ -35,7 +61,16 @@ class SyncWithDriveUseCase @Inject constructor(
         dbFile.delete()
 
         // Download the backup from Google Drive
-        return driveRestoreManager.restore(dbFile)
+        val result = driveRestoreManager.restore(dbFile)
+
+        // Log entry count after restore
+        if (result.isSuccess && dbFile.exists()) {
+            Log.d("SyncDebug", "Restore: Datei heruntergeladen, ${dbFile.length()} Bytes")
+        } else {
+            Log.e("SyncDebug", "Restore fehlgeschlagen: ${result.exceptionOrNull()?.message}")
+        }
+
+        return result
     }
 
     suspend fun hasBackup(): Boolean {

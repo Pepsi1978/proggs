@@ -1,6 +1,8 @@
 package com.entropyjournal.data.repository
 
 import android.content.SharedPreferences
+import android.util.Log
+import retrofit2.HttpException
 import com.entropyjournal.data.local.dao.AdviceDashboardDao
 import com.entropyjournal.data.local.entity.AdviceBlockEntity
 import com.entropyjournal.data.remote.gemini.GeminiApi
@@ -190,7 +192,7 @@ Regeln:
     suspend fun analyzeEntropy(allEntriesText: String, entryCount: Int, freshAnalysis: Boolean = false): Result<Unit> {
         return try {
             val apiKey = encryptedPrefs.getString(Constants.PREF_GEMINI_API_KEY, "") ?: ""
-            if (apiKey.isBlank()) return Result.failure(IllegalStateException("Gemini API-Key nicht konfiguriert"))
+            if (apiKey.isBlank()) return Result.failure(IllegalStateException("Bitte Gemini API-Key in den Einstellungen eingeben"))
 
             // Save current state for undo before refreshing
             val existingBlocks = adviceDashboardDao.getAllSync()
@@ -203,15 +205,33 @@ Regeln:
 
             val userText = buildUserText(allEntriesText, previousContext, entryCount)
 
+            val selectedModel = getSelectedModel()
+            Log.d("GeminiDebug", "Model: $selectedModel, API-Key length: ${apiKey.length}, Entries: $entryCount")
+
             val request = GeminiRequestBuilder.build(
                 userText = userText,
                 systemPrompt = entropyAnalysisSystemPrompt
             )
-            val response = geminiApi.generateContent(
-                model = getSelectedModel(),
-                apiKey = apiKey,
-                request = request
-            )
+
+            // Try selected model first, fallback to gemini-2.5-flash-lite on HTTP 400
+            val response = try {
+                geminiApi.generateContent(
+                    model = selectedModel,
+                    apiKey = apiKey,
+                    request = request
+                )
+            } catch (e: retrofit2.HttpException) {
+                if (e.code() == 400 && selectedModel != Constants.DEFAULT_GEMINI_MODEL) {
+                    Log.w("GeminiDebug", "Model $selectedModel returned 400, falling back to ${Constants.DEFAULT_GEMINI_MODEL}")
+                    geminiApi.generateContent(
+                        model = Constants.DEFAULT_GEMINI_MODEL,
+                        apiKey = apiKey,
+                        request = request
+                    )
+                } else {
+                    throw e
+                }
+            }
             val jsonText = response.extractText() ?: return Result.failure(Exception("Keine Antwort von Gemini"))
 
             val cleanJson = jsonText.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
@@ -221,7 +241,17 @@ Regeln:
             adviceDashboardDao.upsertAll(blocks)
 
             Result.success(Unit)
+        } catch (e: HttpException) {
+            Log.e("GeminiDebug", "HTTP ${e.code()}: ${e.message()}")
+            val msg = when (e.code()) {
+                400 -> "Gemini-Modell nicht verfügbar. Bitte anderes Modell in Einstellungen wählen."
+                401, 403 -> "Gemini API-Key ungültig oder abgelaufen."
+                429 -> "Zu viele Anfragen. Bitte kurz warten."
+                else -> "Gemini-Fehler (HTTP ${e.code()})"
+            }
+            Result.failure(Exception(msg))
         } catch (e: Exception) {
+            Log.e("GeminiDebug", "API error: ${e.javaClass.simpleName}: ${e.message}")
             Result.failure(e)
         }
     }

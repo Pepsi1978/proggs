@@ -161,9 +161,15 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Noch keine Analyse", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.outline)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Erstelle Tagebucheintr\u00e4ge,\ndann analysiert die KI deine Muster.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center)
+                            if (uiState.errorMessage != null) {
+                                Text("Analyse fehlgeschlagen", style = MaterialTheme.typography.titleLarge, color = NeonRed)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(uiState.errorMessage!!, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                            } else {
+                                Text("Noch keine Analyse", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.outline)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Erstelle Tagebucheintr\u00e4ge,\ndann analysiert die KI deine Muster.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center)
+                            }
                         }
                     }
                 }

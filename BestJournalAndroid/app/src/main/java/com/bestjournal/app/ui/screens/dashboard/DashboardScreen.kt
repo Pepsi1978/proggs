@@ -748,13 +748,12 @@ private fun TopActionsBlock(actions: List<TopAction>) {
     ) {
         Column {
             Text(
-                    "Top 5 Massnahmen",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
-                    color = NeonAmber,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                )
-            }
+                "Top 5 Massnahmen",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
+                color = NeonAmber,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
             Spacer(modifier = Modifier.height(16.dp))
             actions.forEachIndexed { index, action ->
                 Row(

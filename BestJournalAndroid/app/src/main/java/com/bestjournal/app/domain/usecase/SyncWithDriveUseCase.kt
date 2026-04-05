@@ -1,6 +1,8 @@
 package com.bestjournal.app.domain.usecase
 
 import android.content.Context
+import android.util.Log
+import com.bestjournal.app.data.local.AppDatabase
 import com.bestjournal.app.data.remote.googledrive.DriveBackupManager
 import com.bestjournal.app.data.remote.googledrive.DriveRestoreManager
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -12,6 +14,7 @@ class SyncWithDriveUseCase
 constructor(
     private val driveBackupManager: DriveBackupManager,
     private val driveRestoreManager: DriveRestoreManager,
+    private val database: AppDatabase,
     @ApplicationContext private val context: Context,
 ) {
     private val dbName = "entropy_journal_db"
@@ -20,20 +23,30 @@ constructor(
         val dbFile = context.getDatabasePath(dbName)
         if (!dbFile.exists()) return Result.failure(Exception("Datenbank nicht gefunden"))
 
-        // Force WAL checkpoint — merge all pending writes into the main database file
-        // Without this, recent entries would be in the -wal file and NOT included in the backup
-        try {
-            val db =
-                android.database.sqlite.SQLiteDatabase.openDatabase(
-                    dbFile.path,
-                    null,
-                    android.database.sqlite.SQLiteDatabase.OPEN_READWRITE,
-                )
-            db.execSQL("PRAGMA wal_checkpoint(TRUNCATE)")
-            db.close()
-        } catch (_: Exception) {
-            /* DB might already be closed */
+        // Close Room's connection so WAL checkpoint can fully flush all data
+        database.close()
+
+        // Force WAL checkpoint — moves ALL pending writes from WAL into the main .db file
+        val db = android.database.sqlite.SQLiteDatabase.openDatabase(
+            dbFile.path, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE
+        )
+        val checkpointCursor = db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null)
+        if (checkpointCursor.moveToFirst()) {
+            val busy = checkpointCursor.getInt(0)
+            val log = checkpointCursor.getInt(1)
+            val checkpointed = checkpointCursor.getInt(2)
+            Log.d("SyncDebug", "WAL checkpoint: busy=$busy, log=$log, checkpointed=$checkpointed")
         }
+        checkpointCursor.close()
+
+        // Count entries to verify backup completeness
+        val countCursor = db.rawQuery("SELECT COUNT(*) FROM journal_entries", null)
+        countCursor.moveToFirst()
+        val entryCount = countCursor.getInt(0)
+        countCursor.close()
+        db.close()
+
+        Log.d("SyncDebug", "Backup: $entryCount Eintraege, Datei: ${dbFile.length()} Bytes")
 
         return driveBackupManager.backup(dbFile)
     }
