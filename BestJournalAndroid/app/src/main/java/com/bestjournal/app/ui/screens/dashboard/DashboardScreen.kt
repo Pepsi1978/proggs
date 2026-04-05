@@ -285,7 +285,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             Text(
                                 "Gesamtanalyse",
                                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = NeonAmber,
                                 modifier = Modifier.fillMaxWidth(),
                                 textAlign = TextAlign.Center,
                             )
@@ -348,7 +348,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     Text(
                         "Alle Empfehlungen",
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
-                        color = MaterialTheme.colorScheme.primary,
+                        color = NeonAmber,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
                     )

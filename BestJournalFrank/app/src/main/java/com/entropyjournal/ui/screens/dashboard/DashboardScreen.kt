@@ -190,7 +190,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
                     GlassCard(glowIntensity = 0.2f) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                            Text("Gesamtanalyse", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline), color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                            Text("Gesamtanalyse", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline), color = NeonAmber, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                             if (entryCount > 0) {
                                 Text("Basierend auf $entryCount Eintr\u00e4gen", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
                             }
@@ -246,7 +246,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     Spacer(modifier = Modifier.height(20.dp))
                     NeonDivider()
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Alle Empfehlungen", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline), color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                    Text("Alle Empfehlungen", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline), color = NeonAmber, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 }
 
                 // Collect all advices from all blocks with their category name
@@ -391,7 +391,7 @@ private fun CategoryDetailDialog(block: com.entropyjournal.domain.model.AdviceBl
                 Text(block.categorySummary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Alle Empfehlungen", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline), color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Text("Alle Empfehlungen", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline), color = NeonAmber, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
 
                 sortedAdvices.forEach { advice ->
                     val dot = when (advice.priority) {
