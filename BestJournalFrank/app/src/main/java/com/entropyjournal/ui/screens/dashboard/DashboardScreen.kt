@@ -190,11 +190,16 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
                     GlassCard(glowIntensity = 0.2f) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                PulsingOrb(entropyLevel = avgEntropy, size = 36.dp)
+                                Spacer(modifier = Modifier.width(10.dp))
                                 Text("Gesamtanalyse", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline), color = MaterialTheme.colorScheme.onSurface)
-                                Box(modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp)) {
-                                    PulsingOrb(entropyLevel = avgEntropy, size = 24.dp)
-                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                PulsingOrb(entropyLevel = avgEntropy, size = 36.dp)
                             }
                             if (entryCount > 0) {
                                 Text("Basierend auf $entryCount Eintr\u00e4gen", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)

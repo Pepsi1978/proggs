@@ -261,7 +261,7 @@ fun EntryDetailScreen(
                         HorizontalPager(
                             state = pagerState,
                             userScrollEnabled = hasImproved,
-                            modifier = Modifier.defaultMinSize(minHeight = 200.dp),
+                            beyondViewportPageCount = 1,
                         ) { page ->
                             val isOriginalPage = page == 1
                             if (isOriginalPage) {
