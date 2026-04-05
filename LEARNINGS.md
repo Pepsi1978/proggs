@@ -523,3 +523,65 @@ print(f'Final depth: {depth}')
 1. **VOR dem Entfernen einer Klammer: Klammerbalance-Script laufen lassen**
 2. **NACH dem Edit: Nochmal pruefen** — depth muss am Ende 0 sein
 3. **Bei grossen Compose-Dateien (500+ Zeilen)**: Immer die umgebende Funktion identifizieren bevor eine Klammer angefasst wird
+
+---
+
+## Room database.close() bricht alle nachfolgenden Saves (KRITISCH)
+
+> Quelle: Best Journal Session 2026-04-05 — Speichern ging nur beim ersten Mal
+
+### Problem
+`database.close()` in der WAL-Backup-Funktion schliesst die Room-Singleton-Instanz.
+Danach schlaegt JEDER `saveJournalEntryUseCase(entry)`-Aufruf fehl mit
+`JobCancellationException` — die App kann keine Eintraege mehr speichern bis sie
+neu gestartet wird.
+
+### Root Cause Kette
+1. Nutzer speichert Eintrag → `saveEntry()` → `triggerSync()` → `backup()`
+2. `backup()` ruft `database.close()` auf (fuer WAL-Checkpoint)
+3. Room-Singleton ist jetzt geschlossen
+4. Naechster `saveEntry()` → `viewModelScope.launch { saveJournalEntryUseCase(entry) }`
+   → Room kann nicht mehr schreiben → Job wird gecancelt
+
+### FALSCHER Ansatz
+```kotlin
+// FALSCH — schliesst Room permanent, alle folgenden Writes scheitern
+database.close()
+val db = SQLiteDatabase.openDatabase(dbFile.path, null, OPEN_READWRITE)
+db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null)
+db.close()
+```
+
+### RICHTIGER Ansatz
+```kotlin
+// RICHTIG — nutzt Room's eigene Verbindung, Room bleibt offen
+try {
+    val roomDb = database.openHelper.writableDatabase
+    val cursor = roomDb.query("PRAGMA wal_checkpoint(TRUNCATE)")
+    cursor.moveToFirst()
+    cursor.close()
+} catch (_: Exception) { /* Checkpoint ist best-effort */ }
+```
+
+### Zweiter Bug: viewModelScope wird gecancelt
+Android kann den viewModelScope canceln (Freeze, Hintergrund, etc.).
+`viewModelScope.launch { save() }` schlaegt dann fehl.
+
+```kotlin
+// FALSCH — viewModelScope kann gecancelt sein
+viewModelScope.launch { saveJournalEntryUseCase(entry) }
+
+// RICHTIG — unabhaengiger Scope der IMMER laeuft
+CoroutineScope(Dispatchers.IO).launch {
+    try {
+        val savedId = saveJournalEntryUseCase(entry)
+        withContext(Dispatchers.Main) { resetState() }
+    } catch (e: Exception) { /* Fehlerbehandlung */ }
+}
+```
+
+### Regeln
+1. **NIEMALS `database.close()` auf einem Room-Singleton aufrufen** — es gibt keinen Weg zurueck
+2. **WAL-Checkpoint ueber `database.openHelper.writableDatabase.query()`** statt eigene Verbindung
+3. **Kritische Operationen (Save, Sync) in eigenem CoroutineScope** statt viewModelScope
+4. Wenn ein Fix `database.close()` enthaelt → SOFORT pruefen ob danach noch Writes kommen

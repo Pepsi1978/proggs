@@ -238,9 +238,12 @@ class JournalViewModel @Inject constructor(
             state.rawText
         }
 
+        if (displayText.isBlank()) return
+
         _uiState.value = state.copy(recordingState = RecordingState.SAVING)
 
-        viewModelScope.launch {
+        // Use independent scope — viewModelScope can be cancelled by Android
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             val entry = JournalEntry(
                 timestamp = System.currentTimeMillis(),
                 rawText = state.rawText,
@@ -249,12 +252,22 @@ class JournalViewModel @Inject constructor(
                 displayText = displayText,
                 audioDurationSeconds = durationSeconds.value
             )
-            val savedId = saveJournalEntryUseCase(entry)
-            resetState()
-            // Generate summary in background (non-blocking)
-            launch { summarizeEntryUseCase(savedId, displayText) }
-            triggerSync()
-            triggerDebouncedAnalysis()
+            try {
+                val savedId = saveJournalEntryUseCase(entry)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    resetState()
+                }
+                try { summarizeEntryUseCase(savedId, displayText) } catch (_: Exception) {}
+                try { triggerSync() } catch (_: Exception) {}
+                try { triggerDebouncedAnalysis() } catch (_: Exception) {}
+            } catch (e: Exception) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        recordingState = RecordingState.PREVIEW,
+                        errorMessage = "Speichern fehlgeschlagen: ${e.message}"
+                    )
+                }
+            }
         }
     }
 
