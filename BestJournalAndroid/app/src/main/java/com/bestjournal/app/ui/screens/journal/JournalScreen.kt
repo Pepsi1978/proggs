@@ -186,12 +186,12 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
             }
 
             // Sync status + search toggle
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "Tagebuch",
@@ -201,13 +201,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                         Spacer(modifier = Modifier.width(8.dp))
                         SunMoonToggle()
                     }
-                    Text(
-                        text = "${allEntries.size} Eintr\u00e4ge",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { showSyncLegend = true }) {
                         Icon(
                             imageVector =
@@ -253,6 +247,12 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                         }
                     }
                 }
+                }
+                Text(
+                    text = "${allEntries.size} Eintr\u00e4ge",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             // Transcribing state — no visual indicator needed (transcription is near-instant)
