@@ -1,6 +1,7 @@
 package com.entropyjournal.ui.screens.journal
 
 import android.Manifest
+import androidx.compose.material3.Surface
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -218,8 +219,20 @@ fun JournalScreen(
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    IconButton(onClick = { viewModel.toggleSearch() }) {
-                        Icon(Icons.Rounded.Search, "Suchen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Surface(
+                        onClick = { viewModel.toggleSearch() },
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        ) {
+                            Icon(Icons.Rounded.Search, "Suchen", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Suche", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
             }

@@ -366,7 +366,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 Text("Entropy Journal v0.5.0", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Dein pers\u00f6nliches KI-Tagebuch", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("\u00a9 Frank Barwandt", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                Text("\u00a9 Barwandt Digital Labs", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
             }
         }
 

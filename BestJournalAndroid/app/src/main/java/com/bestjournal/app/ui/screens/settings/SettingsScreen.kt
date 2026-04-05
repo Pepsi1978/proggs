@@ -677,7 +677,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "\u00a9 Frank Barwandt",
+                    "\u00a9 Barwandt Digital Labs",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.outline,
                 )

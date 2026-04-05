@@ -95,11 +95,13 @@ constructor(
     private var analysisDebounceJob: Job? = null
 
     init {
-        // Set initial sync status based on sign-in state
-        if (
-            encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")?.isNotBlank() == true
-        ) {
+        // Set initial sync status: check if signed in AND last backup timestamp exists
+        val isSignedIn = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")?.isNotBlank() == true
+        val lastSync = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L)
+        if (isSignedIn && lastSync > 0L) {
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
+        } else if (isSignedIn) {
+            _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.IDLE)
         }
 
         // Backfill summaries for existing entries without title/summary.
@@ -135,6 +137,13 @@ constructor(
         currentAudioFile = audioFile
         _uiState.value =
             _uiState.value.copy(recordingState = RecordingState.RECORDING, errorMessage = null)
+
+        // Play a short beep to signal recording start
+        try {
+            val toneGen = android.media.ToneGenerator(android.media.AudioManager.STREAM_NOTIFICATION, 80)
+            toneGen.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 150)
+            toneGen.release()
+        } catch (_: Exception) { /* Beep is optional — don't block recording if it fails */ }
 
         recordingJob = viewModelScope.launch {
             try {

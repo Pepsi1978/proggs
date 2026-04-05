@@ -37,11 +37,14 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,6 +61,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.entropyjournal.ui.components.GlassCard
 import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonEmerald
@@ -204,91 +208,103 @@ fun EntryDetailScreen(
                     }
                 }
 
-                var selectedTab by remember { mutableIntStateOf(0) }
-                val isShowingOriginal = selectedTab == 1 && entry.isImproved && entry.improvedText != null
+                val hasImproved = entry.isImproved && entry.improvedText != null
+                val pagerState = rememberPagerState(pageCount = { if (hasImproved) 2 else 1 })
+                val coroutineScope = rememberCoroutineScope()
 
-                if (entry.isImproved && entry.improvedText != null) {
+                if (hasImproved) {
                     TabRow(
-                        selectedTabIndex = selectedTab,
+                        selectedTabIndex = pagerState.currentPage,
                         containerColor = Color.Transparent,
                         contentColor = MaterialTheme.colorScheme.primary,
                         indicator = { tabPositions ->
-                            if (selectedTab < tabPositions.size) {
+                            if (pagerState.currentPage < tabPositions.size) {
                                 SecondaryIndicator(
-                                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                    Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
                     ) {
-                        Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
+                        Tab(selected = pagerState.currentPage == 0, onClick = {
+                            coroutineScope.launch { pagerState.animateScrollToPage(0) }
+                        }) {
                             Text(
                                 "Verbessert",
                                 modifier = Modifier.padding(8.dp),
-                                color = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                             )
                         }
-                        Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+                        Tab(selected = pagerState.currentPage == 1, onClick = {
+                            coroutineScope.launch { pagerState.animateScrollToPage(1) }
+                        }) {
                             Text(
                                 "Original",
                                 modifier = Modifier.padding(8.dp),
-                                color = if (selectedTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                             )
                         }
                     }
                 }
 
+                val textFieldColors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    cursorColor = MaterialTheme.colorScheme.primary
+                )
+
                 GlassCard {
                     Column {
-                        val textFieldColors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            cursorColor = MaterialTheme.colorScheme.primary
-                        )
-                        if (isShowingOriginal) {
-                            var editedRawText by remember(entry.rawText) { mutableStateOf(entry.rawText) }
-                            TextField(
-                                value = editedRawText,
-                                onValueChange = { newText ->
-                                    editedRawText = newText
-                                    lastEditTime = System.currentTimeMillis()
-                                    viewModel.updateRawText(newText)
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(focusRequester)
-                                    .onFocusChanged { state ->
-                                        isFocused = state.isFocused
-                                        if (state.isFocused) lastEditTime = System.currentTimeMillis()
+                        HorizontalPager(
+                            state = pagerState,
+                            userScrollEnabled = hasImproved,
+                        ) { page ->
+                            val isOriginalPage = page == 1
+                            if (isOriginalPage) {
+                                var editedRawText by remember(entry.rawText) { mutableStateOf(entry.rawText) }
+                                TextField(
+                                    value = editedRawText,
+                                    onValueChange = { newText ->
+                                        editedRawText = newText
+                                        lastEditTime = System.currentTimeMillis()
+                                        viewModel.updateRawText(newText)
                                     },
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                    color = MaterialTheme.colorScheme.onSurface
-                                ),
-                                colors = textFieldColors,
-                                visualTransformation = searchHighlight
-                            )
-                        } else {
-                            TextField(
-                                value = uiState.editedDisplayText,
-                                onValueChange = {
-                                    lastEditTime = System.currentTimeMillis()
-                                    viewModel.updateDisplayText(it)
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(focusRequester)
-                                    .onFocusChanged { state ->
-                                        isFocused = state.isFocused
-                                        if (state.isFocused) lastEditTime = System.currentTimeMillis()
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .focusRequester(focusRequester)
+                                        .onFocusChanged { state ->
+                                            isFocused = state.isFocused
+                                            if (state.isFocused) lastEditTime = System.currentTimeMillis()
+                                        },
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    ),
+                                    colors = textFieldColors,
+                                    visualTransformation = searchHighlight
+                                )
+                            } else {
+                                TextField(
+                                    value = uiState.editedDisplayText,
+                                    onValueChange = {
+                                        lastEditTime = System.currentTimeMillis()
+                                        viewModel.updateDisplayText(it)
                                     },
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                    color = MaterialTheme.colorScheme.onSurface
-                                ),
-                                colors = textFieldColors,
-                                visualTransformation = searchHighlight
-                            )
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .focusRequester(focusRequester)
+                                        .onFocusChanged { state ->
+                                            isFocused = state.isFocused
+                                            if (state.isFocused) lastEditTime = System.currentTimeMillis()
+                                        },
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    ),
+                                    colors = textFieldColors,
+                                    visualTransformation = searchHighlight
+                                )
+                            }
                         }
                         if (uiState.isSaving) {
                             Text(

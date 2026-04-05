@@ -189,16 +189,12 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     val entryCount = blocks.firstOrNull()?.basedOnEntryCount ?: 0
 
                     GlassCard(glowIntensity = 0.2f) {
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                            ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 PulsingOrb(entropyLevel = avgEntropy, size = 48.dp)
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("Gesamtanalyse", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                                    Text("Gesamtanalyse", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline), color = MaterialTheme.colorScheme.onSurface)
                                     if (entryCount > 0) {
                                         Text("Basierend auf $entryCount Eintr\u00e4gen", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
                                     }

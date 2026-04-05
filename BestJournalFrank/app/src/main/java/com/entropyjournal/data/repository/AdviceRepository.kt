@@ -105,7 +105,7 @@ PRIORITÄT der Ratschläge:
 
 JSON-Schema:
 {
-  "gesamtanalyse": "Ausführlicher, empathischer Text (8–12 Sätze)...",
+  "gesamtanalyse": "Sehr ausführlicher, empathischer, persönlicher Text (15–25 Sätze). Gehe auf alle wichtigen Themen ein die sich aus den Einträgen ergeben. Schreibe warm, verständlich und ermutigend.",
   "top_massnahmen": [
     {
       "titel": "Kurzer, prägnanter Titel der Maßnahme",
