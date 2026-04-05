@@ -45,6 +45,9 @@ object Constants {
     // Encrypted SharedPreferences file name
     const val ENCRYPTED_PREFS_NAME = "entropy_journal_secure_prefs"
 
+    // Töne
+    const val PREF_SOUNDS_ENABLED = "sounds_enabled"
+
     // Dashboard-Szenario
     const val PREF_DASHBOARD_SCENARIO = "dashboard_scenario"
     const val PREF_CUSTOM_PROMPT = "custom_dashboard_prompt"

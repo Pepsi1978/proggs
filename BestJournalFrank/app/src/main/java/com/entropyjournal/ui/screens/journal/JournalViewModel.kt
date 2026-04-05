@@ -116,8 +116,9 @@ class JournalViewModel @Inject constructor(
 
         recordingJob = viewModelScope.launch {
             // Play tone FIRST, then start recording after tone finishes
+            val soundsEnabled = encryptedPrefs.getBoolean(com.entropyjournal.util.Constants.PREF_SOUNDS_ENABLED, true)
             val beepMs = 150
-            try {
+            if (soundsEnabled) try {
                 val sampleRate = 44100
                 val beepSamples = sampleRate * beepMs / 1000
                 val samples = ShortArray(beepSamples)
