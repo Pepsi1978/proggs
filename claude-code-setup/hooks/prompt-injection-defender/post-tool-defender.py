@@ -75,6 +75,8 @@ TRUSTED_PATH_PATTERNS = [
     re.compile(r"memory[/\\].*\.md$", re.IGNORECASE),
     # SKILL.md files
     re.compile(r"SKILL\.md$", re.IGNORECASE),
+    # Project session rules (Android projects etc.)
+    re.compile(r"SESSION-RULES\.md$", re.IGNORECASE),
     # Global npm packages — official code from package registries.
     # Matches both Unix (/node_modules/@scope/) and Windows (\node_modules\@scope\)
     # paths, including Git Bash format (/c/Users/.../AppData/Roaming/npm/node_modules/)

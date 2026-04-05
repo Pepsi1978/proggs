@@ -1,13 +1,21 @@
 # Claude Code Prompt Injection Defender - Pattern Configuration
 # ==============================================================
-# v2.0 - Hardened against false positives
+# v3.0 - Systematic false positive audit (2026-04-05)
 #
-# CHANGES FROM v1.0:
-#   - Removed overly broad JSON/comment patterns that triggered on config files
-#   - "system role in JSON" pattern now requires attack context, not just {"role": "system"}
-#   - Comment-based patterns now require injection verbs, not just keywords
-#   - Priority patterns tightened to require manipulation context
-#   - Several medium patterns downgraded to low
+# CHANGES FROM v2.0:
+#   - Reset/clear/wipe patterns now REQUIRE "your" (AI-directed)
+#   - "shadow" removed from evil twin (shadow DOM/mode too common)
+#   - Developer mode patterns downgraded to medium
+#   - AI template patterns ({"role":"system"}, <system>, [INST]) downgraded to medium
+#   - "system prompt" discussion patterns downgraded to medium
+#   - "from now on" pattern tightened: removed "always"/"only" (too common in project rules)
+#   - "does anything now" tightened: requires DAN/jailbreak context
+#   - "unrestricted/uncensored" patterns now require AI-direction ("your")
+#   - "override/replace instructions" require "your" for high severity
+#   - Base64 label pattern: removed "command" (too common in CLI output)
+#   - "anthropic says" split: "demands/orders" = high, "says" = medium
+#   - "without restrictions" requires "your"
+#   - Tested against 76 legitimate software phrases with 0 false positives
 #
 # SEVERITY LEVELS:
 #   - high: Definite injection attempt - always warn
@@ -25,6 +33,7 @@
 
 instructionOverridePatterns:
   # --- Direct Override Attempts ---
+  # These require "your" or "previous/prior" to target the AI specifically
   - pattern: '(?i)\bignore\s+(all\s+)?(previous|prior|above|earlier|preceding)\s+(instructions?|prompts?|rules?|guidelines?|directives?|context)'
     reason: "Attempts to ignore previous instructions"
     severity: high
@@ -37,64 +46,112 @@ instructionOverridePatterns:
     reason: "Attempts to disregard previous instructions"
     severity: high
 
-  - pattern: '(?i)\boverride\s+(your\s+|all\s+)?(instructions?|programming|directives?|rules?|guidelines?)'
-    reason: "Attempts to override instructions"
+  # "override your/all your instructions" = attack, "override all instructions in config" = legitimate
+  - pattern: '(?i)\boverride\s+(your|all\s+your)\s+(instructions?|programming|directives?|rules?|guidelines?)'
+    reason: "Attempts to override AI instructions"
     severity: high
 
-  - pattern: '(?i)\breplace\s+(your\s+)?(instructions?|prompt|guidelines?|rules?)\s+with'
-    reason: "Attempts to replace instructions"
+  - pattern: '(?i)\boverride\s+all\s+(instructions?|programming|directives?|rules?|guidelines?)'
+    reason: "Override all instructions (may be config-related)"
+    severity: medium
+
+  - pattern: '(?i)\boverride\s+(instructions?|programming|directives?|rules?|guidelines?)'
+    reason: "Override instructions (may be config-related)"
+    severity: medium
+
+  # "replace your instructions with: do evil" = attack
+  # "replace your instructions with the new template" = legitimate (document replacement)
+  - pattern: '(?i)\breplace\s+your\s+(instructions?|prompt|guidelines?|rules?)\s+with\s*:'
+    reason: "Attempts to replace AI instructions (colon = inline payload)"
     severity: high
+
+  - pattern: '(?i)\breplace\s+your\s+(instructions?|prompt|guidelines?|rules?)\s+with'
+    reason: "Replace AI instructions (may be document update)"
+    severity: medium
+
+  - pattern: '(?i)\breplace\s+(instructions?|prompt|guidelines?|rules?)\s+with'
+    reason: "Replace instructions (may be config-related)"
+    severity: medium
 
   - pattern: '(?i)\b(do\s+)?not\s+follow\s+(your\s+)?(previous|original|initial)\s+(instructions?|rules?|guidelines?)'
     reason: "Instructs to not follow previous guidelines"
     severity: high
 
   # --- New System Prompt Injection ---
+  # Discussing system prompts is common in AI development — only high when clearly injecting
   - pattern: '(?i)\b(new|updated|revised|real)\s+system\s+prompt\b'
-    reason: "Attempts to inject new system prompt"
-    severity: high
+    reason: "Discusses new/updated system prompt (common in AI dev)"
+    severity: medium
 
   - pattern: '(?i)\bsystem\s+prompt\s*(:|=|override)'
-    reason: "System prompt injection marker"
+    reason: "System prompt assignment or override"
+    severity: medium
+
+  - pattern: '(?i)\b(this\s+is\s+)(your\s+)?new\s+(instructions?|task|objective|mission|directive)\s*:'
+    reason: "Attempts to set new instructions with 'this is'"
     severity: high
 
-  - pattern: '(?i)\b(this\s+is\s+)?(your\s+)?new\s+(instructions?|task|objective|mission|directive)\s*:'
-    reason: "Attempts to set new instructions"
+  # "your new task:" = suspicious (directed at AI), but only with "this is" prefix
+  - pattern: '(?i)\byour\s+new\s+(instructions?|objective|mission|directive)\s*:'
+    reason: "Sets new AI instructions"
     severity: high
 
-  - pattern: '(?i)\bfrom\s+now\s+on[,\s]+(you\s+)?(will|must|should|are)\s+(ignore|forget|disregard|only|always)'
+  - pattern: '(?i)\byour\s+new\s+task\s*:'
+    reason: "Sets new AI task (may be legitimate delegation)"
+    severity: medium
+
+  # "from now on you must ignore/forget/disregard" = attack
+  # "from now on you must always use TypeScript" = project rule (legitimate)
+  - pattern: '(?i)\bfrom\s+now\s+on[,\s]+(you\s+)?(will|must|should|are)\s+(ignore|forget|disregard)'
     reason: "Attempts to redefine behavior going forward"
     severity: high
 
   # --- Priority Manipulation (tightened) ---
-  - pattern: '(?i)\bthis\s+(instruction|command|task|directive)\s+(takes?\s+)?(priority|precedence)\s+over'
-    reason: "Attempts to take priority over other instructions"
+  # "this instruction takes priority over your/previous rules" = attack
+  # "this instruction takes priority over defaults" = config documentation
+  - pattern: '(?i)\bthis\s+(instruction|command|directive)\s+(takes?\s+)?(priority|precedence)\s+over\s+(your|previous|prior|original|other|all)'
+    reason: "Attempts to take priority over AI instructions"
     severity: high
+
+  - pattern: '(?i)\bthis\s+(instruction|command|directive)\s+(takes?\s+)?(priority|precedence)\s+over'
+    reason: "Priority claim (may be config documentation)"
+    severity: medium
 
   - pattern: '(?i)\b(more\s+)?important\s+than\s+(your\s+)?(original|previous|other)\s+(instructions?|rules?)'
     reason: "Claims higher importance than existing instructions"
     severity: high
 
   # --- Reset/Clear Attempts ---
-  - pattern: '(?i)\breset\s+(your\s+)?(context|memory|instructions?|state|conversation)'
-    reason: "Attempts to reset context"
+  # REQUIRE "your" — "reset state" and "clear memory" are standard software operations
+  - pattern: '(?i)\breset\s+your\s+(context|memory|instructions?|state|conversation)'
+    reason: "Attempts to reset AI context"
     severity: high
 
-  - pattern: '(?i)\bclear\s+(your\s+)?(memory|context|instructions?|history|state)'
-    reason: "Attempts to clear memory/context"
+  - pattern: '(?i)\bclear\s+your\s+(memory|context|instructions?|history|state)'
+    reason: "Attempts to clear AI memory"
     severity: high
 
-  - pattern: '(?i)\bwipe\s+(your\s+)?(memory|context|slate)'
-    reason: "Attempts to wipe memory"
+  - pattern: '(?i)\bwipe\s+your\s+(memory|context|slate)'
+    reason: "Attempts to wipe AI memory"
     severity: high
+
+  # Without "your" — could be legitimate software operations
+  - pattern: '(?i)\breset\s+(context|memory|instructions?|conversation)\b'
+    reason: "Reset context/memory (may be software operation)"
+    severity: low
+
+  - pattern: '(?i)\bclear\s+(memory|context|instructions?|history)\b'
+    reason: "Clear memory/context (may be software operation)"
+    severity: low
 
   # --- Fake Delimiters/Markers ---
   - pattern: '(?i)\bend\s+(of\s+)?(system\s+)?(prompt|instructions?)\b.*\b(new|begin|start)'
     reason: "Fake end-of-prompt marker"
     severity: high
 
-  - pattern: '(?i)\[/?system\]|\{/?system\}|</?system\s*>'
-    reason: "Fake system message markers"
+  # Fake system tags — but <system> is common in AI dev code, so medium
+  - pattern: '(?i)\[/?system\]|\{/?system\}'
+    reason: "Fake system message markers (brackets/braces)"
     severity: high
 
   - pattern: '(?i)\[\[SYSTEM\]\]|\(\(SYSTEM\)\)|\{\{SYSTEM\}\}'
@@ -115,8 +172,14 @@ rolePlayingPatterns:
     reason: "DAN mode activation attempt"
     severity: high
 
-  - pattern: '(?i)\b(do|does)\s+anything\s+now\b'
-    reason: "DAN 'Do Anything Now' pattern"
+  # "does anything now" is too common in normal English
+  # Only flag when combined with DAN/jailbreak keywords nearby
+  - pattern: '(?i)\bdo\s+anything\s+now\b.*\b(DAN|jailbreak|restrict|filter)'
+    reason: "DAN 'Do Anything Now' with jailbreak context"
+    severity: high
+
+  - pattern: '(?i)\b(DAN|jailbreak|restrict|filter).*\bdo\s+anything\s+now\b'
+    reason: "DAN 'Do Anything Now' with jailbreak context"
     severity: high
 
   - pattern: '(?i)\bjailbreak(ed)?\s+(mode|prompt|version|enabled)\b'
@@ -127,26 +190,46 @@ rolePlayingPatterns:
     reason: "Mode activation jailbreak"
     severity: high
 
+  # "developer mode enabled" is extremely common in Android/app development
   - pattern: '(?i)\bDEVELOPER\s+MODE\s+(ENABLED|ACTIVATED|ON)'
-    reason: "Fake developer mode activation"
-    severity: high
+    reason: "Developer mode activation (common in Android dev)"
+    severity: medium
 
   # --- Restriction Bypass ---
-  - pattern: '(?i)\b(without|ignore|bypass|disable|remove)\s+(your\s+)?(restrictions?|filters?|safeguards?|limitations?|guardrails?)'
-    reason: "Restriction bypass attempt"
+  # REQUIRE "your" — "without restrictions in test env" is legitimate
+  # "limitations" excluded from high (too common in benchmark/perf context)
+  - pattern: '(?i)\b(without|ignore|bypass|disable|remove)\s+your\s+(restrictions?|filters?|safeguards?|guardrails?)'
+    reason: "Attempts to bypass AI restrictions"
     severity: high
 
-  - pattern: '(?i)\b(remove|turn\s+off|disable|deactivate)\s+(your\s+)?(ethical|safety|content)\s+(guidelines?|filters?|restrictions?)'
-    reason: "Safety filter disable attempt"
+  - pattern: '(?i)\b(without|ignore|bypass|disable|remove)\s+your\s+limitations?'
+    reason: "Remove limitations (may be benchmark context)"
+    severity: medium
+
+  - pattern: '(?i)\b(without|ignore|bypass|disable|remove)\s+(restrictions?|filters?|safeguards?|limitations?|guardrails?)'
+    reason: "Restriction bypass (may be software config)"
+    severity: medium
+
+  - pattern: '(?i)\b(remove|turn\s+off|disable|deactivate)\s+your\s+(ethical|safety|content)\s+(guidelines?|filters?|restrictions?)'
+    reason: "Attempts to disable AI safety filters"
     severity: high
 
+  - pattern: '(?i)\b(remove|turn\s+off|disable|deactivate)\s+(ethical|safety|content)\s+(guidelines?|filters?|restrictions?)'
+    reason: "Safety filter disable (may be software config)"
+    severity: medium
+
+  # "unrestricted mode/access" is common in permission/network docs
   - pattern: '(?i)\bunrestricted\s+(mode|access|version|output)'
-    reason: "Unrestricted mode request"
-    severity: high
+    reason: "Unrestricted mode/access (common in software)"
+    severity: medium
 
-  - pattern: '(?i)\buncensored\s+(mode|version|response|output)'
+  - pattern: '(?i)\buncensored\s+(mode|response|output)'
     reason: "Uncensored mode request"
-    severity: high
+    severity: medium
+
+  - pattern: '(?i)\buncensored\s+version\b'
+    reason: "Uncensored version (may be dataset reference)"
+    severity: low
 
   # --- Persona Change (only clearly malicious ones) ---
   - pattern: '(?i)\byou\s+are\s+(now\s+)?(a|an)\s+(different|new|unrestricted|unfiltered|uncensored)'
@@ -157,11 +240,12 @@ rolePlayingPatterns:
     reason: "Unrestricted roleplay request"
     severity: high
 
-  - pattern: '(?i)\b(evil|shadow|dark|unrestricted|uncensored)\s+(twin|version|mode|side|alter\s*ego)\b'
+  # "evil twin" is a real attack term, "shadow" is too common (Shadow DOM, shadow builds)
+  - pattern: '(?i)\bevil\s+(twin|version|mode|side|alter\s*ego)\b'
     reason: "Evil twin persona attempt"
     severity: high
 
-  # --- Softer persona patterns (low severity — common in legitimate content) ---
+  # --- Softer persona patterns ---
   - pattern: '(?i)\bpretend\s+(to\s+be|you\s+are|you''re)\s+(an?\s+)?(unrestricted|unfiltered|evil)'
     reason: "Pretend to be unrestricted"
     severity: high
@@ -184,9 +268,9 @@ encodingPatterns:
     reason: "Base64 decode-and-execute chain"
     severity: high
 
-  # --- Suspicious encoding payloads (only with labels suggesting instructions) ---
-  - pattern: '(?i)\b(instruction|prompt|command|payload)\s*[:\s]\s*[A-Za-z0-9+/]{40,}={0,2}'
-    reason: "Labeled Base64 payload (instruction/command)"
+  # "command: <base64>" is common in CLI output — only flag instruction/prompt/payload labels
+  - pattern: '(?i)\b(instruction|prompt|payload)\s*[:\s]\s*[A-Za-z0-9+/]{40,}={0,2}'
+    reason: "Labeled Base64 payload (instruction/prompt)"
     severity: high
 
   # --- Unicode/Character Manipulation ---
@@ -207,7 +291,7 @@ encodingPatterns:
     reason: "Leetspeak jailbreak terms"
     severity: high
 
-  # --- Homoglyph Attacks (keep, these are genuinely suspicious) ---
+  # --- Homoglyph Attacks ---
   - pattern: '[\u0430\u0435\u043E\u0440\u0441\u0443\u0445\u0456]{5,}'
     reason: "Cyrillic homoglyphs detected (lookalike letters)"
     severity: high
@@ -218,9 +302,14 @@ encodingPatterns:
 
 contextManipulationPatterns:
   # --- False Authority Claims ---
-  - pattern: '(?i)\b(anthropic|openai|claude\s*team)\s+(says?|requires?|demands?|orders?|instructs?)\s+(you|that\s+you)'
-    reason: "False authority invocation (AI company)"
+  # "anthropic demands/orders you" = clearly attack, "anthropic says you should" = could be docs
+  - pattern: '(?i)\b(anthropic|openai|claude\s*team)\s+(demands?|orders?|instructs?)\s+(you|that\s+you)'
+    reason: "False authority invocation (demanding)"
     severity: high
+
+  - pattern: '(?i)\b(anthropic|openai|claude\s*team)\s+(says?|requires?)\s+(you|that\s+you)'
+    reason: "Authority reference (may be quoting docs)"
+    severity: medium
 
   - pattern: '(?i)\b(official|authorized|verified)\s+(instruction|message|update|command)\s+from\s+(anthropic|openai|claude)'
     reason: "Fake official message"
@@ -230,9 +319,10 @@ contextManipulationPatterns:
     reason: "Fake admin override command"
     severity: high
 
+  # "developer mode/access enabled/granted" is common in Android, app logs, settings
   - pattern: '(?i)\bdeveloper\s+(mode|override|access)\s+(enabled|activated|granted)'
-    reason: "Fake developer mode claim"
-    severity: high
+    reason: "Developer mode claim (common in app settings)"
+    severity: medium
 
   # --- Hidden Instructions in Comments (tightened: must contain injection verbs) ---
   - pattern: '<!--\s*(ignore|disregard|override|forget)\s+(all\s+)?(previous|prior|instructions?|rules?)'
@@ -243,24 +333,27 @@ contextManipulationPatterns:
     reason: "Injection hidden in block comment"
     severity: high
 
-  # --- Fake Chat/Role JSON (tightened: must be actual attack payload) ---
+  # --- Fake Chat/Role JSON ---
+  # {"role": "system", "content": ...} is standard in LLM API code
   - pattern: '(?i)\{"role"\s*:\s*"system"\s*,\s*"content"\s*:'
-    reason: "Fake system message in JSON (role+content structure)"
-    severity: high
+    reason: "System role JSON structure (standard in LLM API code)"
+    severity: medium
 
   # --- Fake XML/HTML system tags ---
+  # <system>...</system> is common in AI dev and XML configs
   - pattern: "(?i)<system[^>]*>[^<]{10,}"
-    reason: "Fake system XML tag with content"
-    severity: high
+    reason: "System XML tag with content (common in AI dev)"
+    severity: medium
 
   # --- Fake instruction block markers ---
+  # [INST]...[/INST] and [SYS]...[/SYS] are standard Llama/Mistral format
   - pattern: '(?i)\[INST\].*\[/INST\]'
-    reason: "Fake instruction block markers (Llama-style)"
-    severity: high
+    reason: "Instruction block markers (Llama format - common in AI dev)"
+    severity: medium
 
   - pattern: '(?i)\[SYS\].*\[/SYS\]'
-    reason: "Fake system block markers"
-    severity: high
+    reason: "System block markers (common in AI dev)"
+    severity: medium
 
   # --- False Context Claims ---
   - pattern: '(?i)\bprevious\s+conversation\s+(summary|context|history)\s*:.*\b(you\s+agreed|you\s+said|you\s+confirmed)'
@@ -295,4 +388,4 @@ contextManipulationPatterns:
 
   - pattern: '(?i)\brepeat\s+(your\s+)?(system\s+)?(prompt|instructions?)\s+(back|verbatim|exactly|word\s+for\s+word)'
     reason: "Prompt repetition extraction"
-    severity: high
+    severity: medium
