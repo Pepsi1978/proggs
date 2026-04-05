@@ -90,7 +90,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Title bar
-            item {
+            item(key = "title_bar") {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -142,7 +142,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
             }
 
             if (uiState.showAiInfoBanner) {
-                item { AiInfoBanner(onDismiss = { viewModel.dismissAiInfoBanner() }) }
+                item(key = "ai_banner") { AiInfoBanner(onDismiss = { viewModel.dismissAiInfoBanner() }) }
             }
 
             if (uiState.isLoading) {
@@ -338,10 +338,10 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                 }
 
                 // Priority legend
-                item { PriorityLegend() }
+                item(key = "priority_legend") { PriorityLegend() }
 
                 // ALL recommendations from ALL categories, sorted by priority
-                item {
+                item(key = "all_recommendations") {
                     Spacer(modifier = Modifier.height(20.dp))
                     NeonDivider()
                     Spacer(modifier = Modifier.height(16.dp))

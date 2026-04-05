@@ -34,13 +34,15 @@ private data class Particle(
 @Composable
 fun ParticleBackground(
     modifier: Modifier = Modifier,
-    particleCount: Int = 40
+    particleCount: Int = 15
 ) {
-    val colors = listOf(
-        NeonCyan.copy(alpha = 0.15f),
-        NeonViolet.copy(alpha = 0.12f),
-        NeonMagenta.copy(alpha = 0.10f)
-    )
+    val colors = remember {
+        listOf(
+            NeonCyan.copy(alpha = 0.12f),
+            NeonViolet.copy(alpha = 0.10f),
+            NeonMagenta.copy(alpha = 0.08f)
+        )
+    }
 
     val particles = remember {
         List(particleCount) {
@@ -61,7 +63,7 @@ fun ParticleBackground(
         initialValue = 0f,
         targetValue = 6.28f,
         animationSpec = infiniteRepeatable(
-            animation = tween(10000, easing = LinearEasing),
+            animation = tween(20000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "time"
@@ -71,17 +73,12 @@ fun ParticleBackground(
         particles.forEach { particle ->
             val offsetX = sin(time + particle.phase) * particle.speedX * size.width * 0.1f
             val offsetY = cos(time + particle.phase * 1.3f) * particle.speedY * size.height * 0.1f
-
             val x = (particle.x * size.width + offsetX) % size.width
             val y = (particle.y * size.height + offsetY) % size.height
-
             drawCircle(
                 color = particle.color,
                 radius = particle.radius * density,
-                center = Offset(
-                    x.coerceIn(0f, size.width),
-                    y.coerceIn(0f, size.height)
-                )
+                center = Offset(x.coerceIn(0f, size.width), y.coerceIn(0f, size.height))
             )
         }
     }

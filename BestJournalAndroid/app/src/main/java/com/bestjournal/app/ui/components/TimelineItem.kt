@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.runtime.remember
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -109,8 +110,9 @@ fun TimelineItem(
             Column {
                 if (!entry.title.isNullOrBlank()) {
                     if (searchQuery.isNotBlank()) {
+                        val highlightedTitle = remember(entry.title, searchQuery) { highlightMatches(entry.title, searchQuery, highlightColor) }
                         Text(
-                            text = highlightMatches(entry.title, searchQuery, highlightColor),
+                            text = highlightedTitle,
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
                             color = MaterialTheme.colorScheme.primary,
                             maxLines = 1,
@@ -137,15 +139,17 @@ fun TimelineItem(
 
                 if (searchQuery.isNotBlank()) {
                     // Show text starting from the first match so the highlight is visible
-                    val matchIndex = entry.displayText.lowercase().indexOf(searchQuery.lowercase())
-                    val snippetStart = if (matchIndex > 50) {
-                        // Find the start of the line or go back ~50 chars
-                        val lineStart = entry.displayText.lastIndexOf('\n', matchIndex - 1)
-                        if (lineStart >= 0) lineStart + 1 else (matchIndex - 50).coerceAtLeast(0)
-                    } else 0
-                    val snippetText = if (snippetStart > 0) "\u2026 " + entry.displayText.substring(snippetStart) else entry.displayText
+                    val snippetText = remember(entry.displayText, searchQuery) {
+                        val matchIndex = entry.displayText.lowercase().indexOf(searchQuery.lowercase())
+                        val snippetStart = if (matchIndex > 50) {
+                            val lineStart = entry.displayText.lastIndexOf('\n', matchIndex - 1)
+                            if (lineStart >= 0) lineStart + 1 else (matchIndex - 50).coerceAtLeast(0)
+                        } else 0
+                        if (snippetStart > 0) "\u2026 " + entry.displayText.substring(snippetStart) else entry.displayText
+                    }
+                    val highlighted = remember(snippetText, searchQuery) { highlightMatches(snippetText, searchQuery, highlightColor) }
                     Text(
-                        text = highlightMatches(snippetText, searchQuery, highlightColor),
+                        text = highlighted,
                         style = MaterialTheme.typography.bodyLarge,
                         maxLines = 4,
                         overflow = TextOverflow.Ellipsis

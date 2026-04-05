@@ -90,7 +90,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Title bar
-            item {
+            item(key = "title_bar") {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -242,7 +242,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                 item { PriorityLegend() }
 
                 // ALL recommendations from ALL categories, sorted by priority
-                item {
+                item(key = "all_recommendations") {
                     Spacer(modifier = Modifier.height(20.dp))
                     NeonDivider()
                     Spacer(modifier = Modifier.height(16.dp))
