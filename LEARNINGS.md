@@ -307,3 +307,30 @@ NavHost(...) {
 - Canvas-Zeichnung: Notebook-Body + Spiralbindung + Linien + animierte Fluegel
   → `rotate(notebook.rotation)` fuer natuerliche Flugrichtung
 - **Performance**: `mutableStateListOf` fuer die Notebook-Liste, Position-Updates nur in `withFrameNanos`
+
+---
+
+## Compose Scroll-Performance (Ruckler vermeiden)
+
+> Quelle: Best Journal Session 2026-04-05 — Dashboard + Tagebuch ruckelten beim Scrollen
+
+### Problem
+LazyColumn scrollt nicht fluessig — sichtbare Ruckler auf Samsung S23 Ultra und Fold 6.
+
+### Ursachen und Fixes
+
+| Ursache | Fix | Effekt |
+|---------|-----|--------|
+| **Canvas-Animation mit vielen Objekten** (40 Partikel × sin/cos pro Frame) | Partikelanzahl auf 15 reduzieren, Animationszyklus verdoppeln (10s→20s) | 63% weniger Draw-Calls pro Frame |
+| **`highlightMatches()` ohne remember** (String-Scanning bei jedem Recompose) | `remember(text, query) { highlightMatches(...) }` wrappen | Scan nur bei Aenderung, nicht bei jedem Frame |
+| **LazyColumn Items ohne stabile Keys** (positional index) | `item(key = "title_bar")`, `item(key = "all_recommendations")` etc. | Compose kann Items korrekt recyclen statt neu erstellen |
+| **Farblisten bei jedem Recompose neu erstellt** | `val colors = remember { listOf(...) }` | Keine Allokation bei Recompose |
+
+### Allgemeine Regeln fuer Compose-Performance
+
+1. **Jedes `item {}` in LazyColumn braucht einen stabilen `key`** — besonders wenn die Liste sich aendern kann
+2. **Teure Berechnungen (String-Ops, Formatierung) IMMER in `remember` wrappen** — sonst laufen sie bei jedem Frame
+3. **Endlos-Animationen (`infiniteTransition`) sparsam einsetzen** — jede verursacht ~60 Recompositions/Sekunde
+4. **Canvas-Animationen**: Max 15-20 Objekte, Trig-Operationen minimieren
+5. **`Modifier.shadow()` erzwingt Compositing-Layer** — bei vielen Karten Elevation niedrig halten (4dp statt 8dp)
+6. **Brush-Objekte in Modifier-Extensions koennen nicht `remember`t werden** — akzeptabler Overhead, aber bewusst sein
