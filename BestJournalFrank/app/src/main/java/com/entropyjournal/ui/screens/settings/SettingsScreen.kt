@@ -3,6 +3,15 @@ package com.entropyjournal.ui.screens.settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -219,6 +228,92 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             viewModel.updateFollowSun(false)
                         }
                     }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Dashboard-Szenario
+                Text("Dashboard-Analyse", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("W\u00e4hle, wie die KI deine Eintr\u00e4ge analysiert", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val scenarioNames = listOf("Szenario 1", "Szenario 2", "Szenario 3", "Szenario 4", "Individuell")
+                val scenarioPrefs = remember {
+                    val masterKey = androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC)
+                    androidx.security.crypto.EncryptedSharedPreferences.create(
+                        Constants.ENCRYPTED_PREFS_NAME, masterKey, context,
+                        androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                    )
+                }
+                val selectedScenario = scenarioPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+                var currentScenario by remember { mutableIntStateOf(selectedScenario) }
+                var showCustomPromptDialog by remember { mutableStateOf(false) }
+
+                scenarioNames.forEachIndexed { index, name ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                currentScenario = index
+                                scenarioPrefs.edit().putInt(Constants.PREF_DASHBOARD_SCENARIO, index).apply()
+                                if (index == 4) showCustomPromptDialog = true
+                            }.padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = currentScenario == index,
+                            onClick = {
+                                currentScenario = index
+                                scenarioPrefs.edit().putInt(Constants.PREF_DASHBOARD_SCENARIO, index).apply()
+                                if (index == 4) showCustomPromptDialog = true
+                            },
+                            colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(name, style = MaterialTheme.typography.bodyLarge, color = if (currentScenario == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                            if (index == 4) {
+                                Text("Eigenen Prompt eingeben", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+
+                if (showCustomPromptDialog) {
+                    val savedPrompt = scenarioPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+                    var promptText by remember { mutableStateOf(savedPrompt) }
+                    AlertDialog(
+                        onDismissRequest = { showCustomPromptDialog = false },
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        title = { Text("Individueller Prompt", style = MaterialTheme.typography.titleLarge) },
+                        text = {
+                            Column {
+                                Text("Was ist dir besonders wichtig? Was soll die KI zusammenfassen?", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.height(12.dp))
+                                OutlinedTextField(
+                                    value = promptText,
+                                    onValueChange = { promptText = it },
+                                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                                    placeholder = { Text("z.B. Fokussiere dich auf meine Schlafqualit\u00e4t und Stresslevel...") },
+                                    textStyle = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                scenarioPrefs.edit().putString(Constants.PREF_CUSTOM_PROMPT, promptText).apply()
+                                showCustomPromptDialog = false
+                            }) { Text("Speichern", color = MaterialTheme.colorScheme.primary) }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showCustomPromptDialog = false }) {
+                                Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        },
+                    )
                 }
             }
         }

@@ -37,6 +37,11 @@ object Constants {
     // Encrypted SharedPreferences file name
     const val ENCRYPTED_PREFS_NAME = "entropy_journal_secure_prefs"
 
+    // Dashboard-Szenario
+    const val PREF_DASHBOARD_SCENARIO = "dashboard_scenario"
+    const val PREF_CUSTOM_PROMPT = "custom_dashboard_prompt"
+    const val DASHBOARD_SCENARIO_COUNT = 5
+
     // Freemium
     const val TRIAL_USAGE_DAYS = 7
     const val FREE_WEEKLY_DASHBOARD_LIMIT = 5
