@@ -268,12 +268,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Icon(
-                            imageVector = if (soundsEnabled) Icons.Rounded.VolumeUp else Icons.Rounded.VolumeOff,
-                            contentDescription = null,
-                            tint = if (soundsEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        SettingsSoundIcon(isEnabled = soundsEnabled)
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text("App-T\u00f6ne", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
@@ -282,9 +277,16 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                     Switch(
                         checked = soundsEnabled,
-                        onCheckedChange = {
-                            soundsEnabled = it
-                            soundsPrefs.edit().putBoolean(Constants.PREF_SOUNDS_ENABLED, it).apply()
+                        onCheckedChange = { enabled ->
+                            soundsEnabled = enabled
+                            soundsPrefs.edit().putBoolean(Constants.PREF_SOUNDS_ENABLED, enabled).apply()
+                            if (enabled) {
+                                try {
+                                    val tg = android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 80)
+                                    tg.startTone(android.media.ToneGenerator.TONE_PROP_ACK, 150)
+                                    tg.release()
+                                } catch (_: Exception) {}
+                            }
                         },
                         colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
                     )
@@ -643,6 +645,23 @@ private fun SettingsPhoneIcon(isDark: Boolean) {
         androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp)) {
             Icon(Icons.Rounded.PhoneAndroid, "Dunkel", tint = if (isDark) glowYellow else mutedGray, modifier = Modifier.size(darkPhoneSize))
             Icon(Icons.Rounded.DarkMode, null, tint = if (isDark) glowYellow else mutedGray, modifier = Modifier.size(darkPhoneSize * 0.35f))
+        }
+    }
+}
+
+@Composable
+private fun SettingsSoundIcon(isEnabled: Boolean) {
+    val activeColor = Color(0xFF4CAF50)
+    val mutedGray = Color(0xFF666666)
+    val onSize by animateDpAsState(targetValue = if (isEnabled) 22.dp else 14.dp, animationSpec = tween(300), label = "soundOnSize")
+    val offSize by animateDpAsState(targetValue = if (!isEnabled) 22.dp else 14.dp, animationSpec = tween(300), label = "soundOffSize")
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp)) {
+            Icon(Icons.Rounded.VolumeUp, "Ton an", tint = if (isEnabled) activeColor else mutedGray, modifier = Modifier.size(onSize))
+        }
+        Divider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.height(16.dp).width(1.dp))
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(24.dp)) {
+            Icon(Icons.Rounded.VolumeOff, "Ton aus", tint = if (!isEnabled) activeColor else mutedGray, modifier = Modifier.size(offSize))
         }
     }
 }
