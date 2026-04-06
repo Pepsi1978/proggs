@@ -86,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import com.entropyjournal.ui.components.GlassCard
+import com.entropyjournal.ui.theme.LocalIsDarkTheme
 import com.entropyjournal.ui.theme.NeonRed
 import com.entropyjournal.util.Constants
 import com.entropyjournal.util.DateTimeFormatter
@@ -477,9 +478,10 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                                     onValueChange = { promptText = it },
                                     modifier = Modifier.fillMaxWidth().height(350.dp),
                                     placeholder = {
+                                        val isDark = LocalIsDarkTheme.current
                                         Text(
-                                            "Je gr\u00fcndlicher du beschreibst was dein Fokus ist, desto besser werden die Ergebnisse.\n\nz.B. Fokussiere dich auf meine Schlafqualit\u00e4t und Stresslevel. Zeige mir Muster in meiner Ern\u00e4hrung. Analysiere, wie sich meine Stimmung \u00fcber die Woche ver\u00e4ndert. Finde heraus, wann ich am produktivsten bin und was mich blockiert.",
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                                            "z.B. Fokussiere dich auf meine Schlafqualit\u00e4t und Stresslevel. Zeige mir Muster in meiner Ern\u00e4hrung. Analysiere, wie sich meine Stimmung \u00fcber die Woche ver\u00e4ndert. Finde heraus, wann ich am produktivsten bin und was mich blockiert.\n\nJe gr\u00fcndlicher du beschreibst was dein Fokus ist, desto besser werden die Ergebnisse.",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (isDark) 0.25f else 0.35f),
                                         )
                                     },
                                     textStyle = MaterialTheme.typography.bodyMedium,

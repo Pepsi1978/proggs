@@ -59,6 +59,7 @@ import com.entropyjournal.ui.components.AdviceCategoryCard
 import com.entropyjournal.ui.components.GlassCard
 import com.entropyjournal.ui.components.NeonDivider
 import com.entropyjournal.ui.components.ParticleBackground
+import com.entropyjournal.ui.components.TwinklingStars
 import com.entropyjournal.ui.components.PulsingOrb
 import com.entropyjournal.ui.components.ShimmerLoadingEffect
 import com.entropyjournal.ui.theme.LocalIsDarkTheme
@@ -100,7 +101,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
             .background(MaterialTheme.colorScheme.background)
     ) {
         if (isDark) {
-            ParticleBackground()
+            TwinklingStars()
         }
 
         LazyColumn(

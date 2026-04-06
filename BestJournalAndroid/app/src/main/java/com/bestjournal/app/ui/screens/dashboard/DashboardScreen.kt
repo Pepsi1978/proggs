@@ -58,6 +58,7 @@ import com.bestjournal.app.ui.components.AiInfoBanner
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.components.NeonDivider
 import com.bestjournal.app.ui.components.ParticleBackground
+import com.bestjournal.app.ui.components.TwinklingStars
 import com.bestjournal.app.ui.components.PulsingOrb
 import com.bestjournal.app.ui.components.ShimmerLoadingEffect
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
@@ -99,7 +100,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         if (isDark) {
-            ParticleBackground()
+            TwinklingStars()
         }
 
         LazyColumn(
