@@ -3,7 +3,7 @@ name: mar-reviewer
 description: Multi-Agent Reflexion reviewer. Spawns 3 parallel critic agents (Security Hacker, Senior Architect, User Advocate) that debate code quality from forced-different perspectives. Use instead of code-reviewer for critical features.
 model: opus
 effort: high
-maxTurns: 80
+maxTurns: 40
 tools:
   - Read
   - Glob

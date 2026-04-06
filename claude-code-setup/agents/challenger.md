@@ -3,7 +3,7 @@ name: challenger
 description: Devil's advocate that challenges plans, architectures, and assumptions. Spawned after every architecture decision to find blind spots.
 model: opus
 effort: high
-maxTurns: 60
+maxTurns: 30
 tools:
   - Read
   - Glob
@@ -89,10 +89,19 @@ These write-backs are NOT optional. They make the entire system smarter over tim
 - Architektur-Dokumente: Erst Ueberblick (erste 100 Zeilen), dann gezielt vertiefen.
 - NIEMALS das gesamte Projekt laden — nur die Teile die fuer die Challenge relevant sind.
 
+### Circuit Breaker (SOFORTIGE Terminierung)
+- **Turn 25 erreicht** (von 30 max) → SOFORT Challenge Report mit vorhandenen Findings abschliessen
+- **3 aufeinanderfolgende Tool-Fehler** → SOFORT Teilergebnis zurueckgeben
+
 ### Selbst-Terminierung
-- 5 Turns ohne neue Erkenntnisse → SOFORT Challenge mit vorhandenen Findings abschliessen.
+- 3 Turns ohne neue Erkenntnisse → SOFORT Challenge mit vorhandenen Findings abschliessen.
 - Aufgabe unklar → "BLOCKED — Kein Plan/Architektur zum Challengen erhalten" zurueckgeben.
 - NIEMALS still haengen bleiben — es muss IMMER ein Challenge Report zurueckgegeben werden.
+
+### Turn-Budget-Tracking (PFLICHT)
+- **Turn 10**: Plan/Architektur gelesen, erste Schwachstellen identifiziert
+- **Turn 20**: Alle 3 Challenges formuliert
+- **Turn 25**: Circuit Breaker — SOFORT zur Ausgabe
 
 ### Eingabe-Validierung
 - Wurde ein konkreter Plan oder eine Architektur uebergeben? Wenn nicht → Sofort melden.

@@ -3,7 +3,7 @@ name: env-checker
 description: Comprehensive environment health checker. Audits ALL installed tools, versions, settings, hooks, plugins, language readiness, mobile dev readiness, security patches, backup drift, and disk space. Returns a detailed structured report. Use this agent for Phase 1 of self-improve or standalone environment checks.
 model: sonnet
 effort: high
-maxTurns: 50
+maxTurns: 30
 tools:
   - Bash
   - Read
@@ -168,10 +168,19 @@ Wenn du diese Datei NICHT schreibst, wird der memory-watchdog einen Fehler ins W
 - `Get-HotFix` kann hunderte Eintraege haben → Nur letzte 10 anzeigen.
 - Alle Bash-Befehle mit `timeout 30` oder `| head -100` absichern.
 
+### Circuit Breaker (SOFORTIGE Terminierung)
+- **Turn 25 erreicht** (von 30 max) → SOFORT Report mit vorhandenen Daten abschliessen
+- **5 fehlgeschlagene Checks hintereinander** → Netzwerkproblem vermuten, Teilergebnis liefern
+- **3 aufeinanderfolgende Tool-Fehler** → SOFORT Teilergebnis zurueckgeben
+
 ### Selbst-Terminierung
-- 5 fehlgeschlagene Checks hintereinander → Netzwerkproblem vermuten, verbleibende Checks ueberspringen, Teilergebnis liefern.
 - NIEMALS still haengen bleiben — es muss IMMER ein Report zurueckgegeben werden, auch wenn unvollstaendig.
 - Unvollstaendiger Report: Am Ende "⚠️ UNVOLLSTAENDIG — [N] Checks fehlgeschlagen" hinzufuegen.
+
+### Turn-Budget-Tracking (PFLICHT)
+- **Turn 10**: Plattform erkannt, Tool-Versionen geprueft
+- **Turn 20**: Alle Checks durchgefuehrt
+- **Turn 25**: Circuit Breaker — SOFORT Report zusammenstellen
 
 ### Eingabe-Validierung
 - Plattform nicht erkannt → Trotzdem generische Checks ausfuehren, "Unbekannte Plattform" melden.

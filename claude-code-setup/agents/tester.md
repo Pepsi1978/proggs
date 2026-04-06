@@ -3,7 +3,7 @@ name: tester
 description: Creates and runs tests for code. Use as part of the quality loop after writing a feature.
 model: opus
 effort: high
-maxTurns: 60
+maxTurns: 30
 tools:
   - Read
   - Glob
@@ -131,10 +131,20 @@ These write-backs are NOT optional. They make the entire system smarter over tim
 - Zweiter Fehlschlag → Im Ergebnis dokumentieren: "⚠️ [Name] ausgefallen — Tests basieren auf [N-1]/[N] Test-Kategorien."
 - IMMER ein Test-Ergebnis liefern, auch wenn nur Unit-Tests aber keine Integration-Tests liefen.
 
+### Circuit Breaker (SOFORTIGE Terminierung)
+- **Turn 25 erreicht** (von 30 max) → SOFORT Test-Report mit vorhandenen Ergebnissen abschliessen
+- **3 aufeinanderfolgende Build-Fehler** → SOFORT mit "BUILD FAILED" Bericht zurueckgeben
+- **3 aufeinanderfolgende Tool-Fehler** → SOFORT Teilergebnis zurueckgeben
+
 ### Selbst-Terminierung
-- 5 Turns ohne Fortschritt → SOFORT Test-Report mit vorhandenen Ergebnissen abschliessen.
+- 3 Turns ohne Fortschritt → SOFORT Test-Report mit vorhandenen Ergebnissen abschliessen.
 - Kein testbarer Code gefunden → "NO TESTABLE CODE — [was gesucht wurde]" zurueckgeben.
 - NIEMALS still haengen bleiben.
+
+### Turn-Budget-Tracking (PFLICHT)
+- **Turn 10**: Code analysiert, Test-Framework identifiziert
+- **Turn 20**: Tests geschrieben und ausgefuehrt
+- **Turn 25**: Circuit Breaker — SOFORT zur Ausgabe
 
 ### Eingabe-Validierung
 - Existiert das Projekt? Hat es eine Build-Datei? Wenn nicht → Sofort melden.

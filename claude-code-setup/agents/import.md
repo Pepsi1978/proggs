@@ -3,7 +3,7 @@ name: import
 description: Liest mirror-ledger.md, findet alle fuer die aktuelle Plattform und das aktuelle CLI ausstehenden Eintraege und setzt sie vollstaendig um. Nutze diesen Agenten beim Session-Start oder auf Abruf.
 model: opus
 effort: high
-maxTurns: 80
+maxTurns: 50
 tools:
   - Read
   - Glob

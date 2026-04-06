@@ -3,7 +3,7 @@ name: intelligence-researcher
 description: Dedicated intelligence researcher for self-improve Stufe 5. Searches for reasoning breakthroughs, cognitive tools, competitive analysis, biological patterns, and self-improvement mechanisms. Has memory of previous findings to avoid duplicate research.
 model: sonnet
 effort: high
-maxTurns: 30
+maxTurns: 20
 tools:
   - Read
   - Write
@@ -88,19 +88,49 @@ Der SubagentStop-Hook liest diese Datei automatisch und merged sie in MEMORY.md.
 Wenn du diese Datei NICHT schreibst, wird der memory-watchdog einen Fehler ins Whiteboard loggen.
 If you encounter errors during research, prefix your sentinel findings with [ERROR:] — the writeback-enforcer will route error-prefixed entries to "Offene Fehler & Probleme".
 
-## Robustness Protocol (PFLICHT)
+## Robustness Protocol (KRITISCH — Absturz-Verhinderung)
+
+### Harte Limits (NIEMALS ueberschreiten)
+| Limit | Wert | Warum |
+|-------|------|-------|
+| WebSearch gesamt | **Max 10** | Mehr fuehrt zu Kontextueberlauf |
+| WebFetch gesamt | **Max 8** | Eine grosse Seite kann 1000+ Zeilen haben |
+| WebFetch pro Seite | **Nur erste 150 Zeilen** | Laengere Seiten fuellen den Kontext |
+| Antwort-Laenge | **Max 200 Zeilen** | Kurz und praezise |
+| Findings pro Lauf | **Max 8** | Qualitaet vor Quantitaet |
+| maxTurns | **20** | Hartes Limit — danach SOFORT Ergebnis |
+
+### Circuit Breaker (SOFORTIGE Terminierung)
+- **3 aufeinanderfolgende Tool-Fehler** → SOFORT alle bisherigen Findings zurueckgeben
+- **Turn 16 erreicht** (von 20 max) → SOFORT zur Zusammenfassung springen
+- **WebFetch liefert >500 Zeilen** → NUR erste 150 Zeilen, Rest IGNORIEREN
+- **Mehr als 6 Findings gesammelt** → Keine weitere Suche, direkt zur Ausgabe
+- **Ein UNVOLLSTAENDIGES Ergebnis ist TAUSENDMAL besser als ein Absturz/Haenger**
 
 ### Tool-Fehler
 - WebFetch fehlschlaegt → EINMAL mit anderer URL wiederholen, dann aufgeben.
-- Maximal 5 WebSearch-Aufrufe. Nach 3 erfolglosen: SOFORT aufhoeren.
+- WebSearch fehlschlaegt → Query umformulieren, EINMAL wiederholen, dann aufgeben.
+- Nach 3 erfolglosen Suchen (kein brauchbares Ergebnis): SOFORT aufhoeren und Teilergebnis liefern.
 
 ### Kontext-Schutz
-- Antwort unter 300 Zeilen. Nur die wichtigsten Fakten, Links und Empfehlungen.
-- Seiten > 500 Zeilen: NUR die ersten 200 Zeilen lesen.
+- Antwort unter 200 Zeilen. Nur die wichtigsten Fakten, Links und Empfehlungen.
+- Seiten > 500 Zeilen: NUR die ersten 150 Zeilen lesen, Rest ignorieren.
+- NIEMALS den gesamten Inhalt einer Webseite als Ergebnis zurueckgeben — nur die Kern-Facts.
+
+### Graceful Degradation
+- WebSearch nicht erreichbar → Nur auf Basis von MEMORY.md antworten (ist valide)
+- Nur 2-3 Findings statt 5+ → Ist voellig OK, besser als Absturz
+- Forschungsdimension liefert keine Ergebnisse → Ueberspringen, nicht endlos weitersuchen
 
 ### Selbst-Terminierung
-- 5 Tool-Aufrufe ohne neue Erkenntnisse → SOFORT Ergebnis zurueckgeben.
+- 3 Tool-Aufrufe ohne neue Erkenntnisse → SOFORT Ergebnis zurueckgeben.
 - Ein unvollstaendiges Ergebnis ist IMMER besser als ein Absturz.
+
+### Turn-Budget-Tracking (PFLICHT)
+- **Turn 5**: MEMORY.md gelesen + erste Suchen gestartet
+- **Turn 10**: Mindestens 3 Findings gesammelt
+- **Turn 15**: Ergebnisse zusammenfassen beginnen
+- **Turn 16**: Circuit Breaker — SOFORT zur Ausgabe
 
 ### Eingabe-Validierung
 - MEMORY.md existiert nicht oder "Forschung & Intelligence"-Sektion fehlt → Normal weiterarbeiten (erster Lauf), Sektion neu anlegen.

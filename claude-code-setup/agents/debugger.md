@@ -3,7 +3,7 @@ name: debugger
 description: Systematically diagnoses and fixes bugs. Use when something doesn't work and you don't know why.
 model: opus
 effort: high
-maxTurns: 80
+maxTurns: 40
 tools:
   - Read
   - Glob
@@ -149,10 +149,21 @@ Der `code-reviewer`-Agent liest diese Bibliothek und prueft praeventiv: "Kommt d
 - Wenn alle Hypothesen-Agents fehlschlagen → Direkt selbst debuggen (ohne Sub-Agents) als Fallback.
 - IMMER ein Debug-Ergebnis liefern, auch wenn nur eine Hypothese getestet werden konnte.
 
+### Circuit Breaker (SOFORTIGE Terminierung)
+- **Turn 35 erreicht** (von 40 max) → SOFORT Fix abschliessen oder Teilergebnis liefern
+- **3 aufeinanderfolgende Tool-Fehler** → SOFORT Hypothesen und bisherige Erkenntnisse zurueckgeben
+- **Build nach Fix schlaegt 3x fehl** → SOFORT Fix revertieren und Blocker dokumentieren
+
 ### Selbst-Terminierung
 - 5 Turns ohne neue Erkenntnisse → SOFORT Teilergebnis mit allen bisherigen Hypothesen zurueckgeben.
 - Bug nicht reproduzierbar → "NOT REPRODUCIBLE — [was versucht wurde]" zurueckgeben.
 - NIEMALS still haengen bleiben — es muss IMMER eine Antwort kommen.
+
+### Turn-Budget-Tracking (PFLICHT)
+- **Turn 10**: Bug reproduziert, Hypothesen formuliert
+- **Turn 20**: Root Cause identifiziert oder eingeengt
+- **Turn 30**: Fix implementiert und verifiziert
+- **Turn 35**: Circuit Breaker — SOFORT zur Ausgabe
 
 ### Eingabe-Validierung
 - Wurde ein konkreter Bug oder Fehler beschrieben? Wenn nicht → Sofort nachfragen.

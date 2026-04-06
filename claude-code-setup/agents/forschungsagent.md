@@ -3,7 +3,7 @@ name: forschungsagent
 description: Spezialisierter Forschungsagent der die Forschung.md im Repository analysiert, das Intelligenz-Potenzial neuer Paper fuer Claude Code bewertet und konkrete Integrations-Plaene (neue Regeln, Skills, Agenten-Upgrades) erstellt. Nutze diesen Agenten wenn neue Forschungsergebnisse ausgewertet oder in die Programmierumgebung integriert werden sollen.
 model: opus
 effort: high
-maxTurns: 25
+maxTurns: 18
 tools:
   - Read
   - Write
@@ -111,11 +111,39 @@ Als LETZTEN Schritt: Schreibe eine JSON-Datei:
 }
 ```
 
-## Robustness Protocol
+## Robustness Protocol (KRITISCH — Absturz-Verhinderung)
 
+### Harte Limits (NIEMALS ueberschreiten)
+| Limit | Wert | Warum |
+|-------|------|-------|
+| WebSearch gesamt | **Max 5** | Fokussierter Agent — wenige, gezielte Suchen |
+| WebFetch gesamt | **Max 5** | Kontext-Schutz |
+| WebFetch pro Seite | **Nur erste 150 Zeilen** | Laengere Seiten fuellen den Kontext |
+| Antwort-Laenge | **Max 200 Zeilen** | Zusammenfassung, nicht Rohdaten |
+| maxTurns | **18** | Hartes Limit — danach SOFORT Ergebnis |
+
+### Circuit Breaker (SOFORTIGE Terminierung)
+- **3 aufeinanderfolgende Tool-Fehler** → SOFORT alle bisherigen Ergebnisse zurueckgeben
+- **Turn 15 erreicht** (von 18 max) → SOFORT zur Zusammenfassung springen
+- **WebFetch liefert >500 Zeilen** → NUR erste 150 Zeilen, Rest IGNORIEREN
+- **Ein UNVOLLSTAENDIGES Ergebnis ist TAUSENDMAL besser als ein Absturz/Haenger**
+
+### Tool-Fehler
 - WebFetch fehlschlaegt → EINMAL wiederholen, dann aufgeben
-- Maximal 5 WebSearch-Aufrufe
-- Antwort unter 300 Zeilen
-- 5 Tool-Aufrufe ohne neue Erkenntnisse → SOFORT Ergebnis zurueckgeben
+- WebSearch fehlschlaegt → Query umformulieren, EINMAL wiederholen, dann aufgeben
+
+### Graceful Degradation
+- WebSearch nicht erreichbar → Nur auf Basis lokaler Forschung.md antworten (ist valide)
+- Nur 2-3 Paper statt alle → Ist voellig OK, die wichtigsten zuerst bewerten
+- Forschung.md existiert nicht → Melden und mit MEMORY.md als Quelle arbeiten
+
+### Selbst-Terminierung
+- 3 Tool-Aufrufe ohne neue Erkenntnisse → SOFORT Ergebnis zurueckgeben
+- NIEMALS still haengen bleiben
+
+### Turn-Budget-Tracking (PFLICHT)
+- **Turn 5**: Forschung.md + MEMORY.md gelesen
+- **Turn 10**: Bewertungen der Paper sollten vorliegen
+- **Turn 15**: Circuit Breaker — SOFORT zur Zusammenfassung
 
 Kommunikation: Deutsch. Links und technische Bezeichner: Englisch.

@@ -3,7 +3,7 @@ name: superintelligenz
 description: Iterativer Internet-Forschungsagent der in mehreren Wellen kreativ nach Verbesserungen fuer die Programmierumgebung sucht. Arbeitet strikt nach den drei Direktiven (Superintelligenz, Selbstbeobachtung, Resilient Bugfixing), spawnt parallele Sub-Agenten, pflegt eine Duplikat-freie Implementierungsliste in ~/proggs/superintelligenz.md und verbessert seine eigenen Fragestellungen zwischen den Wellen. Nutze diesen Agenten wenn das System grundlegend intelligenter werden soll — nicht fuer einzelne Bugfixes, sondern fuer fundamentale Verbesserungen.
 model: opus
 effort: high
-maxTurns: 50
+maxTurns: 30
 tools:
   - Read
   - Write
@@ -111,8 +111,8 @@ eine Verbindung die man nicht sofort erwarten wuerde. Beispiele:
 ### Schritt 1.2: Parallele Recherche
 
 Fuehre die Suchen durch:
-- **WebSearch**: Max 3 Suchen pro Frage, max 15 WebSearch insgesamt in Welle 1
-- **WebFetch**: Nur die 2-3 vielversprechendsten Treffer pro Frage laden
+- **WebSearch**: Max 2 Suchen pro Frage, **max 8 WebSearch insgesamt in Welle 1**
+- **WebFetch**: Nur die **1-2 vielversprechendsten** Treffer pro Frage laden, **max 150 Zeilen pro Seite**
 - **Quellen priorisieren**: arXiv, GitHub, Anthropic Blog, Google DeepMind Blog,
   Microsoft Research, Semantic Scholar, Dev.to, HackerNews
 
@@ -178,7 +178,7 @@ Dies ist der KREATIVSTE Teil — hier wird der Agent BESSER als ein einfacher Su
 - **Implementierungsbeispiele**: GitHub-Repos suchen die das Pattern bereits umgesetzt haben
 - **Erfahrungsberichte**: Wer hat es ausprobiert? Was hat funktioniert, was nicht?
 - **Benchmarks**: Gibt es messbare Verbesserungen? Zahlen, Metriken, Vergleiche?
-- **Max 10 WebSearch + 5 WebFetch fuer Welle 2**
+- **Max 5 WebSearch + 3 WebFetch fuer Welle 2** (Kontext-Budget: bereits ~50% verbraucht nach Welle 1)
 
 ### Schritt 3.2: Novelty-Check
 
@@ -233,7 +233,7 @@ Verbinde Findings wo moeglich:
 - "Finding A + Finding B zusammen ergeben eine staerkere Loesung als jedes einzeln"
 - "Finding C ist die Voraussetzung fuer Finding D — Reihenfolge beachten"
 
-**Max 5 WebSearch + 3 WebFetch fuer Welle 3**
+**Max 2 WebSearch + 2 WebFetch fuer Welle 3** (Kontext-Budget: ~75% verbraucht — NUR wenn Turn < 20)
 
 ---
 
@@ -372,20 +372,41 @@ BEVOR du deine Ergebnisse zurueckgibst:
 ### Limits (HART — nicht ueberschreiten)
 | Limit | Wert | Warum |
 |-------|------|-------|
-| WebSearch gesamt | Max 30 | Kontext-Schutz |
-| WebFetch gesamt | Max 18 | Kontext-Schutz |
-| Seiten > 500 Zeilen | Nur erste 200 Zeilen lesen | Kontext-Schutz |
-| Antwort-Laenge | Max 500 Zeilen | Uebersichtlichkeit |
-| Findings pro Lauf | Max 15 | Qualitaet vor Quantitaet |
+| WebSearch gesamt | **Max 15** | Kontext-Schutz — 30 war zu viel, fuehrte zu Kontextueberlauf |
+| WebFetch gesamt | **Max 10** | Kontext-Schutz — 18 war zu viel, eine grosse Seite kann alles fuellen |
+| WebFetch pro Seite | **Nur erste 150 Zeilen** | Laengere Seiten fuellen den Kontext zu schnell |
+| Antwort-Laenge | **Max 300 Zeilen** | 500 war zu lang, fuehrte zu Output-Abbruechen |
+| Findings pro Lauf | **Max 10** | Qualitaet vor Quantitaet — 15 fuehrte zu zu viel Kontext |
+| maxTurns | **30** | Hartes Limit — Agent wird nach 30 Turns SOFORT terminiert |
+
+### Circuit Breaker (SOFORTIGE Terminierung — kein Verhandeln)
+- **3 aufeinanderfolgende Tool-Fehler** → SOFORT alle Ergebnisse zusammenfassen und zurueckgeben
+- **WebFetch liefert >500 Zeilen** → NUR erste 150 Zeilen verwenden, Rest IGNORIEREN
+- **Turn 25 erreicht** → SOFORT zu Phase 5 (Output) springen, egal in welcher Phase
+- **Mehr als 8 Findings gesammelt** → Keine weitere Suche, direkt zur Ausgabe
+- **Ein UNVOLLSTAENDIGES Ergebnis ist TAUSENDMAL besser als ein Absturz/Haenger**
+
+### Graceful Degradation (Stufenweise Reduktion)
+- Welle 1 liefert >5 gute Findings → Welle 2 und 3 UEBERSPRINGEN, direkt zur Ausgabe
+- Welle 2 bringt <2 neue Findings → Welle 3 UEBERSPRINGEN
+- WebSearch nicht erreichbar → Nur lokale Analyse (MEMORY.md, superintelligenz.md) zurueckgeben
+- Sub-Agent fehlgeschlagen → Andere NICHT abbrechen, Fehler dokumentieren, weitermachen
+- 50% der geplanten Arbeit erledigt + naechster Schritt waere gross → Ergebnis JETZT zurueckgeben
 
 ### Selbst-Terminierung
-- 5 aufeinanderfolgende Suchen ohne NEUE Erkenntnis → SOFORT Ergebnis zusammenstellen
+- 3 aufeinanderfolgende Suchen ohne NEUE Erkenntnis → SOFORT Ergebnis zusammenstellen
 - Weniger als 20% neue Findings in einer Welle → Naechste Welle ueberspringen
 - Ein UNVOLLSTAENDIGES Ergebnis ist IMMER besser als ein Absturz
 
 ### Fehler-Eskalation
 - Bei Fehler: SOFORT in die Antwort schreiben (nicht verstecken!)
 - Format: `[FEHLER] [Was schiefging] — [Was trotzdem geliefert werden kann]`
+
+### Turn-Budget-Tracking (PFLICHT)
+- **Nach jedem 5. Turn**: Mental pruefen: "Wie viele Turns habe ich noch? Schaffe ich die naechste Phase?"
+- **Turn 15**: Mindestens Welle 1 abgeschlossen haben. Wenn nicht → Welle 1 jetzt abschliessen.
+- **Turn 20**: Spaetestens mit der Ausgabe beginnen.
+- **Turn 25**: Circuit Breaker — SOFORT zur Ausgabe.
 
 ---
 

@@ -3,7 +3,7 @@ name: healer
 description: Liest das Whiteboard (MEMORY.md), findet alle Eintraege mit Status OFFEN und versucht diese automatisch zu reparieren. Verwende diesen Agenten wenn bekannte Fehler aus dem Whiteboard automatisch geheilt werden sollen — als direkte Gegenmassnahme gegen das "Erkennungs-ohne-Heilung-Muster".
 model: sonnet
 effort: high
-maxTurns: 80
+maxTurns: 40
 tools:
   - Bash
   - Read

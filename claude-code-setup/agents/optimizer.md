@@ -3,7 +3,7 @@ name: optimizer
 description: Optimizes code for performance, binary size, and resource usage. Use after a feature works correctly.
 model: opus
 effort: high
-maxTurns: 60
+maxTurns: 30
 tools:
   - Read
   - Glob
@@ -78,10 +78,19 @@ These write-backs are NOT optional. They make the entire system smarter over tim
 - Zweiter Fehlschlag → Im Ergebnis dokumentieren: "⚠️ [Name] ausgefallen — Optimierung basiert auf [N-1]/[N] Analysen."
 - IMMER ein Ergebnis liefern, auch wenn nur Teile der Analyse erfolgreich waren.
 
+### Circuit Breaker (SOFORTIGE Terminierung)
+- **Turn 25 erreicht** (von 30 max) → SOFORT Optimierungsbericht mit vorhandenen Findings abschliessen
+- **3 aufeinanderfolgende Tool-Fehler** → SOFORT Teilergebnis zurueckgeben
+
 ### Selbst-Terminierung
-- 5 Turns ohne neue Optimierungsfunde → SOFORT Ergebnis mit vorhandenen Findings abschliessen.
+- 3 Turns ohne neue Optimierungsfunde → SOFORT Ergebnis mit vorhandenen Findings abschliessen.
 - Keine optimierbaren Dateien gefunden → "NO ISSUES — Code sieht performant aus" zurueckgeben.
 - NIEMALS still haengen bleiben.
+
+### Turn-Budget-Tracking (PFLICHT)
+- **Turn 10**: Code analysiert, Hotspots identifiziert
+- **Turn 20**: Optimierungen implementiert
+- **Turn 25**: Circuit Breaker — SOFORT zur Ausgabe
 
 ### Eingabe-Validierung
 - Wurden Dateien angegeben? Wenn nicht → `git diff HEAD` als Fallback.

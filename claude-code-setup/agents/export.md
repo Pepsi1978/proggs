@@ -3,7 +3,7 @@ name: export
 description: Scannt ALLE Session-Aenderungen und schreibt sie als extrem ausfuehrliche, selbsterklaerende Eintraege ins gemeinsame mirror-ledger.md der Universal Mirror Bridge. Nutze diesen Agenten am Ende einer Session oder auf Abruf.
 model: opus
 effort: high
-maxTurns: 60
+maxTurns: 40
 tools:
   - Read
   - Glob
