@@ -100,7 +100,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 val s = ShortArray(n)
                 for (i in 0 until n) {
                     val env = if (i < 3) i.toDouble() / 3 else (n - i).toDouble() / n
-                    s[i] = (Short.MAX_VALUE * 0.7 * env * kotlin.math.sin(2 * Math.PI * 2000.0 * i / sr)).toInt().toShort()
+                    s[i] = (Short.MAX_VALUE * 1.0 * env * kotlin.math.sin(2 * Math.PI * 2000.0 * i / sr)).toInt().toShort()
                 }
                 val t = android.media.AudioTrack(
                     android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build(),
@@ -495,7 +495,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                                     for (i in 0 until n) {
                                         val pos = i.toDouble() / n
                                         val env = if (pos < 0.1) pos / 0.1 else kotlin.math.exp(-8.0 * (pos - 0.1))
-                                        s[i] = (Short.MAX_VALUE * 0.6 * env * kotlin.math.sin(2 * Math.PI * 600.0 * i / sr)).toInt().toShort()
+                                        s[i] = (Short.MAX_VALUE * 1.0 * env * kotlin.math.sin(2 * Math.PI * 600.0 * i / sr)).toInt().toShort()
                                     }
                                     val t = android.media.AudioTrack(
                                         android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build(),
