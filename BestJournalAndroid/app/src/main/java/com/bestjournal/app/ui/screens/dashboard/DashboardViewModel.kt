@@ -80,16 +80,23 @@ constructor(
                     _uiState.update { it.copy(currentScenario = currentScenario, isScenarioSwitch = hadData) }
                     if (hadData) {
                         adviceRepository.clearDashboard()
-                        refreshDashboard()
+                        if (currentScenario == 4) {
+                            val customPrompt = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+                            if (customPrompt.isNotBlank()) {
+                                refreshDashboard()
+                            }
+                        } else {
+                            refreshDashboard()
+                        }
                     }
                 }
                 val promptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
                 if (promptSavedAt > lastCustomPromptSavedAt && promptSavedAt > 0L) {
                     lastCustomPromptSavedAt = promptSavedAt
                     if (_uiState.value.currentScenario == 4) {
-                        val customPrompt = encryptedPrefs.getString(com.bestjournal.app.util.Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+                        val customPrompt = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
                         adviceRepository.clearDashboard()
-                        if (customPrompt.isNotBlank() && adviceBlocks.value.isNotEmpty()) {
+                        if (customPrompt.isNotBlank()) {
                             _uiState.update { it.copy(isScenarioSwitch = true) }
                             refreshDashboard()
                         }
