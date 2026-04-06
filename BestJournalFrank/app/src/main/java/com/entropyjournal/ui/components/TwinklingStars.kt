@@ -38,11 +38,7 @@ fun TwinklingStars(
             Star(
                 x = Random.nextFloat(),
                 y = Random.nextFloat(),
-                maxSize = when (Random.nextInt(3)) {
-                    0 -> Random.nextFloat() * 1.2f + 1f    // small distant star
-                    1 -> Random.nextFloat() * 1.8f + 1.5f  // medium star
-                    else -> Random.nextFloat() * 2.5f + 2f  // large close star
-                },
+                maxSize = Random.nextFloat() * 2.5f + 2f,
                 phaseOffset = Random.nextFloat() * 1000f,
                 speedMultiplier = Random.nextFloat() * 0.5f + 0.75f
             )
