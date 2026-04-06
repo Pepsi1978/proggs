@@ -101,12 +101,32 @@ direkt umsetzen kann ohne nachfragen zu muessen.]
 9. **Funktionsweise & Technische Qualitaet** — Performance, Ladezeiten, Offline, Fehlerbehandlung
 10. **Emotionale Bindung & Branding** — Tonalitaet, Markenpersoenlichkeit, Vertrauensaufbau
 
+## Erweiterungen v2 (2026-04-06)
+
+Alle 12 Verbesserungspunkte aus dem kritischen Review implementiert:
+
+1. **Nutzer-Funnel-Analyse** (neue Phase 3): Download→Start→Aha→Trial→Conversion→Retention→Churn
+2. **Churn-Praevention & Win-Back** (neue Checklisten-Kategorie 7): Survey, Win-Back, Grace Period, Abo-Pause
+3. **Konkurrenz-Analyse** (Phase 4 erweitert): Top 5 Konkurrenten namentlich mit Preisen und Strategien
+4. **Analytics & Messbarkeit** (neue Kategorie 12): Conversion-Events, Funnel-Tracking bei jedem Prompt
+5. **Referral & Virale Verbreitung** (neue Kategorie 8): Share, Referral-Programm, Deep Links
+6. **Monetarisierungs-Modelle** (neue Kategorie 11): Einmalkaeufe, Consumables, Hybrid, Trinkgeld
+7. **App-Reifegrad** (Phase 2): Dynamische Gewichtung je nach Neu/Frueh/Wachsend/Etabliert
+8. **Regionaler Preisvergleich** (Phase 6): Rendite-Tabelle + Prompt fuer regionale Google Play Preise
+9. **Screenshots** (Phase 2): Automatische ADB-Screenshots oder screenshots/-Ordner pruefen
+10. **Follow-Up-Mechanismus** (Phase 7): Tracker abhaken, Re-Audit, "was fehlt noch?"
+11. **Google Play Compliance** (neue Kategorie 16): Transparenz, Dark Patterns, Billing Library
+12. **Rotations-Recherche** (Phase 1): 30 Spezialfragen, 5 rotierend bei jedem Update
+
+Skill: 7 Phasen (statt 5), Checkliste: 113 Pruefpunkte in 16 Kategorien (statt 78 in 11).
+
 ## Selbstverbesserung
 
 - Bei jedem Aufruf: Checkliste auf Aktualitaet pruefen (3-Tage-Fenster)
-- Jedes Mal tiefer recherchieren, neue Quellen finden, kritischer bewerten
-- Nach dem Audit: Allgemeingueltige Erkenntnisse aus kategorie-spezifischer Recherche zur Checkliste hinzufuegen
-- Skeptik-Notizen bei unsicheren Empfehlungen (in Klammern)
+- Jedes Mal tiefer recherchieren via Rotations-Fragen (30 Fragen, 5 rotierend)
+- Nach dem Audit: Allgemeingueltige Erkenntnisse zur Checkliste hinzufuegen
+- Skeptik-Notizen bei unsicheren Empfehlungen
+- Konkurrenz-Daten als Referenz fuer zukuenftige Audits speichern
 
 ## Technische Umsetzung
 
@@ -114,4 +134,5 @@ direkt umsetzen kann ohne nachfragen zu muessen.]
 - Checkliste: `~/.claude/skills/app-monetizer/monetization-checklist.md`
 - Output: `[AppOrdner]/MONETARISIERUNG-[AppName].md`
 - Researcher: Sonnet-Modell, parallele Ausfuehrung, max 15 Web-Fetches pro Researcher
-- App-Analyse: Explore-Agent oder direkte Datei-Reads
+- App-Analyse: Direkte Datei-Reads + ADB-Screenshots
+- Rotations-Tracking: `last_rotation_ids` im Checklisten-Frontmatter
