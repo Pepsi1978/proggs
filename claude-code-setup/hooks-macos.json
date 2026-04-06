@@ -89,6 +89,14 @@
 						"timeout": 10
 					}
 				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash ~/.claude/hooks/path-health-check.sh 2>/dev/null || true"
+					}
+				]
 			}
 		],
 		"UserPromptSubmit": [
@@ -218,6 +226,16 @@
 					{
 						"type": "command",
 						"command": "bash ~/.claude/hooks/poka-yoke-git-push.sh",
+						"timeout": 5
+					}
+				]
+			},
+			{
+				"matcher": "Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash ~/.claude/hooks/silent-corrector.sh",
 						"timeout": 5
 					}
 				]
@@ -400,6 +418,14 @@
 						"type": "command",
 						"command": "bash ~/.claude/hooks/session-scorer.sh",
 						"timeout": 10
+					}
+				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash ~/.claude/hooks/experience-logger.sh 2>/dev/null || true"
 					}
 				]
 			}
