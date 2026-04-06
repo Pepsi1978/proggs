@@ -1260,15 +1260,30 @@ private fun FeedbackDialog(
     AlertDialog(
         onDismissRequest = { if (!isSending) onDismiss() },
         containerColor = MaterialTheme.colorScheme.surface,
-        title = { Text("Feedback", color = MaterialTheme.colorScheme.onSurface) },
+        icon = {
+            Icon(
+                Icons.Rounded.Email, null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(36.dp),
+            )
+        },
+        title = {
+            Text(
+                "Feedback senden",
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
         text = {
             Column {
                 Text(
-                    "Deine Nachricht an den Entwickler:",
+                    "Deine Nachricht an die Entwickler \u2014 wir lesen alles und antworten pers\u00f6nlich!",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 20.sp,
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 TextField(
                     value = feedbackText,
                     onValueChange = { feedbackText = it },
