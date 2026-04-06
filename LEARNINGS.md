@@ -21,6 +21,7 @@
 - [Shimmer/Ladebalken](#shimmerladebalken)
 - [Kategorie-Icons](#kategorie-icons)
 - [Cloud-Sync-Icon: Persistenter Status](#cloud-sync-icon-persistenter-status-statt-kurzes-aufblinken)
+- [Dark Mode: Spotify-Prinzip](#dark-mode-spotify-prinzip-solide-farben-kein-glaseffekt-wichtig) ⭐
 
 **Authentifizierung & Sicherheit:**
 - [Biometric Lock: savedInstanceState bei Rotation](#biometric-lock-savedinstancestate-bei-rotation-wichtig) ⭐
@@ -167,6 +168,18 @@
 - Bei manuellem Texteintrag (leerer Text): Tastatur SOFORT oeffnen — Benutzer will tippen
 - **Loesung**: `if (rawText.isBlank()) { delay(300); focusRequester.requestFocus() }`
 - Einfache Unterscheidung: leerer Text = Schreib-Modus, gefuellter Text = Lese-Modus
+
+## Dark Mode: Spotify-Prinzip — Solide Farben, kein Glaseffekt (WICHTIG)
+- Im Dark Mode NIEMALS Glasmorphismus verwenden (transparente Overlays, Borders, Gradients)
+- Auf AMOLED-Displays erzeugen selbst minimale Transparenzen sichtbare Rechteck-Artefakte
+- **Spotify-Prinzip**: Hintergrund `#121212`, Karte `#181818` (+6 Punkte), Erhoeht `#282828`
+- Nur solide Farben mit minimalem Helligkeitsunterschied (~6-16 Hex-Punkte)
+- KEIN Border, KEIN Shadow, KEIN Gradient — nur die Helligkeitsdifferenz trennt Ebenen
+- GlassCard im Dark Mode: nur `.clip() + .background(solidColor)` — nichts anderes
+- Text: hoher Kontrast auf dunklem Hintergrund (`#E6E1E5` primary, `#CAC4D0` secondary)
+- Akzentfarben (Orange, Neon-Dots) PROFITIEREN vom dunklen Hintergrund — nicht aendern
+- Gilt fuer ALLE Android-Apps, nicht nur Best Journal
+- Quelle: Spotify, Twitter/X, Discord, Instagram — keine Top-App nutzt Glaseffekte im Dark Mode
 
 ## Cloud-Sync-Icon: Persistenter Status statt kurzes Aufblinken
 - Benutzer wollen DAUERHAFT sehen ob ihr Backup aktuell ist — nicht nur 2 Sekunden gruen

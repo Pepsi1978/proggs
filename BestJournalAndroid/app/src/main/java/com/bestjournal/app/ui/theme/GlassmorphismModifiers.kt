@@ -16,75 +16,51 @@ fun Modifier.glassCard(
     glowIntensity: Float = 0.15f,
     cornerRadius: Dp = 20.dp,
     isDark: Boolean = true
-): Modifier = this
-    .shadow(
-        elevation = if (isDark) 8.dp else 2.dp,
-        shape = RoundedCornerShape(cornerRadius),
-        ambientColor = if (isDark) glowColor.copy(alpha = glowIntensity) else Color.Black.copy(alpha = 0.06f),
-        spotColor = if (isDark) glowColor.copy(alpha = glowIntensity) else Color.Black.copy(alpha = 0.04f)
-    )
-    .clip(RoundedCornerShape(cornerRadius))
-    .background(
-        if (isDark) {
-            Brush.verticalGradient(
-                0.0f to GlassWhite,
-                0.3f to GlassWhite.copy(alpha = 0.07f),
-                0.7f to GlassHighlight.copy(alpha = 0.04f),
-                1.0f to GlassHighlight
-            )
-        } else {
-            Brush.verticalGradient(listOf(Color.White, Color(0xFFFAFAFC)))
-        }
-    )
-    .border(
-        width = 0.5.dp,
-        brush = if (isDark) {
-            Brush.verticalGradient(
-                0.0f to GlassBorder.copy(alpha = 0.12f),
-                0.5f to GlassBorder.copy(alpha = 0.06f),
-                1.0f to Color.Transparent
-            )
-        } else {
-            Brush.linearGradient(listOf(Color(0x18000000), Color.Transparent))
-        },
-        shape = RoundedCornerShape(cornerRadius)
-    )
+): Modifier = if (isDark) {
+    // Dark mode: solid card color, no gradient, no border — Spotify style
+    this
+        .clip(RoundedCornerShape(cornerRadius))
+        .background(CardSurface)
+} else {
+    this
+        .shadow(
+            elevation = 2.dp,
+            shape = RoundedCornerShape(cornerRadius),
+            ambientColor = Color.Black.copy(alpha = 0.06f),
+            spotColor = Color.Black.copy(alpha = 0.04f)
+        )
+        .clip(RoundedCornerShape(cornerRadius))
+        .background(Brush.verticalGradient(listOf(Color.White, Color(0xFFFAFAFC))))
+        .border(
+            width = 1.dp,
+            brush = Brush.linearGradient(listOf(Color(0x18000000), Color.Transparent)),
+            shape = RoundedCornerShape(cornerRadius)
+        )
+}
 
 fun Modifier.glassCardElevated(
     glowColor: Color = NeonCyan,
     glowIntensity: Float = 0.25f,
     cornerRadius: Dp = 20.dp,
     isDark: Boolean = true
-): Modifier = this
-    .shadow(
-        elevation = if (isDark) 16.dp else 4.dp,
-        shape = RoundedCornerShape(cornerRadius),
-        ambientColor = if (isDark) glowColor.copy(alpha = glowIntensity) else Color.Black.copy(alpha = 0.08f),
-        spotColor = if (isDark) glowColor.copy(alpha = glowIntensity) else Color.Black.copy(alpha = 0.06f)
-    )
-    .clip(RoundedCornerShape(cornerRadius))
-    .background(
-        if (isDark) {
-            Brush.verticalGradient(
-                0.0f to GlassWhite.copy(alpha = 0.12f),
-                0.3f to GlassWhite.copy(alpha = 0.08f),
-                0.7f to GlassHighlight.copy(alpha = 0.04f),
-                1.0f to GlassHighlight
-            )
-        } else {
-            Brush.verticalGradient(listOf(Color.White, Color(0xFFF8F8FC)))
-        }
-    )
-    .border(
-        width = 0.5.dp,
-        brush = if (isDark) {
-            Brush.verticalGradient(
-                0.0f to GlassBorder.copy(alpha = 0.18f),
-                0.5f to GlassBorder.copy(alpha = 0.08f),
-                1.0f to Color.Transparent
-            )
-        } else {
-            Brush.linearGradient(listOf(Color(0x20000000), Color.Transparent, Color(0x08000000)))
-        },
-        shape = RoundedCornerShape(cornerRadius)
-    )
+): Modifier = if (isDark) {
+    // Dark mode: slightly brighter solid card, no gradient, no border
+    this
+        .clip(RoundedCornerShape(cornerRadius))
+        .background(CardElevated)
+} else {
+    this
+        .shadow(
+            elevation = 4.dp,
+            shape = RoundedCornerShape(cornerRadius),
+            ambientColor = Color.Black.copy(alpha = 0.08f),
+            spotColor = Color.Black.copy(alpha = 0.06f)
+        )
+        .clip(RoundedCornerShape(cornerRadius))
+        .background(Brush.verticalGradient(listOf(Color.White, Color(0xFFF8F8FC))))
+        .border(
+            width = 1.dp,
+            brush = Brush.linearGradient(listOf(Color(0x20000000), Color.Transparent, Color(0x08000000))),
+            shape = RoundedCornerShape(cornerRadius)
+        )
+}
