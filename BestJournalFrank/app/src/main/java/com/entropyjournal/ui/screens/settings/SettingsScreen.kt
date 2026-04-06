@@ -345,7 +345,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 Text("W\u00e4hle, wie die KI deine Eintr\u00e4ge analysiert", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(12.dp))
 
-                val scenarioNames = listOf("Zusammenfassung", "R\u00e4ume dein Leben auf", "Szenario 3", "Pers\u00f6nliche Ziele", "Individuelle Analyse")
+                val scenarioNames = listOf("Zusammenfassung", "R\u00e4ume dein Leben auf", "Selbsterkenntnis", "Pers\u00f6nliche Ziele", "Individuelle Analyse")
                 val scenarioPrefs = remember {
                     val masterKey = androidx.security.crypto.MasterKeys.getOrCreate(androidx.security.crypto.MasterKeys.AES256_GCM_SPEC)
                     androidx.security.crypto.EncryptedSharedPreferences.create(
@@ -383,6 +383,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             when (index) {
                                 0 -> Text("Fasst Themen, Muster und Erlebnisse zusammen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 1 -> Text("Erkennt Stress, Unordnung und Belastung", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                2 -> Text("Deckt verborgene Denk- und Gef\u00fchlsmuster auf", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 3 -> Text("Erkennt Ziele, W\u00fcnsche und Fortschritte", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 4 -> Text("Eigenen Analyse-Fokus festlegen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }

@@ -536,7 +536,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 val scenarioNames = listOf(
                     "Zusammenfassung",
                     "R\u00e4ume dein Leben auf",
-                    "Szenario 3",
+                    "Selbsterkenntnis",
                     "Pers\u00f6nliche Ziele",
                     "Individuelle Analyse"
                 )
@@ -586,6 +586,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             when (index) {
                                 0 -> Text("Fasst Themen, Muster und Erlebnisse zusammen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 1 -> Text("Erkennt Stress, Unordnung und Belastung", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                2 -> Text("Deckt verborgene Denk- und Gef\u00fchlsmuster auf", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 3 -> Text("Erkennt Ziele, W\u00fcnsche und Fortschritte", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 4 -> Text("Eigenen Analyse-Fokus festlegen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
