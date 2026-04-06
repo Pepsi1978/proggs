@@ -23,6 +23,12 @@ val NeonCyan = Color(0xFF4ECDC4)          // Info / low priority dot
 val NeonViolet = Color(0xFF7C4DFF)
 val NeonMagenta = Color(0xFFFF00E5)
 
+// Summary dashboard palette (cool, informative, non-urgent)
+val SummaryBlue = Color(0xFF5B8DEF)          // Primary accent — calm blue
+val SummaryIndigo = Color(0xFF6366F1)        // Secondary — deep indigo
+val SummaryTeal = Color(0xFF14B8A6)          // Highlight — fresh teal
+val SummarySlate = Color(0xFF94A3B8)         // Muted — soft slate
+
 // Glassmorphism (cream-tinted)
 val GlassWhite = Color(0x18DCD7C9)        // Cream overlay 9%
 val GlassBorder = Color(0x28DCD7C9)       // Cream border 16%

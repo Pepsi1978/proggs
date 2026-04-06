@@ -28,6 +28,7 @@ data class DashboardUiState(
     val showAiInfoBanner: Boolean = false,
     val dashboardLimitMessage: String? = null,
     val manualRefreshesLeft: Int = 3,
+    val currentScenario: Int = 1,
 )
 
 @HiltViewModel
@@ -51,6 +52,8 @@ constructor(
     val uiState: StateFlow<DashboardUiState> = _uiState
 
     init {
+        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        _uiState.update { it.copy(currentScenario = scenario) }
         if (aiUsageTracker.shouldShowAiInfoBanner()) {
             _uiState.update { it.copy(showAiInfoBanner = true) }
         }
@@ -61,6 +64,10 @@ constructor(
                 val updating = encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
                 if (updating != _uiState.value.isLoading && !manualRefreshActive) {
                     _uiState.update { it.copy(isLoading = updating, isAutoUpdate = updating) }
+                }
+                val currentScenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+                if (currentScenario != _uiState.value.currentScenario) {
+                    _uiState.update { it.copy(currentScenario = currentScenario) }
                 }
                 kotlinx.coroutines.delay(500)
             }

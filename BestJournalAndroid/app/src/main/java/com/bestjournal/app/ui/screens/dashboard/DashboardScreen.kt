@@ -65,8 +65,13 @@ import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
+import com.bestjournal.app.ui.theme.SummaryBlue
+import com.bestjournal.app.ui.theme.SummaryIndigo
+import com.bestjournal.app.ui.theme.SummaryTeal
+import com.bestjournal.app.ui.theme.SummarySlate
 import com.bestjournal.app.domain.model.TopAction
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.graphics.Brush
 
 @Composable
@@ -266,116 +271,226 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
             }
 
             if (blocks.isNotEmpty()) {
-                // Top-5 Entropy-Reducing Actions — visually prominent block
-                val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
-                if (topActions.isNotEmpty()) {
+                if (uiState.currentScenario == 0) {
+                    // ═══════ ZUSAMMENFASSUNG DASHBOARD ═══════
+                    // Cool blue/indigo theme — informative, not urgent
+
+                    // Key Insights block (replaces Top 5 Maßnahmen)
+                    val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
+                    if (topActions.isNotEmpty()) {
+                        item {
+                            SummaryKeyInsightsBlock(actions = topActions)
+                        }
+                    }
+
+                    // Overview (replaces Gesamtanalyse)
                     item {
-                        TopActionsBlock(actions = topActions)
-                    }
-                }
-
-                // Overall analysis
-                item {
-                    val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
-                    val avgEntropy = blocks.map { it.entropyLevel }.average().toFloat()
-                    val entryCount = blocks.firstOrNull()?.basedOnEntryCount ?: 0
-
-                    GlassCard(glowIntensity = 0.2f) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                "Gesamtanalyse",
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
-                                color = NeonAmber,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Center,
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = overallAnalysis,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-
-                // Category cards — LazyRow with scroll isolation from pager
-                // Consumes leftover horizontal scroll/fling so the HorizontalPager
-                // doesn't steal the gesture when swiping through categories
-                item {
-                    val categoryScrollIsolation = remember {
-                        object : NestedScrollConnection {
-                            override fun onPostScroll(
-                                consumed: Offset,
-                                available: Offset,
-                                source: NestedScrollSource,
-                            ): Offset = Offset(available.x, 0f)
-
-                            override suspend fun onPostFling(
-                                consumed: Velocity,
-                                available: Velocity,
-                            ): Velocity = Velocity(available.x, 0f)
-                        }
-                    }
-
-                    Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        ) {
-                            itemsIndexed(blocks) { index, block ->
-                                AdviceCategoryCard(
-                                    block = block,
-                                    isSelected = index == uiState.selectedCategoryIndex,
-                                    onClick = {
-                                        viewModel.selectCategory(index)
-                                        selectedCategoryBlock = block
-                                    },
+                        val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
+                        GlassCard(glowColor = SummaryBlue, glowIntensity = 0.2f) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    "\uD83D\uDCD6  \u00dcberblick",
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = SummaryBlue,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center,
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = overallAnalysis,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
                     }
-                }
 
-                // Priority legend
-                item(key = "priority_legend") { PriorityLegend() }
+                    // Theme cards — same LazyRow but with summary styling
+                    item {
+                        val categoryScrollIsolation = remember {
+                            object : NestedScrollConnection {
+                                override fun onPostScroll(
+                                    consumed: Offset,
+                                    available: Offset,
+                                    source: NestedScrollSource,
+                                ): Offset = Offset(available.x, 0f)
 
-                // ALL recommendations from ALL categories, sorted by priority
-                item(key = "all_recommendations") {
-                    Spacer(modifier = Modifier.height(20.dp))
-                    NeonDivider()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "Alle Empfehlungen",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
-                        color = NeonAmber,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                    )
-                }
-
-                // Collect all advices from all blocks with their category name
-                val allAdvicesWithCategory =
-                    blocks
-                        .flatMap { block ->
-                            block.advices.map { advice ->
-                                Triple(advice, block.categoryName, block.entropyLevel)
-                            }
-                        }
-                        .sortedBy { (advice, _, _) ->
-                            when (advice.priority) {
-                                AdvicePriority.HIGH -> 0
-                                AdvicePriority.MEDIUM -> 1
-                                AdvicePriority.LOW -> 2
+                                override suspend fun onPostFling(
+                                    consumed: Velocity,
+                                    available: Velocity,
+                                ): Velocity = Velocity(available.x, 0f)
                             }
                         }
 
-                itemsIndexed(allAdvicesWithCategory) { _, (advice, catName, _) ->
-                    AdviceCard(
-                        advice = advice,
-                        categoryName = catName,
-                        onClick = { selectedAdvice = Pair(advice, catName) },
-                    )
+                        Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                itemsIndexed(blocks) { index, block ->
+                                    AdviceCategoryCard(
+                                        block = block,
+                                        isSelected = index == uiState.selectedCategoryIndex,
+                                        onClick = {
+                                            viewModel.selectCategory(index)
+                                            selectedCategoryBlock = block
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Relevance legend (replaces Priority legend)
+                    item(key = "relevance_legend") { SummaryRelevanceLegend() }
+
+                    // All observations header
+                    item(key = "all_observations") {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        NeonDivider()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "\uD83D\uDD0D  Alle Beobachtungen",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = SummaryIndigo,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+
+                    // All observations sorted by relevance
+                    val allObservations =
+                        blocks
+                            .flatMap { block ->
+                                block.advices.map { advice ->
+                                    Triple(advice, block.categoryName, block.entropyLevel)
+                                }
+                            }
+                            .sortedBy { (advice, _, _) ->
+                                when (advice.priority) {
+                                    AdvicePriority.HIGH -> 0
+                                    AdvicePriority.MEDIUM -> 1
+                                    AdvicePriority.LOW -> 2
+                                }
+                            }
+
+                    itemsIndexed(allObservations) { _, (advice, catName, _) ->
+                        SummaryObservationCard(
+                            advice = advice,
+                            categoryName = catName,
+                            onClick = { selectedAdvice = Pair(advice, catName) },
+                        )
+                    }
+                } else {
+                    // ═══════ DEFAULT DASHBOARD (Entropy / Goals / Self-Insight / Custom) ═══════
+
+                    // Top-5 Entropy-Reducing Actions — visually prominent block
+                    val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
+                    if (topActions.isNotEmpty()) {
+                        item {
+                            TopActionsBlock(actions = topActions)
+                        }
+                    }
+
+                    // Overall analysis
+                    item {
+                        val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
+
+                        GlassCard(glowIntensity = 0.2f) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    "Gesamtanalyse",
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
+                                    color = NeonAmber,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center,
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = overallAnalysis,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+
+                    // Category cards — LazyRow with scroll isolation from pager
+                    item {
+                        val categoryScrollIsolation = remember {
+                            object : NestedScrollConnection {
+                                override fun onPostScroll(
+                                    consumed: Offset,
+                                    available: Offset,
+                                    source: NestedScrollSource,
+                                ): Offset = Offset(available.x, 0f)
+
+                                override suspend fun onPostFling(
+                                    consumed: Velocity,
+                                    available: Velocity,
+                                ): Velocity = Velocity(available.x, 0f)
+                            }
+                        }
+
+                        Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                itemsIndexed(blocks) { index, block ->
+                                    AdviceCategoryCard(
+                                        block = block,
+                                        isSelected = index == uiState.selectedCategoryIndex,
+                                        onClick = {
+                                            viewModel.selectCategory(index)
+                                            selectedCategoryBlock = block
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Priority legend
+                    item(key = "priority_legend") { PriorityLegend() }
+
+                    // ALL recommendations from ALL categories, sorted by priority
+                    item(key = "all_recommendations") {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        NeonDivider()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Alle Empfehlungen",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
+                            color = NeonAmber,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+
+                    // Collect all advices from all blocks with their category name
+                    val allAdvicesWithCategory =
+                        blocks
+                            .flatMap { block ->
+                                block.advices.map { advice ->
+                                    Triple(advice, block.categoryName, block.entropyLevel)
+                                }
+                            }
+                            .sortedBy { (advice, _, _) ->
+                                when (advice.priority) {
+                                    AdvicePriority.HIGH -> 0
+                                    AdvicePriority.MEDIUM -> 1
+                                    AdvicePriority.LOW -> 2
+                                }
+                            }
+
+                    itemsIndexed(allAdvicesWithCategory) { _, (advice, catName, _) ->
+                        AdviceCard(
+                            advice = advice,
+                            categoryName = catName,
+                            onClick = { selectedAdvice = Pair(advice, catName) },
+                        )
+                    }
                 }
             }
         }
@@ -924,6 +1039,246 @@ private fun AdviceCard(advice: Advice, categoryName: String = "", onClick: () ->
                     text = "\u2197 ${advice.connection}",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                )
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ZUSAMMENFASSUNG DASHBOARD — Cool blue/indigo theme
+// ═══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
+    var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
+
+    GlassCard(
+        glowColor = SummaryIndigo,
+        glowIntensity = 0.25f,
+    ) {
+        Column {
+            Text(
+                "\uD83D\uDCA1  Kernerkenntnisse",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = SummaryIndigo,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Die wichtigsten Punkte aus deinen Eintr\u00e4gen",
+                style = MaterialTheme.typography.labelMedium,
+                color = SummarySlate,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            actions.forEachIndexed { index, action ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { selectedAction = index to action }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    // Blue gradient numbered badge
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        SummaryBlue,
+                                        SummaryIndigo,
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "${index + 1}",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.surface,
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = action.title,
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = action.description,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                if (index < actions.lastIndex) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .height(1.dp)
+                            .background(SummaryBlue.copy(alpha = 0.15f))
+                    )
+                }
+            }
+        }
+    }
+
+    selectedAction?.let { (index, action) ->
+        SummaryInsightDetailDialog(
+            action = action,
+            index = index,
+            onDismiss = { selectedAction = null },
+        )
+    }
+}
+
+@Composable
+private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(SummaryBlue, SummaryIndigo)
+                            )
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "${index + 1}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.surface,
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = action.title,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = action.description,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic),
+                    color = SummaryBlue,
+                )
+                if (action.detailedDescription.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(SummaryBlue.copy(alpha = 0.2f))
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = action.detailedDescription,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Schlie\u00dfen", color = SummaryBlue)
+            }
+        },
+    )
+}
+
+@Composable
+private fun SummaryRelevanceLegend() {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+        SummaryLegendItem(emoji = "\u2B50", label = "Zentral", color = SummaryIndigo)
+        SummaryLegendItem(emoji = "\uD83D\uDCCC", label = "Relevant", color = SummaryBlue)
+        SummaryLegendItem(emoji = "\uD83D\uDCCE", label = "Randnotiz", color = SummaryTeal)
+    }
+}
+
+@Composable
+private fun SummaryLegendItem(emoji: String, label: String, color: androidx.compose.ui.graphics.Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(emoji, style = MaterialTheme.typography.labelLarge)
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+        )
+    }
+}
+
+@Composable
+private fun SummaryObservationCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
+    val (emoji, glowColor) = when (advice.priority) {
+        AdvicePriority.HIGH -> "\u2B50" to SummaryIndigo
+        AdvicePriority.MEDIUM -> "\uD83D\uDCCC" to SummaryBlue
+        AdvicePriority.LOW -> "\uD83D\uDCCE" to SummaryTeal
+    }
+
+    GlassCard(
+        modifier = Modifier.clickable { onClick() },
+        glowColor = glowColor,
+        glowIntensity = 0.08f,
+    ) {
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = emoji)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = advice.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                if (categoryName.isNotBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = SummaryBlue.copy(alpha = 0.12f),
+                    ) {
+                        Text(
+                            categoryName,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = SummaryBlue,
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = advice.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (advice.connection.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "\u2194 ${advice.connection}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = SummaryTeal.copy(alpha = 0.8f),
                 )
             }
         }

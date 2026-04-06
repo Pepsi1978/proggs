@@ -20,7 +20,8 @@ data class DashboardUiState(
     val isAutoUpdate: Boolean = false,
     val selectedCategoryIndex: Int = 0,
     val errorMessage: String? = null,
-    val canUndo: Boolean = false
+    val canUndo: Boolean = false,
+    val currentScenario: Int = 1,
 )
 
 @HiltViewModel
@@ -40,12 +41,18 @@ class DashboardViewModel @Inject constructor(
     private var manualRefreshActive = false
 
     init {
+        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        _uiState.value = _uiState.value.copy(currentScenario = scenario)
         // Poll for background dashboard updates triggered by JournalViewModel
         viewModelScope.launch {
             while (true) {
                 val updating = encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
                 if (updating != _uiState.value.isLoading && !manualRefreshActive) {
                     _uiState.value = _uiState.value.copy(isLoading = updating, isAutoUpdate = updating)
+                }
+                val currentScenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+                if (currentScenario != _uiState.value.currentScenario) {
+                    _uiState.value = _uiState.value.copy(currentScenario = currentScenario)
                 }
                 kotlinx.coroutines.delay(500)
             }
