@@ -77,6 +77,10 @@ import com.bestjournal.app.ui.theme.GoalEmerald
 import com.bestjournal.app.ui.theme.GoalGold
 import com.bestjournal.app.ui.theme.GoalSky
 import com.bestjournal.app.ui.theme.GoalCoral
+import com.bestjournal.app.ui.theme.CustomAmber
+import com.bestjournal.app.ui.theme.CustomSand
+import com.bestjournal.app.ui.theme.CustomSage
+import com.bestjournal.app.ui.theme.CustomStone
 import com.bestjournal.app.domain.model.TopAction
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontStyle
@@ -535,8 +539,70 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     itemsIndexed(allGoals) { _, (advice, catName, _) ->
                         GoalCard(advice = advice, categoryName = catName, onClick = { selectedAdvice = Pair(advice, catName) })
                     }
+                } else if (uiState.currentScenario == 4) {
+                    // ═══════ INDIVIDUELLE ANALYSE DASHBOARD ═══════
+                    val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
+                    if (topActions.isNotEmpty()) {
+                        item { CustomInsightsBlock(actions = topActions) }
+                    }
+
+                    item {
+                        val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
+                        GlassCard(glowColor = CustomAmber, glowIntensity = 0.2f) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    "\uD83D\uDD2C  Analyse",
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = CustomAmber,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center,
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(overallAnalysis, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+
+                    item {
+                        val categoryScrollIsolation = remember {
+                            object : NestedScrollConnection {
+                                override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset = Offset(available.x, 0f)
+                                override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity = Velocity(available.x, 0f)
+                            }
+                        }
+                        Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
+                            LazyRow(contentPadding = PaddingValues(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                itemsIndexed(blocks) { index, block ->
+                                    AdviceCategoryCard(block = block, isSelected = index == uiState.selectedCategoryIndex, onClick = { viewModel.selectCategory(index); selectedCategoryBlock = block })
+                                }
+                            }
+                        }
+                    }
+
+                    item(key = "all_custom") {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        NeonDivider()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "\uD83D\uDCCB  Alle Ergebnisse",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = CustomAmber,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+
+                    item(key = "custom_legend") { CustomRelevanceLegend() }
+
+                    val allCustom = blocks
+                        .flatMap { block -> block.advices.map { advice -> Triple(advice, block.categoryName, block.entropyLevel) } }
+                        .sortedBy { (advice, _, _) -> when (advice.priority) { AdvicePriority.HIGH -> 0; AdvicePriority.MEDIUM -> 1; AdvicePriority.LOW -> 2 } }
+
+                    itemsIndexed(allCustom) { _, (advice, catName, _) ->
+                        CustomResultCard(advice = advice, categoryName = catName, onClick = { selectedAdvice = Pair(advice, catName) })
+                    }
                 } else {
-                    // ═══════ DEFAULT DASHBOARD (Entropy / Custom) ═══════
+                    // ═══════ DEFAULT DASHBOARD (Entropy) ═══════
 
                     // Top-5 Entropy-Reducing Actions — visually prominent block
                     val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
@@ -1747,6 +1813,149 @@ private fun GoalCard(advice: Advice, categoryName: String = "", onClick: () -> U
             if (advice.connection.isNotBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text("\u27A1 ${advice.connection}", style = MaterialTheme.typography.labelMedium, color = GoalSky.copy(alpha = 0.8f))
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// INDIVIDUELLE ANALYSE DASHBOARD — Warm amber/sand theme
+// ═══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun CustomInsightsBlock(actions: List<TopAction>) {
+    var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
+
+    GlassCard(glowColor = CustomAmber, glowIntensity = 0.25f) {
+        Column {
+            Text(
+                "\uD83D\uDD0D  Wichtigste Ergebnisse",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = CustomAmber,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Basierend auf deiner individuellen Analyse",
+                style = MaterialTheme.typography.labelMedium,
+                color = CustomStone,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            actions.forEachIndexed { index, action ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { selectedAction = index to action }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Brush.linearGradient(listOf(CustomAmber, CustomSand))),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("${index + 1}", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.surface)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(action.title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(action.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (index < actions.lastIndex) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(CustomAmber.copy(alpha = 0.15f)))
+                }
+            }
+        }
+    }
+
+    selectedAction?.let { (index, action) ->
+        CustomDetailDialog(action = action, index = index, onDismiss = { selectedAction = null })
+    }
+}
+
+@Composable
+private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(Brush.linearGradient(listOf(CustomAmber, CustomSand))),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("${index + 1}", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.surface)
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(action.title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+            }
+        },
+        text = {
+            Column {
+                Text(action.description, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = CustomAmber)
+                if (action.detailedDescription.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(CustomAmber.copy(alpha = 0.2f)))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(action.detailedDescription, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = CustomAmber) } },
+    )
+}
+
+@Composable
+private fun CustomRelevanceLegend() {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+        CustomLegendItem(emoji = "\uD83D\uDD25", label = "Wichtig", color = CustomAmber)
+        CustomLegendItem(emoji = "\uD83D\uDCA1", label = "Relevant", color = CustomSand)
+        CustomLegendItem(emoji = "\uD83D\uDCDD", label = "Notiz", color = CustomSage)
+    }
+}
+
+@Composable
+private fun CustomLegendItem(emoji: String, label: String, color: androidx.compose.ui.graphics.Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(emoji, style = MaterialTheme.typography.labelLarge)
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, color = color)
+    }
+}
+
+@Composable
+private fun CustomResultCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
+    val (emoji, glowColor) = when (advice.priority) {
+        AdvicePriority.HIGH -> "\uD83D\uDD25" to CustomAmber
+        AdvicePriority.MEDIUM -> "\uD83D\uDCA1" to CustomSand
+        AdvicePriority.LOW -> "\uD83D\uDCDD" to CustomSage
+    }
+
+    GlassCard(modifier = Modifier.clickable { onClick() }, glowColor = glowColor, glowIntensity = 0.08f) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text(text = emoji)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(advice.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                if (categoryName.isNotBlank()) {
+                    Surface(shape = RoundedCornerShape(6.dp), color = CustomAmber.copy(alpha = 0.12f)) {
+                        Text(categoryName, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelMedium, color = CustomAmber)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(advice.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (advice.connection.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text("\u2194 ${advice.connection}", style = MaterialTheme.typography.labelMedium, color = CustomSage.copy(alpha = 0.8f))
             }
         }
     }

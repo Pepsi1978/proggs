@@ -45,6 +45,12 @@ val GoalGold = Color(0xFFF59E0B)
 val GoalSky = Color(0xFF38BDF8)
 val GoalCoral = Color(0xFFFB7185)
 
+// Custom/Individual analysis palette (neutral, warm, adaptable)
+val CustomAmber = Color(0xFFE8A838)          // Primary — warm amber
+val CustomSand = Color(0xFFD4A574)           // Secondary — earthy sand
+val CustomSage = Color(0xFF8FAE8B)           // Highlight — soft sage green
+val CustomStone = Color(0xFFA09890)          // Muted — warm stone
+
 // Dark mode card surfaces (tonal layering — Spotify principle)
 val CardSurface = Color(0xFF181818)       // Standard card — barely visible over background
 val CardElevated = Color(0xFF1E1E1E)      // Slightly elevated card

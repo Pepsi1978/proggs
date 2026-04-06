@@ -685,6 +685,75 @@ AUSGABEFORMAT — STRENGE REGELN:
 - Valides JSON — keine fehlenden Kommas, keine doppelten Schl${"\u00fc"}ssel.
     """.trimIndent()
 
+    private fun buildCustomAnalysisPrompt(userFocus: String): String = """
+Du bist ein intelligenter, aufmerksamer Tagebuch-Analyst.
+
+BENUTZER-FOKUS (DAS ist deine Aufgabe):
+$userFocus
+
+Analysiere die Tagebucheintr${"\u00e4"}ge des Nutzers mit GENAU diesem Fokus.
+Finde alles, was mit dem Fokus zusammenh${"\u00e4"}ngt. Erstelle daraus ein
+strukturiertes Dashboard im JSON-Format.
+
+OBERSTE REGEL — KEIN EINTRAG DARF FEHLEN:
+Du erh${"\u00e4"}ltst nummerierte Eintr${"\u00e4"}ge. Du MUSST JEDEN EINZELNEN lesen und einbeziehen.
+
+SPRACHREGELN:
+- Deutsch. Einfach, klar. Keine Fremdw${"\u00f6"}rter.
+- Empathisch und direkt.
+
+MENGEN-REGEL:
+Mindestens 10 Erkenntnisse insgesamt. Jeder Aspekt verdient eine eigene Erkenntnis.
+
+JSON-AUSGABE-SCHEMA:
+{
+  "gesamt_entropie": 0.0,
+  "trend": "steigend|stabil|sinkend|unbekannt",
+  "gesamtanalyse": "...",
+  "fortschritte": [...],
+  "top_massnahmen": [...],
+  "kategorien": [...]
+}
+
+1) "gesamt_entropie" (0.0 bis 1.0): Wie stark ist der Fokus-Bereich in den Eintr${"\u00e4"}gen vertreten?
+
+2) "trend": Nur bei 3+ Eintr${"\u00e4"}gen. Ver${"\u00e4"}ndert sich der Fokus-Bereich?
+
+3) "gesamtanalyse" (15–25 S${"\u00e4"}tze): Was sagen die Eintr${"\u00e4"}ge zum Fokus-Bereich?
+   Benenne JEDES relevante Detail aus JEDEM Eintrag.
+
+4) "fortschritte" (0–5): Muster oder Entwicklungen im Fokus-Bereich.
+   { "titel": "max 5 W${"\u00f6"}rter", "beschreibung": "2–3 S${"\u00e4"}tze", "bezug": "1 Satz" }
+
+5) "top_massnahmen" (genau 5): Die wichtigsten Erkenntnisse zum Fokus-Bereich.
+   {
+     "titel": "max 6 W${"\u00f6"}rter",
+     "beschreibung": "13–21 W${"\u00f6"}rter — kompakt auf den Punkt.",
+     "erklaerung": "5–8 S${"\u00e4"}tze ausf${"\u00fc"}hrlich."
+   }
+
+6) "kategorien": Themengruppen die zum Fokus passen (dynamisch erstellen).
+   {
+     "name": "max 12 Zeichen", "icon": "material_icon_name", "farbe": "#HEX",
+     "entropie_level": 0.0,
+     "zusammenfassung": "3–5 S${"\u00e4"}tze",
+     "ratschlaege": [{
+       "titel": "max 6 W${"\u00f6"}rter",
+       "beschreibung": "13–21 W${"\u00f6"}rter",
+       "prioritaet": "hoch|mittel|niedrig",
+       "verknuepfung": "Verbindung zu anderem Thema oder null",
+       "herleitung": [{"datum":"...","zusammenfassung":"1–2 S${"\u00e4"}tze"}]
+     }]
+   }
+
+WORTANZAHL-REGEL: "beschreibung" in top_massnahmen und ratschlaege IMMER 13–21 W${"\u00f6"}rter.
+
+AUSGABEFORMAT — STRENGE REGELN:
+- Antworte NUR mit dem JSON-Objekt.
+- Kein Text davor oder danach. Keine Backticks.
+- Beginne direkt mit { und ende mit }.
+    """.trimIndent()
+
     private fun getActiveSystemPrompt(): String {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
         return when (scenario) {
@@ -693,7 +762,7 @@ AUSGABEFORMAT — STRENGE REGELN:
             3 -> goalsAnalysisSystemPrompt
             4 -> {
                 val custom = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
-                if (custom.isNotBlank()) custom else entropyAnalysisSystemPrompt
+                if (custom.isNotBlank()) buildCustomAnalysisPrompt(custom) else entropyAnalysisSystemPrompt
             }
             else -> entropyAnalysisSystemPrompt
         }
@@ -707,6 +776,8 @@ AUSGABEFORMAT — STRENGE REGELN:
             "=== FRISCHE SELBSTERKENNTNIS-ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse. ==="
         } else if (scenario == 3 && freshAnalysis) {
             "=== FRISCHE ZIEL-ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse. ==="
+        } else if (scenario == 4 && freshAnalysis) {
+            "=== FRISCHE INDIVIDUELLE ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse basierend auf dem Benutzer-Fokus. ==="
         } else if (freshAnalysis) {
             "=== FRISCHE ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse. ==="
         } else ""
@@ -718,6 +789,7 @@ AUSGABEFORMAT — STRENGE REGELN:
             0 -> "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss in der Zusammenfassung und in mindestens einem Thema erscheinen. ==="
             2 -> "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss auf Denkmuster, Gef${"\u00fc"}hle, ${"\u00dc"}berzeugungen und pers${"\u00f6"}nliche St${"\u00e4"}rken durchsucht werden. ==="
             3 -> "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss auf Ziele durchsucht werden. ==="
+            4 -> "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss auf den Benutzer-Fokus hin durchsucht werden. ==="
             else -> "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss in der Analyse erscheinen. ==="
         }
     }
