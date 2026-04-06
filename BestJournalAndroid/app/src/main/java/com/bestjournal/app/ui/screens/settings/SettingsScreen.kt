@@ -72,6 +72,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.theme.NeonRed
 import com.bestjournal.app.util.DateTimeFormatter
@@ -553,6 +554,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 val selectedScenario = scenarioPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                 var currentScenario by remember { mutableIntStateOf(selectedScenario) }
                 var showCustomPromptDialog by remember { mutableStateOf(false) }
+                var showScenarioInfoIndex by remember { mutableIntStateOf(-1) }
 
                 scenarioNames.forEachIndexed { index, name ->
                     Row(
@@ -560,8 +562,10 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
                             .clickable {
+                                val changed = currentScenario != index
                                 currentScenario = index
                                 scenarioPrefs.edit().putInt(Constants.PREF_DASHBOARD_SCENARIO, index).apply()
+                                if (changed) showScenarioInfoIndex = index
                                 if (index == 4) showCustomPromptDialog = true
                             }
                             .padding(vertical = 8.dp),
@@ -570,8 +574,10 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         RadioButton(
                             selected = currentScenario == index,
                             onClick = {
+                                val changed = currentScenario != index
                                 currentScenario = index
                                 scenarioPrefs.edit().putInt(Constants.PREF_DASHBOARD_SCENARIO, index).apply()
+                                if (changed) showScenarioInfoIndex = index
                                 if (index == 4) showCustomPromptDialog = true
                             },
                             colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary),
@@ -592,6 +598,56 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             }
                         }
                     }
+                }
+
+                if (showScenarioInfoIndex >= 0) {
+                    val infoTitle = scenarioNames[showScenarioInfoIndex]
+                    val infoIcon = when (showScenarioInfoIndex) {
+                        0 -> Icons.Rounded.Info
+                        1 -> Icons.Rounded.Dashboard
+                        2 -> Icons.Rounded.Person
+                        3 -> Icons.Rounded.Star
+                        else -> Icons.Rounded.Tune
+                    }
+                    val infoText = when (showScenarioInfoIndex) {
+                        0 -> "Deine Eintr\u00e4ge werden neutral zusammengefasst \u2014 ohne Bewertung oder Ratschl\u00e4ge.\n\nDu siehst auf einen Blick:\n\n\u2022 Welche Themen dich gerade besch\u00e4ftigen\n\u2022 Welche Muster sich wiederholen\n\u2022 Wie sich dein Leben entwickelt\n\nPerfekt als t\u00e4glicher \u00dcberblick \u00fcber alles, was in deinem Leben passiert."
+                        1 -> "Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Eintr\u00e4gen.\n\nDu bekommst:\n\n\u2022 Eine Analyse deiner gr\u00f6\u00dften Belastungsquellen\n\u2022 5 konkrete Ma\u00dfnahmen zum Aufr\u00e4umen\n\u2022 Tipps, die dir sofort helfen k\u00f6nnen\n\nIdeal wenn du das Gef\u00fchl hast, dass gerade alles zu viel wird."
+                        2 -> "Die KI schaut tiefer als nur auf Ereignisse. Sie erkennt in deinen Eintr\u00e4gen:\n\n\u2022 Verborgene Denkmuster und \u00dcberzeugungen\n\u2022 Wiederkehrende Gef\u00fchle und Reaktionen\n\u2022 Pers\u00f6nliche St\u00e4rken, die dir nicht bewusst sind\n\u2022 Werte, die dein Handeln antreiben\n\nF\u00fcr alle, die sich selbst besser verstehen und innerlich wachsen wollen."
+                        3 -> "Die KI findet alle Ziele, W\u00fcnsche und Vorhaben in deinen Eintr\u00e4gen \u2014 auch beil\u00e4ufig erw\u00e4hnte.\n\nDu siehst:\n\n\u2022 Welche Ziele du hast (auch versteckte)\n\u2022 Wie weit du bei jedem Ziel bist\n\u2022 Was dein n\u00e4chster Schritt sein k\u00f6nnte\n\nDein pers\u00f6nlicher Ziel-Tracker, der aus deinen eigenen Worten liest."
+                        else -> "Du bestimmst selbst, worauf die KI achten soll.\n\nSchreibe deinen eigenen Analyse-Fokus, zum Beispiel:\n\n\u2022 \u201eFinde alle Erw\u00e4hnungen von Sport\u201c\n\u2022 \u201eAnalysiere meine Stimmungsschwankungen\u201c\n\u2022 \u201eZeige mir, wann ich am produktivsten bin\u201c\n\nVolle Kontrolle f\u00fcr alle, die genau wissen, was sie suchen."
+                    }
+                    AlertDialog(
+                        onDismissRequest = { showScenarioInfoIndex = -1 },
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        icon = {
+                            Icon(
+                                infoIcon, null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(36.dp),
+                            )
+                        },
+                        title = {
+                            Text(
+                                infoTitle,
+                                style = MaterialTheme.typography.titleLarge,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        },
+                        text = {
+                            Text(
+                                infoText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 22.sp,
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showScenarioInfoIndex = -1 }) {
+                                Text("Verstanden", color = MaterialTheme.colorScheme.primary)
+                            }
+                        },
+                    )
                 }
 
                 if (showCustomPromptDialog) {
