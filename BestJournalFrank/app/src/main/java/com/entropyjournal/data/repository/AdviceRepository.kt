@@ -121,7 +121,7 @@ FELD-DEFINITIONEN:
    Schema pro Maßnahme:
    {
      "titel": "Kurzer Titel (max. 6 Wörter)",
-     "beschreibung": "16–24 Wörter — kurz und knackig: was genau tun und warum.",
+     "beschreibung": "13–21 Wörter — kurz und knackig: was genau tun und warum.",
      "erklaerung": "Ausführliche Begründung (5–8 Sätze). Warum gerade diese
                     Maßnahme? Welche Einträge zeigen das Problem? Was passiert,
                     wenn man es umsetzt?"
@@ -180,7 +180,7 @@ FELD-DEFINITIONEN:
    Schema pro Ratschlag:
    {
      "titel": "Kurzer Titel (max. 6 Wörter)",
-     "beschreibung": "16–24 Wörter — konkret und direkt: was genau tun und warum.",
+     "beschreibung": "13–21 Wörter — konkret und direkt: was genau tun und warum.",
      "prioritaet": "hoch|mittel|niedrig",
      "verknuepfung": "1–2 andere Kategorienamen die zusammenhängen,
                       plus ein Satz warum. Falls keine: null",
@@ -263,7 +263,7 @@ FELD-DEFINITIONEN:
    Schema pro Schritt:
    {
      "titel": "Kurzer Titel (max. 6 W${"\u00f6"}rter)",
-     "beschreibung": "16–24 W${"\u00f6"}rter — was genau tun und welches Ziel das voranbringt.",
+     "beschreibung": "13–21 W${"\u00f6"}rter — was genau tun und welches Ziel das voranbringt.",
      "erklaerung": "Ausf${"\u00fc"}hrliche Begr${"\u00fc"}ndung (5–8 S${"\u00e4"}tze)."
    }
 
@@ -306,7 +306,7 @@ FELD-DEFINITIONEN:
    Schema pro Ziel:
    {
      "titel": "Kurzer Titel (max. 6 W${"\u00f6"}rter)",
-     "beschreibung": "16–24 W${"\u00f6"}rter. Status: [offen/in Arbeit/blockiert/erreicht]. N${"\u00e4"}chster Schritt: [konkreter Schritt].",
+     "beschreibung": "13–21 W${"\u00f6"}rter. Status: [offen/in Arbeit/blockiert/erreicht]. N${"\u00e4"}chster Schritt: [konkreter Schritt].",
      "prioritaet": "hoch|mittel|niedrig",
      "verknuepfung": "Andere Bereiche die zusammenh${"\u00e4"}ngen. Falls keine: null",
      "herleitung": [
