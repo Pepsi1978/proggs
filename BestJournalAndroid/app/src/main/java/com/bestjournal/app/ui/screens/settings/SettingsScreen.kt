@@ -871,7 +871,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("\u2022  Unbegrenzte KI-Textverbesserung \u2014 jeder Eintrag wird klarer und ausdrucksst\u00e4rker", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("\u2022  5 intelligente Dashboard-Analysen \u2014 Zusammenfassung, Entropie, Selbsterkenntnis, Ziele & eigene Analyse", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  5 intelligente Dashboard-Analysen \u2014 Zusammenfassung, R\u00e4ume dein Leben auf, Selbsterkenntnis, Ziele & eigene Analyse", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("\u2022  Automatische Dashboard-Updates \u2014 dein Dashboard aktualisiert sich bei jedem neuen Eintrag", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))

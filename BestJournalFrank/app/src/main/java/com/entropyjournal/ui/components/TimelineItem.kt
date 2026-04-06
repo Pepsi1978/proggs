@@ -140,14 +140,14 @@ fun TimelineItem(
                     Text(
                         text = highlighted,
                         style = MaterialTheme.typography.bodyLarge,
-                        maxLines = 4,
+                        maxLines = 5,
                         overflow = TextOverflow.Ellipsis
                     )
                 } else {
                     Text(
                         text = entry.displayText,
                         style = MaterialTheme.typography.bodyLarge,
-                        maxLines = 4,
+                        maxLines = 5,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
