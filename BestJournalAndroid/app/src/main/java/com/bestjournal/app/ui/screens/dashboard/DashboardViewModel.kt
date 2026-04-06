@@ -86,10 +86,13 @@ constructor(
                 val promptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
                 if (promptSavedAt > lastCustomPromptSavedAt && promptSavedAt > 0L) {
                     lastCustomPromptSavedAt = promptSavedAt
-                    if (adviceBlocks.value.isNotEmpty() && _uiState.value.currentScenario == 4) {
+                    if (_uiState.value.currentScenario == 4) {
+                        val customPrompt = encryptedPrefs.getString(com.bestjournal.app.util.Constants.PREF_CUSTOM_PROMPT, "") ?: ""
                         adviceRepository.clearDashboard()
-                        _uiState.update { it.copy(isScenarioSwitch = true) }
-                        refreshDashboard()
+                        if (customPrompt.isNotBlank() && adviceBlocks.value.isNotEmpty()) {
+                            _uiState.update { it.copy(isScenarioSwitch = true) }
+                            refreshDashboard()
+                        }
                     }
                 }
                 kotlinx.coroutines.delay(500)
@@ -147,6 +150,10 @@ constructor(
                         )
                 }
         }
+    }
+
+    fun getCustomPrompt(): String {
+        return encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
     }
 
     fun undoDashboard() {

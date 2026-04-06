@@ -490,7 +490,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             TextButton(onClick = {
                                 val previousPrompt = scenarioPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
                                 val editor = scenarioPrefs.edit().putString(Constants.PREF_CUSTOM_PROMPT, promptText)
-                                if (promptText != previousPrompt && promptText.isNotBlank()) {
+                                if (promptText != previousPrompt) {
                                     editor.putLong("custom_prompt_saved_at", System.currentTimeMillis())
                                 }
                                 editor.apply()

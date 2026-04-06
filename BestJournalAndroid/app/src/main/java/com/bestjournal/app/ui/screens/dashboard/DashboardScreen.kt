@@ -267,18 +267,49 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                "Noch keine Analyse",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.outline,
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "Erstelle Tagebucheintr\u00e4ge,\ndann analysiert die KI deine Muster.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.outline,
-                                textAlign = TextAlign.Center,
-                            )
+                            if (uiState.currentScenario == 4) {
+                                val customPrompt = viewModel.getCustomPrompt()
+                                if (customPrompt.isBlank()) {
+                                    Text(
+                                        "Kein Analyse-Fokus eingegeben",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "Gib in den Einstellungen unter\n\u201eIndividuelle Analyse\u201c einen Fokus ein,\noder w\u00e4hle ein anderes Profil.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.outline,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                } else {
+                                    Text(
+                                        "Noch keine Analyse",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "Erstelle Tagebucheintr\u00e4ge,\ndann analysiert die KI deinen Fokus.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.outline,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    "Noch keine Analyse",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "Erstelle Tagebucheintr\u00e4ge,\ndann analysiert die KI deine Muster.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.outline,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
                         }
                     }
                 }

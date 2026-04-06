@@ -71,10 +71,13 @@ class DashboardViewModel @Inject constructor(
                 val promptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
                 if (promptSavedAt > lastCustomPromptSavedAt && promptSavedAt > 0L) {
                     lastCustomPromptSavedAt = promptSavedAt
-                    if (adviceBlocks.value.isNotEmpty() && _uiState.value.currentScenario == 4) {
+                    if (_uiState.value.currentScenario == 4) {
+                        val customPrompt = encryptedPrefs.getString(com.entropyjournal.util.Constants.PREF_CUSTOM_PROMPT, "") ?: ""
                         adviceRepository.clearDashboard()
-                        _uiState.value = _uiState.value.copy(isScenarioSwitch = true)
-                        refreshDashboard()
+                        if (customPrompt.isNotBlank() && adviceBlocks.value.isNotEmpty()) {
+                            _uiState.value = _uiState.value.copy(isScenarioSwitch = true)
+                            refreshDashboard()
+                        }
                     }
                 }
                 kotlinx.coroutines.delay(500)
@@ -121,6 +124,10 @@ class DashboardViewModel @Inject constructor(
                 }
             manualRefreshActive = false
         }
+    }
+
+    fun getCustomPrompt(): String {
+        return encryptedPrefs.getString(com.entropyjournal.util.Constants.PREF_CUSTOM_PROMPT, "") ?: ""
     }
 
     fun undoDashboard() {
