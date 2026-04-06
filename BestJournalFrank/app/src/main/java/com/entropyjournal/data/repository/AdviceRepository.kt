@@ -805,6 +805,10 @@ AUSGABEFORMAT — STRENGE REGELN:
             ?: Constants.DEFAULT_GEMINI_MODEL
     }
 
+    suspend fun clearDashboard() {
+        adviceDashboardDao.deleteAll()
+    }
+
     fun getAllAdviceBlocks(): Flow<List<AdviceBlock>> {
         return adviceDashboardDao.getAll().map { entities ->
             entities.map { it.toDomain() }

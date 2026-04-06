@@ -738,6 +738,10 @@ AUSGABEFORMAT — STRENGE REGELN:
         return true
     }
 
+    suspend fun clearDashboard() {
+        adviceDashboardDao.deleteAll()
+    }
+
     fun getAllAdviceBlocks(): Flow<List<AdviceBlock>> {
         return adviceDashboardDao.getAll().map { entities -> entities.map { it.toDomain() } }
     }

@@ -52,7 +52,12 @@ class DashboardViewModel @Inject constructor(
                 }
                 val currentScenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                 if (currentScenario != _uiState.value.currentScenario) {
+                    val hadData = adviceBlocks.value.isNotEmpty()
                     _uiState.value = _uiState.value.copy(currentScenario = currentScenario)
+                    if (hadData) {
+                        adviceRepository.clearDashboard()
+                        refreshDashboard()
+                    }
                 }
                 kotlinx.coroutines.delay(500)
             }
