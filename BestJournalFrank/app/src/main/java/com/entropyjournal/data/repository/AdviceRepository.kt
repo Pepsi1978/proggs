@@ -758,6 +758,16 @@ Analysiere die Tagebucheintr${"\u00e4"}ge des Nutzers mit GENAU diesem Fokus.
 Finde alles, was mit dem Fokus zusammenh${"\u00e4"}ngt. Erstelle daraus ein
 strukturiertes Dashboard im JSON-Format.
 
+WICHTIG — DYNAMISCHE ${"\u00dc"}BERSCHRIFTEN:
+Du MUSST drei passende ${"\u00dc"}berschriften f${"\u00fc"}r das Dashboard erfinden,
+die GENAU zum Benutzer-Fokus passen. KEINE generischen Titel wie
+"Wichtigste Ergebnisse" oder "Analyse". Stattdessen kreative,
+spezifische ${"\u00dc"}berschriften die den Fokus widerspiegeln.
+Beispiele:
+- Fokus "Angeln": "Die gr${"\u00f6"}${"\u00df"}ten F${"\u00e4"}nge", "Dein Angel-${"\u00dc"}berblick", "Alle Fangberichte"
+- Fokus "Schlafqualit${"\u00e4"}t": "Deine Schlafmuster", "Schlaf-Analyse", "Alle Schlafbeobachtungen"
+- Fokus "zu viel machen": "Die gr${"\u00f6"}${"\u00df"}ten Zeitfresser", "Dein Belastungs-${"\u00dc"}berblick", "Alle Belastungspunkte"
+
 OBERSTE REGEL — KEIN EINTRAG DARF FEHLEN:
 Du erh${"\u00e4"}ltst nummerierte Eintr${"\u00e4"}ge. Du MUSST JEDEN EINZELNEN lesen und einbeziehen.
 
@@ -770,6 +780,9 @@ Mindestens 10 Erkenntnisse insgesamt. Jeder Aspekt verdient eine eigene Erkenntn
 
 JSON-AUSGABE-SCHEMA:
 {
+  "ueberschrift_top5": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r die Top 5 (passend zum Fokus, max 4 W${"\u00f6"}rter)",
+  "ueberschrift_analyse": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r die ${"\u00dc"}bersicht (passend zum Fokus, max 4 W${"\u00f6"}rter)",
+  "ueberschrift_ergebnisse": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r alle Ergebnisse (passend zum Fokus, max 4 W${"\u00f6"}rter)",
   "gesamt_entropie": 0.0,
   "trend": "steigend|stabil|sinkend|unbekannt",
   "gesamtanalyse": "...",
@@ -778,14 +791,15 @@ JSON-AUSGABE-SCHEMA:
   "kategorien": [...]
 }
 
-1) "gesamt_entropie" (0.0 bis 1.0): Wie stark ist der Fokus-Bereich in den Eintr${"\u00e4"}gen vertreten?
-2) "trend": Nur bei 3+ Eintr${"\u00e4"}gen. Ver${"\u00e4"}ndert sich der Fokus-Bereich?
-3) "gesamtanalyse" (15–25 S${"\u00e4"}tze): Was sagen die Eintr${"\u00e4"}ge zum Fokus-Bereich?
-4) "fortschritte" (0–5): Muster oder Entwicklungen.
+1) "ueberschrift_top5/analyse/ergebnisse": PFLICHT. Kreativ, spezifisch, max 4 W${"\u00f6"}rter.
+2) "gesamt_entropie" (0.0 bis 1.0): Wie stark ist der Fokus-Bereich vertreten?
+3) "trend": Nur bei 3+ Eintr${"\u00e4"}gen.
+4) "gesamtanalyse" (15–25 S${"\u00e4"}tze): Was sagen die Eintr${"\u00e4"}ge zum Fokus?
+5) "fortschritte" (0–5): Muster oder Entwicklungen.
    { "titel": "max 5 W${"\u00f6"}rter", "beschreibung": "2–3 S${"\u00e4"}tze", "bezug": "1 Satz" }
-5) "top_massnahmen" (genau 5): Wichtigste Erkenntnisse zum Fokus.
+6) "top_massnahmen" (genau 5): Wichtigste Erkenntnisse zum Fokus.
    { "titel": "max 6 W${"\u00f6"}rter", "beschreibung": "13–21 W${"\u00f6"}rter", "erklaerung": "5–8 S${"\u00e4"}tze" }
-6) "kategorien": Themengruppen passend zum Fokus.
+7) "kategorien": Themengruppen passend zum Fokus.
    { "name": "max 12 Zeichen", "icon": "material_icon_name", "farbe": "#HEX",
      "entropie_level": 0.0, "zusammenfassung": "3–5 S${"\u00e4"}tze",
      "ratschlaege": [{ "titel": "max 6 W${"\u00f6"}rter", "beschreibung": "13–21 W${"\u00f6"}rter",
@@ -981,6 +995,15 @@ AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
         val topActionsJson = json.optJSONArray("top_massnahmen")?.toString() ?: "[]"
         val categories = json.getJSONArray("kategorien")
         val now = System.currentTimeMillis()
+
+        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        if (scenario == 4) {
+            encryptedPrefs.edit()
+                .putString("custom_header_top5", json.optString("ueberschrift_top5", ""))
+                .putString("custom_header_analyse", json.optString("ueberschrift_analyse", ""))
+                .putString("custom_header_ergebnisse", json.optString("ueberschrift_ergebnisse", ""))
+                .apply()
+        }
 
         return (0 until categories.length()).map { i ->
             val cat = categories.getJSONObject(i)

@@ -541,9 +541,13 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     }
                 } else if (uiState.currentScenario == 4) {
                     // ═══════ INDIVIDUELLE ANALYSE DASHBOARD ═══════
+                    val customTop5 = uiState.customHeaderTop5.ifBlank { "Wichtigste Ergebnisse" }
+                    val customAnalyse = uiState.customHeaderAnalyse.ifBlank { "Analyse" }
+                    val customErgebnisse = uiState.customHeaderErgebnisse.ifBlank { "Alle Ergebnisse" }
+
                     val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
                     if (topActions.isNotEmpty()) {
-                        item { CustomInsightsBlock(actions = topActions) }
+                        item { CustomInsightsBlock(actions = topActions, title = customTop5) }
                     }
 
                     item {
@@ -551,7 +555,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         GlassCard(glowColor = CustomAmber, glowIntensity = 0.2f) {
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
-                                    "\uD83D\uDD2C  Analyse",
+                                    "\uD83D\uDD2C  $customAnalyse",
                                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                                     color = CustomAmber,
                                     modifier = Modifier.fillMaxWidth(),
@@ -584,7 +588,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         NeonDivider()
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            "\uD83D\uDCCB  Alle Ergebnisse",
+                            "\uD83D\uDCCB  $customErgebnisse",
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                             color = CustomAmber,
                             modifier = Modifier.fillMaxWidth(),
@@ -1823,13 +1827,13 @@ private fun GoalCard(advice: Advice, categoryName: String = "", onClick: () -> U
 // ═══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun CustomInsightsBlock(actions: List<TopAction>) {
+private fun CustomInsightsBlock(actions: List<TopAction>, title: String = "Wichtigste Ergebnisse") {
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
 
     GlassCard(glowColor = CustomAmber, glowIntensity = 0.25f) {
         Column {
             Text(
-                "\uD83D\uDD0D  Wichtigste Ergebnisse",
+                "\uD83D\uDD0D  $title",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = CustomAmber,
                 modifier = Modifier.fillMaxWidth(),

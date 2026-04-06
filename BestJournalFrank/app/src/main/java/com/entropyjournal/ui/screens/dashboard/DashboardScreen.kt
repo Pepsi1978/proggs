@@ -331,14 +331,18 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                     itemsIndexed(allGoals) { _, (advice, catName, _) -> GoalCard(advice = advice, categoryName = catName, onClick = { selectedAdvice = Pair(advice, catName) }) }
                 } else if (uiState.currentScenario == 4) {
                     // ═══════ INDIVIDUELLE ANALYSE DASHBOARD ═══════
+                    val customTop5 = uiState.customHeaderTop5.ifBlank { "Wichtigste Ergebnisse" }
+                    val customAnalyse = uiState.customHeaderAnalyse.ifBlank { "Analyse" }
+                    val customErgebnisse = uiState.customHeaderErgebnisse.ifBlank { "Alle Ergebnisse" }
+
                     val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
-                    if (topActions.isNotEmpty()) { item { CustomInsightsBlock(actions = topActions) } }
+                    if (topActions.isNotEmpty()) { item { CustomInsightsBlock(actions = topActions, title = customTop5) } }
 
                     item {
                         val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
                         GlassCard(glowColor = CustomAmber, glowIntensity = 0.2f) {
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                Text("\uD83D\uDD2C  Analyse", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = CustomAmber, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                                Text("\uD83D\uDD2C  $customAnalyse", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = CustomAmber, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(overallAnalysis, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
@@ -354,7 +358,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         }
                     }
 
-                    item(key = "all_custom") { Spacer(modifier = Modifier.height(20.dp)); NeonDivider(); Spacer(modifier = Modifier.height(16.dp)); Text("\uD83D\uDCCB  Alle Ergebnisse", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = CustomAmber, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
+                    item(key = "all_custom") { Spacer(modifier = Modifier.height(20.dp)); NeonDivider(); Spacer(modifier = Modifier.height(16.dp)); Text("\uD83D\uDCCB  $customErgebnisse", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = CustomAmber, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
                     item(key = "custom_legend") { CustomRelevanceLegend() }
 
                     val allCustom = blocks.flatMap { block -> block.advices.map { advice -> Triple(advice, block.categoryName, block.entropyLevel) } }.sortedBy { (advice, _, _) -> when (advice.priority) { AdvicePriority.HIGH -> 0; AdvicePriority.MEDIUM -> 1; AdvicePriority.LOW -> 2 } }
@@ -1131,11 +1135,11 @@ private fun GoalCard(advice: Advice, categoryName: String = "", onClick: () -> U
 // ═══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun CustomInsightsBlock(actions: List<TopAction>) {
+private fun CustomInsightsBlock(actions: List<TopAction>, title: String = "Wichtigste Ergebnisse") {
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
     GlassCard(glowColor = CustomAmber, glowIntensity = 0.25f) {
         Column {
-            Text("\uD83D\uDD0D  Wichtigste Ergebnisse", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = CustomAmber, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            Text("\uD83D\uDD0D  $title", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = CustomAmber, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(4.dp))
             Text("Basierend auf deiner individuellen Analyse", style = MaterialTheme.typography.labelMedium, color = CustomStone, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(16.dp))

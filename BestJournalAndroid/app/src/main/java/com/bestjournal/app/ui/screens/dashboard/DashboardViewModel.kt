@@ -30,6 +30,9 @@ data class DashboardUiState(
     val manualRefreshesLeft: Int = 3,
     val currentScenario: Int = 1,
     val isScenarioSwitch: Boolean = false,
+    val customHeaderTop5: String = "",
+    val customHeaderAnalyse: String = "",
+    val customHeaderErgebnisse: String = "",
 )
 
 @HiltViewModel
@@ -54,7 +57,12 @@ constructor(
 
     init {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-        _uiState.update { it.copy(currentScenario = scenario) }
+        _uiState.update { it.copy(
+            currentScenario = scenario,
+            customHeaderTop5 = encryptedPrefs.getString("custom_header_top5", "") ?: "",
+            customHeaderAnalyse = encryptedPrefs.getString("custom_header_analyse", "") ?: "",
+            customHeaderErgebnisse = encryptedPrefs.getString("custom_header_ergebnisse", "") ?: "",
+        ) }
         if (aiUsageTracker.shouldShowAiInfoBanner()) {
             _uiState.update { it.copy(showAiInfoBanner = true) }
         }
@@ -109,6 +117,9 @@ constructor(
                             canUndo = adviceRepository.canUndo,
                             selectedCategoryIndex = 0,
                             isScenarioSwitch = false,
+                            customHeaderTop5 = encryptedPrefs.getString("custom_header_top5", "") ?: "",
+                            customHeaderAnalyse = encryptedPrefs.getString("custom_header_analyse", "") ?: "",
+                            customHeaderErgebnisse = encryptedPrefs.getString("custom_header_ergebnisse", "") ?: "",
                         )
                     // Auto-hide undo button after 5 seconds
                     if (adviceRepository.canUndo) {

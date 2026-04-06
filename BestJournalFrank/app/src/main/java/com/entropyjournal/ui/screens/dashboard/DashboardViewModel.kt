@@ -23,6 +23,9 @@ data class DashboardUiState(
     val canUndo: Boolean = false,
     val currentScenario: Int = 1,
     val isScenarioSwitch: Boolean = false,
+    val customHeaderTop5: String = "",
+    val customHeaderAnalyse: String = "",
+    val customHeaderErgebnisse: String = "",
 )
 
 @HiltViewModel
@@ -43,7 +46,12 @@ class DashboardViewModel @Inject constructor(
 
     init {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-        _uiState.value = _uiState.value.copy(currentScenario = scenario)
+        _uiState.value = _uiState.value.copy(
+            currentScenario = scenario,
+            customHeaderTop5 = encryptedPrefs.getString("custom_header_top5", "") ?: "",
+            customHeaderAnalyse = encryptedPrefs.getString("custom_header_analyse", "") ?: "",
+            customHeaderErgebnisse = encryptedPrefs.getString("custom_header_ergebnisse", "") ?: "",
+        )
         // Poll for background dashboard updates triggered by JournalViewModel
         viewModelScope.launch {
             while (true) {
@@ -83,6 +91,9 @@ class DashboardViewModel @Inject constructor(
                         canUndo = adviceRepository.canUndo,
                         selectedCategoryIndex = 0,
                         isScenarioSwitch = false,
+                        customHeaderTop5 = encryptedPrefs.getString("custom_header_top5", "") ?: "",
+                        customHeaderAnalyse = encryptedPrefs.getString("custom_header_analyse", "") ?: "",
+                        customHeaderErgebnisse = encryptedPrefs.getString("custom_header_ergebnisse", "") ?: "",
                     )
                     // Auto-hide undo button after 5 seconds
                     if (adviceRepository.canUndo) {
