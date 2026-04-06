@@ -151,7 +151,9 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                if (uiState.isAutoUpdate) "KI-Dashboard wird nach jedem neuen Tagebucheintrag automatisch aktualisiert" else "KI-Dashboard wird aktualisiert",
+                                if (uiState.isScenarioSwitch) "KI-Dashboard wird nach jedem Profilwechsel automatisch aktualisiert"
+                                else if (uiState.isAutoUpdate) "KI-Dashboard wird nach jedem neuen Tagebucheintrag automatisch aktualisiert"
+                                else "KI-Dashboard wird aktualisiert",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,

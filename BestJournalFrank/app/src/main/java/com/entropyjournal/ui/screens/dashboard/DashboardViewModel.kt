@@ -22,6 +22,7 @@ data class DashboardUiState(
     val errorMessage: String? = null,
     val canUndo: Boolean = false,
     val currentScenario: Int = 1,
+    val isScenarioSwitch: Boolean = false,
 )
 
 @HiltViewModel
@@ -53,7 +54,7 @@ class DashboardViewModel @Inject constructor(
                 val currentScenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                 if (currentScenario != _uiState.value.currentScenario) {
                     val hadData = adviceBlocks.value.isNotEmpty()
-                    _uiState.value = _uiState.value.copy(currentScenario = currentScenario)
+                    _uiState.value = _uiState.value.copy(currentScenario = currentScenario, isScenarioSwitch = hadData)
                     if (hadData) {
                         adviceRepository.clearDashboard()
                         refreshDashboard()
@@ -80,7 +81,8 @@ class DashboardViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         canUndo = adviceRepository.canUndo,
-                        selectedCategoryIndex = 0
+                        selectedCategoryIndex = 0,
+                        isScenarioSwitch = false,
                     )
                     // Auto-hide undo button after 5 seconds
                     if (adviceRepository.canUndo) {
@@ -91,6 +93,7 @@ class DashboardViewModel @Inject constructor(
                 .onFailure { error ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
+                        isScenarioSwitch = false,
                         errorMessage = error.message ?: "Analyse fehlgeschlagen"
                     )
                 }
