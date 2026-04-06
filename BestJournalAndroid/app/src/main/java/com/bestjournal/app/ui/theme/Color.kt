@@ -35,6 +35,12 @@ val InsightRose = Color(0xFFF472B6)          // Secondary — emotional warmth
 val InsightWarm = Color(0xFFFBBF24)          // Highlight — golden warmth
 val InsightMauve = Color(0xFFC084FC)         // Soft accent — light purple
 
+// Goals dashboard palette (motivating, progress-oriented)
+val GoalEmerald = Color(0xFF10B981)          // Primary accent — progress green
+val GoalGold = Color(0xFFF59E0B)             // Secondary — achievement gold
+val GoalSky = Color(0xFF38BDF8)              // Highlight — opportunity sky blue
+val GoalCoral = Color(0xFFFB7185)            // Attention — blocked coral
+
 // Glassmorphism (cream-tinted)
 val GlassWhite = Color(0x18DCD7C9)        // Cream overlay 9%
 val GlassBorder = Color(0x28DCD7C9)       // Cream border 16%
