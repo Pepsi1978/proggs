@@ -338,10 +338,40 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             }
         }
 
-        // Dashboard-Analyse (eigene GlassCard)
+        // Sicherheit
         GlassCard {
             Column {
-                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.Dashboard, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("Dashboard-Analyse", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
+                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.Security, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("Sicherheit", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Icon(imageVector = Icons.Rounded.Fingerprint, contentDescription = null, tint = if (uiState.biometricLock) MaterialTheme.colorScheme.primary else Color(0xFF666666), modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("Fingerabdruck", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                            Text("App beim Start entsperren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Switch(checked = uiState.biometricLock, onCheckedChange = { enabled ->
+                        val activity = context as? com.entropyjournal.MainActivity
+                        if (activity != null) {
+                            activity.showBiometricPrompt { viewModel.updateBiometricLock(enabled) }
+                        } else {
+                            viewModel.updateBiometricLock(enabled)
+                        }
+                    }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
+                }
+                if (uiState.biometricLock) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Sperrt automatisch nach 60 Sekunden im Hintergrund", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                }
+            }
+        }
+
+        // KI-Dashboard-Analyse
+        GlassCard {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.Dashboard, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("KI-Dashboard-Analyse", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("W\u00e4hle, wie die KI deine Eintr\u00e4ge analysiert", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(12.dp))
@@ -467,38 +497,24 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             }
         }
 
-        // 3. Sicherheit
+        // KI-Automatisierungen
         GlassCard {
             Column {
-                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.Security, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("Sicherheit", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
-                Spacer(modifier = Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.Tune, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("KI-Automatisierungen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Icon(imageVector = Icons.Rounded.Fingerprint, contentDescription = null, tint = if (uiState.biometricLock) MaterialTheme.colorScheme.primary else Color(0xFF666666), modifier = Modifier.size(24.dp))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text("Fingerabdruck", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                            Text("App beim Start entsperren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                    Switch(checked = uiState.biometricLock, onCheckedChange = { enabled ->
-                        // Require biometric auth before toggling the lock on or off
-                        val activity = context as? com.entropyjournal.MainActivity
-                        if (activity != null) {
-                            activity.showBiometricPrompt { viewModel.updateBiometricLock(enabled) }
-                        } else {
-                            viewModel.updateBiometricLock(enabled)
-                        }
-                    }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
+                    Column(modifier = Modifier.weight(1f)) { Text("Textverbesserung", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface); Text("Standardm\u00e4\u00dfig aktivieren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Switch(checked = uiState.textImprovementDefault, onCheckedChange = { viewModel.updateTextImprovementDefault(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
                 }
-                if (uiState.biometricLock) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Sperrt automatisch nach 60 Sekunden im Hintergrund", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) { Text("Dashboard", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface); Text("Automatisch aktualisieren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Switch(checked = uiState.autoUpdateDashboard, onCheckedChange = { viewModel.updateAutoUpdateDashboard(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
                 }
             }
         }
 
-        // 4. API-Schluessel
+        // API-Schluessel
         GlassCard {
             Column {
                 Text("API-Schl\u00fcssel", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
@@ -509,7 +525,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             }
         }
 
-        // 4. Gemini-Modell
+        // Gemini-Modell
         GlassCard {
             Column {
                 Text("Gemini-Modell", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
@@ -536,23 +552,6 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             }, onClick = { viewModel.updateSelectedModel(model.id); expanded = false })
                         }
                     }
-                }
-            }
-        }
-
-        // 5. Aufnahme
-        GlassCard {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.Tune, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("Automatisierungen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) { Text("Textverbesserung", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface); Text("Standardm\u00e4\u00dfig aktivieren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    Switch(checked = uiState.textImprovementDefault, onCheckedChange = { viewModel.updateTextImprovementDefault(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) { Text("Dashboard", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface); Text("Automatisch aktualisieren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    Switch(checked = uiState.autoUpdateDashboard, onCheckedChange = { viewModel.updateAutoUpdateDashboard(it) }, colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary))
                 }
             }
         }

@@ -517,14 +517,82 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             }
         }
 
-        // Dashboard-Analyse (eigene GlassCard)
+        // Sicherheit
         GlassCard {
             Column {
-                // Dashboard-Szenario
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Security, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Sicherheit", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Fingerprint,
+                            contentDescription = null,
+                            tint =
+                                if (uiState.biometricLock) MaterialTheme.colorScheme.primary
+                                else Color(0xFF666666),
+                            modifier = Modifier.size(24.dp),
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                "Fingerabdruck",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "App beim Start entsperren",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = uiState.biometricLock,
+                        onCheckedChange = { enabled ->
+                            val activity = context as? com.bestjournal.app.MainActivity
+                            if (activity != null) {
+                                activity.showBiometricPrompt {
+                                    viewModel.updateBiometricLock(enabled)
+                                }
+                            } else {
+                                viewModel.updateBiometricLock(enabled)
+                            }
+                        },
+                        colors =
+                            SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
+                            ),
+                    )
+                }
+                if (uiState.biometricLock) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Sperrt automatisch nach 60 Sekunden im Hintergrund",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
+                }
+            }
+        }
+
+        // KI-Dashboard-Analyse
+        GlassCard {
+            Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Dashboard, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Dashboard-Analyse", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("KI-Dashboard-Analyse", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -692,147 +760,13 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             }
         }
 
-        // 3. Sicherheit
-        GlassCard {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Security, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Sicherheit", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Fingerprint,
-                            contentDescription = null,
-                            tint =
-                                if (uiState.biometricLock) MaterialTheme.colorScheme.primary
-                                else Color(0xFF666666),
-                            modifier = Modifier.size(24.dp),
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                "Fingerabdruck",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                "App beim Start entsperren",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    Switch(
-                        checked = uiState.biometricLock,
-                        onCheckedChange = { enabled ->
-                            // Require biometric auth before toggling the lock on or off
-                            val activity = context as? com.bestjournal.app.MainActivity
-                            if (activity != null) {
-                                activity.showBiometricPrompt {
-                                    viewModel.updateBiometricLock(enabled)
-                                }
-                            } else {
-                                viewModel.updateBiometricLock(enabled)
-                            }
-                        },
-                        colors =
-                            SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary
-                            ),
-                    )
-                }
-                if (uiState.biometricLock) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Sperrt automatisch nach 60 Sekunden im Hintergrund",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.outline,
-                    )
-                }
-            }
-        }
-
-        // 4. KI-Abo
-        GlassCard {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Star, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("KI-Abo", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                if (uiState.isSubscribed) {
-                    Text(
-                        text = "Premium-Abo aktiv",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Du nutzt Best Journal Premium mit voller KI-Qualit\u00e4t.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedButton(
-                        onClick = {
-                            val intent =
-                                android.content.Intent(
-                                    android.content.Intent.ACTION_VIEW,
-                                    android.net.Uri.parse(
-                                        "https://play.google.com/store/account/subscriptions"
-                                    ),
-                                )
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Abo im Play Store verwalten")
-                    }
-                } else {
-                    Text(
-                        text = "Premium-Funktionen freischalten",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Textverbesserung, Zusammenfassungen und Lebensratschl\u00e4ge",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = { showSubscriptionSheet = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            ),
-                    ) {
-                        Text("Premium abonnieren")
-                    }
-                }
-            }
-        }
-
-        // 5. Aufnahme
+        // KI-Automatisierungen
         GlassCard {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Tune, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Automatisierungen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("KI-Automatisierungen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
@@ -887,6 +821,80 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                                 checkedTrackColor = MaterialTheme.colorScheme.primary
                             ),
                     )
+                }
+            }
+        }
+
+        // KI-Abo
+        GlassCard {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Star, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("KI-Abo", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                if (uiState.isSubscribed) {
+                    Text(
+                        text = "Premium-Abo aktiv",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Du nutzt Best Journal Premium mit voller KI-Qualit\u00e4t.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = {
+                            val intent =
+                                android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(
+                                        "https://play.google.com/store/account/subscriptions"
+                                    ),
+                                )
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Abo im Play Store verwalten")
+                    }
+                } else {
+                    Text(
+                        text = "Dein Wochenlimit ist erreicht",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Mit Premium bekommst du:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("\u2022  Unbegrenzte KI-Textverbesserung \u2014 jeder Eintrag wird klarer und ausdrucksst\u00e4rker", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("\u2022  5 intelligente Dashboard-Analysen \u2014 Zusammenfassung, Entropie, Selbsterkenntnis, Ziele & eigene Analyse", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("\u2022  Automatische Dashboard-Updates \u2014 dein Dashboard aktualisiert sich bei jedem neuen Eintrag", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("\u2022  Persönliche Muster erkennen \u2014 die KI findet verborgene Denk- und Gef\u00fchlsmuster in deinen Eintr\u00e4gen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("\u2022  Keine Werbung, keine Limits \u2014 nutze alle Funktionen so oft du willst", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { showSubscriptionSheet = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            ),
+                    ) {
+                        Text("Premium freischalten")
+                    }
                 }
             }
         }
