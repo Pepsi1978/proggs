@@ -534,8 +534,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 val scenarioNames = listOf(
+                    "Szenario 1",
                     "R\u00e4ume dein Leben auf",
-                    "Szenario 2",
                     "Szenario 3",
                     "Pers\u00f6nliche Ziele",
                     "Individuelle Analyse"
@@ -584,7 +584,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                                 color = if (currentScenario == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                             )
                             when (index) {
-                                0 -> Text("Erkennt Stress, Unordnung und Belastung", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                1 -> Text("Erkennt Stress, Unordnung und Belastung", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 3 -> Text("Erkennt Ziele, W\u00fcnsche und Fortschritte", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 4 -> Text("Eigenen Analyse-Fokus festlegen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
