@@ -146,8 +146,12 @@
 - `HorizontalPager` aus `androidx.compose.foundation.pager` ersetzt separate NavHost-Routes
 - Drei Hauptseiten (Dashboard, Tagebuch, Einstellungen) als Pager-Pages statt einzelne Composables
 - `pagerState.animateScrollToPage()` fuer programmatischen Tab-Wechsel (von BottomNavBar)
-- `snapshotFlow { pagerState.currentPage }` synchronisiert Pager → BottomNavBar
-- `beyondViewportPageCount = 1` holt Nachbarseiten vor — fluessigeres Wischen
+- **`beyondViewportPageCount` = Gesamtzahl der Seiten minus 1** — bei 3 Seiten also `= 2`.
+  Damit werden ALLE Seiten vorab im Speicher aufgebaut. Lieber mehr vorladen als zu wenig!
+  `beyondViewportPageCount = 1` reicht nur fuer direkte Nachbarn — beim Wischen zu entfernteren
+  Seiten entsteht sonst eine spuerbare Verzoegerung weil die Seite erst on-demand aufgebaut wird.
+- `LaunchedEffect { snapshotFlow { currentPage }.collect { } }` mit leerem Body ist Verschwendung
+  — nur verwenden wenn im collect-Block tatsaechlich etwas passiert (z.B. Analytics, BottomNav-Sync).
 - Login, Splash und Entry-Detail bleiben als normale NavHost-Routes (kein Pager)
 - **Wiederverwendbar** fuer jede App mit Tab-Navigation die auch Wisch-Gesten braucht
 
