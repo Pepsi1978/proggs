@@ -76,18 +76,15 @@ constructor(
                 }
                 val currentScenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                 if (currentScenario != _uiState.value.currentScenario) {
-                    val hadData = adviceBlocks.value.isNotEmpty()
-                    _uiState.update { it.copy(currentScenario = currentScenario, isScenarioSwitch = hadData) }
-                    if (hadData) {
-                        adviceRepository.clearDashboard()
-                        if (currentScenario == 4) {
-                            val customPrompt = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
-                            if (customPrompt.isNotBlank()) {
-                                refreshDashboard()
-                            }
-                        } else {
+                    _uiState.update { it.copy(currentScenario = currentScenario, isScenarioSwitch = true) }
+                    adviceRepository.clearDashboard()
+                    if (currentScenario == 4) {
+                        val customPrompt = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+                        if (customPrompt.isNotBlank()) {
                             refreshDashboard()
                         }
+                    } else {
+                        refreshDashboard()
                     }
                 }
                 val promptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
