@@ -208,6 +208,284 @@ check_key_directories() {
 }
 
 # ─────────────────────────────────────────────────────────────────────
+# Check 7: validator_compliance
+# Reads the last 3 session scores from session-scores.jsonl and checks
+# whether each ended with an overall score >= 3.0. A low score means
+# Claude was operating below acceptable quality and corrections occurred.
+# CRITICAL (notification) if 2+ sessions below threshold.
+# ─────────────────────────────────────────────────────────────────────
+check_validator_compliance() {
+    local scores_file="$HOME/.claude/session-scores.jsonl"
+
+    # Graceful degradation: file does not exist yet
+    if [ ! -f "$scores_file" ]; then
+        echo '"validator_compliance": {"status": "UNKNOWN", "detail": "session-scores.jsonl not found"}'
+        return
+    fi
+
+    # Extract the last 3 overall scores using python3
+    local result
+    result=$($PYTHON3 - "$scores_file" <<'PYEOF' 2>/dev/null
+import sys, json
+
+scores_file = sys.argv[1]
+scores = []
+try:
+    with open(scores_file, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+                # Support both "overall" and nested {"dimensions": {...}, "overall": ...}
+                overall = entry.get('overall', entry.get('score', None))
+                if overall is not None:
+                    scores.append(float(overall))
+            except (json.JSONDecodeError, ValueError, TypeError):
+                continue
+except Exception:
+    print('UNKNOWN|Could not read session-scores.jsonl')
+    sys.exit(0)
+
+if len(scores) < 3:
+    print(f'UNKNOWN|Only {len(scores)} session score(s) available — need 3')
+    sys.exit(0)
+
+last3 = scores[-3:]
+below = [s for s in last3 if s < 3.0]
+
+if len(below) == 0:
+    avg = sum(last3) / len(last3)
+    print(f'OK|Last 3 session scores all >= 3.0 (avg {avg:.1f})')
+elif len(below) == 1:
+    print(f'WARNING|1 of last 3 sessions scored below 3.0: {below}')
+else:
+    print(f'CRITICAL|{len(below)} of last 3 sessions scored below 3.0: {below}')
+PYEOF
+) || result="UNKNOWN|python3 error reading session scores"
+
+    local status="${result%%|*}"
+    local detail="${result#*|}"
+
+    # Normalize status — default to UNKNOWN if parse failed
+    case "$status" in
+        OK|WARNING|CRITICAL|UNKNOWN) ;;
+        *) status="UNKNOWN"; detail="Unexpected output from score parser" ;;
+    esac
+
+    if [ "$status" = "CRITICAL" ]; then
+        notify_critical "Session-Qualität KRITISCH: $detail"
+    fi
+
+    echo "\"validator_compliance\": {\"status\": \"$status\", \"detail\": \"$detail\"}"
+}
+
+# ─────────────────────────────────────────────────────────────────────
+# Check 8: length_drift
+# Detects monotonically falling session scores over the last 3 sessions.
+# Three consecutively declining scores suggest a quality regression trend,
+# not just a single bad session. Early warning before it becomes CRITICAL.
+# ─────────────────────────────────────────────────────────────────────
+check_length_drift() {
+    local scores_file="$HOME/.claude/session-scores.jsonl"
+
+    if [ ! -f "$scores_file" ]; then
+        echo '"length_drift": {"status": "UNKNOWN", "detail": "session-scores.jsonl not found"}'
+        return
+    fi
+
+    local result
+    result=$($PYTHON3 - "$scores_file" <<'PYEOF' 2>/dev/null
+import sys, json
+
+scores_file = sys.argv[1]
+scores = []
+try:
+    with open(scores_file, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+                overall = entry.get('overall', entry.get('score', None))
+                if overall is not None:
+                    scores.append(float(overall))
+            except (json.JSONDecodeError, ValueError, TypeError):
+                continue
+except Exception:
+    print('UNKNOWN|Could not read session-scores.jsonl')
+    sys.exit(0)
+
+if len(scores) < 3:
+    print(f'UNKNOWN|Only {len(scores)} score(s) available — need 3')
+    sys.exit(0)
+
+last3 = scores[-3:]
+# Monotonically falling: each score strictly less than the previous
+is_falling = last3[0] > last3[1] > last3[2]
+
+if is_falling:
+    print(f'WARNING|Monotonically falling scores: {last3[0]:.1f} → {last3[1]:.1f} → {last3[2]:.1f}')
+else:
+    print(f'OK|No consistent downward drift in last 3 scores: {last3}')
+PYEOF
+) || result="UNKNOWN|python3 error reading session scores"
+
+    local status="${result%%|*}"
+    local detail="${result#*|}"
+
+    case "$status" in
+        OK|WARNING|CRITICAL|UNKNOWN) ;;
+        *) status="UNKNOWN"; detail="Unexpected output from drift parser" ;;
+    esac
+
+    echo "\"length_drift\": {\"status\": \"$status\", \"detail\": \"$detail\"}"
+}
+
+# ─────────────────────────────────────────────────────────────────────
+# Check 9: session_regression
+# Compares the average of the last 3 session scores against the average
+# of the 5 sessions before those. A lower recent average means overall
+# quality is regressing — the compound intelligence effect is reversing.
+# Requires at least 8 sessions to produce a meaningful comparison.
+# ─────────────────────────────────────────────────────────────────────
+check_session_regression() {
+    local scores_file="$HOME/.claude/session-scores.jsonl"
+
+    if [ ! -f "$scores_file" ]; then
+        echo '"session_regression": {"status": "UNKNOWN", "detail": "session-scores.jsonl not found"}'
+        return
+    fi
+
+    local result
+    result=$($PYTHON3 - "$scores_file" <<'PYEOF' 2>/dev/null
+import sys, json
+
+scores_file = sys.argv[1]
+scores = []
+try:
+    with open(scores_file, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+                overall = entry.get('overall', entry.get('score', None))
+                if overall is not None:
+                    scores.append(float(overall))
+            except (json.JSONDecodeError, ValueError, TypeError):
+                continue
+except Exception:
+    print('UNKNOWN|Could not read session-scores.jsonl')
+    sys.exit(0)
+
+# Need at least 8 data points: 5 baseline + 3 recent
+if len(scores) < 8:
+    print(f'UNKNOWN|Only {len(scores)} score(s) available — need 8 for regression check')
+    sys.exit(0)
+
+recent3  = scores[-3:]
+baseline5 = scores[-8:-3]
+
+avg_recent   = sum(recent3)   / len(recent3)
+avg_baseline = sum(baseline5) / len(baseline5)
+
+if avg_recent < avg_baseline:
+    delta = avg_baseline - avg_recent
+    print(f'WARNING|Recent avg {avg_recent:.2f} < baseline avg {avg_baseline:.2f} (Δ -{delta:.2f})')
+else:
+    delta = avg_recent - avg_baseline
+    print(f'OK|Recent avg {avg_recent:.2f} >= baseline avg {avg_baseline:.2f} (Δ +{delta:.2f})')
+PYEOF
+) || result="UNKNOWN|python3 error reading session scores"
+
+    local status="${result%%|*}"
+    local detail="${result#*|}"
+
+    case "$status" in
+        OK|WARNING|CRITICAL|UNKNOWN) ;;
+        *) status="UNKNOWN"; detail="Unexpected output from regression parser" ;;
+    esac
+
+    echo "\"session_regression\": {\"status\": \"$status\", \"detail\": \"$detail\"}"
+}
+
+# ─────────────────────────────────────────────────────────────────────
+# Check 10: behavioral_drift
+# Reads the most recent session score entry and checks the "corrections"
+# field. More than 3 corrections in one session means Claude made too
+# many mistakes or was too uncertain — a sign of behavioral drift.
+# The "corrections" field is written by the session-scorer hook.
+# ─────────────────────────────────────────────────────────────────────
+check_behavioral_drift() {
+    local scores_file="$HOME/.claude/session-scores.jsonl"
+
+    if [ ! -f "$scores_file" ]; then
+        echo '"behavioral_drift": {"status": "UNKNOWN", "detail": "session-scores.jsonl not found"}'
+        return
+    fi
+
+    local result
+    result=$($PYTHON3 - "$scores_file" <<'PYEOF' 2>/dev/null
+import sys, json
+
+scores_file = sys.argv[1]
+last_entry = None
+try:
+    with open(scores_file, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+                last_entry = entry
+            except (json.JSONDecodeError, ValueError):
+                continue
+except Exception:
+    print('UNKNOWN|Could not read session-scores.jsonl')
+    sys.exit(0)
+
+if last_entry is None:
+    print('UNKNOWN|No session score entries found')
+    sys.exit(0)
+
+# "corrections" field: number of user corrections in that session
+corrections = last_entry.get('corrections', None)
+
+if corrections is None:
+    # Field may not exist in older entries — treat as UNKNOWN
+    print('UNKNOWN|No corrections field in last session entry')
+    sys.exit(0)
+
+try:
+    corrections = int(corrections)
+except (ValueError, TypeError):
+    print(f'UNKNOWN|Cannot parse corrections value: {corrections}')
+    sys.exit(0)
+
+if corrections > 3:
+    print(f'WARNING|Last session had {corrections} corrections (threshold: 3) — behavioral drift detected')
+else:
+    print(f'OK|Last session had {corrections} correction(s) — within normal range')
+PYEOF
+) || result="UNKNOWN|python3 error reading session scores"
+
+    local status="${result%%|*}"
+    local detail="${result#*|}"
+
+    case "$status" in
+        OK|WARNING|CRITICAL|UNKNOWN) ;;
+        *) status="UNKNOWN"; detail="Unexpected output from behavioral drift parser" ;;
+    esac
+
+    echo "\"behavioral_drift\": {\"status\": \"$status\", \"detail\": \"$detail\"}"
+}
+
+# ─────────────────────────────────────────────────────────────────────
 # Run all checks
 # ─────────────────────────────────────────────────────────────────────
 log "Heartbeat check started"
@@ -218,10 +496,14 @@ c_whiteboard=$(check_whiteboard)
 c_brew=$(check_brew_outdated)
 c_worker=$(check_claude_mem_worker)
 c_dirs=$(check_key_directories)
+c_compliance=$(check_validator_compliance)
+c_drift=$(check_length_drift)
+c_regression=$(check_session_regression)
+c_behavioral=$(check_behavioral_drift)
 
 # Determine overall status
 overall="OK"
-for check_result in "$c_disk" "$c_config" "$c_whiteboard" "$c_brew" "$c_worker" "$c_dirs"; do
+for check_result in "$c_disk" "$c_config" "$c_whiteboard" "$c_brew" "$c_worker" "$c_dirs" "$c_compliance" "$c_drift" "$c_regression" "$c_behavioral"; do
     if echo "$check_result" | grep -q '"CRITICAL"'; then
         overall="CRITICAL"
         break
@@ -245,7 +527,11 @@ if [ -n "$TMP_STATUS" ]; then
     $c_whiteboard,
     $c_brew,
     $c_worker,
-    $c_dirs
+    $c_dirs,
+    $c_compliance,
+    $c_drift,
+    $c_regression,
+    $c_behavioral
   }
 }
 ENDJSON
