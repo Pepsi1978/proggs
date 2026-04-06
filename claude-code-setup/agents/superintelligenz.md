@@ -97,10 +97,13 @@ Bevor du auch nur EINE Suche startest:
 
 ### Schritt 1.1: Fragen generieren
 
-Erstelle **6-9 Suchfragen** — verteilt ueber alle drei Direktiven:
-- 2-3 Fragen fuer Superintelligenz (neue Reasoning-Methoden, Tools, kompetitive Analyse)
-- 2-3 Fragen fuer Selbstbeobachtung (Metacognition, Drift-Detection, Reflexion)
-- 2-3 Fragen fuer Resilient Bugfixing (Zero-Recurrence, Self-Healing, Praediktion)
+Erstelle **4-5 Suchfragen** — verteilt ueber alle drei Direktiven:
+- 1-2 Fragen fuer Superintelligenz (neue Reasoning-Methoden, Tools, kompetitive Analyse)
+- 1-2 Fragen fuer Selbstbeobachtung (Metacognition, Drift-Detection, Reflexion)
+- 1-2 Fragen fuer Resilient Bugfixing (Zero-Recurrence, Self-Healing, Praediktion)
+
+> **WARUM NUR 4-5 STATT 6-9:** Bei max 2 Suchen pro Frage und max 8 WebSearch insgesamt
+> braucht man nur 4-5 Fragen. 6-9 Fragen wuerden das Limit sprengen und Turns verschwenden.
 
 **Kreativitaets-Regel**: Mindestens 1 Frage pro Direktive muss UNGEWOEHNLICH sein —
 eine Verbindung die man nicht sofort erwarten wuerde. Beispiele:
@@ -112,7 +115,7 @@ eine Verbindung die man nicht sofort erwarten wuerde. Beispiele:
 
 Fuehre die Suchen durch:
 - **WebSearch**: Max 2 Suchen pro Frage, **max 8 WebSearch insgesamt in Welle 1**
-- **WebFetch**: Nur die **1-2 vielversprechendsten** Treffer pro Frage laden, **max 150 Zeilen pro Seite**
+- **WebFetch**: Nur den **1 vielversprechendsten** Treffer pro Frage laden, **max 5 WebFetch in Welle 1**, **max 150 Zeilen pro Seite**
 - **Quellen priorisieren**: arXiv, GitHub, Anthropic Blog, Google DeepMind Blog,
   Microsoft Research, Semantic Scholar, Dev.to, HackerNews
 
@@ -438,20 +441,20 @@ Als ALLERLETZTEN Schritt: Schreibe eine JSON-Datei:
 Phase 0: Lies superintelligenz.md → "5 bestehende Findings, Luecke bei Direktive 2"
          Lies MEMORY.md → "Bug-Pattern-Library schon vorgeschlagen, nicht recherchieren"
 
-Welle 1: 8 Fragen (3x D1, 3x D2, 2x D3 wegen Luecke bei D2)
-         → 12 Findings gefunden, 3 Duplikate erkannt → 9 neue Findings
+Welle 1: 5 Fragen (2x D1, 2x D2, 1x D3 wegen Luecke bei D2)
+         → 7 Findings gefunden, 2 Duplikate erkannt → 5 neue Findings
+         → WebSearch: 8/15 verbraucht, WebFetch: 5/10 verbraucht
          → Beste Quelle: arXiv + GitHub, Schwachste: Medium (zu oberflachlich)
 
 Zwischen-Analyse:
-  - D2 hat jetzt 4 Findings, D1 hat 3, D3 hat 2 → D3 ist jetzt Luecke
+  - D2 hat jetzt 3 Findings, D1 hat 1, D3 hat 1 → D1+D3 brauchen mehr
   - Paper A und B widersprechen sich bei "Reflexion vs. Ensemble" → Welle 2 klaeren
-  - Finding "Schwarm-Intelligenz" (D1) koennte auch D3 staerken → Kreuzverbindung
 
-Welle 2: 4 gezielte Fragen (2x D3, 1x Widerspruch klaeren, 1x Kreuzverbindung)
-         → 6 Findings gefunden, 1 Duplikat → 5 neue Findings
-         → Novelty-Rate: 83% → Welle 3 lohnt sich
+Welle 2: 3 gezielte Fragen (1x D1, 1x D3, 1x Widerspruch klaeren)
+         → 4 Findings gefunden, 1 Duplikat → 3 neue Findings
+         → WebSearch: 13/15 verbraucht, WebFetch: 8/10 verbraucht
 
-Welle 3: 3 interdisziplinaere Fragen
+Welle 3: 1 interdisziplinaere Frage (nur wenn Turn < 20!)
          → 3 kreative Findings (Biologie→Agenten, Luftfahrt→Bugfixing)
          → Validierung: 2 von 3 haben solide Evidenz
 
