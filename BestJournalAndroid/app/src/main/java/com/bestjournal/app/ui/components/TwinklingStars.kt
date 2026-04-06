@@ -23,9 +23,9 @@ import kotlin.random.Random
 private data class Star(
     val x: Float,
     val y: Float,
-    val size: Float,
+    val maxSize: Float,
     val delay: Float,
-    val speed: Float
+    val cycleDuration: Float
 )
 
 @Composable
@@ -38,9 +38,9 @@ fun TwinklingStars(
             Star(
                 x = Random.nextFloat(),
                 y = Random.nextFloat(),
-                size = Random.nextFloat() * 3f + 2f,
+                maxSize = Random.nextFloat() * 2.5f + 2f,
                 delay = Random.nextFloat() * 6.28f,
-                speed = Random.nextFloat() * 4000f + 5000f
+                cycleDuration = Random.nextFloat() * 6000f + 7000f
             )
         }
     }
@@ -50,7 +50,7 @@ fun TwinklingStars(
         initialValue = 0f,
         targetValue = 6.28f,
         animationSpec = infiniteRepeatable(
-            animation = tween(12000, easing = LinearEasing),
+            animation = tween(18000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "starTime"
@@ -58,16 +58,26 @@ fun TwinklingStars(
 
     Canvas(modifier = modifier.fillMaxSize()) {
         stars.forEach { star ->
-            val phase = (time * (12000f / star.speed) + star.delay) % 6.28f
-            val brightness = ((sin(phase.toDouble()) + 1.0) / 2.0)
-            val alpha = (brightness * brightness * 0.8f).toFloat()
+            val phase = (time * (18000f / star.cycleDuration) + star.delay) % 6.28f
 
-            if (alpha > 0.05f) {
+            // Smooth sine curve: 0 → 1 → 0 over the cycle
+            // Only visible for ~40% of the cycle (rest is dark/invisible)
+            val raw = sin(phase.toDouble()).toFloat()
+            val lifecycle = (raw * 2.5f).coerceIn(0f, 1f)
+
+            if (lifecycle > 0.01f) {
                 val cx = star.x * size.width
                 val cy = star.y * size.height
+
+                // Size grows from 0 to maxSize and shrinks back
+                val currentSize = star.maxSize * lifecycle * density
+
+                // Alpha follows the same curve: dark → bright → dark
+                val alpha = lifecycle * 0.75f
+
                 drawStar(
                     center = Offset(cx, cy),
-                    size = star.size * density,
+                    size = currentSize,
                     color = Color.White.copy(alpha = alpha)
                 )
             }
@@ -76,10 +86,11 @@ fun TwinklingStars(
 }
 
 private fun DrawScope.drawStar(center: Offset, size: Float, color: Color) {
+    if (size < 0.5f) return
     val path = Path()
     val points = 4
     val outerRadius = size
-    val innerRadius = size * 0.4f
+    val innerRadius = size * 0.35f
 
     for (i in 0 until points * 2) {
         val radius = if (i % 2 == 0) outerRadius else innerRadius

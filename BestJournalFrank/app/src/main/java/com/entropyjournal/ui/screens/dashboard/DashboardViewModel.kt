@@ -105,7 +105,7 @@ class DashboardViewModel @Inject constructor(
             analyzeEntropyUseCase(freshAnalysis = true)
                 .onSuccess {
                     encryptedPrefs.edit()
-                        .putLong(Constants.PREF_DASHBOARD_LAST_UPDATED, System.currentTimeMillis())
+                        .putLong("dashboard_last_updated_${_uiState.value.currentScenario}", System.currentTimeMillis())
                         .apply()
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -152,7 +152,7 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun getLastUpdatedText(): String? {
-        val ts = encryptedPrefs.getLong(Constants.PREF_DASHBOARD_LAST_UPDATED, 0L)
+        val ts = encryptedPrefs.getLong("dashboard_last_updated_${_uiState.value.currentScenario}", 0L)
         if (ts == 0L) return null
         val sdf = java.text.SimpleDateFormat("dd.MM. 'um' HH:mm", java.util.Locale.GERMAN)
         return "Letzte Aktualisierung am ${sdf.format(java.util.Date(ts))}"

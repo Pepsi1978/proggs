@@ -126,9 +126,10 @@ constructor(
                 )
             analyzeEntropyUseCase(freshAnalysis = true)
                 .onSuccess {
+                    val scenarioKey = "dashboard_last_updated_${_uiState.value.currentScenario}"
                     encryptedPrefs
                         .edit()
-                        .putLong(Constants.PREF_DASHBOARD_LAST_UPDATED, System.currentTimeMillis())
+                        .putLong(scenarioKey, System.currentTimeMillis())
                         .apply()
                     manualRefreshActive = false
                     _uiState.value =
@@ -184,7 +185,8 @@ constructor(
     }
 
     fun getLastUpdatedText(): String? {
-        val ts = encryptedPrefs.getLong(Constants.PREF_DASHBOARD_LAST_UPDATED, 0L)
+        val scenarioKey = "dashboard_last_updated_${_uiState.value.currentScenario}"
+        val ts = encryptedPrefs.getLong(scenarioKey, 0L)
         if (ts == 0L) return null
         val sdf = java.text.SimpleDateFormat("dd.MM. 'um' HH:mm", java.util.Locale.GERMAN)
         return "Letzte Aktualisierung am ${sdf.format(java.util.Date(ts))}"
