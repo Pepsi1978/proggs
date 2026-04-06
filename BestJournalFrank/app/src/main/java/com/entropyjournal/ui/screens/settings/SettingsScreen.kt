@@ -470,7 +470,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         title = { Text("Individuelle Analyse", style = MaterialTheme.typography.titleLarge) },
                         text = {
                             Column {
-                                Text("Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheintr\u00e4ge konzentrieren?\n\nJe gr\u00fcndlicher du beschreibst was du wissen m\u00f6chtest, desto besser werden die Ergebnisse.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheintr\u00e4ge konzentrieren?", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(modifier = Modifier.height(12.dp))
                                 OutlinedTextField(
                                     value = promptText,
@@ -478,7 +478,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                                     modifier = Modifier.fillMaxWidth().height(280.dp),
                                     placeholder = {
                                         Text(
-                                            "z.B. Fokussiere dich auf meine Schlafqualit\u00e4t und Stresslevel. Zeige mir Muster in meiner Ern\u00e4hrung. Analysiere, wie sich meine Stimmung \u00fcber die Woche ver\u00e4ndert. Finde heraus, wann ich am produktivsten bin und was mich blockiert.",
+                                            "Je gr\u00fcndlicher du beschreibst was du wissen m\u00f6chtest, desto besser werden die Ergebnisse.\n\nz.B. Fokussiere dich auf meine Schlafqualit\u00e4t und Stresslevel. Zeige mir Muster in meiner Ern\u00e4hrung. Analysiere, wie sich meine Stimmung \u00fcber die Woche ver\u00e4ndert. Finde heraus, wann ich am produktivsten bin und was mich blockiert.",
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
                                         )
                                     },
