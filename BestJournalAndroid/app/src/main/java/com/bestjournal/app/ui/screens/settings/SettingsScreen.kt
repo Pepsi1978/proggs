@@ -562,10 +562,9 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
                             .clickable {
-                                val changed = currentScenario != index
                                 currentScenario = index
                                 scenarioPrefs.edit().putInt(Constants.PREF_DASHBOARD_SCENARIO, index).apply()
-                                if (changed) showScenarioInfoIndex = index
+                                showScenarioInfoIndex = index
                                 if (index == 4) showCustomPromptDialog = true
                             }
                             .padding(vertical = 8.dp),
@@ -574,10 +573,9 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         RadioButton(
                             selected = currentScenario == index,
                             onClick = {
-                                val changed = currentScenario != index
                                 currentScenario = index
                                 scenarioPrefs.edit().putInt(Constants.PREF_DASHBOARD_SCENARIO, index).apply()
-                                if (changed) showScenarioInfoIndex = index
+                                showScenarioInfoIndex = index
                                 if (index == 4) showCustomPromptDialog = true
                             },
                             colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary),
