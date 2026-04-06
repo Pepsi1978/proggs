@@ -117,6 +117,22 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-05 15:42 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-04-05 18:03 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-04-05 20:23 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-02 19:13 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### 2026-04-02 20:32 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### [2026-04-02 22:45] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-03 01:24 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+
+### 2026-04-03 02:27 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+**Quelle:** Hook: StopFailure (command-type, no API dependency)
+**Symptom:** Session-Turn endete durch API-Fehler
+**Details:** {"session_id":"bafc0d45-050d-45ba-b5b4-d88d66c30159","transcript_path":"/Users/frank/.claude/projects/-Users-frank-proggs/bafc0d45-050d-45ba-b5b4-d88d66c30159.jsonl","cwd":"/Users/frank/proggs/BestJournalAndroid","hook_event_name":"StopFailure","error":"invalid_request","last_assistant_message":"Request too large (max 20MB). Double press esc to go back and try with a smaller file."}
+**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
+**Status:** OFFEN
+### 2026-04-03 02:56 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-03 03:17 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### 2026-04-03 03:20 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### 2026-04-06 16:18 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### [2026-04-06 16:25] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ---
 
 ## Systemzustand (aktuell)
@@ -145,6 +161,16 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Cross-Platform Sync:** Alle Rules, Agents, Skills, Hooks synchron zwischen Setup-Repo und lokal
 - **[2026-04-04 16:11] env-checker**: Gesamtstatus GELB — 1 Problem: effortLevel ist medium statt high in settings.json. Alle anderen Checks OK: Claude Code 2.1.92 aktuell, 92 Hook-Dateien, 88 Plugins, 57 Rules, 29 Agents, Disk 84%, PATH vollstaendig, bypassPermissions aktiv.
 - **Pending Admin Updates (1):** Go (Programmiersprache)
+- **Sicherheit:** Prompt-Injection-Defender aktiv, cargo-audit 0.22.1 OK, Axios Supply-Chain SAUBER (geprueft 2026-04-02)
+- **Evolution-Analyst (2026-04-02):** Quality 8.66 (PLATEAU), IQ 89.5 (STEIGEND), Meta-Intelligence 10% (KOLLAPS → Bug gefixt), Corrections fast null
+- **Speicherplatz (macOS):** 16 GB frei (42%) — bereinigt, stabil
+- **Pending Shell-Updates (macOS):** Claude Code CLI v2.1.90, node, deno, powershell, uv, xz, harfbuzz, util-linux, codex
+- **Neuer Hook (2026-03-31):** invariant-check.ps1/.sh — Proaktive System-Invarianten-Pruefung bei SessionStart (Cursor-Pattern)
+- **Speicherplatz (macOS):** 22 GB frei (36% belegt) — reichlich Platz
+- **Cross-Tool:** Codex + Gemini Delta Bridges aktiv, 8 Intelligenz-Dimensionen im Whiteboard portiert
+- **macOS-Update (2026-03-31):** Claude Code v2.1.83, Node v25.8.1, npm 11.11.1, Bun 1.3.11, Go 1.26.1, Swift 6.3, Rust/Cargo 1.94.0 (→1.94.1 verfuegbar), 25 Homebrew-Pakete veraltet
+- **macOS Settings-Fix (2026-03-31):** allow-Liste entfernt (war Whitelist-Blocker bei bypassPermissions), 2 fehlende Hooks hinzugefuegt (mcp-auth-check, doctor-lite), tote Plugins deaktiviert (boostvolt, FlineDev)
+- **Pending Admin Updates (5):** fzf,harfbuzz,node,ollama,simdjson,
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -167,8 +193,10 @@ _Noch keine Eintraege._
 
 ## Debugging-Muster
 <!-- Writer: debugger Agent, session-autopsy.ts | Leser: alle Agents, /self-improve -->
-_Noch keine Eintraege._
+- **[2026-04-02] Autopsy bafc0d45**: 4 Korrekturen (0.9%), Hauptmuster: other (2x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
 
+- **[2026-04-03] Autopsy bafc0d45**: 4 Korrekturen (0.7%), Hauptmuster: other (2x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
+- **[2026-04-03] Autopsy bafc0d45**: 4 Korrekturen (0.7%), Hauptmuster: other (2x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
 ## Performance & Optimierung
 <!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
@@ -325,6 +353,17 @@ _Noch keine Eintraege._
 - **[2026-04-03] intelligence-checker**: [WARNING] Session 2363a77c (21 Turns) hatte keinen Intelligenz-Vorschlag
 - **[2026-04-03] self-observation-checker**: [WARNING] Session 2363a77c (21 Turns) zeigte keine Selbstbeobachtung
 - **[2026-04-03] intelligence-checker**: [WARNING] Session 2363a77c (36 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-02] intelligence-checker**: [WARNING] Session bafc0d45 (123 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-02] self-observation-checker**: [WARNING] Session bafc0d45 (123 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-03] intelligence-checker**: [WARNING] Session bcad53a9 (39 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-03] intelligence-checker**: [WARNING] Session 71ac5129 (17 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-03] self-observation-checker**: [WARNING] Session 71ac5129 (17 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-03] intelligence-checker**: [WARNING] Session bcad53a9 (52 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-03] CLOSED-LOOP**: Auto-Rule generiert: auto-learned-other.md (3x other in 3 Sessions)
+- **[2026-04-03] intelligence-checker**: [WARNING] Session 4b80f958 (250 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-03] self-observation-checker**: [WARNING] Session 4b80f958 (250 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-06] intelligence-checker**: [WARNING] Session 4b80f958 (250 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-06] self-observation-checker**: [WARNING] Session 4b80f958 (250 Turns) zeigte keine Selbstbeobachtung
 ---
 
 ## Regeln & Konventionen
