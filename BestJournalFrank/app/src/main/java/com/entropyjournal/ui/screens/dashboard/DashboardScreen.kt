@@ -101,6 +101,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
             .background(MaterialTheme.colorScheme.background)
     ) {
         if (isDark) {
+            ParticleBackground()
             TwinklingStars()
         }
 

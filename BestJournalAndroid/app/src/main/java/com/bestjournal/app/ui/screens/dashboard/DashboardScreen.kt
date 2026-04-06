@@ -100,6 +100,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         if (isDark) {
+            ParticleBackground()
             TwinklingStars()
         }
 

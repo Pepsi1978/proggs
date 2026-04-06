@@ -24,8 +24,8 @@ private data class Star(
     val x: Float,
     val y: Float,
     val maxSize: Float,
-    val delay: Float,
-    val cycleDuration: Float
+    val phaseOffset: Float,
+    val speedMultiplier: Float
 )
 
 @Composable
@@ -38,19 +38,25 @@ fun TwinklingStars(
             Star(
                 x = Random.nextFloat(),
                 y = Random.nextFloat(),
-                maxSize = Random.nextFloat() * 2.5f + 2f,
-                delay = Random.nextFloat() * 6.28f,
-                cycleDuration = Random.nextFloat() * 6000f + 7000f
+                maxSize = when (Random.nextInt(3)) {
+                    0 -> Random.nextFloat() * 1.2f + 1f    // small distant star
+                    1 -> Random.nextFloat() * 1.8f + 1.5f  // medium star
+                    else -> Random.nextFloat() * 2.5f + 2f  // large close star
+                },
+                phaseOffset = Random.nextFloat() * 1000f,
+                speedMultiplier = Random.nextFloat() * 0.5f + 0.75f
             )
         }
     }
 
+    // Use a very long cycle (60 seconds) to avoid visible "cut" when restarting.
+    // Each star has its own speed multiplier + phase offset so they never sync up.
     val transition = rememberInfiniteTransition(label = "stars")
     val time by transition.animateFloat(
         initialValue = 0f,
-        targetValue = 6.28f,
+        targetValue = 1000f,
         animationSpec = infiniteRepeatable(
-            animation = tween(18000, easing = LinearEasing),
+            animation = tween(60000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "starTime"
@@ -58,22 +64,24 @@ fun TwinklingStars(
 
     Canvas(modifier = modifier.fillMaxSize()) {
         stars.forEach { star ->
-            val phase = (time * (18000f / star.cycleDuration) + star.delay) % 6.28f
+            // Each star has its own independent cycle via phaseOffset + speedMultiplier
+            val t = (time + star.phaseOffset) * star.speedMultiplier
+            val phase = (t % 100f) / 100f  // 0..1 within this star's personal cycle
 
-            // Smooth sine curve: 0 → 1 → 0 over the cycle
-            // Only visible for ~40% of the cycle (rest is dark/invisible)
-            val raw = sin(phase.toDouble()).toFloat()
-            val lifecycle = (raw * 2.5f).coerceIn(0f, 1f)
+            // Bell curve: star is visible only in the middle ~35% of its cycle
+            // phase 0.0-0.3: invisible, 0.3-0.5: growing, 0.5-0.7: shrinking, 0.7-1.0: invisible
+            val lifecycle = when {
+                phase < 0.3f -> 0f
+                phase < 0.5f -> (phase - 0.3f) / 0.2f  // 0→1 grow
+                phase < 0.7f -> 1f - (phase - 0.5f) / 0.2f  // 1→0 shrink
+                else -> 0f
+            }
 
             if (lifecycle > 0.01f) {
                 val cx = star.x * size.width
                 val cy = star.y * size.height
-
-                // Size grows from 0 to maxSize and shrinks back
                 val currentSize = star.maxSize * lifecycle * density
-
-                // Alpha follows the same curve: dark → bright → dark
-                val alpha = lifecycle * 0.75f
+                val alpha = lifecycle * 0.7f
 
                 drawStar(
                     center = Offset(cx, cy),
@@ -86,7 +94,7 @@ fun TwinklingStars(
 }
 
 private fun DrawScope.drawStar(center: Offset, size: Float, color: Color) {
-    if (size < 0.5f) return
+    if (size < 0.3f) return
     val path = Path()
     val points = 4
     val outerRadius = size
