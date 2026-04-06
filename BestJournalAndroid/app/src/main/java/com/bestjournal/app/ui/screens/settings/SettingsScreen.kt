@@ -864,12 +864,6 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     }
                 } else {
                     Text(
-                        text = "Dein Wochenlimit ist erreicht",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
                         text = "Mit Premium bekommst du:",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -883,7 +877,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("\u2022  Persönliche Muster erkennen \u2014 die KI findet verborgene Denk- und Gef\u00fchlsmuster in deinen Eintr\u00e4gen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("\u2022  Keine Werbung, keine Limits \u2014 nutze alle Funktionen so oft du willst", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  Keine Werbung \u2014 ungest\u00f6rt schreiben und reflektieren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = { showSubscriptionSheet = true },
