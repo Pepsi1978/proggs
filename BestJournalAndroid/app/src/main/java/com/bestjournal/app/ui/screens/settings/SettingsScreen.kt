@@ -586,13 +586,13 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             }
         }
 
-        // KI Dashboard Profile
+        // KI-Dashboard Profile
         GlassCard {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Dashboard, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("KI Dashboard Profile:", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("KI-Dashboard Profile:", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -870,10 +870,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 } else {
                     Text(
                         text = "Mit Premium bekommst du:",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("\u2022  Unbegrenzte KI-Textverbesserung, jeder Eintrag wird klarer und ausdrucksst\u00e4rker", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

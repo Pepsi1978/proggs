@@ -10,9 +10,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -83,10 +81,6 @@ fun AppNavGraph(
             val pagerState = rememberPagerState(initialPage = 1) { mainPages.size }
             val coroutineScope = rememberCoroutineScope()
 
-            LaunchedEffect(pagerState) {
-                snapshotFlow { pagerState.currentPage }.collect { }
-            }
-
             Scaffold(
                 containerColor = MaterialTheme.colorScheme.background,
                 bottomBar = {
@@ -105,7 +99,7 @@ fun AppNavGraph(
             ) { innerPadding ->
                 HorizontalPager(
                     state = pagerState,
-                    beyondViewportPageCount = 1,
+                    beyondViewportPageCount = 2,
                     modifier = Modifier.padding(innerPadding)
                 ) { page ->
                     when (page) {
