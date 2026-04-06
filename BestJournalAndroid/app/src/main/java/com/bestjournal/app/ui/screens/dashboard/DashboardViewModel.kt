@@ -83,11 +83,21 @@ constructor(
                         refreshDashboard()
                     }
                 }
+                val promptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
+                if (promptSavedAt > lastCustomPromptSavedAt && promptSavedAt > 0L) {
+                    lastCustomPromptSavedAt = promptSavedAt
+                    if (adviceBlocks.value.isNotEmpty() && _uiState.value.currentScenario == 4) {
+                        adviceRepository.clearDashboard()
+                        _uiState.update { it.copy(isScenarioSwitch = true) }
+                        refreshDashboard()
+                    }
+                }
                 kotlinx.coroutines.delay(500)
             }
         }
     }
 
+    private var lastCustomPromptSavedAt = encryptedPrefs.getLong("custom_prompt_saved_at", 0L)
     private var manualRefreshActive = false
 
     fun selectCategory(index: Int) {

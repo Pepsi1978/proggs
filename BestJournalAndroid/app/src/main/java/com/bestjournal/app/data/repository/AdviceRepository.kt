@@ -717,9 +717,9 @@ Mindestens 10 Erkenntnisse insgesamt. Jeder Aspekt verdient eine eigene Erkenntn
 
 JSON-AUSGABE-SCHEMA:
 {
-  "ueberschrift_top5": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r die Top 5 (passend zum Fokus, max 4 W${"\u00f6"}rter)",
-  "ueberschrift_analyse": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r die ${"\u00dc"}bersicht (passend zum Fokus, max 4 W${"\u00f6"}rter)",
-  "ueberschrift_ergebnisse": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r alle Ergebnisse (passend zum Fokus, max 4 W${"\u00f6"}rter)",
+  "ueberschrift_top5": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r die Top 5 (passend zum Fokus, max 3 W${"\u00f6"}rter)",
+  "ueberschrift_analyse": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r die ${"\u00dc"}bersicht (passend zum Fokus, max 3 W${"\u00f6"}rter)",
+  "ueberschrift_ergebnisse": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r alle Ergebnisse (passend zum Fokus, max 3 W${"\u00f6"}rter)",
   "gesamt_entropie": 0.0,
   "trend": "steigend|stabil|sinkend|unbekannt",
   "gesamtanalyse": "...",
@@ -728,7 +728,7 @@ JSON-AUSGABE-SCHEMA:
   "kategorien": [...]
 }
 
-1) "ueberschrift_top5/analyse/ergebnisse": PFLICHT. Kreativ, spezifisch, max 4 W${"\u00f6"}rter.
+1) "ueberschrift_top5/analyse/ergebnisse": PFLICHT. Kreativ, spezifisch, max 3 W${"\u00f6"}rter.
    MUSS zum Benutzer-Fokus passen. KEINE generischen Titel.
 
 2) "gesamt_entropie" (0.0 bis 1.0): Wie stark ist der Fokus-Bereich in den Eintr${"\u00e4"}gen vertreten?

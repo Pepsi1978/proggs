@@ -488,7 +488,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         },
                         confirmButton = {
                             TextButton(onClick = {
-                                scenarioPrefs.edit().putString(Constants.PREF_CUSTOM_PROMPT, promptText).apply()
+                                val previousPrompt = scenarioPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+                                val editor = scenarioPrefs.edit().putString(Constants.PREF_CUSTOM_PROMPT, promptText)
+                                if (promptText != previousPrompt && promptText.isNotBlank()) {
+                                    editor.putLong("custom_prompt_saved_at", System.currentTimeMillis())
+                                }
+                                editor.apply()
                                 showCustomPromptDialog = false
                             }) { Text("Speichern", color = MaterialTheme.colorScheme.primary) }
                         },
