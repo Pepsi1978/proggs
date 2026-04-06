@@ -341,10 +341,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         }
                     }
 
-                    // Relevance legend (replaces Priority legend)
-                    item(key = "relevance_legend") { SummaryRelevanceLegend() }
-
-                    // All observations header
+                    // All observations header + relevance legend below it
                     item(key = "all_observations") {
                         Spacer(modifier = Modifier.height(20.dp))
                         NeonDivider()
@@ -357,6 +354,8 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             textAlign = TextAlign.Center,
                         )
                     }
+
+                    item(key = "relevance_legend") { SummaryRelevanceLegend() }
 
                     // All observations sorted by relevance
                     val allObservations =

@@ -214,14 +214,14 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         }
                     }
 
-                    item(key = "relevance_legend") { SummaryRelevanceLegend() }
-
                     item(key = "all_observations") {
                         Spacer(modifier = Modifier.height(20.dp))
                         NeonDivider()
                         Spacer(modifier = Modifier.height(16.dp))
                         Text("\uD83D\uDD0D  Alle Beobachtungen", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = SummaryIndigo, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                     }
+
+                    item(key = "relevance_legend") { SummaryRelevanceLegend() }
 
                     val allObservations = blocks.flatMap { block -> block.advices.map { advice -> Triple(advice, block.categoryName, block.entropyLevel) } }.sortedBy { (advice, _, _) -> when (advice.priority) { AdvicePriority.HIGH -> 0; AdvicePriority.MEDIUM -> 1; AdvicePriority.LOW -> 2 } }
                     itemsIndexed(allObservations) { _, (advice, catName, _) -> SummaryObservationCard(advice = advice, categoryName = catName, onClick = { selectedAdvice = Pair(advice, catName) }) }
