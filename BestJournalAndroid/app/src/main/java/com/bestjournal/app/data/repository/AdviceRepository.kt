@@ -119,7 +119,7 @@ FELD-DEFINITIONEN:
    Schema pro Maßnahme:
    {
      "titel": "Kurzer Titel (max. 6 Wörter)",
-     "beschreibung": "Max. 30 Wörter — kurz und knackig: was genau tun und warum.",
+     "beschreibung": "16–24 Wörter — kurz und knackig: was genau tun und warum.",
      "erklaerung": "Ausführliche Begründung (5–8 Sätze). Warum gerade diese
                     Maßnahme? Welche Einträge zeigen das Problem? Was passiert,
                     wenn man es umsetzt?"
@@ -178,8 +178,7 @@ FELD-DEFINITIONEN:
    Schema pro Ratschlag:
    {
      "titel": "Kurzer Titel (max. 6 Wörter)",
-     "beschreibung": "Ausführliche Empfehlung (3–5 Sätze). Konkret und
-                      direkt — was genau tun, wie, und warum.",
+     "beschreibung": "16–24 Wörter — konkret und direkt: was genau tun und warum.",
      "prioritaet": "hoch|mittel|niedrig",
      "verknuepfung": "1–2 andere Kategorienamen die zusammenhängen,
                       plus ein Satz warum. Falls keine: null",
@@ -246,7 +245,7 @@ JSON-AUSGABE-SCHEMA:
 1) "gesamtanalyse" (15–25 S${"\u00e4"}tze): Alle Ziele benennen, Fortschritt erkennen.
 
 2) "top_massnahmen" (genau 5): N${"\u00e4"}chste Schritte.
-   { "titel": "...", "beschreibung": "Max 30 W${"\u00f6"}rter", "erklaerung": "5–8 S${"\u00e4"}tze" }
+   { "titel": "...", "beschreibung": "16–24 W${"\u00f6"}rter", "erklaerung": "5–8 S${"\u00e4"}tze" }
 
 3) "kategorien": Ziel-Bereiche.
    {
@@ -254,7 +253,7 @@ JSON-AUSGABE-SCHEMA:
      "entropie_level": 0.0, "zusammenfassung": "3–5 S${"\u00e4"}tze",
      "ratschlaege": [{
        "titel": "...",
-       "beschreibung": "Status: [offen/in Arbeit/blockiert/erreicht]. N${"\u00e4"}chster Schritt: [...].",
+       "beschreibung": "16–24 W${"\u00f6"}rter. Status: [offen/in Arbeit/blockiert/erreicht]. N${"\u00e4"}chster Schritt: [...].",
        "prioritaet": "hoch|mittel|niedrig",
        "verknuepfung": "...", "herleitung": [{"datum":"...","zusammenfassung":"..."}]
      }]
