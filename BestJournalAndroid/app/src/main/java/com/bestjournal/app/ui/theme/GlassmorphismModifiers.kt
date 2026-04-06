@@ -26,15 +26,24 @@ fun Modifier.glassCard(
     .clip(RoundedCornerShape(cornerRadius))
     .background(
         if (isDark) {
-            Brush.verticalGradient(listOf(GlassWhite, GlassHighlight))
+            Brush.verticalGradient(
+                0.0f to GlassWhite,
+                0.3f to GlassWhite.copy(alpha = 0.07f),
+                0.7f to GlassHighlight.copy(alpha = 0.04f),
+                1.0f to GlassHighlight
+            )
         } else {
             Brush.verticalGradient(listOf(Color.White, Color(0xFFFAFAFC)))
         }
     )
     .border(
-        width = 1.dp,
+        width = 0.5.dp,
         brush = if (isDark) {
-            Brush.linearGradient(listOf(GlassBorder, Color.Transparent))
+            Brush.verticalGradient(
+                0.0f to GlassBorder.copy(alpha = 0.12f),
+                0.5f to GlassBorder.copy(alpha = 0.06f),
+                1.0f to Color.Transparent
+            )
         } else {
             Brush.linearGradient(listOf(Color(0x18000000), Color.Transparent))
         },
@@ -57,17 +66,22 @@ fun Modifier.glassCardElevated(
     .background(
         if (isDark) {
             Brush.verticalGradient(
-                listOf(GlassWhite.copy(alpha = 0.15f), GlassHighlight)
+                0.0f to GlassWhite.copy(alpha = 0.12f),
+                0.3f to GlassWhite.copy(alpha = 0.08f),
+                0.7f to GlassHighlight.copy(alpha = 0.04f),
+                1.0f to GlassHighlight
             )
         } else {
             Brush.verticalGradient(listOf(Color.White, Color(0xFFF8F8FC)))
         }
     )
     .border(
-        width = 1.dp,
+        width = 0.5.dp,
         brush = if (isDark) {
-            Brush.linearGradient(
-                listOf(GlassBorder.copy(alpha = 0.3f), Color.Transparent, GlassBorder.copy(alpha = 0.1f))
+            Brush.verticalGradient(
+                0.0f to GlassBorder.copy(alpha = 0.18f),
+                0.5f to GlassBorder.copy(alpha = 0.08f),
+                1.0f to Color.Transparent
             )
         } else {
             Brush.linearGradient(listOf(Color(0x20000000), Color.Transparent, Color(0x08000000)))
