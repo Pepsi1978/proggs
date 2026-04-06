@@ -70,6 +70,10 @@ import com.entropyjournal.ui.theme.SummaryBlue
 import com.entropyjournal.ui.theme.SummaryIndigo
 import com.entropyjournal.ui.theme.SummaryTeal
 import com.entropyjournal.ui.theme.SummarySlate
+import com.entropyjournal.ui.theme.InsightViolet
+import com.entropyjournal.ui.theme.InsightRose
+import com.entropyjournal.ui.theme.InsightWarm
+import com.entropyjournal.ui.theme.InsightMauve
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.graphics.Brush
 
@@ -227,6 +231,51 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
                     val allObservations = blocks.flatMap { block -> block.advices.map { advice -> Triple(advice, block.categoryName, block.entropyLevel) } }.sortedBy { (advice, _, _) -> when (advice.priority) { AdvicePriority.HIGH -> 0; AdvicePriority.MEDIUM -> 1; AdvicePriority.LOW -> 2 } }
                     itemsIndexed(allObservations) { _, (advice, catName, _) -> SummaryObservationCard(advice = advice, categoryName = catName, onClick = { selectedAdvice = Pair(advice, catName) }) }
+                } else if (uiState.currentScenario == 2) {
+                    // ═══════ SELBSTERKENNTNIS DASHBOARD ═══════
+                    val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
+                    if (topActions.isNotEmpty()) {
+                        item { InsightKeyBlock(actions = topActions) }
+                    }
+
+                    item {
+                        val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
+                        GlassCard(glowColor = InsightViolet, glowIntensity = 0.2f) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text("\uD83D\uDC9C  Innerer Spiegel", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = InsightViolet, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(text = overallAnalysis, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+
+                    item {
+                        val categoryScrollIsolation = remember {
+                            object : NestedScrollConnection {
+                                override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset = Offset(available.x, 0f)
+                                override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity = Velocity(available.x, 0f)
+                            }
+                        }
+                        Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
+                            LazyRow(contentPadding = PaddingValues(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                itemsIndexed(blocks) { index, block ->
+                                    AdviceCategoryCard(block = block, isSelected = index == uiState.selectedCategoryIndex, onClick = { viewModel.selectCategory(index); selectedCategoryBlock = block })
+                                }
+                            }
+                        }
+                    }
+
+                    item(key = "all_insights") {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        NeonDivider()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("\uD83D\uDD2E  Alle Einsichten", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = InsightMauve, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                    }
+
+                    item(key = "insight_depth_legend") { InsightDepthLegend() }
+
+                    val allInsights = blocks.flatMap { block -> block.advices.map { advice -> Triple(advice, block.categoryName, block.entropyLevel) } }.sortedBy { (advice, _, _) -> when (advice.priority) { AdvicePriority.HIGH -> 0; AdvicePriority.MEDIUM -> 1; AdvicePriority.LOW -> 2 } }
+                    itemsIndexed(allInsights) { _, (advice, catName, _) -> InsightCard(advice = advice, categoryName = catName, onClick = { selectedAdvice = Pair(advice, catName) }) }
                 } else {
                     // ═══════ DEFAULT DASHBOARD ═══════
                     val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
@@ -769,6 +818,116 @@ private fun SummaryObservationCard(advice: Advice, categoryName: String = "", on
             if (advice.connection.isNotBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(text = "\u2194 ${advice.connection}", style = MaterialTheme.typography.labelMedium, color = SummaryTeal.copy(alpha = 0.8f))
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SELBSTERKENNTNIS DASHBOARD — Warm violet/rose theme
+// ═══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun InsightKeyBlock(actions: List<TopAction>) {
+    var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
+
+    GlassCard(glowColor = InsightViolet, glowIntensity = 0.25f) {
+        Column {
+            Text("\uD83E\uDE9E  Tiefste Erkenntnisse", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = InsightViolet, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("Was deine Eintr\u00e4ge \u00fcber dich verraten", style = MaterialTheme.typography.labelMedium, color = InsightMauve, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            Spacer(modifier = Modifier.height(16.dp))
+            actions.forEachIndexed { index, action ->
+                Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { selectedAction = index to action }.padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
+                    Box(modifier = Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Brush.linearGradient(listOf(InsightViolet, InsightRose))), contentAlignment = Alignment.Center) {
+                        Text("${index + 1}", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.surface)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(action.title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(action.description, style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (index < actions.lastIndex) { Box(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(InsightViolet.copy(alpha = 0.15f))) }
+            }
+        }
+    }
+    selectedAction?.let { (index, action) -> InsightDetailDialog(action = action, index = index, onDismiss = { selectedAction = null }) }
+}
+
+@Composable
+private fun InsightDetailDialog(action: TopAction, index: Int, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(Brush.linearGradient(listOf(InsightViolet, InsightRose))), contentAlignment = Alignment.Center) {
+                    Text("${index + 1}", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.surface)
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(action.title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+            }
+        },
+        text = {
+            Column {
+                Text(action.description, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic), color = InsightViolet)
+                if (action.detailedDescription.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(InsightViolet.copy(alpha = 0.2f)))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(action.detailedDescription, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = InsightViolet) } },
+    )
+}
+
+@Composable
+private fun InsightDepthLegend() {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+        InsightLegendItem(emoji = "\uD83E\uDE9E", label = "Tiefgehend", color = InsightViolet)
+        InsightLegendItem(emoji = "\uD83D\uDC9C", label = "Bewusst", color = InsightMauve)
+        InsightLegendItem(emoji = "\uD83C\uDF31", label = "Oberfl\u00e4che", color = InsightWarm)
+    }
+}
+
+@Composable
+private fun InsightLegendItem(emoji: String, label: String, color: androidx.compose.ui.graphics.Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(emoji, style = MaterialTheme.typography.labelLarge)
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, color = color)
+    }
+}
+
+@Composable
+private fun InsightCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
+    val (emoji, glowColor) = when (advice.priority) {
+        AdvicePriority.HIGH -> "\uD83E\uDE9E" to InsightViolet
+        AdvicePriority.MEDIUM -> "\uD83D\uDC9C" to InsightMauve
+        AdvicePriority.LOW -> "\uD83C\uDF31" to InsightWarm
+    }
+
+    GlassCard(modifier = Modifier.clickable { onClick() }, glowColor = glowColor, glowIntensity = 0.08f) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text(text = emoji)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(advice.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                if (categoryName.isNotBlank()) {
+                    Surface(shape = RoundedCornerShape(6.dp), color = InsightViolet.copy(alpha = 0.12f)) {
+                        Text(categoryName, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelMedium, color = InsightViolet)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(advice.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (advice.connection.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text("\uD83D\uDD17 ${advice.connection}", style = MaterialTheme.typography.labelMedium, color = InsightRose.copy(alpha = 0.8f))
             }
         }
     }

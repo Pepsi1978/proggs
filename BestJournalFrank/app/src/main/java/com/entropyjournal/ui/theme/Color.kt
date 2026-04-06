@@ -29,6 +29,12 @@ val SummaryIndigo = Color(0xFF6366F1)        // Secondary — deep indigo
 val SummaryTeal = Color(0xFF14B8A6)          // Highlight — fresh teal
 val SummarySlate = Color(0xFF94A3B8)         // Muted — soft slate
 
+// Self-insight dashboard palette (warm, introspective, personal)
+val InsightViolet = Color(0xFFA78BFA)        // Primary accent — warm purple
+val InsightRose = Color(0xFFF472B6)          // Secondary — emotional warmth
+val InsightWarm = Color(0xFFFBBF24)          // Highlight — golden warmth
+val InsightMauve = Color(0xFFC084FC)         // Soft accent — light purple
+
 // Glassmorphism (cream-tinted)
 val GlassWhite = Color(0x18DCD7C9)        // Cream overlay 9%
 val GlassBorder = Color(0x28DCD7C9)       // Cream border 16%
