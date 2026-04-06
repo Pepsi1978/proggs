@@ -172,6 +172,8 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Cross-Tool:** Codex + Gemini Delta Bridges aktiv, 8 Intelligenz-Dimensionen im Whiteboard portiert
 - **macOS-Update (2026-03-31):** Claude Code v2.1.83, Node v25.8.1, npm 11.11.1, Bun 1.3.11, Go 1.26.1, Swift 6.3, Rust/Cargo 1.94.0 (→1.94.1 verfuegbar), 25 Homebrew-Pakete veraltet
 - **macOS Settings-Fix (2026-03-31):** allow-Liste entfernt (war Whitelist-Blocker bei bypassPermissions), 2 fehlende Hooks hinzugefuegt (mcp-auth-check, doctor-lite), tote Plugins deaktiviert (boostvolt, FlineDev)
+- **Neue Hooks:** StopFailure (v2.1.78) — loggt API-Fehler/Rate-Limits ins Whiteboard
+- **Windows→macOS Porting (2026-03-25):** 6 Hook-Upgrades portiert (Semantic Search Check, config-guard PostToolUse, Enhanced PostToolUseFailure/SubagentStop/PostCompact, session-scorer 25s Timeout)
 - **Pending Admin Updates (5):** fzf,harfbuzz,node,ollama,simdjson,
 ---
 
