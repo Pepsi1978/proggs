@@ -736,10 +736,10 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                                 OutlinedTextField(
                                     value = promptText,
                                     onValueChange = { promptText = it },
-                                    modifier = Modifier.fillMaxWidth().height(280.dp),
+                                    modifier = Modifier.fillMaxWidth().height(350.dp),
                                     placeholder = {
                                         Text(
-                                            "Je gr\u00fcndlicher du beschreibst was du wissen m\u00f6chtest, desto besser werden die Ergebnisse.\n\nz.B. Fokussiere dich auf meine Schlafqualit\u00e4t und Stresslevel. Zeige mir Muster in meiner Ern\u00e4hrung. Analysiere, wie sich meine Stimmung \u00fcber die Woche ver\u00e4ndert. Finde heraus, wann ich am produktivsten bin und was mich blockiert.",
+                                            "Je gr\u00fcndlicher du beschreibst was dein Fokus ist, desto besser werden die Ergebnisse.\n\nz.B. Fokussiere dich auf meine Schlafqualit\u00e4t und Stresslevel. Zeige mir Muster in meiner Ern\u00e4hrung. Analysiere, wie sich meine Stimmung \u00fcber die Woche ver\u00e4ndert. Finde heraus, wann ich am produktivsten bin und was mich blockiert.",
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
                                         )
                                     },
