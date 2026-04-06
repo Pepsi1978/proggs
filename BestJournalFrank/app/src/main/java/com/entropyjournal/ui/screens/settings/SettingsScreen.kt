@@ -368,12 +368,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
             }
         }
 
-        // KI-Dashboard-Profile
+        // KI Dashboard Profile
         GlassCard {
             Column {
-                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.Dashboard, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("KI-Dashboard-Profile", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
+                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.Dashboard, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("KI Dashboard Profile:", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("W\u00e4hle, wie die KI deine Eintr\u00e4ge analysiert", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("W\u00e4hle ein Profil aus. Tippe auf ein Profil f\u00fcr eine genauere Erkl\u00e4rung.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(12.dp))
 
                 val scenarioNames = listOf("Zusammenfassung", "R\u00e4ume dein Leben auf", "Selbsterkenntnis", "Pers\u00f6nliche Ziele", "Individuelle Analyse")
