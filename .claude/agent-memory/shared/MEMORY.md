@@ -133,6 +133,9 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-03 03:20 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
 ### 2026-04-06 16:18 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
 ### [2026-04-06 16:25] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-06 16:54 — Hook: safety-gate.sh — Befehl blockiert: rm[[:space:]]+-rf[[:space:]]+[/~]
+### 2026-04-06 17:36 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### [2026-04-06 17:48] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ---
 
 ## Systemzustand (aktuell)
@@ -160,7 +163,6 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **PATH:** Alle kritischen Verzeichnisse vorhanden (verifiziert 04.04)
 - **Cross-Platform Sync:** Alle Rules, Agents, Skills, Hooks synchron zwischen Setup-Repo und lokal
 - **[2026-04-04 16:11] env-checker**: Gesamtstatus GELB — 1 Problem: effortLevel ist medium statt high in settings.json. Alle anderen Checks OK: Claude Code 2.1.92 aktuell, 92 Hook-Dateien, 88 Plugins, 57 Rules, 29 Agents, Disk 84%, PATH vollstaendig, bypassPermissions aktiv.
-- **Pending Admin Updates (1):** Go (Programmiersprache)
 - **Sicherheit:** Prompt-Injection-Defender aktiv, cargo-audit 0.22.1 OK, Axios Supply-Chain SAUBER (geprueft 2026-04-02)
 - **Evolution-Analyst (2026-04-02):** Quality 8.66 (PLATEAU), IQ 89.5 (STEIGEND), Meta-Intelligence 10% (KOLLAPS → Bug gefixt), Corrections fast null
 - **Speicherplatz (macOS):** 16 GB frei (42%) — bereinigt, stabil
