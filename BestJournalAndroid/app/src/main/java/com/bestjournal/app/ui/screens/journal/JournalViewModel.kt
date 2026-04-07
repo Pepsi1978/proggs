@@ -461,9 +461,11 @@ constructor(
             try {
                 delay(3_000)
                 analyzeEntropyUseCase(freshAnalysis = true)
+                // Write timestamp to the scenario-specific key so getLastUpdatedText() finds it
+                val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                 encryptedPrefs
                     .edit()
-                    .putLong(Constants.PREF_DASHBOARD_LAST_UPDATED, System.currentTimeMillis())
+                    .putLong("dashboard_last_updated_$scenario", System.currentTimeMillis())
                     .apply()
             } finally {
                 encryptedPrefs.edit().putBoolean(Constants.PREF_DASHBOARD_UPDATING, false).apply()
