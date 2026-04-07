@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.LocalFireDepartment
@@ -88,6 +89,8 @@ import com.entropyjournal.ui.components.ShimmerLoadingEffect
 import com.entropyjournal.ui.components.SunMoonToggle
 import com.entropyjournal.ui.components.TimelineItem
 import com.entropyjournal.ui.components.TimelinePosition
+import androidx.compose.ui.draw.clip
+import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
@@ -306,8 +309,8 @@ fun JournalScreen(
                         item(key = "writing_prompt") {
                             WritingPromptBanner(
                                 promptText = uiState.dailyPromptText,
-                                category = uiState.dailyPromptCategory,
-                                onUsePrompt = { viewModel.startPromptEntry(uiState.dailyPromptText) },
+                                promptCategory = uiState.dailyPromptCategory,
+                                onWriteClick = { viewModel.startPromptEntry(uiState.dailyPromptText) },
                                 onDismiss = { viewModel.dismissPromptBanner() },
                             )
                         }
@@ -419,11 +422,16 @@ fun JournalScreen(
                 improvedText = uiState.improvedText,
                 isImproving = uiState.recordingState == RecordingState.IMPROVING,
                 isUsingImproved = uiState.isImproveEnabled,
+                activePrompt = uiState.activePrompt,
                 onImproveClick = { viewModel.improveText() },
                 onToggleVersion = { useImproved -> viewModel.setUseImprovedText(useImproved) },
                 onTextEdit = { viewModel.updatePreviewText(it) },
                 onSave = { viewModel.saveEntry() },
-                onDismiss = { viewModel.dismissPreview() }
+                onDismiss = { viewModel.dismissPreview() },
+                onRecordClick = {
+                    viewModel.dismissPreview()
+                    onMicClick()
+                },
             )
         }
 
@@ -491,23 +499,33 @@ private fun PreviewDialog(
     improvedText: String?,
     isImproving: Boolean,
     isUsingImproved: Boolean,
+    activePrompt: String = "",
     onImproveClick: () -> Unit,
     onToggleVersion: (Boolean) -> Unit,
     onTextEdit: (String) -> Unit,
     onSave: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onRecordClick: () -> Unit = {},
 ) {
     val showingImproved = isUsingImproved && improvedText != null
     val displayText = if (showingImproved) improvedText!! else rawText
+    val hasPrompt = activePrompt.isNotBlank()
+    var inputModeChosen by remember { mutableStateOf(rawText.isNotBlank() || !hasPrompt) }
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     var lastEditTime by remember { mutableLongStateOf(0L) }
     var isFocused by remember { mutableStateOf(false) }
     var hadFocusOnce by remember { mutableStateOf(false) }
 
-    // Auto-focus only for text entry mode (empty text = user tapped the edit button)
     LaunchedEffect(Unit) {
-        if (rawText.isBlank()) {
+        if (rawText.isBlank() && !hasPrompt) {
+            delay(300)
+            focusRequester.requestFocus()
+        }
+    }
+
+    LaunchedEffect(inputModeChosen) {
+        if (inputModeChosen && hasPrompt && rawText.isBlank()) {
             delay(300)
             focusRequester.requestFocus()
         }
@@ -521,14 +539,13 @@ private fun PreviewDialog(
         }
     }
 
-    // Clear focus when keyboard is dismissed (back gesture/swipe)
-    // If text is empty, also close the dialog
+    // Clear focus when keyboard is dismissed; close dialog if text still blank
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     LaunchedEffect(imeVisible) {
         if (!imeVisible && isFocused) {
             focusManager.clearFocus()
         }
-        if (!imeVisible && hadFocusOnce && displayText.isBlank()) {
+        if (!imeVisible && hadFocusOnce && displayText.isBlank() && !hasPrompt) {
             onDismiss()
         }
     }
@@ -538,101 +555,225 @@ private fun PreviewDialog(
             focusManager.clearFocus()
             onDismiss()
         },
+        modifier = if (hasPrompt) Modifier.fillMaxWidth(0.95f) else Modifier,
+        properties = if (hasPrompt) androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false) else androidx.compose.ui.window.DialogProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
         title = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Neuer Eintrag", color = MaterialTheme.colorScheme.onSurface)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (hasPrompt) {
+                        Icon(
+                            imageVector = Icons.Rounded.Lightbulb,
+                            contentDescription = null,
+                            tint = NeonAmber,
+                            modifier = Modifier.size(22.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text(
+                        if (hasPrompt) "Schreibimpuls" else "Neuer Eintrag",
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (improvedText != null) {
                         Text(
                             text = if (showingImproved) "Verbessert" else "Original",
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text(
-                        text = "\u270F\uFE0F",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.outline
-                    )
+                    if (!hasPrompt) {
+                        Text(
+                            text = "\u270F\uFE0F",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                    }
                 }
             }
         },
         text = {
             Column {
-                TextField(
-                    value = displayText,
-                    onValueChange = { newText ->
-                        lastEditTime = System.currentTimeMillis()
-                        onTextEdit(newText)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 300.dp)
-                        .focusRequester(focusRequester)
-                        .onFocusChanged { state ->
-                            isFocused = state.isFocused
-                            if (state.isFocused) hadFocusOnce = true
-                            if (state.isFocused) lastEditTime = System.currentTimeMillis()
-                        },
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        color = MaterialTheme.colorScheme.onSurface
-                    ),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        cursorColor = MaterialTheme.colorScheme.primary
-                    ),
-                    placeholder = {
-                        Text(
-                            "Tippe hier, um den Text zu bearbeiten...",
-                            color = MaterialTheme.colorScheme.outline
-                        )
+                // Inspirational prompt card
+                if (hasPrompt) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                                    listOf(
+                                        NeonAmber.copy(alpha = 0.10f),
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                    )
+                                ),
+                                shape = RoundedCornerShape(16.dp),
+                            )
+                            .padding(16.dp),
+                    ) {
+                        Column {
+                            Text(
+                                text = "\u201E$activePrompt\u201C",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "Lass deine Gedanken frei flie\u00dfen. Es gibt kein richtig oder falsch.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
-                )
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    if (!inputModeChosen) {
+                        // Phase 1: User chooses input method
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            // Pen button
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                FloatingActionButton(
+                                    onClick = { inputModeChosen = true },
+                                    modifier = Modifier.size(56.dp),
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = MaterialTheme.colorScheme.onSurface,
+                                    shape = CircleShape,
+                                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp),
+                                ) {
+                                    Icon(Icons.Rounded.Edit, "Schreiben", modifier = Modifier.size(24.dp))
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text("Schreiben", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
 
-                if (improvedText != null && !isImproving) {
-                    // Toggle between versions
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Box(modifier = Modifier.height(32.dp).width(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            // Mic button
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                FloatingActionButton(
+                                    onClick = onRecordClick,
+                                    modifier = Modifier.size(56.dp),
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = MaterialTheme.colorScheme.onSurface,
+                                    shape = CircleShape,
+                                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp),
+                                ) {
+                                    Icon(Icons.Rounded.Mic, "Einsprechen", modifier = Modifier.size(24.dp))
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text("Einsprechen", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    } else {
+                        // Phase 2: Input active — show small mic chip + label
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "Deine Antwort:",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Surface(
+                                onClick = onRecordClick,
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                ) {
+                                    Icon(Icons.Rounded.Mic, "Einsprechen", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Einsprechen", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                if (inputModeChosen) {
+                    TextField(
+                        value = displayText,
+                        onValueChange = { newText ->
+                            lastEditTime = System.currentTimeMillis()
+                            onTextEdit(newText)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = if (hasPrompt) 120.dp else 0.dp, max = 300.dp)
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { state ->
+                                isFocused = state.isFocused
+                                if (state.isFocused) hadFocusOnce = true
+                                if (state.isFocused) lastEditTime = System.currentTimeMillis()
+                            },
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                        ),
+                        placeholder = {
+                            Text(
+                                if (hasPrompt) "Schreibe hier deine Gedanken\u2026" else "Tippe hier, um den Text zu bearbeiten...",
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                        },
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                if (inputModeChosen && improvedText != null && !isImproving) {
                     OutlinedButton(
                         onClick = { onToggleVersion(!showingImproved) },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                     ) {
-                        Text(
-                            text = if (showingImproved) "\u21A9 Original anzeigen" else "\u2728 Verbesserte Version anzeigen"
-                        )
+                        Text(if (showingImproved) "\u21A9 Original anzeigen" else "\u2728 Verbesserte Version anzeigen")
                     }
                 }
 
-                if (improvedText == null && !isImproving) {
+                if (inputModeChosen && improvedText == null && !isImproving && displayText.isNotBlank()) {
                     Button(
                         onClick = onImproveClick,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        ),
                     ) {
                         Text("\u2728 Text verbessern")
                     }
                 }
 
                 if (isImproving) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
                         ShimmerLoadingEffect(height = 60.dp, cornerRadius = 12.dp)
-                        Text("KI verbessert Text \u2014 bitte warten", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
+                        Text("KI verbessert Text, bitte warten", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
                     }
                 }
             }
@@ -640,10 +781,7 @@ private fun PreviewDialog(
         confirmButton = {
             Button(
                 onClick = onSave,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
             ) {
                 Text(if (showingImproved) "Verbessert speichern" else "Speichern")
             }
@@ -651,68 +789,116 @@ private fun PreviewDialog(
         dismissButton = {
             OutlinedButton(
                 onClick = onDismiss,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
             ) { Text("Verwerfen") }
-        }
+        },
     )
 }
 
 @Composable
 private fun WritingPromptBanner(
     promptText: String,
-    category: String,
-    onUsePrompt: () -> Unit,
+    promptCategory: String,
+    onWriteClick: () -> Unit,
     onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = modifier.fillMaxWidth(),
+        glowColor = NeonAmber,
+        glowIntensity = 0.1f,
+        cornerRadius = 20.dp,
+        contentPadding = 16.dp,
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
             ) {
-                Icon(
-                    Icons.Rounded.Lightbulb,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    category,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f),
-                )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(
+                                androidx.compose.ui.graphics.Brush.linearGradient(
+                                    listOf(NeonAmber, NeonAmber.copy(alpha = 0.6f))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Lightbulb,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            "Schreibimpuls des Tages",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            ),
+                            color = NeonAmber,
+                        )
+                        Text(
+                            promptCategory,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(28.dp),
                 ) {
                     Icon(
                         Icons.Rounded.Close,
-                        contentDescription = "Schließen",
+                        "Schließen",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp),
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(4.dp))
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             Text(
-                promptText,
-                style = MaterialTheme.typography.bodyMedium,
+                text = "\u201E$promptText\u201C",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                ),
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Button(
-                    onClick = onUsePrompt,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                    onClick = onWriteClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = NeonAmber,
+                        contentColor = Color.White,
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
-                    Text("Darüber schreiben", style = MaterialTheme.typography.labelMedium)
+                    Icon(
+                        Icons.Rounded.Edit,
+                        null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "Darüber schreiben",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
                 }
             }
         }
