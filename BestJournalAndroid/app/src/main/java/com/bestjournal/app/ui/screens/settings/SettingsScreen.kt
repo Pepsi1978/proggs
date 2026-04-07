@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Email
@@ -880,21 +881,28 @@ fun SettingsScreen(
                         Text("Abo im Play Store verwalten")
                     }
                 } else {
+                    var benefitsTracked by remember { mutableStateOf(false) }
                     Text(
-                        text = "Mit Premium bekommst du:",
+                        text = "Warum Premium dein Leben ver\u00e4ndert:",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.onGloballyPositioned {
+                            if (!benefitsTracked) {
+                                benefitsTracked = true
+                                viewModel.trackEvent("premium_benefits_viewed")
+                            }
+                        },
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("\u2022  Unbegrenzte KI-Textverbesserung, jeder Eintrag wird klarer und ausdrucksst\u00e4rker", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  Deine Gedanken in klare Worte fassen \u2014 die KI macht jeden Eintrag ausdrucksst\u00e4rker", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("\u2022  5 intelligente Dashboard-Profile: Zusammenfassung, R\u00e4ume dein Leben auf, Selbsterkenntnis, Ziele und eigene Analyse", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  5 Perspektiven auf dein Leben \u2014 von Stressabbau bis Selbsterkenntnis", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("\u2022  Automatische Dashboard-Updates bei jedem neuen Eintrag", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  Dein Dashboard w\u00e4chst mit dir \u2014 automatisch nach jedem Eintrag", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("\u2022  Pers\u00f6nliche Muster erkennen, die KI findet verborgene Denk- und Gef\u00fchlsmuster", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  Entdecke was du bisher \u00fcbersehen hast \u2014 die KI findet Muster die dir nicht auffallen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("\u2022  Keine Werbung, ungest\u00f6rt schreiben und reflektieren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  Dein sicherer Raum \u2014 ungest\u00f6rt schreiben, reflektieren, wachsen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = { onNavigateToPaywall("settings_tap") },

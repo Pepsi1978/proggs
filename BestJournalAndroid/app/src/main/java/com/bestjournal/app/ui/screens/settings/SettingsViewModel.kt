@@ -3,6 +3,7 @@ package com.bestjournal.app.ui.screens.settings
 import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.billing.BillingManager
@@ -45,6 +46,12 @@ constructor(
     private val encryptedPrefs: SharedPreferences,
     private val billingManager: BillingManager,
 ) : ViewModel() {
+
+    fun trackEvent(name: String, params: Map<String, String> = emptyMap()) {
+        Log.d("SettingsAnalytics", "Event: $name ${if (params.isNotEmpty()) params.toString() else ""}")
+        // TODO: Replace with Firebase Analytics when configured
+        // firebaseAnalytics.logEvent(name) { params.forEach { (k, v) -> param(k, v) } }
+    }
 
     fun launchSubscription(activity: Activity, isYearly: Boolean) {
         billingManager.launchPurchaseFlow(activity, isYearly)
