@@ -76,6 +76,18 @@ object Constants {
     // Cooldown duration (shared)
     const val COOLDOWN_MINUTES = 30
 
+    // In-App Review
+    const val PREF_LAST_REVIEW_PROMPT_DATE = "last_review_prompt_date"
+    const val REVIEW_MIN_ENTRIES = 5
+    const val REVIEW_MIN_STREAK = 2
+    const val REVIEW_COOLDOWN_DAYS = 90L
+
+    // Contextual Upsell
+    const val PREF_FIRST_ANALYSIS_UPSELL_SHOWN = "first_analysis_upsell_shown"
+    const val PREF_FIRST_TEXT_UPSELL_SHOWN = "first_text_upsell_shown"
+    const val PREF_DASHBOARD_ANALYSIS_COUNT = "dashboard_analysis_count"
+    const val PREF_TEXT_IMPROVEMENT_COUNT = "text_improvement_count"
+
     // Spam protection
     const val SPAM_HOURLY_AI_LIMIT = 30
 

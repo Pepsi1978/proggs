@@ -124,7 +124,12 @@ fun AppNavGraph(
                     modifier = Modifier.padding(innerPadding)
                 ) { page ->
                     when (page) {
-                        0 -> DashboardScreen(viewModel = hiltViewModel())
+                        0 -> DashboardScreen(
+                            viewModel = hiltViewModel(),
+                            onNavigateToPaywall = { source ->
+                                navController.navigate("paywall?source=$source")
+                            },
+                        )
                         1 -> JournalScreen(
                             viewModel = hiltViewModel(),
                             onEntryClick = { entryId, searchQuery ->

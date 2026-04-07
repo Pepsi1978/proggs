@@ -3,6 +3,7 @@ package com.bestjournal.app.ui.screens.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.billing.BillingManager
+import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.remote.ai.AiRateLimiter
 import com.bestjournal.app.data.remote.ai.AiUsageTracker
 import com.bestjournal.app.data.remote.ai.TieredAccessResult
@@ -33,6 +34,7 @@ data class DashboardUiState(
     val customHeaderTop5: String = "",
     val customHeaderAnalyse: String = "",
     val customHeaderErgebnisse: String = "",
+    val showAnalysisUpsellBanner: Boolean = false,
 )
 
 @HiltViewModel
@@ -129,6 +131,19 @@ constructor(
                         .putLong(scenarioKey, System.currentTimeMillis())
                         .apply()
                     manualRefreshActive = false
+
+                    // Track analysis count and check for first-analysis upsell
+                    val analysisCount = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_ANALYSIS_COUNT, 0) + 1
+                    encryptedPrefs.edit().putInt(Constants.PREF_DASHBOARD_ANALYSIS_COUNT, analysisCount).apply()
+                    val isFree = billingManager.subscriptionState.value is SubscriptionState.Free
+                    val alreadyShown = encryptedPrefs.getBoolean(Constants.PREF_FIRST_ANALYSIS_UPSELL_SHOWN, false)
+                    val onboardingDone = encryptedPrefs.getBoolean(Constants.PREF_ONBOARDING_COMPLETED, false)
+                    val showUpsell = isFree && !alreadyShown && onboardingDone && analysisCount == 1
+
+                    if (showUpsell) {
+                        android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_shown, source=first_analysis")
+                    }
+
                     _uiState.value =
                         _uiState.value.copy(
                             isLoading = false,
@@ -138,6 +153,7 @@ constructor(
                             customHeaderTop5 = encryptedPrefs.getString("custom_header_top5", "") ?: "",
                             customHeaderAnalyse = encryptedPrefs.getString("custom_header_analyse", "") ?: "",
                             customHeaderErgebnisse = encryptedPrefs.getString("custom_header_ergebnisse", "") ?: "",
+                            showAnalysisUpsellBanner = showUpsell,
                         )
                     // Auto-hide undo button after 5 seconds
                     if (adviceRepository.canUndo) {
@@ -179,6 +195,16 @@ constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    fun dismissAnalysisUpsellBanner() {
+        encryptedPrefs.edit().putBoolean(Constants.PREF_FIRST_ANALYSIS_UPSELL_SHOWN, true).apply()
+        _uiState.update { it.copy(showAnalysisUpsellBanner = false) }
+    }
+
+    fun onAnalysisUpsellClicked() {
+        android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_clicked, source=first_analysis")
+        dismissAnalysisUpsellBanner()
     }
 
     fun getLastUpdatedText(): String? {

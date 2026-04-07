@@ -88,7 +88,10 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.graphics.Brush
 
 @Composable
-fun DashboardScreen(viewModel: DashboardViewModel) {
+fun DashboardScreen(
+    viewModel: DashboardViewModel,
+    onNavigateToPaywall: (String) -> Unit = {},
+) {
     val blocks by viewModel.adviceBlocks.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val isDark = LocalIsDarkTheme.current
@@ -162,6 +165,44 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
             if (uiState.showAiInfoBanner) {
                 item(key = "ai_banner") { AiInfoBanner(onDismiss = { viewModel.dismissAiInfoBanner() }) }
+            }
+
+            // Contextual upsell banner after first dashboard analysis
+            if (uiState.showAnalysisUpsellBanner) {
+                item(key = "analysis_upsell") {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Deine erste KI-Analyse ist da! Mit Premium bekommst du unbegrenzte Analysen und tiefere Einblicke.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                TextButton(onClick = {
+                                    viewModel.onAnalysisUpsellClicked()
+                                    onNavigateToPaywall("first_analysis")
+                                }) {
+                                    Text("Premium entdecken")
+                                }
+                                TextButton(onClick = { viewModel.dismissAnalysisUpsellBanner() }) {
+                                    Text(
+                                        "Sp\u00e4ter",
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             if (uiState.isLoading) {

@@ -121,6 +121,17 @@ fun JournalScreen(
             }
         }
 
+    // Observe review event — trigger in-app review when signaled
+    val reviewEntryCount by viewModel.reviewEvent.collectAsState()
+    val activity = context as? android.app.Activity
+    LaunchedEffect(reviewEntryCount) {
+        val count = reviewEntryCount
+        if (count != null && activity != null) {
+            viewModel.consumeReviewEvent()
+            viewModel.triggerInAppReview(activity, count)
+        }
+    }
+
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -281,7 +292,7 @@ fun JournalScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.LocalFireDepartment,
-                                contentDescription = "Streak",
+                                contentDescription = "Tage in Folge",
                                 tint = streakColor,
                                 modifier = Modifier.size(16.dp),
                             )
@@ -433,11 +444,17 @@ fun JournalScreen(
                 isImproving = uiState.recordingState == RecordingState.IMPROVING,
                 isUsingImproved = uiState.isImproveEnabled,
                 transcriptionModel = uiState.transcriptionModel,
+                showTextUpsellBanner = uiState.showTextUpsellBanner,
                 onImproveClick = { viewModel.improveText() },
                 onToggleVersion = { useImproved -> viewModel.setUseImprovedText(useImproved) },
                 onTextEdit = { viewModel.updatePreviewText(it) },
                 onSave = { viewModel.saveEntry() },
                 onDismiss = { viewModel.dismissPreview() },
+                onUpsellClick = {
+                    viewModel.onTextUpsellClicked()
+                    onNavigateToPaywall("first_text")
+                },
+                onUpsellDismiss = { viewModel.dismissTextUpsellBanner() },
             )
         }
 
@@ -537,11 +554,14 @@ private fun PreviewDialog(
     isImproving: Boolean,
     isUsingImproved: Boolean,
     transcriptionModel: String = "",
+    showTextUpsellBanner: Boolean = false,
     onImproveClick: () -> Unit,
     onToggleVersion: (Boolean) -> Unit,
     onTextEdit: (String) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
+    onUpsellClick: () -> Unit = {},
+    onUpsellDismiss: () -> Unit = {},
 ) {
     val showingImproved = isUsingImproved && improvedText != null
     val displayText = if (showingImproved) improvedText!! else rawText
@@ -673,6 +693,43 @@ private fun PreviewDialog(
                                 else "\u2728 Verbesserte Version anzeigen"
                         )
                     }
+
+                    // Contextual upsell banner after first text improvement
+                    if (showTextUpsellBanner) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = "Beeindruckend, oder? Mit Premium kannst du jeden Eintrag verbessern.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = "Premium entdecken",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.clickable { onUpsellClick() },
+                                    )
+                                    Text(
+                                        text = "Sp\u00e4ter",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.clickable { onUpsellDismiss() },
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 if (improvedText == null && !isImproving) {
@@ -784,7 +841,7 @@ private fun StreakDialog(
         title = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    "$currentStreak Tage Streak",
+                    "$currentStreak Tage in Folge",
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.headlineSmall,
                     textAlign = TextAlign.Center,

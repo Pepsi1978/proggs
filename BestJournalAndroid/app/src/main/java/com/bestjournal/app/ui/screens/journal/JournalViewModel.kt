@@ -15,7 +15,9 @@ import com.bestjournal.app.domain.usecase.SummarizeEntryUseCase
 import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
 import com.bestjournal.app.domain.usecase.TranscribeAudioUseCase
 import com.bestjournal.app.util.Constants
+import com.bestjournal.app.util.InAppReviewHelper
 import com.bestjournal.app.util.StreakTracker
+import com.bestjournal.app.billing.SubscriptionState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -52,6 +54,7 @@ data class JournalUiState(
     val transcriptionModel: String = "Lokales Whisper-Modell",
     val currentStreak: Int = 0,
     val longestStreak: Int = 0,
+    val showTextUpsellBanner: Boolean = false,
 )
 
 enum class SyncStatus {
@@ -77,6 +80,7 @@ constructor(
     private val encryptedPrefs: SharedPreferences,
     private val billingManager: BillingManager,
     private val streakTracker: StreakTracker,
+    private val inAppReviewHelper: InAppReviewHelper,
 ) : ViewModel() {
 
     fun launchSubscription(activity: android.app.Activity, isYearly: Boolean) {
@@ -93,6 +97,10 @@ constructor(
 
     val amplitude: StateFlow<Float> = recordAudioUseCase.amplitude
     val durationSeconds: StateFlow<Int> = recordAudioUseCase.durationSeconds
+
+    // Emits total entry count when a review should be attempted (UI observes and provides Activity)
+    private val _reviewEvent = MutableStateFlow<Int?>(null)
+    val reviewEvent: StateFlow<Int?> = _reviewEvent
 
     private var currentAudioFile: File? = null
     private var recordingJob: Job? = null
@@ -253,11 +261,26 @@ constructor(
         viewModelScope.launch {
             improveTextUseCase(rawText)
                 .onSuccess { improved ->
+                    // Track text improvement count
+                    val count = encryptedPrefs.getInt(Constants.PREF_TEXT_IMPROVEMENT_COUNT, 0) + 1
+                    encryptedPrefs.edit().putInt(Constants.PREF_TEXT_IMPROVEMENT_COUNT, count).apply()
+
+                    // Check if this is the first text improvement for free users
+                    val isFree = billingManager.subscriptionState.value is SubscriptionState.Free
+                    val alreadyShown = encryptedPrefs.getBoolean(Constants.PREF_FIRST_TEXT_UPSELL_SHOWN, false)
+                    val onboardingDone = encryptedPrefs.getBoolean(Constants.PREF_ONBOARDING_COMPLETED, false)
+                    val showUpsell = isFree && !alreadyShown && onboardingDone && count == 1
+
+                    if (showUpsell) {
+                        android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_shown, source=first_text")
+                    }
+
                     _uiState.update {
                         it.copy(
                             recordingState = RecordingState.PREVIEW,
                             improvedText = improved,
                             isImproveEnabled = true,
+                            showTextUpsellBanner = showUpsell,
                         )
                     }
                 }
@@ -332,6 +355,12 @@ constructor(
                 try { summarizeEntryUseCase(savedId, displayText) } catch (_: Exception) {}
                 try { triggerSync() } catch (_: Exception) {}
                 try { triggerDebouncedAnalysis() } catch (_: Exception) {}
+                // Signal UI to trigger in-app review at this positive moment
+                try {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        _reviewEvent.value = entries.value.size + 1
+                    }
+                } catch (_: Exception) {}
             } catch (e: Exception) {
                 android.util.Log.e("SaveEntry", "SAVE FAILED: ${e.javaClass.simpleName}: ${e.message}", e)
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -376,6 +405,24 @@ constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    fun consumeReviewEvent() {
+        _reviewEvent.value = null
+    }
+
+    fun dismissTextUpsellBanner() {
+        encryptedPrefs.edit().putBoolean(Constants.PREF_FIRST_TEXT_UPSELL_SHOWN, true).apply()
+        _uiState.update { it.copy(showTextUpsellBanner = false) }
+    }
+
+    fun onTextUpsellClicked() {
+        android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_clicked, source=first_text")
+        dismissTextUpsellBanner()
+    }
+
+    suspend fun triggerInAppReview(activity: android.app.Activity, totalEntries: Int) {
+        inAppReviewHelper.maybeShowReview(activity, totalEntries)
     }
 
     private fun resetState() {

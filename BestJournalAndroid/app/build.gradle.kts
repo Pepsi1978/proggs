@@ -31,8 +31,8 @@ android {
         applicationId = "com.bestjournal.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 59
-        versionName = "0.7.6"
+        versionCode = 60
+        versionName = "0.7.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -149,6 +149,9 @@ dependencies {
 
     // Google Play Billing
     implementation(libs.play.billing)
+
+    // Google Play In-App Review
+    implementation(libs.play.review)
 
     // Unit Testing
     testImplementation(libs.junit5.api)
