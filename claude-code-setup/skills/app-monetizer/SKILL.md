@@ -430,9 +430,13 @@ Die Datei ist nur die Sicherungskopie fuer spaetere Sessions.
 3. **Kontext-Start**: Jeder Prompt beginnt mit dem konkreten Bezug zur App:
    "In meiner App [Name] gibt es aktuell [Beschreibung des Ist-Zustands]."
 
-4. **Ausfuehrlichkeit**: Prompts muessen EXTREM ausfuehrlich sein.
-   Standard-Verbesserungen: mindestens 15-30 Zeilen.
-   Alleinstellungsmerkmale (USP): mindestens 30-60 Zeilen.
+4. **Ausfuehrlichkeit**: Prompts muessen SO AUSFUEHRLICH WIE NOETIG sein damit
+   eine KI die Aufgabe PERFEKT umsetzen kann — ohne Rueckfragen, ohne Raten, ohne
+   fehlende Details. Es gibt KEIN Zeilenlimit nach oben. Ein Prompt darf 20 Zeilen
+   haben wenn die Aufgabe einfach ist, oder 100 Zeilen wenn die Aufgabe komplex ist.
+   Die Laenge richtet sich AUSSCHLIESSLICH nach der Komplexitaet der Aufgabe.
+   Die Faustregel: Wenn du dir vorstellst, du gibst den Prompt einer KI die die
+   App noch nie gesehen hat — wuerde sie ALLES richtig machen? Wenn nicht: MEHR schreiben.
    LIEBER VIEL ZU AUSFUEHRLICH ALS ZU KNAPP. Der Prompt beschreibt:
    - Welche Datei(en) betroffen sind (voller Pfad im Repo)
    - Was genau geaendert oder hinzugefuegt werden soll
@@ -523,19 +527,25 @@ Die Datei ist nur die Sicherungskopie fuer spaetere Sessions.
     beschreibt das auf dem Theme der App aufbaut, muss Prompt 12 das Theme beschreiben —
     nicht "verwende das bestehende Theme" ohne Details.
 
-    **Minimum pro Prompt (egal ob Nummer 1 oder Nummer 25):**
-    - Mindestens 15 Zeilen reiner Prompttext (ohne Leerzeilen)
-    - Mindestens 1 konkreter Dateipfad
-    - Mindestens 3 exakte dp/Farb/Groessen-Angaben
-    - Mindestens 1 Analytics-Event
+    **Pflicht-Bestandteile pro Prompt (egal ob Nummer 1 oder Nummer 25):**
+    - Konkreter Dateipfad wo die Aenderung stattfindet
+    - Exakte visuelle Details (dp-Werte, Farben, Groessen) wo relevant
+    - Analytics-Events am Ende
     - Kontext-Start mit "In meiner App [Name]..."
+    - Genug Kontext dass eine KI OHNE Vorwissen die Aufgabe perfekt umsetzen kann
+
+    **Die Laenge eines Prompts richtet sich nach der Komplexitaet der Aufgabe:**
+    - Einfache Textaenderung → vielleicht 15-20 Zeilen genuegen
+    - Neuer Screen oder neues Feature → 40-80 Zeilen sind normal
+    - Komplexes Feature mit Animationen und mehreren Dateien → 80-120+ Zeilen
+    - Es gibt KEIN Limit nach oben. Der Prompt ist fertig wenn ALLES beschrieben ist.
 
     **Was NIEMALS passieren darf:**
-    - ❌ Prompt wird kuerzer als 10 Zeilen
     - ❌ Prompt sagt nur "fuege Feature X hinzu" ohne Details zur visuellen Umsetzung
     - ❌ Prompt verweist auf "das bestehende Design" ohne es zu beschreiben
     - ❌ Prompt am Ende der Liste ist oberflaechlicher als am Anfang
     - ❌ Prompt enthaelt keine Analytics-Events
+    - ❌ Prompt ist so kurz dass die ausfuehrende KI raten muss wie etwas aussehen soll
 
 ---
 
