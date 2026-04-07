@@ -53,7 +53,7 @@ constructor(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState
 
-    // Listen for external theme changes (e.g. quick toggle from Journal/Dashboard)
+    // Listen for external changes (theme toggle, auto-backup timestamp, etc.)
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
             Constants.PREF_DARK_THEME,
@@ -66,6 +66,14 @@ constructor(
                             encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false),
                         followSun =
                             encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false),
+                    )
+            }
+            Constants.PREF_LAST_SYNC_TIMESTAMP -> {
+                _uiState.value =
+                    _uiState.value.copy(
+                        lastSyncTimestamp =
+                            encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L)
+                                .takeIf { it > 0 },
                     )
             }
         }

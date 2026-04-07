@@ -428,7 +428,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
         }
     }
 
-    if (showLegendDialog) { LegendDialog(onDismiss = { showLegendDialog = false }) }
+    if (showLegendDialog) { LegendDialog(scenario = uiState.currentScenario, onDismiss = { showLegendDialog = false }) }
 
     selectedAdvice?.let { (advice, catName) ->
         AdviceDerivationDialog(advice = advice, categoryName = catName, onDismiss = { selectedAdvice = null })
@@ -458,26 +458,104 @@ private fun LegendDot(color: androidx.compose.ui.graphics.Color, label: String) 
 }
 
 @Composable
-private fun LegendDialog(onDismiss: () -> Unit) {
+private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
+    val title = when (scenario) {
+        0 -> "Legende \u2014 Zusammenfassung"
+        2 -> "Legende \u2014 Selbsterkenntnis"
+        3 -> "Legende \u2014 Pers\u00f6nliche Ziele"
+        4 -> "Legende \u2014 Individuelle Analyse"
+        else -> "Legende \u2014 R\u00e4ume dein Leben auf"
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
-        title = { Text("Legende", color = MaterialTheme.colorScheme.onSurface) },
+        title = { Text(title, color = MaterialTheme.colorScheme.onSurface) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Entropie-Skala", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                Text("Der Halbkreis unter jeder Kategorie zeigt die Belastungsintensit\u00e4t:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    LegendDot(color = NeonRed, label = "Hoch (67\u2013100%) \u2014 Sofort handeln")
-                    LegendDot(color = NeonAmber, label = "Mittel (34\u201366%) \u2014 Aufmerksamkeit n\u00f6tig")
-                    LegendDot(color = NeonEmerald, label = "Niedrig (0\u201333%) \u2014 Guter Zustand")
-                }
-                NeonDivider()
-                Text("Priorit\u00e4t der Ratschl\u00e4ge", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("\uD83D\uDD34 Rot = Dringend \u2014 Sofort handeln", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                    Text("\uD83D\uDFE0 Orange = Mittel \u2014 Bald angehen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                    Text("\uD83D\uDD35 Blau = Niedrig \u2014 Beobachten", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                when (scenario) {
+                    0 -> {
+                        Text("Aktivit\u00e4tslevel", style = MaterialTheme.typography.titleMedium, color = SummaryBlue)
+                        Text("Der Halbkreis zeigt wie viel in diesem Bereich passiert:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            LegendDot(color = NeonRed, label = "Viel Aktivit\u00e4t (67\u2013100%)")
+                            LegendDot(color = NeonAmber, label = "Moderate Aktivit\u00e4t (34\u201366%)")
+                            LegendDot(color = NeonEmerald, label = "Wenig Aktivit\u00e4t (0\u201333%)")
+                        }
+                        NeonDivider()
+                        Text("Relevanz der Beobachtungen", style = MaterialTheme.typography.titleMedium, color = SummaryBlue)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("\u2B50 Zentral \u2014 Kern-Themen deiner Eintr\u00e4ge", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("\uD83D\uDCCC Relevant \u2014 Wiederkehrende Beobachtungen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("\uD83D\uDCCE Randnotiz \u2014 Einmalige Erw\u00e4hnungen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                    2 -> {
+                        Text("Reflexionstiefe", style = MaterialTheme.typography.titleMedium, color = InsightViolet)
+                        Text("Der Halbkreis zeigt die Tiefe deiner Selbstreflexion:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            LegendDot(color = InsightViolet, label = "Tiefgehend (67\u2013100%)")
+                            LegendDot(color = InsightMauve, label = "Bewusst (34\u201366%)")
+                            LegendDot(color = InsightWarm, label = "Oberfl\u00e4che (0\u201333%)")
+                        }
+                        NeonDivider()
+                        Text("Tiefe der Einsichten", style = MaterialTheme.typography.titleMedium, color = InsightViolet)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("\uD83E\uDE9E Tiefgehend \u2014 Verborgene Muster und \u00dcberzeugungen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("\uD83D\uDC9C Bewusst \u2014 Erkannte Denk- und Gef\u00fchlsmuster", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("\uD83C\uDF31 Oberfl\u00e4che \u2014 Erste Beobachtungen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                    3 -> {
+                        Text("Fortschritt", style = MaterialTheme.typography.titleMedium, color = GoalEmerald)
+                        Text("Der Halbkreis zeigt den Fortschritt deiner Ziele:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            LegendDot(color = GoalCoral, label = "Blockiert (0\u201333%)")
+                            LegendDot(color = GoalGold, label = "In Arbeit (34\u201366%)")
+                            LegendDot(color = GoalEmerald, label = "Fortschritt (67\u2013100%)")
+                        }
+                        NeonDivider()
+                        Text("Zielstatus", style = MaterialTheme.typography.titleMedium, color = GoalEmerald)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("\uD83D\uDEA7 Blockiert \u2014 Ziele mit Hindernissen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("\uD83D\uDD13 Offen \u2014 Ziele noch ohne Fortschritt", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("\u2705 Fortschritt \u2014 Ziele mit sichtbarem Erfolg", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                    4 -> {
+                        Text("Analysewert", style = MaterialTheme.typography.titleMedium, color = CustomAmber)
+                        Text("Der Halbkreis zeigt die Relevanz f\u00fcr deinen Fokus:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            LegendDot(color = CustomAmber, label = "Hoch (67\u2013100%) \u2014 Kern deines Fokus")
+                            LegendDot(color = CustomSand, label = "Mittel (34\u201366%) \u2014 Verbindung erkannt")
+                            LegendDot(color = CustomSage, label = "Niedrig (0\u201333%) \u2014 Am Rand")
+                        }
+                        NeonDivider()
+                        Text("Relevanz der Ergebnisse", style = MaterialTheme.typography.titleMedium, color = CustomAmber)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("\uD83D\uDD25 Wichtig \u2014 Direkt relevant f\u00fcr deinen Fokus", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("\uD83D\uDCA1 Relevant \u2014 Verbindung zu deinem Fokus", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("\uD83D\uDCDD Notiz \u2014 Randbemerkung", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                    else -> {
+                        Text("Entropie-Skala", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Text("Der Halbkreis unter jeder Kategorie zeigt die Belastungsintensit\u00e4t:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            LegendDot(color = NeonRed, label = "Hoch (67\u2013100%) \u2014 Sofort handeln")
+                            LegendDot(color = NeonAmber, label = "Mittel (34\u201366%) \u2014 Aufmerksamkeit n\u00f6tig")
+                            LegendDot(color = NeonEmerald, label = "Niedrig (0\u201333%) \u2014 Guter Zustand")
+                        }
+                        NeonDivider()
+                        Text("Priorit\u00e4t der Ratschl\u00e4ge", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("\uD83D\uDD34 Rot = Dringend \u2014 Sofort handeln", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("\uD83D\uDFE0 Orange = Mittel \u2014 Bald angehen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("\uD83D\uDD35 Blau = Niedrig \u2014 Beobachten", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
                 }
                 NeonDivider()
                 Text("Kategorien", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
