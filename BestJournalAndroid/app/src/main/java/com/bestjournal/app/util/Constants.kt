@@ -101,6 +101,9 @@ object Constants {
     const val PREF_WEEKLY_REVIEW_ENABLED = "weekly_review_enabled"
     const val PREF_FROM_WEEKLY_REVIEW = "from_weekly_review"
 
+    // Daily Writing Prompt
+    const val PREF_PROMPT_DISMISSED_DATE = "prompt_dismissed_date"
+
     // Spam protection
     const val SPAM_HOURLY_AI_LIMIT = 30
 

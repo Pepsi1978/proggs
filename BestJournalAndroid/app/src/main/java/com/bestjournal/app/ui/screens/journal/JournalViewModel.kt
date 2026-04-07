@@ -16,6 +16,7 @@ import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
 import com.bestjournal.app.domain.usecase.TranscribeAudioUseCase
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
+import com.bestjournal.app.util.DailyPromptProvider
 import com.bestjournal.app.util.InAppReviewHelper
 import com.bestjournal.app.util.StreakTracker
 import com.bestjournal.app.billing.SubscriptionState
@@ -56,6 +57,11 @@ data class JournalUiState(
     val currentStreak: Int = 0,
     val longestStreak: Int = 0,
     val showTextUpsellBanner: Boolean = false,
+    val dailyPromptText: String = "",
+    val dailyPromptCategory: String = "",
+    val dailyPromptId: String = "",
+    val isPremiumUser: Boolean = false,
+    val showPromptBanner: Boolean = true,
 )
 
 enum class SyncStatus {
@@ -124,6 +130,29 @@ constructor(
             currentStreak = streakTracker.getCurrentStreak(),
             longestStreak = streakTracker.getLongestStreak(),
         )
+
+        // Load today's writing prompt
+        val todaysPrompt = DailyPromptProvider.getTodaysPrompt()
+        val promptDismissedDate = encryptedPrefs.getString(Constants.PREF_PROMPT_DISMISSED_DATE, "")
+        val todayStr = java.time.LocalDate.now().toString()
+        val isPromptDismissed = promptDismissedDate == todayStr
+        _uiState.value = _uiState.value.copy(
+            dailyPromptText = todaysPrompt.text,
+            dailyPromptCategory = todaysPrompt.category.displayName,
+            dailyPromptId = todaysPrompt.id,
+            isPremiumUser = billingManager.subscriptionState.value is SubscriptionState.Subscribed,
+            showPromptBanner = !isPromptDismissed,
+        )
+        if (!isPromptDismissed) {
+            analyticsTracker.trackDailyPromptShown(todaysPrompt.id)
+        }
+
+        // Observe subscription state changes
+        viewModelScope.launch {
+            billingManager.subscriptionState.collect { state ->
+                _uiState.update { it.copy(isPremiumUser = state is SubscriptionState.Subscribed) }
+            }
+        }
 
         // Backfill summaries for existing entries without title/summary.
         // Sequential with pauses to avoid hitting Gemini rate limits.
@@ -390,6 +419,28 @@ constructor(
             )
     }
 
+    fun startTextEntryWithPrompt(prompt: String) {
+        analyticsTracker.trackDailyPromptUsed(_uiState.value.dailyPromptId)
+        _uiState.value =
+            _uiState.value.copy(
+                recordingState = RecordingState.PREVIEW,
+                rawText = "$prompt\n\n",
+                improvedText = null,
+                isImproveEnabled = false,
+                showPreviewDialog = true,
+            )
+    }
+
+    fun dismissPromptBanner() {
+        val todayStr = java.time.LocalDate.now().toString()
+        encryptedPrefs.edit().putString(Constants.PREF_PROMPT_DISMISSED_DATE, todayStr).apply()
+        _uiState.update { it.copy(showPromptBanner = false) }
+    }
+
+    fun onPromptPremiumBlocked() {
+        analyticsTracker.trackDailyPromptPremiumBlocked()
+    }
+
     fun dismissPreview() {
         resetState()
     }
@@ -438,10 +489,15 @@ constructor(
         }
         val currentState = _uiState.value
         _uiState.value = JournalUiState(
-            // Preserve streak and sync status across resets to avoid UI flicker
+            // Preserve streak, sync, and prompt state across resets to avoid UI flicker
             currentStreak = currentState.currentStreak,
             longestStreak = currentState.longestStreak,
             syncStatus = currentState.syncStatus,
+            dailyPromptText = currentState.dailyPromptText,
+            dailyPromptCategory = currentState.dailyPromptCategory,
+            dailyPromptId = currentState.dailyPromptId,
+            isPremiumUser = currentState.isPremiumUser,
+            showPromptBanner = currentState.showPromptBanner,
         )
     }
 

@@ -195,6 +195,24 @@ class AnalyticsTracker @Inject constructor(
         firebaseAnalytics.logEvent("weekly_review_upsell_clicked", null)
     }
 
+    // ── Daily Prompt Events ──────────────────────────────────────────────
+
+    fun trackDailyPromptShown(promptId: String) {
+        firebaseAnalytics.logEvent("daily_prompt_shown", Bundle().apply {
+            putString("prompt_id", promptId)
+        })
+    }
+
+    fun trackDailyPromptUsed(promptId: String) {
+        firebaseAnalytics.logEvent("daily_prompt_used", Bundle().apply {
+            putString("prompt_id", promptId)
+        })
+    }
+
+    fun trackDailyPromptPremiumBlocked() {
+        firebaseAnalytics.logEvent("daily_prompt_premium_blocked", null)
+    }
+
     // ── Upsell Events ───────────────────────────────────────────────────
 
     fun trackUpsellBannerShown(source: String) {

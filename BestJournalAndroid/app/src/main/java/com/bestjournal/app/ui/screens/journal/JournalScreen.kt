@@ -40,6 +40,8 @@ import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -75,6 +77,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.input.ImeAction
@@ -85,6 +88,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.bestjournal.app.ui.components.AnimatedMicButton
+import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.components.ShimmerLoadingEffect
 import com.bestjournal.app.ui.components.SunMoonToggle
 import com.bestjournal.app.ui.components.TimelineItem
@@ -314,6 +318,21 @@ fun JournalScreen(
             // Transcribing state — no visual indicator needed (transcription is near-instant)
 
             if (entries.isEmpty() && uiState.recordingState == RecordingState.IDLE) {
+                // Writing prompt banner in empty state
+                if (uiState.showPromptBanner && uiState.dailyPromptText.isNotBlank()) {
+                    WritingPromptBanner(
+                        promptText = uiState.dailyPromptText,
+                        promptCategory = uiState.dailyPromptCategory,
+                        isPremium = uiState.isPremiumUser,
+                        onWriteClick = { viewModel.startTextEntryWithPrompt(uiState.dailyPromptText) },
+                        onPremiumClick = {
+                            viewModel.onPromptPremiumBlocked()
+                            onNavigateToPaywall("daily_prompt")
+                        },
+                        onDismiss = { viewModel.dismissPromptBanner() },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentAlignment = Alignment.Center,
@@ -344,6 +363,24 @@ fun JournalScreen(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
+                    // Daily writing prompt banner
+                    if (uiState.showPromptBanner && uiState.dailyPromptText.isNotBlank()) {
+                        item(key = "writing_prompt") {
+                            WritingPromptBanner(
+                                promptText = uiState.dailyPromptText,
+                                promptCategory = uiState.dailyPromptCategory,
+                                isPremium = uiState.isPremiumUser,
+                                onWriteClick = { viewModel.startTextEntryWithPrompt(uiState.dailyPromptText) },
+                                onPremiumClick = {
+                                    viewModel.onPromptPremiumBlocked()
+                                    onNavigateToPaywall("daily_prompt")
+                                },
+                                onDismiss = { viewModel.dismissPromptBanner() },
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+
                     groupedEntries.forEach { (sectionLabel, sectionEntries) ->
                         // Section header
                         item(key = "header_$sectionLabel") {
@@ -1012,5 +1049,135 @@ private fun StatColumn(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.outline,
         )
+    }
+}
+
+@Composable
+private fun WritingPromptBanner(
+    promptText: String,
+    promptCategory: String,
+    isPremium: Boolean,
+    onWriteClick: () -> Unit,
+    onPremiumClick: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GlassCard(
+        modifier = modifier.fillMaxWidth(),
+        glowColor = NeonAmber,
+        glowIntensity = 0.1f,
+        cornerRadius = 20.dp,
+        contentPadding = 16.dp,
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(NeonAmber, NeonAmber.copy(alpha = 0.6f))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Lightbulb,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            "Schreibimpuls des Tages",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                            ),
+                            color = NeonAmber,
+                        )
+                        Text(
+                            promptCategory,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(28.dp),
+                ) {
+                    Icon(
+                        Icons.Rounded.Close,
+                        "Schlie\u00dfen",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "\u201E$promptText\u201C",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontStyle = FontStyle.Italic,
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            if (isPremium) {
+                Button(
+                    onClick = onWriteClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = NeonAmber,
+                        contentColor = Color.White,
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Icon(
+                        Icons.Rounded.Edit,
+                        null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Dar\u00fcber schreiben")
+                }
+            } else {
+                OutlinedButton(
+                    onClick = onPremiumClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                    ),
+                ) {
+                    Icon(
+                        Icons.Rounded.Lock,
+                        null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Premium-Feature")
+                }
+            }
+        }
     }
 }

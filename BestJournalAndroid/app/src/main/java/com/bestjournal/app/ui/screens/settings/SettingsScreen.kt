@@ -1038,20 +1038,28 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedButton(
+                    var showChurnDialog by remember { mutableStateOf(false) }
+                    TextButton(
                         onClick = {
-                            val intent =
-                                android.content.Intent(
-                                    android.content.Intent.ACTION_VIEW,
-                                    android.net.Uri.parse(
-                                        "https://play.google.com/store/account/subscriptions"
-                                    ),
-                                )
-                            context.startActivity(intent)
+                            playClick()
+                            showChurnDialog = true
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Abo im Play Store verwalten")
+                        Text(
+                            "Abo verwalten",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (showChurnDialog) {
+                        ChurnRetentionDialog(
+                            userEmail = uiState.userProfile?.email,
+                            onDismiss = { showChurnDialog = false },
+                            onOfferAccepted = { showChurnDialog = false },
+                            onCancelConfirmed = { showChurnDialog = false },
+                            analyticsTracker = viewModel.analyticsTracker,
+                            context = context,
+                        )
                     }
                 } else {
                     var benefitsTracked by remember { mutableStateOf(false) }
@@ -1151,47 +1159,49 @@ fun SettingsScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Eintr\u00e4ge als PDF exportieren")
+                            Text("Tagebucheintr\u00e4ge als PDF exportieren")
                         }
                     }
                 } else {
-                    Row(
+                    Text(
+                        "Tagebucheintr\u00e4ge als PDF exportieren",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Rounded.Star,
+                            null,
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            "Premium-Feature",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = {
+                            playClick()
+                            viewModel.analyticsTracker.trackExportPremiumBlocked()
+                            onNavigateToPaywall("pdf_export")
+                        },
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "Eintr\u00e4ge als PDF exportieren",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Rounded.Star,
-                                    null,
-                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(14.dp),
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    "Premium-Feature",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                )
-                            }
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                playClick()
-                                viewModel.analyticsTracker.trackExportPremiumBlocked()
-                                onNavigateToPaywall("pdf_export")
-                            },
-                        ) {
-                            Text(
-                                "Freischalten",
-                                color = MaterialTheme.colorScheme.primary,
-                            )
+                        Icon(
+                            Icons.Rounded.Star,
+                            null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Premium freischalten",
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                         }
                     }
                 }
@@ -1288,7 +1298,7 @@ fun SettingsScreen(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Best Journal v0.9.1",
+                    "Best Journal v0.10.0",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
