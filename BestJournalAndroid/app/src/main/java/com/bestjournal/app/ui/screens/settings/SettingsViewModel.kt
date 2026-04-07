@@ -19,10 +19,12 @@ import com.bestjournal.app.util.DailyReminderManager
 import com.bestjournal.app.util.PdfExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class SettingsUiState(
     val userProfile: UserProfile? = null,
@@ -365,14 +367,20 @@ constructor(
                     return@launch
                 }
 
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    val count = PdfExporter.export(entries, outputStream)
+                // PDF generation is CPU+IO intensive — run off Main thread
+                val count = withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        PdfExporter.export(entries, outputStream)
+                    }
+                }
+
+                if (count != null) {
                     analyticsTracker.trackExportCompleted(count)
                     _uiState.value = _uiState.value.copy(
                         isExporting = false,
                         exportMessage = "$count Eintr\u00e4ge exportiert",
                     )
-                } ?: run {
+                } else {
                     _uiState.value = _uiState.value.copy(
                         isExporting = false,
                         exportMessage = "Fehler: Datei konnte nicht ge\u00f6ffnet werden",

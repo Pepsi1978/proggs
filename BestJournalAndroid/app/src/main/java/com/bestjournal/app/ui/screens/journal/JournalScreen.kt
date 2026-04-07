@@ -41,7 +41,6 @@ import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Lightbulb
-import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -323,12 +322,7 @@ fun JournalScreen(
                     WritingPromptBanner(
                         promptText = uiState.dailyPromptText,
                         promptCategory = uiState.dailyPromptCategory,
-                        isPremium = uiState.isPremiumUser,
                         onWriteClick = { viewModel.startTextEntryWithPrompt(uiState.dailyPromptText) },
-                        onPremiumClick = {
-                            viewModel.onPromptPremiumBlocked()
-                            onNavigateToPaywall("daily_prompt")
-                        },
                         onDismiss = { viewModel.dismissPromptBanner() },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
@@ -369,12 +363,7 @@ fun JournalScreen(
                             WritingPromptBanner(
                                 promptText = uiState.dailyPromptText,
                                 promptCategory = uiState.dailyPromptCategory,
-                                isPremium = uiState.isPremiumUser,
                                 onWriteClick = { viewModel.startTextEntryWithPrompt(uiState.dailyPromptText) },
-                                onPremiumClick = {
-                                    viewModel.onPromptPremiumBlocked()
-                                    onNavigateToPaywall("daily_prompt")
-                                },
                                 onDismiss = { viewModel.dismissPromptBanner() },
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -1056,9 +1045,7 @@ private fun StatColumn(
 private fun WritingPromptBanner(
     promptText: String,
     promptCategory: String,
-    isPremium: Boolean,
     onWriteClick: () -> Unit,
-    onPremiumClick: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1138,45 +1125,22 @@ private fun WritingPromptBanner(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            if (isPremium) {
-                Button(
-                    onClick = onWriteClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = NeonAmber,
-                        contentColor = Color.White,
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Icon(
-                        Icons.Rounded.Edit,
-                        null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Dar\u00fcber schreiben")
-                }
-            } else {
-                OutlinedButton(
-                    onClick = onPremiumClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                    ),
-                ) {
-                    Icon(
-                        Icons.Rounded.Lock,
-                        null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Premium-Feature")
-                }
+            Button(
+                onClick = onWriteClick,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = NeonAmber,
+                    contentColor = Color.White,
+                ),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Icon(
+                    Icons.Rounded.Edit,
+                    null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Dar\u00fcber schreiben")
             }
         }
     }

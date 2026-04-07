@@ -542,75 +542,6 @@ fun SettingsScreen(
             }
         }
 
-        // Sicherheit
-        GlassCard {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Security, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Sicherheit", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Fingerprint,
-                            contentDescription = null,
-                            tint =
-                                if (uiState.biometricLock) MaterialTheme.colorScheme.primary
-                                else Color(0xFF666666),
-                            modifier = Modifier.size(24.dp),
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                "Fingerabdruck",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                "App beim Start entsperren",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    Switch(
-                        checked = uiState.biometricLock,
-                        onCheckedChange = { enabled ->
-                            val activity = context as? com.bestjournal.app.MainActivity
-                            if (activity != null) {
-                                activity.showBiometricPrompt {
-                                    viewModel.updateBiometricLock(enabled)
-                                }
-                            } else {
-                                viewModel.updateBiometricLock(enabled)
-                            }
-                        },
-                        colors =
-                            SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary
-                            ),
-                    )
-                }
-                if (uiState.biometricLock) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Sperrt automatisch nach 60 Sekunden im Hintergrund",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.outline,
-                    )
-                }
-            }
-        }
-
         // Erinnerung
         var pendingPermissionAction by remember { mutableStateOf<(() -> Unit)?>(null) }
         val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -633,7 +564,7 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        "Erinnerung",
+                        "Erinnerung / Rückblick",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -761,6 +692,75 @@ fun SettingsScreen(
                         colors = SwitchDefaults.colors(
                             checkedTrackColor = MaterialTheme.colorScheme.primary,
                         ),
+                    )
+                }
+            }
+        }
+
+        // Sicherheit
+        GlassCard {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Security, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Sicherheit", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Fingerprint,
+                            contentDescription = null,
+                            tint =
+                                if (uiState.biometricLock) MaterialTheme.colorScheme.primary
+                                else Color(0xFF666666),
+                            modifier = Modifier.size(24.dp),
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                "Fingerabdruck",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "App beim Start entsperren",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = uiState.biometricLock,
+                        onCheckedChange = { enabled ->
+                            val activity = context as? com.bestjournal.app.MainActivity
+                            if (activity != null) {
+                                activity.showBiometricPrompt {
+                                    viewModel.updateBiometricLock(enabled)
+                                }
+                            } else {
+                                viewModel.updateBiometricLock(enabled)
+                            }
+                        },
+                        colors =
+                            SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
+                            ),
+                    )
+                }
+                if (uiState.biometricLock) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Sperrt automatisch nach 60 Sekunden im Hintergrund",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.outline,
                     )
                 }
             }
@@ -1202,7 +1202,6 @@ fun SettingsScreen(
                             "Premium freischalten",
                             color = MaterialTheme.colorScheme.primary,
                         )
-                        }
                     }
                 }
                 uiState.exportMessage?.let { msg ->
