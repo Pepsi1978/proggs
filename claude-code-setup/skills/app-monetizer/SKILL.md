@@ -19,6 +19,23 @@ fuehrst du zum maximalen Monetarisierungserfolg. Du denkst aus der Perspektive e
 der hunderte Apps erfolgreich monetarisiert hat — du weisst was funktioniert, was nicht
 funktioniert, und warum Nutzer bereit sind zu zahlen.
 
+## Uebergeordnetes Prinzip: MAXIMALE SCHOENHEIT & MODERNSTE TECHNIK
+
+Dieses Prinzip steht UEBER allem und durchdringt JEDEN Prompt, JEDE Phase, JEDE Entscheidung:
+
+Jeder Vorschlag und jeder Prompt muss die SCHOENSTE und MODERNSTE Umsetzung beschreiben
+die technisch moeglich ist. Nicht "gut genug", nicht "funktioniert", sondern "sieht aus
+wie eine Premium-App die 50 Euro im Monat kostet". Orientierung an den besten Apps der
+Welt — Spotify, Duolingo, Headspace, Apple Health, Monzo — nicht an mittelmassiger Konkurrenz.
+
+- Visuelle Exzellenz ist der Standard, nicht die Ausnahme
+- Neuester Stand der Android/Compose-Technik (2026, nicht 2022)
+- Jedes Detail zaehlt: Eckenradien, Animationskurven, Farbverlaeufe, Schattenwuerfe
+- Emotionale Wirkung beschreiben: WIE soll es sich ANFUEHLEN?
+- Researcher-E-Ergebnisse (modernste Techniken) fliessen in JEDEN visuellen Prompt ein
+
+---
+
 ## Aufruf
 
 Der Benutzer sagt etwas wie:
@@ -191,7 +208,7 @@ Jetzt wo die App-Kategorie bekannt ist, wird gezielt recherchiert wie die erfolg
 Apps genau dieser Kategorie monetarisieren — und es werden konkrete Konkurrenten analysiert.
 
 **Ablauf:**
-1. 3 parallele Researcher-Agents (Sonnet) starten:
+1. 5 parallele Researcher-Agents (Sonnet) starten:
 
    **Researcher A — Konkurrenz-Teardown:**
    "Recherchiere die Top 5 erfolgreichsten [KATEGORIE]-Apps im Google Play Store.
@@ -257,7 +274,8 @@ Apps genau dieser Kategorie monetarisieren — und es werden konkrete Konkurrent
 3. Falls allgemeingueltige Erkenntnisse dabei sind: zur Haupt-Checkliste hinzufuegen
 
 **Status-Meldung:** "Konkurrenz analysiert: Top 5 sind [App1, App2, App3, ...].
-Regionale Preise recherchiert. Schreibe jetzt den Audit-Bericht..."
+Regionale Preise recherchiert. X Alleinstellungsmerkmale gefunden. Y moderne UI-Techniken
+identifiziert. Schreibe jetzt den Audit-Bericht..."
 
 ### Phase 5: Audit-Bericht erstellen
 
@@ -321,7 +339,7 @@ Diese Sektion kommt NACH den Standard-Verbesserungen und enthaelt Features die d
 App auf ein komplett anderes Level heben. Jedes Alleinstellungsmerkmal:
 - Stammt aus der Researcher-D-Recherche (branchenubergreifende Innovation)
 - Wird mit den modernsten Compose-Techniken aus Researcher E umgesetzt
-- Hat einen EXTRA-AUSFUEHRLICHEN Prompt (30-60 Zeilen, nicht 15-30)
+- Hat einen BESONDERS AUSFUEHRLICHEN Prompt — so lang wie noetig fuer perfekte Umsetzung
 - Beschreibt EXAKT wie die visuelle Umsetzung aussehen soll (Animationen, Farben,
   Uebergaenge, Micro-Interactions, Haptic Feedback)
 - Nennt konkrete Compose-APIs, Libraries oder Techniken fuer die Umsetzung
@@ -342,8 +360,8 @@ Konkrete Klassen/Funktionen nennen: z.B. "SharedTransitionLayout fuer den Ueberg
 Prompt:
 
 
-[EXTRA-AUSFUEHRLICHER Prompt — 30-60 Zeilen. Beschreibt nicht nur WAS gebaut wird,
-sondern im Detail WIE es visuell umgesetzt wird. Nennt konkrete dp-Werte, Farben,
+[BESONDERS AUSFUEHRLICHER Prompt — so lang wie noetig. Beschreibt nicht nur WAS gebaut
+wird, sondern im Detail WIE es visuell umgesetzt wird. Nennt konkrete dp-Werte, Farben,
 Animationsdauern, Easing-Kurven, Schriftgroessen. Beschreibt jeden visuellen Zustand
 (leer, geladen, animierend, interagierend). Referenziert modernste Compose-Techniken.]
 
@@ -411,50 +429,6 @@ ausgegeben werden. Nicht nur eine kurze Zusammenfassung, sondern der VOLLSTAENDI
 **Warum:** Der Benutzer will SOFORT nach dem Audit mit der Umsetzung beginnen.
 Er will nicht erst eine Datei oeffnen, durchscrollen und den richtigen Prompt finden.
 Die Datei ist nur die Sicherungskopie fuer spaetere Sessions.
-
----
-
-## Uebergeordnetes Prompt-Prinzip: MAXIMALE SCHOENHEIT & MODERNSTE TECHNIK
-
-Dieses Prinzip steht UEBER allen einzelnen Regeln und durchdringt JEDEN Prompt:
-
-Jeder Vorschlag und jeder Prompt muss die SCHOENSTE und MODERNSTE Umsetzung beschreiben
-die technisch moeglich ist. Nicht "gut genug", nicht "funktioniert", sondern "sieht aus
-wie eine Premium-App die 50 Euro im Monat kostet". Jeder Prompt orientiert sich an dem
-was die besten Designer und Entwickler der Welt bauen wuerden.
-
-**Was das konkret bedeutet:**
-
-- **Visuelle Exzellenz ist nicht optional, sondern der Standard.** Jeder Button, jeder
-  Screen, jede Animation muss so beschrieben werden dass das Ergebnis WOW ausloest.
-  Nicht "fuege einen Button hinzu" sondern "fuege einen Button hinzu der beim Druecken
-  sanft auf 96% schrumpft, einen subtilen Schatten wirft, einen Gradient von der
-  Primaerfarbe zur helleren Variante zeigt, und beim Loslassen mit einem Spring-Effekt
-  zurueckfedert". DAS ist der Qualitaetsstandard.
-
-- **Neuester Stand der Technik.** Die Prompts muessen die modernsten verfuegbaren
-  Android/Compose-APIs und -Patterns verwenden. Nicht die Loesung von 2022, sondern
-  die von 2026. Was ist die schoenste Art einen Uebergang zu animieren? Was ist die
-  eleganteste Compose-API fuer diesen Effekt? Was wuerde ein Google-Entwickler nehmen?
-  Die Researcher-E-Ergebnisse (modernste UI-Techniken) muessen in JEDEN Prompt einfliessen
-  wo visuelle Elemente beschrieben werden.
-
-- **Orientierung an den schoensten Apps der Welt.** Nicht an der Konkurrenz orientieren
-  (die ist oft mittelmassig), sondern an den Apps die Nutzer LIEBEN: Spotify (Fluesse,
-  Animationen, Dark Mode), Apple Health (Datenvisualisierung), Duolingo (Gamification,
-  Micro-Interactions), Headspace (Ruhe, Eleganz), Monzo (Klarheit, Farben). In jedem
-  Prompt darf stehen: "Orientiere dich an [Top-App] die das so loest: ..."
-
-- **Jedes Detail zaehlt.** Eckenradien, Schattenwuerfe, Animationskurven, Farbverlaeufe,
-  Schriftgewichte, Icon-Groessen, Abstaende zwischen Elementen — all das macht den
-  Unterschied zwischen "sieht aus wie ein Prototyp" und "sieht aus wie eine Apple-App".
-  Die Prompts muessen diese Details beschreiben, nicht der umsetzenden KI ueberlassen.
-
-- **Emotionale Wirkung beschreiben.** Nicht nur WAS gebaut wird, sondern WIE es sich
-  ANFUEHLEN soll. "Der Nutzer soll beim Oeffnen dieses Screens das Gefuehl haben,
-  dass jemand sich Muehe gegeben hat. Der Screen soll Vertrauen und Professionalitaet
-  ausstrahlen." Solche Saetze im Prompt helfen der umsetzenden KI die richtige
-  Designentscheidung zu treffen wenn Details fehlen.
 
 ---
 
@@ -543,8 +517,8 @@ was die besten Designer und Entwickler der Welt bauen wuerden.
     nicht wie ein Entwickler-Prototyp.
 
 12. **Alleinstellungsmerkmal-Prompts (USP-Prompts)**: Diese speziellen Prompts
-    sind EXTRA ausfuehrlich (30-60 Zeilen) und beschreiben nicht nur das Feature
-    sondern auch dessen visuelle Inszenierung im Detail. Sie enthalten:
+    beschreiben nicht nur das Feature sondern auch dessen visuelle Inszenierung
+    im Detail — so ausfuehrlich wie noetig fuer perfekte Umsetzung. Sie enthalten:
     - Woher die Inspiration stammt und warum sie hier funktioniert
     - Exakte visuelle Beschreibung jedes UI-Elements
     - Welche Compose-Animationen und -APIs verwendet werden sollen
