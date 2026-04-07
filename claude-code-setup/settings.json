@@ -277,6 +277,15 @@
 						"timeout": 5
 					}
 				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash ~/.claude/hooks/stop-notify.sh",
+						"timeout": 3
+					}
+				]
 			}
 		],
 		"PreCompact": [
@@ -472,7 +481,12 @@
 		]
 	},
 	"worktree": {
-		"symlinkDirectories": ["node_modules", ".cache", ".gradle", "build"]
+		"symlinkDirectories": [
+			"node_modules",
+			".cache",
+			".gradle",
+			"build"
+		]
 	},
 	"enabledPlugins": {
 		"swift-lsp@claude-plugins-official": true,
@@ -642,7 +656,10 @@
 		"android-adb": {
 			"type": "stdio",
 			"command": "/opt/homebrew/bin/npx",
-			"args": ["-y", "android-debug-bridge-mcp"]
+			"args": [
+				"-y",
+				"android-debug-bridge-mcp"
+			]
 		}
 	}
 }

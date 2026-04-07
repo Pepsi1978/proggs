@@ -5,7 +5,7 @@
 		"DISABLE_COST_WARNINGS": "1",
 		"CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1",
 		"CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000",
-		"CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "95",
+		"CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "85",
 		"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
 		"CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS": "30000",
 		"ENABLE_TOOL_SEARCH": "1",
@@ -111,6 +111,15 @@
 						"timeout": 5
 					}
 				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/heartbeat.ps1\"",
+						"timeout": 10
+					}
+				]
 			}
 		],
 		"UserPromptSubmit": [
@@ -131,6 +140,16 @@
 					{
 						"type": "command",
 						"command": "pwsh -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/safety-gate.ps1\"",
+						"timeout": 5
+					}
+				]
+			},
+			{
+				"matcher": "Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/silent-corrector.ps1\"",
 						"timeout": 5
 					}
 				]
@@ -233,6 +252,16 @@
 				"hooks": [
 					{
 						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/cross-platform-file-guard.ps1\"",
+						"timeout": 5
+					}
+				]
+			},
+			{
+				"matcher": "Edit|Write",
+				"hooks": [
+					{
+						"type": "command",
 						"command": "pwsh -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/poka-yoke-json-validate.ps1\"",
 						"timeout": 5
 					}
@@ -253,8 +282,17 @@
 			{
 				"hooks": [
 					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/bug-case-auto-writer.ps1\"",
+						"timeout": 10
+					}
+				]
+			},
+			{
+				"hooks": [
+					{
 						"type": "prompt",
-						"prompt": "A tool call just failed. This could be from ANY component: a plugin, MCP server, skill, agent, or hook.\n\n1. Briefly analyze the error (1-2 sentences).\n2. If it is a RECURRING or SIGNIFICANT failure (not a trivial typo), write the error details to a sentinel file at /tmp/agent-writeback-tool-failure.json with format: {\"agent\": \"tool-failure\", \"section\": \"Offene Fehler & Probleme\", \"findings\": \"[description]\", \"timestamp\": \"[ISO date]\"}. The writeback-enforcer will merge it into ~/proggs/.claude/agent-memory/shared/MEMORY.md.\n3. If it is a simple fix (wrong path, syntax error), just note the correction without writing to the sentinel file.\n4. Do NOT retry the exact same command unchanged.",
+						"prompt": "A tool call just failed. The bug-case-auto-writer hook has already logged this error and checked for known fixes.\n\n1. If the hook injected a KNOWN FIX above: Apply that fix FIRST before trying anything else.\n2. If the hook noted 'auto-captured': After fixing, update the auto-captured entry in bug-cases.jsonl with root_cause and fix fields.\n3. Briefly analyze the error (1-2 sentences).\n4. Do NOT retry the exact same command unchanged.",
 						"timeout": 15
 					}
 				]
@@ -298,6 +336,15 @@
 				"hooks": [
 					{
 						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/config-guard-preemptive.ps1\"",
+						"timeout": 5
+					}
+				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
 						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/config-guard.ps1\"",
 						"timeout": 5
 					}
@@ -320,6 +367,15 @@
 						"type": "command",
 						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/hyperagent-stop.ps1\"",
 						"timeout": 5
+					}
+				]
+			},
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/stop-notify.ps1\"",
+						"timeout": 3
 					}
 				]
 			}
@@ -445,7 +501,12 @@
 		]
 	},
 	"worktree": {
-		"symlinkDirectories": ["node_modules", ".cache", ".gradle", "build"]
+		"symlinkDirectories": [
+			"node_modules",
+			".cache",
+			".gradle",
+			"build"
+		]
 	},
 	"enabledPlugins": {
 		"swift-lsp@claude-plugins-official": true,
@@ -531,14 +592,10 @@
 		"tech-stack@context-engineering-kit": true,
 		"mcp@context-engineering-kit": true,
 		"fpf@context-engineering-kit": true,
-		"claude-code-lsps@boostvolt": false,
 		"xclaude-plugin@xclaude-plugin-marketplace": false,
 		"claude-reflect@claude-reflect-marketplace": true,
 		"coderabbit@claude-plugins-official": true,
-		"aikido@claude-plugins-official": true,
-		"spec-driven-development@context-engineering-kit": false,
-		"context-kit@FlineDev": false,
-		"second-opinion@trailofbits": false
+		"aikido@claude-plugins-official": true
 	},
 	"extraKnownMarketplaces": {
 		"superpowers-marketplace": {
@@ -605,7 +662,7 @@
 	},
 	"language": "de",
 	"alwaysThinkingEnabled": true,
-	"effortLevel": "high",
+	"effortLevel": "medium",
 	"autoUpdatesChannel": "latest",
 	"autoDreamEnabled": true,
 	"skipDangerousModePermissionPrompt": true,
