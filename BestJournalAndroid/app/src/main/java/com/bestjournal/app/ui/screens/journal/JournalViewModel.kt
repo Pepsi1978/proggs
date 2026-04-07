@@ -426,7 +426,17 @@ constructor(
     }
 
     private fun resetState() {
-        _uiState.value = JournalUiState()
+        // If the text upsell banner was shown but not explicitly dismissed, mark it as shown
+        if (_uiState.value.showTextUpsellBanner) {
+            encryptedPrefs.edit().putBoolean(Constants.PREF_FIRST_TEXT_UPSELL_SHOWN, true).apply()
+        }
+        val currentState = _uiState.value
+        _uiState.value = JournalUiState(
+            // Preserve streak and sync status across resets to avoid UI flicker
+            currentStreak = currentState.currentStreak,
+            longestStreak = currentState.longestStreak,
+            syncStatus = currentState.syncStatus,
+        )
     }
 
     private fun triggerSync() {

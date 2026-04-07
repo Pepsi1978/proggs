@@ -122,13 +122,13 @@ fun JournalScreen(
         }
 
     // Observe review event — trigger in-app review when signaled
-    val reviewEntryCount by viewModel.reviewEvent.collectAsState()
     val activity = context as? android.app.Activity
-    LaunchedEffect(reviewEntryCount) {
-        val count = reviewEntryCount
-        if (count != null && activity != null) {
-            viewModel.consumeReviewEvent()
-            viewModel.triggerInAppReview(activity, count)
+    LaunchedEffect(Unit) {
+        viewModel.reviewEvent.collect { count ->
+            if (count != null && activity != null) {
+                viewModel.consumeReviewEvent()
+                viewModel.triggerInAppReview(activity, count)
+            }
         }
     }
 
