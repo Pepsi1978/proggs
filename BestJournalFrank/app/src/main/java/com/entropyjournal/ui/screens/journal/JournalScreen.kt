@@ -90,6 +90,7 @@ import com.entropyjournal.ui.components.SunMoonToggle
 import com.entropyjournal.ui.components.TimelineItem
 import com.entropyjournal.ui.components.TimelinePosition
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.luminance
 import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonEmerald
@@ -458,6 +459,7 @@ fun JournalScreen(
             StreakDialog(
                 currentStreak = uiState.currentStreak,
                 longestStreak = uiState.longestStreak,
+                totalEntries = allEntries.size,
                 onDismiss = { showStreakDialog = false },
             )
         }
@@ -917,13 +919,15 @@ private fun WritingPromptBanner(
 private fun StreakDialog(
     currentStreak: Int,
     longestStreak: Int,
+    totalEntries: Int,
     onDismiss: () -> Unit,
 ) {
     val milestones = listOf(7, 14, 30, 60, 90, 180, 365)
     val nextMilestone = milestones.firstOrNull { it > currentStreak } ?: (currentStreak + 30)
     val prevMilestone = milestones.lastOrNull { it <= currentStreak } ?: 0
-    val progress =
+    val progress = if (nextMilestone > prevMilestone) {
         (currentStreak - prevMilestone).toFloat() / (nextMilestone - prevMilestone)
+    } else 0f
 
     val headline = when {
         currentStreak >= 365 -> "Ein ganzes Jahr!"
@@ -933,67 +937,112 @@ private fun StreakDialog(
         currentStreak >= 14 -> "Zwei Wochen stark!"
         currentStreak >= 7 -> "Eine ganze Woche!"
         currentStreak >= 3 -> "Du bleibst dran!"
-        else -> "Guter Anfang!"
+        else -> "Jeder Tag zählt!"
     }
+
+    val motivationText = when {
+        currentStreak >= 30 -> "Was als kleine Gewohnheit begann, ist jetzt ein fester Teil deines Lebens. Dein Tagebuch kennt dich besser als je zuvor."
+        currentStreak >= 14 -> "Zwei Wochen am Stück, das schaffen die wenigsten. Dein zukünftiges Ich wird dir dafür danken."
+        currentStreak >= 7 -> "Eine Woche voller Gedanken, Gefühle und Erinnerungen. Du baust gerade etwas Wertvolles auf."
+        currentStreak >= 3 -> "Drei Tage in Folge sind der Anfang einer echten Gewohnheit. Bleib dran, es lohnt sich!"
+        else -> "Jeder Eintrag ist ein kleines Geschenk an dein zukünftiges Ich. Schreib morgen wieder!"
+    }
+
+    val isDarkTheme = !MaterialTheme.colorScheme.background.luminance().let { it > 0.5f }
+    val accentColor = if (currentStreak > 7) NeonAmber else MaterialTheme.colorScheme.primary
+    val daysToNext = nextMilestone - currentStreak
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
         icon = {
             Icon(
-                Icons.Rounded.LocalFireDepartment,
+                imageVector = Icons.Rounded.LocalFireDepartment,
                 contentDescription = null,
-                tint = Color(0xFFFF9800),
-                modifier = Modifier.size(48.dp),
+                tint = accentColor,
+                modifier = Modifier.size(40.dp),
             )
         },
         title = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Text(headline, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-                Spacer(modifier = Modifier.height(4.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     "$currentStreak Tage in Folge",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color(0xFFFF9800),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    headline,
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelLarge,
                     textAlign = TextAlign.Center,
                 )
             }
         },
         text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    "Nächstes Ziel: $nextMilestone Tage",
-                    style = MaterialTheme.typography.bodyMedium,
+                    motivationText,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = { progress.coerceIn(0f, 1f) },
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFFFF9800),
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 )
-                if (longestStreak > currentStreak) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.EmojiEvents, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            "Persönlicher Rekord: $longestStreak Tage",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text("Nächstes Ziel: $nextMilestone Tage", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
+                        Text("noch $daysToNext", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
                     }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth().height(8.dp),
+                        color = accentColor,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        drawStopIndicator = {},
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    StatColumn(icon = Icons.Rounded.LocalFireDepartment, value = "$currentStreak", label = "Aktuell", tint = accentColor)
+                    StatColumn(icon = Icons.Rounded.EmojiEvents, value = "$longestStreak", label = "Rekord", tint = NeonAmber)
+                    StatColumn(icon = Icons.Rounded.Edit, value = "$totalEntries", label = "Einträge", tint = NeonEmerald)
                 }
             }
         },
         confirmButton = {
             Button(
                 onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = accentColor,
+                    contentColor = if (isDarkTheme) Color.Black else Color.White,
+                ),
             ) {
                 Text("Weiter so!")
             }
         },
     )
+}
+
+@Composable
+private fun StatColumn(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    value: String,
+    label: String,
+    tint: Color,
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(value, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+    }
 }
