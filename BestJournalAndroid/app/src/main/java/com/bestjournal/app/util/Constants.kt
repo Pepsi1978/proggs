@@ -88,6 +88,11 @@ object Constants {
     const val PREF_DASHBOARD_ANALYSIS_COUNT = "dashboard_analysis_count"
     const val PREF_TEXT_IMPROVEMENT_COUNT = "text_improvement_count"
 
+    // Daily Reminder
+    const val PREF_REMINDER_ENABLED = "reminder_enabled"
+    const val PREF_REMINDER_HOUR = "reminder_hour"
+    const val PREF_REMINDER_MINUTE = "reminder_minute"
+
     // Spam protection
     const val SPAM_HOURLY_AI_LIMIT = 30
 

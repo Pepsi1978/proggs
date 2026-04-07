@@ -53,6 +53,11 @@ class MainActivity : FragmentActivity() {
         billingManager.initialize(this)
         enableEdgeToEdge()
 
+        // Track if opened from daily reminder notification
+        if (intent?.getBooleanExtra("from_reminder", false) == true) {
+            android.util.Log.d("ReminderAnalytics", "Event: reminder_notification_opened")
+        }
+
         // Restore unlock state across configuration changes (e.g. screen rotation)
         if (savedInstanceState != null) {
             isUnlocked.value = savedInstanceState.getBoolean(KEY_IS_UNLOCKED, false)

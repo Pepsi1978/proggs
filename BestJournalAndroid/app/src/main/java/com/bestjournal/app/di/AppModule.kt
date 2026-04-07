@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import com.bestjournal.app.util.Constants
+import com.bestjournal.app.util.DailyReminderManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -30,4 +31,11 @@ object AppModule {
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
     }
+
+    @Provides
+    @Singleton
+    fun provideDailyReminderManager(
+        @ApplicationContext context: Context,
+        prefs: SharedPreferences,
+    ): DailyReminderManager = DailyReminderManager(context, prefs)
 }

@@ -13,6 +13,7 @@ import com.bestjournal.app.domain.model.UserProfile
 import com.bestjournal.app.domain.usecase.SignInWithGoogleUseCase
 import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
 import com.bestjournal.app.util.Constants
+import com.bestjournal.app.util.DailyReminderManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.delay
@@ -35,6 +36,9 @@ data class SettingsUiState(
     val showLogoutDialog: Boolean = false,
     val consentIntent: Intent? = null,
     val isSubscribed: Boolean = false,
+    val reminderEnabled: Boolean = false,
+    val reminderHour: Int = 20,
+    val reminderMinute: Int = 0,
 )
 
 @HiltViewModel
@@ -45,6 +49,7 @@ constructor(
     private val syncUseCase: SyncWithDriveUseCase,
     private val encryptedPrefs: SharedPreferences,
     private val billingManager: BillingManager,
+    private val reminderManager: DailyReminderManager,
 ) : ViewModel() {
 
     fun trackEvent(name: String, params: Map<String, String> = emptyMap()) {
@@ -118,6 +123,9 @@ constructor(
                 biometricLock = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false),
                 lastSyncTimestamp =
                     encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L).takeIf { it > 0 },
+                reminderEnabled = reminderManager.isReminderEnabled(),
+                reminderHour = reminderManager.getReminderHour(),
+                reminderMinute = reminderManager.getReminderMinute(),
             )
     }
 
@@ -291,6 +299,33 @@ constructor(
                         )
                 }
         }
+    }
+
+    fun updateReminderEnabled(enabled: Boolean) {
+        if (enabled) {
+            val hour = _uiState.value.reminderHour
+            val minute = _uiState.value.reminderMinute
+            reminderManager.scheduleReminder(hour, minute)
+            trackEvent("reminder_enabled")
+        } else {
+            reminderManager.cancelReminder()
+            trackEvent("reminder_disabled")
+        }
+        _uiState.value = _uiState.value.copy(reminderEnabled = enabled)
+    }
+
+    fun updateReminderTime(hour: Int, minute: Int) {
+        _uiState.value = _uiState.value.copy(reminderHour = hour, reminderMinute = minute)
+        if (_uiState.value.reminderEnabled) {
+            reminderManager.scheduleReminder(hour, minute)
+        } else {
+            // Just persist the time even if not enabled yet
+            encryptedPrefs.edit()
+                .putInt(Constants.PREF_REMINDER_HOUR, hour)
+                .putInt(Constants.PREF_REMINDER_MINUTE, minute)
+                .apply()
+        }
+        trackEvent("reminder_time_changed", mapOf("hour" to hour.toString()))
     }
 
     fun showLogoutDialog(show: Boolean) {
