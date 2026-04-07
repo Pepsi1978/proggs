@@ -35,7 +35,8 @@ private val mainPages = listOf(BottomNavItem.Dashboard, BottomNavItem.Journal, B
 
 @Composable
 fun AppNavGraph(
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    initialTab: Int = 1,
 ) {
     // NavHost WITHOUT Scaffold — splash and login get full screen, no bottom bar
     NavHost(
@@ -99,7 +100,7 @@ fun AppNavGraph(
         ) {
             // Scaffold with bottom bar ONLY wraps the main content —
             // splash and login screens are completely isolated
-            val pagerState = rememberPagerState(initialPage = 1) { mainPages.size }
+            val pagerState = rememberPagerState(initialPage = initialTab) { mainPages.size }
             val coroutineScope = rememberCoroutineScope()
 
             Scaffold(

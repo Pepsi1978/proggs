@@ -93,6 +93,10 @@ object Constants {
     const val PREF_REMINDER_HOUR = "reminder_hour"
     const val PREF_REMINDER_MINUTE = "reminder_minute"
 
+    // Weekly Review
+    const val PREF_WEEKLY_REVIEW_ENABLED = "weekly_review_enabled"
+    const val PREF_FROM_WEEKLY_REVIEW = "from_weekly_review"
+
     // Spam protection
     const val SPAM_HOURLY_AI_LIMIT = 30
 

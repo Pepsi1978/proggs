@@ -169,6 +169,94 @@ fun DashboardScreen(
                 item(key = "ai_banner") { AiInfoBanner(onDismiss = { viewModel.dismissAiInfoBanner() }) }
             }
 
+            // Weekly review upsell — shown for free users arriving from Sunday notification
+            if (uiState.showWeeklyReviewBanner) {
+                item(key = "weekly_review_upsell") {
+                    GlassCard(
+                        glowColor = InsightViolet,
+                        glowIntensity = 0.3f,
+                        cornerRadius = 20.dp,
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(InsightViolet, InsightRose),
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(28.dp),
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Dein Wochenr\u00fcckblick wartet",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                ),
+                                color = InsightViolet,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Du hattest eine bewegte Woche. Mit Premium siehst du die volle Analyse \u2014 erkenne Muster, entdecke Einsichten und verstehe, was dich wirklich bewegt.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(
+                                onClick = {
+                                    viewModel.onWeeklyReviewUpsellClicked()
+                                    onNavigateToPaywall("weekly_review")
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = InsightViolet,
+                                    contentColor = Color.White,
+                                ),
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(vertical = 14.dp),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.AutoAwesome,
+                                    null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Premium entdecken",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.Bold,
+                                    ),
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            TextButton(
+                                onClick = { viewModel.dismissWeeklyReviewBanner() },
+                            ) {
+                                Text(
+                                    "Sp\u00e4ter",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             if (uiState.isLoading) {
                 item {
                     Box(

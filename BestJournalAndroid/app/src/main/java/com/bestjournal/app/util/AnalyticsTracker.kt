@@ -177,6 +177,24 @@ class AnalyticsTracker @Inject constructor(
         firebaseAnalytics.logEvent("review_flow_launched", null)
     }
 
+    // ── Weekly Review Events ───────────────────────────────────────────
+
+    fun trackWeeklyReviewNotificationShown() {
+        firebaseAnalytics.logEvent("weekly_review_notification_shown", null)
+    }
+
+    fun trackWeeklyReviewNotificationOpened() {
+        firebaseAnalytics.logEvent("weekly_review_notification_opened", null)
+    }
+
+    fun trackWeeklyReviewUpsellShown() {
+        firebaseAnalytics.logEvent("weekly_review_upsell_shown", null)
+    }
+
+    fun trackWeeklyReviewUpsellClicked() {
+        firebaseAnalytics.logEvent("weekly_review_upsell_clicked", null)
+    }
+
     // ── Upsell Events ───────────────────────────────────────────────────
 
     fun trackUpsellBannerShown(source: String) {

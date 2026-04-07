@@ -60,6 +60,12 @@ class MainActivity : FragmentActivity() {
             analyticsTracker.trackReminderOpened()
         }
 
+        // Track weekly review notification and flag for dashboard navigation
+        if (intent?.getBooleanExtra("from_weekly_review", false) == true) {
+            analyticsTracker.trackWeeklyReviewNotificationOpened()
+            encryptedPrefs.edit().putBoolean(Constants.PREF_FROM_WEEKLY_REVIEW, true).apply()
+        }
+
         // Restore unlock state across configuration changes (e.g. screen rotation)
         if (savedInstanceState != null) {
             isUnlocked.value = savedInstanceState.getBoolean(KEY_IS_UNLOCKED, false)
@@ -127,9 +133,11 @@ class MainActivity : FragmentActivity() {
                 else -> manualDark.value
             }
 
+            val initialTab = if (intent?.getBooleanExtra("from_weekly_review", false) == true) 0 else 1
+
             BestJournalTheme(darkTheme = isDark) {
                 if (isUnlocked.value) {
-                    AppNavGraph()
+                    AppNavGraph(initialTab = initialTab)
                 } else {
                     // Lock screen
                     Column(

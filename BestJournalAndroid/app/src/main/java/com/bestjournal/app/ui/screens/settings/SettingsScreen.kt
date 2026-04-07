@@ -597,12 +597,14 @@ fun SettingsScreen(
         }
 
         // Erinnerung
+        var pendingPermissionAction by remember { mutableStateOf<(() -> Unit)?>(null) }
         val notificationPermissionLauncher = rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted ->
             if (granted) {
-                viewModel.updateReminderEnabled(true)
+                pendingPermissionAction?.invoke()
             }
+            pendingPermissionAction = null
         }
 
         GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -648,6 +650,7 @@ fun SettingsScreen(
                                     android.Manifest.permission.POST_NOTIFICATIONS,
                                 ) == android.content.pm.PackageManager.PERMISSION_GRANTED
                                 if (!hasPermission) {
+                                    pendingPermissionAction = { viewModel.updateReminderEnabled(true) }
                                     notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                                     return@Switch
                                 }
@@ -696,6 +699,54 @@ fun SettingsScreen(
                             onDismiss = { showTimePicker = false },
                         )
                     }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                androidx.compose.material3.HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "W\u00f6chentlicher R\u00fcckblick",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            "Jeden Sonntag um 19:00 Uhr",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = uiState.weeklyReviewEnabled,
+                        onCheckedChange = { enabled ->
+                            if (enabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                val hasPermission =
+                                    androidx.core.content.ContextCompat.checkSelfPermission(
+                                        context,
+                                        android.Manifest.permission.POST_NOTIFICATIONS,
+                                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                if (!hasPermission) {
+                                    pendingPermissionAction = { viewModel.updateWeeklyReviewEnabled(true) }
+                                    notificationPermissionLauncher.launch(
+                                        android.Manifest.permission.POST_NOTIFICATIONS
+                                    )
+                                    return@Switch
+                                }
+                            }
+                            viewModel.updateWeeklyReviewEnabled(enabled)
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        ),
+                    )
                 }
             }
         }
@@ -1104,7 +1155,7 @@ fun SettingsScreen(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Best Journal v0.8.0",
+                    "Best Journal v0.9.0",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

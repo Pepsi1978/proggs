@@ -39,6 +39,7 @@ data class SettingsUiState(
     val reminderEnabled: Boolean = false,
     val reminderHour: Int = 20,
     val reminderMinute: Int = 0,
+    val weeklyReviewEnabled: Boolean = true,
 )
 
 @HiltViewModel
@@ -89,6 +90,8 @@ constructor(
     init {
         loadSettings()
         encryptedPrefs.registerOnSharedPreferenceChangeListener(prefsListener)
+        // Ensure weekly review alarm is scheduled (default: enabled)
+        reminderManager.ensureWeeklyReviewScheduled()
         viewModelScope.launch {
             billingManager.subscriptionState.collect { state ->
                 _uiState.value =
@@ -121,6 +124,7 @@ constructor(
                 reminderEnabled = reminderManager.isReminderEnabled(),
                 reminderHour = reminderManager.getReminderHour(),
                 reminderMinute = reminderManager.getReminderMinute(),
+                weeklyReviewEnabled = reminderManager.isWeeklyReviewEnabled(),
             )
     }
 
@@ -296,6 +300,15 @@ constructor(
         }
     }
 
+    fun updateWeeklyReviewEnabled(enabled: Boolean) {
+        if (enabled) {
+            reminderManager.scheduleWeeklyReview()
+        } else {
+            reminderManager.cancelWeeklyReview()
+        }
+        _uiState.value = _uiState.value.copy(weeklyReviewEnabled = enabled)
+    }
+
     fun updateReminderEnabled(enabled: Boolean) {
         if (enabled) {
             val hour = _uiState.value.reminderHour
@@ -333,8 +346,9 @@ constructor(
 
     fun signOut(context: android.content.Context) {
         try {
-            // Cancel any active reminder alarm before clearing prefs
+            // Cancel any active alarms before clearing prefs
             reminderManager.cancelReminder()
+            reminderManager.cancelWeeklyReview()
 
             // Save device-specific settings BEFORE clearing everything
             val isDark = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, true)

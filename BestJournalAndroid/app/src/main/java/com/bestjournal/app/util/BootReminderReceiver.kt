@@ -30,6 +30,7 @@ class BootReminderReceiver : BroadcastReceiver() {
 
             val manager = DailyReminderManager(context, prefs)
             manager.rescheduleIfEnabled()
+            manager.ensureWeeklyReviewScheduled()
 
             if (manager.isReminderEnabled()) {
                 Log.d(
@@ -38,6 +39,9 @@ class BootReminderReceiver : BroadcastReceiver() {
                         "%02d".format(manager.getReminderMinute())
                     }",
                 )
+            }
+            if (manager.isWeeklyReviewEnabled()) {
+                Log.d("BootReminderReceiver", "Weekly review re-scheduled for Sunday 19:00")
             }
         } catch (e: Exception) {
             Log.e("BootReminderReceiver", "Failed to re-schedule reminder", e)

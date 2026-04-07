@@ -14,6 +14,8 @@ class DailyReminderManager(
 
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
+    // ── Daily Reminder ──────────────────────────────────────────────────
+
     fun scheduleReminder(hour: Int, minute: Int) {
         prefs.edit()
             .putBoolean(Constants.PREF_REMINDER_ENABLED, true)
@@ -26,7 +28,6 @@ class DailyReminderManager(
             set(Calendar.MINUTE, minute)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
-            // If the time has already passed today, schedule for tomorrow
             if (before(Calendar.getInstance())) {
                 add(Calendar.DAY_OF_YEAR, 1)
             }
@@ -54,12 +55,54 @@ class DailyReminderManager(
     fun getReminderMinute(): Int =
         prefs.getInt(Constants.PREF_REMINDER_MINUTE, 0)
 
-    /** Re-schedule an active reminder (e.g. after device reboot). */
+    /** Re-schedule an active daily reminder (e.g. after device reboot). */
     fun rescheduleIfEnabled() {
         if (isReminderEnabled()) {
             scheduleReminder(getReminderHour(), getReminderMinute())
         }
     }
+
+    // ── Weekly Review ───────────────────────────────────────────────────
+
+    /** Schedule a weekly notification every Sunday at 19:00. */
+    fun scheduleWeeklyReview() {
+        prefs.edit().putBoolean(Constants.PREF_WEEKLY_REVIEW_ENABLED, true).apply()
+
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
+            set(Calendar.HOUR_OF_DAY, 19)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            if (before(Calendar.getInstance())) {
+                add(Calendar.WEEK_OF_YEAR, 1)
+            }
+        }
+
+        alarmManager.setRepeating(
+            AlarmManager.RTC_WAKEUP,
+            calendar.timeInMillis,
+            AlarmManager.INTERVAL_DAY * 7,
+            createWeeklyReviewPendingIntent(),
+        )
+    }
+
+    fun cancelWeeklyReview() {
+        prefs.edit().putBoolean(Constants.PREF_WEEKLY_REVIEW_ENABLED, false).apply()
+        alarmManager.cancel(createWeeklyReviewPendingIntent())
+    }
+
+    fun isWeeklyReviewEnabled(): Boolean =
+        prefs.getBoolean(Constants.PREF_WEEKLY_REVIEW_ENABLED, true)
+
+    /** Schedule weekly review if it has not been explicitly disabled. */
+    fun ensureWeeklyReviewScheduled() {
+        if (isWeeklyReviewEnabled()) {
+            scheduleWeeklyReview()
+        }
+    }
+
+    // ── Shared ──────────────────────────────────────────────────────────
 
     private fun createPendingIntent(): PendingIntent {
         val intent = Intent(context, ReminderReceiver::class.java)
@@ -71,7 +114,18 @@ class DailyReminderManager(
         )
     }
 
+    private fun createWeeklyReviewPendingIntent(): PendingIntent {
+        val intent = Intent(context, WeeklyReviewReceiver::class.java)
+        return PendingIntent.getBroadcast(
+            context,
+            WEEKLY_REVIEW_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
     companion object {
         private const val REQUEST_CODE = 1001
+        private const val WEEKLY_REVIEW_REQUEST_CODE = 1002
     }
 }

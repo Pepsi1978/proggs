@@ -36,6 +36,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".util.WeeklyReviewReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".util.BootReminderReceiver"
             android:exported="true">
             <intent-filter>

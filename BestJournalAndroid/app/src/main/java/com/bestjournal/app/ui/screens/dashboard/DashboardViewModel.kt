@@ -37,6 +37,7 @@ data class DashboardUiState(
     val customHeaderAnalyse: String = "",
     val customHeaderErgebnisse: String = "",
     val showAnalysisUpsellBanner: Boolean = false,
+    val showWeeklyReviewBanner: Boolean = false,
 )
 
 @HiltViewModel
@@ -71,6 +72,20 @@ constructor(
         ) }
         if (aiUsageTracker.shouldShowAiInfoBanner()) {
             _uiState.update { it.copy(showAiInfoBanner = true) }
+        }
+        // Show weekly review upsell banner for free users arriving from the notification
+        viewModelScope.launch {
+            val fromWeeklyReview =
+                encryptedPrefs.getBoolean(Constants.PREF_FROM_WEEKLY_REVIEW, false)
+            if (fromWeeklyReview) {
+                encryptedPrefs.edit().putBoolean(Constants.PREF_FROM_WEEKLY_REVIEW, false).apply()
+                kotlinx.coroutines.delay(600)
+                val isFree = billingManager.subscriptionState.value is SubscriptionState.Free
+                if (isFree) {
+                    analyticsTracker.trackWeeklyReviewUpsellShown()
+                    _uiState.update { it.copy(showWeeklyReviewBanner = true) }
+                }
+            }
         }
         // Check upsell banner when blocks load (handles auto-update that completed before navigation)
         viewModelScope.launch {
@@ -226,6 +241,15 @@ constructor(
     fun onAnalysisUpsellClicked() {
         analyticsTracker.trackUpsellBannerClicked("first_analysis")
         dismissAnalysisUpsellBanner()
+    }
+
+    fun dismissWeeklyReviewBanner() {
+        _uiState.update { it.copy(showWeeklyReviewBanner = false) }
+    }
+
+    fun onWeeklyReviewUpsellClicked() {
+        analyticsTracker.trackWeeklyReviewUpsellClicked()
+        dismissWeeklyReviewBanner()
     }
 
     private fun shouldShowAnalysisUpsell(): Boolean {

@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import com.bestjournal.app.util.ReminderReceiver
+import com.bestjournal.app.util.WeeklyReviewReceiver
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
@@ -31,15 +32,25 @@ class BestJournalApp : Application() {
 
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
+            val manager = getSystemService(NotificationManager::class.java)
+
+            val dailyChannel = NotificationChannel(
                 ReminderReceiver.CHANNEL_ID,
                 "T\u00e4gliche Erinnerung",
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
                 description = "Erinnert dich t\u00e4glich ans Tagebuchschreiben"
             }
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
+            manager.createNotificationChannel(dailyChannel)
+
+            val weeklyChannel = NotificationChannel(
+                WeeklyReviewReceiver.CHANNEL_ID,
+                "W\u00f6chentlicher R\u00fcckblick",
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description = "Dein Wochenr\u00fcckblick jeden Sonntag um 19:00 Uhr"
+            }
+            manager.createNotificationChannel(weeklyChannel)
         }
     }
 }
