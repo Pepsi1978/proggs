@@ -550,7 +550,7 @@ fun JournalScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                "Nicht angemeldet \u2014 melde dich in den Einstellungen bei Google an, um Backups zu aktivieren",
+                                "Nicht bei Google angemeldet",
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
@@ -564,7 +564,7 @@ fun JournalScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                "Backup aktuell \u2014 alle Eintr\u00e4ge gesichert",
+                                "Backup aktuell, alle Eintr\u00e4ge gesichert",
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
