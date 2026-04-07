@@ -14,6 +14,8 @@ import com.entropyjournal.domain.usecase.SummarizeEntryUseCase
 import com.entropyjournal.domain.usecase.SyncWithDriveUseCase
 import com.entropyjournal.domain.usecase.TranscribeAudioUseCase
 import com.entropyjournal.util.Constants
+import com.entropyjournal.util.DailyPromptProvider
+import com.entropyjournal.util.StreakTracker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -22,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -39,7 +42,14 @@ data class JournalUiState(
     val searchQuery: String = "",
     val isSearchActive: Boolean = false,
     val errorMessage: String? = null,
-    val syncStatus: SyncStatus = SyncStatus.IDLE
+    val syncStatus: SyncStatus = SyncStatus.IDLE,
+    val currentStreak: Int = 0,
+    val longestStreak: Int = 0,
+    val dailyPromptText: String = "",
+    val dailyPromptCategory: String = "",
+    val dailyPromptId: String = "",
+    val showPromptBanner: Boolean = true,
+    val activePrompt: String = "",
 )
 
 enum class SyncStatus { IDLE, SYNCING, SYNCED, ERROR, NOT_SIGNED_IN }
@@ -54,6 +64,7 @@ class JournalViewModel @Inject constructor(
     private val summarizeEntryUseCase: SummarizeEntryUseCase,
     private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
     private val syncWithDriveUseCase: SyncWithDriveUseCase,
+    private val streakTracker: StreakTracker,
     @ApplicationContext private val context: Context,
     private val encryptedPrefs: SharedPreferences
 ) : ViewModel() {
@@ -88,6 +99,23 @@ class JournalViewModel @Inject constructor(
         } else if (isSignedIn) {
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.IDLE)
         }
+
+        // Load current streak into UI state
+        _uiState.value = _uiState.value.copy(
+            currentStreak = streakTracker.getCurrentStreak(),
+            longestStreak = streakTracker.getLongestStreak(),
+        )
+
+        // Load today's writing prompt
+        val todaysPrompt = DailyPromptProvider.getTodaysPrompt()
+        val promptDismissedDate = encryptedPrefs.getString(com.entropyjournal.util.Constants.PREF_PROMPT_DISMISSED_DATE, "")
+        val isPromptDismissed = promptDismissedDate == java.time.LocalDate.now().toString()
+        _uiState.value = _uiState.value.copy(
+            dailyPromptText = todaysPrompt.text,
+            dailyPromptCategory = todaysPrompt.category.displayName,
+            dailyPromptId = todaysPrompt.id,
+            showPromptBanner = !isPromptDismissed,
+        )
 
         // Backfill summaries for existing entries that don't have one yet
         viewModelScope.launch {
@@ -235,7 +263,10 @@ class JournalViewModel @Inject constructor(
 
     fun saveEntry() {
         val state = _uiState.value
-        val displayText = if (state.isImproveEnabled && state.improvedText != null) {
+        val displayText = if (state.activePrompt.isNotBlank()) {
+            val userText = if (state.isImproveEnabled && state.improvedText != null) state.improvedText else state.rawText
+            "${state.activePrompt}\n\n$userText"
+        } else if (state.isImproveEnabled && state.improvedText != null) {
             state.improvedText
         } else {
             state.rawText
@@ -260,6 +291,24 @@ class JournalViewModel @Inject constructor(
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     resetState()
                 }
+                // Dismiss prompt banner if entry was from a prompt
+                if (state.activePrompt.isNotBlank()) {
+                    val todayStr = java.time.LocalDate.now().toString()
+                    encryptedPrefs.edit().putString(com.entropyjournal.util.Constants.PREF_PROMPT_DISMISSED_DATE, todayStr).apply()
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        _uiState.update { it.copy(showPromptBanner = false) }
+                    }
+                }
+                // Update streak
+                try {
+                    streakTracker.recordEntry()
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        _uiState.update { it.copy(
+                            currentStreak = streakTracker.getCurrentStreak(),
+                            longestStreak = streakTracker.getLongestStreak(),
+                        ) }
+                    }
+                } catch (_: Exception) {}
                 try { summarizeEntryUseCase(savedId, displayText) } catch (_: Exception) {}
                 try { triggerSync() } catch (_: Exception) {}
                 try { triggerDebouncedAnalysis() } catch (_: Exception) {}
@@ -301,12 +350,38 @@ class JournalViewModel @Inject constructor(
 
     fun searchEntries(query: String) = journalRepository.searchEntries(query)
 
+    fun startPromptEntry(prompt: String) {
+        _uiState.value = _uiState.value.copy(
+            recordingState = RecordingState.PREVIEW,
+            rawText = "",
+            improvedText = null,
+            isImproveEnabled = false,
+            showPreviewDialog = true,
+            activePrompt = prompt,
+        )
+    }
+
+    fun dismissPromptBanner() {
+        val todayStr = java.time.LocalDate.now().toString()
+        encryptedPrefs.edit().putString(com.entropyjournal.util.Constants.PREF_PROMPT_DISMISSED_DATE, todayStr).apply()
+        _uiState.update { it.copy(showPromptBanner = false) }
+    }
+
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 
     private fun resetState() {
-        _uiState.value = JournalUiState()
+        val currentState = _uiState.value
+        _uiState.value = JournalUiState(
+            syncStatus = currentState.syncStatus,
+            currentStreak = currentState.currentStreak,
+            longestStreak = currentState.longestStreak,
+            dailyPromptText = currentState.dailyPromptText,
+            dailyPromptCategory = currentState.dailyPromptCategory,
+            dailyPromptId = currentState.dailyPromptId,
+            showPromptBanner = currentState.showPromptBanner,
+        )
     }
 
     fun retrySyncNow() {

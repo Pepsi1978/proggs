@@ -88,7 +88,7 @@ object PdfExporter {
 
         val headerPaint = Paint().apply { color = COLOR_HEADER_BG }
         canvas.drawRect(0f, 0f, PAGE_WIDTH.toFloat(), MARGIN_TOP + 70f, headerPaint)
-        canvas.drawText("Entropy Journal", MARGIN_LEFT, currentY + 20f, brandPaint())
+        canvas.drawText("Best Journal", MARGIN_LEFT, currentY + 20f, brandPaint())
         val dateP = datePaint()
         canvas.drawText(dateText, PAGE_WIDTH - MARGIN_RIGHT - dateP.measureText(dateText), currentY + 20f, dateP)
 
@@ -148,7 +148,7 @@ object PdfExporter {
     private fun drawFooter(canvas: Canvas, pageNumber: Int) {
         val footerY = PAGE_HEIGHT - 30f
         canvas.drawLine(MARGIN_LEFT, footerY - 10f, PAGE_WIDTH - MARGIN_RIGHT, footerY - 10f, dividerPaint())
-        canvas.drawText("Entropy Journal", MARGIN_LEFT, footerY, footerPaint())
+        canvas.drawText("Best Journal", MARGIN_LEFT, footerY, footerPaint())
         val pageText = "Seite $pageNumber"
         canvas.drawText(pageText, PAGE_WIDTH - MARGIN_RIGHT - footerPaint().measureText(pageText), footerY, footerPaint())
     }

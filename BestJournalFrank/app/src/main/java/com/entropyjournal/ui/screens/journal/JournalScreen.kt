@@ -34,7 +34,12 @@ import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -138,6 +143,7 @@ fun JournalScreen(
     }
 
     var showSyncLegend by remember { mutableStateOf(false) }
+    var showStreakDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -198,6 +204,30 @@ fun JournalScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         SunMoonToggle()
+                        if (uiState.currentStreak > 0) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            val streakColor = if (uiState.currentStreak > 7) Color(0xFFFF9800) else MaterialTheme.colorScheme.primary
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .background(streakColor.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                                    .clickable { showStreakDialog = true }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.LocalFireDepartment,
+                                    contentDescription = "Streak",
+                                    tint = streakColor,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = "${uiState.currentStreak} Tage",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = streakColor,
+                                )
+                            }
+                        }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = {
@@ -271,6 +301,18 @@ fun JournalScreen(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                 ) {
+                    // Writing Prompt Banner
+                    if (uiState.showPromptBanner && uiState.dailyPromptText.isNotBlank()) {
+                        item(key = "writing_prompt") {
+                            WritingPromptBanner(
+                                promptText = uiState.dailyPromptText,
+                                category = uiState.dailyPromptCategory,
+                                onUsePrompt = { viewModel.startPromptEntry(uiState.dailyPromptText) },
+                                onDismiss = { viewModel.dismissPromptBanner() },
+                            )
+                        }
+                    }
+
                     groupedEntries.forEach { (sectionLabel, sectionEntries) ->
                         // Section header
                         item(key = "header_$sectionLabel") {
@@ -393,6 +435,14 @@ fun JournalScreen(
                 snackbarData = data,
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        if (showStreakDialog) {
+            StreakDialog(
+                currentStreak = uiState.currentStreak,
+                longestStreak = uiState.longestStreak,
+                onDismiss = { showStreakDialog = false },
             )
         }
 
@@ -604,5 +654,152 @@ private fun PreviewDialog(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
             ) { Text("Verwerfen") }
         }
+    )
+}
+
+@Composable
+private fun WritingPromptBanner(
+    promptText: String,
+    category: String,
+    onUsePrompt: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    GlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    Icons.Rounded.Lightbulb,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    category,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(24.dp),
+                ) {
+                    Icon(
+                        Icons.Rounded.Close,
+                        contentDescription = "Schließen",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                promptText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                Button(
+                    onClick = onUsePrompt,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                ) {
+                    Text("Darüber schreiben", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StreakDialog(
+    currentStreak: Int,
+    longestStreak: Int,
+    onDismiss: () -> Unit,
+) {
+    val milestones = listOf(7, 14, 30, 60, 90, 180, 365)
+    val nextMilestone = milestones.firstOrNull { it > currentStreak } ?: (currentStreak + 30)
+    val prevMilestone = milestones.lastOrNull { it <= currentStreak } ?: 0
+    val progress =
+        (currentStreak - prevMilestone).toFloat() / (nextMilestone - prevMilestone)
+
+    val headline = when {
+        currentStreak >= 365 -> "Ein ganzes Jahr!"
+        currentStreak >= 180 -> "Unglaubliche Disziplin!"
+        currentStreak >= 90 -> "Du bist unstoppbar!"
+        currentStreak >= 30 -> "Ein ganzer Monat!"
+        currentStreak >= 14 -> "Zwei Wochen stark!"
+        currentStreak >= 7 -> "Eine ganze Woche!"
+        currentStreak >= 3 -> "Du bleibst dran!"
+        else -> "Guter Anfang!"
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        icon = {
+            Icon(
+                Icons.Rounded.LocalFireDepartment,
+                contentDescription = null,
+                tint = Color(0xFFFF9800),
+                modifier = Modifier.size(48.dp),
+            )
+        },
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Text(headline, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "$currentStreak Tage in Folge",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color(0xFFFF9800),
+                    textAlign = TextAlign.Center,
+                )
+            }
+        },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    "Nächstes Ziel: $nextMilestone Tage",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { progress.coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFFFF9800),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+                if (longestStreak > currentStreak) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.EmojiEvents, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            "Persönlicher Rekord: $longestStreak Tage",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            ) {
+                Text("Weiter so!")
+            }
+        },
     )
 }
