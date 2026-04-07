@@ -357,8 +357,9 @@ constructor(
                 try { triggerDebouncedAnalysis() } catch (_: Exception) {}
                 // Signal UI to trigger in-app review at this positive moment
                 try {
+                    val totalEntries = journalRepository.getEntryCount()
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        _reviewEvent.value = entries.value.size + 1
+                        _reviewEvent.value = totalEntries
                     }
                 } catch (_: Exception) {}
             } catch (e: Exception) {
