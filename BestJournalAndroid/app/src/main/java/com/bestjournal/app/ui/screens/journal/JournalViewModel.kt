@@ -151,6 +151,20 @@ constructor(
             analyticsTracker.trackDailyPromptShown(todaysPrompt.id)
         }
 
+        // Listen for sync-in-progress changes from other ViewModels (e.g. delete in EntryDetail)
+        encryptedPrefs.registerOnSharedPreferenceChangeListener { _, key ->
+            when (key) {
+                Constants.PREF_SYNC_IN_PROGRESS -> {
+                    val inProgress = encryptedPrefs.getBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
+                    if (inProgress) {
+                        _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCING)
+                    } else {
+                        _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
+                    }
+                }
+            }
+        }
+
         // Observe subscription state changes
         viewModelScope.launch {
             billingManager.subscriptionState.collect { state ->

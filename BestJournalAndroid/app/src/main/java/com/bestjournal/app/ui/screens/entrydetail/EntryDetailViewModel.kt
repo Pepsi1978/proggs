@@ -110,11 +110,15 @@ constructor(
                 // Launch backup in independent scope — viewModelScope gets cancelled on navigation
                 kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                     try {
+                        encryptedPrefs.edit().putBoolean(Constants.PREF_SYNC_IN_PROGRESS, true).apply()
                         syncWithDriveUseCase.backup()
                         encryptedPrefs.edit()
+                            .putBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
                             .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
                             .apply()
-                    } catch (_: Exception) {}
+                    } catch (_: Exception) {
+                        encryptedPrefs.edit().putBoolean(Constants.PREF_SYNC_IN_PROGRESS, false).apply()
+                    }
                 }
                 _uiState.value = _uiState.value.copy(isDeleted = true, showDeleteDialog = false)
             }

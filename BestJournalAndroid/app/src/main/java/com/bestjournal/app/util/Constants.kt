@@ -27,6 +27,7 @@ object Constants {
     const val PREF_GOOGLE_ACCOUNT_EMAIL = "google_account_email"
     const val PREF_GOOGLE_AVATAR_URL = "google_avatar_url"
     const val PREF_LAST_SYNC_TIMESTAMP = "last_sync_timestamp"
+    const val PREF_SYNC_IN_PROGRESS = "sync_in_progress"
     const val PREF_DARK_THEME = "dark_theme"
     const val PREF_THEME_FOLLOW_SYSTEM = "theme_follow_system"
     const val PREF_THEME_FOLLOW_SUN = "theme_follow_sun"
