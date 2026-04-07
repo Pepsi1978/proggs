@@ -38,7 +38,7 @@ class AnalyticsTracker @Inject constructor(
 
     fun trackOnboardingGoalsSelected(goals: String) {
         firebaseAnalytics.logEvent("onboarding_goals_selected", Bundle().apply {
-            putString("goals", goals)
+            putString("goals", goals.take(100))
         })
     }
 
@@ -65,8 +65,7 @@ class AnalyticsTracker @Inject constructor(
     // ── Dashboard Events ────────────────────────────────────────────────
 
     fun trackDashboardViewed(scenario: Int) {
-        firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, Bundle().apply {
-            putString(FirebaseAnalytics.Param.SCREEN_NAME, "dashboard")
+        firebaseAnalytics.logEvent("dashboard_viewed", Bundle().apply {
             putInt("scenario", scenario)
         })
     }

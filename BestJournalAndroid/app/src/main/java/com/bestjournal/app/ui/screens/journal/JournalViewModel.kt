@@ -234,7 +234,6 @@ constructor(
             val audioFile = currentAudioFile ?: return@launch
             transcribeAudioUseCase(audioFile)
                 .onSuccess { result ->
-                    analyticsTracker.trackEntryCreated("voice")
                     _uiState.value =
                         _uiState.value.copy(
                             recordingState = RecordingState.PREVIEW,
@@ -342,6 +341,8 @@ constructor(
                 android.util.Log.d("SaveEntry", "Saving entry, displayText=${displayText.take(30)}")
                 val savedId = saveJournalEntryUseCase(entry)
                 android.util.Log.d("SaveEntry", "Entry saved with id=$savedId")
+                val source = if (entry.audioDurationSeconds > 0) "voice" else "text"
+                analyticsTracker.trackEntryCreated(source)
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     resetState()
                 }
@@ -379,7 +380,6 @@ constructor(
     }
 
     fun startTextEntry() {
-        analyticsTracker.trackEntryCreated("text")
         _uiState.value =
             _uiState.value.copy(
                 recordingState = RecordingState.PREVIEW,

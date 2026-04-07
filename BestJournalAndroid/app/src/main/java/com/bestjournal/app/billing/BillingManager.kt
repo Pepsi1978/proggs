@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.util.Log
 import com.android.billingclient.api.*
+import com.bestjournal.app.util.AnalyticsTracker
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,7 +12,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 @Singleton
-class BillingManager @Inject constructor() : PurchasesUpdatedListener {
+class BillingManager @Inject constructor(
+    private val analyticsTracker: AnalyticsTracker,
+) : PurchasesUpdatedListener {
 
     companion object {
         private const val TAG = "BillingManager"
@@ -155,6 +158,12 @@ class BillingManager @Inject constructor() : PurchasesUpdatedListener {
         billingClient?.acknowledgePurchase(ackParams) { result ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                 _subscriptionState.value = SubscriptionState.Subscribed
+                val type = when {
+                    purchase.products.contains(YEARLY_PRODUCT_ID) -> "yearly"
+                    purchase.products.contains(MONTHLY_PRODUCT_ID) -> "monthly"
+                    else -> "unknown"
+                }
+                analyticsTracker.trackSubscriptionPurchased(type)
             } else {
                 Log.e(TAG, "Acknowledge failed: ${result.debugMessage}")
             }
