@@ -59,6 +59,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -81,7 +82,11 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
+    onSignOut: () -> Unit,
+    onNavigateToPaywall: (String) -> Unit = {},
+) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
@@ -892,7 +897,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                     Text("\u2022  Keine Werbung, ungest\u00f6rt schreiben und reflektieren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        onClick = { showSubscriptionSheet = true },
+                        onClick = { onNavigateToPaywall("settings_tap") },
                         modifier = Modifier.fillMaxWidth(),
                         colors =
                             ButtonDefaults.buttonColors(
@@ -984,7 +989,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Best Journal v0.6.1",
+                    "Best Journal v0.7.0",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1032,21 +1037,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
         )
     }
 
-    if (showSubscriptionSheet) {
-        val activity = context as? android.app.Activity
-        com.bestjournal.app.ui.components.AiLimitReachedSheet(
-            monthlyPrice = com.bestjournal.app.util.Constants.MONTHLY_PRICE_DISPLAY,
-            yearlyPrice = com.bestjournal.app.util.Constants.YEARLY_PRICE_DISPLAY,
-            onSubscribeMonthly = {
-                showSubscriptionSheet = false
-                activity?.let { viewModel.launchSubscription(it, isYearly = false) }
-            },
-            onSubscribeYearly = {
-                showSubscriptionSheet = false
-                activity?.let { viewModel.launchSubscription(it, isYearly = true) }
-            },
-            onDismiss = { showSubscriptionSheet = false },
-        )
+    // Fallback: if showSubscriptionSheet is triggered from elsewhere, navigate to paywall
+    LaunchedEffect(showSubscriptionSheet) {
+        if (showSubscriptionSheet) {
+            onNavigateToPaywall("settings_tap")
+            showSubscriptionSheet = false
+        }
     }
 }
 

@@ -87,7 +87,11 @@ import com.bestjournal.app.util.DateTimeFormatter as DTFormatter
 import kotlinx.coroutines.delay
 
 @Composable
-fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> Unit) {
+fun JournalScreen(
+    viewModel: JournalViewModel,
+    onEntryClick: (Long, String) -> Unit,
+    onNavigateToPaywall: (String) -> Unit = {},
+) {
     val allEntries by viewModel.entries.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val searchResults by
@@ -398,22 +402,12 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
             )
         }
 
-        // AI limit reached — show subscription sheet
-        if (uiState.showAiLimitReached) {
-            val activity = context as? android.app.Activity
-            com.bestjournal.app.ui.components.AiLimitReachedSheet(
-                monthlyPrice = com.bestjournal.app.util.Constants.MONTHLY_PRICE_DISPLAY,
-                yearlyPrice = com.bestjournal.app.util.Constants.YEARLY_PRICE_DISPLAY,
-                onSubscribeMonthly = {
-                    viewModel.dismissAiLimitReached()
-                    activity?.let { viewModel.launchSubscription(it, isYearly = false) }
-                },
-                onSubscribeYearly = {
-                    viewModel.dismissAiLimitReached()
-                    activity?.let { viewModel.launchSubscription(it, isYearly = true) }
-                },
-                onDismiss = { viewModel.dismissAiLimitReached() },
-            )
+        // AI limit reached — navigate to fullscreen PaywallScreen
+        LaunchedEffect(uiState.showAiLimitReached) {
+            if (uiState.showAiLimitReached) {
+                onNavigateToPaywall("limit_reached")
+                viewModel.dismissAiLimitReached()
+            }
         }
 
         SnackbarHost(

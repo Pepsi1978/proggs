@@ -24,6 +24,7 @@ import com.bestjournal.app.ui.screens.dashboard.DashboardScreen
 import com.bestjournal.app.ui.screens.entrydetail.EntryDetailScreen
 import com.bestjournal.app.ui.screens.journal.JournalScreen
 import com.bestjournal.app.ui.screens.login.LoginScreen
+import com.bestjournal.app.ui.screens.paywall.PaywallScreen
 import com.bestjournal.app.ui.screens.settings.SettingsScreen
 import com.bestjournal.app.ui.screens.onboarding.OnboardingScreen
 import com.bestjournal.app.ui.screens.splash.SplashScreen
@@ -129,7 +130,10 @@ fun AppNavGraph(
                             onEntryClick = { entryId, searchQuery ->
                                 val encodedQuery = Uri.encode(searchQuery)
                                 navController.navigate("entry_detail/$entryId?searchQuery=$encodedQuery")
-                            }
+                            },
+                            onNavigateToPaywall = { source ->
+                                navController.navigate("paywall?source=$source")
+                            },
                         )
                         2 -> SettingsScreen(
                             viewModel = hiltViewModel(),
@@ -137,7 +141,10 @@ fun AppNavGraph(
                                 navController.navigate("login") {
                                     popUpTo(0) { inclusive = true }
                                 }
-                            }
+                            },
+                            onNavigateToPaywall = { source ->
+                                navController.navigate("paywall?source=$source")
+                            },
                         )
                     }
                 }
@@ -158,6 +165,20 @@ fun AppNavGraph(
                 viewModel = hiltViewModel(),
                 onBack = { navController.popBackStack() },
                 searchQuery = searchQuery
+            )
+        }
+
+        composable(
+            "paywall?source={source}",
+            arguments = listOf(
+                navArgument("source") { type = NavType.StringType; defaultValue = "limit_reached" }
+            ),
+            enterTransition = { slideInHorizontally { it } + fadeIn() },
+            exitTransition = { slideOutHorizontally { it } + fadeOut() }
+        ) {
+            PaywallScreen(
+                viewModel = hiltViewModel(),
+                onDismiss = { navController.popBackStack() },
             )
         }
     }

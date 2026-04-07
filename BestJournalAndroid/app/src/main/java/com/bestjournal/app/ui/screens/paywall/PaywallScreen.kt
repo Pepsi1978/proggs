@@ -1,0 +1,295 @@
+package com.bestjournal.app.ui.screens.paywall
+
+import android.app.Activity
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.bestjournal.app.ui.components.PulsingOrb
+import com.bestjournal.app.util.Constants
+import kotlinx.coroutines.delay
+
+private val Amber = Color(0xFFFFC107)
+
+private val benefits =
+    listOf(
+        "Verstehe verborgene Muster in deinem Denken",
+        "Unbegrenzte KI-Textverbesserung f\u00fcr jeden Eintrag",
+        "5 intelligente Analyse-Profile f\u00fcr verschiedene Perspektiven",
+        "Automatische Dashboard-Updates nach jedem Eintrag",
+        "Schreibe ungest\u00f6rt \u2014 ohne Limits und ohne Werbung",
+    )
+
+@Composable
+fun PaywallScreen(
+    viewModel: PaywallViewModel,
+    onDismiss: () -> Unit,
+) {
+    val monthlyPrice by viewModel.monthlyPrice.collectAsState()
+    val yearlyPrice by viewModel.yearlyPrice.collectAsState()
+    val activity = LocalContext.current as? Activity
+
+    val displayMonthlyPrice = monthlyPrice.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
+    val displayYearlyPrice = yearlyPrice.ifEmpty { Constants.YEARLY_PRICE_DISPLAY }
+
+    // Track paywall_shown on first composition
+    LaunchedEffect(Unit) {
+        viewModel.trackEvent("paywall_shown", mapOf("source" to viewModel.source))
+    }
+
+    // Staggered benefit entrance animation
+    var visibleBenefits by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        delay(300) // wait for screen transition to settle
+        for (i in benefits.indices) {
+            delay(80)
+            visibleBenefits = i + 1
+        }
+    }
+
+    // Subtle breathing animation on primary CTA to draw the eye
+    val infiniteTransition = rememberInfiniteTransition(label = "cta")
+    val ctaScale by
+        infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.02f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(2000, easing = EaseInOutSine),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "ctaBreathing",
+        )
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // ── Close button (top-right, 12dp from edge) ──
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                IconButton(
+                    onClick = {
+                        viewModel.trackEvent("paywall_dismissed")
+                        onDismiss()
+                    }
+                ) {
+                    Icon(
+                        Icons.Rounded.Close,
+                        contentDescription = "Schlie\u00dfen",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ── Hero: Animated PulsingOrb ──
+            PulsingOrb(
+                size = 140.dp,
+                entropyLevel = 0.7f,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Emotional headline ──
+            Text(
+                text = "Entdecke dich selbst \u2014\njeden Tag ein St\u00fcck mehr",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ── Subtitle ──
+            Text(
+                text = "Dein pers\u00f6nlicher KI-Begleiter ohne Grenzen",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ── Benefits with staggered entrance ──
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                benefits.forEachIndexed { index, benefit ->
+                    AnimatedVisibility(
+                        visible = index < visibleBenefits,
+                        enter =
+                            fadeIn(tween(300)) +
+                                slideInHorizontally(tween(300)) { -it / 4 },
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Rounded.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = benefit,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Social proof ──
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    Icons.Rounded.Star,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = Amber,
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Bereits von \u00fcber 1.000 Nutzern geliebt",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ── Primary CTA: yearly with free trial ──
+            Button(
+                onClick = {
+                    viewModel.trackEvent("trial_cta_clicked")
+                    activity?.let { viewModel.launchPurchaseFlow(it, isYearly = true) }
+                },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .scale(ctaScale),
+                shape = RoundedCornerShape(16.dp),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    ),
+            ) {
+                Text(
+                    text = "7 Tage kostenlos testen",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Danach $displayYearlyPrice pro Jahr \u2014 jederzeit k\u00fcndbar",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // ── Secondary CTA: monthly ──
+            OutlinedButton(
+                onClick = {
+                    viewModel.trackEvent("monthly_cta_clicked")
+                    activity?.let { viewModel.launchPurchaseFlow(it, isYearly = false) }
+                },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Text(
+                    text = "Monatsabo \u2014 $displayMonthlyPrice pro Monat",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // ── No thanks ──
+            TextButton(
+                onClick = {
+                    viewModel.trackEvent("no_thanks_clicked")
+                    onDismiss()
+                }
+            ) {
+                Text(
+                    text = "Weiter ohne Premium",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
