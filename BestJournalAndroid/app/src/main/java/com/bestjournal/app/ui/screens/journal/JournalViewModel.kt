@@ -51,6 +51,7 @@ data class JournalUiState(
     val showAiLimitReached: Boolean = false,
     val transcriptionModel: String = "Lokales Whisper-Modell",
     val currentStreak: Int = 0,
+    val longestStreak: Int = 0,
 )
 
 enum class SyncStatus {
@@ -109,7 +110,10 @@ constructor(
         }
 
         // Load current streak into UI state
-        _uiState.value = _uiState.value.copy(currentStreak = streakTracker.getCurrentStreak())
+        _uiState.value = _uiState.value.copy(
+            currentStreak = streakTracker.getCurrentStreak(),
+            longestStreak = streakTracker.getLongestStreak(),
+        )
 
         // Backfill summaries for existing entries without title/summary.
         // Sequential with pauses to avoid hitting Gemini rate limits.
@@ -318,7 +322,10 @@ constructor(
                 try {
                     streakTracker.recordEntry()
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        _uiState.update { it.copy(currentStreak = streakTracker.getCurrentStreak()) }
+                        _uiState.update { it.copy(
+                            currentStreak = streakTracker.getCurrentStreak(),
+                            longestStreak = streakTracker.getLongestStreak(),
+                        ) }
                     }
                 } catch (_: Exception) {}
                 // Background tasks — best effort
