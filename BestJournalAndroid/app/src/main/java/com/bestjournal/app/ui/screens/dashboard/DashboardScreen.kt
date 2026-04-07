@@ -880,9 +880,9 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                         }
                     }
                     else -> {
-                        // ── Räume dein Leben auf (Entropie) ──
-                        Text("Entropie-Skala", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                        Text("Der Halbkreis unter jeder Kategorie zeigt die Belastungsintensit\u00e4t:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        // ── Räume dein Leben auf (Belastung) ──
+                        Text("Belastungs-Skala", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Text("Der Halbkreis zeigt wie stark dich dieses Thema belastet:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             LegendDot(color = NeonRed, label = "Hoch (67\u2013100%) \u2014 Sofort handeln")
                             LegendDot(color = NeonAmber, label = "Mittel (34\u201366%) \u2014 Aufmerksamkeit n\u00f6tig")

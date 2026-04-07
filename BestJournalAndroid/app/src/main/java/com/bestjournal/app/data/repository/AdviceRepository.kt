@@ -29,10 +29,10 @@ Du bist ein empathischer, hochintelligenter Lebensberater und Muster-Analyst.
 
 DEINE AUFGABE:
 Analysiere die Tagebucheinträge eines Nutzers. Finde wiederkehrende Quellen
-persönlicher Entropie. Erstelle daraus ein strukturiertes Ratschlags-Dashboard
-im JSON-Format.
+von Stress, Unordnung und Belastung. Erstelle daraus ein strukturiertes
+Ratschlags-Dashboard im JSON-Format.
 
-DEFINITION — PERSÖNLICHE ENTROPIE:
+WAS WIR SUCHEN — PERSÖNLICHE BELASTUNG:
 Alles, was Unordnung, Stress, Energieverlust, Schmerz, Schlafprobleme,
 emotionale Belastung oder Kontrollverlust im Leben des Nutzers erzeugt.
 
@@ -81,7 +81,7 @@ JSON-AUSGABE-SCHEMA:
 FELD-DEFINITIONEN:
 
 1) "gesamt_entropie" (Zahl, 0.0 bis 1.0)
-   Gewichteter Durchschnitt aller Kategorie-Entropie-Levels.
+   Gewichteter Durchschnitt aller Kategorie-Belastungswerte.
    - 0.0–0.33 = Niedrig (guter Zustand)
    - 0.34–0.66 = Mittel (Aufmerksamkeit nötig)
    - 0.67–1.0 = Hoch (sofortiges Handeln empfohlen)
@@ -112,7 +112,7 @@ FELD-DEFINITIONEN:
    Bei nur 1 Eintrag oder keinen erkennbaren Fortschritten: leeres Array [].
 
 5) "top_massnahmen" (Array, genau 5 Einträge)
-   Die 5 wichtigsten Maßnahmen, die die persönliche Entropie am
+   Die 5 wichtigsten Maßnahmen, die die persönliche Belastung am
    STÄRKSTEN und NACHHALTIGSTEN senken würden.
    Sortiert nach Wirksamkeit (stärkste zuerst).
    Kategorieübergreifend — ganzheitlich denken.
@@ -160,7 +160,7 @@ FELD-DEFINITIONEN:
    Weitere Icons: spa, coffee, self_improvement, nights_stay, directions_run,
    child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb
 
-   ENTROPIE-LEVEL pro Kategorie (0.0 bis 1.0):
+   BELASTUNGS-LEVEL pro Kategorie (0.0 bis 1.0):
    - 0.0–0.33 = Niedrig (grün)
    - 0.34–0.66 = Mittel (gelb)
    - 0.67–1.0 = Hoch (rot)
@@ -191,7 +191,7 @@ FELD-DEFINITIONEN:
    }
 
    PRIORITÄT-BEDEUTUNG:
-   - "hoch" = Dringend, sofort handeln (größte Entropie-Quelle)
+   - "hoch" = Dringend, sofort handeln (gr\u00f6\u00dfte Belastungsquelle)
    - "mittel" = Spürbar, bald angehen
    - "niedrig" = Beobachten, langfristig bearbeiten
 
@@ -893,7 +893,7 @@ AUSGABEFORMAT — STRENGE REGELN:
 
         existingBlocks.forEach { block ->
             sb.appendLine(
-                "Kategorie '${block.categoryName}': Entropie=${block.entropyLevel}, ${block.categorySummary}"
+                "Kategorie '${block.categoryName}': Belastung=${block.entropyLevel}, ${block.categorySummary}"
             )
         }
 
