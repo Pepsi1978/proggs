@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.data.repository.JournalRepository
 import com.bestjournal.app.domain.model.JournalEntry
+import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
 import com.bestjournal.app.util.AnalyticsTracker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -28,6 +29,7 @@ class EntryDetailViewModel
 constructor(
     private val journalRepository: JournalRepository,
     private val analyticsTracker: AnalyticsTracker,
+    private val syncWithDriveUseCase: SyncWithDriveUseCase,
     savedStateHandle: SavedStateHandle,
 ) :
     ViewModel() {
@@ -103,6 +105,7 @@ constructor(
                 journalRepository.deleteEntry(entry)
                 analyticsTracker.trackEntryDeleted()
                 _uiState.value = _uiState.value.copy(isDeleted = true, showDeleteDialog = false)
+                try { syncWithDriveUseCase.backup() } catch (_: Exception) {}
             }
         }
     }

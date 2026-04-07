@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.entropyjournal.data.repository.JournalRepository
 import com.entropyjournal.domain.model.JournalEntry
+import com.entropyjournal.domain.usecase.SyncWithDriveUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -26,6 +27,7 @@ data class EntryDetailUiState(
 @HiltViewModel
 class EntryDetailViewModel @Inject constructor(
     private val journalRepository: JournalRepository,
+    private val syncWithDriveUseCase: SyncWithDriveUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -122,6 +124,7 @@ class EntryDetailViewModel @Inject constructor(
             _uiState.value.entry?.let { entry ->
                 journalRepository.deleteEntry(entry)
                 _uiState.value = _uiState.value.copy(isDeleted = true, showDeleteDialog = false)
+                try { syncWithDriveUseCase.backup() } catch (_: Exception) {}
             }
         }
     }
