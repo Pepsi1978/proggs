@@ -28,7 +28,8 @@ object FeedbackSender {
     suspend fun send(
         context: Context,
         accountEmail: String,
-        feedbackText: String
+        feedbackText: String,
+        subject: String = "Best Journal Feedback",
     ): String? = withContext(Dispatchers.IO) {
         val account = Account(accountEmail, "com.google")
         val token = try {
@@ -44,7 +45,7 @@ object FeedbackSender {
             val devMessage = buildRawEmail(
                 from = accountEmail,
                 to = DEV_EMAIL,
-                subject = "Best Journal Feedback",
+                subject = subject,
                 body = "Feedback von: $accountEmail\n\n$feedbackText"
             )
             sendViaGmailApi(token, devMessage)

@@ -5,8 +5,10 @@ import android.content.Intent
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.net.Uri
 import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.billing.SubscriptionState
+import com.bestjournal.app.data.local.dao.JournalEntryDao
 import com.bestjournal.app.data.remote.googledrive.NeedConsentException
 import com.bestjournal.app.domain.model.UserProfile
 import com.bestjournal.app.domain.usecase.SignInWithGoogleUseCase
@@ -14,6 +16,7 @@ import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.DailyReminderManager
+import com.bestjournal.app.util.PdfExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.delay
@@ -40,6 +43,8 @@ data class SettingsUiState(
     val reminderHour: Int = 20,
     val reminderMinute: Int = 0,
     val weeklyReviewEnabled: Boolean = true,
+    val isExporting: Boolean = false,
+    val exportMessage: String? = null,
 )
 
 @HiltViewModel
@@ -51,6 +56,7 @@ constructor(
     private val encryptedPrefs: SharedPreferences,
     private val billingManager: BillingManager,
     private val reminderManager: DailyReminderManager,
+    private val journalEntryDao: JournalEntryDao,
     val analyticsTracker: AnalyticsTracker,
 ) : ViewModel() {
 
@@ -342,6 +348,48 @@ constructor(
 
     fun clearConsentIntent() {
         _uiState.value = _uiState.value.copy(consentIntent = null)
+    }
+
+    fun exportToPdf(context: android.content.Context, uri: Uri) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isExporting = true, exportMessage = null)
+            try {
+                val entries = journalEntryDao.getAllEntriesOnce()
+                if (entries.isEmpty()) {
+                    _uiState.value = _uiState.value.copy(
+                        isExporting = false,
+                        exportMessage = "Keine Eintr\u00e4ge vorhanden",
+                    )
+                    delay(3000)
+                    _uiState.value = _uiState.value.copy(exportMessage = null)
+                    return@launch
+                }
+
+                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    val count = PdfExporter.export(entries, outputStream)
+                    analyticsTracker.trackExportCompleted(count)
+                    _uiState.value = _uiState.value.copy(
+                        isExporting = false,
+                        exportMessage = "$count Eintr\u00e4ge exportiert",
+                    )
+                } ?: run {
+                    _uiState.value = _uiState.value.copy(
+                        isExporting = false,
+                        exportMessage = "Fehler: Datei konnte nicht ge\u00f6ffnet werden",
+                    )
+                }
+
+                delay(4000)
+                _uiState.value = _uiState.value.copy(exportMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isExporting = false,
+                    exportMessage = "Fehler: ${e.message}",
+                )
+                delay(4000)
+                _uiState.value = _uiState.value.copy(exportMessage = null)
+            }
+        }
     }
 
     fun signOut(context: android.content.Context) {

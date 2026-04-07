@@ -31,6 +31,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Notifications
@@ -40,6 +41,7 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.DarkMode
@@ -80,8 +82,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
+import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
+import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.DateTimeFormatter
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material.icons.rounded.CardGiftcard
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Surface
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1076,6 +1091,124 @@ fun SettingsScreen(
             }
         }
 
+        // Daten (PDF-Export)
+        val pdfLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.CreateDocument("application/pdf"),
+        ) { uri ->
+            if (uri != null) {
+                viewModel.exportToPdf(context, uri)
+            }
+        }
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Rounded.Description,
+                        null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Daten",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                if (uiState.isSubscribed) {
+                    Text(
+                        "Exportiere alle Tagebucheintr\u00e4ge als PDF-Dokument.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            playClick()
+                            viewModel.analyticsTracker.trackExportInitiated()
+                            pdfLauncher.launch("BestJournal_Export.pdf")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isExporting,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                    ) {
+                        if (uiState.isExporting) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Wird exportiert\u2026")
+                        } else {
+                            Icon(
+                                Icons.Rounded.PictureAsPdf,
+                                null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Eintr\u00e4ge als PDF exportieren")
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Eintr\u00e4ge als PDF exportieren",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.Star,
+                                    null,
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "Premium-Feature",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                )
+                            }
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                playClick()
+                                viewModel.analyticsTracker.trackExportPremiumBlocked()
+                                onNavigateToPaywall("pdf_export")
+                            },
+                        ) {
+                            Text(
+                                "Freischalten",
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+                uiState.exportMessage?.let { msg ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        msg,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (msg.startsWith("Fehler")) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+        }
+
         // 7. Feedback
         var showFeedbackDialog by remember { mutableStateOf(false) }
         var feedbackSent by remember { mutableStateOf(false) }
@@ -1155,7 +1288,7 @@ fun SettingsScreen(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Best Journal v0.9.0",
+                    "Best Journal v0.9.1",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1599,4 +1732,357 @@ private fun ReminderTimePickerDialog(
             }
         },
     )
+}
+
+// ── Churn / Retention Dialog ────────────────────────────────────────────────
+//
+// Emotional retention flow that intercepts the cancellation and offers
+// a 20 % discount.  Collects structured churn reasons + optional free-text
+// and sends them to the developer via the existing FeedbackSender.
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun ChurnRetentionDialog(
+    userEmail: String?,
+    onDismiss: () -> Unit,
+    onOfferAccepted: () -> Unit,
+    onCancelConfirmed: () -> Unit,
+    analyticsTracker: AnalyticsTracker,
+    context: android.content.Context,
+) {
+    val reasons = listOf(
+        "Zu teuer",
+        "Nutze ich zu wenig",
+        "Features fehlen",
+        "Andere App gefunden",
+    )
+    var selectedReasons by remember { mutableStateOf(setOf<String>()) }
+    var additionalFeedback by remember { mutableStateOf("") }
+    var isSending by remember { mutableStateOf(false) }
+    var offerAccepted by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        analyticsTracker.trackChurnFlowOpened()
+        analyticsTracker.trackChurnOfferShown()
+    }
+
+    fun sendChurnFeedback(onComplete: () -> Unit) {
+        if (userEmail == null) { onComplete(); return }
+        if (selectedReasons.isEmpty() && additionalFeedback.isBlank()) { onComplete(); return }
+        isSending = true
+        errorMessage = null
+        scope.launch {
+            try {
+                val body = buildString {
+                    append("K\u00fcndigungsgr\u00fcnde: ")
+                    append(selectedReasons.joinToString(", ").ifEmpty { "Keine angegeben" })
+                    if (additionalFeedback.isNotBlank()) {
+                        append("\n\nZus\u00e4tzliches Feedback:\n")
+                        append(additionalFeedback)
+                    }
+                }
+                val error = com.bestjournal.app.data.remote.FeedbackSender.send(
+                    context = context,
+                    accountEmail = userEmail,
+                    feedbackText = body,
+                    subject = "K\u00fcndigungsfeedback",
+                )
+                isSending = false
+                if (error != null) errorMessage = error else onComplete()
+            } catch (e: com.bestjournal.app.data.remote.FeedbackNeedConsentException) {
+                isSending = false
+                try { context.startActivity(e.consentIntent) } catch (_: Exception) {}
+                errorMessage = "Bitte Gmail-Zugriff erlauben und erneut versuchen."
+            }
+        }
+    }
+
+    Dialog(onDismissRequest = { if (!isSending) onDismiss() }) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+        ) {
+            if (offerAccepted) {
+                // ── Success state ────────────────────────────────────
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(
+                        Icons.Rounded.Favorite, null,
+                        tint = NeonEmerald,
+                        modifier = Modifier.size(56.dp),
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Danke, dass du bleibst!",
+                        style = MaterialTheme.typography.headlineSmall,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Wir melden uns bei dir wegen des Rabatts. " +
+                            "Dein Feedback hilft uns, Best Journal noch besser zu machen.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 20.sp,
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = onOfferAccepted,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Text("Weiter schreiben")
+                    }
+                }
+            } else {
+                // ── Main churn flow ──────────────────────────────────
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(
+                        Icons.Rounded.Favorite, null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(48.dp),
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        "Bevor du gehst\u2026",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        "Dein Tagebuch und deine Fortschritte liegen uns am Herzen. " +
+                            "Jeder Eintrag erz\u00e4hlt deine Geschichte " +
+                            "\u2014 und wir m\u00f6chten Teil davon bleiben.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 20.sp,
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        "Was k\u00f6nnen wir besser machen?",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        reasons.forEach { reason ->
+                            val selected = reason in selectedReasons
+                            FilterChip(
+                                selected = selected,
+                                onClick = {
+                                    selectedReasons = if (selected) {
+                                        selectedReasons - reason
+                                    } else {
+                                        selectedReasons + reason
+                                    }
+                                    if (!selected) {
+                                        analyticsTracker.trackChurnReasonSelected(reason)
+                                    }
+                                },
+                                label = {
+                                    Text(reason, style = MaterialTheme.typography.bodySmall)
+                                },
+                                leadingIcon = if (selected) {
+                                    {
+                                        Icon(
+                                            Icons.Rounded.Check, null,
+                                            modifier = Modifier.size(16.dp),
+                                        )
+                                    }
+                                } else {
+                                    null
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor =
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                    selectedLabelColor = MaterialTheme.colorScheme.primary,
+                                    selectedLeadingIconColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    TextField(
+                        value = additionalFeedback,
+                        onValueChange = { additionalFeedback = it },
+                        modifier = Modifier.fillMaxWidth().height(100.dp),
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurface,
+                        ),
+                        placeholder = {
+                            Text(
+                                "M\u00f6chtest du uns noch etwas sagen?",
+                                color = MaterialTheme.colorScheme.outline,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // ── Retention offer card ─────────────────────────
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = MaterialTheme.colorScheme.primaryContainer
+                                    .copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(16.dp),
+                            )
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Icon(
+                            Icons.Rounded.CardGiftcard, null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp),
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Wir m\u00f6chten dich behalten!",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "20\u00A0% Rabatt auf den n\u00e4chsten Monat",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Statt ${Constants.MONTHLY_PRICE_DISPLAY} nur 3,19\u00A0\u20AC",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = {
+                                analyticsTracker.trackChurnOfferAccepted()
+                                try {
+                                    val mk = androidx.security.crypto.MasterKeys.getOrCreate(
+                                        androidx.security.crypto.MasterKeys.AES256_GCM_SPEC,
+                                    )
+                                    val prefs = androidx.security.crypto
+                                        .EncryptedSharedPreferences.create(
+                                            Constants.ENCRYPTED_PREFS_NAME, mk, context,
+                                            androidx.security.crypto.EncryptedSharedPreferences
+                                                .PrefKeyEncryptionScheme.AES256_SIV,
+                                            androidx.security.crypto.EncryptedSharedPreferences
+                                                .PrefValueEncryptionScheme.AES256_GCM,
+                                        )
+                                    prefs.edit()
+                                        .putBoolean(Constants.PREF_CHURN_OFFER_ACCEPTED, true)
+                                        .putLong(
+                                            Constants.PREF_CHURN_OFFER_TIMESTAMP,
+                                            System.currentTimeMillis(),
+                                        )
+                                        .apply()
+                                } catch (_: Exception) { /* non-critical */ }
+                                sendChurnFeedback { offerAccepted = true }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !isSending,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = NeonEmerald,
+                                contentColor = Color.White,
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Text("Angebot annehmen", style = MaterialTheme.typography.titleSmall)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    TextButton(
+                        onClick = {
+                            analyticsTracker.trackChurnConfirmed()
+                            sendChurnFeedback {
+                                val intent = android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(
+                                        "https://play.google.com/store/account/subscriptions",
+                                    ),
+                                )
+                                context.startActivity(intent)
+                                onCancelConfirmed()
+                            }
+                        },
+                        enabled = !isSending,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            "Trotzdem k\u00fcndigen",
+                            color = MaterialTheme.colorScheme.outline,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+
+                    if (isSending) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Wird gesendet\u2026",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                    }
+                    errorMessage?.let {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(it, style = MaterialTheme.typography.labelMedium, color = NeonRed)
+                    }
+                }
+            }
+        }
+    }
 }

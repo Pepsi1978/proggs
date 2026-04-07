@@ -208,4 +208,44 @@ class AnalyticsTracker @Inject constructor(
             putString("source", source)
         })
     }
+
+    // ── Export Events ───────────────────────────────────────────────────
+
+    fun trackExportInitiated() {
+        firebaseAnalytics.logEvent("export_initiated", null)
+    }
+
+    fun trackExportCompleted(entryCount: Int) {
+        firebaseAnalytics.logEvent("export_completed", Bundle().apply {
+            putInt("entry_count", entryCount)
+        })
+    }
+
+    fun trackExportPremiumBlocked() {
+        firebaseAnalytics.logEvent("export_premium_blocked", null)
+    }
+
+    // ── Churn Flow Events ───────────────────────────────────────────────
+
+    fun trackChurnFlowOpened() {
+        firebaseAnalytics.logEvent("churn_flow_opened", null)
+    }
+
+    fun trackChurnReasonSelected(reason: String) {
+        firebaseAnalytics.logEvent("churn_reason_selected", Bundle().apply {
+            putString("reason", reason)
+        })
+    }
+
+    fun trackChurnOfferShown() {
+        firebaseAnalytics.logEvent("churn_offer_shown", null)
+    }
+
+    fun trackChurnOfferAccepted() {
+        firebaseAnalytics.logEvent("churn_offer_accepted", null)
+    }
+
+    fun trackChurnConfirmed() {
+        firebaseAnalytics.logEvent("churn_confirmed", null)
+    }
 }

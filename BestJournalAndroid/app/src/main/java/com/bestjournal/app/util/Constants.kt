@@ -93,6 +93,10 @@ object Constants {
     const val PREF_REMINDER_HOUR = "reminder_hour"
     const val PREF_REMINDER_MINUTE = "reminder_minute"
 
+    // Churn / Cancellation Flow
+    const val PREF_CHURN_OFFER_ACCEPTED = "churn_offer_accepted"
+    const val PREF_CHURN_OFFER_TIMESTAMP = "churn_offer_timestamp"
+
     // Weekly Review
     const val PREF_WEEKLY_REVIEW_ENABLED = "weekly_review_enabled"
     const val PREF_FROM_WEEKLY_REVIEW = "from_weekly_review"
