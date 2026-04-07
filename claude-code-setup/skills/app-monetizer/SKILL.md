@@ -288,29 +288,51 @@ Prompt:
 **Status-Meldung:** "Bericht geschrieben mit X Verbesserungsvorschlaegen in
 [Pfad zur Datei]. Erstelle Zusammenfassung..."
 
-### Phase 6: Zusammenfassung + Follow-Up-Anleitung
+### Phase 6: Vollstaendige Ausgabe im Chat + Datei als Sicherungskopie (KRITISCH)
 
-Am Ende dem Benutzer eine Zusammenfassung geben:
+**WICHTIGSTE REGEL DIESER PHASE:** Die Datei ist NUR eine Sicherungskopie fuer spaeter.
+Der Benutzer will SOFORT loslegen — deshalb MUSS der gesamte Bericht AUCH DIREKT IM CHAT
+ausgegeben werden. Nicht nur eine kurze Zusammenfassung, sondern der VOLLSTAENDIGE Inhalt.
 
-1. **Top 3 Prioritaeten** — die drei Verbesserungen mit dem groessten Impact
-2. **Quick Wins** — Dinge die in unter 30 Minuten umgesetzt werden koennen
-3. **Langfristige Projekte** — groessere Umbauten die sich lohnen
-4. **Konkurrenz-Vorteil** — was diese App besser machen kann als die Top-Konkurrenten
-5. Verweis auf die vollstaendige Datei
+**Pflicht-Ausgabe im Chat (NACH dem Schreiben der Datei):**
 
-**Follow-Up-Anleitung (im Bericht UND dem Benutzer mitteilen):**
+1. **Ausfuehrliche Zusammenfassung** (mindestens 500 Woerter):
+   - Gesamtbewertung der App (Staerken, Schwaechen, Vergleich mit Konkurrenz)
+   - Top 3 Prioritaeten mit Begruendung warum gerade diese
+   - Quick Wins die sofort umsetzbar sind
+   - Langfristige Projekte
+   - Konkurrenz-Vorteil — was die App besser machen kann
+   - Nutzer-Funnel mit den groessten Lecks
 
-"Die komplette Analyse mit allen Prompts liegt in `[Pfad zur Datei]`.
-Du kannst jederzeit sagen:
-- 'Oeffne die Monetarisierungs-Datei' → Ich zeige dir den aktuellen Stand
-- 'Was haben wir schon umgesetzt?' → Ich pruefe den Umsetzungs-Tracker
-- 'Mach weiter mit Punkt X' → Ich fuehre den naechsten Prompt aus
-- 'Aktualisiere das Audit' → Ich mache ein neues Audit mit frischer Recherche
+2. **ALLE Verbesserungen mit ihren VOLLSTAENDIGEN Prompts** — nicht abgekuerzt,
+   nicht "siehe Datei", sondern jeder einzelne Prompt komplett ausgeschrieben im Chat.
+   Der Benutzer soll jeden Prompt direkt aus dem Chat kopieren und ausfuehren koennen
+   ohne die Datei oeffnen zu muessen.
 
-Wenn du einen Prompt umsetzt, hake ich ihn automatisch im Tracker ab:
-- [ ] → [x] nach erfolgreicher Umsetzung
-- [ ] → [~] wenn teilweise umgesetzt
-- [ ] → [-] wenn bewusst uebersprungen"
+3. **Umsetzungs-Tracker** als Checkliste
+
+4. **Follow-Up-Anleitung:**
+   "Die Sicherungskopie liegt in `[Pfad zur Datei]`.
+   Du kannst jederzeit sagen:
+   - 'Oeffne die Monetarisierungs-Datei' → Ich zeige dir den aktuellen Stand
+   - 'Was haben wir schon umgesetzt?' → Ich pruefe den Umsetzungs-Tracker
+   - 'Mach weiter mit Punkt X' → Ich fuehre den naechsten Prompt aus
+   - 'Aktualisiere das Audit' → Ich mache ein neues Audit mit frischer Recherche
+
+   Wenn du einen Prompt umsetzt, hake ich ihn automatisch im Tracker ab:
+   - [ ] → [x] nach erfolgreicher Umsetzung
+   - [ ] → [~] wenn teilweise umgesetzt
+   - [ ] → [-] wenn bewusst uebersprungen"
+
+**Was NIEMALS passieren darf:**
+- ❌ Nur eine kurze Zusammenfassung ausgeben und auf die Datei verweisen
+- ❌ Prompts abkuerzen oder zusammenfassen ("Details siehe Datei")
+- ❌ Den Benutzer bitten die Datei selbst zu oeffnen fuer die Prompts
+- ❌ Die Ausgabe im Chat weglassen weil "steht ja alles in der Datei"
+
+**Warum:** Der Benutzer will SOFORT nach dem Audit mit der Umsetzung beginnen.
+Er will nicht erst eine Datei oeffnen, durchscrollen und den richtigen Prompt finden.
+Die Datei ist nur die Sicherungskopie fuer spaetere Sessions.
 
 ---
 
