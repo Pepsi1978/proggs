@@ -883,7 +883,7 @@ fun SettingsScreen(
                 } else {
                     var benefitsTracked by remember { mutableStateOf(false) }
                     Text(
-                        text = "Warum Premium dein Leben ver\u00e4ndert:",
+                        text = "Warum Premium:",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.onGloballyPositioned {
@@ -894,15 +894,15 @@ fun SettingsScreen(
                         },
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("\u2022  Deine Gedanken in klare Worte fassen \u2014 die KI macht jeden Eintrag ausdrucksst\u00e4rker", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  Deine Gedanken in klare Worte fassen, die KI macht jeden Eintrag ausdrucksst\u00e4rker", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("\u2022  5 Perspektiven auf dein Leben \u2014 von Stressabbau bis Selbsterkenntnis", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  5 Perspektiven auf dein Leben, von Stressabbau bis Selbsterkenntnis", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("\u2022  Dein Dashboard w\u00e4chst mit dir \u2014 automatisch nach jedem Eintrag", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  Dein Dashboard w\u00e4chst mit dir, automatisch nach jedem Eintrag", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("\u2022  Entdecke was du bisher \u00fcbersehen hast \u2014 die KI findet Muster die dir nicht auffallen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  Entdecke was du bisher \u00fcbersehen hast, die KI findet Muster die dir nicht auffallen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("\u2022  Dein sicherer Raum \u2014 ungest\u00f6rt schreiben, reflektieren, wachsen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  Dein sicherer Raum, ungest\u00f6rt schreiben, reflektieren, wachsen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = { onNavigateToPaywall("settings_tap") },
