@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -62,7 +63,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimeInput
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -267,16 +268,17 @@ fun SettingsScreen(
                         }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = { viewModel.signIn(context) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary,
-                            ),
-                    ) {
-                        Text("Mit Google anmelden")
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        Button(
+                            onClick = { viewModel.signIn(context) },
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                                ),
+                        ) {
+                            Text("Mit Google anmelden")
+                        }
                     }
                 }
             }
@@ -570,6 +572,7 @@ fun SettingsScreen(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
+                var showTimePicker by remember { mutableStateOf(false) }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -581,27 +584,43 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
-                        Text(
-                            "Erinnert dich ans Tagebuchschreiben",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        if (uiState.reminderEnabled) {
+                            Text(
+                                "Uhrzeit: %02d:%02d Uhr".format(uiState.reminderHour, uiState.reminderMinute),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        } else {
+                            Text(
+                                "Erinnert dich ans Tagebuchschreiben",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                     Switch(
                         checked = uiState.reminderEnabled,
                         onCheckedChange = { enabled ->
-                            if (enabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                                val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
-                                    context,
-                                    android.Manifest.permission.POST_NOTIFICATIONS,
-                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                                if (!hasPermission) {
-                                    pendingPermissionAction = { viewModel.updateReminderEnabled(true) }
-                                    notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                                    return@Switch
+                            if (enabled) {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                    val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                                        context,
+                                        android.Manifest.permission.POST_NOTIFICATIONS,
+                                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                    if (!hasPermission) {
+                                        pendingPermissionAction = {
+                                            viewModel.updateReminderEnabled(true)
+                                            showTimePicker = true
+                                        }
+                                        notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                        return@Switch
+                                    }
                                 }
+                                viewModel.updateReminderEnabled(true)
+                                showTimePicker = true
+                            } else {
+                                viewModel.updateReminderEnabled(false)
                             }
-                            viewModel.updateReminderEnabled(enabled)
                         },
                         colors = SwitchDefaults.colors(
                             checkedTrackColor = MaterialTheme.colorScheme.primary,
@@ -609,42 +628,16 @@ fun SettingsScreen(
                     )
                 }
 
-                if (uiState.reminderEnabled) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    var showTimePicker by remember { mutableStateOf(false) }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                            .clickable { showTimePicker = true }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            "Uhrzeit",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            "%02d:%02d Uhr".format(uiState.reminderHour, uiState.reminderMinute),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-
-                    if (showTimePicker) {
-                        ReminderTimePickerDialog(
-                            initialHour = uiState.reminderHour,
-                            initialMinute = uiState.reminderMinute,
-                            onConfirm = { h, m ->
-                                viewModel.updateReminderTime(h, m)
-                                showTimePicker = false
-                            },
-                            onDismiss = { showTimePicker = false },
-                        )
-                    }
+                if (showTimePicker) {
+                    ReminderTimePickerDialog(
+                        initialHour = uiState.reminderHour,
+                        initialMinute = uiState.reminderMinute,
+                        onConfirm = { h, m ->
+                            viewModel.updateReminderTime(h, m)
+                            showTimePicker = false
+                        },
+                        onDismiss = { showTimePicker = false },
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -1085,15 +1078,16 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("\u2022  Dein sicherer Raum, ungestört schreiben, reflektieren, wachsen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = { onNavigateToPaywall("settings_tap") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            ),
-                    ) {
-                        Text("Premium freischalten")
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        Button(
+                            onClick = { onNavigateToPaywall("settings_tap") },
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                ),
+                        ) {
+                            Text("Premium freischalten")
+                        }
                     }
                 }
             }
@@ -1169,11 +1163,16 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    Button(
                         onClick = {
                             viewModel.analyticsTracker.trackExportPremiumBlocked()
                             onNavigateToPaywall("pdf_export")
                         },
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            ),
                     ) {
                         Icon(
                             Icons.Rounded.Star,
@@ -1184,8 +1183,8 @@ fun SettingsScreen(
                         Text(
                             "Premium-Feature",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
                         )
+                    }
                     }
                 }
                 uiState.exportMessage?.let { msg ->
@@ -1693,20 +1692,33 @@ private fun ReminderTimePickerDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp),
         title = {
-            Text(
-                "Erinnerungszeit wählen",
-                color = MaterialTheme.colorScheme.onSurface,
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-            )
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    Icons.Rounded.Notifications,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp),
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Wann möchtest du erinnert werden?",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+            }
         },
         text = {
             Box(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center,
             ) {
-                TimePicker(state = timePickerState)
+                TimeInput(state = timePickerState)
             }
         },
         confirmButton = {
@@ -1716,7 +1728,7 @@ private fun ReminderTimePickerDialog(
                     containerColor = MaterialTheme.colorScheme.primary,
                 ),
             ) {
-                Text("Übernehmen")
+                Text("Speichern")
             }
         },
         dismissButton = {

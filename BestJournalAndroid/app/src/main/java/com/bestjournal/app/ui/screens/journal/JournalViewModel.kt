@@ -70,6 +70,7 @@ enum class SyncStatus {
     SYNCING,
     SYNCED,
     ERROR,
+    NOT_SIGNED_IN,
 }
 
 @HiltViewModel
@@ -120,7 +121,9 @@ constructor(
         // Set initial sync status: check if signed in AND last backup timestamp exists
         val isSignedIn = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")?.isNotBlank() == true
         val lastSync = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L)
-        if (isSignedIn && lastSync > 0L) {
+        if (!isSignedIn) {
+            _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.NOT_SIGNED_IN)
+        } else if (isSignedIn && lastSync > 0L) {
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
         } else if (isSignedIn) {
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.IDLE)
@@ -538,6 +541,10 @@ constructor(
                 .onSuccess { _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED) }
                 .onFailure { _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.ERROR) }
         }
+    }
+
+    fun retrySyncNow() {
+        triggerSync()
     }
 
     private fun triggerDebouncedAnalysis() {

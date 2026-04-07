@@ -43,6 +43,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -233,10 +234,17 @@ fun JournalScreen(
                         SunMoonToggle()
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { showSyncLegend = true }) {
+                    IconButton(onClick = {
+                        if (uiState.syncStatus == SyncStatus.ERROR) {
+                            viewModel.retrySyncNow()
+                        } else {
+                            showSyncLegend = true
+                        }
+                    }) {
                         Icon(
                             imageVector =
                                 when (uiState.syncStatus) {
+                                    SyncStatus.NOT_SIGNED_IN -> Icons.Rounded.Warning
                                     SyncStatus.ERROR -> Icons.Rounded.CloudOff
                                     SyncStatus.SYNCING -> Icons.Rounded.Cloud
                                     else -> Icons.Rounded.CloudDone
@@ -244,6 +252,7 @@ fun JournalScreen(
                             contentDescription = "Sync-Status",
                             tint =
                                 when (uiState.syncStatus) {
+                                    SyncStatus.NOT_SIGNED_IN -> NeonAmber
                                     SyncStatus.SYNCING -> NeonCyan
                                     SyncStatus.ERROR -> NeonRed
                                     else -> NeonEmerald
@@ -532,6 +541,20 @@ fun JournalScreen(
                 },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Rounded.Warning,
+                                null,
+                                tint = NeonAmber,
+                                modifier = Modifier.size(24.dp),
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                "Nicht angemeldet \u2014 melde dich in den Einstellungen bei Google an, um Backups zu aktivieren",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Rounded.CloudDone,
