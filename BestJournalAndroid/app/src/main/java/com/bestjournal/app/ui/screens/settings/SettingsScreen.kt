@@ -1164,29 +1164,13 @@ fun SettingsScreen(
                     }
                 } else {
                     Text(
-                        "Tagebucheinträge als PDF exportieren",
+                        "Tagebucheintr\u00e4ge als PDF exportieren",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Rounded.Star,
-                            null,
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                            modifier = Modifier.size(14.dp),
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            "Premium-Feature",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                        )
-                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = {
-                            playClick()
                             viewModel.analyticsTracker.trackExportPremiumBlocked()
                             onNavigateToPaywall("pdf_export")
                         },
@@ -1198,7 +1182,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            "Premium freischalten",
+                            "Premium-Feature",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
