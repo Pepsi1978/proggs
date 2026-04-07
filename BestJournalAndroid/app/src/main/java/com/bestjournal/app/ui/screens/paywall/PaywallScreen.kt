@@ -12,6 +12,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -87,6 +89,19 @@ fun PaywallScreen(
     val orbPrimaryColor = if (isDarkTheme) WarmCopper else NeonCyan
     val orbSecondaryColor = if (isDarkTheme) NeonAmber else NeonViolet
 
+    // Calculate yearly savings vs monthly
+    val savingsPercent = remember(displayMonthlyPrice, displayYearlyPrice) {
+        val monthly = displayMonthlyPrice.replace("[^0-9,.]".toRegex(), "")
+            .replace(",", ".").toDoubleOrNull()
+        val yearly = displayYearlyPrice.replace("[^0-9,.]".toRegex(), "")
+            .replace(",", ".").toDoubleOrNull()
+        if (monthly != null && yearly != null && monthly > 0) {
+            ((monthly * 12 - yearly) / (monthly * 12) * 100).toInt()
+        } else {
+            37 // fallback
+        }
+    }
+
     // Track paywall_shown on first composition
     LaunchedEffect(Unit) {
         viewModel.trackEvent("paywall_shown", mapOf("source" to viewModel.source))
@@ -120,227 +135,234 @@ fun PaywallScreen(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // ── Close button (top-right, 12dp from edge) ──
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                horizontalArrangement = Arrangement.End,
+        Box(modifier = Modifier.fillMaxSize()) {
+            // ── Scrollable content ──
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .statusBarsPadding()
+                        .padding(top = 56.dp) // room for fixed X button
+                        .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                IconButton(
+                // ── Hero: Animated PulsingOrb (orange in dark, cyan in light) ──
+                PulsingOrb(
+                    size = 140.dp,
+                    entropyLevel = 0.7f,
+                    color = orbPrimaryColor,
+                    secondaryColor = orbSecondaryColor,
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // ── Emotional headline ──
+                Text(
+                    text = "Entdecke dich selbst\nJeden Tag ein St\u00fcck mehr",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // ── Subtitle ──
+                Text(
+                    text = "Dein pers\u00f6nlicher KI-Begleiter ohne Grenzen",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // ── Benefits with staggered entrance ──
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    benefits.forEachIndexed { index, benefit ->
+                        AnimatedVisibility(
+                            visible = index < visibleBenefits,
+                            enter =
+                                fadeIn(tween(300)) +
+                                    slideInHorizontally(tween(300)) { -it / 4 },
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = benefit,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // ── Primary CTA: yearly with free trial ──
+                Button(
                     onClick = {
-                        viewModel.trackEvent("paywall_dismissed")
+                        viewModel.trackEvent("trial_cta_clicked")
+                        activity?.let { act ->
+                            if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
+                                Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .scale(ctaScale),
+                    shape = RoundedCornerShape(16.dp),
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                        ),
+                ) {
+                    Text(
+                        text = "7 Tage kostenlos testen",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Danach $displayYearlyPrice pro Jahr",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // ── Monthly subscription ──
+                OutlinedButton(
+                    onClick = {
+                        viewModel.trackEvent("monthly_cta_clicked")
+                        activity?.let { act ->
+                            if (!viewModel.launchPurchaseFlow(act, isYearly = false)) {
+                                Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Text(
+                        text = "Monatsabo, $displayMonthlyPrice pro Monat",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // ── Yearly subscription (direct) ──
+                OutlinedButton(
+                    onClick = {
+                        viewModel.trackEvent("yearly_cta_clicked")
+                        activity?.let { act ->
+                            if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
+                                Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Text(
+                        text = "Jahresabo, $displayYearlyPrice pro Jahr",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Spare $savingsPercent% gegen\u00fcber dem Monatsabo, jederzeit k\u00fcndbar",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // ── Free tier note (two lines for readability) ──
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Rounded.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Die App funktioniert auch ohne Abo,",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Text(
+                        text = "mit eingeschr\u00e4nkten Limits.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // ── No thanks ──
+                TextButton(
+                    onClick = {
+                        viewModel.trackEvent("no_thanks_clicked")
                         onDismiss()
                     }
                 ) {
-                    Icon(
-                        Icons.Rounded.Close,
-                        contentDescription = "Schlie\u00dfen",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Text(
+                        text = "Weiter ohne Premium",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // ── Hero: Animated PulsingOrb (orange in dark, cyan in light) ──
-            PulsingOrb(
-                size = 140.dp,
-                entropyLevel = 0.7f,
-                color = orbPrimaryColor,
-                secondaryColor = orbSecondaryColor,
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // ── Emotional headline ──
-            Text(
-                text = "Entdecke dich selbst\nJeden Tag ein St\u00fcck mehr",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // ── Subtitle ──
-            Text(
-                text = "Dein pers\u00f6nlicher KI-Begleiter ohne Grenzen",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // ── Benefits with staggered entrance ──
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                benefits.forEachIndexed { index, benefit ->
-                    AnimatedVisibility(
-                        visible = index < visibleBenefits,
-                        enter =
-                            fadeIn(tween(300)) +
-                                slideInHorizontally(tween(300)) { -it / 4 },
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Rounded.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = benefit,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // ── Primary CTA: yearly with free trial ──
-            Button(
+            // ── Fixed close button (stays visible while scrolling) ──
+            IconButton(
                 onClick = {
-                    viewModel.trackEvent("trial_cta_clicked")
-                    activity?.let { act ->
-                        if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
-                            Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                    viewModel.trackEvent("paywall_dismissed")
+                    onDismiss()
                 },
                 modifier =
                     Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .scale(ctaScale),
-                shape = RoundedCornerShape(16.dp),
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                    ),
-            ) {
-                Text(
-                    text = "7 Tage kostenlos testen",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "Danach $displayYearlyPrice pro Jahr",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // ── Monthly subscription ──
-            OutlinedButton(
-                onClick = {
-                    viewModel.trackEvent("monthly_cta_clicked")
-                    activity?.let { act ->
-                        if (!viewModel.launchPurchaseFlow(act, isYearly = false)) {
-                            Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Text(
-                    text = "Monatsabo, $displayMonthlyPrice pro Monat",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // ── Yearly subscription (direct) ──
-            OutlinedButton(
-                onClick = {
-                    viewModel.trackEvent("yearly_cta_clicked")
-                    activity?.let { act ->
-                        if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
-                            Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Text(
-                    text = "Jahresabo, $displayYearlyPrice pro Jahr",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "Jederzeit k\u00fcndbar",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // ── Free tier note ──
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
+                        .align(Alignment.TopEnd)
+                        .statusBarsPadding()
+                        .padding(top = 8.dp, end = 12.dp),
             ) {
                 Icon(
-                    Icons.Rounded.Info,
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp),
+                    Icons.Rounded.Close,
+                    contentDescription = "Schlie\u00dfen",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Die App funktioniert auch ohne Abo, mit eingeschr\u00e4nkten Limits.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // ── No thanks ──
-            TextButton(
-                onClick = {
-                    viewModel.trackEvent("no_thanks_clicked")
-                    onDismiss()
-                }
-            ) {
-                Text(
-                    text = "Weiter ohne Premium",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
