@@ -596,6 +596,110 @@ fun SettingsScreen(
             }
         }
 
+        // Erinnerung
+        val notificationPermissionLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            if (granted) {
+                viewModel.updateReminderEnabled(true)
+            }
+        }
+
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Rounded.Notifications,
+                        null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Erinnerung",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "T\u00e4gliche Erinnerung",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            "Erinnert dich ans Tagebuchschreiben",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = uiState.reminderEnabled,
+                        onCheckedChange = { enabled ->
+                            if (enabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                                    context,
+                                    android.Manifest.permission.POST_NOTIFICATIONS,
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                if (!hasPermission) {
+                                    notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                    return@Switch
+                                }
+                            }
+                            viewModel.updateReminderEnabled(enabled)
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        ),
+                    )
+                }
+
+                if (uiState.reminderEnabled) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    var showTimePicker by remember { mutableStateOf(false) }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .clickable { showTimePicker = true }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "Uhrzeit",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            "%02d:%02d Uhr".format(uiState.reminderHour, uiState.reminderMinute),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+
+                    if (showTimePicker) {
+                        ReminderTimePickerDialog(
+                            initialHour = uiState.reminderHour,
+                            initialMinute = uiState.reminderMinute,
+                            onConfirm = { h, m ->
+                                viewModel.updateReminderTime(h, m)
+                                showTimePicker = false
+                            },
+                            onDismiss = { showTimePicker = false },
+                        )
+                    }
+                }
+            }
+        }
+
         // KI-Dashboard Profile
         GlassCard {
             Column {
@@ -916,90 +1020,6 @@ fun SettingsScreen(
                             ),
                     ) {
                         Text("Premium freischalten")
-                    }
-                }
-            }
-        }
-
-        // 6. Erinnerung
-        GlassCard(modifier = Modifier.fillMaxWidth()) {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Rounded.Notifications,
-                        null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Erinnerung",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "T\u00e4gliche Erinnerung",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            "Erinnert dich ans Tagebuchschreiben",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Switch(
-                        checked = uiState.reminderEnabled,
-                        onCheckedChange = { viewModel.updateReminderEnabled(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
-                }
-
-                if (uiState.reminderEnabled) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    var showTimePicker by remember { mutableStateOf(false) }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                            .clickable { showTimePicker = true }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            "Uhrzeit",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            "%02d:%02d Uhr".format(uiState.reminderHour, uiState.reminderMinute),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-
-                    if (showTimePicker) {
-                        ReminderTimePickerDialog(
-                            initialHour = uiState.reminderHour,
-                            initialMinute = uiState.reminderMinute,
-                            onConfirm = { h, m ->
-                                viewModel.updateReminderTime(h, m)
-                                showTimePicker = false
-                            },
-                            onDismiss = { showTimePicker = false },
-                        )
                     }
                 }
             }
@@ -1500,6 +1520,8 @@ private fun ReminderTimePickerDialog(
             Text(
                 "Erinnerungszeit w\u00e4hlen",
                 color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
             )
         },
         text = {

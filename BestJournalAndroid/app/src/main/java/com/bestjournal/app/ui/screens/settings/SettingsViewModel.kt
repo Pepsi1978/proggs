@@ -338,6 +338,9 @@ constructor(
 
     fun signOut(context: android.content.Context) {
         try {
+            // Cancel any active reminder alarm before clearing prefs
+            reminderManager.cancelReminder()
+
             // Save device-specific settings BEFORE clearing everything
             val isDark = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, true)
             val biometricLock = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)
