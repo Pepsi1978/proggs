@@ -238,7 +238,7 @@ fun PaywallScreen(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "Danach $displayYearlyPrice pro Jahr",
+                    text = "Danach $displayYearlyPrice pro Jahr\nIn der Testphase jederzeit k\u00fcndbar",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
