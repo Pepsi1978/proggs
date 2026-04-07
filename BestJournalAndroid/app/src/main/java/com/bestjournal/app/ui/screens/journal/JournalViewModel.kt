@@ -443,7 +443,10 @@ constructor(
     }
 
     fun dismissPreviewForRecording() {
-        _uiState.update { it.copy(showPreviewDialog = false) }
+        _uiState.update { it.copy(
+            showPreviewDialog = false,
+            recordingState = RecordingState.IDLE,
+        ) }
         // activePrompt is intentionally preserved — dialog reopens after transcription
     }
 

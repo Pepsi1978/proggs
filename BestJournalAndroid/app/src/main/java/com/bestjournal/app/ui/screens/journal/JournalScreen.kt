@@ -86,6 +86,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import com.bestjournal.app.ui.components.AnimatedMicButton
 import com.bestjournal.app.ui.components.GlassCard
@@ -652,6 +653,8 @@ private fun PreviewDialog(
             focusManager.clearFocus()
             onDismiss()
         },
+        modifier = if (hasPrompt) Modifier.fillMaxWidth(0.95f) else Modifier,
+        properties = if (hasPrompt) DialogProperties(usePlatformDefaultWidth = false) else DialogProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
         title = {
             Row(
@@ -731,51 +734,71 @@ private fun PreviewDialog(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     if (!inputModeChosen) {
-                        // Phase 1: User chooses input method
-                        Text(
-                            "Wie m\u00f6chtest du antworten?",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.Medium,
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
+                        // Phase 1: User chooses input method — FAB style like bottom bar
+                        Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            OutlinedButton(
-                                onClick = onRecordClick,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.primary,
-                                ),
-                            ) {
-                                Icon(
-                                    Icons.Rounded.Mic,
-                                    null,
-                                    modifier = Modifier.size(20.dp),
+                            // Pen button (left)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                FloatingActionButton(
+                                    onClick = { inputModeChosen = true },
+                                    modifier = Modifier.size(56.dp),
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = MaterialTheme.colorScheme.onSurface,
+                                    shape = CircleShape,
+                                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Edit,
+                                        contentDescription = "Schreiben",
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    "Schreiben",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Einsprechen")
                             }
-                            Button(
-                                onClick = { inputModeChosen = true },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                ),
-                            ) {
-                                Icon(
-                                    Icons.Rounded.Edit,
-                                    null,
-                                    modifier = Modifier.size(20.dp),
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            // Divider
+                            Box(
+                                modifier = Modifier
+                                    .height(32.dp)
+                                    .width(1.dp)
+                                    .background(MaterialTheme.colorScheme.outlineVariant)
+                            )
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            // Mic button (right)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                FloatingActionButton(
+                                    onClick = onRecordClick,
+                                    modifier = Modifier.size(56.dp),
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = MaterialTheme.colorScheme.onSurface,
+                                    shape = CircleShape,
+                                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Mic,
+                                        contentDescription = "Einsprechen",
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    "Einsprechen",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Schreiben")
                             }
                         }
                     } else {
