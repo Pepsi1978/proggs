@@ -26,7 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -55,15 +55,13 @@ import com.bestjournal.app.ui.components.PulsingOrb
 import com.bestjournal.app.util.Constants
 import kotlinx.coroutines.delay
 
-private val Amber = Color(0xFFFFC107)
-
 private val benefits =
     listOf(
         "Verstehe verborgene Muster in deinem Denken",
         "Unbegrenzte KI-Textverbesserung f\u00fcr jeden Eintrag",
         "5 intelligente Analyse-Profile f\u00fcr verschiedene Perspektiven",
         "Automatische Dashboard-Updates nach jedem Eintrag",
-        "Schreibe ungest\u00f6rt \u2014 ohne Limits und ohne Werbung",
+        "Schreibe ungest\u00f6rt, ohne Limits und ohne Werbung",
     )
 
 @Composable
@@ -146,11 +144,11 @@ fun PaywallScreen(
                 entropyLevel = 0.7f,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             // ── Emotional headline ──
             Text(
-                text = "Entdecke dich selbst \u2014\njeden Tag ein St\u00fcck mehr",
+                text = "Entdecke dich selbst\nJeden Tag ein St\u00fcck mehr",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -196,28 +194,6 @@ fun PaywallScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // ── Social proof ──
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(
-                    Icons.Rounded.Star,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = Amber,
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Bereits von \u00fcber 1.000 Nutzern geliebt",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
             Spacer(modifier = Modifier.height(24.dp))
 
             // ── Primary CTA: yearly with free trial ──
@@ -247,15 +223,15 @@ fun PaywallScreen(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Danach $displayYearlyPrice pro Jahr \u2014 jederzeit k\u00fcndbar",
+                text = "Danach $displayYearlyPrice pro Jahr",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // ── Secondary CTA: monthly ──
+            // ── Monthly subscription ──
             OutlinedButton(
                 onClick = {
                     viewModel.trackEvent("monthly_cta_clicked")
@@ -268,12 +244,62 @@ fun PaywallScreen(
                 shape = RoundedCornerShape(16.dp),
             ) {
                 Text(
-                    text = "Monatsabo \u2014 $displayMonthlyPrice pro Monat",
+                    text = "Monatsabo, $displayMonthlyPrice pro Monat",
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ── Yearly subscription (direct) ──
+            OutlinedButton(
+                onClick = {
+                    viewModel.trackEvent("yearly_cta_clicked")
+                    activity?.let { viewModel.launchPurchaseFlow(it, isYearly = true) }
+                },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Text(
+                    text = "Jahresabo, $displayYearlyPrice pro Jahr",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Jederzeit k\u00fcndbar",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Free tier note ──
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.Info,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Die App funktioniert auch ohne Abo, mit eingeschr\u00e4nkten Limits.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // ── No thanks ──
             TextButton(

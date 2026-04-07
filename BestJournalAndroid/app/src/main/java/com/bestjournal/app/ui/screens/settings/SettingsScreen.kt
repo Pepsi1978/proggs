@@ -989,7 +989,7 @@ fun SettingsScreen(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Best Journal v0.7.0",
+                    "Best Journal v0.7.1",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
