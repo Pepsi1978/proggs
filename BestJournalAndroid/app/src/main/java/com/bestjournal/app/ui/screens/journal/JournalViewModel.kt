@@ -380,8 +380,17 @@ constructor(
                 android.util.Log.d("SaveEntry", "Entry saved with id=$savedId")
                 val source = if (entry.audioDurationSeconds > 0) "voice" else "text"
                 analyticsTracker.trackEntryCreated(source)
+                // If entry was from a writing prompt, dismiss the banner for today
+                if (state.activePrompt.isNotBlank()) {
+                    val todayStr = java.time.LocalDate.now().toString()
+                    encryptedPrefs.edit().putString(Constants.PREF_PROMPT_DISMISSED_DATE, todayStr).apply()
+                }
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     resetState()
+                    // Hide prompt banner after using it
+                    if (state.activePrompt.isNotBlank()) {
+                        _uiState.update { it.copy(showPromptBanner = false) }
+                    }
                 }
                 // Update streak
                 try {
