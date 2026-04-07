@@ -44,7 +44,12 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Psychology
+import androidx.compose.material.icons.rounded.AutoStories
+import androidx.compose.material.icons.rounded.SelfImprovement
+import androidx.compose.material.icons.rounded.RocketLaunch
+import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -77,15 +82,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bestjournal.app.ui.components.GlassCard
-import com.bestjournal.app.ui.theme.CardSurface
 import com.bestjournal.app.ui.theme.CustomAmber
 import com.bestjournal.app.ui.theme.GoalEmerald
 import com.bestjournal.app.ui.theme.InsightViolet
 import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.SummaryTeal
-import com.bestjournal.app.ui.theme.TextMuted
-import com.bestjournal.app.ui.theme.TextSecondary
 import com.bestjournal.app.ui.theme.WarmCopper
 import com.bestjournal.app.ui.theme.WarmGold
 import kotlinx.coroutines.launch
@@ -280,7 +282,7 @@ private fun WelcomePage() {
             Text(
                 "Dein pers\u00f6nliches KI-Tagebuch\nf\u00fcr Klarheit und Ver\u00e4nderung",
                 style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp),
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
         }
@@ -289,9 +291,9 @@ private fun WelcomePage() {
 
         // Three benefit rows — staggered entrance
         val benefits = listOf(
-            "Sprich oder schreib \u2014 die KI versteht beides",
+            "Sprich oder schreib, die KI versteht beides",
             "5 intelligente Analyse-Profile f\u00fcr verschiedene Perspektiven",
-            "Deine Daten bleiben bei dir \u2014 verschl\u00fcsselt und sicher"
+            "Deine Daten bleiben bei dir, verschl\u00fcsselt und sicher"
         )
         benefits.forEachIndexed { idx, text ->
             AnimatedVisibility(
@@ -369,7 +371,7 @@ private fun PersonalizationPage(viewModel: OnboardingViewModel) {
                 Text(
                     "W\u00e4hle ein oder mehrere Ziele",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextMuted
+                    color = MaterialTheme.colorScheme.outline
                 )
             }
         }
@@ -402,12 +404,12 @@ private fun GoalChip(text: String, selected: Boolean, onClick: () -> Unit) {
         label = "chipScale"
     )
     val borderColor by animateColorAsState(
-        targetValue = if (selected) WarmCopper else TextMuted.copy(alpha = 0.15f),
+        targetValue = if (selected) WarmCopper else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
         animationSpec = tween(250),
         label = "chipBorder"
     )
     val bgColor by animateColorAsState(
-        targetValue = if (selected) WarmCopper.copy(alpha = 0.12f) else CardSurface,
+        targetValue = if (selected) WarmCopper.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant,
         animationSpec = tween(250),
         label = "chipBg"
     )
@@ -437,7 +439,7 @@ private fun GoalChip(text: String, selected: Boolean, onClick: () -> Unit) {
                     )
                     .then(
                         if (!selected) Modifier.border(
-                            1.5.dp, TextMuted.copy(alpha = 0.3f), CircleShape
+                            1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), CircleShape
                         ) else Modifier
                     ),
                 contentAlignment = Alignment.Center
@@ -483,7 +485,7 @@ private fun HowItWorksPage() {
         Step(
             Icons.Rounded.Mic, NeonCyan,
             "Sprich oder tippe deinen Eintrag",
-            "Nimm deine Gedanken als Sprachnachricht auf oder tippe sie ein \u2014 ganz wie du m\u00f6chtest."
+            "Nimm deine Gedanken als Sprachnachricht auf oder tippe sie ein, ganz wie du m\u00f6chtest."
         ),
         Step(
             Icons.Rounded.AutoAwesome, WarmCopper,
@@ -598,7 +600,7 @@ private fun StepItem(
             Text(
                 description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -610,16 +612,16 @@ private fun StepItem(
 private data class ProfileInfo(
     val name: String,
     val description: String,
-    val emoji: String,
+    val icon: ImageVector,
     val accentColor: Color
 )
 
 private val profiles = listOf(
-    ProfileInfo("Zusammenfassung", "Fasst Themen, Muster und Erlebnisse zusammen", "\uD83D\uDCD6", SummaryTeal),
-    ProfileInfo("Belastung", "Erkennt Stress, Unordnung und Belastung", "\u26A1", WarmCopper),
-    ProfileInfo("Selbsterkenntnis", "Deckt verborgene Denk- und Gef\u00fchlsmuster auf", "\uD83D\uDC9C", InsightViolet),
-    ProfileInfo("Pers\u00f6nliche Ziele", "Erkennt Ziele, W\u00fcnsche und Fortschritte", "\uD83C\uDFAF", GoalEmerald),
-    ProfileInfo("Individuelle Analyse", "Eigenen Analyse-Fokus festlegen", "\uD83D\uDD2C", CustomAmber)
+    ProfileInfo("Zusammenfassung", "Fasst Themen, Muster und Erlebnisse zusammen", Icons.Rounded.AutoStories, SummaryTeal),
+    ProfileInfo("Belastung", "Erkennt Stress, Unordnung und Belastung", Icons.Rounded.Whatshot, WarmCopper),
+    ProfileInfo("Selbsterkenntnis", "Deckt verborgene Denk- und Gef\u00fchlsmuster auf", Icons.Rounded.SelfImprovement, InsightViolet),
+    ProfileInfo("Pers\u00f6nliche Ziele", "Erkennt Ziele, W\u00fcnsche und Fortschritte", Icons.Rounded.RocketLaunch, GoalEmerald),
+    ProfileInfo("Individuelle Analyse", "Eigenen Analyse-Fokus festlegen", Icons.Rounded.Science, CustomAmber)
 )
 
 @Composable
@@ -690,8 +692,21 @@ private fun ProfileCard(profile: ProfileInfo) {
                     .background(profile.accentColor)
             )
 
-            // Emoji
-            Text(profile.emoji, fontSize = 24.sp)
+            // Profile icon in colored circle
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(profile.accentColor.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    profile.icon,
+                    contentDescription = null,
+                    tint = profile.accentColor,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
 
             // Text column
             Column(modifier = Modifier.weight(1f)) {
@@ -705,7 +720,7 @@ private fun ProfileCard(profile: ProfileInfo) {
                 Text(
                     profile.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2
                 )
             }
@@ -722,11 +737,11 @@ private fun TrialPage(onStartTrial: () -> Unit, onSkip: () -> Unit) {
     LaunchedEffect(Unit) { visible.value = true }
 
     val benefits = listOf(
-        "Unbegrenzte KI-Textverbesserung \u2014 jeder Eintrag wird klarer und ausdrucksst\u00e4rker",
+        "Unbegrenzte KI-Textverbesserung, jeder Eintrag wird klarer und ausdrucksst\u00e4rker",
         "5 intelligente Dashboard-Profile f\u00fcr tiefe Einblicke in dein Leben",
         "Automatische Dashboard-Updates bei jedem neuen Eintrag",
-        "Pers\u00f6nliche Muster erkennen \u2014 die KI findet verborgene Denk- und Gef\u00fchlsmuster",
-        "Keine Werbung \u2014 ungest\u00f6rt schreiben und reflektieren"
+        "Pers\u00f6nliche Muster erkennen, die KI findet verborgene Denk- und Gef\u00fchlsmuster",
+        "Keine Werbung, ungest\u00f6rt schreiben und reflektieren"
     )
 
     Column(
@@ -768,7 +783,7 @@ private fun TrialPage(onStartTrial: () -> Unit, onSkip: () -> Unit) {
                 Spacer(Modifier.height(20.dp))
 
                 Text(
-                    "7 Tage alles testen",
+                    "7 Tage Premium testen",
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold
                     ),
@@ -776,11 +791,20 @@ private fun TrialPage(onStartTrial: () -> Unit, onSkip: () -> Unit) {
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    "\u2014 kostenlos",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold
+                    "Kostenlos und unverbindlich",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Medium
                     ),
                     color = WarmCopper,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    "Danach nutzt du Best Journal weiter,\nkostenlos mit begrenzten KI-Aufrufen pro Woche.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline,
                     textAlign = TextAlign.Center
                 )
             }
@@ -836,9 +860,9 @@ private fun TrialPage(onStartTrial: () -> Unit, onSkip: () -> Unit) {
 
                 TextButton(onClick = onSkip) {
                     Text(
-                        "Sp\u00e4ter entscheiden",
+                        "Ohne Premium fortfahren",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextMuted
+                        color = MaterialTheme.colorScheme.outline
                     )
                 }
             }
@@ -893,7 +917,7 @@ private fun PageIndicator(currentPage: Int, pageCount: Int) {
             )
             val color by animateColorAsState(
                 targetValue = if (index == currentPage) WarmCopper
-                else TextMuted.copy(alpha = 0.25f),
+                else MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
                 animationSpec = tween(300),
                 label = "dotColor$index"
             )
