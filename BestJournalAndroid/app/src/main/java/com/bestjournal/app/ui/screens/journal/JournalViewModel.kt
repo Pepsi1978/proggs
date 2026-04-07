@@ -15,6 +15,7 @@ import com.bestjournal.app.domain.usecase.SummarizeEntryUseCase
 import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
 import com.bestjournal.app.domain.usecase.TranscribeAudioUseCase
 import com.bestjournal.app.util.Constants
+import com.bestjournal.app.util.StreakTracker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -49,6 +50,7 @@ data class JournalUiState(
     val syncStatus: SyncStatus = SyncStatus.IDLE,
     val showAiLimitReached: Boolean = false,
     val transcriptionModel: String = "Lokales Whisper-Modell",
+    val currentStreak: Int = 0,
 )
 
 enum class SyncStatus {
@@ -73,6 +75,7 @@ constructor(
     @ApplicationContext private val context: Context,
     private val encryptedPrefs: SharedPreferences,
     private val billingManager: BillingManager,
+    private val streakTracker: StreakTracker,
 ) : ViewModel() {
 
     fun launchSubscription(activity: android.app.Activity, isYearly: Boolean) {
@@ -104,6 +107,9 @@ constructor(
         } else if (isSignedIn) {
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.IDLE)
         }
+
+        // Load current streak into UI state
+        _uiState.value = _uiState.value.copy(currentStreak = streakTracker.getCurrentStreak())
 
         // Backfill summaries for existing entries without title/summary.
         // Sequential with pauses to avoid hitting Gemini rate limits.
@@ -308,6 +314,13 @@ constructor(
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     resetState()
                 }
+                // Update streak
+                try {
+                    streakTracker.recordEntry()
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        _uiState.update { it.copy(currentStreak = streakTracker.getCurrentStreak()) }
+                    }
+                } catch (_: Exception) {}
                 // Background tasks — best effort
                 try { summarizeEntryUseCase(savedId, displayText) } catch (_: Exception) {}
                 try { triggerSync() } catch (_: Exception) {}

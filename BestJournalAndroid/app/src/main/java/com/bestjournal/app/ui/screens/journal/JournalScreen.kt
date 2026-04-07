@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudDone
@@ -80,6 +81,7 @@ import com.bestjournal.app.ui.components.ShimmerLoadingEffect
 import com.bestjournal.app.ui.components.SunMoonToggle
 import com.bestjournal.app.ui.components.TimelineItem
 import com.bestjournal.app.ui.components.TimelinePosition
+import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
@@ -250,11 +252,34 @@ fun JournalScreen(
                     }
                 }
                 }
-                Text(
-                    text = "${allEntries.size} Eintr\u00e4ge",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        text = "${allEntries.size} Eintr\u00e4ge",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (uiState.currentStreak > 0) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Rounded.LocalFireDepartment,
+                                contentDescription = "Streak",
+                                tint = if (uiState.currentStreak > 7) NeonAmber
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = "${uiState.currentStreak} Tage",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (uiState.currentStreak > 7) NeonAmber
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
             }
 
             // Transcribing state — no visual indicator needed (transcription is near-instant)
