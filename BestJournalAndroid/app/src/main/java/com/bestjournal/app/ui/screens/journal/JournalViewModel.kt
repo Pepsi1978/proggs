@@ -424,6 +424,7 @@ constructor(
                 improvedText = null,
                 isImproveEnabled = false,
                 showPreviewDialog = true,
+                transcriptionModel = "",
             )
     }
 
@@ -436,8 +437,14 @@ constructor(
                 improvedText = null,
                 isImproveEnabled = false,
                 showPreviewDialog = true,
+                transcriptionModel = "",
                 activePrompt = prompt,
             )
+    }
+
+    fun dismissPreviewForRecording() {
+        _uiState.update { it.copy(showPreviewDialog = false) }
+        // activePrompt is intentionally preserved — dialog reopens after transcription
     }
 
     fun dismissPromptBanner() {

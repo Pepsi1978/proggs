@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -481,6 +482,10 @@ fun JournalScreen(
                 onTextEdit = { viewModel.updatePreviewText(it) },
                 onSave = { viewModel.saveEntry() },
                 onDismiss = { viewModel.dismissPreview() },
+                onRecordClick = {
+                    viewModel.dismissPreviewForRecording()
+                    onMicClick()
+                },
                 onUpsellClick = {
                     viewModel.onTextUpsellClicked()
                     onNavigateToPaywall("first_text")
@@ -592,21 +597,31 @@ private fun PreviewDialog(
     onTextEdit: (String) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
+    onRecordClick: () -> Unit = {},
     onUpsellClick: () -> Unit = {},
     onUpsellDismiss: () -> Unit = {},
 ) {
     val showingImproved = isUsingImproved && improvedText != null
     val displayText = if (showingImproved) improvedText!! else rawText
     val hasPrompt = activePrompt.isNotBlank()
+    var inputModeChosen by remember { mutableStateOf(rawText.isNotBlank() || !hasPrompt) }
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     var lastEditTime by remember { mutableLongStateOf(0L) }
     var isFocused by remember { mutableStateOf(false) }
     var hadFocusOnce by remember { mutableStateOf(false) }
 
-    // Auto-focus for text entry mode
+    // Auto-focus for text entry mode (not for prompt choice phase)
     LaunchedEffect(Unit) {
-        if (rawText.isBlank()) {
+        if (rawText.isBlank() && !hasPrompt) {
+            delay(300)
+            focusRequester.requestFocus()
+        }
+    }
+
+    // Focus text field after user chooses "Schreiben"
+    LaunchedEffect(inputModeChosen) {
+        if (inputModeChosen && hasPrompt && rawText.isBlank()) {
             delay(300)
             focusRequester.requestFocus()
         }
@@ -713,57 +728,148 @@ private fun PreviewDialog(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    if (!inputModeChosen) {
+                        // Phase 1: User chooses input method
+                        Text(
+                            "Wie m\u00f6chtest du antworten?",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Medium,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            OutlinedButton(
+                                onClick = onRecordClick,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Mic,
+                                    null,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Einsprechen")
+                            }
+                            Button(
+                                onClick = { inputModeChosen = true },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                ),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Edit,
+                                    null,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Schreiben")
+                            }
+                        }
+                    } else {
+                        // Phase 2: Input active — show small mic chip + label
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "Deine Antwort:",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Medium,
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Surface(
+                                onClick = onRecordClick,
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Mic,
+                                        "Einsprechen",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        "Einsprechen",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                TextField(
-                    value = displayText,
-                    onValueChange = { newText ->
-                        lastEditTime = System.currentTimeMillis()
-                        onTextEdit(newText)
-                    },
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .heightIn(min = if (hasPrompt) 120.dp else 0.dp, max = 300.dp)
-                            .focusRequester(focusRequester)
-                            .onFocusChanged { state ->
-                                isFocused = state.isFocused
-                                if (state.isFocused) hadFocusOnce = true
-                                if (state.isFocused) lastEditTime = System.currentTimeMillis()
-                            },
-                    textStyle =
-                        MaterialTheme.typography.bodyLarge.copy(
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
-                    colors =
-                        TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            cursorColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    placeholder = {
+                if (inputModeChosen) {
+                    TextField(
+                        value = displayText,
+                        onValueChange = { newText ->
+                            lastEditTime = System.currentTimeMillis()
+                            onTextEdit(newText)
+                        },
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .heightIn(min = if (hasPrompt) 120.dp else 0.dp, max = 300.dp)
+                                .focusRequester(focusRequester)
+                                .onFocusChanged { state ->
+                                    isFocused = state.isFocused
+                                    if (state.isFocused) hadFocusOnce = true
+                                    if (state.isFocused) lastEditTime = System.currentTimeMillis()
+                                },
+                        textStyle =
+                            MaterialTheme.typography.bodyLarge.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                        colors =
+                            TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                cursorColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        placeholder = {
+                            Text(
+                                if (hasPrompt) "Schreibe hier deine Gedanken\u2026"
+                                else "Tippe hier, um den Text zu bearbeiten...",
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                        },
+                    )
+
+                    if (transcriptionModel.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            if (hasPrompt) "Schreibe hier deine Gedanken\u2026"
-                            else "Tippe hier, um den Text zu bearbeiten...",
+                            text = "Transkribiert mit $transcriptionModel",
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline,
                         )
-                    },
-                )
+                    }
 
-                if (transcriptionModel.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Transkribiert mit $transcriptionModel",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
-                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                if (improvedText != null && !isImproving) {
+                if (inputModeChosen && improvedText != null && !isImproving) {
                     // Toggle between versions
                     OutlinedButton(
                         onClick = { onToggleVersion(!showingImproved) },
@@ -866,7 +972,7 @@ private fun PreviewDialog(
                     }
                 }
 
-                if (improvedText == null && !isImproving) {
+                if (inputModeChosen && improvedText == null && !isImproving && displayText.isNotBlank()) {
                     Button(
                         onClick = onImproveClick,
                         modifier = Modifier.fillMaxWidth(),
