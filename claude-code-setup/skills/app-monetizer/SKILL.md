@@ -218,7 +218,42 @@ Apps genau dieser Kategorie monetarisieren — und es werden konkrete Konkurrent
    Beruecksichtige Kaufkraftparitaet, lokale Zahlungsgewohnheiten, und was die
    Konkurrenz in diesen Regionen verlangt. Max 25 Erkenntnisse."
 
-2. Ergebnisse zusammenfuehren
+   **Researcher D — Alleinstellungsmerkmale & Innovation (PFLICHT):**
+   "Recherchiere innovative Features die KEINE der Top-[KATEGORIE]-Apps hat, aber die
+   aus ANDEREN App-Kategorien (Fitness, Meditation, Produktivitaet, Social Media, Gaming,
+   Gesundheit, Finanzen) erfolgreich uebernommen werden koennten. Suche gezielt nach:
+   - Features die in einer voellig anderen Kategorie extrem erfolgreich sind und auf
+     [KATEGORIE]-Apps uebertragbar waeren (z.B. Spotify Wrapped fuer ein Tagebuch,
+     Duolingo-Streaks fuer Fitness, TikTok-Discovery fuer Produktivitaet)
+   - Innovative KI-Anwendungen die noch niemand in [KATEGORIE]-Apps nutzt
+   - Emotionale oder soziale Features die andere App-Kategorien revolutioniert haben
+   - Gamification-Mechaniken die in Gaming-Apps millionenfach funktionieren
+   - Personalisierungs-Features die Nutzer begeistern (wie Spotify-Algorithmus, Netflix-Empfehlungen)
+   - Visualisierungs-Ideen die komplexe Daten schoen und verstaendlich darstellen
+   Fuer jede Idee beschreiben: Woher stammt sie, warum funktioniert sie dort, und WIE
+   koennte sie konkret in einer [KATEGORIE]-App umgesetzt werden. Sei kreativ und denke
+   branchenubergreifend. Nicht das Offensichtliche, sondern das Ueberraschende.
+   Max 30 Erkenntnisse."
+
+   **Researcher E — Modernste Android-UI-Umsetzungstechniken (PFLICHT):**
+   "Recherchiere die modernsten und optisch beeindruckendsten Umsetzungstechniken
+   fuer Android-Apps mit Jetpack Compose (2025/2026). Suche gezielt nach:
+   - Die schoensten Compose-Animationen (SharedElement Transitions, AnimatedContent,
+     SpringSpec vs. TweenSpec, Crossfade, AnimatedVisibility mit Custom Specs)
+   - Material Design 3 Expressive: Welche neuen Komponenten und Designsprachen gibt es?
+   - Glassmorphism, Neumorphism, Aurora-Effekte — was ist modern, was ist veraltet?
+   - Canvas-basierte Custom-Visualisierungen (Graphen, Charts, Fortschrittsanzeigen)
+   - Lottie vs. Compose-native Animationen — wann was?
+   - Haptic Feedback und Sound Design fuer Premium-Feeling
+   - Micro-Interactions die eine App hochwertig wirken lassen
+   - Adaptive Layouts fuer Foldables und Tablets
+   - Die besten Open-Source Compose-Libraries fuer visuell beeindruckende UIs
+   - Konkrete Codebeispiele oder Library-Namen fuer jede Technik
+   Bewerte: Was davon ist produktionsreif? Was ist experimentell? Was macht den groessten
+   visuellen Unterschied mit dem geringsten Aufwand?
+   Max 30 Erkenntnisse."
+
+2. Ergebnisse aller 5 Researcher zusammenfuehren
 3. Falls allgemeingueltige Erkenntnisse dabei sind: zur Haupt-Checkliste hinzufuegen
 
 **Status-Meldung:** "Konkurrenz analysiert: Top 5 sind [App1, App2, App3, ...].
@@ -279,9 +314,52 @@ Prompt:
 ...
 
 ---
+
+## Alleinstellungsmerkmale — Was die Konkurrenz NICHT hat (PFLICHT-SEKTION)
+
+Diese Sektion kommt NACH den Standard-Verbesserungen und enthaelt Features die die
+App auf ein komplett anderes Level heben. Jedes Alleinstellungsmerkmal:
+- Stammt aus der Researcher-D-Recherche (branchenubergreifende Innovation)
+- Wird mit den modernsten Compose-Techniken aus Researcher E umgesetzt
+- Hat einen EXTRA-AUSFUEHRLICHEN Prompt (30-60 Zeilen, nicht 15-30)
+- Beschreibt EXAKT wie die visuelle Umsetzung aussehen soll (Animationen, Farben,
+  Uebergaenge, Micro-Interactions, Haptic Feedback)
+- Nennt konkrete Compose-APIs, Libraries oder Techniken fuer die Umsetzung
+- Erklaert WOHER die Idee stammt und WARUM sie in dieser App funktionieren wird
+
+Format pro Alleinstellungsmerkmal:
+### USP-1 — [Titel] (Inspiration: [Quell-App/Kategorie]) [Aufwand: ...]
+[Ausfuehrliche Erklaerung: Woher die Idee kommt, warum sie hier funktioniert,
+welchen emotionalen/monetaeren Mehrwert sie bringt, warum die Konkurrenz das nicht hat]
+
+Visuelle Umsetzung: [Detaillierte Beschreibung wie es AUSSEHEN soll — Animationen,
+Farben, Typografie, Layout, Uebergaenge, Micro-Interactions]
+
+Technische Umsetzung: [Welche Compose-APIs, Libraries, Patterns verwendet werden.
+Konkrete Klassen/Funktionen nennen: z.B. "SharedTransitionLayout fuer den Uebergang",
+"Canvas mit drawArc fuer den Fortschrittsring", "Animatable mit SpringSpec fuer das Bounce"]
+
+Prompt:
+
+
+[EXTRA-AUSFUEHRLICHER Prompt — 30-60 Zeilen. Beschreibt nicht nur WAS gebaut wird,
+sondern im Detail WIE es visuell umgesetzt wird. Nennt konkrete dp-Werte, Farben,
+Animationsdauern, Easing-Kurven, Schriftgroessen. Beschreibt jeden visuellen Zustand
+(leer, geladen, animierend, interagierend). Referenziert modernste Compose-Techniken.]
+
+
+### USP-2 — [Titel] ...
+
+Mindestens 5 Alleinstellungsmerkmale pro Audit. Lieber 8-10 wenn die Recherche
+genug innovative Ideen liefert.
+
+---
 ## Umsetzungs-Tracker
 - [ ] 1 — [Titel]
 - [ ] 2 — [Titel]
+...
+- [ ] USP-1 — [Titel]
+- [ ] USP-2 — [Titel]
 ...
 ```
 
@@ -352,14 +430,25 @@ Die Datei ist nur die Sicherungskopie fuer spaetere Sessions.
 3. **Kontext-Start**: Jeder Prompt beginnt mit dem konkreten Bezug zur App:
    "In meiner App [Name] gibt es aktuell [Beschreibung des Ist-Zustands]."
 
-4. **Ausfuehrlichkeit**: Prompts muessen SEHR ausfuehrlich sein — 15-30 Zeilen.
-   Lieber zu ausfuehrlich als zu knapp. Der Prompt beschreibt:
+4. **Ausfuehrlichkeit**: Prompts muessen EXTREM ausfuehrlich sein.
+   Standard-Verbesserungen: mindestens 15-30 Zeilen.
+   Alleinstellungsmerkmale (USP): mindestens 30-60 Zeilen.
+   LIEBER VIEL ZU AUSFUEHRLICH ALS ZU KNAPP. Der Prompt beschreibt:
    - Welche Datei(en) betroffen sind (voller Pfad im Repo)
    - Was genau geaendert oder hinzugefuegt werden soll
-   - WIE es aussehen soll (Farben, Layout, Texte, Icons, Abstaende)
+   - WIE es aussehen soll — DETAILLIERT: Farben (als Hex oder Theme-Referenz),
+     Layout (dp-Werte, Padding, Margin), Texte (exakter Wortlaut), Icons (Material
+     Icon-Name), Abstaende, Schriftgroessen, Schriftgewichte, Eckenradien
+   - WIE es sich anfuehlen soll — Animationen (Dauer in ms, Easing-Kurve,
+     Start/End-Zustand), Uebergaenge, Micro-Interactions, Haptic Feedback
    - WIE es funktionieren soll (Logik, Navigation, Datenfluss, Interaktion)
+   - Welche MODERNEN Compose-Techniken verwendet werden sollen (aus Researcher E):
+     z.B. "Verwende AnimatedContent mit fadeIn + slideInVertically fuer den Uebergang",
+     "Nutze Canvas mit drawArc fuer den Fortschrittsring",
+     "SpringSpec mit dampingRatio 0.6f fuer den Bounce-Effekt"
    - Bezug zu Best Practices: "Die erfolgreichsten Apps machen das so: ..."
    - Bezug zur Konkurrenz: "Daylio loest das so: ..."
+   - WIE es in Light Mode UND Dark Mode aussehen soll (beide Zustaende beschreiben)
 
 5. **Eigenstaendigkeit**: Jeder Prompt funktioniert allein — ohne dass man den
    Rest des Berichts gelesen haben muss. Alle noetige Information steckt im Prompt.
@@ -391,6 +480,30 @@ Die Datei ist nur die Sicherungskopie fuer spaetere Sessions.
     die klar macht was sich aendert. VORHER beschreibt den IST-Zustand (konkret, mit
     Dateipfad). NACHHER beschreibt den SOLL-Zustand (wie es aussehen und funktionieren soll).
 
+11. **Visuelle Exzellenz (PFLICHT fuer JEDEN Prompt)**: Jeder Prompt MUSS explizit
+    beschreiben wie die Umsetzung OPTISCH SCHOEN und MODERN wird. Nicht nur "fuege
+    einen Button hinzu", sondern "fuege einen Button mit 56dp Hoehe, abgerundeten Ecken
+    (16dp), einem Gradient von Primary zu PrimaryContainer, einer subtilen Schatten-
+    Elevation von 4dp und einer Scale-Animation beim Druecken (0.95f, 100ms, EaseOut) hinzu."
+    Die Prompts sollen sich anfuehlen wie ein Briefing an einen Top-Designer:
+    - Exakte Abmessungen und Abstaende in dp
+    - Farben als Theme-Referenz ODER Hex-Wert
+    - Animationsdetails (Dauer, Easing, Spring-Parameter)
+    - Zustandsbeschreibungen (normal, pressed, disabled, loading)
+    - Modernste verfuegbare Compose-APIs und Libraries nutzen
+    Ziel: Das Ergebnis soll aussehen wie eine professionelle App aus dem Store —
+    nicht wie ein Entwickler-Prototyp.
+
+12. **Alleinstellungsmerkmal-Prompts (USP-Prompts)**: Diese speziellen Prompts
+    sind EXTRA ausfuehrlich (30-60 Zeilen) und beschreiben nicht nur das Feature
+    sondern auch dessen visuelle Inszenierung im Detail. Sie enthalten:
+    - Woher die Inspiration stammt und warum sie hier funktioniert
+    - Exakte visuelle Beschreibung jedes UI-Elements
+    - Welche Compose-Animationen und -APIs verwendet werden sollen
+    - Wie sich das Feature in Light und Dark Mode verhaelt
+    - Welche emotionale Reaktion beim Nutzer ausgeloest werden soll
+    - Wie das Feature die App von JEDER Konkurrenz-App abhebt
+
 ---
 
 ## Kategorien (alle durcharbeiten, nach Wichtigkeit sortieren)
@@ -412,6 +525,7 @@ Die Datei ist nur die Sicherungskopie fuer spaetere Sessions.
 15. Dark Mode & Farbschema
 16. Google Play Compliance
 17. Lokalisierung & Mehrsprachigkeit
+18. **Alleinstellungsmerkmale & Innovation** (eigene Sektion im Bericht — siehe oben)
 
 **Sortierung: NACH WICHTIGKEIT, nicht nach Kategorie.**
 Die Verbesserung mit dem groessten Monetarisierungs-Impact kommt zuerst (1),
