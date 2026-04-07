@@ -5,8 +5,8 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.google.firebase.analytics.FirebaseAnalytics
 import com.bestjournal.app.MainActivity
 import com.bestjournal.app.R
 
@@ -21,7 +21,6 @@ class ReminderReceiver : BroadcastReceiver() {
     )
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d("ReminderReceiver", "Daily reminder triggered")
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -47,8 +46,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(NOTIFICATION_ID, notification)
 
-        // Track notification shown
-        Log.d("ReminderAnalytics", "Event: reminder_notification_shown")
+        FirebaseAnalytics.getInstance(context).logEvent("reminder_notification_shown", null)
     }
 
     companion object {

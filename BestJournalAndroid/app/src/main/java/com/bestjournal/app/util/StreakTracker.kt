@@ -1,7 +1,6 @@
 package com.bestjournal.app.util
 
 import android.content.SharedPreferences
-import android.util.Log
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -13,6 +12,7 @@ import javax.inject.Singleton
 @Singleton
 class StreakTracker @Inject constructor(
     private val prefs: SharedPreferences,
+    private val analyticsTracker: AnalyticsTracker,
 ) {
     companion object {
         private const val KEY_CURRENT = "streak_current"
@@ -32,7 +32,6 @@ class StreakTracker @Inject constructor(
         val lastDate = lastDateStr?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 
         if (lastDate == today) {
-            // Already recorded today
             return
         }
 
@@ -40,12 +39,10 @@ class StreakTracker @Inject constructor(
         val yesterday = today.minusDays(1)
 
         val newStreak = if (lastDate == yesterday) {
-            // Consecutive day
             previousStreak + 1
         } else {
-            // Streak broken or first entry ever
             if (previousStreak > 1 && lastDate != null) {
-                Log.d("StreakAnalytics", "Event: streak_broken (was $previousStreak days)")
+                analyticsTracker.trackStreakBroken()
             }
             1
         }
@@ -58,10 +55,10 @@ class StreakTracker @Inject constructor(
             .putString(KEY_LAST_DATE, today.toString())
             .apply()
 
-        Log.d("StreakAnalytics", "Event: streak_updated, streak_length=$newStreak")
+        analyticsTracker.trackStreakUpdated(newStreak)
 
         if (newStreak in MILESTONES) {
-            Log.d("StreakAnalytics", "Event: streak_milestone, days=$newStreak")
+            analyticsTracker.trackStreakMilestone(newStreak)
         }
     }
 
@@ -72,7 +69,6 @@ class StreakTracker @Inject constructor(
             ?: return 0
         val today = LocalDate.now()
 
-        // Streak is current if last entry was today or yesterday
         return if (lastDate == today || lastDate == today.minusDays(1)) {
             prefs.getInt(KEY_CURRENT, 0)
         } else {

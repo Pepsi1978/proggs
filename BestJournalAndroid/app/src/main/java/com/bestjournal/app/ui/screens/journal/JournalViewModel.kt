@@ -14,6 +14,7 @@ import com.bestjournal.app.domain.usecase.SaveJournalEntryUseCase
 import com.bestjournal.app.domain.usecase.SummarizeEntryUseCase
 import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
 import com.bestjournal.app.domain.usecase.TranscribeAudioUseCase
+import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.InAppReviewHelper
 import com.bestjournal.app.util.StreakTracker
@@ -81,6 +82,7 @@ constructor(
     private val billingManager: BillingManager,
     private val streakTracker: StreakTracker,
     private val inAppReviewHelper: InAppReviewHelper,
+    private val analyticsTracker: AnalyticsTracker,
 ) : ViewModel() {
 
     fun launchSubscription(activity: android.app.Activity, isYearly: Boolean) {
@@ -232,6 +234,7 @@ constructor(
             val audioFile = currentAudioFile ?: return@launch
             transcribeAudioUseCase(audioFile)
                 .onSuccess { result ->
+                    analyticsTracker.trackEntryCreated("voice")
                     _uiState.value =
                         _uiState.value.copy(
                             recordingState = RecordingState.PREVIEW,
@@ -271,8 +274,9 @@ constructor(
                     val onboardingDone = encryptedPrefs.getBoolean(Constants.PREF_ONBOARDING_COMPLETED, false)
                     val showUpsell = isFree && !alreadyShown && onboardingDone && count >= 1
 
+                    analyticsTracker.trackEntryImproved()
                     if (showUpsell) {
-                        android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_shown, source=first_text")
+                        analyticsTracker.trackUpsellBannerShown("first_text")
                     }
 
                     _uiState.update {
@@ -375,6 +379,7 @@ constructor(
     }
 
     fun startTextEntry() {
+        analyticsTracker.trackEntryCreated("text")
         _uiState.value =
             _uiState.value.copy(
                 recordingState = RecordingState.PREVIEW,
@@ -418,7 +423,7 @@ constructor(
     }
 
     fun onTextUpsellClicked() {
-        android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_clicked, source=first_text")
+        analyticsTracker.trackUpsellBannerClicked("first_text")
         dismissTextUpsellBanner()
     }
 

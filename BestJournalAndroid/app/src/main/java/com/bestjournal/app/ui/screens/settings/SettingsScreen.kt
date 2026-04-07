@@ -996,7 +996,7 @@ fun SettingsScreen(
                         modifier = Modifier.onGloballyPositioned {
                             if (!benefitsTracked) {
                                 benefitsTracked = true
-                                viewModel.trackEvent("premium_benefits_viewed")
+                                viewModel.analyticsTracker.trackPremiumBenefitsViewed()
                             }
                         },
                     )

@@ -31,6 +31,7 @@ import androidx.core.content.ContextCompat
 import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.ui.navigation.AppNavGraph
 import com.bestjournal.app.ui.theme.BestJournalTheme
+import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.SunCalculator
 import dagger.hilt.android.AndroidEntryPoint
@@ -41,6 +42,7 @@ class MainActivity : FragmentActivity() {
 
     @Inject lateinit var encryptedPrefs: SharedPreferences
     @Inject lateinit var billingManager: BillingManager
+    @Inject lateinit var analyticsTracker: AnalyticsTracker
 
     // Compose-accessible lock state — survives recomposition AND configuration changes
     private val isUnlocked = mutableStateOf(false)
@@ -55,7 +57,7 @@ class MainActivity : FragmentActivity() {
 
         // Track if opened from daily reminder notification
         if (intent?.getBooleanExtra("from_reminder", false) == true) {
-            android.util.Log.d("ReminderAnalytics", "Event: reminder_notification_opened")
+            analyticsTracker.trackReminderOpened()
         }
 
         // Restore unlock state across configuration changes (e.g. screen rotation)

@@ -3,7 +3,6 @@ package com.bestjournal.app.ui.screens.settings
 import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.billing.BillingManager
@@ -12,6 +11,7 @@ import com.bestjournal.app.data.remote.googledrive.NeedConsentException
 import com.bestjournal.app.domain.model.UserProfile
 import com.bestjournal.app.domain.usecase.SignInWithGoogleUseCase
 import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
+import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.DailyReminderManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -50,13 +50,8 @@ constructor(
     private val encryptedPrefs: SharedPreferences,
     private val billingManager: BillingManager,
     private val reminderManager: DailyReminderManager,
+    val analyticsTracker: AnalyticsTracker,
 ) : ViewModel() {
-
-    fun trackEvent(name: String, params: Map<String, String> = emptyMap()) {
-        Log.d("SettingsAnalytics", "Event: $name ${if (params.isNotEmpty()) params.toString() else ""}")
-        // TODO: Replace with Firebase Analytics when configured
-        // firebaseAnalytics.logEvent(name) { params.forEach { (k, v) -> param(k, v) } }
-    }
 
     fun launchSubscription(activity: Activity, isYearly: Boolean) {
         billingManager.launchPurchaseFlow(activity, isYearly)
@@ -306,10 +301,10 @@ constructor(
             val hour = _uiState.value.reminderHour
             val minute = _uiState.value.reminderMinute
             reminderManager.scheduleReminder(hour, minute)
-            trackEvent("reminder_enabled")
+            analyticsTracker.trackReminderEnabled()
         } else {
             reminderManager.cancelReminder()
-            trackEvent("reminder_disabled")
+            analyticsTracker.trackReminderDisabled()
         }
         _uiState.value = _uiState.value.copy(reminderEnabled = enabled)
     }
@@ -325,7 +320,7 @@ constructor(
                 .putInt(Constants.PREF_REMINDER_MINUTE, minute)
                 .apply()
         }
-        trackEvent("reminder_time_changed", mapOf("hour" to hour.toString()))
+        analyticsTracker.trackReminderTimeChanged(hour)
     }
 
     fun showLogoutDialog(show: Boolean) {

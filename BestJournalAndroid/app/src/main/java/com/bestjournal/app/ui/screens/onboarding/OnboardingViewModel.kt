@@ -1,8 +1,8 @@
 package com.bestjournal.app.ui.screens.onboarding
 
 import android.content.SharedPreferences
-import android.util.Log
 import androidx.lifecycle.ViewModel
+import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,7 +12,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
-    private val prefs: SharedPreferences
+    private val prefs: SharedPreferences,
+    val analyticsTracker: AnalyticsTracker,
 ) : ViewModel() {
 
     val isCompleted: Boolean
@@ -32,20 +33,11 @@ class OnboardingViewModel @Inject constructor(
     fun saveGoals() {
         val goals = _selectedGoals.value.joinToString(",")
         prefs.edit().putString(Constants.PREF_ONBOARDING_GOALS, goals).apply()
-        trackEvent("onboarding_goals_selected", mapOf("goals" to goals))
+        analyticsTracker.trackOnboardingGoalsSelected(goals)
     }
 
     fun completeOnboarding() {
         prefs.edit().putBoolean(Constants.PREF_ONBOARDING_COMPLETED, true).apply()
-        trackEvent("onboarding_completed")
-    }
-
-    fun trackEvent(name: String, params: Map<String, String> = emptyMap()) {
-        val paramStr = if (params.isNotEmpty()) {
-            " (${params.entries.joinToString(", ") { "${it.key}=${it.value}" }})"
-        } else ""
-        Log.d("OnboardingAnalytics", "Event: $name$paramStr")
-        // TODO: Replace with Firebase Analytics when SDK is added
-        // firebaseAnalytics.logEvent(name) { params.forEach { (k, v) -> param(k, v) } }
+        analyticsTracker.trackOnboardingCompleted()
     }
 }

@@ -104,7 +104,7 @@ fun PaywallScreen(
 
     // Track paywall_shown on first composition
     LaunchedEffect(Unit) {
-        viewModel.trackEvent("paywall_shown", mapOf("source" to viewModel.source))
+        viewModel.analyticsTracker.trackPaywallShown(viewModel.source)
     }
 
     // Staggered benefit entrance animation
@@ -210,7 +210,7 @@ fun PaywallScreen(
                 // ── Primary CTA: yearly with free trial ──
                 Button(
                     onClick = {
-                        viewModel.trackEvent("trial_cta_clicked")
+                        viewModel.analyticsTracker.trackTrialCtaClicked()
                         activity?.let { act ->
                             if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
                                 Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
@@ -249,7 +249,7 @@ fun PaywallScreen(
                 // ── Monthly subscription ──
                 OutlinedButton(
                     onClick = {
-                        viewModel.trackEvent("monthly_cta_clicked")
+                        viewModel.analyticsTracker.trackMonthlyCtaClicked()
                         activity?.let { act ->
                             if (!viewModel.launchPurchaseFlow(act, isYearly = false)) {
                                 Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
@@ -273,7 +273,7 @@ fun PaywallScreen(
                 // ── Yearly subscription (direct) ──
                 OutlinedButton(
                     onClick = {
-                        viewModel.trackEvent("yearly_cta_clicked")
+                        viewModel.analyticsTracker.trackYearlyCtaClicked()
                         activity?.let { act ->
                             if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
                                 Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
@@ -331,7 +331,7 @@ fun PaywallScreen(
                 // ── No thanks ──
                 TextButton(
                     onClick = {
-                        viewModel.trackEvent("no_thanks_clicked")
+                        viewModel.analyticsTracker.trackNoThanksClicked()
                         onDismiss()
                     }
                 ) {
@@ -348,7 +348,7 @@ fun PaywallScreen(
             // ── Fixed close button (stays visible while scrolling) ──
             IconButton(
                 onClick = {
-                    viewModel.trackEvent("paywall_dismissed")
+                    viewModel.analyticsTracker.trackPaywallDismissed()
                     onDismiss()
                 },
                 modifier =

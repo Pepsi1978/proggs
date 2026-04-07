@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.data.repository.JournalRepository
 import com.bestjournal.app.domain.model.JournalEntry
+import com.bestjournal.app.util.AnalyticsTracker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -24,7 +25,11 @@ data class EntryDetailUiState(
 @HiltViewModel
 class EntryDetailViewModel
 @Inject
-constructor(private val journalRepository: JournalRepository, savedStateHandle: SavedStateHandle) :
+constructor(
+    private val journalRepository: JournalRepository,
+    private val analyticsTracker: AnalyticsTracker,
+    savedStateHandle: SavedStateHandle,
+) :
     ViewModel() {
 
     private val _uiState = MutableStateFlow(EntryDetailUiState())
@@ -96,6 +101,7 @@ constructor(private val journalRepository: JournalRepository, savedStateHandle: 
         viewModelScope.launch {
             _uiState.value.entry?.let { entry ->
                 journalRepository.deleteEntry(entry)
+                analyticsTracker.trackEntryDeleted()
                 _uiState.value = _uiState.value.copy(isDeleted = true, showDeleteDialog = false)
             }
         }

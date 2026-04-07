@@ -112,13 +112,10 @@ fun OnboardingScreen(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        viewModel.trackEvent("onboarding_started")
+        viewModel.analyticsTracker.trackOnboardingStarted()
     }
     LaunchedEffect(pagerState.currentPage) {
-        viewModel.trackEvent(
-            "onboarding_screen_viewed",
-            mapOf("screen_index" to pagerState.currentPage.toString())
-        )
+        viewModel.analyticsTracker.trackOnboardingScreenViewed(pagerState.currentPage)
     }
 
     Box(
@@ -157,16 +154,13 @@ fun OnboardingScreen(
                 3 -> ProfilesPage()
                 4 -> TrialPage(
                     onStartTrial = {
-                        viewModel.trackEvent("trial_started_onboarding")
+                        viewModel.analyticsTracker.trackTrialStartedOnboarding()
                         viewModel.saveGoals()
                         viewModel.completeOnboarding()
                         onFinished()
                     },
                     onSkip = {
-                        viewModel.trackEvent(
-                            "onboarding_skipped",
-                            mapOf("screen_index" to "4")
-                        )
+                        viewModel.analyticsTracker.trackOnboardingSkipped(4)
                         viewModel.saveGoals()
                         viewModel.completeOnboarding()
                         onFinished()

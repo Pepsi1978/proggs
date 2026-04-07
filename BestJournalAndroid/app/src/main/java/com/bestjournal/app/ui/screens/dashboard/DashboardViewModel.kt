@@ -10,6 +10,7 @@ import com.bestjournal.app.data.remote.ai.TieredAccessResult
 import com.bestjournal.app.data.repository.AdviceRepository
 import com.bestjournal.app.domain.usecase.AnalyzeEntropyUseCase
 import com.bestjournal.app.domain.usecase.GenerateAdviceUseCase
+import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -49,6 +50,7 @@ constructor(
     private val aiRateLimiter: AiRateLimiter,
     private val billingManager: BillingManager,
     private val encryptedPrefs: android.content.SharedPreferences,
+    private val analyticsTracker: AnalyticsTracker,
 ) : ViewModel() {
 
     val adviceBlocks =
@@ -60,6 +62,7 @@ constructor(
 
     init {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        analyticsTracker.trackDashboardViewed(scenario)
         _uiState.update { it.copy(
             currentScenario = scenario,
             customHeaderTop5 = encryptedPrefs.getString("custom_header_top5", "") ?: "",
@@ -75,7 +78,7 @@ constructor(
             // Small delay so BillingManager can resolve subscription status on cold starts
             kotlinx.coroutines.delay(500)
             if (!_uiState.value.showAnalysisUpsellBanner && shouldShowAnalysisUpsell()) {
-                android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_shown, source=first_analysis")
+                analyticsTracker.trackUpsellBannerShown("first_analysis")
                 _uiState.update { it.copy(showAnalysisUpsellBanner = true) }
             }
         }
@@ -89,7 +92,7 @@ constructor(
                         // Auto-update just completed — check upsell banner
                         val showUpsell = shouldShowAnalysisUpsell()
                         if (showUpsell && !_uiState.value.showAnalysisUpsellBanner) {
-                            android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_shown, source=first_analysis")
+                            analyticsTracker.trackUpsellBannerShown("first_analysis")
                         }
                         _uiState.update { it.copy(isLoading = false, isAutoUpdate = false, showAnalysisUpsellBanner = showUpsell || it.showAnalysisUpsellBanner) }
                     } else {
@@ -98,6 +101,7 @@ constructor(
                 }
                 val currentScenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                 if (currentScenario != _uiState.value.currentScenario) {
+                    analyticsTracker.trackProfileSwitched(_uiState.value.currentScenario, currentScenario)
                     _uiState.update { it.copy(currentScenario = currentScenario, isScenarioSwitch = true) }
                     adviceRepository.clearDashboard()
                     if (currentScenario == 4) {
@@ -136,6 +140,7 @@ constructor(
     fun refreshDashboard() {
         viewModelScope.launch {
             manualRefreshActive = true
+            analyticsTracker.trackDashboardRefreshed(_uiState.value.currentScenario)
             _uiState.value =
                 _uiState.value.copy(
                     isLoading = true,
@@ -157,7 +162,7 @@ constructor(
                     encryptedPrefs.edit().putInt(Constants.PREF_DASHBOARD_ANALYSIS_COUNT, analysisCount).apply()
                     val showUpsell = shouldShowAnalysisUpsell()
                     if (showUpsell) {
-                        android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_shown, source=first_analysis")
+                        analyticsTracker.trackUpsellBannerShown("first_analysis")
                     }
 
                     _uiState.value =
@@ -219,7 +224,7 @@ constructor(
     }
 
     fun onAnalysisUpsellClicked() {
-        android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_clicked, source=first_analysis")
+        analyticsTracker.trackUpsellBannerClicked("first_analysis")
         dismissAnalysisUpsellBanner()
     }
 
