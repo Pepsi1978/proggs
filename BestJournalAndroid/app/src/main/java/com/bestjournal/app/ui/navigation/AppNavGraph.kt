@@ -25,6 +25,7 @@ import com.bestjournal.app.ui.screens.entrydetail.EntryDetailScreen
 import com.bestjournal.app.ui.screens.journal.JournalScreen
 import com.bestjournal.app.ui.screens.login.LoginScreen
 import com.bestjournal.app.ui.screens.settings.SettingsScreen
+import com.bestjournal.app.ui.screens.onboarding.OnboardingScreen
 import com.bestjournal.app.ui.screens.splash.SplashScreen
 import kotlinx.coroutines.launch
 
@@ -47,8 +48,12 @@ fun AppNavGraph(
         ) {
             SplashScreen(
                 viewModel = hiltViewModel(),
-                onSplashFinished = { isSignedIn ->
-                    val destination = if (isSignedIn) "main" else "login"
+                onSplashFinished = { isSignedIn, isOnboardingDone ->
+                    val destination = when {
+                        !isSignedIn -> "login"
+                        !isOnboardingDone -> "onboarding"
+                        else -> "main"
+                    }
                     navController.navigate(destination) {
                         popUpTo("splash") { inclusive = true }
                     }
@@ -64,8 +69,23 @@ fun AppNavGraph(
             LoginScreen(
                 viewModel = hiltViewModel(),
                 onLoginSuccess = {
-                    navController.navigate("main") {
+                    navController.navigate("onboarding") {
                         popUpTo("login") { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(
+            "onboarding",
+            enterTransition = { fadeIn() },
+            exitTransition = { fadeOut() }
+        ) {
+            OnboardingScreen(
+                viewModel = hiltViewModel(),
+                onFinished = {
+                    navController.navigate("main") {
+                        popUpTo("onboarding") { inclusive = true }
                     }
                 }
             )

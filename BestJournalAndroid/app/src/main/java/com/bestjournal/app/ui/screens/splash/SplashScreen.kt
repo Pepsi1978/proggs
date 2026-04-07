@@ -94,7 +94,7 @@ private data class FlyingNotebook(
 
 @Composable
 fun SplashScreen(
-    onSplashFinished: (isSignedIn: Boolean) -> Unit,
+    onSplashFinished: (isSignedIn: Boolean, isOnboardingDone: Boolean) -> Unit,
     viewModel: SplashViewModel
 ) {
     // Phase-based animations
@@ -473,7 +473,7 @@ fun SplashScreen(
 
         // --- Start button — bottom center ---
         Button(
-            onClick = { onSplashFinished(viewModel.isUserSignedIn()) },
+            onClick = { onSplashFinished(viewModel.isUserSignedIn(), viewModel.isOnboardingCompleted()) },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .offset(y = (-48).dp)

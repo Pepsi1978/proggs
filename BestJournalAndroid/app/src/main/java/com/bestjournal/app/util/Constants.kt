@@ -51,6 +51,10 @@ object Constants {
     const val PREF_CUSTOM_PROMPT = "custom_dashboard_prompt"
     const val DASHBOARD_SCENARIO_COUNT = 5
 
+    // Onboarding
+    const val PREF_ONBOARDING_COMPLETED = "onboarding_completed"
+    const val PREF_ONBOARDING_GOALS = "onboarding_goals"
+
     // Freemium
     const val TRIAL_USAGE_DAYS = 7
     const val FREE_WEEKLY_DASHBOARD_LIMIT = 5
