@@ -21,8 +21,19 @@ constructor(
     val monthlyPrice: StateFlow<String> = billingManager.monthlyPrice
     val yearlyPrice: StateFlow<String> = billingManager.yearlyPrice
 
-    fun launchPurchaseFlow(activity: Activity, isYearly: Boolean) {
+    /** Returns false if product details are not loaded yet (billing unavailable). */
+    fun launchPurchaseFlow(activity: Activity, isYearly: Boolean): Boolean {
+        val priceLoaded =
+            if (isYearly) yearlyPrice.value.isNotEmpty() else monthlyPrice.value.isNotEmpty()
+        if (!priceLoaded) {
+            Log.w(
+                "PaywallViewModel",
+                "Product details not loaded for ${if (isYearly) "yearly" else "monthly"}",
+            )
+            return false
+        }
         billingManager.launchPurchaseFlow(activity, isYearly)
+        return true
     }
 
     fun trackEvent(name: String, params: Map<String, String> = emptyMap()) {

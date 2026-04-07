@@ -1,6 +1,7 @@
 package com.bestjournal.app.ui.screens.paywall
 
 import android.app.Activity
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.RepeatMode
@@ -52,6 +53,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.bestjournal.app.ui.components.PulsingOrb
+import com.bestjournal.app.ui.theme.LocalIsDarkTheme
+import com.bestjournal.app.ui.theme.NeonAmber
+import com.bestjournal.app.ui.theme.NeonCyan
+import com.bestjournal.app.ui.theme.NeonViolet
+import com.bestjournal.app.ui.theme.WarmCopper
 import com.bestjournal.app.util.Constants
 import kotlinx.coroutines.delay
 
@@ -75,6 +81,11 @@ fun PaywallScreen(
 
     val displayMonthlyPrice = monthlyPrice.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
     val displayYearlyPrice = yearlyPrice.ifEmpty { Constants.YEARLY_PRICE_DISPLAY }
+
+    // Dark mode: warm orange orb, Light mode: cool cyan orb
+    val isDarkTheme = LocalIsDarkTheme.current
+    val orbPrimaryColor = if (isDarkTheme) WarmCopper else NeonCyan
+    val orbSecondaryColor = if (isDarkTheme) NeonAmber else NeonViolet
 
     // Track paywall_shown on first composition
     LaunchedEffect(Unit) {
@@ -138,10 +149,12 @@ fun PaywallScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ── Hero: Animated PulsingOrb ──
+            // ── Hero: Animated PulsingOrb (orange in dark, cyan in light) ──
             PulsingOrb(
                 size = 140.dp,
                 entropyLevel = 0.7f,
+                color = orbPrimaryColor,
+                secondaryColor = orbSecondaryColor,
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -200,7 +213,11 @@ fun PaywallScreen(
             Button(
                 onClick = {
                     viewModel.trackEvent("trial_cta_clicked")
-                    activity?.let { viewModel.launchPurchaseFlow(it, isYearly = true) }
+                    activity?.let { act ->
+                        if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
+                            Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 },
                 modifier =
                     Modifier
@@ -235,7 +252,11 @@ fun PaywallScreen(
             OutlinedButton(
                 onClick = {
                     viewModel.trackEvent("monthly_cta_clicked")
-                    activity?.let { viewModel.launchPurchaseFlow(it, isYearly = false) }
+                    activity?.let { act ->
+                        if (!viewModel.launchPurchaseFlow(act, isYearly = false)) {
+                            Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 },
                 modifier =
                     Modifier
@@ -255,7 +276,11 @@ fun PaywallScreen(
             OutlinedButton(
                 onClick = {
                     viewModel.trackEvent("yearly_cta_clicked")
-                    activity?.let { viewModel.launchPurchaseFlow(it, isYearly = true) }
+                    activity?.let { act ->
+                        if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
+                            Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 },
                 modifier =
                     Modifier
