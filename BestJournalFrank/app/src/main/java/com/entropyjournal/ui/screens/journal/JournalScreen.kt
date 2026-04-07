@@ -207,30 +207,6 @@ fun JournalScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         SunMoonToggle()
-                        if (uiState.currentStreak > 0) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            val streakColor = if (uiState.currentStreak > 7) Color(0xFFFF9800) else MaterialTheme.colorScheme.primary
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .background(streakColor.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
-                                    .clickable { showStreakDialog = true }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.LocalFireDepartment,
-                                    contentDescription = "Streak",
-                                    tint = streakColor,
-                                    modifier = Modifier.size(16.dp),
-                                )
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Text(
-                                    text = "${uiState.currentStreak} Tage",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = streakColor,
-                                )
-                            }
-                        }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = {
@@ -274,11 +250,43 @@ fun JournalScreen(
                     }
                 }
                 }
-                Text(
-                    text = "${allEntries.size} Eintr\u00e4ge",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        text = "${allEntries.size} Einträge",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (uiState.currentStreak > 0) {
+                        val streakColor = if (uiState.currentStreak > 7) NeonAmber
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .background(
+                                    streakColor.copy(alpha = 0.1f),
+                                    RoundedCornerShape(12.dp),
+                                )
+                                .clickable { showStreakDialog = true }
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.LocalFireDepartment,
+                                contentDescription = "Tage in Folge",
+                                tint = streakColor,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "${uiState.currentStreak} Tage",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = streakColor,
+                            )
+                        }
+                    }
+                }
             }
 
             // Transcribing state — no visual indicator needed (transcription is near-instant)
