@@ -467,6 +467,9 @@ constructor(
                     .edit()
                     .putLong("dashboard_last_updated_$scenario", System.currentTimeMillis())
                     .apply()
+                // Increment analysis count so the dashboard upsell banner can trigger
+                val count = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_ANALYSIS_COUNT, 0) + 1
+                encryptedPrefs.edit().putInt(Constants.PREF_DASHBOARD_ANALYSIS_COUNT, count).apply()
             } finally {
                 encryptedPrefs.edit().putBoolean(Constants.PREF_DASHBOARD_UPDATING, false).apply()
             }

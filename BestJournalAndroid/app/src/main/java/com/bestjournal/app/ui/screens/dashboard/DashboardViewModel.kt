@@ -13,6 +13,7 @@ import com.bestjournal.app.domain.usecase.GenerateAdviceUseCase
 import com.bestjournal.app.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -68,13 +69,30 @@ constructor(
         if (aiUsageTracker.shouldShowAiInfoBanner()) {
             _uiState.update { it.copy(showAiInfoBanner = true) }
         }
+        // Check upsell banner when blocks load (handles auto-update that completed before navigation)
+        viewModelScope.launch {
+            adviceBlocks.first { it.isNotEmpty() }
+            if (shouldShowAnalysisUpsell()) {
+                android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_shown, source=first_analysis")
+                _uiState.update { it.copy(showAnalysisUpsellBanner = true) }
+            }
+        }
         // Continuously poll the auto-update flag so the loading indicator
         // appears even if the user navigates to the dashboard mid-update.
         viewModelScope.launch {
             while (true) {
                 val updating = encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
                 if (updating != _uiState.value.isLoading && !manualRefreshActive) {
-                    _uiState.update { it.copy(isLoading = updating, isAutoUpdate = updating) }
+                    if (!updating && _uiState.value.isAutoUpdate) {
+                        // Auto-update just completed — check upsell banner
+                        val showUpsell = shouldShowAnalysisUpsell()
+                        if (showUpsell) {
+                            android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_shown, source=first_analysis")
+                        }
+                        _uiState.update { it.copy(isLoading = false, isAutoUpdate = false, showAnalysisUpsellBanner = showUpsell || it.showAnalysisUpsellBanner) }
+                    } else {
+                        _uiState.update { it.copy(isLoading = updating, isAutoUpdate = updating) }
+                    }
                 }
                 val currentScenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                 if (currentScenario != _uiState.value.currentScenario) {
@@ -135,11 +153,7 @@ constructor(
                     // Track analysis count and check for first-analysis upsell
                     val analysisCount = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_ANALYSIS_COUNT, 0) + 1
                     encryptedPrefs.edit().putInt(Constants.PREF_DASHBOARD_ANALYSIS_COUNT, analysisCount).apply()
-                    val isFree = billingManager.subscriptionState.value is SubscriptionState.Free
-                    val alreadyShown = encryptedPrefs.getBoolean(Constants.PREF_FIRST_ANALYSIS_UPSELL_SHOWN, false)
-                    val onboardingDone = encryptedPrefs.getBoolean(Constants.PREF_ONBOARDING_COMPLETED, false)
-                    val showUpsell = isFree && !alreadyShown && onboardingDone && analysisCount == 1
-
+                    val showUpsell = shouldShowAnalysisUpsell()
                     if (showUpsell) {
                         android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_shown, source=first_analysis")
                     }
@@ -205,6 +219,14 @@ constructor(
     fun onAnalysisUpsellClicked() {
         android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_clicked, source=first_analysis")
         dismissAnalysisUpsellBanner()
+    }
+
+    private fun shouldShowAnalysisUpsell(): Boolean {
+        val analysisCount = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_ANALYSIS_COUNT, 0)
+        val isFree = billingManager.subscriptionState.value is SubscriptionState.Free
+        val alreadyShown = encryptedPrefs.getBoolean(Constants.PREF_FIRST_ANALYSIS_UPSELL_SHOWN, false)
+        val onboardingDone = encryptedPrefs.getBoolean(Constants.PREF_ONBOARDING_COMPLETED, false)
+        return isFree && !alreadyShown && onboardingDone && analysisCount >= 1
     }
 
     fun getLastUpdatedText(): String? {
