@@ -69,4 +69,16 @@ object Constants {
     )
 
     val DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
+
+    // Reminder
+    const val PREF_REMINDER_ENABLED = "reminder_enabled"
+    const val PREF_REMINDER_HOUR = "reminder_hour"
+    const val PREF_REMINDER_MINUTE = "reminder_minute"
+
+    // Weekly Review
+    const val PREF_WEEKLY_REVIEW_ENABLED = "weekly_review_enabled"
+    const val PREF_WEEKLY_REVIEW_DAY = "weekly_review_day"
+    const val PREF_WEEKLY_REVIEW_HOUR = "weekly_review_hour"
+    const val PREF_WEEKLY_REVIEW_MINUTE = "weekly_review_minute"
+    const val PREF_FROM_WEEKLY_REVIEW = "from_weekly_review"
 }

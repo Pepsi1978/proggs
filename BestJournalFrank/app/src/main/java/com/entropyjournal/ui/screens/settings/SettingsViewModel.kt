@@ -15,7 +15,13 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 import android.content.Intent
+import android.net.Uri
+import com.entropyjournal.data.local.dao.JournalEntryDao
 import com.entropyjournal.data.remote.googledrive.NeedConsentException
+import com.entropyjournal.util.DailyReminderManager
+import com.entropyjournal.util.PdfExporter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 data class SettingsUiState(
     val userProfile: UserProfile? = null,
@@ -33,15 +39,28 @@ data class SettingsUiState(
     val isSyncing: Boolean = false,
     val syncMessage: String? = null,
     val showLogoutDialog: Boolean = false,
-    val consentIntent: Intent? = null
+    val consentIntent: Intent? = null,
+    val reminderEnabled: Boolean = false,
+    val reminderHour: Int = 20,
+    val reminderMinute: Int = 0,
+    val weeklyReviewEnabled: Boolean = true,
+    val weeklyReviewDay: Int = java.util.Calendar.SUNDAY,
+    val weeklyReviewHour: Int = 19,
+    val weeklyReviewMinute: Int = 0,
+    val isExporting: Boolean = false,
+    val exportMessage: String? = null,
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val signInUseCase: SignInWithGoogleUseCase,
     private val syncUseCase: SyncWithDriveUseCase,
-    private val encryptedPrefs: SharedPreferences
+    private val encryptedPrefs: SharedPreferences,
+    private val journalEntryDao: JournalEntryDao,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
+
+    private lateinit var reminderManager: DailyReminderManager
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState
@@ -65,6 +84,8 @@ class SettingsViewModel @Inject constructor(
     }
 
     init {
+        reminderManager = DailyReminderManager(context, encryptedPrefs)
+        reminderManager.ensureWeeklyReviewScheduled()
         loadSettings()
         encryptedPrefs.registerOnSharedPreferenceChangeListener(prefsListener)
     }
@@ -87,7 +108,14 @@ class SettingsViewModel @Inject constructor(
             followSystem = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false),
             followSun = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false),
             biometricLock = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false),
-            lastSyncTimestamp = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L).takeIf { it > 0 }
+            lastSyncTimestamp = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L).takeIf { it > 0 },
+            reminderEnabled = reminderManager.isReminderEnabled(),
+            reminderHour = reminderManager.getReminderHour(),
+            reminderMinute = reminderManager.getReminderMinute(),
+            weeklyReviewEnabled = reminderManager.isWeeklyReviewEnabled(),
+            weeklyReviewDay = reminderManager.getWeeklyReviewDay(),
+            weeklyReviewHour = reminderManager.getWeeklyReviewHour(),
+            weeklyReviewMinute = reminderManager.getWeeklyReviewMinute(),
         )
     }
 
@@ -217,6 +245,40 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateReminderEnabled(enabled: Boolean) {
+        if (enabled) {
+            val hour = _uiState.value.reminderHour
+            val minute = _uiState.value.reminderMinute
+            reminderManager.scheduleReminder(hour, minute)
+        } else {
+            reminderManager.cancelReminder()
+        }
+        _uiState.value = _uiState.value.copy(reminderEnabled = enabled)
+    }
+
+    fun updateReminderTime(hour: Int, minute: Int) {
+        reminderManager.scheduleReminder(hour, minute)
+        _uiState.value = _uiState.value.copy(reminderHour = hour, reminderMinute = minute)
+    }
+
+    fun updateWeeklyReviewEnabled(enabled: Boolean) {
+        if (enabled) {
+            reminderManager.scheduleWeeklyReview()
+        } else {
+            reminderManager.cancelWeeklyReview()
+        }
+        _uiState.value = _uiState.value.copy(weeklyReviewEnabled = enabled)
+    }
+
+    fun updateWeeklyReviewSchedule(dayOfWeek: Int, hour: Int, minute: Int) {
+        reminderManager.scheduleWeeklyReview(dayOfWeek, hour, minute)
+        _uiState.value = _uiState.value.copy(
+            weeklyReviewDay = dayOfWeek,
+            weeklyReviewHour = hour,
+            weeklyReviewMinute = minute,
+        )
+    }
+
     fun signIn(activityContext: android.content.Context) {
         viewModelScope.launch {
             signInUseCase(activityContext)
@@ -253,6 +315,40 @@ class SettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(consentIntent = null)
     }
 
+    fun exportToPdf(context: android.content.Context, uri: Uri) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isExporting = true, exportMessage = null)
+            try {
+                val entries = journalEntryDao.getAllEntriesOnce()
+                if (entries.isEmpty()) {
+                    _uiState.value = _uiState.value.copy(isExporting = false, exportMessage = "Keine Einträge vorhanden")
+                    delay(3000)
+                    _uiState.value = _uiState.value.copy(exportMessage = null)
+                    return@launch
+                }
+
+                val count = withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        PdfExporter.export(entries, outputStream)
+                    }
+                }
+
+                if (count != null) {
+                    _uiState.value = _uiState.value.copy(isExporting = false, exportMessage = "$count Einträge exportiert")
+                } else {
+                    _uiState.value = _uiState.value.copy(isExporting = false, exportMessage = "Fehler: Datei konnte nicht geöffnet werden")
+                }
+
+                delay(4000)
+                _uiState.value = _uiState.value.copy(exportMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isExporting = false, exportMessage = "Fehler: ${e.message}")
+                delay(4000)
+                _uiState.value = _uiState.value.copy(exportMessage = null)
+            }
+        }
+    }
+
     fun signOut(context: android.content.Context) {
         try {
             // Save device-specific settings BEFORE clearing everything
@@ -271,6 +367,9 @@ class SettingsViewModel @Inject constructor(
                 .putBoolean(Constants.PREF_DARK_THEME, isDark)
                 .putBoolean(Constants.PREF_BIOMETRIC_LOCK, biometricLock)
                 .commit() // commit() is synchronous — guarantees write before restart
+
+            reminderManager.cancelReminder()
+            reminderManager.cancelWeeklyReview()
 
             // Delete local database — data belongs to the account
             context.deleteDatabase("entropy_journal_db")

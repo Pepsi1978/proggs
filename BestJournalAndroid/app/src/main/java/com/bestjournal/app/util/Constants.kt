@@ -99,6 +99,9 @@ object Constants {
 
     // Weekly Review
     const val PREF_WEEKLY_REVIEW_ENABLED = "weekly_review_enabled"
+    const val PREF_WEEKLY_REVIEW_DAY = "weekly_review_day"       // Calendar.MONDAY=2 .. SUNDAY=1
+    const val PREF_WEEKLY_REVIEW_HOUR = "weekly_review_hour"
+    const val PREF_WEEKLY_REVIEW_MINUTE = "weekly_review_minute"
     const val PREF_FROM_WEEKLY_REVIEW = "from_weekly_review"
 
     // Daily Writing Prompt

@@ -45,6 +45,9 @@ data class SettingsUiState(
     val reminderHour: Int = 20,
     val reminderMinute: Int = 0,
     val weeklyReviewEnabled: Boolean = true,
+    val weeklyReviewDay: Int = java.util.Calendar.SUNDAY,
+    val weeklyReviewHour: Int = 19,
+    val weeklyReviewMinute: Int = 0,
     val isExporting: Boolean = false,
     val exportMessage: String? = null,
 )
@@ -133,6 +136,9 @@ constructor(
                 reminderHour = reminderManager.getReminderHour(),
                 reminderMinute = reminderManager.getReminderMinute(),
                 weeklyReviewEnabled = reminderManager.isWeeklyReviewEnabled(),
+                weeklyReviewDay = reminderManager.getWeeklyReviewDay(),
+                weeklyReviewHour = reminderManager.getWeeklyReviewHour(),
+                weeklyReviewMinute = reminderManager.getWeeklyReviewMinute(),
             )
     }
 
@@ -315,6 +321,15 @@ constructor(
             reminderManager.cancelWeeklyReview()
         }
         _uiState.value = _uiState.value.copy(weeklyReviewEnabled = enabled)
+    }
+
+    fun updateWeeklyReviewSchedule(dayOfWeek: Int, hour: Int, minute: Int) {
+        reminderManager.scheduleWeeklyReview(dayOfWeek, hour, minute)
+        _uiState.value = _uiState.value.copy(
+            weeklyReviewDay = dayOfWeek,
+            weeklyReviewHour = hour,
+            weeklyReviewMinute = minute,
+        )
     }
 
     fun updateReminderEnabled(enabled: Boolean) {

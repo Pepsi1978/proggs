@@ -42,7 +42,7 @@ data class JournalUiState(
     val syncStatus: SyncStatus = SyncStatus.IDLE
 )
 
-enum class SyncStatus { IDLE, SYNCING, SYNCED, ERROR }
+enum class SyncStatus { IDLE, SYNCING, SYNCED, ERROR, NOT_SIGNED_IN }
 
 @HiltViewModel
 class JournalViewModel @Inject constructor(
@@ -81,7 +81,9 @@ class JournalViewModel @Inject constructor(
         // Set initial sync status: check if signed in AND last backup timestamp exists
         val isSignedIn = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")?.isNotBlank() == true
         val lastSync = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L)
-        if (isSignedIn && lastSync > 0L) {
+        if (!isSignedIn) {
+            _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.NOT_SIGNED_IN)
+        } else if (isSignedIn && lastSync > 0L) {
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
         } else if (isSignedIn) {
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.IDLE)
@@ -305,6 +307,10 @@ class JournalViewModel @Inject constructor(
 
     private fun resetState() {
         _uiState.value = JournalUiState()
+    }
+
+    fun retrySyncNow() {
+        triggerSync()
     }
 
     private fun triggerSync() {

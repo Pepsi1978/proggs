@@ -200,11 +200,17 @@ fun JournalScreen(
                         SunMoonToggle()
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { showSyncLegend = true }) {
+                    IconButton(onClick = {
+                        if (uiState.syncStatus == SyncStatus.ERROR) {
+                            viewModel.retrySyncNow()
+                        } else {
+                            showSyncLegend = true
+                        }
+                    }) {
                         Icon(
                             imageVector = when (uiState.syncStatus) {
-                                SyncStatus.SYNCED -> Icons.Rounded.CloudDone
                                 SyncStatus.ERROR -> Icons.Rounded.CloudOff
+                                SyncStatus.NOT_SIGNED_IN -> Icons.Rounded.CloudOff
                                 SyncStatus.SYNCING -> Icons.Rounded.Cloud
                                 else -> Icons.Rounded.CloudDone
                             },
@@ -212,6 +218,7 @@ fun JournalScreen(
                             tint = when (uiState.syncStatus) {
                                 SyncStatus.SYNCING -> NeonCyan
                                 SyncStatus.ERROR -> NeonRed
+                                SyncStatus.NOT_SIGNED_IN -> Color(0xFFFF9800)
                                 else -> NeonEmerald
                             },
                             modifier = Modifier.size(20.dp)
@@ -410,6 +417,11 @@ fun JournalScreen(
                             Icon(Icons.Rounded.CloudOff, null, tint = NeonRed, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(12.dp))
                             Text("Backup fehlgeschlagen!", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.CloudOff, null, tint = Color(0xFFFF9800), modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Nicht angemeldet", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 },

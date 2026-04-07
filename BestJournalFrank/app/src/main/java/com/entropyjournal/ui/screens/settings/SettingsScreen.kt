@@ -42,8 +42,11 @@ import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.DateRange
+import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.Fingerprint
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -128,6 +131,16 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
         androidx.compose.runtime.LaunchedEffect(intent) { consentLauncher.launch(intent); viewModel.clearConsentIntent() }
     }
 
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { _ -> }
+
+    val pdfLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/pdf"),
+    ) { uri ->
+        if (uri != null) {
+            viewModel.exportToPdf(context, uri)
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -181,11 +194,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = { viewModel.signIn(context) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
-                    ) { Text("Mit Google anmelden") }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        Button(
+                            onClick = { viewModel.signIn(context) },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
+                        ) { Text("Mit Google anmelden") }
+                    }
                 }
             }
         }
@@ -335,6 +349,159 @@ fun SettingsScreen(viewModel: SettingsViewModel, onSignOut: () -> Unit) {
                         },
                         colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
                     )
+                }
+            }
+        }
+
+        // Erinnerung / Rückblick
+        GlassCard {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Notifications, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Erinnerung / R\u00fcckblick", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Daily reminder
+                var showTimePicker by remember { mutableStateOf(false) }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("T\u00e4gliche Erinnerung", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        if (uiState.reminderEnabled) {
+                            Text(
+                                "Uhrzeit: %02d:%02d Uhr".format(uiState.reminderHour, uiState.reminderMinute),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        } else {
+                            Text("Erinnert dich ans Tagebuchschreiben", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Switch(
+                        checked = uiState.reminderEnabled,
+                        onCheckedChange = { enabled ->
+                            if (enabled) {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                    val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                                        context, android.Manifest.permission.POST_NOTIFICATIONS,
+                                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                    if (!hasPermission) {
+                                        notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                        return@Switch
+                                    }
+                                }
+                                viewModel.updateReminderEnabled(true)
+                                showTimePicker = true
+                            } else {
+                                viewModel.updateReminderEnabled(false)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary),
+                    )
+                }
+
+                if (showTimePicker) {
+                    ReminderTimePickerDialog(
+                        initialHour = uiState.reminderHour,
+                        initialMinute = uiState.reminderMinute,
+                        onConfirm = { h, m ->
+                            viewModel.updateReminderTime(h, m)
+                            showTimePicker = false
+                        },
+                        onDismiss = { showTimePicker = false },
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Weekly review
+                var showWeeklyPicker by remember { mutableStateOf(false) }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("W\u00f6chentlicher R\u00fcckblick", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        if (uiState.weeklyReviewEnabled) {
+                            val dayName = weekDayName(uiState.weeklyReviewDay)
+                            Text(
+                                "Jeden $dayName um %02d:%02d Uhr".format(uiState.weeklyReviewHour, uiState.weeklyReviewMinute),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        } else {
+                            Text("W\u00e4hle einen Tag und eine Uhrzeit", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Switch(
+                        checked = uiState.weeklyReviewEnabled,
+                        onCheckedChange = { enabled ->
+                            if (enabled) {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                    val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                                        context, android.Manifest.permission.POST_NOTIFICATIONS,
+                                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                    if (!hasPermission) {
+                                        notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                        return@Switch
+                                    }
+                                }
+                                viewModel.updateWeeklyReviewEnabled(true)
+                                showWeeklyPicker = true
+                            } else {
+                                viewModel.updateWeeklyReviewEnabled(false)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary),
+                    )
+                }
+
+                if (showWeeklyPicker) {
+                    WeeklyReviewPickerDialog(
+                        initialDay = uiState.weeklyReviewDay,
+                        initialHour = uiState.weeklyReviewHour,
+                        initialMinute = uiState.weeklyReviewMinute,
+                        onConfirm = { day, h, m ->
+                            viewModel.updateWeeklyReviewSchedule(day, h, m)
+                            showWeeklyPicker = false
+                        },
+                        onDismiss = { showWeeklyPicker = false },
+                    )
+                }
+            }
+        }
+
+        // Daten
+        GlassCard {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Description, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Daten", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    Button(
+                        onClick = { pdfLauncher.launch("EntropyJournal_Export.pdf") },
+                        enabled = !uiState.isExporting,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    ) {
+                        Icon(Icons.Rounded.Description, null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(if (uiState.isExporting) "Wird exportiert..." else "Tagebucheinträge als PDF exportieren")
+                    }
+                }
+                uiState.exportMessage?.let { msg ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(msg, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 }
             }
         }
@@ -875,5 +1042,117 @@ private fun FeedbackDialog(
         dismissButton = {
             OutlinedButton(onClick = { if (!isSending) onDismiss() }) { Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
+    )
+}
+
+private fun weekDayName(calendarDay: Int): String = when (calendarDay) {
+    java.util.Calendar.MONDAY -> "Montag"
+    java.util.Calendar.TUESDAY -> "Dienstag"
+    java.util.Calendar.WEDNESDAY -> "Mittwoch"
+    java.util.Calendar.THURSDAY -> "Donnerstag"
+    java.util.Calendar.FRIDAY -> "Freitag"
+    java.util.Calendar.SATURDAY -> "Samstag"
+    java.util.Calendar.SUNDAY -> "Sonntag"
+    else -> "Sonntag"
+}
+
+private val weekDays = listOf(
+    java.util.Calendar.MONDAY, java.util.Calendar.TUESDAY, java.util.Calendar.WEDNESDAY,
+    java.util.Calendar.THURSDAY, java.util.Calendar.FRIDAY, java.util.Calendar.SATURDAY,
+    java.util.Calendar.SUNDAY,
+)
+private val weekDayLabels = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReminderTimePickerDialog(
+    initialHour: Int, initialMinute: Int,
+    onConfirm: (Int, Int) -> Unit, onDismiss: () -> Unit,
+) {
+    val timePickerState = androidx.compose.material3.rememberTimePickerState(initialHour = initialHour, initialMinute = initialMinute, is24Hour = true)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Rounded.Notifications, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Wann m\u00f6chtest du erinnert werden?", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
+            }
+        },
+        text = {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                androidx.compose.material3.TimeInput(state = timePickerState)
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(timePickerState.hour, timePickerState.minute) }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
+                Text("Speichern")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) { Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WeeklyReviewPickerDialog(
+    initialDay: Int, initialHour: Int, initialMinute: Int,
+    onConfirm: (Int, Int, Int) -> Unit, onDismiss: () -> Unit,
+) {
+    var selectedDayIndex by remember { mutableIntStateOf(weekDays.indexOf(initialDay).coerceAtLeast(0)) }
+    val timePickerState = androidx.compose.material3.rememberTimePickerState(initialHour = initialHour, initialMinute = initialMinute, is24Hour = true)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Rounded.DateRange, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Wann soll dein R\u00fcckblick kommen?", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
+            }
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Wochentag", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    weekDayLabels.forEachIndexed { index, label ->
+                        val isSelected = index == selectedDayIndex
+                        androidx.compose.material3.Surface(
+                            onClick = { selectedDayIndex = index },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.size(40.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+                Text("Uhrzeit", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+                androidx.compose.material3.TimeInput(state = timePickerState)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(weekDays[selectedDayIndex], timePickerState.hour, timePickerState.minute) },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            ) { Text("Speichern") }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) { Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        },
     )
 }

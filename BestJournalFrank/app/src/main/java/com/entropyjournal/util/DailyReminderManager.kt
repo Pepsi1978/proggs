@@ -1,4 +1,4 @@
-package com.bestjournal.app.util
+package com.entropyjournal.util
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -13,8 +13,6 @@ class DailyReminderManager(
 ) {
 
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
-    // ── Daily Reminder ──────────────────────────────────────────────────
 
     fun scheduleReminder(hour: Int, minute: Int) {
         prefs.edit()
@@ -55,16 +53,12 @@ class DailyReminderManager(
     fun getReminderMinute(): Int =
         prefs.getInt(Constants.PREF_REMINDER_MINUTE, 0)
 
-    /** Re-schedule an active daily reminder (e.g. after device reboot). */
     fun rescheduleIfEnabled() {
         if (isReminderEnabled()) {
             scheduleReminder(getReminderHour(), getReminderMinute())
         }
     }
 
-    // ── Weekly Review ───────────────────────────────────────────────────
-
-    /** Schedule a weekly notification on the chosen day and time. */
     fun scheduleWeeklyReview(dayOfWeek: Int = getWeeklyReviewDay(), hour: Int = getWeeklyReviewHour(), minute: Int = getWeeklyReviewMinute()) {
         prefs.edit()
             .putBoolean(Constants.PREF_WEEKLY_REVIEW_ENABLED, true)
@@ -109,21 +103,16 @@ class DailyReminderManager(
     fun getWeeklyReviewMinute(): Int =
         prefs.getInt(Constants.PREF_WEEKLY_REVIEW_MINUTE, 0)
 
-    /** Schedule weekly review if it has not been explicitly disabled. */
     fun ensureWeeklyReviewScheduled() {
         if (isWeeklyReviewEnabled()) {
             scheduleWeeklyReview()
         }
     }
 
-    // ── Shared ──────────────────────────────────────────────────────────
-
     private fun createPendingIntent(): PendingIntent {
         val intent = Intent(context, ReminderReceiver::class.java)
         return PendingIntent.getBroadcast(
-            context,
-            REQUEST_CODE,
-            intent,
+            context, REQUEST_CODE, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
@@ -131,9 +120,7 @@ class DailyReminderManager(
     private fun createWeeklyReviewPendingIntent(): PendingIntent {
         val intent = Intent(context, WeeklyReviewReceiver::class.java)
         return PendingIntent.getBroadcast(
-            context,
-            WEEKLY_REVIEW_REQUEST_CODE,
-            intent,
+            context, WEEKLY_REVIEW_REQUEST_CODE, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }

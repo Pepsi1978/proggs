@@ -27,6 +27,9 @@ interface JournalEntryDao {
     @Query("SELECT * FROM journal_entries WHERE timestamp BETWEEN :startTime AND :endTime ORDER BY timestamp DESC")
     fun filterByTimeRange(startTime: Long, endTime: Long): Flow<List<JournalEntryEntity>>
 
+    @Query("SELECT * FROM journal_entries ORDER BY timestamp DESC")
+    suspend fun getAllEntriesOnce(): List<JournalEntryEntity>
+
     @Query("SELECT COUNT(*) FROM journal_entries")
     suspend fun getEntryCount(): Int
 

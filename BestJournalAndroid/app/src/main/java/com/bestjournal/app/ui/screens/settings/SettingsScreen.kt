@@ -32,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Info
@@ -646,6 +647,7 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
+                var showWeeklyPicker by remember { mutableStateOf(false) }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -657,34 +659,64 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
-                        Text(
-                            "Jeden Sonntag um 19:00 Uhr",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        if (uiState.weeklyReviewEnabled) {
+                            val dayName = weekDayName(uiState.weeklyReviewDay)
+                            Text(
+                                "Jeden $dayName um %02d:%02d Uhr".format(uiState.weeklyReviewHour, uiState.weeklyReviewMinute),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        } else {
+                            Text(
+                                "Wähle einen Tag und eine Uhrzeit",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                     Switch(
                         checked = uiState.weeklyReviewEnabled,
                         onCheckedChange = { enabled ->
-                            if (enabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                                val hasPermission =
-                                    androidx.core.content.ContextCompat.checkSelfPermission(
-                                        context,
-                                        android.Manifest.permission.POST_NOTIFICATIONS,
-                                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                                if (!hasPermission) {
-                                    pendingPermissionAction = { viewModel.updateWeeklyReviewEnabled(true) }
-                                    notificationPermissionLauncher.launch(
-                                        android.Manifest.permission.POST_NOTIFICATIONS
-                                    )
-                                    return@Switch
+                            if (enabled) {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                    val hasPermission =
+                                        androidx.core.content.ContextCompat.checkSelfPermission(
+                                            context,
+                                            android.Manifest.permission.POST_NOTIFICATIONS,
+                                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                    if (!hasPermission) {
+                                        pendingPermissionAction = {
+                                            viewModel.updateWeeklyReviewEnabled(true)
+                                            showWeeklyPicker = true
+                                        }
+                                        notificationPermissionLauncher.launch(
+                                            android.Manifest.permission.POST_NOTIFICATIONS
+                                        )
+                                        return@Switch
+                                    }
                                 }
+                                viewModel.updateWeeklyReviewEnabled(true)
+                                showWeeklyPicker = true
+                            } else {
+                                viewModel.updateWeeklyReviewEnabled(false)
                             }
-                            viewModel.updateWeeklyReviewEnabled(enabled)
                         },
                         colors = SwitchDefaults.colors(
                             checkedTrackColor = MaterialTheme.colorScheme.primary,
                         ),
+                    )
+                }
+
+                if (showWeeklyPicker) {
+                    WeeklyReviewPickerDialog(
+                        initialDay = uiState.weeklyReviewDay,
+                        initialHour = uiState.weeklyReviewHour,
+                        initialMinute = uiState.weeklyReviewMinute,
+                        onConfirm = { day, h, m ->
+                            viewModel.updateWeeklyReviewSchedule(day, h, m)
+                            showWeeklyPicker = false
+                        },
+                        onDismiss = { showWeeklyPicker = false },
                     )
                 }
             }
@@ -1164,27 +1196,25 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    Button(
-                        onClick = {
-                            viewModel.analyticsTracker.trackExportPremiumBlocked()
-                            onNavigateToPaywall("pdf_export")
-                        },
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            ),
-                    ) {
-                        Icon(
-                            Icons.Rounded.Star,
-                            null,
-                            modifier = Modifier.size(14.dp),
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            "Premium-Feature",
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.analyticsTracker.trackExportPremiumBlocked()
+                                onNavigateToPaywall("pdf_export")
+                            },
+                        ) {
+                            Icon(
+                                Icons.Rounded.Star,
+                                null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "Premium-Feature",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                     }
                 }
                 uiState.exportMessage?.let { msg ->
@@ -1724,6 +1754,135 @@ private fun ReminderTimePickerDialog(
         confirmButton = {
             Button(
                 onClick = { onConfirm(timePickerState.hour, timePickerState.minute) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
+            ) {
+                Text("Speichern")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+    )
+}
+
+// ── Weekly Review Picker Dialog ─────────────────────────────────────────────
+
+private fun weekDayName(calendarDay: Int): String = when (calendarDay) {
+    java.util.Calendar.MONDAY -> "Montag"
+    java.util.Calendar.TUESDAY -> "Dienstag"
+    java.util.Calendar.WEDNESDAY -> "Mittwoch"
+    java.util.Calendar.THURSDAY -> "Donnerstag"
+    java.util.Calendar.FRIDAY -> "Freitag"
+    java.util.Calendar.SATURDAY -> "Samstag"
+    java.util.Calendar.SUNDAY -> "Sonntag"
+    else -> "Sonntag"
+}
+
+// Map UI index (0=Monday) to Calendar constant
+private val weekDays = listOf(
+    java.util.Calendar.MONDAY,
+    java.util.Calendar.TUESDAY,
+    java.util.Calendar.WEDNESDAY,
+    java.util.Calendar.THURSDAY,
+    java.util.Calendar.FRIDAY,
+    java.util.Calendar.SATURDAY,
+    java.util.Calendar.SUNDAY,
+)
+
+private val weekDayLabels = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WeeklyReviewPickerDialog(
+    initialDay: Int,
+    initialHour: Int,
+    initialMinute: Int,
+    onConfirm: (Int, Int, Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var selectedDayIndex by remember { mutableIntStateOf(weekDays.indexOf(initialDay).coerceAtLeast(0)) }
+    val timePickerState = rememberTimePickerState(
+        initialHour = initialHour,
+        initialMinute = initialMinute,
+        is24Hour = true,
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    Icons.Rounded.DateRange,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp),
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Wann soll dein Rückblick kommen?",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    "Wochentag",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    weekDayLabels.forEachIndexed { index, label ->
+                        val isSelected = index == selectedDayIndex
+                        Surface(
+                            onClick = { selectedDayIndex = index },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.size(40.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    "Uhrzeit",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                TimeInput(state = timePickerState)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(weekDays[selectedDayIndex], timePickerState.hour, timePickerState.minute) },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                 ),
