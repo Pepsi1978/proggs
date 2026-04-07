@@ -475,6 +475,7 @@ fun JournalScreen(
                 isUsingImproved = uiState.isImproveEnabled,
                 transcriptionModel = uiState.transcriptionModel,
                 showTextUpsellBanner = uiState.showTextUpsellBanner,
+                activePrompt = uiState.activePrompt,
                 onImproveClick = { viewModel.improveText() },
                 onToggleVersion = { useImproved -> viewModel.setUseImprovedText(useImproved) },
                 onTextEdit = { viewModel.updatePreviewText(it) },
@@ -585,6 +586,7 @@ private fun PreviewDialog(
     isUsingImproved: Boolean,
     transcriptionModel: String = "",
     showTextUpsellBanner: Boolean = false,
+    activePrompt: String = "",
     onImproveClick: () -> Unit,
     onToggleVersion: (Boolean) -> Unit,
     onTextEdit: (String) -> Unit,
@@ -595,13 +597,14 @@ private fun PreviewDialog(
 ) {
     val showingImproved = isUsingImproved && improvedText != null
     val displayText = if (showingImproved) improvedText!! else rawText
+    val hasPrompt = activePrompt.isNotBlank()
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     var lastEditTime by remember { mutableLongStateOf(0L) }
     var isFocused by remember { mutableStateOf(false) }
     var hadFocusOnce by remember { mutableStateOf(false) }
 
-    // Auto-focus only for text entry mode (empty text = user tapped the edit button)
+    // Auto-focus for text entry mode
     LaunchedEffect(Unit) {
         if (rawText.isBlank()) {
             delay(300)
@@ -618,13 +621,13 @@ private fun PreviewDialog(
     }
 
     // Clear focus when keyboard is dismissed (back gesture/swipe)
-    // If text is empty, also close the dialog
+    // If text is empty and no prompt, also close the dialog
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     LaunchedEffect(imeVisible) {
         if (!imeVisible && isFocused) {
             focusManager.clearFocus()
         }
-        if (!imeVisible && hadFocusOnce && displayText.isBlank()) {
+        if (!imeVisible && hadFocusOnce && displayText.isBlank() && !hasPrompt) {
             onDismiss()
         }
     }
@@ -641,7 +644,21 @@ private fun PreviewDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Neuer Eintrag", color = MaterialTheme.colorScheme.onSurface)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (hasPrompt) {
+                        Icon(
+                            imageVector = Icons.Rounded.Lightbulb,
+                            contentDescription = null,
+                            tint = NeonAmber,
+                            modifier = Modifier.size(22.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text(
+                        if (hasPrompt) "Schreibimpuls" else "Neuer Eintrag",
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (improvedText != null) {
                         Text(
@@ -651,16 +668,54 @@ private fun PreviewDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text(
-                        text = "\u270F\uFE0F",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.outline,
-                    )
+                    if (!hasPrompt) {
+                        Text(
+                            text = "\u270F\uFE0F",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                    }
                 }
             }
         },
         text = {
             Column {
+                // Inspirational prompt card
+                if (hasPrompt) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                brush = Brush.linearGradient(
+                                    listOf(
+                                        NeonAmber.copy(alpha = 0.10f),
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                    )
+                                ),
+                                shape = RoundedCornerShape(16.dp),
+                            )
+                            .padding(16.dp),
+                    ) {
+                        Column {
+                            Text(
+                                text = "\u201E$activePrompt\u201C",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontStyle = FontStyle.Italic,
+                                    fontWeight = FontWeight.Medium,
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "Lass deine Gedanken frei flie\u00dfen. Es gibt kein richtig oder falsch.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
                 TextField(
                     value = displayText,
                     onValueChange = { newText ->
@@ -669,7 +724,7 @@ private fun PreviewDialog(
                     },
                     modifier =
                         Modifier.fillMaxWidth()
-                            .heightIn(max = 300.dp)
+                            .heightIn(min = if (hasPrompt) 120.dp else 0.dp, max = 300.dp)
                             .focusRequester(focusRequester)
                             .onFocusChanged { state ->
                                 isFocused = state.isFocused
@@ -690,7 +745,8 @@ private fun PreviewDialog(
                         ),
                     placeholder = {
                         Text(
-                            "Tippe hier, um den Text zu bearbeiten...",
+                            if (hasPrompt) "Schreibe hier deine Gedanken\u2026"
+                            else "Tippe hier, um den Text zu bearbeiten...",
                             color = MaterialTheme.colorScheme.outline,
                         )
                     },
@@ -1125,22 +1181,27 @@ private fun WritingPromptBanner(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            Button(
-                onClick = onWriteClick,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = NeonAmber,
-                    contentColor = Color.White,
-                ),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Icon(
-                    Icons.Rounded.Edit,
-                    null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Dar\u00fcber schreiben")
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Button(
+                    onClick = onWriteClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = NeonAmber,
+                        contentColor = Color.White,
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Icon(
+                        Icons.Rounded.Edit,
+                        null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "Dar\u00fcber schreiben",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
             }
         }
     }

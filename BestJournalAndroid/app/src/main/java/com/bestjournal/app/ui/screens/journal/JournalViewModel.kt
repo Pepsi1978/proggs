@@ -62,6 +62,7 @@ data class JournalUiState(
     val dailyPromptId: String = "",
     val isPremiumUser: Boolean = false,
     val showPromptBanner: Boolean = true,
+    val activePrompt: String = "",
 )
 
 enum class SyncStatus {
@@ -344,14 +345,21 @@ constructor(
     fun saveEntry() {
         android.util.Log.d("SaveEntry", "saveEntry called, rawText=${_uiState.value.rawText.take(30)}")
         val state = _uiState.value
-        val displayText =
+        val userText =
             if (state.isImproveEnabled && state.improvedText != null) {
                 state.improvedText
             } else {
                 state.rawText
             }
 
-        if (displayText.isBlank()) return
+        if (userText.isBlank()) return
+
+        // Prepend the writing prompt if active
+        val displayText = if (state.activePrompt.isNotBlank()) {
+            "${state.activePrompt}\n\n$userText"
+        } else {
+            userText
+        }
 
         _uiState.value = state.copy(recordingState = RecordingState.SAVING)
 
@@ -424,10 +432,11 @@ constructor(
         _uiState.value =
             _uiState.value.copy(
                 recordingState = RecordingState.PREVIEW,
-                rawText = "$prompt\n\n",
+                rawText = "",
                 improvedText = null,
                 isImproveEnabled = false,
                 showPreviewDialog = true,
+                activePrompt = prompt,
             )
     }
 
