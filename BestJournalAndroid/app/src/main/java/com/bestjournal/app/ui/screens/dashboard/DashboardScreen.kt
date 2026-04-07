@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Undo
@@ -47,6 +48,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Velocity
@@ -165,44 +167,6 @@ fun DashboardScreen(
 
             if (uiState.showAiInfoBanner) {
                 item(key = "ai_banner") { AiInfoBanner(onDismiss = { viewModel.dismissAiInfoBanner() }) }
-            }
-
-            // Contextual upsell banner after first dashboard analysis
-            if (uiState.showAnalysisUpsellBanner) {
-                item(key = "analysis_upsell") {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "Deine erste KI-Analyse ist da! Mit Premium bekommst du unbegrenzte Analysen und tiefere Einblicke.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                TextButton(onClick = {
-                                    viewModel.onAnalysisUpsellClicked()
-                                    onNavigateToPaywall("first_analysis")
-                                }) {
-                                    Text("Premium entdecken")
-                                }
-                                TextButton(onClick = { viewModel.dismissAnalysisUpsellBanner() }) {
-                                    Text(
-                                        "Sp\u00e4ter",
-                                        color = MaterialTheme.colorScheme.outline,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
             }
 
             if (uiState.isLoading) {
@@ -687,6 +651,96 @@ fun DashboardScreen(
                     if (topActions.isNotEmpty()) {
                         item {
                             TopActionsBlock(actions = topActions)
+                        }
+                    }
+
+                    // Contextual upsell banner — shown once after first analysis for free users
+                    if (uiState.showAnalysisUpsellBanner) {
+                        item(key = "analysis_upsell") {
+                            GlassCard(
+                                glowColor = NeonAmber,
+                                glowIntensity = 0.25f,
+                                cornerRadius = 16.dp,
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.Top,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    // Star icon in golden circle
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                Brush.linearGradient(
+                                                    listOf(
+                                                        NeonAmber,
+                                                        NeonAmber.copy(alpha = 0.6f),
+                                                    )
+                                                )
+                                            ),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.AutoAwesome,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Gef\u00e4llt dir die Analyse?",
+                                            style = MaterialTheme.typography.titleSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                            ),
+                                            color = NeonAmber,
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Mit Premium bekommst du unbegrenzte Analysen aus 5 verschiedenen Perspektiven.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Button(
+                                                onClick = {
+                                                    viewModel.onAnalysisUpsellClicked()
+                                                    onNavigateToPaywall("first_analysis")
+                                                },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = NeonAmber,
+                                                    contentColor = Color.Black,
+                                                ),
+                                                shape = RoundedCornerShape(12.dp),
+                                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                                            ) {
+                                                Text(
+                                                    "Mehr erfahren",
+                                                    style = MaterialTheme.typography.labelMedium.copy(
+                                                        fontWeight = FontWeight.Bold,
+                                                    ),
+                                                )
+                                            }
+                                            TextButton(
+                                                onClick = { viewModel.dismissAnalysisUpsellBanner() },
+                                            ) {
+                                                Text(
+                                                    "Sp\u00e4ter",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.outline,
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
