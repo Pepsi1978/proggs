@@ -214,7 +214,7 @@ fun SettingsScreen(
                         )
                     }
                     Text(
-                        "Eintr\u00e4ge werden bei der Anmeldung automatisch geladen",
+                        "Einträge werden bei der Anmeldung automatisch geladen",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.outline,
                     )
@@ -234,7 +234,7 @@ fun SettingsScreen(
                         ) {
                             Text(
                                 if (uiState.isSyncing) "Wird gesichert..."
-                                else "Tagebucheintr\u00e4ge sichern"
+                                else "Tagebucheinträge sichern"
                             )
                         }
                     }
@@ -260,7 +260,7 @@ fun SettingsScreen(
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
-                                "Gesicherte Eintr\u00e4ge werden beim Anmelden geladen",
+                                "Gesicherte Einträge werden beim Anmelden geladen",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -469,7 +469,7 @@ fun SettingsScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.MusicNote, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("T\u00f6ne", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("Töne", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -496,12 +496,12 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                "App-T\u00f6ne",
+                                "App-Töne",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
-                                if (soundsEnabled) "T\u00f6ne sind eingeschaltet" else "T\u00f6ne sind ausgeschaltet",
+                                if (soundsEnabled) "Töne sind eingeschaltet" else "Töne sind ausgeschaltet",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -577,7 +577,7 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "T\u00e4gliche Erinnerung",
+                            "Tägliche Erinnerung",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -660,7 +660,7 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "W\u00f6chentlicher R\u00fcckblick",
+                            "Wöchentlicher Rückblick",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -776,7 +776,7 @@ fun SettingsScreen(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "W\u00e4hle ein Profil aus. Tippe auf ein Profil f\u00fcr eine genauere Erkl\u00e4rung.",
+                    "Wähle ein Profil aus. Tippe auf ein Profil für eine genauere Erklärung.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -784,9 +784,9 @@ fun SettingsScreen(
 
                 val scenarioNames = listOf(
                     "Zusammenfassung",
-                    "R\u00e4ume dein Leben auf",
+                    "Räume dein Leben auf",
                     "Selbsterkenntnis",
-                    "Pers\u00f6nliche Ziele",
+                    "Persönliche Ziele",
                     "Individuelle Analyse"
                 )
                 val scenarioPrefs = remember {
@@ -838,8 +838,8 @@ fun SettingsScreen(
                             when (index) {
                                 0 -> Text("Fasst Themen, Muster und Erlebnisse zusammen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 1 -> Text("Erkennt Stress, Unordnung und Belastung", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                2 -> Text("Deckt verborgene Denk- und Gef\u00fchlsmuster auf", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                3 -> Text("Erkennt Ziele, W\u00fcnsche und Fortschritte", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                2 -> Text("Deckt verborgene Denk- und Gefühlsmuster auf", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                3 -> Text("Erkennt Ziele, Wünsche und Fortschritte", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 4 -> Text("Eigenen Analyse-Fokus festlegen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
@@ -856,11 +856,11 @@ fun SettingsScreen(
                         else -> Icons.Rounded.Tune
                     }
                     val infoText = when (showScenarioInfoIndex) {
-                        0 -> "Deine Eintr\u00e4ge werden neutral zusammengefasst, ohne Bewertung oder Ratschl\u00e4ge.\n\nDu siehst auf einen Blick:\n\n\u2022 Welche Themen dich gerade besch\u00e4ftigen\n\u2022 Welche Muster sich wiederholen\n\u2022 Wie sich dein Leben entwickelt\n\nPerfekt als t\u00e4glicher \u00dcberblick \u00fcber alles, was in deinem Leben passiert."
-                        1 -> "Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Eintr\u00e4gen.\n\nDu bekommst:\n\n\u2022 Eine Analyse deiner gr\u00f6\u00dften Belastungsquellen\n\u2022 5 konkrete Ma\u00dfnahmen zum Aufr\u00e4umen\n\u2022 Tipps, die dir sofort helfen k\u00f6nnen\n\nIdeal wenn du das Gef\u00fchl hast, dass gerade alles zu viel wird."
-                        2 -> "Die KI schaut tiefer als nur auf Ereignisse. Sie erkennt in deinen Eintr\u00e4gen:\n\n\u2022 Verborgene Denkmuster und \u00dcberzeugungen\n\u2022 Wiederkehrende Gef\u00fchle und Reaktionen\n\u2022 Pers\u00f6nliche St\u00e4rken, die dir nicht bewusst sind\n\u2022 Werte, die dein Handeln antreiben\n\nF\u00fcr alle, die sich selbst besser verstehen und innerlich wachsen wollen."
-                        3 -> "Die KI findet alle Ziele, W\u00fcnsche und Vorhaben in deinen Eintr\u00e4gen, auch beil\u00e4ufig erw\u00e4hnte.\n\nDu siehst:\n\n\u2022 Welche Ziele du hast (auch versteckte)\n\u2022 Wie weit du bei jedem Ziel bist\n\u2022 Was dein n\u00e4chster Schritt sein k\u00f6nnte\n\nDein pers\u00f6nlicher Ziel-Tracker, der aus deinen eigenen Worten liest."
-                        else -> "Du bestimmst selbst, worauf die KI achten soll.\n\nSchreibe deinen eigenen Analyse-Fokus, zum Beispiel:\n\n\u2022 \u201eFinde alle Erw\u00e4hnungen von Sport\u201c\n\u2022 \u201eAnalysiere meine Stimmungsschwankungen\u201c\n\u2022 \u201eZeige mir, wann ich am produktivsten bin\u201c\n\nVolle Kontrolle f\u00fcr alle, die genau wissen, was sie suchen."
+                        0 -> "Deine Einträge werden neutral zusammengefasst, ohne Bewertung oder Ratschläge.\n\nDu siehst auf einen Blick:\n\n\u2022 Welche Themen dich gerade beschäftigen\n\u2022 Welche Muster sich wiederholen\n\u2022 Wie sich dein Leben entwickelt\n\nPerfekt als täglicher Überblick über alles, was in deinem Leben passiert."
+                        1 -> "Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Einträgen.\n\nDu bekommst:\n\n\u2022 Eine Analyse deiner größten Belastungsquellen\n\u2022 5 konkrete Maßnahmen zum Aufräumen\n\u2022 Tipps, die dir sofort helfen können\n\nIdeal wenn du das Gefühl hast, dass gerade alles zu viel wird."
+                        2 -> "Die KI schaut tiefer als nur auf Ereignisse. Sie erkennt in deinen Einträgen:\n\n\u2022 Verborgene Denkmuster und Überzeugungen\n\u2022 Wiederkehrende Gefühle und Reaktionen\n\u2022 Persönliche Stärken, die dir nicht bewusst sind\n\u2022 Werte, die dein Handeln antreiben\n\nFür alle, die sich selbst besser verstehen und innerlich wachsen wollen."
+                        3 -> "Die KI findet alle Ziele, Wünsche und Vorhaben in deinen Einträgen, auch beiläufig erwähnte.\n\nDu siehst:\n\n\u2022 Welche Ziele du hast (auch versteckte)\n\u2022 Wie weit du bei jedem Ziel bist\n\u2022 Was dein nächster Schritt sein könnte\n\nDein persönlicher Ziel-Tracker, der aus deinen eigenen Worten liest."
+                        else -> "Du bestimmst selbst, worauf die KI achten soll.\n\nSchreibe deinen eigenen Analyse-Fokus, zum Beispiel:\n\n\u2022 „Finde alle Erwähnungen von Sport“\n\u2022 „Analysiere meine Stimmungsschwankungen“\n\u2022 „Zeige mir, wann ich am produktivsten bin“\n\nVolle Kontrolle für alle, die genau wissen, was sie suchen."
                     }
                     AlertDialog(
                         onDismissRequest = { showScenarioInfoIndex = -1 },
@@ -908,7 +908,7 @@ fun SettingsScreen(
                         text = {
                             Column {
                                 Text(
-                                    "Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheintr\u00e4ge konzentrieren?",
+                                    "Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheinträge konzentrieren?",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -920,7 +920,7 @@ fun SettingsScreen(
                                     placeholder = {
                                         val isDark = LocalIsDarkTheme.current
                                         Text(
-                                            "z.B. Fokussiere dich auf meine Schlafqualit\u00e4t und Stresslevel. Zeige mir Muster in meiner Ern\u00e4hrung. Analysiere, wie sich meine Stimmung \u00fcber die Woche ver\u00e4ndert. Finde heraus, wann ich am produktivsten bin und was mich blockiert.\n\nJe gr\u00fcndlicher du beschreibst was dein Fokus ist, desto besser werden die Ergebnisse.",
+                                            "z.B. Fokussiere dich auf meine Schlafqualität und Stresslevel. Zeige mir Muster in meiner Ernährung. Analysiere, wie sich meine Stimmung über die Woche verändert. Finde heraus, wann ich am produktivsten bin und was mich blockiert.\n\nJe gründlicher du beschreibst was dein Fokus ist, desto besser werden die Ergebnisse.",
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (isDark) 0.25f else 0.35f),
                                         )
                                     },
@@ -972,7 +972,7 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            "Standardm\u00e4\u00dfig aktivieren",
+                            "Standardmäßig aktivieren",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -1033,7 +1033,7 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Du nutzt Best Journal Premium mit voller KI-Qualit\u00e4t.",
+                        text = "Du nutzt Best Journal Premium mit voller KI-Qualität.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1075,15 +1075,15 @@ fun SettingsScreen(
                         },
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("\u2022  Deine Gedanken in klare Worte fassen, die KI macht jeden Eintrag ausdrucksst\u00e4rker", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  Deine Gedanken in klare Worte fassen, die KI macht jeden Eintrag ausdrucksstärker", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("\u2022  5 Perspektiven auf dein Leben, von Stressabbau bis Selbsterkenntnis", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("\u2022  Dein Dashboard w\u00e4chst mit dir, automatisch nach jedem Eintrag", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  Dein Dashboard wächst mit dir, automatisch nach jedem Eintrag", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("\u2022  Entdecke was du bisher \u00fcbersehen hast, die KI findet Muster die dir nicht auffallen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  Entdecke was du bisher übersehen hast, die KI findet Muster die dir nicht auffallen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("\u2022  Dein sicherer Raum, ungest\u00f6rt schreiben, reflektieren, wachsen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("\u2022  Dein sicherer Raum, ungestört schreiben, reflektieren, wachsen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = { onNavigateToPaywall("settings_tap") },
@@ -1126,7 +1126,7 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 if (uiState.isSubscribed) {
                     Text(
-                        "Exportiere alle Tagebucheintr\u00e4ge als PDF-Dokument.",
+                        "Exportiere alle Tagebucheinträge als PDF-Dokument.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1151,7 +1151,7 @@ fun SettingsScreen(
                                 strokeWidth = 2.dp,
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Wird exportiert\u2026")
+                            Text("Wird exportiert…")
                         } else {
                             Icon(
                                 Icons.Rounded.PictureAsPdf,
@@ -1159,12 +1159,12 @@ fun SettingsScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Tagebucheintr\u00e4ge als PDF exportieren")
+                            Text("Tagebucheinträge als PDF exportieren")
                         }
                     }
                 } else {
                     Text(
-                        "Tagebucheintr\u00e4ge als PDF exportieren",
+                        "Tagebucheinträge als PDF exportieren",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                     )
@@ -1183,23 +1183,23 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                         )
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = {
                             playClick()
                             viewModel.analyticsTracker.trackExportPremiumBlocked()
                             onNavigateToPaywall("pdf_export")
                         },
-                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(
                             Icons.Rounded.Star,
                             null,
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(14.dp),
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             "Premium freischalten",
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
@@ -1230,7 +1230,7 @@ fun SettingsScreen(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Anregungen, W\u00fcnsche, Verbesserungsvorschl\u00e4ge, Bugs melden \uD83D\uDC1E",
+                    "Anregungen, Wünsche, Verbesserungsvorschläge, Bugs melden \uD83D\uDC1E",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1293,7 +1293,7 @@ fun SettingsScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("\u00dcber die App", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    Text("Über die App", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -1302,13 +1302,13 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    "Dein pers\u00f6nliches KI-Tagebuch",
+                    "Dein persönliches KI-Tagebuch",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.outline,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "\u00a9 Barwandt Digital Labs",
+                    "© Barwandt Digital Labs",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.outline,
                 )
@@ -1325,7 +1325,7 @@ fun SettingsScreen(
             title = { Text("Abmelden?", color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Text(
-                    "M\u00f6chtest du dich wirklich abmelden?",
+                    "Möchtest du dich wirklich abmelden?",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             },
@@ -1594,7 +1594,7 @@ private fun FeedbackDialog(
         text = {
             Column {
                 Text(
-                    "Deine Nachricht an die Entwickler \u2014 wir lesen alles und antworten pers\u00f6nlich!",
+                    "Deine Nachricht an die Entwickler — wir lesen alles und antworten persönlich!",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 20.sp,
@@ -1711,7 +1711,7 @@ private fun ReminderTimePickerDialog(
         containerColor = MaterialTheme.colorScheme.surface,
         title = {
             Text(
-                "Erinnerungszeit w\u00e4hlen",
+                "Erinnerungszeit wählen",
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
@@ -1732,7 +1732,7 @@ private fun ReminderTimePickerDialog(
                     containerColor = MaterialTheme.colorScheme.primary,
                 ),
             ) {
-                Text("\u00dcbernehmen")
+                Text("Übernehmen")
             }
         },
         dismissButton = {
@@ -1785,10 +1785,10 @@ private fun ChurnRetentionDialog(
         scope.launch {
             try {
                 val body = buildString {
-                    append("K\u00fcndigungsgr\u00fcnde: ")
+                    append("Kündigungsgründe: ")
                     append(selectedReasons.joinToString(", ").ifEmpty { "Keine angegeben" })
                     if (additionalFeedback.isNotBlank()) {
-                        append("\n\nZus\u00e4tzliches Feedback:\n")
+                        append("\n\nZusätzliches Feedback:\n")
                         append(additionalFeedback)
                     }
                 }
@@ -1796,7 +1796,7 @@ private fun ChurnRetentionDialog(
                     context = context,
                     accountEmail = userEmail,
                     feedbackText = body,
-                    subject = "K\u00fcndigungsfeedback",
+                    subject = "Kündigungsfeedback",
                 )
                 isSending = false
                 if (error != null) errorMessage = error else onComplete()
@@ -1804,6 +1804,10 @@ private fun ChurnRetentionDialog(
                 isSending = false
                 try { context.startActivity(e.consentIntent) } catch (_: Exception) {}
                 errorMessage = "Bitte Gmail-Zugriff erlauben und erneut versuchen."
+            } catch (_: Exception) {
+                // Graceful degradation: if email fails for any reason, don't block the flow
+                isSending = false
+                onComplete()
             }
         }
     }
@@ -1871,7 +1875,7 @@ private fun ChurnRetentionDialog(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        "Bevor du gehst\u2026",
+                        "Bevor du gehst…",
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center,
@@ -1881,8 +1885,8 @@ private fun ChurnRetentionDialog(
 
                     Text(
                         "Dein Tagebuch und deine Fortschritte liegen uns am Herzen. " +
-                            "Jeder Eintrag erz\u00e4hlt deine Geschichte " +
-                            "\u2014 und wir m\u00f6chten Teil davon bleiben.",
+                            "Jeder Eintrag erzählt deine Geschichte " +
+                            "— und wir möchten Teil davon bleiben.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -1894,7 +1898,7 @@ private fun ChurnRetentionDialog(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        "Was k\u00f6nnen wir besser machen?",
+                        "Was können wir besser machen?",
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.fillMaxWidth(),
@@ -1955,7 +1959,7 @@ private fun ChurnRetentionDialog(
                         ),
                         placeholder = {
                             Text(
-                                "M\u00f6chtest du uns noch etwas sagen?",
+                                "Möchtest du uns noch etwas sagen?",
                                 color = MaterialTheme.colorScheme.outline,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
@@ -1993,14 +1997,14 @@ private fun ChurnRetentionDialog(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "Wir m\u00f6chten dich behalten!",
+                            "Wir möchten dich behalten!",
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary,
                             textAlign = TextAlign.Center,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "20\u00A0% Rabatt auf den n\u00e4chsten Monat",
+                            "20 % Rabatt auf den nächsten Monat",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                             ),
@@ -2009,7 +2013,7 @@ private fun ChurnRetentionDialog(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Statt ${Constants.MONTHLY_PRICE_DISPLAY} nur 3,19\u00A0\u20AC",
+                            "Statt ${Constants.MONTHLY_PRICE_DISPLAY} nur 3,19 \u20AC",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -2072,7 +2076,7 @@ private fun ChurnRetentionDialog(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
-                            "Trotzdem k\u00fcndigen",
+                            "Trotzdem kündigen",
                             color = MaterialTheme.colorScheme.outline,
                             style = MaterialTheme.typography.bodyMedium,
                         )
@@ -2081,7 +2085,7 @@ private fun ChurnRetentionDialog(
                     if (isSending) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Wird gesendet\u2026",
+                            "Wird gesendet…",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.outline,
                         )
