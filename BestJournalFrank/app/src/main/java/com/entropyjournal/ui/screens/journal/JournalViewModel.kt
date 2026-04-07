@@ -50,6 +50,7 @@ data class JournalUiState(
     val dailyPromptId: String = "",
     val showPromptBanner: Boolean = true,
     val activePrompt: String = "",
+    val lastSyncTimestamp: Long = 0L,
 )
 
 enum class SyncStatus { IDLE, SYNCING, SYNCED, ERROR, NOT_SIGNED_IN }
@@ -99,6 +100,7 @@ class JournalViewModel @Inject constructor(
         } else if (isSignedIn) {
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.IDLE)
         }
+        _uiState.value = _uiState.value.copy(lastSyncTimestamp = lastSync)
 
         // Load current streak into UI state
         _uiState.value = _uiState.value.copy(
@@ -140,6 +142,10 @@ class JournalViewModel @Inject constructor(
                     } else {
                         _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
                     }
+                }
+                Constants.PREF_LAST_SYNC_TIMESTAMP -> {
+                    val ts = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L)
+                    _uiState.value = _uiState.value.copy(lastSyncTimestamp = ts)
                 }
             }
         }
@@ -395,6 +401,7 @@ class JournalViewModel @Inject constructor(
             dailyPromptCategory = currentState.dailyPromptCategory,
             dailyPromptId = currentState.dailyPromptId,
             showPromptBanner = currentState.showPromptBanner,
+            lastSyncTimestamp = currentState.lastSyncTimestamp,
         )
     }
 

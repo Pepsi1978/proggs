@@ -491,6 +491,16 @@ fun JournalScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Text("Nicht angemeldet", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
                         }
+                        if (uiState.lastSyncTimestamp > 0L) {
+                            androidx.compose.material3.HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            )
+                            Text(
+                                "Letzte Synchronisierung: ${DTFormatter.formatFull(uiState.lastSyncTimestamp)}",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                 },
                 confirmButton = {
