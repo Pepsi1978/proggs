@@ -3,9 +3,11 @@ package com.entropyjournal.ui.screens.entrydetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.SharedPreferences
 import com.entropyjournal.data.repository.JournalRepository
 import com.entropyjournal.domain.model.JournalEntry
 import com.entropyjournal.domain.usecase.SyncWithDriveUseCase
+import com.entropyjournal.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -28,6 +30,7 @@ data class EntryDetailUiState(
 class EntryDetailViewModel @Inject constructor(
     private val journalRepository: JournalRepository,
     private val syncWithDriveUseCase: SyncWithDriveUseCase,
+    private val encryptedPrefs: SharedPreferences,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -123,8 +126,16 @@ class EntryDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value.entry?.let { entry ->
                 journalRepository.deleteEntry(entry)
+                // Launch backup in independent scope — viewModelScope gets cancelled on navigation
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    try {
+                        syncWithDriveUseCase.backup()
+                        encryptedPrefs.edit()
+                            .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
+                            .apply()
+                    } catch (_: Exception) {}
+                }
                 _uiState.value = _uiState.value.copy(isDeleted = true, showDeleteDialog = false)
-                try { syncWithDriveUseCase.backup() } catch (_: Exception) {}
             }
         }
     }

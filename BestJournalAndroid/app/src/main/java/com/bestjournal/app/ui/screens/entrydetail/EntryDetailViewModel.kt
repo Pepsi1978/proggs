@@ -3,10 +3,12 @@ package com.bestjournal.app.ui.screens.entrydetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.SharedPreferences
 import com.bestjournal.app.data.repository.JournalRepository
 import com.bestjournal.app.domain.model.JournalEntry
 import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
 import com.bestjournal.app.util.AnalyticsTracker
+import com.bestjournal.app.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -30,6 +32,7 @@ constructor(
     private val journalRepository: JournalRepository,
     private val analyticsTracker: AnalyticsTracker,
     private val syncWithDriveUseCase: SyncWithDriveUseCase,
+    private val encryptedPrefs: SharedPreferences,
     savedStateHandle: SavedStateHandle,
 ) :
     ViewModel() {
@@ -104,8 +107,16 @@ constructor(
             _uiState.value.entry?.let { entry ->
                 journalRepository.deleteEntry(entry)
                 analyticsTracker.trackEntryDeleted()
+                // Launch backup in independent scope — viewModelScope gets cancelled on navigation
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    try {
+                        syncWithDriveUseCase.backup()
+                        encryptedPrefs.edit()
+                            .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
+                            .apply()
+                    } catch (_: Exception) {}
+                }
                 _uiState.value = _uiState.value.copy(isDeleted = true, showDeleteDialog = false)
-                try { syncWithDriveUseCase.backup() } catch (_: Exception) {}
             }
         }
     }
