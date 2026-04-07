@@ -30,7 +30,7 @@ data class DashboardUiState(
     val showAiInfoBanner: Boolean = false,
     val dashboardLimitMessage: String? = null,
     val manualRefreshesLeft: Int = 3,
-    val currentScenario: Int = 1,
+    val currentScenario: Int = 0,
     val isScenarioSwitch: Boolean = false,
     val customHeaderTop5: String = "",
     val customHeaderAnalyse: String = "",
@@ -72,7 +72,9 @@ constructor(
         // Check upsell banner when blocks load (handles auto-update that completed before navigation)
         viewModelScope.launch {
             adviceBlocks.first { it.isNotEmpty() }
-            if (shouldShowAnalysisUpsell()) {
+            // Small delay so BillingManager can resolve subscription status on cold starts
+            kotlinx.coroutines.delay(500)
+            if (!_uiState.value.showAnalysisUpsellBanner && shouldShowAnalysisUpsell()) {
                 android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_shown, source=first_analysis")
                 _uiState.update { it.copy(showAnalysisUpsellBanner = true) }
             }
@@ -86,7 +88,7 @@ constructor(
                     if (!updating && _uiState.value.isAutoUpdate) {
                         // Auto-update just completed — check upsell banner
                         val showUpsell = shouldShowAnalysisUpsell()
-                        if (showUpsell) {
+                        if (showUpsell && !_uiState.value.showAnalysisUpsellBanner) {
                             android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_shown, source=first_analysis")
                         }
                         _uiState.update { it.copy(isLoading = false, isAutoUpdate = false, showAnalysisUpsellBanner = showUpsell || it.showAnalysisUpsellBanner) }

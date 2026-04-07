@@ -269,7 +269,7 @@ constructor(
                     val isFree = billingManager.subscriptionState.value is SubscriptionState.Free
                     val alreadyShown = encryptedPrefs.getBoolean(Constants.PREF_FIRST_TEXT_UPSELL_SHOWN, false)
                     val onboardingDone = encryptedPrefs.getBoolean(Constants.PREF_ONBOARDING_COMPLETED, false)
-                    val showUpsell = isFree && !alreadyShown && onboardingDone && count == 1
+                    val showUpsell = isFree && !alreadyShown && onboardingDone && count >= 1
 
                     if (showUpsell) {
                         android.util.Log.d("UpsellAnalytics", "Event: upsell_banner_shown, source=first_text")
