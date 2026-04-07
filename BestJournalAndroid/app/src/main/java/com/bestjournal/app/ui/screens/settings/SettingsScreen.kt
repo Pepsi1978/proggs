@@ -2013,7 +2013,7 @@ private fun ChurnRetentionDialog(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Statt ${Constants.MONTHLY_PRICE_DISPLAY} nur 3,19 \u20AC",
+                            "Statt ${Constants.MONTHLY_PRICE_DISPLAY} nur 3,19 €",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
