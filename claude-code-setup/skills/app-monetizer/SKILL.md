@@ -579,10 +579,12 @@ was die besten Designer und Entwickler der Welt bauen wuerden.
     - Genug Kontext dass eine KI OHNE Vorwissen die Aufgabe perfekt umsetzen kann
 
     **Die Laenge eines Prompts richtet sich nach der Komplexitaet der Aufgabe:**
-    - Einfache Textaenderung → vielleicht 15-20 Zeilen genuegen
-    - Neuer Screen oder neues Feature → 40-80 Zeilen sind normal
-    - Komplexes Feature mit Animationen und mehreren Dateien → 80-120+ Zeilen
-    - Es gibt KEIN Limit nach oben. Der Prompt ist fertig wenn ALLES beschrieben ist.
+    - MINIMUM: 20 Zeilen — darunter ist ein Prompt nie ausfuehrlich genug
+    - Nach oben gibt es KEIN Limit — der Prompt ist fertig wenn ALLES beschrieben
+      ist was die umsetzende KI fuer eine PERFEKTE Umsetzung braucht
+    - Nicht kuenstlich aufblaehen, aber auch nicht kuenstlich kuerzen
+    - Der Prompt soll genau so lang sein wie er sein muss — perfekt durchdacht
+      fuer die jeweilige Aufgabe
 
     **Was NIEMALS passieren darf:**
     - ❌ Prompt sagt nur "fuege Feature X hinzu" ohne Details zur visuellen Umsetzung
