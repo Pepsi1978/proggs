@@ -504,6 +504,39 @@ Die Datei ist nur die Sicherungskopie fuer spaetere Sessions.
     - Welche emotionale Reaktion beim Nutzer ausgeloest werden soll
     - Wie das Feature die App von JEDER Konkurrenz-App abhebt
 
+13. **GLEICHMAESSIGE AUSFUEHRLICHKEIT — KEIN ERMUEDUNGS-EFFEKT (KRITISCH)**:
+    Prompt 1 und Prompt 15 muessen die GLEICHE Ausfuehrlichkeit und Qualitaet haben.
+    Es ist ein bekanntes LLM-Problem dass Prompts nach hinten heraus kuerzer und
+    oberflaechlicher werden weil das Kontextfenster voller wird. Das darf NICHT passieren.
+
+    **Selbstpruefung VOR dem Schreiben jedes Prompts:**
+    - Ist dieser Prompt mindestens so lang wie Prompt 1? Falls nein: MEHR schreiben.
+    - Enthaelt er konkrete Dateipfade? Falls nein: ERGAENZEN.
+    - Enthaelt er exakte dp-Werte, Farben, Abstaende? Falls nein: ERGAENZEN.
+    - Enthaelt er eine Beschreibung fuer Light UND Dark Mode? Falls nein: ERGAENZEN.
+    - Enthaelt er Analytics-Events am Ende? Falls nein: ERGAENZEN.
+    - Koennte eine KI diesen Prompt OHNE zusaetzlichen Kontext ausfuehren? Falls nein: MEHR KONTEXT.
+
+    **Die KI die den Prompt ausfuehrt hat KEINEN Kontext der vorherigen Prompts.**
+    Sie kennt nicht den Bericht, nicht die Analyse, nicht die Konkurrenz. JEDER Prompt
+    muss komplett eigenstaendig funktionieren. Das bedeutet: Wenn Prompt 12 ein Feature
+    beschreibt das auf dem Theme der App aufbaut, muss Prompt 12 das Theme beschreiben —
+    nicht "verwende das bestehende Theme" ohne Details.
+
+    **Minimum pro Prompt (egal ob Nummer 1 oder Nummer 25):**
+    - Mindestens 15 Zeilen reiner Prompttext (ohne Leerzeilen)
+    - Mindestens 1 konkreter Dateipfad
+    - Mindestens 3 exakte dp/Farb/Groessen-Angaben
+    - Mindestens 1 Analytics-Event
+    - Kontext-Start mit "In meiner App [Name]..."
+
+    **Was NIEMALS passieren darf:**
+    - ❌ Prompt wird kuerzer als 10 Zeilen
+    - ❌ Prompt sagt nur "fuege Feature X hinzu" ohne Details zur visuellen Umsetzung
+    - ❌ Prompt verweist auf "das bestehende Design" ohne es zu beschreiben
+    - ❌ Prompt am Ende der Liste ist oberflaechlicher als am Anfang
+    - ❌ Prompt enthaelt keine Analytics-Events
+
 ---
 
 ## Kategorien (alle durcharbeiten, nach Wichtigkeit sortieren)
