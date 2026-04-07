@@ -257,8 +257,14 @@
 	},
 
 	"custom_skills": [
+		"app-monetizer",
 		"auto-verify-iterate",
 		"cross-platform",
+		"direktiven-recherche",
+		"hook-forge",
+		"resilient-bugfixing",
+		"selbstbeobachtung",
+		"superintelligenz",
 		"tampermonkey-version",
 		"undo-changes",
 		"android-clean-architecture",
