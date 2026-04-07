@@ -414,7 +414,51 @@ Die Datei ist nur die Sicherungskopie fuer spaetere Sessions.
 
 ---
 
-## Prompt-Regeln (1-10)
+## Uebergeordnetes Prompt-Prinzip: MAXIMALE SCHOENHEIT & MODERNSTE TECHNIK
+
+Dieses Prinzip steht UEBER allen einzelnen Regeln und durchdringt JEDEN Prompt:
+
+Jeder Vorschlag und jeder Prompt muss die SCHOENSTE und MODERNSTE Umsetzung beschreiben
+die technisch moeglich ist. Nicht "gut genug", nicht "funktioniert", sondern "sieht aus
+wie eine Premium-App die 50 Euro im Monat kostet". Jeder Prompt orientiert sich an dem
+was die besten Designer und Entwickler der Welt bauen wuerden.
+
+**Was das konkret bedeutet:**
+
+- **Visuelle Exzellenz ist nicht optional, sondern der Standard.** Jeder Button, jeder
+  Screen, jede Animation muss so beschrieben werden dass das Ergebnis WOW ausloest.
+  Nicht "fuege einen Button hinzu" sondern "fuege einen Button hinzu der beim Druecken
+  sanft auf 96% schrumpft, einen subtilen Schatten wirft, einen Gradient von der
+  Primaerfarbe zur helleren Variante zeigt, und beim Loslassen mit einem Spring-Effekt
+  zurueckfedert". DAS ist der Qualitaetsstandard.
+
+- **Neuester Stand der Technik.** Die Prompts muessen die modernsten verfuegbaren
+  Android/Compose-APIs und -Patterns verwenden. Nicht die Loesung von 2022, sondern
+  die von 2026. Was ist die schoenste Art einen Uebergang zu animieren? Was ist die
+  eleganteste Compose-API fuer diesen Effekt? Was wuerde ein Google-Entwickler nehmen?
+  Die Researcher-E-Ergebnisse (modernste UI-Techniken) muessen in JEDEN Prompt einfliessen
+  wo visuelle Elemente beschrieben werden.
+
+- **Orientierung an den schoensten Apps der Welt.** Nicht an der Konkurrenz orientieren
+  (die ist oft mittelmassig), sondern an den Apps die Nutzer LIEBEN: Spotify (Fluesse,
+  Animationen, Dark Mode), Apple Health (Datenvisualisierung), Duolingo (Gamification,
+  Micro-Interactions), Headspace (Ruhe, Eleganz), Monzo (Klarheit, Farben). In jedem
+  Prompt darf stehen: "Orientiere dich an [Top-App] die das so loest: ..."
+
+- **Jedes Detail zaehlt.** Eckenradien, Schattenwuerfe, Animationskurven, Farbverlaeufe,
+  Schriftgewichte, Icon-Groessen, Abstaende zwischen Elementen — all das macht den
+  Unterschied zwischen "sieht aus wie ein Prototyp" und "sieht aus wie eine Apple-App".
+  Die Prompts muessen diese Details beschreiben, nicht der umsetzenden KI ueberlassen.
+
+- **Emotionale Wirkung beschreiben.** Nicht nur WAS gebaut wird, sondern WIE es sich
+  ANFUEHLEN soll. "Der Nutzer soll beim Oeffnen dieses Screens das Gefuehl haben,
+  dass jemand sich Muehe gegeben hat. Der Screen soll Vertrauen und Professionalitaet
+  ausstrahlen." Solche Saetze im Prompt helfen der umsetzenden KI die richtige
+  Designentscheidung zu treffen wenn Details fehlen.
+
+---
+
+## Prompt-Regeln
 
 1. **Copy-Paste-Format**: Jeder Prompt-Text steht isoliert zwischen 2 Leerzeilen
    DAVOR und 2 Leerzeilen DANACH. Vor dem Prompt-Text steht nur "Prompt:" als
