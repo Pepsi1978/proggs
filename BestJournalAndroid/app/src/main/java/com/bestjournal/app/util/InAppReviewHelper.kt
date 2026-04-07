@@ -16,6 +16,7 @@ import kotlinx.coroutines.tasks.await
 class InAppReviewHelper @Inject constructor(
     private val prefs: SharedPreferences,
     private val streakTracker: StreakTracker,
+    private val analyticsTracker: AnalyticsTracker,
 ) {
     companion object {
         private const val TAG = "InAppReview"
@@ -50,7 +51,7 @@ class InAppReviewHelper @Inject constructor(
             return
         }
 
-        Log.d(TAG, "Event: review_prompt_conditions_met")
+        analyticsTracker.trackReviewPromptConditionsMet()
 
         try {
             val reviewManager = ReviewManagerFactory.create(activity)
@@ -61,7 +62,7 @@ class InAppReviewHelper @Inject constructor(
                 .putLong(Constants.PREF_LAST_REVIEW_PROMPT_DATE, System.currentTimeMillis())
                 .apply()
 
-            Log.d(TAG, "Event: review_flow_launched")
+            analyticsTracker.trackReviewFlowLaunched()
         } catch (e: Exception) {
             Log.e(TAG, "Review flow failed: ${e.message}")
         }

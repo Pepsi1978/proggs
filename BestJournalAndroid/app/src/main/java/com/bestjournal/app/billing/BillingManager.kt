@@ -158,12 +158,22 @@ class BillingManager @Inject constructor(
         billingClient?.acknowledgePurchase(ackParams) { result ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                 _subscriptionState.value = SubscriptionState.Subscribed
+                val isYearly = purchase.products.contains(YEARLY_PRODUCT_ID)
                 val type = when {
-                    purchase.products.contains(YEARLY_PRODUCT_ID) -> "yearly"
+                    isYearly -> "yearly"
                     purchase.products.contains(MONTHLY_PRODUCT_ID) -> "monthly"
                     else -> "unknown"
                 }
-                analyticsTracker.trackSubscriptionPurchased(type)
+                val details = if (isYearly) yearlyProductDetails else monthlyProductDetails
+                val pricingPhase = details?.subscriptionOfferDetails
+                    ?.firstOrNull()?.pricingPhases?.pricingPhaseList?.firstOrNull()
+                val valueMicros = pricingPhase?.priceAmountMicros ?: 0L
+                val currency = pricingPhase?.priceCurrencyCode ?: "EUR"
+                analyticsTracker.trackSubscriptionPurchased(
+                    type = type,
+                    value = valueMicros / 1_000_000.0,
+                    currency = currency,
+                )
             } else {
                 Log.e(TAG, "Acknowledge failed: ${result.debugMessage}")
             }

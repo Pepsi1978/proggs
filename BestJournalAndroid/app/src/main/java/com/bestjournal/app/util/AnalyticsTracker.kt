@@ -115,9 +115,11 @@ class AnalyticsTracker @Inject constructor(
         firebaseAnalytics.logEvent("no_thanks_clicked", null)
     }
 
-    fun trackSubscriptionPurchased(type: String) {
+    fun trackSubscriptionPurchased(type: String, value: Double = 0.0, currency: String = "EUR") {
         firebaseAnalytics.logEvent(FirebaseAnalytics.Event.PURCHASE, Bundle().apply {
             putString("subscription_type", type)
+            putDouble(FirebaseAnalytics.Param.VALUE, value)
+            putString(FirebaseAnalytics.Param.CURRENCY, currency)
         })
     }
 
@@ -163,6 +165,16 @@ class AnalyticsTracker @Inject constructor(
 
     fun trackReminderNotificationShown() {
         firebaseAnalytics.logEvent("reminder_notification_shown", null)
+    }
+
+    // ── Review Events ─────────────────────────────────────────────────
+
+    fun trackReviewPromptConditionsMet() {
+        firebaseAnalytics.logEvent("review_prompt_conditions_met", null)
+    }
+
+    fun trackReviewFlowLaunched() {
+        firebaseAnalytics.logEvent("review_flow_launched", null)
     }
 
     // ── Upsell Events ───────────────────────────────────────────────────
