@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Assignment
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.BookmarkBorder
@@ -31,12 +32,14 @@ import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.RocketLaunch
+import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material.icons.rounded.Star
@@ -706,16 +709,35 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
                         GlassCard(glowColor = CustomAmber, glowIntensity = 0.2f) {
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    "\uD83D\uDD2C  $customAnalyse",
-                                    style =
-                                        MaterialTheme.typography.titleLarge.copy(
-                                            fontWeight = FontWeight.Bold
-                                        ),
-                                    color = CustomAmber,
+                                Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.Center,
-                                )
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Box(
+                                        modifier =
+                                            Modifier.size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(CustomAmber.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.Science,
+                                            contentDescription = null,
+                                            tint = CustomAmber,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        customAnalyse,
+                                        style =
+                                            MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                        color = CustomAmber,
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     overallAnalysis,
@@ -764,16 +786,35 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         Spacer(modifier = Modifier.height(20.dp))
                         NeonDivider()
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "\uD83D\uDCCB  $customErgebnisse",
-                            style =
-                                MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
-                            color = CustomAmber,
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                        )
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                modifier =
+                                    Modifier.size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(CustomAmber.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Assignment,
+                                    contentDescription = null,
+                                    tint = CustomAmber,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                customErgebnisse,
+                                style =
+                                    MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                color = CustomAmber,
+                            )
+                        }
                     }
                     item(key = "custom_legend") { CustomRelevanceLegend() }
 
@@ -1969,13 +2010,32 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
 
     GlassCard(glowColor = SummaryIndigo, glowIntensity = 0.25f) {
         Column {
-            Text(
-                "\uD83D\uDCA1  Kernerkenntnisse",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = SummaryIndigo,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-            )
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier =
+                        Modifier.size(32.dp)
+                            .clip(CircleShape)
+                            .background(SummaryIndigo.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.TipsAndUpdates,
+                        contentDescription = null,
+                        tint = SummaryIndigo,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "Kernerkenntnisse",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = SummaryIndigo,
+                )
+            }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "Die wichtigsten Punkte aus deinen Eintr\u00e4gen",
@@ -2235,13 +2295,32 @@ private fun InsightKeyBlock(actions: List<TopAction>) {
 
     GlassCard(glowColor = InsightViolet, glowIntensity = 0.25f) {
         Column {
-            Text(
-                "\uD83E\uDE9E  Tiefste Erkenntnisse",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = InsightViolet,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-            )
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier =
+                        Modifier.size(32.dp)
+                            .clip(CircleShape)
+                            .background(InsightViolet.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.Psychology,
+                        contentDescription = null,
+                        tint = InsightViolet,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "Tiefste Erkenntnisse",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = InsightViolet,
+                )
+            }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "Was deine Eintr\u00e4ge \u00fcber dich verraten",
@@ -2496,13 +2575,32 @@ private fun GoalNextStepsBlock(actions: List<TopAction>) {
 
     GlassCard(glowColor = GoalEmerald, glowIntensity = 0.25f) {
         Column {
-            Text(
-                "\uD83C\uDFAF  N\u00e4chste Schritte",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = GoalEmerald,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-            )
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier =
+                        Modifier.size(32.dp)
+                            .clip(CircleShape)
+                            .background(GoalEmerald.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.RocketLaunch,
+                        contentDescription = null,
+                        tint = GoalEmerald,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "N\u00e4chste Schritte",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = GoalEmerald,
+                )
+            }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "Die wichtigsten Schritte f\u00fcr deine Ziele",
@@ -2739,13 +2837,32 @@ private fun CustomInsightsBlock(actions: List<TopAction>, title: String = "Wicht
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
     GlassCard(glowColor = CustomAmber, glowIntensity = 0.25f) {
         Column {
-            Text(
-                "\uD83D\uDD0D  $title",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = CustomAmber,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-            )
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier =
+                        Modifier.size(32.dp)
+                            .clip(CircleShape)
+                            .background(CustomAmber.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.Lightbulb,
+                        contentDescription = null,
+                        tint = CustomAmber,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = CustomAmber,
+                )
+            }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "Basierend auf deiner individuellen Analyse",
