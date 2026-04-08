@@ -22,13 +22,19 @@ import androidx.navigation.navArgument
 import com.entropyjournal.ui.screens.dashboard.DashboardScreen
 import com.entropyjournal.ui.screens.entrydetail.EntryDetailScreen
 import com.entropyjournal.ui.screens.journal.JournalScreen
+import com.entropyjournal.ui.screens.retrospective.RetrospectiveScreen
 import com.entropyjournal.ui.screens.settings.SettingsScreen
 import com.entropyjournal.ui.screens.splash.SplashScreen
 import kotlinx.coroutines.launch
 
-// Page order: Dashboard (0), Journal (1), Settings (2)
+// Page order: Retrospective (0), Dashboard (1), Journal (2), Settings (3)
 private val mainPages =
-    listOf(BottomNavItem.Dashboard, BottomNavItem.Journal, BottomNavItem.Settings)
+    listOf(
+        BottomNavItem.Retrospective,
+        BottomNavItem.Dashboard,
+        BottomNavItem.Journal,
+        BottomNavItem.Settings,
+    )
 
 @Composable
 fun AppNavGraph(navController: NavHostController = rememberNavController()) {
@@ -46,7 +52,7 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
         composable("main", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
             // Scaffold with bottom bar ONLY wraps the main content —
             // splash and login screens are completely isolated
-            val pagerState = rememberPagerState(initialPage = 1) { mainPages.size }
+            val pagerState = rememberPagerState(initialPage = 2) { mainPages.size }
             val coroutineScope = rememberCoroutineScope()
 
             Scaffold(
@@ -65,19 +71,20 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
             ) { innerPadding ->
                 HorizontalPager(
                     state = pagerState,
-                    beyondViewportPageCount = 2,
+                    beyondViewportPageCount = 3,
                     modifier = Modifier.padding(innerPadding),
                 ) { page ->
                     when (page) {
-                        0 -> DashboardScreen(viewModel = hiltViewModel())
-                        1 ->
+                        0 -> RetrospectiveScreen(viewModel = hiltViewModel())
+                        1 -> DashboardScreen(viewModel = hiltViewModel())
+                        2 ->
                             JournalScreen(
                                 viewModel = hiltViewModel(),
                                 onEntryClick = { entryId, query ->
                                     navController.navigate("entry_detail/$entryId?q=$query")
                                 },
                             )
-                        2 -> SettingsScreen(viewModel = hiltViewModel(), onSignOut = {})
+                        3 -> SettingsScreen(viewModel = hiltViewModel(), onSignOut = {})
                     }
                 }
             }

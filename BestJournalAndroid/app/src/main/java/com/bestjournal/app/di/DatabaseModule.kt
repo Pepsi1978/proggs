@@ -4,6 +4,7 @@ import android.content.Context
 import com.bestjournal.app.data.local.AppDatabase
 import com.bestjournal.app.data.local.dao.AdviceDashboardDao
 import com.bestjournal.app.data.local.dao.JournalEntryDao
+import com.bestjournal.app.data.local.dao.RetrospectiveDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -29,5 +30,10 @@ object DatabaseModule {
     @Provides
     fun provideAdviceDashboardDao(database: AppDatabase): AdviceDashboardDao {
         return database.adviceDashboardDao()
+    }
+
+    @Provides
+    fun provideRetrospectiveDao(database: AppDatabase): RetrospectiveDao {
+        return database.retrospectiveDao()
     }
 }

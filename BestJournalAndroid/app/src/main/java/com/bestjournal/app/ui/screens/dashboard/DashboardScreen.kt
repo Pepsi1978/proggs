@@ -130,12 +130,11 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
             TwinklingStars()
         }
 
-        LazyColumn(
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            // Title bar
-            item(key = "title_bar") {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Fixed title bar (does not scroll)
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -185,306 +184,36 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                 }
             }
 
-            if (uiState.showAiInfoBanner) {
-                item(key = "ai_banner") {
-                    AiInfoBanner(onDismiss = { viewModel.dismissAiInfoBanner() })
-                }
-            }
-
-            // Weekly review upsell — shown for free users arriving from Sunday notification
-            if (uiState.showWeeklyReviewBanner) {
-                item(key = "weekly_review_upsell") {
-                    GlassCard(
-                        glowColor = InsightViolet,
-                        glowIntensity = 0.3f,
-                        cornerRadius = 20.dp,
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Box(
-                                modifier =
-                                    Modifier.size(52.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            Brush.linearGradient(listOf(InsightViolet, InsightRose))
-                                        ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(28.dp),
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = "Dein Wochenr\u00fcckblick wartet",
-                                style =
-                                    MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold
-                                    ),
-                                color = InsightViolet,
-                                textAlign = TextAlign.Center,
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text =
-                                    "Du hattest eine bewegte Woche. Mit Premium siehst du die volle Analyse \u2014 erkenne Muster, entdecke Einsichten und verstehe, was dich wirklich bewegt.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(
-                                onClick = {
-                                    viewModel.onWeeklyReviewUpsellClicked()
-                                    onNavigateToPaywall("weekly_review")
-                                },
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = InsightViolet,
-                                        contentColor = Color.White,
-                                    ),
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.fillMaxWidth(),
-                                contentPadding = PaddingValues(vertical = 14.dp),
-                            ) {
-                                Icon(
-                                    Icons.Rounded.AutoAwesome,
-                                    null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Premium entdecken",
-                                    style =
-                                        MaterialTheme.typography.labelLarge.copy(
-                                            fontWeight = FontWeight.Bold
-                                        ),
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            TextButton(onClick = { viewModel.dismissWeeklyReviewBanner() }) {
-                                Text(
-                                    "Sp\u00e4ter",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.outline,
-                                )
-                            }
-                        }
+            // Scrollable content
+            LazyColumn(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (uiState.showAiInfoBanner) {
+                    item(key = "ai_banner") {
+                        AiInfoBanner(onDismiss = { viewModel.dismissAiInfoBanner() })
                     }
                 }
-            }
 
-            if (uiState.isLoading) {
-                item {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
-                        ShimmerLoadingEffect(height = 80.dp, cornerRadius = 16.dp)
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                        ) {
-                            Text(
-                                "Bitte warten",
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.titleMedium,
-                                textAlign = TextAlign.Center,
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                if (uiState.isScenarioSwitch)
-                                    "KI-Dashboard wird nach jedem Profilwechsel automatisch aktualisiert"
-                                else if (uiState.isDeleteUpdate)
-                                    "KI-Dashboard wird nach jedem gelöschten Tagebucheintrag automatisch aktualisiert"
-                                else if (uiState.isAutoUpdate)
-                                    "KI-Dashboard wird nach jedem neuen Tagebucheintrag automatisch aktualisiert"
-                                else "KI-Dashboard wird aktualisiert",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Dashboard limit message
-            if (uiState.dashboardLimitMessage != null) {
-                item {
-                    GlassCard(glowIntensity = 0.1f) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Box(
-                                modifier =
-                                    Modifier.size(48.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                                        ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    Icons.Rounded.HourglassEmpty,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(28.dp),
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = uiState.dashboardLimitMessage!!,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            TextButton(onClick = { viewModel.dismissLimitMessage() }) {
-                                Text("Verstanden", color = MaterialTheme.colorScheme.primary)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Analysis error message
-            if (uiState.errorMessage != null) {
-                item {
-                    GlassCard(glowColor = NeonRed, glowIntensity = 0.15f) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Box(
-                                modifier =
-                                    Modifier.size(48.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                        ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    Icons.Rounded.Coffee,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(28.dp),
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text =
-                                    "Gemini ist gerade nicht erreichbar \u2014 bitte versuch es gleich nochmal.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Button(
-                                onClick = {
-                                    viewModel.clearError()
-                                    viewModel.refreshDashboard()
-                                },
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    ),
-                            ) {
-                                Text("Nochmal versuchen")
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            TextButton(onClick = { viewModel.clearError() }) {
-                                Text(
-                                    "Sp\u00e4ter",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (blocks.isEmpty() && !uiState.isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(200.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            if (uiState.currentScenario == 4) {
-                                val customPrompt = viewModel.getCustomPrompt()
-                                if (customPrompt.isBlank()) {
-                                    Text(
-                                        "Kein Analyse-Fokus eingegeben",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        color = MaterialTheme.colorScheme.outline,
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        "Gib in den Einstellungen unter\n\u201eIndividuelle Analyse\u201c einen Fokus ein,\noder w\u00e4hle ein anderes Profil.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.outline,
-                                        textAlign = TextAlign.Center,
-                                    )
-                                } else {
-                                    Text(
-                                        "Noch keine Analyse",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        color = MaterialTheme.colorScheme.outline,
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        "Erstelle Tagebucheintr\u00e4ge,\ndann analysiert die KI deinen Fokus.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.outline,
-                                        textAlign = TextAlign.Center,
-                                    )
-                                }
-                            } else {
-                                Text(
-                                    "Noch keine Analyse",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.outline,
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    "Erstelle Tagebucheintr\u00e4ge,\ndann analysiert die KI deine Muster.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.outline,
-                                    textAlign = TextAlign.Center,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (blocks.isNotEmpty()) {
-                // Contextual upsell banner — shown once after first analysis for free users (all
-                // scenarios)
-                if (uiState.showAnalysisUpsellBanner) {
-                    item(key = "analysis_upsell") {
+                // Weekly review upsell — shown for free users arriving from Sunday notification
+                if (uiState.showWeeklyReviewBanner) {
+                    item(key = "weekly_review_upsell") {
                         GlassCard(
-                            glowColor = NeonAmber,
-                            glowIntensity = 0.25f,
-                            cornerRadius = 16.dp,
+                            glowColor = InsightViolet,
+                            glowIntensity = 0.3f,
+                            cornerRadius = 20.dp,
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.Top,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Box(
                                     modifier =
-                                        Modifier.size(36.dp)
+                                        Modifier.size(52.dp)
                                             .clip(CircleShape)
                                             .background(
                                                 Brush.linearGradient(
-                                                    listOf(NeonAmber, NeonAmber.copy(alpha = 0.6f))
+                                                    listOf(InsightViolet, InsightRose)
                                                 )
                                             ),
                                     contentAlignment = Alignment.Center,
@@ -493,757 +222,1052 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         imageVector = Icons.Rounded.AutoAwesome,
                                         contentDescription = null,
                                         tint = Color.White,
-                                        modifier = Modifier.size(20.dp),
+                                        modifier = Modifier.size(28.dp),
                                     )
                                 }
-                                Column(modifier = Modifier.weight(1f)) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "Dein Wochenr\u00fcckblick wartet",
+                                    style =
+                                        MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                    color = InsightViolet,
+                                    textAlign = TextAlign.Center,
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text =
+                                        "Du hattest eine bewegte Woche. Mit Premium siehst du die volle Analyse \u2014 erkenne Muster, entdecke Einsichten und verstehe, was dich wirklich bewegt.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Button(
+                                    onClick = {
+                                        viewModel.onWeeklyReviewUpsellClicked()
+                                        onNavigateToPaywall("weekly_review")
+                                    },
+                                    colors =
+                                        ButtonDefaults.buttonColors(
+                                            containerColor = InsightViolet,
+                                            contentColor = Color.White,
+                                        ),
+                                    shape = RoundedCornerShape(16.dp),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentPadding = PaddingValues(vertical = 14.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.AutoAwesome,
+                                        null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "Gef\u00e4llt dir die Analyse?",
+                                        "Premium entdecken",
                                         style =
-                                            MaterialTheme.typography.titleSmall.copy(
+                                            MaterialTheme.typography.labelLarge.copy(
                                                 fontWeight = FontWeight.Bold
                                             ),
-                                        color = NeonAmber,
                                     )
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                TextButton(onClick = { viewModel.dismissWeeklyReviewBanner() }) {
                                     Text(
-                                        text =
-                                            "Mit Premium bekommst du unbegrenzte Analysen aus 5 verschiedenen Perspektiven.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        "Sp\u00e4ter",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.outline,
                                     )
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Button(
-                                            onClick = {
-                                                viewModel.onAnalysisUpsellClicked()
-                                                onNavigateToPaywall("first_analysis")
-                                            },
-                                            colors =
-                                                ButtonDefaults.buttonColors(
-                                                    containerColor = NeonAmber,
-                                                    contentColor = Color.Black,
-                                                ),
-                                            shape = RoundedCornerShape(12.dp),
-                                            contentPadding =
-                                                PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                                        ) {
-                                            Text(
-                                                "Mehr erfahren",
-                                                style =
-                                                    MaterialTheme.typography.labelMedium.copy(
-                                                        fontWeight = FontWeight.Bold
-                                                    ),
-                                            )
-                                        }
-                                        TextButton(
-                                            onClick = { viewModel.dismissAnalysisUpsellBanner() }
-                                        ) {
-                                            Text(
-                                                "Sp\u00e4ter",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.outline,
-                                            )
-                                        }
-                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                if (uiState.currentScenario == 0) {
-                    // ═══════ ZUSAMMENFASSUNG DASHBOARD ═══════
-                    // Cool blue/indigo theme — informative, not urgent
-
-                    // Key Insights block (replaces Top 5 Maßnahmen)
-                    val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
-                    if (topActions.isNotEmpty()) {
-                        item { SummaryKeyInsightsBlock(actions = topActions) }
-                    }
-
-                    // Overview (replaces Gesamtanalyse)
+                if (uiState.isLoading) {
                     item {
-                        val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
-                        GlassCard(glowColor = SummaryBlue, glowIntensity = 0.2f) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
-                                ) {
-                                    Box(
-                                        modifier =
-                                            Modifier.size(32.dp)
-                                                .clip(CircleShape)
-                                                .background(SummaryBlue.copy(alpha = 0.12f)),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            Icons.Rounded.AutoStories,
-                                            contentDescription = null,
-                                            tint = SummaryBlue,
-                                            modifier = Modifier.size(18.dp),
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        "\u00dcberblick",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = SummaryBlue,
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = overallAnalysis,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-
-                    // Theme cards — same LazyRow but with summary styling
-                    item {
-                        val categoryScrollIsolation = remember {
-                            object : NestedScrollConnection {
-                                override fun onPostScroll(
-                                    consumed: Offset,
-                                    available: Offset,
-                                    source: NestedScrollSource,
-                                ): Offset = Offset(available.x, 0f)
-
-                                override suspend fun onPostFling(
-                                    consumed: Velocity,
-                                    available: Velocity,
-                                ): Velocity = Velocity(available.x, 0f)
-                            }
-                        }
-
-                        Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                itemsIndexed(blocks) { index, block ->
-                                    AdviceCategoryCard(
-                                        block = block,
-                                        isSelected = index == uiState.selectedCategoryIndex,
-                                        onClick = {
-                                            viewModel.selectCategory(index)
-                                            selectedCategoryBlock = block
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // All observations header + relevance legend below it
-                    item(key = "all_observations") {
-                        Spacer(modifier = Modifier.height(20.dp))
-                        NeonDivider()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(
+                        Box(
+                            contentAlignment = Alignment.Center,
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
                         ) {
-                            Box(
-                                modifier =
-                                    Modifier.size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(SummaryIndigo.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center,
+                            ShimmerLoadingEffect(height = 80.dp, cornerRadius = 16.dp)
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(horizontal = 16.dp),
                             ) {
-                                Icon(
-                                    Icons.Rounded.Search,
-                                    contentDescription = null,
-                                    tint = SummaryIndigo,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Alle Beobachtungen",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = SummaryIndigo,
-                            )
-                        }
-                    }
-
-                    item(key = "relevance_legend") { SummaryRelevanceLegend() }
-
-                    // All observations sorted by relevance
-                    val allObservations =
-                        blocks
-                            .flatMap { block ->
-                                block.advices.map { advice ->
-                                    Triple(advice, block.categoryName, block.entropyLevel)
-                                }
-                            }
-                            .sortedBy { (advice, _, _) ->
-                                when (advice.priority) {
-                                    AdvicePriority.HIGH -> 0
-                                    AdvicePriority.MEDIUM -> 1
-                                    AdvicePriority.LOW -> 2
-                                }
-                            }
-
-                    itemsIndexed(allObservations) { _, (advice, catName, _) ->
-                        SummaryObservationCard(
-                            advice = advice,
-                            categoryName = catName,
-                            onClick = { selectedAdvice = Pair(advice, catName) },
-                        )
-                    }
-                } else if (uiState.currentScenario == 2) {
-                    // ═══════ SELBSTERKENNTNIS DASHBOARD ═══════
-                    // Warm violet/rose theme — introspective, personal
-
-                    val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
-                    if (topActions.isNotEmpty()) {
-                        item { InsightKeyBlock(actions = topActions) }
-                    }
-
-                    item {
-                        val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
-                        GlassCard(glowColor = InsightViolet, glowIntensity = 0.2f) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
-                                ) {
-                                    Box(
-                                        modifier =
-                                            Modifier.size(32.dp)
-                                                .clip(CircleShape)
-                                                .background(InsightViolet.copy(alpha = 0.12f)),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            Icons.Rounded.SelfImprovement,
-                                            contentDescription = null,
-                                            tint = InsightViolet,
-                                            modifier = Modifier.size(18.dp),
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        "Innerer Spiegel",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = InsightViolet,
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
                                 Text(
-                                    text = overallAnalysis,
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    "Bitte warten",
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    textAlign = TextAlign.Center,
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    if (uiState.isScenarioSwitch)
+                                        "KI-Dashboard wird nach jedem Profilwechsel automatisch aktualisiert"
+                                    else if (uiState.isDeleteUpdate)
+                                        "KI-Dashboard wird nach jedem gelöschten Tagebucheintrag automatisch aktualisiert"
+                                    else if (uiState.isAutoUpdate)
+                                        "KI-Dashboard wird nach jedem neuen Tagebucheintrag automatisch aktualisiert"
+                                    else "KI-Dashboard wird aktualisiert",
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    textAlign = TextAlign.Center,
                                 )
                             }
                         }
                     }
+                }
 
+                // Dashboard limit message
+                if (uiState.dashboardLimitMessage != null) {
                     item {
-                        val categoryScrollIsolation = remember {
-                            object : NestedScrollConnection {
-                                override fun onPostScroll(
-                                    consumed: Offset,
-                                    available: Offset,
-                                    source: NestedScrollSource,
-                                ): Offset = Offset(available.x, 0f)
-
-                                override suspend fun onPostFling(
-                                    consumed: Velocity,
-                                    available: Velocity,
-                                ): Velocity = Velocity(available.x, 0f)
-                            }
-                        }
-                        Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        GlassCard(glowIntensity = 0.1f) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
-                                itemsIndexed(blocks) { index, block ->
-                                    AdviceCategoryCard(
-                                        block = block,
-                                        isSelected = index == uiState.selectedCategoryIndex,
-                                        onClick = {
-                                            viewModel.selectCategory(index)
-                                            selectedCategoryBlock = block
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    item(key = "all_insights") {
-                        Spacer(modifier = Modifier.height(20.dp))
-                        NeonDivider()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            Box(
-                                modifier =
-                                    Modifier.size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(InsightViolet.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    Icons.Rounded.Visibility,
-                                    contentDescription = null,
-                                    tint = InsightViolet,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Alle Einsichten",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = InsightViolet,
-                            )
-                        }
-                    }
-
-                    item(key = "insight_depth_legend") { InsightDepthLegend() }
-
-                    val allInsights =
-                        blocks
-                            .flatMap { block ->
-                                block.advices.map { advice ->
-                                    Triple(advice, block.categoryName, block.entropyLevel)
-                                }
-                            }
-                            .sortedBy { (advice, _, _) ->
-                                when (advice.priority) {
-                                    AdvicePriority.HIGH -> 0
-                                    AdvicePriority.MEDIUM -> 1
-                                    AdvicePriority.LOW -> 2
-                                }
-                            }
-
-                    itemsIndexed(allInsights) { _, (advice, catName, _) ->
-                        InsightCard(
-                            advice = advice,
-                            categoryName = catName,
-                            onClick = { selectedAdvice = Pair(advice, catName) },
-                        )
-                    }
-                } else if (uiState.currentScenario == 3) {
-                    // ═══════ PERSÖNLICHE ZIELE DASHBOARD ═══════
-                    // Green/gold theme — motivating, progress-oriented
-
-                    val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
-                    if (topActions.isNotEmpty()) {
-                        item { GoalNextStepsBlock(actions = topActions) }
-                    }
-
-                    item {
-                        val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
-                        GlassCard(glowColor = GoalEmerald, glowIntensity = 0.2f) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
+                                Box(
+                                    modifier =
+                                        Modifier.size(48.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                MaterialTheme.colorScheme.onSurface.copy(
+                                                    alpha = 0.08f
+                                                )
+                                            ),
+                                    contentAlignment = Alignment.Center,
                                 ) {
-                                    Box(
-                                        modifier =
-                                            Modifier.size(32.dp)
-                                                .clip(CircleShape)
-                                                .background(GoalEmerald.copy(alpha = 0.12f)),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            Icons.Rounded.Map,
-                                            contentDescription = null,
-                                            tint = GoalEmerald,
-                                            modifier = Modifier.size(18.dp),
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        "Ziel-\u00dcberblick",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = GoalEmerald,
+                                    Icon(
+                                        Icons.Rounded.HourglassEmpty,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(28.dp),
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    overallAnalysis,
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    text = uiState.dashboardLimitMessage!!,
+                                    style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
                                 )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                TextButton(onClick = { viewModel.dismissLimitMessage() }) {
+                                    Text("Verstanden", color = MaterialTheme.colorScheme.primary)
+                                }
                             }
                         }
                     }
+                }
 
+                // Analysis error message
+                if (uiState.errorMessage != null) {
                     item {
-                        val categoryScrollIsolation = remember {
-                            object : NestedScrollConnection {
-                                override fun onPostScroll(
-                                    consumed: Offset,
-                                    available: Offset,
-                                    source: NestedScrollSource,
-                                ): Offset = Offset(available.x, 0f)
-
-                                override suspend fun onPostFling(
-                                    consumed: Velocity,
-                                    available: Velocity,
-                                ): Velocity = Velocity(available.x, 0f)
-                            }
-                        }
-                        Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        GlassCard(glowColor = NeonRed, glowIntensity = 0.15f) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
-                                itemsIndexed(blocks) { index, block ->
-                                    AdviceCategoryCard(
-                                        block = block,
-                                        isSelected = index == uiState.selectedCategoryIndex,
-                                        onClick = {
-                                            viewModel.selectCategory(index)
-                                            selectedCategoryBlock = block
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    item(key = "all_goals") {
-                        Spacer(modifier = Modifier.height(20.dp))
-                        NeonDivider()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            Box(
-                                modifier =
-                                    Modifier.size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(GoalEmerald.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    Icons.Rounded.RocketLaunch,
-                                    contentDescription = null,
-                                    tint = GoalEmerald,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Alle Ziele",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = GoalEmerald,
-                            )
-                        }
-                    }
-
-                    item(key = "goal_status_legend") { GoalStatusLegend() }
-
-                    val allGoals =
-                        blocks
-                            .flatMap { block ->
-                                block.advices.map { advice ->
-                                    Triple(advice, block.categoryName, block.entropyLevel)
-                                }
-                            }
-                            .sortedBy { (advice, _, _) ->
-                                when (advice.priority) {
-                                    AdvicePriority.HIGH -> 0
-                                    AdvicePriority.MEDIUM -> 1
-                                    AdvicePriority.LOW -> 2
-                                }
-                            }
-
-                    itemsIndexed(allGoals) { _, (advice, catName, _) ->
-                        GoalCard(
-                            advice = advice,
-                            categoryName = catName,
-                            onClick = { selectedAdvice = Pair(advice, catName) },
-                        )
-                    }
-                } else if (uiState.currentScenario == 4) {
-                    // ═══════ INDIVIDUELLE ANALYSE DASHBOARD ═══════
-                    val customTop5 = uiState.customHeaderTop5.ifBlank { "Wichtigste Ergebnisse" }
-                    val customAnalyse = uiState.customHeaderAnalyse.ifBlank { "Analyse" }
-                    val customErgebnisse =
-                        uiState.customHeaderErgebnisse.ifBlank { "Alle Ergebnisse" }
-
-                    val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
-                    if (topActions.isNotEmpty()) {
-                        item { CustomInsightsBlock(actions = topActions, title = customTop5) }
-                    }
-
-                    item {
-                        val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
-                        GlassCard(glowColor = CustomAmber, glowIntensity = 0.2f) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
+                                Box(
+                                    modifier =
+                                        Modifier.size(48.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                MaterialTheme.colorScheme.primary.copy(
+                                                    alpha = 0.12f
+                                                )
+                                            ),
+                                    contentAlignment = Alignment.Center,
                                 ) {
-                                    Box(
-                                        modifier =
-                                            Modifier.size(32.dp)
-                                                .clip(CircleShape)
-                                                .background(CustomAmber.copy(alpha = 0.12f)),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            Icons.Rounded.Science,
-                                            contentDescription = null,
-                                            tint = CustomAmber,
-                                            modifier = Modifier.size(18.dp),
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        customAnalyse,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = CustomAmber,
+                                    Icon(
+                                        Icons.Rounded.Coffee,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(28.dp),
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    overallAnalysis,
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    text =
+                                        "Gemini ist gerade nicht erreichbar \u2014 bitte versuch es gleich nochmal.",
+                                    style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-
-                    item {
-                        val categoryScrollIsolation = remember {
-                            object : NestedScrollConnection {
-                                override fun onPostScroll(
-                                    consumed: Offset,
-                                    available: Offset,
-                                    source: NestedScrollSource,
-                                ): Offset = Offset(available.x, 0f)
-
-                                override suspend fun onPostFling(
-                                    consumed: Velocity,
-                                    available: Velocity,
-                                ): Velocity = Velocity(available.x, 0f)
-                            }
-                        }
-                        Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                itemsIndexed(blocks) { index, block ->
-                                    AdviceCategoryCard(
-                                        block = block,
-                                        isSelected = index == uiState.selectedCategoryIndex,
-                                        onClick = {
-                                            viewModel.selectCategory(index)
-                                            selectedCategoryBlock = block
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    item(key = "all_custom") {
-                        Spacer(modifier = Modifier.height(20.dp))
-                        NeonDivider()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            Box(
-                                modifier =
-                                    Modifier.size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(CustomAmber.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    Icons.Rounded.Assignment,
-                                    contentDescription = null,
-                                    tint = CustomAmber,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                customErgebnisse,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = CustomAmber,
-                            )
-                        }
-                    }
-
-                    item(key = "custom_legend") { CustomRelevanceLegend() }
-
-                    val allCustom =
-                        blocks
-                            .flatMap { block ->
-                                block.advices.map { advice ->
-                                    Triple(advice, block.categoryName, block.entropyLevel)
-                                }
-                            }
-                            .sortedBy { (advice, _, _) ->
-                                when (advice.priority) {
-                                    AdvicePriority.HIGH -> 0
-                                    AdvicePriority.MEDIUM -> 1
-                                    AdvicePriority.LOW -> 2
-                                }
-                            }
-
-                    itemsIndexed(allCustom) { _, (advice, catName, _) ->
-                        CustomResultCard(
-                            advice = advice,
-                            categoryName = catName,
-                            onClick = { selectedAdvice = Pair(advice, catName) },
-                        )
-                    }
-                } else {
-                    // ═══════ DEFAULT DASHBOARD (Entropy) ═══════
-
-                    // Top-5 Entropy-Reducing Actions — visually prominent block
-                    val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
-                    if (topActions.isNotEmpty()) {
-                        item { TopActionsBlock(actions = topActions) }
-                    }
-
-                    // Overall analysis
-                    item {
-                        val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
-
-                        GlassCard(glowIntensity = 0.2f) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    "Gesamtanalyse",
-                                    style =
-                                        MaterialTheme.typography.titleLarge.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            textDecoration = TextDecoration.Underline,
-                                        ),
-                                    color = NeonAmber,
-                                    modifier = Modifier.fillMaxWidth(),
                                     textAlign = TextAlign.Center,
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = overallAnalysis,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-
-                    // Category cards — LazyRow with scroll isolation from pager
-                    item {
-                        val categoryScrollIsolation = remember {
-                            object : NestedScrollConnection {
-                                override fun onPostScroll(
-                                    consumed: Offset,
-                                    available: Offset,
-                                    source: NestedScrollSource,
-                                ): Offset = Offset(available.x, 0f)
-
-                                override suspend fun onPostFling(
-                                    consumed: Velocity,
-                                    available: Velocity,
-                                ): Velocity = Velocity(available.x, 0f)
-                            }
-                        }
-
-                        Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                itemsIndexed(blocks) { index, block ->
-                                    AdviceCategoryCard(
-                                        block = block,
-                                        isSelected = index == uiState.selectedCategoryIndex,
-                                        onClick = {
-                                            viewModel.selectCategory(index)
-                                            selectedCategoryBlock = block
-                                        },
+                                Button(
+                                    onClick = {
+                                        viewModel.clearError()
+                                        viewModel.refreshDashboard()
+                                    },
+                                    colors =
+                                        ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary
+                                        ),
+                                ) {
+                                    Text("Nochmal versuchen")
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                TextButton(onClick = { viewModel.clearError() }) {
+                                    Text(
+                                        "Sp\u00e4ter",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
                         }
                     }
+                }
 
-                    // Priority legend
-                    item(key = "priority_legend") { PriorityLegend() }
+                if (blocks.isEmpty() && !uiState.isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                if (uiState.currentScenario == 4) {
+                                    val customPrompt = viewModel.getCustomPrompt()
+                                    if (customPrompt.isBlank()) {
+                                        Text(
+                                            "Kein Analyse-Fokus eingegeben",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            color = MaterialTheme.colorScheme.outline,
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            "Gib in den Einstellungen unter\n\u201eIndividuelle Analyse\u201c einen Fokus ein,\noder w\u00e4hle ein anderes Profil.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.outline,
+                                            textAlign = TextAlign.Center,
+                                        )
+                                    } else {
+                                        Text(
+                                            "Noch keine Analyse",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            color = MaterialTheme.colorScheme.outline,
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            "Erstelle Tagebucheintr\u00e4ge,\ndann analysiert die KI deinen Fokus.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.outline,
+                                            textAlign = TextAlign.Center,
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        "Noch keine Analyse",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "Erstelle Tagebucheintr\u00e4ge,\ndann analysiert die KI deine Muster.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.outline,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
 
-                    // ALL recommendations from ALL categories, sorted by priority
-                    item(key = "all_recommendations") {
-                        Spacer(modifier = Modifier.height(20.dp))
-                        NeonDivider()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "Alle Empfehlungen",
-                            style =
-                                MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    textDecoration = TextDecoration.Underline,
-                                ),
-                            color = NeonAmber,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                        )
+                if (blocks.isNotEmpty()) {
+                    // Contextual upsell banner — shown once after first analysis for free users
+                    // (all
+                    // scenarios)
+                    if (uiState.showAnalysisUpsellBanner) {
+                        item(key = "analysis_upsell") {
+                            GlassCard(
+                                glowColor = NeonAmber,
+                                glowIntensity = 0.25f,
+                                cornerRadius = 16.dp,
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.Top,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    Box(
+                                        modifier =
+                                            Modifier.size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    Brush.linearGradient(
+                                                        listOf(
+                                                            NeonAmber,
+                                                            NeonAmber.copy(alpha = 0.6f),
+                                                        )
+                                                    )
+                                                ),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.AutoAwesome,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Gef\u00e4llt dir die Analyse?",
+                                            style =
+                                                MaterialTheme.typography.titleSmall.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                            color = NeonAmber,
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text =
+                                                "Mit Premium bekommst du unbegrenzte Analysen aus 5 verschiedenen Perspektiven.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Button(
+                                                onClick = {
+                                                    viewModel.onAnalysisUpsellClicked()
+                                                    onNavigateToPaywall("first_analysis")
+                                                },
+                                                colors =
+                                                    ButtonDefaults.buttonColors(
+                                                        containerColor = NeonAmber,
+                                                        contentColor = Color.Black,
+                                                    ),
+                                                shape = RoundedCornerShape(12.dp),
+                                                contentPadding =
+                                                    PaddingValues(
+                                                        horizontal = 16.dp,
+                                                        vertical = 6.dp,
+                                                    ),
+                                            ) {
+                                                Text(
+                                                    "Mehr erfahren",
+                                                    style =
+                                                        MaterialTheme.typography.labelMedium.copy(
+                                                            fontWeight = FontWeight.Bold
+                                                        ),
+                                                )
+                                            }
+                                            TextButton(
+                                                onClick = {
+                                                    viewModel.dismissAnalysisUpsellBanner()
+                                                }
+                                            ) {
+                                                Text(
+                                                    "Sp\u00e4ter",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.outline,
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
 
-                    // Collect all advices from all blocks with their category name
-                    val allAdvicesWithCategory =
-                        blocks
-                            .flatMap { block ->
-                                block.advices.map { advice ->
-                                    Triple(advice, block.categoryName, block.entropyLevel)
+                    if (uiState.currentScenario == 0) {
+                        // ═══════ ZUSAMMENFASSUNG DASHBOARD ═══════
+                        // Cool blue/indigo theme — informative, not urgent
+
+                        // Key Insights block (replaces Top 5 Maßnahmen)
+                        val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
+                        if (topActions.isNotEmpty()) {
+                            item { SummaryKeyInsightsBlock(actions = topActions) }
+                        }
+
+                        // Overview (replaces Gesamtanalyse)
+                        item {
+                            val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
+                            GlassCard(glowColor = SummaryBlue, glowIntensity = 0.2f) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                    ) {
+                                        Box(
+                                            modifier =
+                                                Modifier.size(32.dp)
+                                                    .clip(CircleShape)
+                                                    .background(SummaryBlue.copy(alpha = 0.12f)),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Icon(
+                                                Icons.Rounded.AutoStories,
+                                                contentDescription = null,
+                                                tint = SummaryBlue,
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "\u00dcberblick",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = SummaryBlue,
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = overallAnalysis,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                 }
                             }
-                            .sortedBy { (advice, _, _) ->
-                                when (advice.priority) {
-                                    AdvicePriority.HIGH -> 0
-                                    AdvicePriority.MEDIUM -> 1
-                                    AdvicePriority.LOW -> 2
+                        }
+
+                        // Theme cards — same LazyRow but with summary styling
+                        item {
+                            val categoryScrollIsolation = remember {
+                                object : NestedScrollConnection {
+                                    override fun onPostScroll(
+                                        consumed: Offset,
+                                        available: Offset,
+                                        source: NestedScrollSource,
+                                    ): Offset = Offset(available.x, 0f)
+
+                                    override suspend fun onPostFling(
+                                        consumed: Velocity,
+                                        available: Velocity,
+                                    ): Velocity = Velocity(available.x, 0f)
                                 }
                             }
 
-                    itemsIndexed(allAdvicesWithCategory) { _, (advice, catName, _) ->
-                        AdviceCard(
-                            advice = advice,
-                            categoryName = catName,
-                            onClick = { selectedAdvice = Pair(advice, catName) },
-                        )
+                            Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    itemsIndexed(blocks) { index, block ->
+                                        AdviceCategoryCard(
+                                            block = block,
+                                            isSelected = index == uiState.selectedCategoryIndex,
+                                            onClick = {
+                                                viewModel.selectCategory(index)
+                                                selectedCategoryBlock = block
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // All observations header + relevance legend below it
+                        item(key = "all_observations") {
+                            Spacer(modifier = Modifier.height(20.dp))
+                            NeonDivider()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                            ) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(SummaryIndigo.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Search,
+                                        contentDescription = null,
+                                        tint = SummaryIndigo,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Alle Beobachtungen",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = SummaryIndigo,
+                                )
+                            }
+                        }
+
+                        item(key = "relevance_legend") { SummaryRelevanceLegend() }
+
+                        // All observations sorted by relevance
+                        val allObservations =
+                            blocks
+                                .flatMap { block ->
+                                    block.advices.map { advice ->
+                                        Triple(advice, block.categoryName, block.entropyLevel)
+                                    }
+                                }
+                                .sortedBy { (advice, _, _) ->
+                                    when (advice.priority) {
+                                        AdvicePriority.HIGH -> 0
+                                        AdvicePriority.MEDIUM -> 1
+                                        AdvicePriority.LOW -> 2
+                                    }
+                                }
+
+                        itemsIndexed(allObservations) { _, (advice, catName, _) ->
+                            SummaryObservationCard(
+                                advice = advice,
+                                categoryName = catName,
+                                onClick = { selectedAdvice = Pair(advice, catName) },
+                            )
+                        }
+                    } else if (uiState.currentScenario == 2) {
+                        // ═══════ SELBSTERKENNTNIS DASHBOARD ═══════
+                        // Warm violet/rose theme — introspective, personal
+
+                        val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
+                        if (topActions.isNotEmpty()) {
+                            item { InsightKeyBlock(actions = topActions) }
+                        }
+
+                        item {
+                            val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
+                            GlassCard(glowColor = InsightViolet, glowIntensity = 0.2f) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                    ) {
+                                        Box(
+                                            modifier =
+                                                Modifier.size(32.dp)
+                                                    .clip(CircleShape)
+                                                    .background(InsightViolet.copy(alpha = 0.12f)),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Icon(
+                                                Icons.Rounded.SelfImprovement,
+                                                contentDescription = null,
+                                                tint = InsightViolet,
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "Innerer Spiegel",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = InsightViolet,
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = overallAnalysis,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+
+                        item {
+                            val categoryScrollIsolation = remember {
+                                object : NestedScrollConnection {
+                                    override fun onPostScroll(
+                                        consumed: Offset,
+                                        available: Offset,
+                                        source: NestedScrollSource,
+                                    ): Offset = Offset(available.x, 0f)
+
+                                    override suspend fun onPostFling(
+                                        consumed: Velocity,
+                                        available: Velocity,
+                                    ): Velocity = Velocity(available.x, 0f)
+                                }
+                            }
+                            Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    itemsIndexed(blocks) { index, block ->
+                                        AdviceCategoryCard(
+                                            block = block,
+                                            isSelected = index == uiState.selectedCategoryIndex,
+                                            onClick = {
+                                                viewModel.selectCategory(index)
+                                                selectedCategoryBlock = block
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        item(key = "all_insights") {
+                            Spacer(modifier = Modifier.height(20.dp))
+                            NeonDivider()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                            ) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(InsightViolet.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Visibility,
+                                        contentDescription = null,
+                                        tint = InsightViolet,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Alle Einsichten",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = InsightViolet,
+                                )
+                            }
+                        }
+
+                        item(key = "insight_depth_legend") { InsightDepthLegend() }
+
+                        val allInsights =
+                            blocks
+                                .flatMap { block ->
+                                    block.advices.map { advice ->
+                                        Triple(advice, block.categoryName, block.entropyLevel)
+                                    }
+                                }
+                                .sortedBy { (advice, _, _) ->
+                                    when (advice.priority) {
+                                        AdvicePriority.HIGH -> 0
+                                        AdvicePriority.MEDIUM -> 1
+                                        AdvicePriority.LOW -> 2
+                                    }
+                                }
+
+                        itemsIndexed(allInsights) { _, (advice, catName, _) ->
+                            InsightCard(
+                                advice = advice,
+                                categoryName = catName,
+                                onClick = { selectedAdvice = Pair(advice, catName) },
+                            )
+                        }
+                    } else if (uiState.currentScenario == 3) {
+                        // ═══════ PERSÖNLICHE ZIELE DASHBOARD ═══════
+                        // Green/gold theme — motivating, progress-oriented
+
+                        val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
+                        if (topActions.isNotEmpty()) {
+                            item { GoalNextStepsBlock(actions = topActions) }
+                        }
+
+                        item {
+                            val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
+                            GlassCard(glowColor = GoalEmerald, glowIntensity = 0.2f) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                    ) {
+                                        Box(
+                                            modifier =
+                                                Modifier.size(32.dp)
+                                                    .clip(CircleShape)
+                                                    .background(GoalEmerald.copy(alpha = 0.12f)),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Icon(
+                                                Icons.Rounded.Map,
+                                                contentDescription = null,
+                                                tint = GoalEmerald,
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "Ziel-\u00dcberblick",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = GoalEmerald,
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        overallAnalysis,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+
+                        item {
+                            val categoryScrollIsolation = remember {
+                                object : NestedScrollConnection {
+                                    override fun onPostScroll(
+                                        consumed: Offset,
+                                        available: Offset,
+                                        source: NestedScrollSource,
+                                    ): Offset = Offset(available.x, 0f)
+
+                                    override suspend fun onPostFling(
+                                        consumed: Velocity,
+                                        available: Velocity,
+                                    ): Velocity = Velocity(available.x, 0f)
+                                }
+                            }
+                            Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    itemsIndexed(blocks) { index, block ->
+                                        AdviceCategoryCard(
+                                            block = block,
+                                            isSelected = index == uiState.selectedCategoryIndex,
+                                            onClick = {
+                                                viewModel.selectCategory(index)
+                                                selectedCategoryBlock = block
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        item(key = "all_goals") {
+                            Spacer(modifier = Modifier.height(20.dp))
+                            NeonDivider()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                            ) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(GoalEmerald.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.RocketLaunch,
+                                        contentDescription = null,
+                                        tint = GoalEmerald,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Alle Ziele",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = GoalEmerald,
+                                )
+                            }
+                        }
+
+                        item(key = "goal_status_legend") { GoalStatusLegend() }
+
+                        val allGoals =
+                            blocks
+                                .flatMap { block ->
+                                    block.advices.map { advice ->
+                                        Triple(advice, block.categoryName, block.entropyLevel)
+                                    }
+                                }
+                                .sortedBy { (advice, _, _) ->
+                                    when (advice.priority) {
+                                        AdvicePriority.HIGH -> 0
+                                        AdvicePriority.MEDIUM -> 1
+                                        AdvicePriority.LOW -> 2
+                                    }
+                                }
+
+                        itemsIndexed(allGoals) { _, (advice, catName, _) ->
+                            GoalCard(
+                                advice = advice,
+                                categoryName = catName,
+                                onClick = { selectedAdvice = Pair(advice, catName) },
+                            )
+                        }
+                    } else if (uiState.currentScenario == 4) {
+                        // ═══════ INDIVIDUELLE ANALYSE DASHBOARD ═══════
+                        val customTop5 =
+                            uiState.customHeaderTop5.ifBlank { "Wichtigste Ergebnisse" }
+                        val customAnalyse = uiState.customHeaderAnalyse.ifBlank { "Analyse" }
+                        val customErgebnisse =
+                            uiState.customHeaderErgebnisse.ifBlank { "Alle Ergebnisse" }
+
+                        val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
+                        if (topActions.isNotEmpty()) {
+                            item { CustomInsightsBlock(actions = topActions, title = customTop5) }
+                        }
+
+                        item {
+                            val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
+                            GlassCard(glowColor = CustomAmber, glowIntensity = 0.2f) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                    ) {
+                                        Box(
+                                            modifier =
+                                                Modifier.size(32.dp)
+                                                    .clip(CircleShape)
+                                                    .background(CustomAmber.copy(alpha = 0.12f)),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Icon(
+                                                Icons.Rounded.Science,
+                                                contentDescription = null,
+                                                tint = CustomAmber,
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            customAnalyse,
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = CustomAmber,
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        overallAnalysis,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+
+                        item {
+                            val categoryScrollIsolation = remember {
+                                object : NestedScrollConnection {
+                                    override fun onPostScroll(
+                                        consumed: Offset,
+                                        available: Offset,
+                                        source: NestedScrollSource,
+                                    ): Offset = Offset(available.x, 0f)
+
+                                    override suspend fun onPostFling(
+                                        consumed: Velocity,
+                                        available: Velocity,
+                                    ): Velocity = Velocity(available.x, 0f)
+                                }
+                            }
+                            Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    itemsIndexed(blocks) { index, block ->
+                                        AdviceCategoryCard(
+                                            block = block,
+                                            isSelected = index == uiState.selectedCategoryIndex,
+                                            onClick = {
+                                                viewModel.selectCategory(index)
+                                                selectedCategoryBlock = block
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        item(key = "all_custom") {
+                            Spacer(modifier = Modifier.height(20.dp))
+                            NeonDivider()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                            ) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(CustomAmber.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Assignment,
+                                        contentDescription = null,
+                                        tint = CustomAmber,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    customErgebnisse,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CustomAmber,
+                                )
+                            }
+                        }
+
+                        item(key = "custom_legend") { CustomRelevanceLegend() }
+
+                        val allCustom =
+                            blocks
+                                .flatMap { block ->
+                                    block.advices.map { advice ->
+                                        Triple(advice, block.categoryName, block.entropyLevel)
+                                    }
+                                }
+                                .sortedBy { (advice, _, _) ->
+                                    when (advice.priority) {
+                                        AdvicePriority.HIGH -> 0
+                                        AdvicePriority.MEDIUM -> 1
+                                        AdvicePriority.LOW -> 2
+                                    }
+                                }
+
+                        itemsIndexed(allCustom) { _, (advice, catName, _) ->
+                            CustomResultCard(
+                                advice = advice,
+                                categoryName = catName,
+                                onClick = { selectedAdvice = Pair(advice, catName) },
+                            )
+                        }
+                    } else {
+                        // ═══════ DEFAULT DASHBOARD (Entropy) ═══════
+
+                        // Top-5 Entropy-Reducing Actions — visually prominent block
+                        val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
+                        if (topActions.isNotEmpty()) {
+                            item { TopActionsBlock(actions = topActions) }
+                        }
+
+                        // Overall analysis
+                        item {
+                            val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
+
+                            GlassCard(glowIntensity = 0.2f) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Text(
+                                        "Gesamtanalyse",
+                                        style =
+                                            MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                textDecoration = TextDecoration.Underline,
+                                            ),
+                                        color = NeonAmber,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Center,
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = overallAnalysis,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+
+                        // Category cards — LazyRow with scroll isolation from pager
+                        item {
+                            val categoryScrollIsolation = remember {
+                                object : NestedScrollConnection {
+                                    override fun onPostScroll(
+                                        consumed: Offset,
+                                        available: Offset,
+                                        source: NestedScrollSource,
+                                    ): Offset = Offset(available.x, 0f)
+
+                                    override suspend fun onPostFling(
+                                        consumed: Velocity,
+                                        available: Velocity,
+                                    ): Velocity = Velocity(available.x, 0f)
+                                }
+                            }
+
+                            Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    itemsIndexed(blocks) { index, block ->
+                                        AdviceCategoryCard(
+                                            block = block,
+                                            isSelected = index == uiState.selectedCategoryIndex,
+                                            onClick = {
+                                                viewModel.selectCategory(index)
+                                                selectedCategoryBlock = block
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Priority legend
+                        item(key = "priority_legend") { PriorityLegend() }
+
+                        // ALL recommendations from ALL categories, sorted by priority
+                        item(key = "all_recommendations") {
+                            Spacer(modifier = Modifier.height(20.dp))
+                            NeonDivider()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "Alle Empfehlungen",
+                                style =
+                                    MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        textDecoration = TextDecoration.Underline,
+                                    ),
+                                color = NeonAmber,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+
+                        // Collect all advices from all blocks with their category name
+                        val allAdvicesWithCategory =
+                            blocks
+                                .flatMap { block ->
+                                    block.advices.map { advice ->
+                                        Triple(advice, block.categoryName, block.entropyLevel)
+                                    }
+                                }
+                                .sortedBy { (advice, _, _) ->
+                                    when (advice.priority) {
+                                        AdvicePriority.HIGH -> 0
+                                        AdvicePriority.MEDIUM -> 1
+                                        AdvicePriority.LOW -> 2
+                                    }
+                                }
+
+                        itemsIndexed(allAdvicesWithCategory) { _, (advice, catName, _) ->
+                            AdviceCard(
+                                advice = advice,
+                                categoryName = catName,
+                                onClick = { selectedAdvice = Pair(advice, catName) },
+                            )
+                        }
                     }
                 }
             }

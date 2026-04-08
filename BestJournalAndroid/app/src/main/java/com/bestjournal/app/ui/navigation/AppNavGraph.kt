@@ -25,16 +25,22 @@ import com.bestjournal.app.ui.screens.entrydetail.EntryDetailScreen
 import com.bestjournal.app.ui.screens.journal.JournalScreen
 import com.bestjournal.app.ui.screens.onboarding.OnboardingScreen
 import com.bestjournal.app.ui.screens.paywall.PaywallScreen
+import com.bestjournal.app.ui.screens.retrospective.RetrospectiveScreen
 import com.bestjournal.app.ui.screens.settings.SettingsScreen
 import com.bestjournal.app.ui.screens.splash.SplashScreen
 import kotlinx.coroutines.launch
 
-// Page order: Dashboard (0), Journal (1), Settings (2)
+// Page order: Retrospective (0), Dashboard (1), Journal (2), Settings (3)
 private val mainPages =
-    listOf(BottomNavItem.Dashboard, BottomNavItem.Journal, BottomNavItem.Settings)
+    listOf(
+        BottomNavItem.Retrospective,
+        BottomNavItem.Dashboard,
+        BottomNavItem.Journal,
+        BottomNavItem.Settings,
+    )
 
 @Composable
-fun AppNavGraph(navController: NavHostController = rememberNavController(), initialTab: Int = 1) {
+fun AppNavGraph(navController: NavHostController = rememberNavController(), initialTab: Int = 2) {
     // NavHost WITHOUT Scaffold — splash and login get full screen, no bottom bar
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
@@ -78,18 +84,19 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
             ) { innerPadding ->
                 HorizontalPager(
                     state = pagerState,
-                    beyondViewportPageCount = 2,
+                    beyondViewportPageCount = 3,
                     modifier = Modifier.padding(innerPadding),
                 ) { page ->
                     when (page) {
-                        0 ->
+                        0 -> RetrospectiveScreen(viewModel = hiltViewModel())
+                        1 ->
                             DashboardScreen(
                                 viewModel = hiltViewModel(),
                                 onNavigateToPaywall = { source ->
                                     navController.navigate("paywall?source=$source")
                                 },
                             )
-                        1 ->
+                        2 ->
                             JournalScreen(
                                 viewModel = hiltViewModel(),
                                 onEntryClick = { entryId, searchQuery ->
@@ -102,7 +109,7 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                                     navController.navigate("paywall?source=$source")
                                 },
                             )
-                        2 ->
+                        3 ->
                             SettingsScreen(
                                 viewModel = hiltViewModel(),
                                 onSignOut = {},

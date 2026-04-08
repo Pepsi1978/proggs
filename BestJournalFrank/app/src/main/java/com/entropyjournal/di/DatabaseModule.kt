@@ -4,6 +4,7 @@ import android.content.Context
 import com.entropyjournal.data.local.AppDatabase
 import com.entropyjournal.data.local.dao.AdviceDashboardDao
 import com.entropyjournal.data.local.dao.JournalEntryDao
+import com.entropyjournal.data.local.dao.RetrospectiveDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -29,5 +30,10 @@ object DatabaseModule {
     @Provides
     fun provideAdviceDashboardDao(database: AppDatabase): AdviceDashboardDao {
         return database.adviceDashboardDao()
+    }
+
+    @Provides
+    fun provideRetrospectiveDao(database: AppDatabase): RetrospectiveDao {
+        return database.retrospectiveDao()
     }
 }

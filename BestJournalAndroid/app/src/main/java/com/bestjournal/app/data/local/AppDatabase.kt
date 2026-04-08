@@ -8,53 +8,89 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.bestjournal.app.data.local.dao.AdviceDashboardDao
 import com.bestjournal.app.data.local.dao.JournalEntryDao
+import com.bestjournal.app.data.local.dao.RetrospectiveDao
 import com.bestjournal.app.data.local.entity.AdviceBlockEntity
 import com.bestjournal.app.data.local.entity.JournalEntryEntity
+import com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity
 
 @Database(
-    entities = [JournalEntryEntity::class, AdviceBlockEntity::class],
-    version = 4,
-    exportSchema = true
+    entities =
+        [JournalEntryEntity::class, AdviceBlockEntity::class, RetrospectiveSummaryEntity::class],
+    version = 5,
+    exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun journalEntryDao(): JournalEntryDao
+
     abstract fun adviceDashboardDao(): AdviceDashboardDao
 
+    abstract fun retrospectiveDao(): RetrospectiveDao
+
     companion object {
-        @Volatile
-        private var INSTANCE: AppDatabase? = null
+        @Volatile private var INSTANCE: AppDatabase? = null
 
-        private val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE journal_entries ADD COLUMN summary TEXT DEFAULT NULL")
+        private val MIGRATION_1_2 =
+            object : Migration(1, 2) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE journal_entries ADD COLUMN summary TEXT DEFAULT NULL")
+                }
             }
-        }
 
-        private val MIGRATION_2_3 = object : Migration(2, 3) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE journal_entries ADD COLUMN title TEXT DEFAULT NULL")
+        private val MIGRATION_2_3 =
+            object : Migration(2, 3) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE journal_entries ADD COLUMN title TEXT DEFAULT NULL")
+                }
             }
-        }
 
-        private val MIGRATION_3_4 = object : Migration(3, 4) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE advice_blocks ADD COLUMN topActionsJson TEXT NOT NULL DEFAULT '[]'")
+        private val MIGRATION_3_4 =
+            object : Migration(3, 4) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "ALTER TABLE advice_blocks ADD COLUMN topActionsJson TEXT NOT NULL DEFAULT '[]'"
+                    )
+                }
             }
-        }
+
+        private val MIGRATION_4_5 =
+            object : Migration(4, 5) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """CREATE TABLE IF NOT EXISTS retrospective_summaries (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        type TEXT NOT NULL,
+                        periodLabel TEXT NOT NULL,
+                        startDate INTEGER NOT NULL,
+                        endDate INTEGER NOT NULL,
+                        title TEXT NOT NULL,
+                        summaryText TEXT NOT NULL,
+                        periodIndex INTEGER NOT NULL,
+                        createdAt INTEGER NOT NULL
+                    )"""
+                    )
+                }
+            }
 
         fun getDatabase(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "entropy_journal_db"
-                )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
-                    .build()
-                INSTANCE = instance
-                instance
-            }
+            return INSTANCE
+                ?: synchronized(this) {
+                    val instance =
+                        Room.databaseBuilder(
+                                context.applicationContext,
+                                AppDatabase::class.java,
+                                "entropy_journal_db",
+                            )
+                            .addMigrations(
+                                MIGRATION_1_2,
+                                MIGRATION_2_3,
+                                MIGRATION_3_4,
+                                MIGRATION_4_5,
+                            )
+                            .build()
+                    INSTANCE = instance
+                    instance
+                }
         }
     }
 }
