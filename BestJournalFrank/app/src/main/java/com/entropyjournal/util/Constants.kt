@@ -39,9 +39,11 @@ object Constants {
     const val PREF_BIOMETRIC_LOCK = "biometric_lock"
     const val PREF_DASHBOARD_LAST_UPDATED = "dashboard_last_updated"
     const val PREF_DASHBOARD_UPDATING = "dashboard_updating"
+    const val PREF_DASHBOARD_UPDATE_IS_DELETE = "dashboard_update_is_delete"
 
     // Google OAuth
-    const val GOOGLE_WEB_CLIENT_ID = "674560807048-l6ktqsucjr4ld91srdc6assgfiks19mh.apps.googleusercontent.com"
+    const val GOOGLE_WEB_CLIENT_ID =
+        "674560807048-l6ktqsucjr4ld91srdc6assgfiks19mh.apps.googleusercontent.com"
 
     // Encrypted SharedPreferences file name
     const val ENCRYPTED_PREFS_NAME = "entropy_journal_secure_prefs"
@@ -55,19 +57,20 @@ object Constants {
     const val DASHBOARD_SCENARIO_COUNT = 5
 
     // Gemini Flash models: sorted strongest→weakest, prices per 1M tokens (input/output)
-    data class GeminiModel(
-        val id: String,
-        val displayName: String,
-        val price: String
-    )
+    data class GeminiModel(val id: String, val displayName: String, val price: String)
 
-    val GEMINI_FLASH_MODELS = listOf(
-        GeminiModel("gemini-3-flash-preview", "Gemini 3 Flash", "\$0.50 / \$3.00"),
-        GeminiModel("gemini-3.1-flash-lite-preview", "Gemini 3.1 Flash Lite", "\$0.25 / \$1.50"),
-        GeminiModel("gemini-2.5-flash", "Gemini 2.5 Flash", "\$0.30 / \$2.50"),
-        GeminiModel("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite", "\$0.10 / \$0.40"),
-        GeminiModel("gemini-2.0-flash", "Gemini 2.0 Flash", "\$0.10 / \$0.40"),
-    )
+    val GEMINI_FLASH_MODELS =
+        listOf(
+            GeminiModel("gemini-3-flash-preview", "Gemini 3 Flash", "\$0.50 / \$3.00"),
+            GeminiModel(
+                "gemini-3.1-flash-lite-preview",
+                "Gemini 3.1 Flash Lite",
+                "\$0.25 / \$1.50",
+            ),
+            GeminiModel("gemini-2.5-flash", "Gemini 2.5 Flash", "\$0.30 / \$2.50"),
+            GeminiModel("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite", "\$0.10 / \$0.40"),
+            GeminiModel("gemini-2.0-flash", "Gemini 2.0 Flash", "\$0.10 / \$0.40"),
+        )
 
     val DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
 

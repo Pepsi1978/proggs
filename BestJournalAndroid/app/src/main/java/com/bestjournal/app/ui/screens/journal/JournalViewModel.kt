@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.billing.BillingManager
+import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.repository.JournalRepository
 import com.bestjournal.app.domain.model.JournalEntry
 import com.bestjournal.app.domain.usecase.AnalyzeEntropyUseCase
@@ -19,7 +20,6 @@ import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.DailyPromptProvider
 import com.bestjournal.app.util.InAppReviewHelper
 import com.bestjournal.app.util.StreakTracker
-import com.bestjournal.app.billing.SubscriptionState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -120,7 +120,8 @@ constructor(
 
     init {
         // Set initial sync status: check if signed in AND last backup timestamp exists
-        val isSignedIn = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")?.isNotBlank() == true
+        val isSignedIn =
+            encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")?.isNotBlank() == true
         val lastSync = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L)
         if (!isSignedIn) {
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.NOT_SIGNED_IN)
@@ -132,23 +133,26 @@ constructor(
         _uiState.value = _uiState.value.copy(lastSyncTimestamp = lastSync)
 
         // Load current streak into UI state
-        _uiState.value = _uiState.value.copy(
-            currentStreak = streakTracker.getCurrentStreak(),
-            longestStreak = streakTracker.getLongestStreak(),
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                currentStreak = streakTracker.getCurrentStreak(),
+                longestStreak = streakTracker.getLongestStreak(),
+            )
 
         // Load today's writing prompt
         val todaysPrompt = DailyPromptProvider.getTodaysPrompt()
         val promptDismissedDate = encryptedPrefs.getString(Constants.PREF_PROMPT_DISMISSED_DATE, "")
         val todayStr = java.time.LocalDate.now().toString()
         val isPromptDismissed = promptDismissedDate == todayStr
-        _uiState.value = _uiState.value.copy(
-            dailyPromptText = todaysPrompt.text,
-            dailyPromptCategory = todaysPrompt.category.displayName,
-            dailyPromptId = todaysPrompt.id,
-            isPremiumUser = billingManager.subscriptionState.value is SubscriptionState.Subscribed,
-            showPromptBanner = !isPromptDismissed,
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                dailyPromptText = todaysPrompt.text,
+                dailyPromptCategory = todaysPrompt.category.displayName,
+                dailyPromptId = todaysPrompt.id,
+                isPremiumUser =
+                    billingManager.subscriptionState.value is SubscriptionState.Subscribed,
+                showPromptBanner = !isPromptDismissed,
+            )
         if (!isPromptDismissed) {
             analyticsTracker.trackDailyPromptShown(todaysPrompt.id)
         }
@@ -157,7 +161,8 @@ constructor(
         encryptedPrefs.registerOnSharedPreferenceChangeListener { _, key ->
             when (key) {
                 Constants.PREF_SYNC_IN_PROGRESS -> {
-                    val inProgress = encryptedPrefs.getBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
+                    val inProgress =
+                        encryptedPrefs.getBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
                     if (inProgress) {
                         _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCING)
                     } else {
@@ -209,50 +214,66 @@ constructor(
     private fun startRecording() {
         val audioFile = File(context.cacheDir, "recording_${System.currentTimeMillis()}.wav")
         currentAudioFile = audioFile
-        _uiState.value = _uiState.value.copy(
-            recordingState = RecordingState.RECORDING,
-            errorMessage = null,
-            transcriptionModel = ""
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                recordingState = RecordingState.RECORDING,
+                errorMessage = null,
+                transcriptionModel = "",
+            )
 
         recordingJob = viewModelScope.launch {
             // Play tone FIRST, then start recording after tone finishes
-            val soundsEnabled = encryptedPrefs.getBoolean(com.bestjournal.app.util.Constants.PREF_SOUNDS_ENABLED, true)
-            val beepMs = 150
-            if (soundsEnabled) try {
-                val sampleRate = 44100
-                val beepSamples = sampleRate * beepMs / 1000
-                val samples = ShortArray(beepSamples)
-                val freq = 880.0
-                val fadeLen = beepSamples / 8
-                for (i in 0 until beepSamples) {
-                    val t = i.toDouble() / sampleRate
-                    val envelope = when {
-                        i < fadeLen -> i.toDouble() / fadeLen
-                        i > beepSamples - fadeLen -> (beepSamples - i).toDouble() / fadeLen
-                        else -> 1.0
-                    }
-                    samples[i] = (Short.MAX_VALUE * 0.5 * envelope * kotlin.math.sin(2 * Math.PI * freq * t)).toInt().toShort()
-                }
-                val track = android.media.AudioTrack(
-                    android.media.AudioAttributes.Builder()
-                        .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
-                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build(),
-                    android.media.AudioFormat.Builder()
-                        .setSampleRate(sampleRate)
-                        .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
-                        .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
-                        .build(),
-                    beepSamples * 2,
-                    android.media.AudioTrack.MODE_STATIC,
-                    android.media.AudioManager.AUDIO_SESSION_ID_GENERATE
+            val soundsEnabled =
+                encryptedPrefs.getBoolean(
+                    com.bestjournal.app.util.Constants.PREF_SOUNDS_ENABLED,
+                    true,
                 )
-                track.write(samples, 0, beepSamples)
-                track.play()
-                kotlinx.coroutines.delay(beepMs.toLong() + 100) // Wait for tone to finish
-                track.release()
-            } catch (_: Exception) { /* Tone is optional */ }
+            val beepMs = 150
+            if (soundsEnabled)
+                try {
+                    val sampleRate = 44100
+                    val beepSamples = sampleRate * beepMs / 1000
+                    val samples = ShortArray(beepSamples)
+                    val freq = 880.0
+                    val fadeLen = beepSamples / 8
+                    for (i in 0 until beepSamples) {
+                        val t = i.toDouble() / sampleRate
+                        val envelope =
+                            when {
+                                i < fadeLen -> i.toDouble() / fadeLen
+                                i > beepSamples - fadeLen -> (beepSamples - i).toDouble() / fadeLen
+                                else -> 1.0
+                            }
+                        samples[i] =
+                            (Short.MAX_VALUE *
+                                    0.5 *
+                                    envelope *
+                                    kotlin.math.sin(2 * Math.PI * freq * t))
+                                .toInt()
+                                .toShort()
+                    }
+                    val track =
+                        android.media.AudioTrack(
+                            android.media.AudioAttributes.Builder()
+                                .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                                .build(),
+                            android.media.AudioFormat.Builder()
+                                .setSampleRate(sampleRate)
+                                .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                                .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
+                                .build(),
+                            beepSamples * 2,
+                            android.media.AudioTrack.MODE_STATIC,
+                            android.media.AudioManager.AUDIO_SESSION_ID_GENERATE,
+                        )
+                    track.write(samples, 0, beepSamples)
+                    track.play()
+                    kotlinx.coroutines.delay(beepMs.toLong() + 100) // Wait for tone to finish
+                    track.release()
+                } catch (_: Exception) {
+                    /* Tone is optional */
+                }
 
             // NOW start recording — tone is done
             try {
@@ -318,12 +339,17 @@ constructor(
                 .onSuccess { improved ->
                     // Track text improvement count
                     val count = encryptedPrefs.getInt(Constants.PREF_TEXT_IMPROVEMENT_COUNT, 0) + 1
-                    encryptedPrefs.edit().putInt(Constants.PREF_TEXT_IMPROVEMENT_COUNT, count).apply()
+                    encryptedPrefs
+                        .edit()
+                        .putInt(Constants.PREF_TEXT_IMPROVEMENT_COUNT, count)
+                        .apply()
 
                     // Check if this is the first text improvement for free users
                     val isFree = billingManager.subscriptionState.value is SubscriptionState.Free
-                    val alreadyShown = encryptedPrefs.getBoolean(Constants.PREF_FIRST_TEXT_UPSELL_SHOWN, false)
-                    val onboardingDone = encryptedPrefs.getBoolean(Constants.PREF_ONBOARDING_COMPLETED, false)
+                    val alreadyShown =
+                        encryptedPrefs.getBoolean(Constants.PREF_FIRST_TEXT_UPSELL_SHOWN, false)
+                    val onboardingDone =
+                        encryptedPrefs.getBoolean(Constants.PREF_ONBOARDING_COMPLETED, false)
                     val showUpsell = isFree && !alreadyShown && onboardingDone && count >= 1
 
                     analyticsTracker.trackEntryImproved()
@@ -344,8 +370,7 @@ constructor(
                     _uiState.update {
                         it.copy(
                             recordingState = RecordingState.PREVIEW,
-                            errorMessage =
-                                "Textverbesserung fehlgeschlagen: ${error.message}",
+                            errorMessage = "Textverbesserung fehlgeschlagen: ${error.message}",
                         )
                     }
                 }
@@ -366,7 +391,10 @@ constructor(
     }
 
     fun saveEntry() {
-        android.util.Log.d("SaveEntry", "saveEntry called, rawText=${_uiState.value.rawText.take(30)}")
+        android.util.Log.d(
+            "SaveEntry",
+            "saveEntry called, rawText=${_uiState.value.rawText.take(30)}",
+        )
         val state = _uiState.value
         val userText =
             if (state.isImproveEnabled && state.improvedText != null) {
@@ -378,11 +406,12 @@ constructor(
         if (userText.isBlank()) return
 
         // Prepend the writing prompt if active
-        val displayText = if (state.activePrompt.isNotBlank()) {
-            "${state.activePrompt}\n\n$userText"
-        } else {
-            userText
-        }
+        val displayText =
+            if (state.activePrompt.isNotBlank()) {
+                "${state.activePrompt}\n\n$userText"
+            } else {
+                userText
+            }
 
         _uiState.value = state.copy(recordingState = RecordingState.SAVING)
 
@@ -406,7 +435,10 @@ constructor(
                 // If entry was from a writing prompt, dismiss the banner for today
                 if (state.activePrompt.isNotBlank()) {
                     val todayStr = java.time.LocalDate.now().toString()
-                    encryptedPrefs.edit().putString(Constants.PREF_PROMPT_DISMISSED_DATE, todayStr).apply()
+                    encryptedPrefs
+                        .edit()
+                        .putString(Constants.PREF_PROMPT_DISMISSED_DATE, todayStr)
+                        .apply()
                 }
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     resetState()
@@ -419,16 +451,24 @@ constructor(
                 try {
                     streakTracker.recordEntry()
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        _uiState.update { it.copy(
-                            currentStreak = streakTracker.getCurrentStreak(),
-                            longestStreak = streakTracker.getLongestStreak(),
-                        ) }
+                        _uiState.update {
+                            it.copy(
+                                currentStreak = streakTracker.getCurrentStreak(),
+                                longestStreak = streakTracker.getLongestStreak(),
+                            )
+                        }
                     }
                 } catch (_: Exception) {}
                 // Background tasks — best effort
-                try { summarizeEntryUseCase(savedId, displayText) } catch (_: Exception) {}
-                try { triggerSync() } catch (_: Exception) {}
-                try { triggerDebouncedAnalysis() } catch (_: Exception) {}
+                try {
+                    summarizeEntryUseCase(savedId, displayText)
+                } catch (_: Exception) {}
+                try {
+                    triggerSync()
+                } catch (_: Exception) {}
+                try {
+                    triggerDebouncedAnalysis()
+                } catch (_: Exception) {}
                 // Signal UI to trigger in-app review at this positive moment
                 try {
                     val totalEntries = journalRepository.getEntryCount()
@@ -437,12 +477,17 @@ constructor(
                     }
                 } catch (_: Exception) {}
             } catch (e: Exception) {
-                android.util.Log.e("SaveEntry", "SAVE FAILED: ${e.javaClass.simpleName}: ${e.message}", e)
+                android.util.Log.e(
+                    "SaveEntry",
+                    "SAVE FAILED: ${e.javaClass.simpleName}: ${e.message}",
+                    e,
+                )
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    _uiState.value = _uiState.value.copy(
-                        recordingState = RecordingState.PREVIEW,
-                        errorMessage = "Speichern fehlgeschlagen: ${e.message}"
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            recordingState = RecordingState.PREVIEW,
+                            errorMessage = "Speichern fehlgeschlagen: ${e.message}",
+                        )
                 }
             }
         }
@@ -475,10 +520,7 @@ constructor(
     }
 
     fun dismissPreviewForRecording() {
-        _uiState.update { it.copy(
-            showPreviewDialog = false,
-            recordingState = RecordingState.IDLE,
-        ) }
+        _uiState.update { it.copy(showPreviewDialog = false, recordingState = RecordingState.IDLE) }
         // activePrompt is intentionally preserved — dialog reopens after transcription
     }
 
@@ -539,18 +581,19 @@ constructor(
             encryptedPrefs.edit().putBoolean(Constants.PREF_FIRST_TEXT_UPSELL_SHOWN, true).apply()
         }
         val currentState = _uiState.value
-        _uiState.value = JournalUiState(
-            // Preserve streak, sync, and prompt state across resets to avoid UI flicker
-            currentStreak = currentState.currentStreak,
-            longestStreak = currentState.longestStreak,
-            syncStatus = currentState.syncStatus,
-            lastSyncTimestamp = currentState.lastSyncTimestamp,
-            dailyPromptText = currentState.dailyPromptText,
-            dailyPromptCategory = currentState.dailyPromptCategory,
-            dailyPromptId = currentState.dailyPromptId,
-            isPremiumUser = currentState.isPremiumUser,
-            showPromptBanner = currentState.showPromptBanner,
-        )
+        _uiState.value =
+            JournalUiState(
+                // Preserve streak, sync, and prompt state across resets to avoid UI flicker
+                currentStreak = currentState.currentStreak,
+                longestStreak = currentState.longestStreak,
+                syncStatus = currentState.syncStatus,
+                lastSyncTimestamp = currentState.lastSyncTimestamp,
+                dailyPromptText = currentState.dailyPromptText,
+                dailyPromptCategory = currentState.dailyPromptCategory,
+                dailyPromptId = currentState.dailyPromptId,
+                isPremiumUser = currentState.isPremiumUser,
+                showPromptBanner = currentState.showPromptBanner,
+            )
     }
 
     private fun triggerSync() {
@@ -574,7 +617,11 @@ constructor(
 
         analysisDebounceJob?.cancel()
         analysisDebounceJob = viewModelScope.launch {
-            encryptedPrefs.edit().putBoolean(Constants.PREF_DASHBOARD_UPDATING, true).apply()
+            encryptedPrefs
+                .edit()
+                .putBoolean(Constants.PREF_DASHBOARD_UPDATE_IS_DELETE, false)
+                .putBoolean(Constants.PREF_DASHBOARD_UPDATING, true)
+                .apply()
             try {
                 delay(3_000)
                 analyzeEntropyUseCase(freshAnalysis = true)

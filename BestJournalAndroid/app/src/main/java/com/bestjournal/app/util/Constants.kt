@@ -35,6 +35,7 @@ object Constants {
     const val PREF_LONGITUDE = "location_longitude"
     const val PREF_BIOMETRIC_LOCK = "biometric_lock"
     const val PREF_DASHBOARD_UPDATING = "dashboard_updating"
+    const val PREF_DASHBOARD_UPDATE_IS_DELETE = "dashboard_update_is_delete"
     const val PREF_DASHBOARD_LAST_UPDATED = "dashboard_last_updated"
 
     // Google OAuth
@@ -100,7 +101,7 @@ object Constants {
 
     // Weekly Review
     const val PREF_WEEKLY_REVIEW_ENABLED = "weekly_review_enabled"
-    const val PREF_WEEKLY_REVIEW_DAY = "weekly_review_day"       // Calendar.MONDAY=2 .. SUNDAY=1
+    const val PREF_WEEKLY_REVIEW_DAY = "weekly_review_day" // Calendar.MONDAY=2 .. SUNDAY=1
     const val PREF_WEEKLY_REVIEW_HOUR = "weekly_review_hour"
     const val PREF_WEEKLY_REVIEW_MINUTE = "weekly_review_minute"
     const val PREF_FROM_WEEKLY_REVIEW = "from_weekly_review"

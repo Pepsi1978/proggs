@@ -1,20 +1,21 @@
 package com.entropyjournal.ui.screens.entrydetail
 
+import android.content.SharedPreferences
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import android.content.SharedPreferences
 import com.entropyjournal.data.repository.JournalRepository
 import com.entropyjournal.domain.model.JournalEntry
+import com.entropyjournal.domain.usecase.AnalyzeEntropyUseCase
 import com.entropyjournal.domain.usecase.SyncWithDriveUseCase
 import com.entropyjournal.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class EntryDetailUiState(
     val entry: JournalEntry? = null,
@@ -23,15 +24,18 @@ data class EntryDetailUiState(
     val showOriginalText: Boolean = true,
     val showDeleteDialog: Boolean = false,
     val isDeleted: Boolean = false,
-    val isSaving: Boolean = false
+    val isSaving: Boolean = false,
 )
 
 @HiltViewModel
-class EntryDetailViewModel @Inject constructor(
+class EntryDetailViewModel
+@Inject
+constructor(
     private val journalRepository: JournalRepository,
     private val syncWithDriveUseCase: SyncWithDriveUseCase,
+    private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
     private val encryptedPrefs: SharedPreferences,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EntryDetailUiState())
@@ -47,19 +51,13 @@ class EntryDetailViewModel @Inject constructor(
     private fun loadEntry() {
         viewModelScope.launch {
             val entry = journalRepository.getEntryById(entryId)
-            _uiState.value = _uiState.value.copy(
-                entry = entry,
-                editedDisplayText = entry?.displayText ?: ""
-            )
+            _uiState.value =
+                _uiState.value.copy(entry = entry, editedDisplayText = entry?.displayText ?: "")
         }
     }
 
     fun updateDisplayText(newText: String) {
-        _uiState.value = _uiState.value.copy(
-            editedDisplayText = newText,
-            isEditing = true
-        )
-        // Debounced auto-save after 1.5 seconds of inactivity
+        _uiState.value = _uiState.value.copy(editedDisplayText = newText, isEditing = true)
         autoSaveJob?.cancel()
         autoSaveJob = viewModelScope.launch {
             delay(1500)
@@ -77,17 +75,15 @@ class EntryDetailViewModel @Inject constructor(
         }
 
         _uiState.value = state.copy(isSaving = true)
-        val updatedEntry = entry.copy(
-            displayText = newText,
-            rawText = if (!entry.isImproved) newText else entry.rawText,
-            improvedText = if (entry.isImproved) newText else entry.improvedText
-        )
+        val updatedEntry =
+            entry.copy(
+                displayText = newText,
+                rawText = if (!entry.isImproved) newText else entry.rawText,
+                improvedText = if (entry.isImproved) newText else entry.improvedText,
+            )
         journalRepository.updateEntry(updatedEntry)
-        _uiState.value = _uiState.value.copy(
-            entry = updatedEntry,
-            isEditing = false,
-            isSaving = false
-        )
+        _uiState.value =
+            _uiState.value.copy(entry = updatedEntry, isEditing = false, isSaving = false)
     }
 
     fun saveNow() {
@@ -97,9 +93,7 @@ class EntryDetailViewModel @Inject constructor(
 
     fun updateRawText(newText: String) {
         val entry = _uiState.value.entry ?: return
-        _uiState.value = _uiState.value.copy(
-            entry = entry.copy(rawText = newText)
-        )
+        _uiState.value = _uiState.value.copy(entry = entry.copy(rawText = newText))
         autoSaveJob?.cancel()
         autoSaveJob = viewModelScope.launch {
             delay(1500)
@@ -112,10 +106,11 @@ class EntryDetailViewModel @Inject constructor(
         val state = _uiState.value
         val entry = state.entry ?: return
         val showOriginal = !state.showOriginalText
-        _uiState.value = state.copy(
-            showOriginalText = showOriginal,
-            editedDisplayText = if (showOriginal) entry.rawText else entry.displayText
-        )
+        _uiState.value =
+            state.copy(
+                showOriginalText = showOriginal,
+                editedDisplayText = if (showOriginal) entry.rawText else entry.displayText,
+            )
     }
 
     fun showDeleteDialog(show: Boolean) {
@@ -126,17 +121,52 @@ class EntryDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value.entry?.let { entry ->
                 journalRepository.deleteEntry(entry)
-                // Launch backup in independent scope — viewModelScope gets cancelled on navigation
+                // Launch backup + dashboard update in independent scope — viewModelScope gets
+                // cancelled on navigation
                 kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                     try {
-                        encryptedPrefs.edit().putBoolean(Constants.PREF_SYNC_IN_PROGRESS, true).apply()
+                        encryptedPrefs
+                            .edit()
+                            .putBoolean(Constants.PREF_SYNC_IN_PROGRESS, true)
+                            .apply()
                         syncWithDriveUseCase.backup()
-                        encryptedPrefs.edit()
+                        encryptedPrefs
+                            .edit()
                             .putBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
                             .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
                             .apply()
                     } catch (_: Exception) {
-                        encryptedPrefs.edit().putBoolean(Constants.PREF_SYNC_IN_PROGRESS, false).apply()
+                        encryptedPrefs
+                            .edit()
+                            .putBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
+                            .apply()
+                    }
+                    // Refresh dashboard so deleted entry's data is removed from analysis
+                    val autoUpdate =
+                        encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true)
+                    if (autoUpdate) {
+                        try {
+                            encryptedPrefs
+                                .edit()
+                                .putBoolean(Constants.PREF_DASHBOARD_UPDATE_IS_DELETE, true)
+                                .putBoolean(Constants.PREF_DASHBOARD_UPDATING, true)
+                                .apply()
+                            analyzeEntropyUseCase(freshAnalysis = true)
+                            val scenario =
+                                encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+                            encryptedPrefs
+                                .edit()
+                                .putLong(
+                                    "dashboard_last_updated_$scenario",
+                                    System.currentTimeMillis(),
+                                )
+                                .apply()
+                        } finally {
+                            encryptedPrefs
+                                .edit()
+                                .putBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
+                                .apply()
+                        }
                     }
                 }
                 _uiState.value = _uiState.value.copy(isDeleted = true, showDeleteDialog = false)

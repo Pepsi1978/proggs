@@ -19,8 +19,15 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        ksp {
-            arg("room.schemaLocation", "$projectDir/schemas")
+        ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("debug-shared.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 
@@ -30,7 +37,7 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
         debug {
@@ -44,9 +51,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+    kotlinOptions { jvmTarget = "17" }
 
     buildFeatures {
         compose = true
@@ -61,9 +66,7 @@ android {
         }
     }
 
-    androidResources {
-        noCompress += listOf("onnx", "txt")
-    }
+    androidResources { noCompress += listOf("onnx", "txt") }
 }
 
 dependencies {

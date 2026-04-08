@@ -45,24 +45,39 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.bestjournal.app.domain.model.Advice
 import com.bestjournal.app.domain.model.AdvicePriority
+import com.bestjournal.app.domain.model.TopAction
 import com.bestjournal.app.ui.components.AdviceCategoryCard
 import com.bestjournal.app.ui.components.AiInfoBanner
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.components.NeonDivider
 import com.bestjournal.app.ui.components.ParticleBackground
-import com.bestjournal.app.ui.components.TwinklingStars
-import com.bestjournal.app.ui.components.PulsingOrb
 import com.bestjournal.app.ui.components.ShimmerLoadingEffect
+import com.bestjournal.app.ui.components.TwinklingStars
+import com.bestjournal.app.ui.theme.CustomAmber
+import com.bestjournal.app.ui.theme.CustomSage
+import com.bestjournal.app.ui.theme.CustomSand
+import com.bestjournal.app.ui.theme.CustomStone
+import com.bestjournal.app.ui.theme.GoalCoral
+import com.bestjournal.app.ui.theme.GoalEmerald
+import com.bestjournal.app.ui.theme.GoalGold
+import com.bestjournal.app.ui.theme.GoalSky
+import com.bestjournal.app.ui.theme.InsightMauve
+import com.bestjournal.app.ui.theme.InsightRose
+import com.bestjournal.app.ui.theme.InsightViolet
+import com.bestjournal.app.ui.theme.InsightWarm
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonCyan
@@ -70,30 +85,11 @@ import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
 import com.bestjournal.app.ui.theme.SummaryBlue
 import com.bestjournal.app.ui.theme.SummaryIndigo
-import com.bestjournal.app.ui.theme.SummaryTeal
 import com.bestjournal.app.ui.theme.SummarySlate
-import com.bestjournal.app.ui.theme.InsightViolet
-import com.bestjournal.app.ui.theme.InsightRose
-import com.bestjournal.app.ui.theme.InsightWarm
-import com.bestjournal.app.ui.theme.InsightMauve
-import com.bestjournal.app.ui.theme.GoalEmerald
-import com.bestjournal.app.ui.theme.GoalGold
-import com.bestjournal.app.ui.theme.GoalSky
-import com.bestjournal.app.ui.theme.GoalCoral
-import com.bestjournal.app.ui.theme.CustomAmber
-import com.bestjournal.app.ui.theme.CustomSand
-import com.bestjournal.app.ui.theme.CustomSage
-import com.bestjournal.app.ui.theme.CustomStone
-import com.bestjournal.app.domain.model.TopAction
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.graphics.Brush
+import com.bestjournal.app.ui.theme.SummaryTeal
 
 @Composable
-fun DashboardScreen(
-    viewModel: DashboardViewModel,
-    onNavigateToPaywall: (String) -> Unit = {},
-) {
+fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String) -> Unit = {}) {
     val blocks by viewModel.adviceBlocks.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val isDark = LocalIsDarkTheme.current
@@ -154,8 +150,7 @@ fun DashboardScreen(
                         }
                     }
                 }
-                val lastUpdated =
-                    remember(uiState.isLoading) { viewModel.getLastUpdatedText() }
+                val lastUpdated = remember(uiState.isLoading) { viewModel.getLastUpdatedText() }
                 if (lastUpdated != null) {
                     Text(
                         text = lastUpdated,
@@ -166,7 +161,9 @@ fun DashboardScreen(
             }
 
             if (uiState.showAiInfoBanner) {
-                item(key = "ai_banner") { AiInfoBanner(onDismiss = { viewModel.dismissAiInfoBanner() }) }
+                item(key = "ai_banner") {
+                    AiInfoBanner(onDismiss = { viewModel.dismissAiInfoBanner() })
+                }
             }
 
             // Weekly review upsell — shown for free users arriving from Sunday notification
@@ -182,14 +179,12 @@ fun DashboardScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            listOf(InsightViolet, InsightRose),
-                                        )
-                                    ),
+                                modifier =
+                                    Modifier.size(52.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            Brush.linearGradient(listOf(InsightViolet, InsightRose))
+                                        ),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -202,15 +197,17 @@ fun DashboardScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 text = "Dein Wochenr\u00fcckblick wartet",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                ),
+                                style =
+                                    MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
                                 color = InsightViolet,
                                 textAlign = TextAlign.Center,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Du hattest eine bewegte Woche. Mit Premium siehst du die volle Analyse \u2014 erkenne Muster, entdecke Einsichten und verstehe, was dich wirklich bewegt.",
+                                text =
+                                    "Du hattest eine bewegte Woche. Mit Premium siehst du die volle Analyse \u2014 erkenne Muster, entdecke Einsichten und verstehe, was dich wirklich bewegt.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
@@ -221,10 +218,11 @@ fun DashboardScreen(
                                     viewModel.onWeeklyReviewUpsellClicked()
                                     onNavigateToPaywall("weekly_review")
                                 },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = InsightViolet,
-                                    contentColor = Color.White,
-                                ),
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = InsightViolet,
+                                        contentColor = Color.White,
+                                    ),
                                 shape = RoundedCornerShape(16.dp),
                                 modifier = Modifier.fillMaxWidth(),
                                 contentPadding = PaddingValues(vertical = 14.dp),
@@ -237,15 +235,14 @@ fun DashboardScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     "Premium entdecken",
-                                    style = MaterialTheme.typography.labelLarge.copy(
-                                        fontWeight = FontWeight.Bold,
-                                    ),
+                                    style =
+                                        MaterialTheme.typography.labelLarge.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
                                 )
                             }
                             Spacer(modifier = Modifier.height(4.dp))
-                            TextButton(
-                                onClick = { viewModel.dismissWeeklyReviewBanner() },
-                            ) {
+                            TextButton(onClick = { viewModel.dismissWeeklyReviewBanner() }) {
                                 Text(
                                     "Sp\u00e4ter",
                                     style = MaterialTheme.typography.labelSmall,
@@ -259,10 +256,7 @@ fun DashboardScreen(
 
             if (uiState.isLoading) {
                 item {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
                         ShimmerLoadingEffect(height = 80.dp, cornerRadius = 16.dp)
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -276,8 +270,12 @@ fun DashboardScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                if (uiState.isScenarioSwitch) "KI-Dashboard wird nach jedem Profilwechsel automatisch aktualisiert"
-                                else if (uiState.isAutoUpdate) "KI-Dashboard wird nach jedem neuen Tagebucheintrag automatisch aktualisiert"
+                                if (uiState.isScenarioSwitch)
+                                    "KI-Dashboard wird nach jedem Profilwechsel automatisch aktualisiert"
+                                else if (uiState.isDeleteUpdate)
+                                    "KI-Dashboard wird nach jedem gelöschten Tagebucheintrag automatisch aktualisiert"
+                                else if (uiState.isAutoUpdate)
+                                    "KI-Dashboard wird nach jedem neuen Tagebucheintrag automatisch aktualisiert"
                                 else "KI-Dashboard wird aktualisiert",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyMedium,
@@ -411,7 +409,8 @@ fun DashboardScreen(
             }
 
             if (blocks.isNotEmpty()) {
-                // Contextual upsell banner — shown once after first analysis for free users (all scenarios)
+                // Contextual upsell banner — shown once after first analysis for free users (all
+                // scenarios)
                 if (uiState.showAnalysisUpsellBanner) {
                     item(key = "analysis_upsell") {
                         GlassCard(
@@ -425,17 +424,14 @@ fun DashboardScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            Brush.linearGradient(
-                                                listOf(
-                                                    NeonAmber,
-                                                    NeonAmber.copy(alpha = 0.6f),
+                                    modifier =
+                                        Modifier.size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                Brush.linearGradient(
+                                                    listOf(NeonAmber, NeonAmber.copy(alpha = 0.6f))
                                                 )
-                                            )
-                                        ),
+                                            ),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
@@ -448,14 +444,16 @@ fun DashboardScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = "Gef\u00e4llt dir die Analyse?",
-                                        style = MaterialTheme.typography.titleSmall.copy(
-                                            fontWeight = FontWeight.Bold,
-                                        ),
+                                        style =
+                                            MaterialTheme.typography.titleSmall.copy(
+                                                fontWeight = FontWeight.Bold
+                                            ),
                                         color = NeonAmber,
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = "Mit Premium bekommst du unbegrenzte Analysen aus 5 verschiedenen Perspektiven.",
+                                        text =
+                                            "Mit Premium bekommst du unbegrenzte Analysen aus 5 verschiedenen Perspektiven.",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -470,22 +468,25 @@ fun DashboardScreen(
                                                 viewModel.onAnalysisUpsellClicked()
                                                 onNavigateToPaywall("first_analysis")
                                             },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = NeonAmber,
-                                                contentColor = Color.Black,
-                                            ),
+                                            colors =
+                                                ButtonDefaults.buttonColors(
+                                                    containerColor = NeonAmber,
+                                                    contentColor = Color.Black,
+                                                ),
                                             shape = RoundedCornerShape(12.dp),
-                                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                                            contentPadding =
+                                                PaddingValues(horizontal = 16.dp, vertical = 6.dp),
                                         ) {
                                             Text(
                                                 "Mehr erfahren",
-                                                style = MaterialTheme.typography.labelMedium.copy(
-                                                    fontWeight = FontWeight.Bold,
-                                                ),
+                                                style =
+                                                    MaterialTheme.typography.labelMedium.copy(
+                                                        fontWeight = FontWeight.Bold
+                                                    ),
                                             )
                                         }
                                         TextButton(
-                                            onClick = { viewModel.dismissAnalysisUpsellBanner() },
+                                            onClick = { viewModel.dismissAnalysisUpsellBanner() }
                                         ) {
                                             Text(
                                                 "Sp\u00e4ter",
@@ -507,9 +508,7 @@ fun DashboardScreen(
                     // Key Insights block (replaces Top 5 Maßnahmen)
                     val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
                     if (topActions.isNotEmpty()) {
-                        item {
-                            SummaryKeyInsightsBlock(actions = topActions)
-                        }
+                        item { SummaryKeyInsightsBlock(actions = topActions) }
                     }
 
                     // Overview (replaces Gesamtanalyse)
@@ -519,7 +518,10 @@ fun DashboardScreen(
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     "\uD83D\uDCD6  \u00dcberblick",
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                    style =
+                                        MaterialTheme.typography.titleLarge.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
                                     color = SummaryBlue,
                                     modifier = Modifier.fillMaxWidth(),
                                     textAlign = TextAlign.Center,
@@ -577,7 +579,10 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             "\uD83D\uDD0D  Alle Beobachtungen",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            style =
+                                MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
                             color = SummaryIndigo,
                             modifier = Modifier.fillMaxWidth(),
                             textAlign = TextAlign.Center,
@@ -615,9 +620,7 @@ fun DashboardScreen(
 
                     val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
                     if (topActions.isNotEmpty()) {
-                        item {
-                            InsightKeyBlock(actions = topActions)
-                        }
+                        item { InsightKeyBlock(actions = topActions) }
                     }
 
                     item {
@@ -626,7 +629,10 @@ fun DashboardScreen(
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     "\uD83D\uDC9C  Innerer Spiegel",
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                    style =
+                                        MaterialTheme.typography.titleLarge.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
                                     color = InsightViolet,
                                     modifier = Modifier.fillMaxWidth(),
                                     textAlign = TextAlign.Center,
@@ -644,8 +650,16 @@ fun DashboardScreen(
                     item {
                         val categoryScrollIsolation = remember {
                             object : NestedScrollConnection {
-                                override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset = Offset(available.x, 0f)
-                                override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity = Velocity(available.x, 0f)
+                                override fun onPostScroll(
+                                    consumed: Offset,
+                                    available: Offset,
+                                    source: NestedScrollSource,
+                                ): Offset = Offset(available.x, 0f)
+
+                                override suspend fun onPostFling(
+                                    consumed: Velocity,
+                                    available: Velocity,
+                                ): Velocity = Velocity(available.x, 0f)
                             }
                         }
                         Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
@@ -657,7 +671,10 @@ fun DashboardScreen(
                                     AdviceCategoryCard(
                                         block = block,
                                         isSelected = index == uiState.selectedCategoryIndex,
-                                        onClick = { viewModel.selectCategory(index); selectedCategoryBlock = block },
+                                        onClick = {
+                                            viewModel.selectCategory(index)
+                                            selectedCategoryBlock = block
+                                        },
                                     )
                                 }
                             }
@@ -670,7 +687,10 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             "\uD83D\uDD2E  Alle Einsichten",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            style =
+                                MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
                             color = InsightMauve,
                             modifier = Modifier.fillMaxWidth(),
                             textAlign = TextAlign.Center,
@@ -679,9 +699,20 @@ fun DashboardScreen(
 
                     item(key = "insight_depth_legend") { InsightDepthLegend() }
 
-                    val allInsights = blocks
-                        .flatMap { block -> block.advices.map { advice -> Triple(advice, block.categoryName, block.entropyLevel) } }
-                        .sortedBy { (advice, _, _) -> when (advice.priority) { AdvicePriority.HIGH -> 0; AdvicePriority.MEDIUM -> 1; AdvicePriority.LOW -> 2 } }
+                    val allInsights =
+                        blocks
+                            .flatMap { block ->
+                                block.advices.map { advice ->
+                                    Triple(advice, block.categoryName, block.entropyLevel)
+                                }
+                            }
+                            .sortedBy { (advice, _, _) ->
+                                when (advice.priority) {
+                                    AdvicePriority.HIGH -> 0
+                                    AdvicePriority.MEDIUM -> 1
+                                    AdvicePriority.LOW -> 2
+                                }
+                            }
 
                     itemsIndexed(allInsights) { _, (advice, catName, _) ->
                         InsightCard(
@@ -705,13 +736,20 @@ fun DashboardScreen(
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     "\uD83D\uDDFA\uFE0F  Ziel-\u00dcberblick",
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                    style =
+                                        MaterialTheme.typography.titleLarge.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
                                     color = GoalEmerald,
                                     modifier = Modifier.fillMaxWidth(),
                                     textAlign = TextAlign.Center,
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
-                                Text(overallAnalysis, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    overallAnalysis,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
@@ -719,14 +757,32 @@ fun DashboardScreen(
                     item {
                         val categoryScrollIsolation = remember {
                             object : NestedScrollConnection {
-                                override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset = Offset(available.x, 0f)
-                                override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity = Velocity(available.x, 0f)
+                                override fun onPostScroll(
+                                    consumed: Offset,
+                                    available: Offset,
+                                    source: NestedScrollSource,
+                                ): Offset = Offset(available.x, 0f)
+
+                                override suspend fun onPostFling(
+                                    consumed: Velocity,
+                                    available: Velocity,
+                                ): Velocity = Velocity(available.x, 0f)
                             }
                         }
                         Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
-                            LazyRow(contentPadding = PaddingValues(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
                                 itemsIndexed(blocks) { index, block ->
-                                    AdviceCategoryCard(block = block, isSelected = index == uiState.selectedCategoryIndex, onClick = { viewModel.selectCategory(index); selectedCategoryBlock = block })
+                                    AdviceCategoryCard(
+                                        block = block,
+                                        isSelected = index == uiState.selectedCategoryIndex,
+                                        onClick = {
+                                            viewModel.selectCategory(index)
+                                            selectedCategoryBlock = block
+                                        },
+                                    )
                                 }
                             }
                         }
@@ -738,7 +794,10 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             "\uD83C\uDFAF  Alle Ziele",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            style =
+                                MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
                             color = GoalEmerald,
                             modifier = Modifier.fillMaxWidth(),
                             textAlign = TextAlign.Center,
@@ -747,18 +806,34 @@ fun DashboardScreen(
 
                     item(key = "goal_status_legend") { GoalStatusLegend() }
 
-                    val allGoals = blocks
-                        .flatMap { block -> block.advices.map { advice -> Triple(advice, block.categoryName, block.entropyLevel) } }
-                        .sortedBy { (advice, _, _) -> when (advice.priority) { AdvicePriority.HIGH -> 0; AdvicePriority.MEDIUM -> 1; AdvicePriority.LOW -> 2 } }
+                    val allGoals =
+                        blocks
+                            .flatMap { block ->
+                                block.advices.map { advice ->
+                                    Triple(advice, block.categoryName, block.entropyLevel)
+                                }
+                            }
+                            .sortedBy { (advice, _, _) ->
+                                when (advice.priority) {
+                                    AdvicePriority.HIGH -> 0
+                                    AdvicePriority.MEDIUM -> 1
+                                    AdvicePriority.LOW -> 2
+                                }
+                            }
 
                     itemsIndexed(allGoals) { _, (advice, catName, _) ->
-                        GoalCard(advice = advice, categoryName = catName, onClick = { selectedAdvice = Pair(advice, catName) })
+                        GoalCard(
+                            advice = advice,
+                            categoryName = catName,
+                            onClick = { selectedAdvice = Pair(advice, catName) },
+                        )
                     }
                 } else if (uiState.currentScenario == 4) {
                     // ═══════ INDIVIDUELLE ANALYSE DASHBOARD ═══════
                     val customTop5 = uiState.customHeaderTop5.ifBlank { "Wichtigste Ergebnisse" }
                     val customAnalyse = uiState.customHeaderAnalyse.ifBlank { "Analyse" }
-                    val customErgebnisse = uiState.customHeaderErgebnisse.ifBlank { "Alle Ergebnisse" }
+                    val customErgebnisse =
+                        uiState.customHeaderErgebnisse.ifBlank { "Alle Ergebnisse" }
 
                     val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
                     if (topActions.isNotEmpty()) {
@@ -771,13 +846,20 @@ fun DashboardScreen(
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     "\uD83D\uDD2C  $customAnalyse",
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                    style =
+                                        MaterialTheme.typography.titleLarge.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
                                     color = CustomAmber,
                                     modifier = Modifier.fillMaxWidth(),
                                     textAlign = TextAlign.Center,
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
-                                Text(overallAnalysis, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    overallAnalysis,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
@@ -785,14 +867,32 @@ fun DashboardScreen(
                     item {
                         val categoryScrollIsolation = remember {
                             object : NestedScrollConnection {
-                                override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset = Offset(available.x, 0f)
-                                override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity = Velocity(available.x, 0f)
+                                override fun onPostScroll(
+                                    consumed: Offset,
+                                    available: Offset,
+                                    source: NestedScrollSource,
+                                ): Offset = Offset(available.x, 0f)
+
+                                override suspend fun onPostFling(
+                                    consumed: Velocity,
+                                    available: Velocity,
+                                ): Velocity = Velocity(available.x, 0f)
                             }
                         }
                         Box(modifier = Modifier.nestedScroll(categoryScrollIsolation)) {
-                            LazyRow(contentPadding = PaddingValues(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
                                 itemsIndexed(blocks) { index, block ->
-                                    AdviceCategoryCard(block = block, isSelected = index == uiState.selectedCategoryIndex, onClick = { viewModel.selectCategory(index); selectedCategoryBlock = block })
+                                    AdviceCategoryCard(
+                                        block = block,
+                                        isSelected = index == uiState.selectedCategoryIndex,
+                                        onClick = {
+                                            viewModel.selectCategory(index)
+                                            selectedCategoryBlock = block
+                                        },
+                                    )
                                 }
                             }
                         }
@@ -804,7 +904,10 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             "\uD83D\uDCCB  $customErgebnisse",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            style =
+                                MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
                             color = CustomAmber,
                             modifier = Modifier.fillMaxWidth(),
                             textAlign = TextAlign.Center,
@@ -813,12 +916,27 @@ fun DashboardScreen(
 
                     item(key = "custom_legend") { CustomRelevanceLegend() }
 
-                    val allCustom = blocks
-                        .flatMap { block -> block.advices.map { advice -> Triple(advice, block.categoryName, block.entropyLevel) } }
-                        .sortedBy { (advice, _, _) -> when (advice.priority) { AdvicePriority.HIGH -> 0; AdvicePriority.MEDIUM -> 1; AdvicePriority.LOW -> 2 } }
+                    val allCustom =
+                        blocks
+                            .flatMap { block ->
+                                block.advices.map { advice ->
+                                    Triple(advice, block.categoryName, block.entropyLevel)
+                                }
+                            }
+                            .sortedBy { (advice, _, _) ->
+                                when (advice.priority) {
+                                    AdvicePriority.HIGH -> 0
+                                    AdvicePriority.MEDIUM -> 1
+                                    AdvicePriority.LOW -> 2
+                                }
+                            }
 
                     itemsIndexed(allCustom) { _, (advice, catName, _) ->
-                        CustomResultCard(advice = advice, categoryName = catName, onClick = { selectedAdvice = Pair(advice, catName) })
+                        CustomResultCard(
+                            advice = advice,
+                            categoryName = catName,
+                            onClick = { selectedAdvice = Pair(advice, catName) },
+                        )
                     }
                 } else {
                     // ═══════ DEFAULT DASHBOARD (Entropy) ═══════
@@ -826,9 +944,7 @@ fun DashboardScreen(
                     // Top-5 Entropy-Reducing Actions — visually prominent block
                     val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
                     if (topActions.isNotEmpty()) {
-                        item {
-                            TopActionsBlock(actions = topActions)
-                        }
+                        item { TopActionsBlock(actions = topActions) }
                     }
 
                     // Overall analysis
@@ -839,7 +955,11 @@ fun DashboardScreen(
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
                                     "Gesamtanalyse",
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
+                                    style =
+                                        MaterialTheme.typography.titleLarge.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            textDecoration = TextDecoration.Underline,
+                                        ),
                                     color = NeonAmber,
                                     modifier = Modifier.fillMaxWidth(),
                                     textAlign = TextAlign.Center,
@@ -900,7 +1020,11 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             "Alle Empfehlungen",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
+                            style =
+                                MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    textDecoration = TextDecoration.Underline,
+                                ),
                             color = NeonAmber,
                             modifier = Modifier.fillMaxWidth(),
                             textAlign = TextAlign.Center,
@@ -976,13 +1100,14 @@ private fun LegendDot(color: androidx.compose.ui.graphics.Color, label: String) 
 
 @Composable
 private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
-    val title = when (scenario) {
-        0 -> "Legende \u2014 Zusammenfassung"
-        2 -> "Legende \u2014 Selbsterkenntnis"
-        3 -> "Legende \u2014 Pers\u00f6nliche Ziele"
-        4 -> "Legende \u2014 Individuelle Analyse"
-        else -> "Legende \u2014 R\u00e4ume dein Leben auf"
-    }
+    val title =
+        when (scenario) {
+            0 -> "Legende \u2014 Zusammenfassung"
+            2 -> "Legende \u2014 Selbsterkenntnis"
+            3 -> "Legende \u2014 Pers\u00f6nliche Ziele"
+            4 -> "Legende \u2014 Individuelle Analyse"
+            else -> "Legende \u2014 R\u00e4ume dein Leben auf"
+        }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -995,92 +1120,240 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                 when (scenario) {
                     0 -> {
                         // ── Zusammenfassung ──
-                        Text("Aktivit\u00e4tslevel", style = MaterialTheme.typography.titleMedium, color = SummaryBlue)
-                        Text("Der Halbkreis zeigt wie viel in diesem Bereich passiert:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "Aktivit\u00e4tslevel",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = SummaryBlue,
+                        )
+                        Text(
+                            "Der Halbkreis zeigt wie viel in diesem Bereich passiert:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             LegendDot(color = NeonRed, label = "Viel Aktivit\u00e4t (67\u2013100%)")
-                            LegendDot(color = NeonAmber, label = "Moderate Aktivit\u00e4t (34\u201366%)")
-                            LegendDot(color = NeonEmerald, label = "Wenig Aktivit\u00e4t (0\u201333%)")
+                            LegendDot(
+                                color = NeonAmber,
+                                label = "Moderate Aktivit\u00e4t (34\u201366%)",
+                            )
+                            LegendDot(
+                                color = NeonEmerald,
+                                label = "Wenig Aktivit\u00e4t (0\u201333%)",
+                            )
                         }
                         NeonDivider()
-                        Text("Relevanz der Beobachtungen", style = MaterialTheme.typography.titleMedium, color = SummaryBlue)
+                        Text(
+                            "Relevanz der Beobachtungen",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = SummaryBlue,
+                        )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("\u2B50 Zentral \u2014 Kern-Themen deiner Eintr\u00e4ge", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                            Text("\uD83D\uDCCC Relevant \u2014 Wiederkehrende Beobachtungen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                            Text("\uD83D\uDCCE Randnotiz \u2014 Einmalige Erw\u00e4hnungen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                "\u2B50 Zentral \u2014 Kern-Themen deiner Eintr\u00e4ge",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "\uD83D\uDCCC Relevant \u2014 Wiederkehrende Beobachtungen",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "\uD83D\uDCCE Randnotiz \u2014 Einmalige Erw\u00e4hnungen",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
                         }
                     }
                     2 -> {
                         // ── Selbsterkenntnis ──
-                        Text("Reflexionstiefe", style = MaterialTheme.typography.titleMedium, color = InsightViolet)
-                        Text("Der Halbkreis zeigt die Tiefe deiner Selbstreflexion:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "Reflexionstiefe",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = InsightViolet,
+                        )
+                        Text(
+                            "Der Halbkreis zeigt die Tiefe deiner Selbstreflexion:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             LegendDot(color = InsightViolet, label = "Tiefgehend (67\u2013100%)")
                             LegendDot(color = InsightMauve, label = "Bewusst (34\u201366%)")
                             LegendDot(color = InsightWarm, label = "Oberfl\u00e4che (0\u201333%)")
                         }
                         NeonDivider()
-                        Text("Tiefe der Einsichten", style = MaterialTheme.typography.titleMedium, color = InsightViolet)
+                        Text(
+                            "Tiefe der Einsichten",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = InsightViolet,
+                        )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("\uD83E\uDE9E Tiefgehend \u2014 Verborgene Muster und \u00dcberzeugungen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                            Text("\uD83D\uDC9C Bewusst \u2014 Erkannte Denk- und Gef\u00fchlsmuster", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                            Text("\uD83C\uDF31 Oberfl\u00e4che \u2014 Erste Beobachtungen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                "\uD83E\uDE9E Tiefgehend \u2014 Verborgene Muster und \u00dcberzeugungen",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "\uD83D\uDC9C Bewusst \u2014 Erkannte Denk- und Gef\u00fchlsmuster",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "\uD83C\uDF31 Oberfl\u00e4che \u2014 Erste Beobachtungen",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
                         }
                     }
                     3 -> {
                         // ── Persönliche Ziele ──
-                        Text("Fortschritt", style = MaterialTheme.typography.titleMedium, color = GoalEmerald)
-                        Text("Der Halbkreis zeigt den Fortschritt deiner Ziele:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "Fortschritt",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = GoalEmerald,
+                        )
+                        Text(
+                            "Der Halbkreis zeigt den Fortschritt deiner Ziele:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             LegendDot(color = GoalCoral, label = "Blockiert (0\u201333%)")
                             LegendDot(color = GoalGold, label = "In Arbeit (34\u201366%)")
                             LegendDot(color = GoalEmerald, label = "Fortschritt (67\u2013100%)")
                         }
                         NeonDivider()
-                        Text("Zielstatus", style = MaterialTheme.typography.titleMedium, color = GoalEmerald)
+                        Text(
+                            "Zielstatus",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = GoalEmerald,
+                        )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("\uD83D\uDEA7 Blockiert \u2014 Ziele mit Hindernissen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                            Text("\uD83D\uDD13 Offen \u2014 Ziele noch ohne Fortschritt", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                            Text("\u2705 Fortschritt \u2014 Ziele mit sichtbarem Erfolg", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                "\uD83D\uDEA7 Blockiert \u2014 Ziele mit Hindernissen",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "\uD83D\uDD13 Offen \u2014 Ziele noch ohne Fortschritt",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "\u2705 Fortschritt \u2014 Ziele mit sichtbarem Erfolg",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
                         }
                     }
                     4 -> {
                         // ── Individuelle Analyse ──
-                        Text("Analysewert", style = MaterialTheme.typography.titleMedium, color = CustomAmber)
-                        Text("Der Halbkreis zeigt die Relevanz f\u00fcr deinen Fokus:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "Analysewert",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = CustomAmber,
+                        )
+                        Text(
+                            "Der Halbkreis zeigt die Relevanz f\u00fcr deinen Fokus:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            LegendDot(color = CustomAmber, label = "Hoch (67\u2013100%) \u2014 Kern deines Fokus")
-                            LegendDot(color = CustomSand, label = "Mittel (34\u201366%) \u2014 Verbindung erkannt")
-                            LegendDot(color = CustomSage, label = "Niedrig (0\u201333%) \u2014 Am Rand")
+                            LegendDot(
+                                color = CustomAmber,
+                                label = "Hoch (67\u2013100%) \u2014 Kern deines Fokus",
+                            )
+                            LegendDot(
+                                color = CustomSand,
+                                label = "Mittel (34\u201366%) \u2014 Verbindung erkannt",
+                            )
+                            LegendDot(
+                                color = CustomSage,
+                                label = "Niedrig (0\u201333%) \u2014 Am Rand",
+                            )
                         }
                         NeonDivider()
-                        Text("Relevanz der Ergebnisse", style = MaterialTheme.typography.titleMedium, color = CustomAmber)
+                        Text(
+                            "Relevanz der Ergebnisse",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = CustomAmber,
+                        )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("\uD83D\uDD25 Wichtig \u2014 Direkt relevant f\u00fcr deinen Fokus", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                            Text("\uD83D\uDCA1 Relevant \u2014 Verbindung zu deinem Fokus", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                            Text("\uD83D\uDCDD Notiz \u2014 Randbemerkung", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                "\uD83D\uDD25 Wichtig \u2014 Direkt relevant f\u00fcr deinen Fokus",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "\uD83D\uDCA1 Relevant \u2014 Verbindung zu deinem Fokus",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "\uD83D\uDCDD Notiz \u2014 Randbemerkung",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
                         }
                     }
                     else -> {
                         // ── Räume dein Leben auf (Belastung) ──
-                        Text("Belastungs-Skala", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                        Text("Der Halbkreis zeigt wie stark dich dieses Thema belastet:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "Belastungs-Skala",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            "Der Halbkreis zeigt wie stark dich dieses Thema belastet:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            LegendDot(color = NeonRed, label = "Hoch (67\u2013100%) \u2014 Sofort handeln")
-                            LegendDot(color = NeonAmber, label = "Mittel (34\u201366%) \u2014 Aufmerksamkeit n\u00f6tig")
-                            LegendDot(color = NeonEmerald, label = "Niedrig (0\u201333%) \u2014 Guter Zustand")
+                            LegendDot(
+                                color = NeonRed,
+                                label = "Hoch (67\u2013100%) \u2014 Sofort handeln",
+                            )
+                            LegendDot(
+                                color = NeonAmber,
+                                label = "Mittel (34\u201366%) \u2014 Aufmerksamkeit n\u00f6tig",
+                            )
+                            LegendDot(
+                                color = NeonEmerald,
+                                label = "Niedrig (0\u201333%) \u2014 Guter Zustand",
+                            )
                         }
                         NeonDivider()
-                        Text("Priorit\u00e4t der Ratschl\u00e4ge", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "Priorit\u00e4t der Ratschl\u00e4ge",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("\uD83D\uDD34 Rot = Dringend \u2014 Sofort handeln", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                            Text("\uD83D\uDFE0 Orange = Mittel \u2014 Bald angehen", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                            Text("\uD83D\uDD35 Blau = Niedrig \u2014 Beobachten", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                "\uD83D\uDD34 Rot = Dringend \u2014 Sofort handeln",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "\uD83D\uDFE0 Orange = Mittel \u2014 Bald angehen",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "\uD83D\uDD35 Blau = Niedrig \u2014 Beobachten",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
                         }
                     }
                 }
                 NeonDivider()
-                Text("Kategorien", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    "Kategorien",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
                 Text(
                     "Kategorien werden dynamisch erstellt \u2014 die KI erkennt Themen in deinen Eintr\u00e4gen und erstellt passende Kategorien. Neue Themen f\u00fchren automatisch zu neuen Symbolen.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -1177,7 +1450,10 @@ private fun CategoryDetailDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "Alle Empfehlungen",
-                    style = MaterialTheme.typography.titleMedium.copy(textDecoration = TextDecoration.Underline),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            textDecoration = TextDecoration.Underline
+                        ),
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
@@ -1334,14 +1610,15 @@ private fun AdviceDerivationDialog(advice: Advice, categoryName: String, onDismi
 private fun TopActionsBlock(actions: List<TopAction>) {
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
 
-    GlassCard(
-        glowColor = NeonAmber,
-        glowIntensity = 0.3f,
-    ) {
+    GlassCard(glowColor = NeonAmber, glowIntensity = 0.3f) {
         Column {
             Text(
                 "Top 5 Massnahmen",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
+                style =
+                    MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        textDecoration = TextDecoration.Underline,
+                    ),
                 color = NeonAmber,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
@@ -1349,30 +1626,33 @@ private fun TopActionsBlock(actions: List<TopAction>) {
             Spacer(modifier = Modifier.height(16.dp))
             actions.forEachIndexed { index, action ->
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { selectedAction = index to action }
-                        .padding(vertical = 6.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { selectedAction = index to action }
+                            .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(
-                                when (index) {
-                                    0 -> NeonRed
-                                    1 -> NeonAmber
-                                    2 -> NeonAmber.copy(alpha = 0.8f)
-                                    else -> NeonCyan
-                                }
-                            ),
+                        modifier =
+                            Modifier.size(32.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    when (index) {
+                                        0 -> NeonRed
+                                        1 -> NeonAmber
+                                        2 -> NeonAmber.copy(alpha = 0.8f)
+                                        else -> NeonCyan
+                                    }
+                                ),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = "${index + 1}",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            style =
+                                MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
                             color = MaterialTheme.colorScheme.surface,
                         )
                     }
@@ -1380,7 +1660,10 @@ private fun TopActionsBlock(actions: List<TopAction>) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = action.title,
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            style =
+                                MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Spacer(modifier = Modifier.height(2.dp))
@@ -1399,22 +1682,19 @@ private fun TopActionsBlock(actions: List<TopAction>) {
     }
 
     selectedAction?.let { (index, action) ->
-        TopActionDetailDialog(
-            action = action,
-            index = index,
-            onDismiss = { selectedAction = null },
-        )
+        TopActionDetailDialog(action = action, index = index, onDismiss = { selectedAction = null })
     }
 }
 
 @Composable
 private fun TopActionDetailDialog(action: TopAction, index: Int, onDismiss: () -> Unit) {
-    val dotColor = when (index) {
-        0 -> NeonRed
-        1 -> NeonAmber
-        2 -> NeonAmber.copy(alpha = 0.8f)
-        else -> NeonCyan
-    }
+    val dotColor =
+        when (index) {
+            0 -> NeonRed
+            1 -> NeonAmber
+            2 -> NeonAmber.copy(alpha = 0.8f)
+            else -> NeonCyan
+        }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1422,15 +1702,13 @@ private fun TopActionDetailDialog(action: TopAction, index: Int, onDismiss: () -
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(dotColor),
+                    modifier = Modifier.size(36.dp).clip(CircleShape).background(dotColor),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "${index + 1}",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.surface,
                     )
                 }
@@ -1541,10 +1819,7 @@ private fun AdviceCard(advice: Advice, categoryName: String = "", onClick: () ->
 private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
 
-    GlassCard(
-        glowColor = SummaryIndigo,
-        glowIntensity = 0.25f,
-    ) {
+    GlassCard(glowColor = SummaryIndigo, glowIntensity = 0.25f) {
         Column {
             Text(
                 "\uD83D\uDCA1  Kernerkenntnisse",
@@ -1564,31 +1839,29 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
             Spacer(modifier = Modifier.height(16.dp))
             actions.forEachIndexed { index, action ->
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable { selectedAction = index to action }
-                        .padding(vertical = 8.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { selectedAction = index to action }
+                            .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
                     // Blue gradient numbered badge
                     Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(
-                                        SummaryBlue,
-                                        SummaryIndigo,
-                                    )
-                                )
-                            ),
+                        modifier =
+                            Modifier.size(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    Brush.linearGradient(listOf(SummaryBlue, SummaryIndigo))
+                                ),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = "${index + 1}",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            style =
+                                MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
                             color = MaterialTheme.colorScheme.surface,
                         )
                     }
@@ -1596,24 +1869,30 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = action.title,
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            style =
+                                MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = action.description,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                            style =
+                                MaterialTheme.typography.bodyMedium.copy(
+                                    fontStyle = FontStyle.Italic
+                                ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
                 if (index < actions.lastIndex) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .height(1.dp)
-                            .background(SummaryBlue.copy(alpha = 0.15f))
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .height(1.dp)
+                                .background(SummaryBlue.copy(alpha = 0.15f))
                     )
                 }
             }
@@ -1637,19 +1916,16 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(SummaryBlue, SummaryIndigo)
-                            )
-                        ),
+                    modifier =
+                        Modifier.size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Brush.linearGradient(listOf(SummaryBlue, SummaryIndigo))),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "${index + 1}",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.surface,
                     )
                 }
@@ -1665,16 +1941,20 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
             Column {
                 Text(
                     text = action.description,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic),
+                    style =
+                        MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontStyle = FontStyle.Italic,
+                        ),
                     color = SummaryBlue,
                 )
                 if (action.detailedDescription.isNotBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(SummaryBlue.copy(alpha = 0.2f))
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .height(1.dp)
+                                .background(SummaryBlue.copy(alpha = 0.2f))
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
@@ -1686,9 +1966,7 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Schlie\u00dfen", color = SummaryBlue)
-            }
+            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = SummaryBlue) }
         },
     )
 }
@@ -1703,25 +1981,30 @@ private fun SummaryRelevanceLegend() {
 }
 
 @Composable
-private fun SummaryLegendItem(emoji: String, label: String, color: androidx.compose.ui.graphics.Color) {
+private fun SummaryLegendItem(
+    emoji: String,
+    label: String,
+    color: androidx.compose.ui.graphics.Color,
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(emoji, style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = color,
-        )
+        Text(label, style = MaterialTheme.typography.labelMedium, color = color)
     }
 }
 
 @Composable
-private fun SummaryObservationCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
-    val (emoji, glowColor) = when (advice.priority) {
-        AdvicePriority.HIGH -> "\u2B50" to SummaryIndigo
-        AdvicePriority.MEDIUM -> "\uD83D\uDCCC" to SummaryBlue
-        AdvicePriority.LOW -> "\uD83D\uDCCE" to SummaryTeal
-    }
+private fun SummaryObservationCard(
+    advice: Advice,
+    categoryName: String = "",
+    onClick: () -> Unit = {},
+) {
+    val (emoji, glowColor) =
+        when (advice.priority) {
+            AdvicePriority.HIGH -> "\u2B50" to SummaryIndigo
+            AdvicePriority.MEDIUM -> "\uD83D\uDCCC" to SummaryBlue
+            AdvicePriority.LOW -> "\uD83D\uDCCE" to SummaryTeal
+        }
 
     GlassCard(
         modifier = Modifier.clickable { onClick() },
@@ -1801,25 +2084,28 @@ private fun InsightKeyBlock(actions: List<TopAction>) {
             Spacer(modifier = Modifier.height(16.dp))
             actions.forEachIndexed { index, action ->
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable { selectedAction = index to action }
-                        .padding(vertical = 8.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { selectedAction = index to action }
+                            .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(
-                                Brush.linearGradient(listOf(InsightViolet, InsightRose))
-                            ),
+                        modifier =
+                            Modifier.size(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    Brush.linearGradient(listOf(InsightViolet, InsightRose))
+                                ),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = "${index + 1}",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            style =
+                                MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
                             color = MaterialTheme.colorScheme.surface,
                         )
                     }
@@ -1827,24 +2113,30 @@ private fun InsightKeyBlock(actions: List<TopAction>) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = action.title,
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            style =
+                                MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = action.description,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                            style =
+                                MaterialTheme.typography.bodyMedium.copy(
+                                    fontStyle = FontStyle.Italic
+                                ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
                 if (index < actions.lastIndex) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .height(1.dp)
-                            .background(InsightViolet.copy(alpha = 0.15f))
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .height(1.dp)
+                                .background(InsightViolet.copy(alpha = 0.15f))
                     )
                 }
             }
@@ -1864,30 +2156,58 @@ private fun InsightDetailDialog(action: TopAction, index: Int, onDismiss: () -> 
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Brush.linearGradient(listOf(InsightViolet, InsightRose))),
+                    modifier =
+                        Modifier.size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Brush.linearGradient(listOf(InsightViolet, InsightRose))),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("${index + 1}", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.surface)
+                    Text(
+                        "${index + 1}",
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.surface,
+                    )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(action.title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    action.title,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
         },
         text = {
             Column {
-                Text(action.description, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic), color = InsightViolet)
+                Text(
+                    action.description,
+                    style =
+                        MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontStyle = FontStyle.Italic,
+                        ),
+                    color = InsightViolet,
+                )
                 if (action.detailedDescription.isNotBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(InsightViolet.copy(alpha = 0.2f)))
+                    Box(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .height(1.dp)
+                                .background(InsightViolet.copy(alpha = 0.2f))
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(action.detailedDescription, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        action.detailedDescription,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = InsightViolet) } },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = InsightViolet) }
+        },
     )
 }
 
@@ -1901,7 +2221,11 @@ private fun InsightDepthLegend() {
 }
 
 @Composable
-private fun InsightLegendItem(emoji: String, label: String, color: androidx.compose.ui.graphics.Color) {
+private fun InsightLegendItem(
+    emoji: String,
+    label: String,
+    color: androidx.compose.ui.graphics.Color,
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(emoji, style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.width(4.dp))
@@ -1911,11 +2235,12 @@ private fun InsightLegendItem(emoji: String, label: String, color: androidx.comp
 
 @Composable
 private fun InsightCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
-    val (emoji, glowColor) = when (advice.priority) {
-        AdvicePriority.HIGH -> "\uD83E\uDE9E" to InsightViolet
-        AdvicePriority.MEDIUM -> "\uD83D\uDC9C" to InsightMauve
-        AdvicePriority.LOW -> "\uD83C\uDF31" to InsightWarm
-    }
+    val (emoji, glowColor) =
+        when (advice.priority) {
+            AdvicePriority.HIGH -> "\uD83E\uDE9E" to InsightViolet
+            AdvicePriority.MEDIUM -> "\uD83D\uDC9C" to InsightMauve
+            AdvicePriority.LOW -> "\uD83C\uDF31" to InsightWarm
+        }
 
     GlassCard(
         modifier = Modifier.clickable { onClick() },
@@ -1923,21 +2248,45 @@ private fun InsightCard(advice: Advice, categoryName: String = "", onClick: () -
         glowIntensity = 0.08f,
     ) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(text = emoji)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(advice.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                Text(
+                    advice.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
                 if (categoryName.isNotBlank()) {
-                    Surface(shape = RoundedCornerShape(6.dp), color = InsightViolet.copy(alpha = 0.12f)) {
-                        Text(categoryName, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelMedium, color = InsightViolet)
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = InsightViolet.copy(alpha = 0.12f),
+                    ) {
+                        Text(
+                            categoryName,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = InsightViolet,
+                        )
                     }
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
-            Text(advice.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                advice.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             if (advice.connection.isNotBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
-                Text("\uD83D\uDD17 ${advice.connection}", style = MaterialTheme.typography.labelMedium, color = InsightRose.copy(alpha = 0.8f))
+                Text(
+                    "\uD83D\uDD17 ${advice.connection}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = InsightRose.copy(alpha = 0.8f),
+                )
             }
         }
     }
@@ -1971,31 +2320,55 @@ private fun GoalNextStepsBlock(actions: List<TopAction>) {
             Spacer(modifier = Modifier.height(16.dp))
             actions.forEachIndexed { index, action ->
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable { selectedAction = index to action }
-                        .padding(vertical = 8.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { selectedAction = index to action }
+                            .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Brush.linearGradient(listOf(GoalEmerald, GoalSky))),
+                        modifier =
+                            Modifier.size(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Brush.linearGradient(listOf(GoalEmerald, GoalSky))),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text("${index + 1}", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.surface)
+                        Text(
+                            "${index + 1}",
+                            style =
+                                MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                            color = MaterialTheme.colorScheme.surface,
+                        )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(action.title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            action.title,
+                            style =
+                                MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(action.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            action.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
                 if (index < actions.lastIndex) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(GoalEmerald.copy(alpha = 0.15f)))
+                    Box(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .height(1.dp)
+                                .background(GoalEmerald.copy(alpha = 0.15f))
+                    )
                 }
             }
         }
@@ -2014,27 +2387,54 @@ private fun GoalStepDetailDialog(action: TopAction, index: Int, onDismiss: () ->
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(Brush.linearGradient(listOf(GoalEmerald, GoalSky))),
+                    modifier =
+                        Modifier.size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Brush.linearGradient(listOf(GoalEmerald, GoalSky))),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("${index + 1}", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.surface)
+                    Text(
+                        "${index + 1}",
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.surface,
+                    )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(action.title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    action.title,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
         },
         text = {
             Column {
-                Text(action.description, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = GoalEmerald)
+                Text(
+                    action.description,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                    color = GoalEmerald,
+                )
                 if (action.detailedDescription.isNotBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(GoalEmerald.copy(alpha = 0.2f)))
+                    Box(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .height(1.dp)
+                                .background(GoalEmerald.copy(alpha = 0.2f))
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(action.detailedDescription, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        action.detailedDescription,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = GoalEmerald) } },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = GoalEmerald) }
+        },
     )
 }
 
@@ -2048,7 +2448,11 @@ private fun GoalStatusLegend() {
 }
 
 @Composable
-private fun GoalLegendItem(emoji: String, label: String, color: androidx.compose.ui.graphics.Color) {
+private fun GoalLegendItem(
+    emoji: String,
+    label: String,
+    color: androidx.compose.ui.graphics.Color,
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(emoji, style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.width(4.dp))
@@ -2058,29 +2462,58 @@ private fun GoalLegendItem(emoji: String, label: String, color: androidx.compose
 
 @Composable
 private fun GoalCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
-    val (emoji, glowColor) = when (advice.priority) {
-        AdvicePriority.HIGH -> "\uD83D\uDEA7" to GoalCoral
-        AdvicePriority.MEDIUM -> "\uD83D\uDD13" to GoalGold
-        AdvicePriority.LOW -> "\u2705" to GoalEmerald
-    }
+    val (emoji, glowColor) =
+        when (advice.priority) {
+            AdvicePriority.HIGH -> "\uD83D\uDEA7" to GoalCoral
+            AdvicePriority.MEDIUM -> "\uD83D\uDD13" to GoalGold
+            AdvicePriority.LOW -> "\u2705" to GoalEmerald
+        }
 
-    GlassCard(modifier = Modifier.clickable { onClick() }, glowColor = glowColor, glowIntensity = 0.08f) {
+    GlassCard(
+        modifier = Modifier.clickable { onClick() },
+        glowColor = glowColor,
+        glowIntensity = 0.08f,
+    ) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(text = emoji)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(advice.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                Text(
+                    advice.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
                 if (categoryName.isNotBlank()) {
-                    Surface(shape = RoundedCornerShape(6.dp), color = GoalEmerald.copy(alpha = 0.12f)) {
-                        Text(categoryName, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelMedium, color = GoalEmerald)
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = GoalEmerald.copy(alpha = 0.12f),
+                    ) {
+                        Text(
+                            categoryName,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = GoalEmerald,
+                        )
                     }
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
-            Text(advice.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                advice.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             if (advice.connection.isNotBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
-                Text("\u27A1 ${advice.connection}", style = MaterialTheme.typography.labelMedium, color = GoalSky.copy(alpha = 0.8f))
+                Text(
+                    "\u27A1 ${advice.connection}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = GoalSky.copy(alpha = 0.8f),
+                )
             }
         }
     }
@@ -2114,31 +2547,55 @@ private fun CustomInsightsBlock(actions: List<TopAction>, title: String = "Wicht
             Spacer(modifier = Modifier.height(16.dp))
             actions.forEachIndexed { index, action ->
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable { selectedAction = index to action }
-                        .padding(vertical = 8.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { selectedAction = index to action }
+                            .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Brush.linearGradient(listOf(CustomAmber, CustomSand))),
+                        modifier =
+                            Modifier.size(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Brush.linearGradient(listOf(CustomAmber, CustomSand))),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text("${index + 1}", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.surface)
+                        Text(
+                            "${index + 1}",
+                            style =
+                                MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                            color = MaterialTheme.colorScheme.surface,
+                        )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(action.title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            action.title,
+                            style =
+                                MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(action.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            action.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
                 if (index < actions.lastIndex) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(CustomAmber.copy(alpha = 0.15f)))
+                    Box(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .height(1.dp)
+                                .background(CustomAmber.copy(alpha = 0.15f))
+                    )
                 }
             }
         }
@@ -2157,27 +2614,54 @@ private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> U
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(Brush.linearGradient(listOf(CustomAmber, CustomSand))),
+                    modifier =
+                        Modifier.size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Brush.linearGradient(listOf(CustomAmber, CustomSand))),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("${index + 1}", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.surface)
+                    Text(
+                        "${index + 1}",
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.surface,
+                    )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(action.title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    action.title,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
         },
         text = {
             Column {
-                Text(action.description, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = CustomAmber)
+                Text(
+                    action.description,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                    color = CustomAmber,
+                )
                 if (action.detailedDescription.isNotBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(CustomAmber.copy(alpha = 0.2f)))
+                    Box(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .height(1.dp)
+                                .background(CustomAmber.copy(alpha = 0.2f))
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(action.detailedDescription, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        action.detailedDescription,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = CustomAmber) } },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = CustomAmber) }
+        },
     )
 }
 
@@ -2191,7 +2675,11 @@ private fun CustomRelevanceLegend() {
 }
 
 @Composable
-private fun CustomLegendItem(emoji: String, label: String, color: androidx.compose.ui.graphics.Color) {
+private fun CustomLegendItem(
+    emoji: String,
+    label: String,
+    color: androidx.compose.ui.graphics.Color,
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(emoji, style = MaterialTheme.typography.labelLarge)
         Spacer(modifier = Modifier.width(4.dp))
@@ -2201,29 +2689,58 @@ private fun CustomLegendItem(emoji: String, label: String, color: androidx.compo
 
 @Composable
 private fun CustomResultCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
-    val (emoji, glowColor) = when (advice.priority) {
-        AdvicePriority.HIGH -> "\uD83D\uDD25" to CustomAmber
-        AdvicePriority.MEDIUM -> "\uD83D\uDCA1" to CustomSand
-        AdvicePriority.LOW -> "\uD83D\uDCDD" to CustomSage
-    }
+    val (emoji, glowColor) =
+        when (advice.priority) {
+            AdvicePriority.HIGH -> "\uD83D\uDD25" to CustomAmber
+            AdvicePriority.MEDIUM -> "\uD83D\uDCA1" to CustomSand
+            AdvicePriority.LOW -> "\uD83D\uDCDD" to CustomSage
+        }
 
-    GlassCard(modifier = Modifier.clickable { onClick() }, glowColor = glowColor, glowIntensity = 0.08f) {
+    GlassCard(
+        modifier = Modifier.clickable { onClick() },
+        glowColor = glowColor,
+        glowIntensity = 0.08f,
+    ) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(text = emoji)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(advice.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                Text(
+                    advice.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
                 if (categoryName.isNotBlank()) {
-                    Surface(shape = RoundedCornerShape(6.dp), color = CustomAmber.copy(alpha = 0.12f)) {
-                        Text(categoryName, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelMedium, color = CustomAmber)
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = CustomAmber.copy(alpha = 0.12f),
+                    ) {
+                        Text(
+                            categoryName,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = CustomAmber,
+                        )
                     }
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
-            Text(advice.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                advice.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             if (advice.connection.isNotBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
-                Text("\u2194 ${advice.connection}", style = MaterialTheme.typography.labelMedium, color = CustomSage.copy(alpha = 0.8f))
+                Text(
+                    "\u2194 ${advice.connection}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = CustomSage.copy(alpha = 0.8f),
+                )
             }
         }
     }

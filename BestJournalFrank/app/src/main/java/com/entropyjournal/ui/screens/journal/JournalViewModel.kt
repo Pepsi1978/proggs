@@ -18,6 +18,8 @@ import com.entropyjournal.util.DailyPromptProvider
 import com.entropyjournal.util.StreakTracker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,11 +28,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
-import javax.inject.Inject
 
 enum class RecordingState {
-    IDLE, RECORDING, TRANSCRIBING, IMPROVING, PREVIEW, SAVING
+    IDLE,
+    RECORDING,
+    TRANSCRIBING,
+    IMPROVING,
+    PREVIEW,
+    SAVING,
 }
 
 data class JournalUiState(
@@ -53,10 +58,18 @@ data class JournalUiState(
     val lastSyncTimestamp: Long = 0L,
 )
 
-enum class SyncStatus { IDLE, SYNCING, SYNCED, ERROR, NOT_SIGNED_IN }
+enum class SyncStatus {
+    IDLE,
+    SYNCING,
+    SYNCED,
+    ERROR,
+    NOT_SIGNED_IN,
+}
 
 @HiltViewModel
-class JournalViewModel @Inject constructor(
+class JournalViewModel
+@Inject
+constructor(
     private val journalRepository: JournalRepository,
     private val recordAudioUseCase: RecordAudioUseCase,
     private val transcribeAudioUseCase: TranscribeAudioUseCase,
@@ -67,11 +80,13 @@ class JournalViewModel @Inject constructor(
     private val syncWithDriveUseCase: SyncWithDriveUseCase,
     private val streakTracker: StreakTracker,
     @ApplicationContext private val context: Context,
-    private val encryptedPrefs: SharedPreferences
+    private val encryptedPrefs: SharedPreferences,
 ) : ViewModel() {
 
-    val entries = journalRepository.getAllEntries()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val entries =
+        journalRepository
+            .getAllEntries()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _uiState = MutableStateFlow(JournalUiState())
     val uiState: StateFlow<JournalUiState> = _uiState
@@ -91,7 +106,8 @@ class JournalViewModel @Inject constructor(
 
     init {
         // Set initial sync status: check if signed in AND last backup timestamp exists
-        val isSignedIn = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")?.isNotBlank() == true
+        val isSignedIn =
+            encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")?.isNotBlank() == true
         val lastSync = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L)
         if (!isSignedIn) {
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.NOT_SIGNED_IN)
@@ -103,26 +119,35 @@ class JournalViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(lastSyncTimestamp = lastSync)
 
         // Load current streak into UI state
-        _uiState.value = _uiState.value.copy(
-            currentStreak = streakTracker.getCurrentStreak(),
-            longestStreak = streakTracker.getLongestStreak(),
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                currentStreak = streakTracker.getCurrentStreak(),
+                longestStreak = streakTracker.getLongestStreak(),
+            )
 
         // Load today's writing prompt
         val todaysPrompt = DailyPromptProvider.getTodaysPrompt()
-        val promptDismissedDate = encryptedPrefs.getString(com.entropyjournal.util.Constants.PREF_PROMPT_DISMISSED_DATE, "")
+        val promptDismissedDate =
+            encryptedPrefs.getString(
+                com.entropyjournal.util.Constants.PREF_PROMPT_DISMISSED_DATE,
+                "",
+            )
         val isPromptDismissed = promptDismissedDate == java.time.LocalDate.now().toString()
-        _uiState.value = _uiState.value.copy(
-            dailyPromptText = todaysPrompt.text,
-            dailyPromptCategory = todaysPrompt.category.displayName,
-            dailyPromptId = todaysPrompt.id,
-            showPromptBanner = !isPromptDismissed,
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                dailyPromptText = todaysPrompt.text,
+                dailyPromptCategory = todaysPrompt.category.displayName,
+                dailyPromptId = todaysPrompt.id,
+                showPromptBanner = !isPromptDismissed,
+            )
 
         // Backfill summaries for existing entries that don't have one yet
         viewModelScope.launch {
             entries.collect { list ->
-                val missing = list.filter { (it.summary.isNullOrBlank() || it.title.isNullOrBlank()) && it.displayText.isNotBlank() }
+                val missing = list.filter {
+                    (it.summary.isNullOrBlank() || it.title.isNullOrBlank()) &&
+                        it.displayText.isNotBlank()
+                }
                 if (missing.isNotEmpty()) {
                     for (entry in missing) {
                         launch { summarizeEntryUseCase(entry.id, entry.displayText) }
@@ -136,7 +161,8 @@ class JournalViewModel @Inject constructor(
         encryptedPrefs.registerOnSharedPreferenceChangeListener { _, key ->
             when (key) {
                 Constants.PREF_SYNC_IN_PROGRESS -> {
-                    val inProgress = encryptedPrefs.getBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
+                    val inProgress =
+                        encryptedPrefs.getBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
                     if (inProgress) {
                         _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCING)
                     } else {
@@ -162,55 +188,72 @@ class JournalViewModel @Inject constructor(
     private fun startRecording() {
         val audioFile = File(context.cacheDir, "recording_${System.currentTimeMillis()}.wav")
         currentAudioFile = audioFile
-        _uiState.value = _uiState.value.copy(recordingState = RecordingState.RECORDING, errorMessage = null)
+        _uiState.value =
+            _uiState.value.copy(recordingState = RecordingState.RECORDING, errorMessage = null)
 
         recordingJob = viewModelScope.launch {
             // Play tone FIRST, then start recording after tone finishes
-            val soundsEnabled = encryptedPrefs.getBoolean(com.entropyjournal.util.Constants.PREF_SOUNDS_ENABLED, true)
-            val beepMs = 150
-            if (soundsEnabled) try {
-                val sampleRate = 44100
-                val beepSamples = sampleRate * beepMs / 1000
-                val samples = ShortArray(beepSamples)
-                val freq = 880.0
-                val fadeLen = beepSamples / 8
-                for (i in 0 until beepSamples) {
-                    val t = i.toDouble() / sampleRate
-                    val envelope = when {
-                        i < fadeLen -> i.toDouble() / fadeLen
-                        i > beepSamples - fadeLen -> (beepSamples - i).toDouble() / fadeLen
-                        else -> 1.0
-                    }
-                    samples[i] = (Short.MAX_VALUE * 0.5 * envelope * kotlin.math.sin(2 * Math.PI * freq * t)).toInt().toShort()
-                }
-                val track = android.media.AudioTrack(
-                    android.media.AudioAttributes.Builder()
-                        .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
-                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build(),
-                    android.media.AudioFormat.Builder()
-                        .setSampleRate(sampleRate)
-                        .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
-                        .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
-                        .build(),
-                    beepSamples * 2,
-                    android.media.AudioTrack.MODE_STATIC,
-                    android.media.AudioManager.AUDIO_SESSION_ID_GENERATE
+            val soundsEnabled =
+                encryptedPrefs.getBoolean(
+                    com.entropyjournal.util.Constants.PREF_SOUNDS_ENABLED,
+                    true,
                 )
-                track.write(samples, 0, beepSamples)
-                track.play()
-                kotlinx.coroutines.delay(beepMs.toLong() + 100)
-                track.release()
-            } catch (_: Exception) { /* Tone is optional */ }
+            val beepMs = 150
+            if (soundsEnabled)
+                try {
+                    val sampleRate = 44100
+                    val beepSamples = sampleRate * beepMs / 1000
+                    val samples = ShortArray(beepSamples)
+                    val freq = 880.0
+                    val fadeLen = beepSamples / 8
+                    for (i in 0 until beepSamples) {
+                        val t = i.toDouble() / sampleRate
+                        val envelope =
+                            when {
+                                i < fadeLen -> i.toDouble() / fadeLen
+                                i > beepSamples - fadeLen -> (beepSamples - i).toDouble() / fadeLen
+                                else -> 1.0
+                            }
+                        samples[i] =
+                            (Short.MAX_VALUE *
+                                    0.5 *
+                                    envelope *
+                                    kotlin.math.sin(2 * Math.PI * freq * t))
+                                .toInt()
+                                .toShort()
+                    }
+                    val track =
+                        android.media.AudioTrack(
+                            android.media.AudioAttributes.Builder()
+                                .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                                .build(),
+                            android.media.AudioFormat.Builder()
+                                .setSampleRate(sampleRate)
+                                .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                                .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
+                                .build(),
+                            beepSamples * 2,
+                            android.media.AudioTrack.MODE_STATIC,
+                            android.media.AudioManager.AUDIO_SESSION_ID_GENERATE,
+                        )
+                    track.write(samples, 0, beepSamples)
+                    track.play()
+                    kotlinx.coroutines.delay(beepMs.toLong() + 100)
+                    track.release()
+                } catch (_: Exception) {
+                    /* Tone is optional */
+                }
 
             // NOW start recording — tone is done
             try {
                 recordAudioUseCase.startRecording(audioFile)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    recordingState = RecordingState.IDLE,
-                    errorMessage = "Aufnahme fehlgeschlagen: ${e.message}"
-                )
+                _uiState.value =
+                    _uiState.value.copy(
+                        recordingState = RecordingState.IDLE,
+                        errorMessage = "Aufnahme fehlgeschlagen: ${e.message}",
+                    )
             }
         }
     }
@@ -227,18 +270,20 @@ class JournalViewModel @Inject constructor(
             val audioFile = currentAudioFile ?: return@launch
             transcribeAudioUseCase(audioFile)
                 .onSuccess { text ->
-                    _uiState.value = _uiState.value.copy(
-                        recordingState = RecordingState.PREVIEW,
-                        rawText = text.trim(),
-                        showPreviewDialog = true
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            recordingState = RecordingState.PREVIEW,
+                            rawText = text.trim(),
+                            showPreviewDialog = true,
+                        )
                     audioFile.delete()
                 }
                 .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        recordingState = RecordingState.IDLE,
-                        errorMessage = "Transkription fehlgeschlagen: ${error.message}"
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            recordingState = RecordingState.IDLE,
+                            errorMessage = "Transkription fehlgeschlagen: ${error.message}",
+                        )
                     audioFile.delete()
                 }
         }
@@ -253,17 +298,19 @@ class JournalViewModel @Inject constructor(
         viewModelScope.launch {
             improveTextUseCase(rawText)
                 .onSuccess { improved ->
-                    _uiState.value = _uiState.value.copy(
-                        recordingState = RecordingState.PREVIEW,
-                        improvedText = improved,
-                        isImproveEnabled = true
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            recordingState = RecordingState.PREVIEW,
+                            improvedText = improved,
+                            isImproveEnabled = true,
+                        )
                 }
                 .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        recordingState = RecordingState.PREVIEW,
-                        errorMessage = "Textverbesserung fehlgeschlagen: ${error.message}"
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            recordingState = RecordingState.PREVIEW,
+                            errorMessage = "Textverbesserung fehlgeschlagen: ${error.message}",
+                        )
                 }
         }
     }
@@ -283,14 +330,17 @@ class JournalViewModel @Inject constructor(
 
     fun saveEntry() {
         val state = _uiState.value
-        val displayText = if (state.activePrompt.isNotBlank()) {
-            val userText = if (state.isImproveEnabled && state.improvedText != null) state.improvedText else state.rawText
-            "${state.activePrompt}\n\n$userText"
-        } else if (state.isImproveEnabled && state.improvedText != null) {
-            state.improvedText
-        } else {
-            state.rawText
-        }
+        val displayText =
+            if (state.activePrompt.isNotBlank()) {
+                val userText =
+                    if (state.isImproveEnabled && state.improvedText != null) state.improvedText
+                    else state.rawText
+                "${state.activePrompt}\n\n$userText"
+            } else if (state.isImproveEnabled && state.improvedText != null) {
+                state.improvedText
+            } else {
+                state.rawText
+            }
 
         if (displayText.isBlank()) return
 
@@ -298,23 +348,28 @@ class JournalViewModel @Inject constructor(
 
         // Use independent scope — viewModelScope can be cancelled by Android
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-            val entry = JournalEntry(
-                timestamp = System.currentTimeMillis(),
-                rawText = state.rawText,
-                improvedText = state.improvedText,
-                isImproved = state.isImproveEnabled && state.improvedText != null,
-                displayText = displayText,
-                audioDurationSeconds = durationSeconds.value
-            )
+            val entry =
+                JournalEntry(
+                    timestamp = System.currentTimeMillis(),
+                    rawText = state.rawText,
+                    improvedText = state.improvedText,
+                    isImproved = state.isImproveEnabled && state.improvedText != null,
+                    displayText = displayText,
+                    audioDurationSeconds = durationSeconds.value,
+                )
             try {
                 val savedId = saveJournalEntryUseCase(entry)
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    resetState()
-                }
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { resetState() }
                 // Dismiss prompt banner if entry was from a prompt
                 if (state.activePrompt.isNotBlank()) {
                     val todayStr = java.time.LocalDate.now().toString()
-                    encryptedPrefs.edit().putString(com.entropyjournal.util.Constants.PREF_PROMPT_DISMISSED_DATE, todayStr).apply()
+                    encryptedPrefs
+                        .edit()
+                        .putString(
+                            com.entropyjournal.util.Constants.PREF_PROMPT_DISMISSED_DATE,
+                            todayStr,
+                        )
+                        .apply()
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                         _uiState.update { it.copy(showPromptBanner = false) }
                     }
@@ -323,34 +378,44 @@ class JournalViewModel @Inject constructor(
                 try {
                     streakTracker.recordEntry()
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        _uiState.update { it.copy(
-                            currentStreak = streakTracker.getCurrentStreak(),
-                            longestStreak = streakTracker.getLongestStreak(),
-                        ) }
+                        _uiState.update {
+                            it.copy(
+                                currentStreak = streakTracker.getCurrentStreak(),
+                                longestStreak = streakTracker.getLongestStreak(),
+                            )
+                        }
                     }
                 } catch (_: Exception) {}
-                try { summarizeEntryUseCase(savedId, displayText) } catch (_: Exception) {}
-                try { triggerSync() } catch (_: Exception) {}
-                try { triggerDebouncedAnalysis() } catch (_: Exception) {}
+                try {
+                    summarizeEntryUseCase(savedId, displayText)
+                } catch (_: Exception) {}
+                try {
+                    triggerSync()
+                } catch (_: Exception) {}
+                try {
+                    triggerDebouncedAnalysis()
+                } catch (_: Exception) {}
             } catch (e: Exception) {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    _uiState.value = _uiState.value.copy(
-                        recordingState = RecordingState.PREVIEW,
-                        errorMessage = "Speichern fehlgeschlagen: ${e.message}"
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            recordingState = RecordingState.PREVIEW,
+                            errorMessage = "Speichern fehlgeschlagen: ${e.message}",
+                        )
                 }
             }
         }
     }
 
     fun startTextEntry() {
-        _uiState.value = _uiState.value.copy(
-            recordingState = RecordingState.PREVIEW,
-            rawText = "",
-            improvedText = null,
-            isImproveEnabled = false,
-            showPreviewDialog = true
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                recordingState = RecordingState.PREVIEW,
+                rawText = "",
+                improvedText = null,
+                isImproveEnabled = false,
+                showPreviewDialog = true,
+            )
     }
 
     fun dismissPreview() {
@@ -362,28 +427,30 @@ class JournalViewModel @Inject constructor(
     }
 
     fun toggleSearch() {
-        _uiState.value = _uiState.value.copy(
-            isSearchActive = !_uiState.value.isSearchActive,
-            searchQuery = ""
-        )
+        _uiState.value =
+            _uiState.value.copy(isSearchActive = !_uiState.value.isSearchActive, searchQuery = "")
     }
 
     fun searchEntries(query: String) = journalRepository.searchEntries(query)
 
     fun startPromptEntry(prompt: String) {
-        _uiState.value = _uiState.value.copy(
-            recordingState = RecordingState.PREVIEW,
-            rawText = "",
-            improvedText = null,
-            isImproveEnabled = false,
-            showPreviewDialog = true,
-            activePrompt = prompt,
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                recordingState = RecordingState.PREVIEW,
+                rawText = "",
+                improvedText = null,
+                isImproveEnabled = false,
+                showPreviewDialog = true,
+                activePrompt = prompt,
+            )
     }
 
     fun dismissPromptBanner() {
         val todayStr = java.time.LocalDate.now().toString()
-        encryptedPrefs.edit().putString(com.entropyjournal.util.Constants.PREF_PROMPT_DISMISSED_DATE, todayStr).apply()
+        encryptedPrefs
+            .edit()
+            .putString(com.entropyjournal.util.Constants.PREF_PROMPT_DISMISSED_DATE, todayStr)
+            .apply()
         _uiState.update { it.copy(showPromptBanner = false) }
     }
 
@@ -393,16 +460,17 @@ class JournalViewModel @Inject constructor(
 
     private fun resetState() {
         val currentState = _uiState.value
-        _uiState.value = JournalUiState(
-            syncStatus = currentState.syncStatus,
-            currentStreak = currentState.currentStreak,
-            longestStreak = currentState.longestStreak,
-            dailyPromptText = currentState.dailyPromptText,
-            dailyPromptCategory = currentState.dailyPromptCategory,
-            dailyPromptId = currentState.dailyPromptId,
-            showPromptBanner = currentState.showPromptBanner,
-            lastSyncTimestamp = currentState.lastSyncTimestamp,
-        )
+        _uiState.value =
+            JournalUiState(
+                syncStatus = currentState.syncStatus,
+                currentStreak = currentState.currentStreak,
+                longestStreak = currentState.longestStreak,
+                dailyPromptText = currentState.dailyPromptText,
+                dailyPromptCategory = currentState.dailyPromptCategory,
+                dailyPromptId = currentState.dailyPromptId,
+                showPromptBanner = currentState.showPromptBanner,
+                lastSyncTimestamp = currentState.lastSyncTimestamp,
+            )
     }
 
     fun retrySyncNow() {
@@ -413,13 +481,10 @@ class JournalViewModel @Inject constructor(
         syncDebounceJob?.cancel()
         syncDebounceJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCING)
-            syncWithDriveUseCase.backup()
-                .onSuccess {
-                    _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
-                }
-                .onFailure {
-                    _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.ERROR)
-                }
+            syncWithDriveUseCase
+                .backup()
+                .onSuccess { _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED) }
+                .onFailure { _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.ERROR) }
         }
     }
 
@@ -429,7 +494,11 @@ class JournalViewModel @Inject constructor(
 
         analysisDebounceJob?.cancel()
         analysisDebounceJob = viewModelScope.launch {
-            encryptedPrefs.edit().putBoolean(Constants.PREF_DASHBOARD_UPDATING, true).apply()
+            encryptedPrefs
+                .edit()
+                .putBoolean(Constants.PREF_DASHBOARD_UPDATE_IS_DELETE, false)
+                .putBoolean(Constants.PREF_DASHBOARD_UPDATING, true)
+                .apply()
             try {
                 delay(3_000)
                 analyzeEntropyUseCase(freshAnalysis = true)

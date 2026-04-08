@@ -6,7 +6,6 @@ import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.remote.ai.AiRateLimiter
 import com.bestjournal.app.data.remote.ai.AiUsageTracker
-import com.bestjournal.app.data.remote.ai.TieredAccessResult
 import com.bestjournal.app.data.repository.AdviceRepository
 import com.bestjournal.app.domain.usecase.AnalyzeEntropyUseCase
 import com.bestjournal.app.domain.usecase.GenerateAdviceUseCase
@@ -14,10 +13,10 @@ import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -38,6 +37,7 @@ data class DashboardUiState(
     val customHeaderErgebnisse: String = "",
     val showAnalysisUpsellBanner: Boolean = false,
     val showWeeklyReviewBanner: Boolean = false,
+    val isDeleteUpdate: Boolean = false,
 )
 
 @HiltViewModel
@@ -64,12 +64,15 @@ constructor(
     init {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
         analyticsTracker.trackDashboardViewed(scenario)
-        _uiState.update { it.copy(
-            currentScenario = scenario,
-            customHeaderTop5 = encryptedPrefs.getString("custom_header_top5", "") ?: "",
-            customHeaderAnalyse = encryptedPrefs.getString("custom_header_analyse", "") ?: "",
-            customHeaderErgebnisse = encryptedPrefs.getString("custom_header_ergebnisse", "") ?: "",
-        ) }
+        _uiState.update {
+            it.copy(
+                currentScenario = scenario,
+                customHeaderTop5 = encryptedPrefs.getString("custom_header_top5", "") ?: "",
+                customHeaderAnalyse = encryptedPrefs.getString("custom_header_analyse", "") ?: "",
+                customHeaderErgebnisse =
+                    encryptedPrefs.getString("custom_header_ergebnisse", "") ?: "",
+            )
+        }
         if (aiUsageTracker.shouldShowAiInfoBanner()) {
             _uiState.update { it.copy(showAiInfoBanner = true) }
         }
@@ -87,7 +90,8 @@ constructor(
                 }
             }
         }
-        // Check upsell banner when blocks load (handles auto-update that completed before navigation)
+        // Check upsell banner when blocks load (handles auto-update that completed before
+        // navigation)
         viewModelScope.launch {
             adviceBlocks.first { it.isNotEmpty() }
             // Small delay so BillingManager can resolve subscription status on cold starts
@@ -109,18 +113,41 @@ constructor(
                         if (showUpsell && !_uiState.value.showAnalysisUpsellBanner) {
                             analyticsTracker.trackUpsellBannerShown("first_analysis")
                         }
-                        _uiState.update { it.copy(isLoading = false, isAutoUpdate = false, showAnalysisUpsellBanner = showUpsell || it.showAnalysisUpsellBanner) }
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                isAutoUpdate = false,
+                                showAnalysisUpsellBanner = showUpsell || it.showAnalysisUpsellBanner,
+                            )
+                        }
                     } else {
-                        _uiState.update { it.copy(isLoading = updating, isAutoUpdate = updating) }
+                        val isDelete =
+                            encryptedPrefs.getBoolean(
+                                Constants.PREF_DASHBOARD_UPDATE_IS_DELETE,
+                                false,
+                            )
+                        _uiState.update {
+                            it.copy(
+                                isLoading = updating,
+                                isAutoUpdate = updating,
+                                isDeleteUpdate = isDelete,
+                            )
+                        }
                     }
                 }
                 val currentScenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                 if (currentScenario != _uiState.value.currentScenario) {
-                    analyticsTracker.trackProfileSwitched(_uiState.value.currentScenario, currentScenario)
-                    _uiState.update { it.copy(currentScenario = currentScenario, isScenarioSwitch = true) }
+                    analyticsTracker.trackProfileSwitched(
+                        _uiState.value.currentScenario,
+                        currentScenario,
+                    )
+                    _uiState.update {
+                        it.copy(currentScenario = currentScenario, isScenarioSwitch = true)
+                    }
                     adviceRepository.clearDashboard()
                     if (currentScenario == 4) {
-                        val customPrompt = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+                        val customPrompt =
+                            encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
                         if (customPrompt.isNotBlank()) {
                             refreshDashboard()
                         }
@@ -132,7 +159,8 @@ constructor(
                 if (promptSavedAt > lastCustomPromptSavedAt && promptSavedAt > 0L) {
                     lastCustomPromptSavedAt = promptSavedAt
                     if (_uiState.value.currentScenario == 4) {
-                        val customPrompt = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
+                        val customPrompt =
+                            encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
                         adviceRepository.clearDashboard()
                         if (customPrompt.isNotBlank()) {
                             _uiState.update { it.copy(isScenarioSwitch = true) }
@@ -166,15 +194,16 @@ constructor(
             analyzeEntropyUseCase(freshAnalysis = true)
                 .onSuccess {
                     val scenarioKey = "dashboard_last_updated_${_uiState.value.currentScenario}"
-                    encryptedPrefs
-                        .edit()
-                        .putLong(scenarioKey, System.currentTimeMillis())
-                        .apply()
+                    encryptedPrefs.edit().putLong(scenarioKey, System.currentTimeMillis()).apply()
                     manualRefreshActive = false
 
                     // Track analysis count and check for first-analysis upsell
-                    val analysisCount = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_ANALYSIS_COUNT, 0) + 1
-                    encryptedPrefs.edit().putInt(Constants.PREF_DASHBOARD_ANALYSIS_COUNT, analysisCount).apply()
+                    val analysisCount =
+                        encryptedPrefs.getInt(Constants.PREF_DASHBOARD_ANALYSIS_COUNT, 0) + 1
+                    encryptedPrefs
+                        .edit()
+                        .putInt(Constants.PREF_DASHBOARD_ANALYSIS_COUNT, analysisCount)
+                        .apply()
                     val showUpsell = shouldShowAnalysisUpsell()
                     if (showUpsell) {
                         analyticsTracker.trackUpsellBannerShown("first_analysis")
@@ -186,9 +215,12 @@ constructor(
                             canUndo = adviceRepository.canUndo,
                             selectedCategoryIndex = 0,
                             isScenarioSwitch = false,
-                            customHeaderTop5 = encryptedPrefs.getString("custom_header_top5", "") ?: "",
-                            customHeaderAnalyse = encryptedPrefs.getString("custom_header_analyse", "") ?: "",
-                            customHeaderErgebnisse = encryptedPrefs.getString("custom_header_ergebnisse", "") ?: "",
+                            customHeaderTop5 =
+                                encryptedPrefs.getString("custom_header_top5", "") ?: "",
+                            customHeaderAnalyse =
+                                encryptedPrefs.getString("custom_header_analyse", "") ?: "",
+                            customHeaderErgebnisse =
+                                encryptedPrefs.getString("custom_header_ergebnisse", "") ?: "",
                             showAnalysisUpsellBanner = showUpsell,
                         )
                     // Auto-hide undo button after 5 seconds
@@ -255,7 +287,8 @@ constructor(
     private fun shouldShowAnalysisUpsell(): Boolean {
         val analysisCount = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_ANALYSIS_COUNT, 0)
         val isFree = billingManager.subscriptionState.value is SubscriptionState.Free
-        val alreadyShown = encryptedPrefs.getBoolean(Constants.PREF_FIRST_ANALYSIS_UPSELL_SHOWN, false)
+        val alreadyShown =
+            encryptedPrefs.getBoolean(Constants.PREF_FIRST_ANALYSIS_UPSELL_SHOWN, false)
         val onboardingDone = encryptedPrefs.getBoolean(Constants.PREF_ONBOARDING_COMPLETED, false)
         return isFree && !alreadyShown && onboardingDone && analysisCount >= 1
     }
