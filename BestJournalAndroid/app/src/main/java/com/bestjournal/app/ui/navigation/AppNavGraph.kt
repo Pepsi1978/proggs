@@ -1,5 +1,6 @@
 package com.bestjournal.app.ui.navigation
 
+import android.net.Uri
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -19,85 +20,43 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import android.net.Uri
 import com.bestjournal.app.ui.screens.dashboard.DashboardScreen
 import com.bestjournal.app.ui.screens.entrydetail.EntryDetailScreen
 import com.bestjournal.app.ui.screens.journal.JournalScreen
-import com.bestjournal.app.ui.screens.login.LoginScreen
+import com.bestjournal.app.ui.screens.onboarding.OnboardingScreen
 import com.bestjournal.app.ui.screens.paywall.PaywallScreen
 import com.bestjournal.app.ui.screens.settings.SettingsScreen
-import com.bestjournal.app.ui.screens.onboarding.OnboardingScreen
 import com.bestjournal.app.ui.screens.splash.SplashScreen
 import kotlinx.coroutines.launch
 
 // Page order: Dashboard (0), Journal (1), Settings (2)
-private val mainPages = listOf(BottomNavItem.Dashboard, BottomNavItem.Journal, BottomNavItem.Settings)
+private val mainPages =
+    listOf(BottomNavItem.Dashboard, BottomNavItem.Journal, BottomNavItem.Settings)
 
 @Composable
-fun AppNavGraph(
-    navController: NavHostController = rememberNavController(),
-    initialTab: Int = 1,
-) {
+fun AppNavGraph(navController: NavHostController = rememberNavController(), initialTab: Int = 1) {
     // NavHost WITHOUT Scaffold — splash and login get full screen, no bottom bar
-    NavHost(
-        navController = navController,
-        startDestination = "splash"
-    ) {
-        composable(
-            "splash",
-            enterTransition = { fadeIn() },
-            exitTransition = { fadeOut() }
-        ) {
+    NavHost(navController = navController, startDestination = "splash") {
+        composable("splash", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
             SplashScreen(
                 viewModel = hiltViewModel(),
-                onSplashFinished = { isSignedIn, isOnboardingDone ->
-                    val destination = when {
-                        !isSignedIn -> "login"
-                        !isOnboardingDone -> "onboarding"
-                        else -> "main"
-                    }
-                    navController.navigate(destination) {
-                        popUpTo("splash") { inclusive = true }
-                    }
-                }
+                onSplashFinished = { isOnboardingDone ->
+                    val destination = if (isOnboardingDone) "main" else "onboarding"
+                    navController.navigate(destination) { popUpTo("splash") { inclusive = true } }
+                },
             )
         }
 
-        composable(
-            "login",
-            enterTransition = { fadeIn() },
-            exitTransition = { fadeOut() }
-        ) {
-            LoginScreen(
-                viewModel = hiltViewModel(),
-                onLoginSuccess = {
-                    navController.navigate("onboarding") {
-                        popUpTo("login") { inclusive = true }
-                    }
-                }
-            )
-        }
-
-        composable(
-            "onboarding",
-            enterTransition = { fadeIn() },
-            exitTransition = { fadeOut() }
-        ) {
+        composable("onboarding", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
             OnboardingScreen(
                 viewModel = hiltViewModel(),
                 onFinished = {
-                    navController.navigate("main") {
-                        popUpTo("onboarding") { inclusive = true }
-                    }
-                }
+                    navController.navigate("main") { popUpTo("onboarding") { inclusive = true } }
+                },
             )
         }
 
-        composable(
-            "main",
-            enterTransition = { fadeIn() },
-            exitTransition = { fadeOut() }
-        ) {
+        composable("main", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
             // Scaffold with bottom bar ONLY wraps the main content —
             // splash and login screens are completely isolated
             val pagerState = rememberPagerState(initialPage = initialTab) { mainPages.size }
@@ -111,47 +70,46 @@ fun AppNavGraph(
                         onItemClick = { item ->
                             val targetPage = mainPages.indexOf(item)
                             if (targetPage >= 0) {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(targetPage)
-                                }
+                                coroutineScope.launch { pagerState.animateScrollToPage(targetPage) }
                             }
-                        }
+                        },
                     )
-                }
+                },
             ) { innerPadding ->
                 HorizontalPager(
                     state = pagerState,
                     beyondViewportPageCount = 2,
-                    modifier = Modifier.padding(innerPadding)
+                    modifier = Modifier.padding(innerPadding),
                 ) { page ->
                     when (page) {
-                        0 -> DashboardScreen(
-                            viewModel = hiltViewModel(),
-                            onNavigateToPaywall = { source ->
-                                navController.navigate("paywall?source=$source")
-                            },
-                        )
-                        1 -> JournalScreen(
-                            viewModel = hiltViewModel(),
-                            onEntryClick = { entryId, searchQuery ->
-                                val encodedQuery = Uri.encode(searchQuery)
-                                navController.navigate("entry_detail/$entryId?searchQuery=$encodedQuery")
-                            },
-                            onNavigateToPaywall = { source ->
-                                navController.navigate("paywall?source=$source")
-                            },
-                        )
-                        2 -> SettingsScreen(
-                            viewModel = hiltViewModel(),
-                            onSignOut = {
-                                navController.navigate("login") {
-                                    popUpTo(0) { inclusive = true }
-                                }
-                            },
-                            onNavigateToPaywall = { source ->
-                                navController.navigate("paywall?source=$source")
-                            },
-                        )
+                        0 ->
+                            DashboardScreen(
+                                viewModel = hiltViewModel(),
+                                onNavigateToPaywall = { source ->
+                                    navController.navigate("paywall?source=$source")
+                                },
+                            )
+                        1 ->
+                            JournalScreen(
+                                viewModel = hiltViewModel(),
+                                onEntryClick = { entryId, searchQuery ->
+                                    val encodedQuery = Uri.encode(searchQuery)
+                                    navController.navigate(
+                                        "entry_detail/$entryId?searchQuery=$encodedQuery"
+                                    )
+                                },
+                                onNavigateToPaywall = { source ->
+                                    navController.navigate("paywall?source=$source")
+                                },
+                            )
+                        2 ->
+                            SettingsScreen(
+                                viewModel = hiltViewModel(),
+                                onSignOut = {},
+                                onNavigateToPaywall = { source ->
+                                    navController.navigate("paywall?source=$source")
+                                },
+                            )
                     }
                 }
             }
@@ -159,33 +117,38 @@ fun AppNavGraph(
 
         composable(
             "entry_detail/{entryId}?searchQuery={searchQuery}",
-            arguments = listOf(
-                navArgument("entryId") { type = NavType.LongType },
-                navArgument("searchQuery") { type = NavType.StringType; defaultValue = "" }
-            ),
+            arguments =
+                listOf(
+                    navArgument("entryId") { type = NavType.LongType },
+                    navArgument("searchQuery") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
+                ),
             enterTransition = { slideInHorizontally { it } + fadeIn() },
-            exitTransition = { slideOutHorizontally { it } + fadeOut() }
+            exitTransition = { slideOutHorizontally { it } + fadeOut() },
         ) { backStackEntry ->
             val searchQuery = backStackEntry.arguments?.getString("searchQuery") ?: ""
             EntryDetailScreen(
                 viewModel = hiltViewModel(),
                 onBack = { navController.popBackStack() },
-                searchQuery = searchQuery
+                searchQuery = searchQuery,
             )
         }
 
         composable(
             "paywall?source={source}",
-            arguments = listOf(
-                navArgument("source") { type = NavType.StringType; defaultValue = "limit_reached" }
-            ),
+            arguments =
+                listOf(
+                    navArgument("source") {
+                        type = NavType.StringType
+                        defaultValue = "limit_reached"
+                    }
+                ),
             enterTransition = { slideInHorizontally { it } + fadeIn() },
-            exitTransition = { slideOutHorizontally { it } + fadeOut() }
+            exitTransition = { slideOutHorizontally { it } + fadeOut() },
         ) {
-            PaywallScreen(
-                viewModel = hiltViewModel(),
-                onDismiss = { navController.popBackStack() },
-            )
+            PaywallScreen(viewModel = hiltViewModel(), onDismiss = { navController.popBackStack() })
         }
     }
 }
