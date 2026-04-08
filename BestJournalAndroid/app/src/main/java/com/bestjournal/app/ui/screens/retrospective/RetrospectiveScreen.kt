@@ -126,7 +126,7 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             // Fixed title bar (does not scroll)
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
@@ -197,7 +197,7 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                             lineHeight = MaterialTheme.typography.bodyLarge.lineHeight,
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         Text(
                             text = "Schau zurück und entdecke, was dich bewegt hat.",
@@ -433,14 +433,14 @@ private fun SummaryEntryCard(
                 color = RetrospectiveColors.monthDividerColor,
                 fontWeight = FontWeight.Medium,
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = summary.title,
                 style = MaterialTheme.typography.titleMedium,
                 color = textColor,
                 fontWeight = FontWeight.Bold,
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = summary.summaryText,
                 style = MaterialTheme.typography.bodySmall,
@@ -464,14 +464,14 @@ private fun MonthDivider(label: String) {
                     .height(2.5.dp)
                     .background(RetrospectiveColors.monthDividerColor)
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = RetrospectiveColors.monthDividerColor,
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         Box(
             modifier =
                 Modifier.fillMaxWidth()
