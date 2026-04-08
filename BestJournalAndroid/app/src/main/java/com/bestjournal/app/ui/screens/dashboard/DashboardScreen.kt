@@ -23,9 +23,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Eco
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.TipsAndUpdates
 import androidx.compose.material.icons.rounded.Undo
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -47,6 +59,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -1974,20 +1987,29 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
 @Composable
 private fun SummaryRelevanceLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        SummaryLegendItem(emoji = "\u2B50", label = "Zentral", color = SummaryIndigo)
-        SummaryLegendItem(emoji = "\uD83D\uDCCC", label = "Relevant", color = SummaryBlue)
-        SummaryLegendItem(emoji = "\uD83D\uDCCE", label = "Randnotiz", color = SummaryTeal)
+        SummaryLegendItem(icon = Icons.Rounded.Star, label = "Zentral", color = SummaryIndigo)
+        SummaryLegendItem(icon = Icons.Rounded.PushPin, label = "Relevant", color = SummaryBlue)
+        SummaryLegendItem(
+            icon = Icons.Rounded.BookmarkBorder,
+            label = "Randnotiz",
+            color = SummaryTeal,
+        )
     }
 }
 
 @Composable
 private fun SummaryLegendItem(
-    emoji: String,
+    icon: ImageVector,
     label: String,
     color: androidx.compose.ui.graphics.Color,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(emoji, style = MaterialTheme.typography.labelLarge)
+        Box(
+            modifier = Modifier.size(22.dp).clip(CircleShape).background(color.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(13.dp))
+        }
         Spacer(modifier = Modifier.width(4.dp))
         Text(label, style = MaterialTheme.typography.labelMedium, color = color)
     }
@@ -1999,11 +2021,11 @@ private fun SummaryObservationCard(
     categoryName: String = "",
     onClick: () -> Unit = {},
 ) {
-    val (emoji, glowColor) =
+    val (icon, glowColor) =
         when (advice.priority) {
-            AdvicePriority.HIGH -> "\u2B50" to SummaryIndigo
-            AdvicePriority.MEDIUM -> "\uD83D\uDCCC" to SummaryBlue
-            AdvicePriority.LOW -> "\uD83D\uDCCE" to SummaryTeal
+            AdvicePriority.HIGH -> Icons.Rounded.Star to SummaryIndigo
+            AdvicePriority.MEDIUM -> Icons.Rounded.PushPin to SummaryBlue
+            AdvicePriority.LOW -> Icons.Rounded.BookmarkBorder to SummaryTeal
         }
 
     GlassCard(
@@ -2016,7 +2038,20 @@ private fun SummaryObservationCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(text = emoji)
+                Box(
+                    modifier =
+                        Modifier.size(24.dp)
+                            .clip(CircleShape)
+                            .background(glowColor.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = glowColor,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = advice.title,
@@ -2214,20 +2249,33 @@ private fun InsightDetailDialog(action: TopAction, index: Int, onDismiss: () -> 
 @Composable
 private fun InsightDepthLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        InsightLegendItem(emoji = "\uD83E\uDE9E", label = "Tiefgehend", color = InsightViolet)
-        InsightLegendItem(emoji = "\uD83D\uDC9C", label = "Bewusst", color = InsightMauve)
-        InsightLegendItem(emoji = "\uD83C\uDF31", label = "Oberfl\u00e4che", color = InsightWarm)
+        InsightLegendItem(
+            icon = Icons.Rounded.Visibility,
+            label = "Tiefgehend",
+            color = InsightViolet,
+        )
+        InsightLegendItem(
+            icon = Icons.Rounded.FavoriteBorder,
+            label = "Bewusst",
+            color = InsightMauve,
+        )
+        InsightLegendItem(icon = Icons.Rounded.Eco, label = "Oberfläche", color = InsightWarm)
     }
 }
 
 @Composable
 private fun InsightLegendItem(
-    emoji: String,
+    icon: ImageVector,
     label: String,
     color: androidx.compose.ui.graphics.Color,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(emoji, style = MaterialTheme.typography.labelLarge)
+        Box(
+            modifier = Modifier.size(22.dp).clip(CircleShape).background(color.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(13.dp))
+        }
         Spacer(modifier = Modifier.width(4.dp))
         Text(label, style = MaterialTheme.typography.labelMedium, color = color)
     }
@@ -2235,11 +2283,11 @@ private fun InsightLegendItem(
 
 @Composable
 private fun InsightCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
-    val (emoji, glowColor) =
+    val (icon, glowColor) =
         when (advice.priority) {
-            AdvicePriority.HIGH -> "\uD83E\uDE9E" to InsightViolet
-            AdvicePriority.MEDIUM -> "\uD83D\uDC9C" to InsightMauve
-            AdvicePriority.LOW -> "\uD83C\uDF31" to InsightWarm
+            AdvicePriority.HIGH -> Icons.Rounded.Visibility to InsightViolet
+            AdvicePriority.MEDIUM -> Icons.Rounded.FavoriteBorder to InsightMauve
+            AdvicePriority.LOW -> Icons.Rounded.Eco to InsightWarm
         }
 
     GlassCard(
@@ -2252,7 +2300,20 @@ private fun InsightCard(advice: Advice, categoryName: String = "", onClick: () -
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(text = emoji)
+                Box(
+                    modifier =
+                        Modifier.size(24.dp)
+                            .clip(CircleShape)
+                            .background(glowColor.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = glowColor,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     advice.title,
@@ -2441,20 +2502,25 @@ private fun GoalStepDetailDialog(action: TopAction, index: Int, onDismiss: () ->
 @Composable
 private fun GoalStatusLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        GoalLegendItem(emoji = "\uD83D\uDEA7", label = "Blockiert", color = GoalCoral)
-        GoalLegendItem(emoji = "\uD83D\uDD13", label = "Offen", color = GoalGold)
-        GoalLegendItem(emoji = "\u2705", label = "Fortschritt", color = GoalEmerald)
+        GoalLegendItem(icon = Icons.Rounded.Block, label = "Blockiert", color = GoalCoral)
+        GoalLegendItem(icon = Icons.Rounded.LockOpen, label = "Offen", color = GoalGold)
+        GoalLegendItem(icon = Icons.Rounded.CheckCircle, label = "Fortschritt", color = GoalEmerald)
     }
 }
 
 @Composable
 private fun GoalLegendItem(
-    emoji: String,
+    icon: ImageVector,
     label: String,
     color: androidx.compose.ui.graphics.Color,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(emoji, style = MaterialTheme.typography.labelLarge)
+        Box(
+            modifier = Modifier.size(22.dp).clip(CircleShape).background(color.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(13.dp))
+        }
         Spacer(modifier = Modifier.width(4.dp))
         Text(label, style = MaterialTheme.typography.labelMedium, color = color)
     }
@@ -2462,11 +2528,11 @@ private fun GoalLegendItem(
 
 @Composable
 private fun GoalCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
-    val (emoji, glowColor) =
+    val (icon, glowColor) =
         when (advice.priority) {
-            AdvicePriority.HIGH -> "\uD83D\uDEA7" to GoalCoral
-            AdvicePriority.MEDIUM -> "\uD83D\uDD13" to GoalGold
-            AdvicePriority.LOW -> "\u2705" to GoalEmerald
+            AdvicePriority.HIGH -> Icons.Rounded.Block to GoalCoral
+            AdvicePriority.MEDIUM -> Icons.Rounded.LockOpen to GoalGold
+            AdvicePriority.LOW -> Icons.Rounded.CheckCircle to GoalEmerald
         }
 
     GlassCard(
@@ -2479,7 +2545,20 @@ private fun GoalCard(advice: Advice, categoryName: String = "", onClick: () -> U
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(text = emoji)
+                Box(
+                    modifier =
+                        Modifier.size(24.dp)
+                            .clip(CircleShape)
+                            .background(glowColor.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = glowColor,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     advice.title,
@@ -2668,20 +2747,29 @@ private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> U
 @Composable
 private fun CustomRelevanceLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        CustomLegendItem(emoji = "\uD83D\uDD25", label = "Wichtig", color = CustomAmber)
-        CustomLegendItem(emoji = "\uD83D\uDCA1", label = "Relevant", color = CustomSand)
-        CustomLegendItem(emoji = "\uD83D\uDCDD", label = "Notiz", color = CustomSage)
+        CustomLegendItem(icon = Icons.Rounded.Whatshot, label = "Wichtig", color = CustomAmber)
+        CustomLegendItem(
+            icon = Icons.Rounded.TipsAndUpdates,
+            label = "Relevant",
+            color = CustomSand,
+        )
+        CustomLegendItem(icon = Icons.Rounded.EditNote, label = "Notiz", color = CustomSage)
     }
 }
 
 @Composable
 private fun CustomLegendItem(
-    emoji: String,
+    icon: ImageVector,
     label: String,
     color: androidx.compose.ui.graphics.Color,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(emoji, style = MaterialTheme.typography.labelLarge)
+        Box(
+            modifier = Modifier.size(22.dp).clip(CircleShape).background(color.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(13.dp))
+        }
         Spacer(modifier = Modifier.width(4.dp))
         Text(label, style = MaterialTheme.typography.labelMedium, color = color)
     }
@@ -2689,11 +2777,11 @@ private fun CustomLegendItem(
 
 @Composable
 private fun CustomResultCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
-    val (emoji, glowColor) =
+    val (icon, glowColor) =
         when (advice.priority) {
-            AdvicePriority.HIGH -> "\uD83D\uDD25" to CustomAmber
-            AdvicePriority.MEDIUM -> "\uD83D\uDCA1" to CustomSand
-            AdvicePriority.LOW -> "\uD83D\uDCDD" to CustomSage
+            AdvicePriority.HIGH -> Icons.Rounded.Whatshot to CustomAmber
+            AdvicePriority.MEDIUM -> Icons.Rounded.TipsAndUpdates to CustomSand
+            AdvicePriority.LOW -> Icons.Rounded.EditNote to CustomSage
         }
 
     GlassCard(
@@ -2706,7 +2794,20 @@ private fun CustomResultCard(advice: Advice, categoryName: String = "", onClick:
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(text = emoji)
+                Box(
+                    modifier =
+                        Modifier.size(24.dp)
+                            .clip(CircleShape)
+                            .background(glowColor.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = glowColor,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     advice.title,
