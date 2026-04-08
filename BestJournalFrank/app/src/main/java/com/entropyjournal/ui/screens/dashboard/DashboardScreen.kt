@@ -22,20 +22,28 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Eco
 import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.Map
+import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.RocketLaunch
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.TipsAndUpdates
 import androidx.compose.material.icons.rounded.Undo
 import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -279,16 +287,33 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
                         GlassCard(glowColor = SummaryBlue, glowIntensity = 0.2f) {
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    "\uD83D\uDCD6  \u00dcberblick",
-                                    style =
-                                        MaterialTheme.typography.titleLarge.copy(
-                                            fontWeight = FontWeight.Bold
-                                        ),
-                                    color = SummaryBlue,
+                                Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.Center,
-                                )
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                ) {
+                                    Box(
+                                        modifier =
+                                            Modifier.size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(SummaryBlue.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.AutoStories,
+                                            contentDescription = null,
+                                            tint = SummaryBlue,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "\u00dcberblick",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = SummaryBlue,
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     text = overallAnalysis,
@@ -337,16 +362,33 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         Spacer(modifier = Modifier.height(20.dp))
                         NeonDivider()
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "\uD83D\uDD0D  Alle Beobachtungen",
-                            style =
-                                MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
-                            color = SummaryIndigo,
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                        )
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Box(
+                                modifier =
+                                    Modifier.size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(SummaryIndigo.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Search,
+                                    contentDescription = null,
+                                    tint = SummaryIndigo,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Alle Beobachtungen",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = SummaryIndigo,
+                            )
+                        }
                     }
 
                     item(key = "relevance_legend") { SummaryRelevanceLegend() }
@@ -383,16 +425,33 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
                         GlassCard(glowColor = InsightViolet, glowIntensity = 0.2f) {
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    "\uD83D\uDC9C  Innerer Spiegel",
-                                    style =
-                                        MaterialTheme.typography.titleLarge.copy(
-                                            fontWeight = FontWeight.Bold
-                                        ),
-                                    color = InsightViolet,
+                                Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.Center,
-                                )
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                ) {
+                                    Box(
+                                        modifier =
+                                            Modifier.size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(InsightViolet.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.SelfImprovement,
+                                            contentDescription = null,
+                                            tint = InsightViolet,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "Innerer Spiegel",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = InsightViolet,
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     text = overallAnalysis,
@@ -441,16 +500,33 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         Spacer(modifier = Modifier.height(20.dp))
                         NeonDivider()
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "\uD83D\uDD2E  Alle Einsichten",
-                            style =
-                                MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
-                            color = InsightMauve,
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                        )
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Box(
+                                modifier =
+                                    Modifier.size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(InsightViolet.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Visibility,
+                                    contentDescription = null,
+                                    tint = InsightViolet,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Alle Einsichten",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = InsightViolet,
+                            )
+                        }
                     }
 
                     item(key = "insight_depth_legend") { InsightDepthLegend() }
@@ -487,16 +563,33 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
                         GlassCard(glowColor = GoalEmerald, glowIntensity = 0.2f) {
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    "\uD83D\uDDFA\uFE0F  Ziel-\u00dcberblick",
-                                    style =
-                                        MaterialTheme.typography.titleLarge.copy(
-                                            fontWeight = FontWeight.Bold
-                                        ),
-                                    color = GoalEmerald,
+                                Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.Center,
-                                )
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                ) {
+                                    Box(
+                                        modifier =
+                                            Modifier.size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(GoalEmerald.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.Map,
+                                            contentDescription = null,
+                                            tint = GoalEmerald,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        "Ziel-\u00dcberblick",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = GoalEmerald,
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     text = overallAnalysis,
@@ -545,16 +638,33 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         Spacer(modifier = Modifier.height(20.dp))
                         NeonDivider()
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "\uD83C\uDFAF  Alle Ziele",
-                            style =
-                                MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
-                            color = GoalEmerald,
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                        )
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Box(
+                                modifier =
+                                    Modifier.size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(GoalEmerald.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Rounded.RocketLaunch,
+                                    contentDescription = null,
+                                    tint = GoalEmerald,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Alle Ziele",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = GoalEmerald,
+                            )
+                        }
                     }
 
                     item(key = "goal_status_legend") { GoalStatusLegend() }
@@ -853,11 +963,11 @@ private fun LegendDot(color: androidx.compose.ui.graphics.Color, label: String) 
 private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
     val title =
         when (scenario) {
-            0 -> "Legende \u2014 Zusammenfassung"
-            2 -> "Legende \u2014 Selbsterkenntnis"
-            3 -> "Legende \u2014 Pers\u00f6nliche Ziele"
-            4 -> "Legende \u2014 Individuelle Analyse"
-            else -> "Legende \u2014 R\u00e4ume dein Leben auf"
+            0 -> "Zusammenfassung"
+            2 -> "Selbsterkenntnis"
+            3 -> "Pers\u00f6nliche Ziele"
+            4 -> "Individuelle Analyse"
+            else -> "R\u00e4ume dein Leben auf"
         }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -898,21 +1008,72 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                             color = SummaryBlue,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                "\u2B50 Zentral \u2014 Kern-Themen deiner Eintr\u00e4ge",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                "\uD83D\uDCCC Relevant \u2014 Wiederkehrende Beobachtungen",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                "\uD83D\uDCCE Randnotiz \u2014 Einmalige Erw\u00e4hnungen",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(SummaryIndigo.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Star,
+                                        contentDescription = null,
+                                        tint = SummaryIndigo,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Zentral \u2014 Kern-Themen deiner Eintr\u00e4ge",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(SummaryBlue.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.PushPin,
+                                        contentDescription = null,
+                                        tint = SummaryBlue,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Relevant \u2014 Wiederkehrende Beobachtungen",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(SummaryTeal.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.BookmarkBorder,
+                                        contentDescription = null,
+                                        tint = SummaryTeal,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Randnotiz \u2014 Einmalige Erw\u00e4hnungen",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
                         }
                     }
                     2 -> {
@@ -938,21 +1099,72 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                             color = InsightViolet,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                "\uD83E\uDE9E Tiefgehend \u2014 Verborgene Muster und \u00dcberzeugungen",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                "\uD83D\uDC9C Bewusst \u2014 Erkannte Denk- und Gef\u00fchlsmuster",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                "\uD83C\uDF31 Oberfl\u00e4che \u2014 Erste Beobachtungen",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(InsightViolet.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Psychology,
+                                        contentDescription = null,
+                                        tint = InsightViolet,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Tiefgehend \u2014 Verborgene Muster und \u00dcberzeugungen",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(InsightMauve.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.FavoriteBorder,
+                                        contentDescription = null,
+                                        tint = InsightMauve,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Bewusst \u2014 Erkannte Denk- und Gef\u00fchlsmuster",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(InsightWarm.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Eco,
+                                        contentDescription = null,
+                                        tint = InsightWarm,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Oberfl\u00e4che \u2014 Erste Beobachtungen",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
                         }
                     }
                     3 -> {
@@ -978,21 +1190,72 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                             color = GoalEmerald,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                "\uD83D\uDEA7 Blockiert \u2014 Ziele mit Hindernissen",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                "\uD83D\uDD13 Offen \u2014 Ziele noch ohne Fortschritt",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                "\u2705 Fortschritt \u2014 Ziele mit sichtbarem Erfolg",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(GoalCoral.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Block,
+                                        contentDescription = null,
+                                        tint = GoalCoral,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Blockiert \u2014 Ziele mit Hindernissen",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(GoalGold.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.LockOpen,
+                                        contentDescription = null,
+                                        tint = GoalGold,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Offen \u2014 Ziele noch ohne Fortschritt",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(GoalEmerald.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.CheckCircle,
+                                        contentDescription = null,
+                                        tint = GoalEmerald,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Fortschritt \u2014 Ziele mit sichtbarem Erfolg",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
                         }
                     }
                     4 -> {
@@ -1027,21 +1290,72 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                             color = CustomAmber,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                "\uD83D\uDD25 Wichtig \u2014 Direkt relevant f\u00fcr deinen Fokus",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                "\uD83D\uDCA1 Relevant \u2014 Verbindung zu deinem Fokus",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                "\uD83D\uDCDD Notiz \u2014 Randbemerkung",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(CustomAmber.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Whatshot,
+                                        contentDescription = null,
+                                        tint = CustomAmber,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Wichtig \u2014 Direkt relevant f\u00fcr deinen Fokus",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(CustomSand.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.TipsAndUpdates,
+                                        contentDescription = null,
+                                        tint = CustomSand,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Relevant \u2014 Verbindung zu deinem Fokus",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(CustomSage.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.EditNote,
+                                        contentDescription = null,
+                                        tint = CustomSage,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Notiz \u2014 Randbemerkung",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
                         }
                     }
                     else -> {
@@ -1076,21 +1390,72 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                "\uD83D\uDD34 Rot = Dringend \u2014 Sofort handeln",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                "\uD83D\uDFE0 Orange = Mittel \u2014 Bald angehen",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                "\uD83D\uDD35 Blau = Niedrig \u2014 Beobachten",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(NeonRed.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Error,
+                                        contentDescription = null,
+                                        tint = NeonRed,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Rot = Dringend \u2014 Sofort handeln",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(NeonAmber.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Warning,
+                                        contentDescription = null,
+                                        tint = NeonAmber,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Orange = Mittel \u2014 Bald angehen",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier =
+                                        Modifier.size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(NeonCyan.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Info,
+                                        contentDescription = null,
+                                        tint = NeonCyan,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Blau = Niedrig \u2014 Beobachten",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
                         }
                     }
                 }
@@ -1205,18 +1570,42 @@ private fun CategoryDetailDialog(
                 )
 
                 sortedAdvices.forEach { advice ->
-                    val dot =
+                    val dotColor =
                         when (advice.priority) {
-                            AdvicePriority.HIGH -> "\uD83D\uDD34"
-                            AdvicePriority.MEDIUM -> "\uD83D\uDFE0"
-                            AdvicePriority.LOW -> "\uD83D\uDD35"
+                            AdvicePriority.HIGH -> NeonRed
+                            AdvicePriority.MEDIUM -> NeonAmber
+                            AdvicePriority.LOW -> NeonCyan
+                        }
+                    val dotIcon =
+                        when (advice.priority) {
+                            AdvicePriority.HIGH -> Icons.Rounded.Whatshot
+                            AdvicePriority.MEDIUM -> Icons.Rounded.TipsAndUpdates
+                            AdvicePriority.LOW -> Icons.Rounded.Eco
                         }
                     Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                        Text(
-                            "$dot ${advice.title}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier =
+                                    Modifier.size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(dotColor.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = dotIcon,
+                                    contentDescription = null,
+                                    tint = dotColor,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                advice.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             advice.description,
@@ -1353,14 +1742,22 @@ private fun AdviceDerivationDialog(advice: Advice, categoryName: String, onDismi
 
 @Composable
 private fun AdviceCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
+    val priorityColor =
+        when (advice.priority) {
+            AdvicePriority.HIGH -> NeonRed
+            AdvicePriority.MEDIUM -> NeonAmber
+            AdvicePriority.LOW -> NeonCyan
+        }
+    val priorityIcon =
+        when (advice.priority) {
+            AdvicePriority.HIGH -> Icons.Rounded.Whatshot
+            AdvicePriority.MEDIUM -> Icons.Rounded.TipsAndUpdates
+            AdvicePriority.LOW -> Icons.Rounded.Eco
+        }
+
     GlassCard(
         modifier = Modifier.clickable { onClick() },
-        glowColor =
-            when (advice.priority) {
-                AdvicePriority.HIGH -> NeonRed
-                AdvicePriority.MEDIUM -> NeonAmber
-                AdvicePriority.LOW -> NeonCyan
-            },
+        glowColor = priorityColor,
         glowIntensity = 0.1f,
     ) {
         Column {
@@ -1368,15 +1765,21 @@ private fun AdviceCard(advice: Advice, categoryName: String = "", onClick: () ->
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(
-                    text =
-                        when (advice.priority) {
-                            AdvicePriority.HIGH -> "\uD83D\uDD34"
-                            AdvicePriority.MEDIUM -> "\uD83D\uDFE0"
-                            AdvicePriority.LOW -> "\uD83D\uDD35"
-                        }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier =
+                        Modifier.size(32.dp)
+                            .clip(CircleShape)
+                            .background(priorityColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = priorityIcon,
+                        contentDescription = null,
+                        tint = priorityColor,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = advice.title,
                     style = MaterialTheme.typography.titleMedium,

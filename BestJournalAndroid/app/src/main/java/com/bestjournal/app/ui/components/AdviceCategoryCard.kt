@@ -1,7 +1,9 @@
 package com.bestjournal.app.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.TrendingUp
@@ -64,6 +67,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
@@ -81,85 +85,84 @@ fun AdviceCategoryCard(
     block: AdviceBlock,
     isSelected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    val categoryColor = try {
-        Color(android.graphics.Color.parseColor(block.categoryColor))
-    } catch (e: Exception) {
-        NeonCyan
-    }
+    val categoryColor =
+        try {
+            Color(android.graphics.Color.parseColor(block.categoryColor))
+        } catch (e: Exception) {
+            NeonCyan
+        }
 
     GlassCard(
-        modifier = modifier
-            .width(110.dp)
-            .height(100.dp)
-            .clickable { onClick() },
+        modifier = modifier.width(110.dp).height(100.dp).clickable { onClick() },
         glowColor = if (isSelected) categoryColor else categoryColor.copy(alpha = 0.3f),
-        contentPadding = 6.dp
+        contentPadding = 6.dp,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 2.dp)
+            modifier = Modifier.fillMaxSize().padding(horizontal = 2.dp),
         ) {
-            Icon(
-                imageVector = getIconForCategory(block.categoryIcon),
-                contentDescription = block.categoryName,
-                tint = categoryColor,
-                modifier = Modifier.size(24.dp)
-            )
+            // Onboarding-style icon: colored circle background + icon
+            Box(
+                modifier =
+                    Modifier.size(36.dp)
+                        .clip(CircleShape)
+                        .background(categoryColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = getIconForCategory(block.categoryIcon),
+                    contentDescription = block.categoryName,
+                    tint = categoryColor,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = block.categoryName,
                 fontSize = 10.sp,
                 lineHeight = 12.sp,
-                color = if (isSelected) categoryColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                color =
+                    if (isSelected) categoryColor else MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 maxLines = 3,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(4.dp))
-            EntropyLevelIndicator(
-                level = block.entropyLevel,
-                color = categoryColor
-            )
+            EntropyLevelIndicator(level = block.entropyLevel, color = categoryColor)
         }
     }
 }
 
 @Composable
-private fun EntropyLevelIndicator(
-    level: Float,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    val indicatorColor = when {
-        level < 0.33f -> NeonEmerald
-        level < 0.66f -> NeonAmber
-        else -> NeonRed
-    }
+private fun EntropyLevelIndicator(level: Float, color: Color, modifier: Modifier = Modifier) {
+    val indicatorColor =
+        when {
+            level < 0.33f -> NeonEmerald
+            level < 0.66f -> NeonAmber
+            else -> NeonRed
+        }
 
-    androidx.compose.foundation.Canvas(
-        modifier = modifier.size(36.dp, 18.dp)
-    ) {
+    androidx.compose.foundation.Canvas(modifier = modifier.size(36.dp, 18.dp)) {
         drawArc(
             color = color.copy(alpha = 0.2f),
             startAngle = 180f,
             sweepAngle = 180f,
             useCenter = false,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx()),
         )
         drawArc(
             color = indicatorColor,
             startAngle = 180f,
             sweepAngle = 180f * level,
             useCenter = false,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(
-                width = 3.dp.toPx(),
-                cap = androidx.compose.ui.graphics.StrokeCap.Round
-            )
+            style =
+                androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = 3.dp.toPx(),
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                ),
         )
     }
 }
@@ -167,72 +170,185 @@ private fun EntropyLevelIndicator(
 fun getIconForCategory(iconName: String): ImageVector {
     return when (iconName) {
         // Gesundheit & Koerper
-        "bedtime", "sleep" -> Icons.Rounded.Bedtime
-        "fitness_center", "fitness" -> Icons.Rounded.FitnessCenter
-        "restaurant", "food", "ernaehrung" -> Icons.Rounded.Restaurant
-        "health_and_safety", "health", "gesundheit" -> Icons.Rounded.HealthAndSafety
-        "local_hospital", "medical", "arzt" -> Icons.Rounded.LocalHospital
-        "directions_run", "running", "sport", "laufen" -> Icons.AutoMirrored.Rounded.DirectionsRun
-        "spa", "wellness" -> Icons.Rounded.Spa
-        "coffee", "kaffee" -> Icons.Rounded.Coffee
+        "bedtime",
+        "sleep" -> Icons.Rounded.Bedtime
+        "fitness_center",
+        "fitness" -> Icons.Rounded.FitnessCenter
+        "restaurant",
+        "food",
+        "ernaehrung" -> Icons.Rounded.Restaurant
+        "health_and_safety",
+        "health",
+        "gesundheit" -> Icons.Rounded.HealthAndSafety
+        "local_hospital",
+        "medical",
+        "arzt" -> Icons.Rounded.LocalHospital
+        "directions_run",
+        "running",
+        "sport",
+        "laufen" -> Icons.AutoMirrored.Rounded.DirectionsRun
+        "spa",
+        "wellness" -> Icons.Rounded.Spa
+        "coffee",
+        "kaffee" -> Icons.Rounded.Coffee
 
         // Psyche & Gefuehle
-        "psychology", "mental", "psyche" -> Icons.Rounded.Psychology
-        "self_improvement", "meditation", "achtsamkeit" -> Icons.Rounded.SelfImprovement
-        "mood_bad", "gefuehle", "emotions", "trauer", "angst", "wut" -> Icons.Rounded.MoodBad
-        "favorite", "love", "heart", "liebe" -> Icons.Rounded.Favorite
-        "nights_stay", "einsamkeit", "loneliness" -> Icons.Rounded.NightsStay
+        "psychology",
+        "mental",
+        "psyche" -> Icons.Rounded.Psychology
+        "self_improvement",
+        "meditation",
+        "achtsamkeit" -> Icons.Rounded.SelfImprovement
+        "mood_bad",
+        "gefuehle",
+        "emotions",
+        "trauer",
+        "angst",
+        "wut" -> Icons.Rounded.MoodBad
+        "favorite",
+        "love",
+        "heart",
+        "liebe" -> Icons.Rounded.Favorite
+        "nights_stay",
+        "einsamkeit",
+        "loneliness" -> Icons.Rounded.NightsStay
 
         // Beziehungen & Soziales
-        "people", "beziehungen", "freunde" -> Icons.Rounded.People
-        "child_care", "kinder", "familie", "family" -> Icons.Rounded.ChildCare
-        "cake", "dating", "partnerschaft" -> Icons.Rounded.Cake
-        "volunteer_activism", "social", "sozial", "ehrenamt" -> Icons.Rounded.VolunteerActivism
+        "people",
+        "beziehungen",
+        "freunde" -> Icons.Rounded.People
+        "child_care",
+        "kinder",
+        "familie",
+        "family" -> Icons.Rounded.ChildCare
+        "cake",
+        "dating",
+        "partnerschaft" -> Icons.Rounded.Cake
+        "volunteer_activism",
+        "social",
+        "sozial",
+        "ehrenamt" -> Icons.Rounded.VolunteerActivism
 
         // Arbeit & Karriere
-        "work", "arbeit", "job" -> Icons.Rounded.Work
-        "trending_up", "karriere", "career" -> Icons.AutoMirrored.Rounded.TrendingUp
-        "school", "schule", "studium", "pruefung" -> Icons.Rounded.School
-        "code", "programmieren", "tech" -> Icons.Rounded.Code
-        "computer", "digital", "bildschirm" -> Icons.Rounded.Computer
-        "timer", "time", "produktivitaet", "zeitmanagement" -> Icons.Rounded.Timer
+        "work",
+        "arbeit",
+        "job" -> Icons.Rounded.Work
+        "trending_up",
+        "karriere",
+        "career" -> Icons.AutoMirrored.Rounded.TrendingUp
+        "school",
+        "schule",
+        "studium",
+        "pruefung" -> Icons.Rounded.School
+        "code",
+        "programmieren",
+        "tech" -> Icons.Rounded.Code
+        "computer",
+        "digital",
+        "bildschirm" -> Icons.Rounded.Computer
+        "timer",
+        "time",
+        "produktivitaet",
+        "zeitmanagement" -> Icons.Rounded.Timer
 
         // Finanzen
-        "payments", "money", "finance", "finanzen", "geld" -> Icons.Rounded.Payments
-        "account_balance", "bank" -> Icons.Rounded.AccountBalance
-        "shopping_cart", "shopping", "einkaufen" -> Icons.Rounded.ShoppingCart
+        "payments",
+        "money",
+        "finance",
+        "finanzen",
+        "geld" -> Icons.Rounded.Payments
+        "account_balance",
+        "bank" -> Icons.Rounded.AccountBalance
+        "shopping_cart",
+        "shopping",
+        "einkaufen" -> Icons.Rounded.ShoppingCart
 
         // Zuhause & Alltag
-        "home", "zuhause", "wohnung" -> Icons.Rounded.Home
-        "cleaning_services", "haushalt", "putzen", "ordnung" -> Icons.Rounded.CleaningServices
-        "directions_car", "car", "mobility", "auto", "pendeln" -> Icons.Rounded.DirectionsCar
-        "gavel", "recht", "justiz", "buerokratie", "steuern" -> Icons.Rounded.Gavel
+        "home",
+        "zuhause",
+        "wohnung" -> Icons.Rounded.Home
+        "cleaning_services",
+        "haushalt",
+        "putzen",
+        "ordnung" -> Icons.Rounded.CleaningServices
+        "directions_car",
+        "car",
+        "mobility",
+        "auto",
+        "pendeln" -> Icons.Rounded.DirectionsCar
+        "gavel",
+        "recht",
+        "justiz",
+        "buerokratie",
+        "steuern" -> Icons.Rounded.Gavel
 
         // Freizeit & Hobbys
-        "menu_book", "book", "lesen" -> Icons.Rounded.MenuBook
-        "music_note", "music", "musik" -> Icons.Rounded.MusicNote
-        "palette", "art", "creative", "kunst", "kreativ" -> Icons.Rounded.Palette
-        "brush", "design" -> Icons.Rounded.Brush
-        "sports_esports", "gaming", "spiele" -> Icons.Rounded.SportsEsports
-        "photo_camera", "fotografie", "foto" -> Icons.Rounded.PhotoCamera
-        "grass", "garten", "hobby" -> Icons.Rounded.Grass
-        "travel", "travel_explore", "urlaub", "reisen" -> Icons.Rounded.TravelExplore
-        "pets", "pet", "animal", "haustier" -> Icons.Rounded.Pets
+        "menu_book",
+        "book",
+        "lesen" -> Icons.Rounded.MenuBook
+        "music_note",
+        "music",
+        "musik" -> Icons.Rounded.MusicNote
+        "palette",
+        "art",
+        "creative",
+        "kunst",
+        "kreativ" -> Icons.Rounded.Palette
+        "brush",
+        "design" -> Icons.Rounded.Brush
+        "sports_esports",
+        "gaming",
+        "spiele" -> Icons.Rounded.SportsEsports
+        "photo_camera",
+        "fotografie",
+        "foto" -> Icons.Rounded.PhotoCamera
+        "grass",
+        "garten",
+        "hobby" -> Icons.Rounded.Grass
+        "travel",
+        "travel_explore",
+        "urlaub",
+        "reisen" -> Icons.Rounded.TravelExplore
+        "pets",
+        "pet",
+        "animal",
+        "haustier" -> Icons.Rounded.Pets
 
         // Sucht & Laster
-        "smoking_rooms", "rauchen", "smoke" -> Icons.Rounded.SmokingRooms
-        "local_bar", "alkohol", "trinken", "sucht" -> Icons.Rounded.LocalBar
+        "smoking_rooms",
+        "rauchen",
+        "smoke" -> Icons.Rounded.SmokingRooms
+        "local_bar",
+        "alkohol",
+        "trinken",
+        "sucht" -> Icons.Rounded.LocalBar
 
         // Spiritualitaet
-        "church", "glaube", "spiritualitaet", "religion" -> Icons.Rounded.Church
+        "church",
+        "glaube",
+        "spiritualitaet",
+        "religion" -> Icons.Rounded.Church
 
         // Sonstiges
-        "nature", "outdoor", "natur" -> Icons.Rounded.Nature
-        "wb_sunny", "sun", "weather", "wetter" -> Icons.Rounded.WbSunny
-        "lightbulb", "idea", "idee" -> Icons.Rounded.Lightbulb
-        "star", "goals", "ziele" -> Icons.Rounded.Star
-        "emoji_events", "achievement", "erfolg" -> Icons.Rounded.EmojiEvents
-        "thermostat", "energy", "energie" -> Icons.Rounded.Thermostat
+        "nature",
+        "outdoor",
+        "natur" -> Icons.Rounded.Nature
+        "wb_sunny",
+        "sun",
+        "weather",
+        "wetter" -> Icons.Rounded.WbSunny
+        "lightbulb",
+        "idea",
+        "idee" -> Icons.Rounded.Lightbulb
+        "star",
+        "goals",
+        "ziele" -> Icons.Rounded.Star
+        "emoji_events",
+        "achievement",
+        "erfolg" -> Icons.Rounded.EmojiEvents
+        "thermostat",
+        "energy",
+        "energie" -> Icons.Rounded.Thermostat
 
         else -> Icons.Rounded.Lightbulb
     }

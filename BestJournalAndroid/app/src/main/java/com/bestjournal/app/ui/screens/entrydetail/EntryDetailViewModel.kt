@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.data.repository.JournalRepository
 import com.bestjournal.app.domain.model.JournalEntry
 import com.bestjournal.app.domain.usecase.AnalyzeEntropyUseCase
+import com.bestjournal.app.domain.usecase.ImproveTextUseCase
 import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
@@ -24,6 +25,8 @@ data class EntryDetailUiState(
     val showDeleteDialog: Boolean = false,
     val isDeleted: Boolean = false,
     val isSaving: Boolean = false,
+    val isImproving: Boolean = false,
+    val improveError: String? = null,
 )
 
 @HiltViewModel
@@ -34,6 +37,7 @@ constructor(
     private val analyticsTracker: AnalyticsTracker,
     private val syncWithDriveUseCase: SyncWithDriveUseCase,
     private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
+    private val improveTextUseCase: ImproveTextUseCase,
     private val encryptedPrefs: SharedPreferences,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -96,6 +100,43 @@ constructor(
             val current = _uiState.value.entry ?: return@launch
             journalRepository.updateEntry(current)
         }
+    }
+
+    fun improveTextWithAi() {
+        val entry = _uiState.value.entry ?: return
+        if (entry.rawText.isBlank()) return
+
+        _uiState.value = _uiState.value.copy(isImproving = true, improveError = null)
+
+        viewModelScope.launch {
+            improveTextUseCase(entry.rawText)
+                .onSuccess { improved ->
+                    val updatedEntry =
+                        entry.copy(
+                            improvedText = improved,
+                            isImproved = true,
+                            displayText = improved,
+                        )
+                    journalRepository.updateEntry(updatedEntry)
+                    _uiState.value =
+                        _uiState.value.copy(
+                            entry = updatedEntry,
+                            editedDisplayText = improved,
+                            isImproving = false,
+                        )
+                }
+                .onFailure { error ->
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isImproving = false,
+                            improveError = error.message ?: "Textverbesserung fehlgeschlagen",
+                        )
+                }
+        }
+    }
+
+    fun clearImproveError() {
+        _uiState.value = _uiState.value.copy(improveError = null)
     }
 
     fun showDeleteDialog(show: Boolean) {

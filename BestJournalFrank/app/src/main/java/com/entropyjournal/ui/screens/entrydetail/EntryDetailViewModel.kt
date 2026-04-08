@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.entropyjournal.data.repository.JournalRepository
 import com.entropyjournal.domain.model.JournalEntry
 import com.entropyjournal.domain.usecase.AnalyzeEntropyUseCase
+import com.entropyjournal.domain.usecase.ImproveTextUseCase
 import com.entropyjournal.domain.usecase.SyncWithDriveUseCase
 import com.entropyjournal.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,6 +26,8 @@ data class EntryDetailUiState(
     val showDeleteDialog: Boolean = false,
     val isDeleted: Boolean = false,
     val isSaving: Boolean = false,
+    val isImproving: Boolean = false,
+    val improveError: String? = null,
 )
 
 @HiltViewModel
@@ -34,6 +37,7 @@ constructor(
     private val journalRepository: JournalRepository,
     private val syncWithDriveUseCase: SyncWithDriveUseCase,
     private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
+    private val improveTextUseCase: ImproveTextUseCase,
     private val encryptedPrefs: SharedPreferences,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -100,6 +104,43 @@ constructor(
             val current = _uiState.value.entry ?: return@launch
             journalRepository.updateEntry(current)
         }
+    }
+
+    fun improveTextWithAi() {
+        val entry = _uiState.value.entry ?: return
+        if (entry.rawText.isBlank()) return
+
+        _uiState.value = _uiState.value.copy(isImproving = true, improveError = null)
+
+        viewModelScope.launch {
+            improveTextUseCase(entry.rawText)
+                .onSuccess { improved ->
+                    val updatedEntry =
+                        entry.copy(
+                            improvedText = improved,
+                            isImproved = true,
+                            displayText = improved,
+                        )
+                    journalRepository.updateEntry(updatedEntry)
+                    _uiState.value =
+                        _uiState.value.copy(
+                            entry = updatedEntry,
+                            editedDisplayText = improved,
+                            isImproving = false,
+                        )
+                }
+                .onFailure { error ->
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isImproving = false,
+                            improveError = error.message ?: "Textverbesserung fehlgeschlagen",
+                        )
+                }
+        }
+    }
+
+    fun clearImproveError() {
+        _uiState.value = _uiState.value.copy(improveError = null)
     }
 
     fun toggleTextVersion() {
