@@ -104,4 +104,34 @@ constructor(
                 Result.failure(e)
             }
         }
+
+    suspend fun restorePhotos(targetZipFile: File): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                val driveService = getDriveService() ?: return@withContext Result.success(Unit)
+
+                val files =
+                    driveService
+                        .files()
+                        .list()
+                        .setSpaces("appDataFolder")
+                        .setQ("name = '${Constants.DRIVE_PHOTOS_FILENAME}'")
+                        .setFields("files(id)")
+                        .execute()
+
+                val photoZip = files.files?.firstOrNull() ?: return@withContext Result.success(Unit)
+
+                FileOutputStream(targetZipFile).use { outputStream ->
+                    driveService.files().get(photoZip.id).executeMediaAndDownloadTo(outputStream)
+                }
+                android.util.Log.d(
+                    "DriveRestore",
+                    "Photos restored: ${targetZipFile.length()} bytes",
+                )
+                Result.success(Unit)
+            } catch (e: Exception) {
+                android.util.Log.e("DriveRestore", "Photos restore FAILED: ${e.message}", e)
+                Result.failure(e)
+            }
+        }
 }

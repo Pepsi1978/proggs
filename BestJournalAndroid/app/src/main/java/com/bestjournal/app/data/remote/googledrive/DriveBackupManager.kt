@@ -50,34 +50,11 @@ constructor(
         withContext(Dispatchers.IO) {
             try {
                 val driveService = getDriveService()
-
-                val existingFiles =
-                    driveService
-                        .files()
-                        .list()
-                        .setSpaces("appDataFolder")
-                        .setQ("name = '${Constants.DRIVE_BACKUP_FILENAME}'")
-                        .setFields("files(id)")
-                        .execute()
-
-                existingFiles.files?.forEach { file ->
-                    driveService.files().delete(file.id).execute()
-                }
-
-                val fileMetadata =
-                    com.google.api.services.drive.model.File().apply {
-                        name = Constants.DRIVE_BACKUP_FILENAME
-                        parents = listOf("appDataFolder")
-                    }
-
-                val mediaContent = FileContent("application/octet-stream", databaseFile)
-                driveService.files().create(fileMetadata, mediaContent).setFields("id").execute()
-
+                uploadFile(driveService, databaseFile, Constants.DRIVE_BACKUP_FILENAME)
                 encryptedPrefs
                     .edit()
                     .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
                     .apply()
-
                 Result.success(Unit)
             } catch (e: UserRecoverableAuthException) {
                 android.util.Log.e("DriveBackup", "Backup needs consent: ${e.message}")
@@ -91,4 +68,37 @@ constructor(
                 Result.failure(e)
             }
         }
+
+    suspend fun backupPhotos(zipFile: File): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                val driveService = getDriveService()
+                uploadFile(driveService, zipFile, Constants.DRIVE_PHOTOS_FILENAME)
+                android.util.Log.d("DriveBackup", "Photos backup: ${zipFile.length()} bytes")
+                Result.success(Unit)
+            } catch (e: Exception) {
+                android.util.Log.e("DriveBackup", "Photos backup FAILED: ${e.message}", e)
+                Result.failure(e)
+            }
+        }
+
+    private fun uploadFile(driveService: Drive, localFile: File, remoteName: String) {
+        val existingFiles =
+            driveService
+                .files()
+                .list()
+                .setSpaces("appDataFolder")
+                .setQ("name = '$remoteName'")
+                .setFields("files(id)")
+                .execute()
+        existingFiles.files?.forEach { file -> driveService.files().delete(file.id).execute() }
+
+        val fileMetadata =
+            com.google.api.services.drive.model.File().apply {
+                name = remoteName
+                parents = listOf("appDataFolder")
+            }
+        val mediaContent = FileContent("application/octet-stream", localFile)
+        driveService.files().create(fileMetadata, mediaContent).setFields("id").execute()
+    }
 }
