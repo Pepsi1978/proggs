@@ -375,7 +375,6 @@ fun EntryDetailScreen(
                             Button(
                                 onClick = { viewModel.improveTextWithAi() },
                                 enabled = !uiState.isImproving,
-                                modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(14.dp),
                                 colors =
                                     ButtonDefaults.buttonColors(
