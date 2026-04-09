@@ -152,9 +152,10 @@ fun EntryDetailScreen(
         }
 
     val cameraLauncher =
-        rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicture()) {
-            success ->
-            if (success) {
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
                 cameraFile?.let { viewModel.onCameraPhotoTaken(it) }
             } else {
                 cameraFile?.delete()
@@ -168,7 +169,14 @@ fun EntryDetailScreen(
             if (granted) {
                 val (uri, file) = viewModel.createCameraUri()
                 cameraFile = file
-                cameraLauncher.launch(uri)
+                val intent =
+                    android.content.Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                        putExtra(android.provider.MediaStore.EXTRA_OUTPUT, uri)
+                        putExtra("android.intent.extras.CAMERA_FACING", 0)
+                        putExtra("android.intent.extras.LENS_FACING_FRONT", 0)
+                        putExtra("android.intent.extra.USE_FRONT_CAMERA", false)
+                    }
+                cameraLauncher.launch(intent)
             }
         }
 
