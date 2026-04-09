@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -91,7 +92,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -786,42 +786,80 @@ fun EntryDetailScreen(
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     val infiniteTransition = rememberInfiniteTransition(label = "photo_source")
-                    val animOffset by
+                    // Rotating gradient angle
+                    val gradientAngle by
                         infiniteTransition.animateFloat(
                             initialValue = 0f,
-                            targetValue = 1f,
+                            targetValue = 360f,
                             animationSpec =
                                 infiniteRepeatable(
-                                    animation = tween(3000, easing = LinearEasing),
+                                    animation = tween(4000, easing = LinearEasing),
+                                    repeatMode = RepeatMode.Restart,
+                                ),
+                            label = "gradient_angle",
+                        )
+                    // Icon pulse
+                    val iconScale by
+                        infiniteTransition.animateFloat(
+                            initialValue = 1f,
+                            targetValue = 1.15f,
+                            animationSpec =
+                                infiniteRepeatable(
+                                    animation = tween(800, easing = FastOutSlowInEasing),
                                     repeatMode = RepeatMode.Reverse,
                                 ),
-                            label = "gradient_shift",
+                            label = "icon_pulse",
+                        )
+                    // Tile breathing
+                    val tileScale by
+                        infiniteTransition.animateFloat(
+                            initialValue = 1f,
+                            targetValue = 1.03f,
+                            animationSpec =
+                                infiniteRepeatable(
+                                    animation = tween(2000, easing = FastOutSlowInEasing),
+                                    repeatMode = RepeatMode.Reverse,
+                                ),
+                            label = "tile_breathe",
                         )
 
-                    val cameraGreen = Color(0xFF4CAF50)
-                    val cameraGray = Color(0xFFBDBDBD)
-                    val galleryOrange = Color(0xFFFF9800)
-                    val galleryGray = Color(0xFFBDBDBD)
+                    val angleRad = Math.toRadians(gradientAngle.toDouble())
+                    val gradStart =
+                        Offset(
+                            (150 + 150 * kotlin.math.cos(angleRad)).toFloat(),
+                            (150 + 150 * kotlin.math.sin(angleRad)).toFloat(),
+                        )
+                    val gradEnd =
+                        Offset(
+                            (150 - 150 * kotlin.math.cos(angleRad)).toFloat(),
+                            (150 - 150 * kotlin.math.sin(angleRad)).toFloat(),
+                        )
 
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        // Camera tile — animated green/gray
+                        // Camera tile
                         Box(
                             modifier =
                                 Modifier.weight(1f)
                                     .aspectRatio(1f)
+                                    .graphicsLayer {
+                                        scaleX = tileScale
+                                        scaleY = tileScale
+                                    }
                                     .clip(RoundedCornerShape(20.dp))
                                     .background(
                                         Brush.linearGradient(
                                             colors =
                                                 listOf(
-                                                    lerp(cameraGreen, cameraGray, animOffset),
-                                                    lerp(cameraGray, cameraGreen, animOffset),
+                                                    Color(0xFF4CAF50),
+                                                    Color(0xFF81C784),
+                                                    Color(0xFFBDBDBD),
+                                                    Color(0xFF4CAF50),
                                                 ),
-                                            start = Offset.Zero,
-                                            end = Offset.Infinite,
+                                            start = gradStart,
+                                            end = gradEnd,
                                         )
                                     )
                                     .clickable {
@@ -836,7 +874,11 @@ fun EntryDetailScreen(
                                 Icon(
                                     Icons.Rounded.CameraAlt,
                                     contentDescription = null,
-                                    modifier = Modifier.size(40.dp),
+                                    modifier =
+                                        Modifier.size(40.dp).graphicsLayer {
+                                            scaleX = iconScale
+                                            scaleY = iconScale
+                                        },
                                     tint = Color.White,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -847,21 +889,27 @@ fun EntryDetailScreen(
                                 )
                             }
                         }
-                        // Gallery tile — animated orange/gray
+                        // Gallery tile
                         Box(
                             modifier =
                                 Modifier.weight(1f)
                                     .aspectRatio(1f)
+                                    .graphicsLayer {
+                                        scaleX = tileScale
+                                        scaleY = tileScale
+                                    }
                                     .clip(RoundedCornerShape(20.dp))
                                     .background(
                                         Brush.linearGradient(
                                             colors =
                                                 listOf(
-                                                    lerp(galleryOrange, galleryGray, animOffset),
-                                                    lerp(galleryGray, galleryOrange, animOffset),
+                                                    Color(0xFFFF9800),
+                                                    Color(0xFFFFB74D),
+                                                    Color(0xFFBDBDBD),
+                                                    Color(0xFFFF9800),
                                                 ),
-                                            start = Offset.Zero,
-                                            end = Offset.Infinite,
+                                            start = gradEnd,
+                                            end = gradStart,
                                         )
                                     )
                                     .clickable {
@@ -878,7 +926,11 @@ fun EntryDetailScreen(
                                 Icon(
                                     Icons.Rounded.PhotoLibrary,
                                     contentDescription = null,
-                                    modifier = Modifier.size(40.dp),
+                                    modifier =
+                                        Modifier.size(40.dp).graphicsLayer {
+                                            scaleX = iconScale
+                                            scaleY = iconScale
+                                        },
                                     tint = Color.White,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
