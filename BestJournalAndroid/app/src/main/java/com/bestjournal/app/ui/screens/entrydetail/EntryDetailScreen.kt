@@ -11,7 +11,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -604,6 +605,7 @@ fun EntryDetailScreen(
         val photos = uiState.photos
         val initialPage = photos.indexOfFirst { it.filePath == initialPath }.coerceAtLeast(0)
         val pagerState = rememberPagerState(initialPage = initialPage) { photos.size }
+        var currentPageZoomed by remember { mutableStateOf(false) }
 
         Dialog(
             onDismissRequest = { fullScreenPhotoPath = null },
@@ -613,65 +615,72 @@ fun EntryDetailScreen(
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
-                    userScrollEnabled = true,
+                    userScrollEnabled = !currentPageZoomed,
                 ) { page ->
                     var scale by remember { mutableStateOf(1f) }
                     var offsetX by remember { mutableStateOf(0f) }
                     var offsetY by remember { mutableStateOf(0f) }
 
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    LaunchedEffect(scale, pagerState.currentPage) {
+                        if (page == pagerState.currentPage) {
+                            currentPageZoomed = scale > 1f
+                        }
+                    }
+
+                    // Reset zoom when swiping to a different page
+                    LaunchedEffect(pagerState.currentPage) {
+                        if (page != pagerState.currentPage) {
+                            scale = 1f
+                            offsetX = 0f
+                            offsetY = 0f
+                        }
+                    }
+
+                    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+                        scale = (scale * zoomChange).coerceIn(1f, 5f)
+                        if (scale > 1f) {
+                            offsetX += panChange.x
+                            offsetY += panChange.y
+                            val maxX = 1000f * (scale - 1)
+                            val maxY = 1500f * (scale - 1)
+                            offsetX = offsetX.coerceIn(-maxX, maxX)
+                            offsetY = offsetY.coerceIn(-maxY, maxY)
+                        } else {
+                            offsetX = 0f
+                            offsetY = 0f
+                        }
+                    }
+
+                    Box(
+                        modifier =
+                            Modifier.fillMaxSize()
+                                .transformable(state = transformState)
+                                .pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onDoubleTap = {
+                                            if (scale > 1f) {
+                                                scale = 1f
+                                                offsetX = 0f
+                                                offsetY = 0f
+                                            } else {
+                                                scale = 2.5f
+                                            }
+                                        },
+                                        onTap = { fullScreenPhotoPath = null },
+                                    )
+                                },
+                        contentAlignment = Alignment.Center,
+                    ) {
                         AsyncImage(
                             model = File(photos[page].filePath),
                             contentDescription = "Foto ${page + 1}",
                             modifier =
-                                Modifier.fillMaxSize()
-                                    .pointerInput(scale) {
-                                        if (scale > 1f) {
-                                            detectTransformGestures { _, pan, zoom, _ ->
-                                                scale = (scale * zoom).coerceIn(1f, 5f)
-                                                offsetX += pan.x
-                                                offsetY += pan.y
-                                                val maxX = (size.width * (scale - 1)) / 2
-                                                val maxY = (size.height * (scale - 1)) / 2
-                                                offsetX = offsetX.coerceIn(-maxX, maxX)
-                                                offsetY = offsetY.coerceIn(-maxY, maxY)
-                                                if (scale <= 1f) {
-                                                    offsetX = 0f
-                                                    offsetY = 0f
-                                                }
-                                            }
-                                        } else {
-                                            detectTransformGestures { _, _, zoom, _ ->
-                                                if (zoom != 1f) {
-                                                    scale = (scale * zoom).coerceIn(1f, 5f)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    .pointerInput(Unit) {
-                                        detectTapGestures(
-                                            onDoubleTap = {
-                                                if (scale > 1f) {
-                                                    scale = 1f
-                                                    offsetX = 0f
-                                                    offsetY = 0f
-                                                } else {
-                                                    scale = 2.5f
-                                                }
-                                            },
-                                            onTap = {
-                                                if (scale <= 1f) {
-                                                    fullScreenPhotoPath = null
-                                                }
-                                            },
-                                        )
-                                    }
-                                    .graphicsLayer {
-                                        scaleX = scale
-                                        scaleY = scale
-                                        translationX = offsetX
-                                        translationY = offsetY
-                                    },
+                                Modifier.fillMaxSize().graphicsLayer {
+                                    scaleX = scale
+                                    scaleY = scale
+                                    translationX = offsetX
+                                    translationY = offsetY
+                                },
                             contentScale = ContentScale.Fit,
                         )
                     }
