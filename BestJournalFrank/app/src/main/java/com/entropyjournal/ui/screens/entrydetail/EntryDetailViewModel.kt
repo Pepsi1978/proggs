@@ -74,8 +74,8 @@ constructor(
         }
     }
 
-    fun addPhotos(uris: List<Uri>) {
-        viewModelScope.launch { uris.forEach { uri -> photoRepository.addPhoto(entryId, uri) } }
+    fun addMedia(uris: List<Uri>) {
+        viewModelScope.launch { uris.forEach { uri -> photoRepository.addMedia(entryId, uri) } }
     }
 
     fun createCameraUri() = photoRepository.createCameraUri()

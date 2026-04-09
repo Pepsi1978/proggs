@@ -53,6 +53,7 @@ import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.PhotoLibrary
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -147,7 +148,7 @@ fun EntryDetailScreen(
             contract = ActivityResultContracts.PickMultipleVisualMedia()
         ) { uris ->
             if (uris.isNotEmpty()) {
-                viewModel.addPhotos(uris)
+                viewModel.addMedia(uris)
             }
         }
 
@@ -534,7 +535,7 @@ fun EntryDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    "Fotos",
+                                    "Fotos/Videos",
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -563,7 +564,8 @@ fun EntryDetailScreen(
                                     Box {
                                         AsyncImage(
                                             model = File(photo.filePath),
-                                            contentDescription = "Foto",
+                                            contentDescription =
+                                                if (photo.isVideo) "Video" else "Foto",
                                             modifier =
                                                 Modifier.size(120.dp)
                                                     .clip(RoundedCornerShape(12.dp))
@@ -572,6 +574,15 @@ fun EntryDetailScreen(
                                                     },
                                             contentScale = ContentScale.Crop,
                                         )
+                                        if (photo.isVideo) {
+                                            Icon(
+                                                Icons.Rounded.PlayCircle,
+                                                contentDescription = "Video abspielen",
+                                                modifier =
+                                                    Modifier.size(40.dp).align(Alignment.Center),
+                                                tint = Color.White.copy(alpha = 0.9f),
+                                            )
+                                        }
                                         IconButton(
                                             onClick = { viewModel.deletePhoto(photo.id) },
                                             modifier =
@@ -584,7 +595,7 @@ fun EntryDetailScreen(
                                         ) {
                                             Icon(
                                                 Icons.Rounded.Close,
-                                                contentDescription = "Foto entfernen",
+                                                contentDescription = "Entfernen",
                                                 modifier = Modifier.size(16.dp),
                                                 tint = Color.White,
                                             )
@@ -595,7 +606,7 @@ fun EntryDetailScreen(
                         } else {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                "Noch keine Fotos hinzugef\u00fcgt",
+                                "Noch keine Fotos/Videos hinzugef\u00fcgt",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline,
                             )
@@ -788,7 +799,7 @@ fun EntryDetailScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        "Foto hinzuf\u00fcgen",
+                        "Foto/Video hinzuf\u00fcgen",
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -942,7 +953,8 @@ fun EntryDetailScreen(
                                         showPhotoSourceDialog = false
                                         photoPickerLauncher.launch(
                                             PickVisualMediaRequest(
-                                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                                                ActivityResultContracts.PickVisualMedia
+                                                    .ImageAndVideo
                                             )
                                         )
                                     },

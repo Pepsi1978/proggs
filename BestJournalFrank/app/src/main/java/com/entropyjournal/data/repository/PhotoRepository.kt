@@ -33,10 +33,17 @@ constructor(
         return uri to file
     }
 
-    suspend fun addPhoto(entryId: Long, sourceUri: Uri): Long =
+    private fun isVideoUri(uri: Uri): Boolean {
+        val mimeType = context.contentResolver.getType(uri)
+        return mimeType?.startsWith("video/") == true
+    }
+
+    suspend fun addMedia(entryId: Long, sourceUri: Uri): Long =
         withContext(Dispatchers.IO) {
+            val isVideo = isVideoUri(sourceUri)
             val photosDir = File(context.filesDir, "photos").also { it.mkdirs() }
-            val fileName = "${UUID.randomUUID()}.jpg"
+            val ext = if (isVideo) "mp4" else "jpg"
+            val fileName = "${UUID.randomUUID()}.$ext"
             val destFile = File(photosDir, fileName)
 
             context.contentResolver.openInputStream(sourceUri)?.use { input ->
@@ -48,17 +55,20 @@ constructor(
                     entryId = entryId,
                     filePath = destFile.absolutePath,
                     timestamp = System.currentTimeMillis(),
+                    isVideo = isVideo,
                 )
             )
         }
 
     suspend fun addPhotoFromFile(entryId: Long, file: File): Long =
         withContext(Dispatchers.IO) {
+            val isVideo = file.extension.lowercase() in listOf("mp4", "3gp", "mkv", "webm")
             entryPhotoDao.insert(
                 EntryPhotoEntity(
                     entryId = entryId,
                     filePath = file.absolutePath,
                     timestamp = System.currentTimeMillis(),
+                    isVideo = isVideo,
                 )
             )
         }

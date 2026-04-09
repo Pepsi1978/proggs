@@ -1,5 +1,6 @@
 package com.bestjournal.app.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -23,4 +24,5 @@ data class EntryPhotoEntity(
     val entryId: Long,
     val filePath: String,
     val timestamp: Long,
+    @ColumnInfo(defaultValue = "0") val isVideo: Boolean = false,
 )
