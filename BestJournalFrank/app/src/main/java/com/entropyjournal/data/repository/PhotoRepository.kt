@@ -1,7 +1,11 @@
 package com.entropyjournal.data.repository
 
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import com.entropyjournal.data.local.dao.EntryPhotoDao
 import com.entropyjournal.data.local.entity.EntryPhotoEntity
@@ -38,6 +42,38 @@ constructor(
         return mimeType?.startsWith("video/") == true
     }
 
+    private fun saveToGallery(file: File, isVideo: Boolean) {
+        val mimeType = if (isVideo) "video/mp4" else "image/jpeg"
+        val collection =
+            if (isVideo) MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+
+        val values =
+            ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, file.name)
+                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    put(
+                        MediaStore.MediaColumns.RELATIVE_PATH,
+                        if (isVideo) Environment.DIRECTORY_DCIM + "/Camera"
+                        else Environment.DIRECTORY_DCIM + "/Camera",
+                    )
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
+                }
+            }
+
+        val uri = context.contentResolver.insert(collection, values) ?: return
+        context.contentResolver.openOutputStream(uri)?.use { output ->
+            file.inputStream().use { input -> input.copyTo(output) }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            values.clear()
+            values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+            context.contentResolver.update(uri, values, null, null)
+        }
+    }
+
     suspend fun addMedia(entryId: Long, sourceUri: Uri): Long =
         withContext(Dispatchers.IO) {
             val isVideo = isVideoUri(sourceUri)
@@ -63,6 +99,12 @@ constructor(
     suspend fun addPhotoFromFile(entryId: Long, file: File): Long =
         withContext(Dispatchers.IO) {
             val isVideo = file.extension.lowercase() in listOf("mp4", "3gp", "mkv", "webm")
+            // Save a copy to the phone gallery (DCIM/Camera)
+            try {
+                saveToGallery(file, isVideo)
+            } catch (_: Exception) {
+                // Gallery save is best-effort, don't fail the whole operation
+            }
             entryPhotoDao.insert(
                 EntryPhotoEntity(
                     entryId = entryId,
