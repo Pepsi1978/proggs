@@ -5,7 +5,6 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -92,6 +91,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -767,16 +767,27 @@ fun EntryDetailScreen(
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     val infiniteTransition = rememberInfiniteTransition(label = "photo_source")
-                    val gradientAngle by
+                    val flow by
                         infiniteTransition.animateFloat(
                             initialValue = 0f,
-                            targetValue = 360f,
+                            targetValue = 1f,
                             animationSpec =
                                 infiniteRepeatable(
-                                    animation = tween(4000, easing = LinearEasing),
-                                    repeatMode = RepeatMode.Restart,
+                                    animation = tween(3000, easing = FastOutSlowInEasing),
+                                    repeatMode = RepeatMode.Reverse,
                                 ),
-                            label = "gradient_angle",
+                            label = "color_flow",
+                        )
+                    val flow2 by
+                        infiniteTransition.animateFloat(
+                            initialValue = 1f,
+                            targetValue = 0f,
+                            animationSpec =
+                                infiniteRepeatable(
+                                    animation = tween(2200, easing = FastOutSlowInEasing),
+                                    repeatMode = RepeatMode.Reverse,
+                                ),
+                            label = "color_flow2",
                         )
                     val iconScale by
                         infiniteTransition.animateFloat(
@@ -801,18 +812,6 @@ fun EntryDetailScreen(
                             label = "tile_breathe",
                         )
 
-                    val angleRad = Math.toRadians(gradientAngle.toDouble())
-                    val gradStart =
-                        Offset(
-                            (150 + 150 * kotlin.math.cos(angleRad)).toFloat(),
-                            (150 + 150 * kotlin.math.sin(angleRad)).toFloat(),
-                        )
-                    val gradEnd =
-                        Offset(
-                            (150 - 150 * kotlin.math.cos(angleRad)).toFloat(),
-                            (150 - 150 * kotlin.math.sin(angleRad)).toFloat(),
-                        )
-
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxWidth(),
@@ -830,13 +829,20 @@ fun EntryDetailScreen(
                                         Brush.linearGradient(
                                             colors =
                                                 listOf(
-                                                    Color(0xFF4CAF50),
-                                                    Color(0xFF81C784),
-                                                    Color(0xFFBDBDBD),
-                                                    Color(0xFF4CAF50),
+                                                    lerp(
+                                                        Color(0xFF4CAF50),
+                                                        Color(0xFFBDBDBD),
+                                                        flow,
+                                                    ),
+                                                    lerp(
+                                                        Color(0xFF81C784),
+                                                        Color(0xFF4CAF50),
+                                                        flow2,
+                                                    ),
+                                                    lerp(Color(0xFFBDBDBD), Color(0xFF81C784), flow),
                                                 ),
-                                            start = gradStart,
-                                            end = gradEnd,
+                                            start = Offset(0f, 300f * flow),
+                                            end = Offset(300f, 300f * (1f - flow)),
                                         )
                                     )
                                     .clickable {
@@ -879,13 +885,24 @@ fun EntryDetailScreen(
                                         Brush.linearGradient(
                                             colors =
                                                 listOf(
-                                                    Color(0xFFFF9800),
-                                                    Color(0xFFFFB74D),
-                                                    Color(0xFFBDBDBD),
-                                                    Color(0xFFFF9800),
+                                                    lerp(
+                                                        Color(0xFFFF9800),
+                                                        Color(0xFFBDBDBD),
+                                                        flow2,
+                                                    ),
+                                                    lerp(
+                                                        Color(0xFFFFB74D),
+                                                        Color(0xFFFF9800),
+                                                        flow,
+                                                    ),
+                                                    lerp(
+                                                        Color(0xFFBDBDBD),
+                                                        Color(0xFFFFB74D),
+                                                        flow2,
+                                                    ),
                                                 ),
-                                            start = gradEnd,
-                                            end = gradStart,
+                                            start = Offset(300f * flow2, 0f),
+                                            end = Offset(300f * (1f - flow2), 300f),
                                         )
                                     )
                                     .clickable {
