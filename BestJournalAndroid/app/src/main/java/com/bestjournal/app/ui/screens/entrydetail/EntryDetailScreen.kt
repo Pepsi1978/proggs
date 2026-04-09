@@ -1,5 +1,6 @@
 package com.bestjournal.app.ui.screens.entrydetail
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -52,6 +53,7 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material3.AlertDialog
@@ -144,8 +146,10 @@ fun EntryDetailScreen(
     var fullScreenPhotoPath by remember { mutableStateOf<String?>(null) }
     var fullScreenIsVideo by remember { mutableStateOf(false) }
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
+    var showShareDialog by remember { mutableStateOf(false) }
     var cameraFile by remember { mutableStateOf<File?>(null) }
-    val appContext = LocalContext.current.applicationContext
+    val context = LocalContext.current
+    val appContext = context.applicationContext
     val videoImageLoader = remember {
         coil3.ImageLoader.Builder(appContext)
             .components { add(coil3.video.VideoFrameDecoder.Factory()) }
@@ -229,6 +233,33 @@ fun EntryDetailScreen(
                 }
             },
             actions = {
+                IconButton(
+                    onClick = {
+                        uiState.entry?.let { entry ->
+                            val hasImproved =
+                                entry.isImproved && !entry.improvedText.isNullOrBlank()
+                            val photos = uiState.photos
+                            if (!hasImproved && photos.size <= 1) {
+                                val shareText = buildShareText(entry, useImproved = false)
+                                val photoUris =
+                                    if (photos.size == 1) {
+                                        listOf(getPhotoUri(context, photos[0]))
+                                    } else {
+                                        emptyList()
+                                    }
+                                executeShare(context, shareText, photoUris)
+                            } else {
+                                showShareDialog = true
+                            }
+                        }
+                    }
+                ) {
+                    Icon(
+                        Icons.Rounded.IosShare,
+                        "Teilen",
+                        tint = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
                 IconButton(onClick = { viewModel.showDeleteDialog(true) }) {
                     Icon(Icons.Rounded.Delete, "L\u00f6schen", tint = NeonRed)
                 }
@@ -1015,6 +1046,17 @@ fun EntryDetailScreen(
                     }
                 }
             }
+        }
+    }
+
+    if (showShareDialog) {
+        uiState.entry?.let { entry ->
+            ShareEntryDialog(
+                entry = entry,
+                photos = uiState.photos,
+                context = context,
+                onDismiss = { showShareDialog = false },
+            )
         }
     }
 
