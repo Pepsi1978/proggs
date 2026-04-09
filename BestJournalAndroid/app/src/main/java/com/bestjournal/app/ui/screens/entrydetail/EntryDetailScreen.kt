@@ -798,9 +798,9 @@ fun EntryDetailScreen(
                             label = "gradient_shift",
                         )
 
-                    val cameraGreen = Color(0xFF81C784)
+                    val cameraGreen = Color(0xFF4CAF50)
                     val cameraGray = Color(0xFFBDBDBD)
-                    val galleryOrange = Color(0xFFFFB74D)
+                    val galleryOrange = Color(0xFFFF9800)
                     val galleryGray = Color(0xFFBDBDBD)
 
                     Row(
