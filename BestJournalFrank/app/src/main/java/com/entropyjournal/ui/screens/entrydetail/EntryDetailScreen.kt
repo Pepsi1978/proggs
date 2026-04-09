@@ -4,6 +4,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -81,8 +87,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -757,67 +766,105 @@ fun EntryDetailScreen(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(modifier = Modifier.height(24.dp))
+                    val infiniteTransition = rememberInfiniteTransition(label = "photo_source")
+                    val animOffset by
+                        infiniteTransition.animateFloat(
+                            initialValue = 0f,
+                            targetValue = 1f,
+                            animationSpec =
+                                infiniteRepeatable(
+                                    animation = tween(3000, easing = LinearEasing),
+                                    repeatMode = RepeatMode.Reverse,
+                                ),
+                            label = "gradient_shift",
+                        )
+
+                    val cameraGreen = Color(0xFF81C784)
+                    val cameraGray = Color(0xFFBDBDBD)
+                    val galleryOrange = Color(0xFFFFB74D)
+                    val galleryGray = Color(0xFFBDBDBD)
+
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Surface(
-                            onClick = {
-                                showPhotoSourceDialog = false
-                                cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
-                            },
-                            shape = RoundedCornerShape(20.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.weight(1f).aspectRatio(1f),
+                        Box(
+                            modifier =
+                                Modifier.weight(1f)
+                                    .aspectRatio(1f)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors =
+                                                listOf(
+                                                    lerp(cameraGreen, cameraGray, animOffset),
+                                                    lerp(cameraGray, cameraGreen, animOffset),
+                                                ),
+                                            start = Offset.Zero,
+                                            end = Offset.Infinite,
+                                        )
+                                    )
+                                    .clickable {
+                                        showPhotoSourceDialog = false
+                                        cameraPermissionLauncher.launch(
+                                            android.Manifest.permission.CAMERA
+                                        )
+                                    },
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Column(
-                                modifier = Modifier.fillMaxSize().padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                            ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(
                                     Icons.Rounded.CameraAlt,
                                     contentDescription = null,
                                     modifier = Modifier.size(40.dp),
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    tint = Color.White,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     "Kamera",
                                     style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    color = Color.White,
                                 )
                             }
                         }
-                        Surface(
-                            onClick = {
-                                showPhotoSourceDialog = false
-                                photoPickerLauncher.launch(
-                                    PickVisualMediaRequest(
-                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                        Box(
+                            modifier =
+                                Modifier.weight(1f)
+                                    .aspectRatio(1f)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors =
+                                                listOf(
+                                                    lerp(galleryOrange, galleryGray, animOffset),
+                                                    lerp(galleryGray, galleryOrange, animOffset),
+                                                ),
+                                            start = Offset.Zero,
+                                            end = Offset.Infinite,
+                                        )
                                     )
-                                )
-                            },
-                            shape = RoundedCornerShape(20.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                            modifier = Modifier.weight(1f).aspectRatio(1f),
+                                    .clickable {
+                                        showPhotoSourceDialog = false
+                                        photoPickerLauncher.launch(
+                                            PickVisualMediaRequest(
+                                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                                            )
+                                        )
+                                    },
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Column(
-                                modifier = Modifier.fillMaxSize().padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                            ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(
                                     Icons.Rounded.PhotoLibrary,
                                     contentDescription = null,
                                     modifier = Modifier.size(40.dp),
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    tint = Color.White,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     "Galerie",
                                     style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    color = Color.White,
                                 )
                             }
                         }
