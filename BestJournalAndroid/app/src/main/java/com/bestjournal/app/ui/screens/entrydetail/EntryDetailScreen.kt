@@ -10,6 +10,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +20,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +29,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -74,6 +77,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -595,27 +599,90 @@ fun EntryDetailScreen(
         }
     }
 
-    // Full-screen photo viewer
-    fullScreenPhotoPath?.let { path ->
+    // Full-screen photo viewer with pinch-to-zoom and horizontal paging
+    fullScreenPhotoPath?.let { initialPath ->
+        val photos = uiState.photos
+        val initialPage = photos.indexOfFirst { it.filePath == initialPath }.coerceAtLeast(0)
+        val pagerState = rememberPagerState(initialPage = initialPage) { photos.size }
+
         Dialog(
             onDismissRequest = { fullScreenPhotoPath = null },
             properties = DialogProperties(usePlatformDefaultWidth = false),
         ) {
-            Box(
-                modifier =
-                    Modifier.fillMaxSize().background(Color.Black).clickable {
-                        fullScreenPhotoPath = null
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                AsyncImage(
-                    model = File(path),
-                    contentDescription = "Foto Vollbild",
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .aspectRatio(1f, matchHeightConstraintsFirst = false),
-                    contentScale = ContentScale.Fit,
-                )
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                    var scale by remember { mutableStateOf(1f) }
+                    var offsetX by remember { mutableStateOf(0f) }
+                    var offsetY by remember { mutableStateOf(0f) }
+
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        AsyncImage(
+                            model = File(photos[page].filePath),
+                            contentDescription = "Foto ${page + 1}",
+                            modifier =
+                                Modifier.fillMaxSize()
+                                    .pointerInput(Unit) {
+                                        detectTransformGestures { _, pan, zoom, _ ->
+                                            scale = (scale * zoom).coerceIn(1f, 5f)
+                                            if (scale > 1f) {
+                                                offsetX += pan.x
+                                                offsetY += pan.y
+                                                val maxX = (size.width * (scale - 1)) / 2
+                                                val maxY = (size.height * (scale - 1)) / 2
+                                                offsetX = offsetX.coerceIn(-maxX, maxX)
+                                                offsetY = offsetY.coerceIn(-maxY, maxY)
+                                            } else {
+                                                offsetX = 0f
+                                                offsetY = 0f
+                                            }
+                                        }
+                                    }
+                                    .pointerInput(Unit) {
+                                        detectTapGestures(
+                                            onDoubleTap = {
+                                                if (scale > 1f) {
+                                                    scale = 1f
+                                                    offsetX = 0f
+                                                    offsetY = 0f
+                                                } else {
+                                                    scale = 2.5f
+                                                }
+                                            },
+                                            onTap = {
+                                                if (scale <= 1f) {
+                                                    fullScreenPhotoPath = null
+                                                }
+                                            },
+                                        )
+                                    }
+                                    .graphicsLayer {
+                                        scaleX = scale
+                                        scaleY = scale
+                                        translationX = offsetX
+                                        translationY = offsetY
+                                    },
+                            contentScale = ContentScale.Fit,
+                        )
+                    }
+                }
+
+                // Page indicator
+                if (photos.size > 1) {
+                    Text(
+                        "${pagerState.currentPage + 1} / ${photos.size}",
+                        modifier =
+                            Modifier.align(Alignment.BottomCenter)
+                                .padding(bottom = 32.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.5f),
+                                    RoundedCornerShape(16.dp),
+                                )
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+
                 IconButton(
                     onClick = { fullScreenPhotoPath = null },
                     modifier =
