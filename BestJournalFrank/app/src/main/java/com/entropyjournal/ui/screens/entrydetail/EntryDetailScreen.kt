@@ -9,10 +9,12 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -617,25 +619,44 @@ fun EntryDetailScreen(
                         }
                     }
 
-                    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
-                        scale = (scale * zoomChange).coerceIn(1f, 5f)
-                        if (scale > 1f) {
-                            offsetX += panChange.x
-                            offsetY += panChange.y
-                            val maxX = 1000f * (scale - 1)
-                            val maxY = 1500f * (scale - 1)
-                            offsetX = offsetX.coerceIn(-maxX, maxX)
-                            offsetY = offsetY.coerceIn(-maxY, maxY)
-                        } else {
-                            offsetX = 0f
-                            offsetY = 0f
-                        }
-                    }
-
                     Box(
                         modifier =
                             Modifier.fillMaxSize()
-                                .transformable(state = transformState)
+                                .pointerInput(Unit) {
+                                    awaitEachGesture {
+                                        awaitFirstDown(requireUnconsumed = false)
+                                        do {
+                                            val event = awaitPointerEvent()
+                                            val pressed = event.changes.count { it.pressed }
+                                            if (pressed >= 2) {
+                                                val zoom = event.calculateZoom()
+                                                val pan = event.calculatePan()
+                                                scale = (scale * zoom).coerceIn(1f, 5f)
+                                                if (scale > 1f) {
+                                                    offsetX += pan.x
+                                                    offsetY += pan.y
+                                                    val maxX = 1000f * (scale - 1)
+                                                    val maxY = 1500f * (scale - 1)
+                                                    offsetX = offsetX.coerceIn(-maxX, maxX)
+                                                    offsetY = offsetY.coerceIn(-maxY, maxY)
+                                                } else {
+                                                    offsetX = 0f
+                                                    offsetY = 0f
+                                                }
+                                                event.changes.forEach { it.consume() }
+                                            } else if (pressed == 1 && scale > 1f) {
+                                                val pan = event.calculatePan()
+                                                offsetX += pan.x
+                                                offsetY += pan.y
+                                                val maxX = 1000f * (scale - 1)
+                                                val maxY = 1500f * (scale - 1)
+                                                offsetX = offsetX.coerceIn(-maxX, maxX)
+                                                offsetY = offsetY.coerceIn(-maxY, maxY)
+                                                event.changes.forEach { it.consume() }
+                                            }
+                                        } while (event.changes.any { it.pressed })
+                                    }
+                                }
                                 .pointerInput(Unit) {
                                     detectTapGestures(
                                         onDoubleTap = {
