@@ -78,6 +78,12 @@ constructor(
         viewModelScope.launch { uris.forEach { uri -> photoRepository.addPhoto(entryId, uri) } }
     }
 
+    fun createCameraUri() = photoRepository.createCameraUri()
+
+    fun onCameraPhotoTaken(file: java.io.File) {
+        viewModelScope.launch { photoRepository.addPhotoFromFile(entryId, file) }
+    }
+
     fun deletePhoto(photoId: Long) {
         viewModelScope.launch { photoRepository.deletePhoto(photoId) }
     }

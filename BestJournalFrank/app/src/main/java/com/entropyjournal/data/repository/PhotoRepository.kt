@@ -2,6 +2,7 @@ package com.entropyjournal.data.repository
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.content.FileProvider
 import com.entropyjournal.data.local.dao.EntryPhotoDao
 import com.entropyjournal.data.local.entity.EntryPhotoEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -25,6 +26,13 @@ constructor(
         return entryPhotoDao.getPhotosForEntry(entryId)
     }
 
+    fun createCameraUri(): Pair<Uri, File> {
+        val photosDir = File(context.filesDir, "photos").also { it.mkdirs() }
+        val file = File(photosDir, "${UUID.randomUUID()}.jpg")
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        return uri to file
+    }
+
     suspend fun addPhoto(entryId: Long, sourceUri: Uri): Long =
         withContext(Dispatchers.IO) {
             val photosDir = File(context.filesDir, "photos").also { it.mkdirs() }
@@ -39,6 +47,17 @@ constructor(
                 EntryPhotoEntity(
                     entryId = entryId,
                     filePath = destFile.absolutePath,
+                    timestamp = System.currentTimeMillis(),
+                )
+            )
+        }
+
+    suspend fun addPhotoFromFile(entryId: Long, file: File): Long =
+        withContext(Dispatchers.IO) {
+            entryPhotoDao.insert(
+                EntryPhotoEntity(
+                    entryId = entryId,
+                    filePath = file.absolutePath,
                     timestamp = System.currentTimeMillis(),
                 )
             )

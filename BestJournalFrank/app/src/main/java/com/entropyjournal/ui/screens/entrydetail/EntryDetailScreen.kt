@@ -42,6 +42,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.PhotoLibrary
@@ -128,6 +129,8 @@ fun EntryDetailScreen(
     var isFocused by remember { mutableStateOf(false) }
 
     var fullScreenPhotoPath by remember { mutableStateOf<String?>(null) }
+    var showPhotoSourceDialog by remember { mutableStateOf(false) }
+    var cameraFile by remember { mutableStateOf<java.io.File?>(null) }
 
     val photoPickerLauncher =
         rememberLauncherForActivityResult(
@@ -135,6 +138,27 @@ fun EntryDetailScreen(
         ) { uris ->
             if (uris.isNotEmpty()) {
                 viewModel.addPhotos(uris)
+            }
+        }
+
+    val cameraLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicture()) {
+            success ->
+            if (success) {
+                cameraFile?.let { viewModel.onCameraPhotoTaken(it) }
+            } else {
+                cameraFile?.delete()
+            }
+            cameraFile = null
+        }
+
+    val cameraPermissionLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
+            granted ->
+            if (granted) {
+                val (uri, file) = viewModel.createCameraUri()
+                cameraFile = file
+                cameraLauncher.launch(uri)
             }
         }
 
@@ -480,13 +504,7 @@ fun EntryDetailScreen(
                                 )
                             }
                             Button(
-                                onClick = {
-                                    photoPickerLauncher.launch(
-                                        PickVisualMediaRequest(
-                                            ActivityResultContracts.PickVisualMedia.ImageOnly
-                                        )
-                                    )
-                                },
+                                onClick = { showPhotoSourceDialog = true },
                                 shape = RoundedCornerShape(12.dp),
                             ) {
                                 Icon(
@@ -719,6 +737,60 @@ fun EntryDetailScreen(
                 }
             }
         }
+    }
+
+    if (showPhotoSourceDialog) {
+        AlertDialog(
+            onDismissRequest = { showPhotoSourceDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Foto hinzuf\u00fcgen", color = MaterialTheme.colorScheme.onSurface) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            showPhotoSourceDialog = false
+                            cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.CameraAlt,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Kamera")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            showPhotoSourceDialog = false
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.PhotoLibrary,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Galerie")
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                OutlinedButton(onClick = { showPhotoSourceDialog = false }) {
+                    Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+        )
     }
 
     if (uiState.showDeleteDialog) {
