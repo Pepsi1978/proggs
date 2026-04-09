@@ -95,12 +95,14 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
@@ -140,8 +142,15 @@ fun EntryDetailScreen(
         }
 
     var fullScreenPhotoPath by remember { mutableStateOf<String?>(null) }
+    var fullScreenIsVideo by remember { mutableStateOf(false) }
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     var cameraFile by remember { mutableStateOf<File?>(null) }
+    val appContext = LocalContext.current.applicationContext
+    val videoImageLoader = remember {
+        coil3.ImageLoader.Builder(appContext)
+            .components { add(coil3.video.VideoFrameDecoder.Factory()) }
+            .build()
+    }
 
     val photoPickerLauncher =
         rememberLauncherForActivityResult(
@@ -566,11 +575,15 @@ fun EntryDetailScreen(
                                             model = File(photo.filePath),
                                             contentDescription =
                                                 if (photo.isVideo) "Video" else "Foto",
+                                            imageLoader =
+                                                if (photo.isVideo) videoImageLoader
+                                                else coil3.ImageLoader(appContext),
                                             modifier =
                                                 Modifier.size(120.dp)
                                                     .clip(RoundedCornerShape(12.dp))
                                                     .clickable {
                                                         fullScreenPhotoPath = photo.filePath
+                                                        fullScreenIsVideo = photo.isVideo
                                                     },
                                             contentScale = ContentScale.Crop,
                                         )
@@ -738,18 +751,38 @@ fun EntryDetailScreen(
                                 },
                         contentAlignment = Alignment.Center,
                     ) {
-                        AsyncImage(
-                            model = File(photos[page].filePath),
-                            contentDescription = "Foto ${page + 1}",
-                            modifier =
-                                Modifier.fillMaxSize().graphicsLayer {
-                                    scaleX = scale
-                                    scaleY = scale
-                                    translationX = offsetX
-                                    translationY = offsetY
+                        if (photos[page].isVideo) {
+                            AndroidView(
+                                factory = { ctx ->
+                                    android.widget.VideoView(ctx).apply {
+                                        setVideoPath(photos[page].filePath)
+                                        setMediaController(
+                                            android.widget.MediaController(ctx).also {
+                                                it.setAnchorView(this)
+                                            }
+                                        )
+                                        setOnPreparedListener { mp ->
+                                            mp.isLooping = false
+                                            start()
+                                        }
+                                    }
                                 },
-                            contentScale = ContentScale.Fit,
-                        )
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        } else {
+                            AsyncImage(
+                                model = File(photos[page].filePath),
+                                contentDescription = "Foto ${page + 1}",
+                                modifier =
+                                    Modifier.fillMaxSize().graphicsLayer {
+                                        scaleX = scale
+                                        scaleY = scale
+                                        translationX = offsetX
+                                        translationY = offsetY
+                                    },
+                                contentScale = ContentScale.Fit,
+                            )
+                        }
                     }
                 }
 

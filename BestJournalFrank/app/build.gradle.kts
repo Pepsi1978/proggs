@@ -126,6 +126,7 @@ dependencies {
 
     // Image Loading
     implementation(libs.coil.compose)
+    implementation(libs.coil.video)
 
     // Coroutines
     implementation(libs.coroutines.core)
