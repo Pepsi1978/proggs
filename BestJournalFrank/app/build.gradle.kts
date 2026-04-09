@@ -124,6 +124,9 @@ dependencies {
     // Sherpa-ONNX (local Whisper speech-to-text)
     implementation(files("libs/sherpa-onnx-1.12.34.aar"))
 
+    // Image Loading
+    implementation(libs.coil.compose)
+
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)

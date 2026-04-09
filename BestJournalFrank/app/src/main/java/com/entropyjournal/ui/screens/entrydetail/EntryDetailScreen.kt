@@ -1,5 +1,8 @@
 package com.entropyjournal.ui.screens.entrydetail
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -8,12 +11,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,13 +26,19 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -58,19 +69,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import coil3.compose.AsyncImage
 import com.entropyjournal.ui.components.GlassCard
 import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
 import com.entropyjournal.util.DateTimeFormatter
+import java.io.File
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -102,6 +119,17 @@ fun EntryDetailScreen(
     val focusRequester = remember { FocusRequester() }
     var lastEditTime by remember { mutableLongStateOf(0L) }
     var isFocused by remember { mutableStateOf(false) }
+
+    var fullScreenPhotoPath by remember { mutableStateOf<String?>(null) }
+
+    val photoPickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.PickMultipleVisualMedia()
+        ) { uris ->
+            if (uris.isNotEmpty()) {
+                viewModel.addPhotos(uris)
+            }
+        }
 
     LaunchedEffect(lastEditTime) {
         if (lastEditTime > 0 && isFocused) {
@@ -422,6 +450,98 @@ fun EntryDetailScreen(
                     }
                 }
 
+                // Photos section
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.PhotoLibrary,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Fotos",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(
+                                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                                        )
+                                    )
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.AddPhotoAlternate,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Hinzuf\u00fcgen",
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            }
+                        }
+
+                        if (uiState.photos.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(uiState.photos, key = { it.id }) { photo ->
+                                    Box {
+                                        AsyncImage(
+                                            model = File(photo.filePath),
+                                            contentDescription = "Foto",
+                                            modifier =
+                                                Modifier.size(120.dp)
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .clickable {
+                                                        fullScreenPhotoPath = photo.filePath
+                                                    },
+                                            contentScale = ContentScale.Crop,
+                                        )
+                                        IconButton(
+                                            onClick = { viewModel.deletePhoto(photo.id) },
+                                            modifier =
+                                                Modifier.align(Alignment.TopEnd)
+                                                    .size(28.dp)
+                                                    .background(
+                                                        Color.Black.copy(alpha = 0.5f),
+                                                        CircleShape,
+                                                    ),
+                                        ) {
+                                            Icon(
+                                                Icons.Rounded.Close,
+                                                contentDescription = "Foto entfernen",
+                                                modifier = Modifier.size(16.dp),
+                                                tint = Color.White,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Noch keine Fotos hinzugef\u00fcgt",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                        }
+                    }
+                }
+
                 if (!entry.adviceCategoryTags.isNullOrBlank()) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         entry.adviceCategoryTags
@@ -453,6 +573,44 @@ fun EntryDetailScreen(
                 )
 
                 Spacer(modifier = Modifier.height(80.dp))
+            }
+        }
+    }
+
+    // Full-screen photo viewer
+    fullScreenPhotoPath?.let { path ->
+        Dialog(
+            onDismissRequest = { fullScreenPhotoPath = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Box(
+                modifier =
+                    Modifier.fillMaxSize().background(Color.Black).clickable {
+                        fullScreenPhotoPath = null
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                AsyncImage(
+                    model = File(path),
+                    contentDescription = "Foto Vollbild",
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .aspectRatio(1f, matchHeightConstraintsFirst = false),
+                    contentScale = ContentScale.Fit,
+                )
+                IconButton(
+                    onClick = { fullScreenPhotoPath = null },
+                    modifier =
+                        Modifier.align(Alignment.TopEnd)
+                            .padding(16.dp)
+                            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                ) {
+                    Icon(
+                        Icons.Rounded.Close,
+                        contentDescription = "Schlie\u00dfen",
+                        tint = Color.White,
+                    )
+                }
             }
         }
     }

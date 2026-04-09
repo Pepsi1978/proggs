@@ -7,16 +7,23 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.bestjournal.app.data.local.dao.AdviceDashboardDao
+import com.bestjournal.app.data.local.dao.EntryPhotoDao
 import com.bestjournal.app.data.local.dao.JournalEntryDao
 import com.bestjournal.app.data.local.dao.RetrospectiveDao
 import com.bestjournal.app.data.local.entity.AdviceBlockEntity
+import com.bestjournal.app.data.local.entity.EntryPhotoEntity
 import com.bestjournal.app.data.local.entity.JournalEntryEntity
 import com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity
 
 @Database(
     entities =
-        [JournalEntryEntity::class, AdviceBlockEntity::class, RetrospectiveSummaryEntity::class],
-    version = 5,
+        [
+            JournalEntryEntity::class,
+            AdviceBlockEntity::class,
+            RetrospectiveSummaryEntity::class,
+            EntryPhotoEntity::class,
+        ],
+    version = 6,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -26,6 +33,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun adviceDashboardDao(): AdviceDashboardDao
 
     abstract fun retrospectiveDao(): RetrospectiveDao
+
+    abstract fun entryPhotoDao(): EntryPhotoDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -72,6 +81,24 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
 
+        private val MIGRATION_5_6 =
+            object : Migration(5, 6) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        """CREATE TABLE IF NOT EXISTS entry_photos (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        entryId INTEGER NOT NULL,
+                        filePath TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        FOREIGN KEY (entryId) REFERENCES journal_entries(id) ON DELETE CASCADE
+                    )"""
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_entry_photos_entryId ON entry_photos(entryId)"
+                    )
+                }
+            }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE
                 ?: synchronized(this) {
@@ -86,6 +113,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 MIGRATION_2_3,
                                 MIGRATION_3_4,
                                 MIGRATION_4_5,
+                                MIGRATION_5_6,
                             )
                             .build()
                     INSTANCE = instance

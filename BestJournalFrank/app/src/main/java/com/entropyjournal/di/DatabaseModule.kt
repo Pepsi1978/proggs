@@ -3,6 +3,7 @@ package com.entropyjournal.di
 import android.content.Context
 import com.entropyjournal.data.local.AppDatabase
 import com.entropyjournal.data.local.dao.AdviceDashboardDao
+import com.entropyjournal.data.local.dao.EntryPhotoDao
 import com.entropyjournal.data.local.dao.JournalEntryDao
 import com.entropyjournal.data.local.dao.RetrospectiveDao
 import dagger.Module
@@ -35,5 +36,10 @@ object DatabaseModule {
     @Provides
     fun provideRetrospectiveDao(database: AppDatabase): RetrospectiveDao {
         return database.retrospectiveDao()
+    }
+
+    @Provides
+    fun provideEntryPhotoDao(database: AppDatabase): EntryPhotoDao {
+        return database.entryPhotoDao()
     }
 }

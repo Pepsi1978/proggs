@@ -3,6 +3,7 @@ package com.bestjournal.app.di
 import android.content.Context
 import com.bestjournal.app.data.local.AppDatabase
 import com.bestjournal.app.data.local.dao.AdviceDashboardDao
+import com.bestjournal.app.data.local.dao.EntryPhotoDao
 import com.bestjournal.app.data.local.dao.JournalEntryDao
 import com.bestjournal.app.data.local.dao.RetrospectiveDao
 import dagger.Module
@@ -35,5 +36,10 @@ object DatabaseModule {
     @Provides
     fun provideRetrospectiveDao(database: AppDatabase): RetrospectiveDao {
         return database.retrospectiveDao()
+    }
+
+    @Provides
+    fun provideEntryPhotoDao(database: AppDatabase): EntryPhotoDao {
+        return database.entryPhotoDao()
     }
 }

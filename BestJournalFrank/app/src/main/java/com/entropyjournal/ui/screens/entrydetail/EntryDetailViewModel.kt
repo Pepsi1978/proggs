@@ -1,10 +1,13 @@
 package com.entropyjournal.ui.screens.entrydetail
 
 import android.content.SharedPreferences
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.entropyjournal.data.local.entity.EntryPhotoEntity
 import com.entropyjournal.data.repository.JournalRepository
+import com.entropyjournal.data.repository.PhotoRepository
 import com.entropyjournal.domain.model.JournalEntry
 import com.entropyjournal.domain.usecase.AnalyzeEntropyUseCase
 import com.entropyjournal.domain.usecase.ImproveTextUseCase
@@ -28,6 +31,7 @@ data class EntryDetailUiState(
     val isSaving: Boolean = false,
     val isImproving: Boolean = false,
     val improveError: String? = null,
+    val photos: List<EntryPhotoEntity> = emptyList(),
 )
 
 @HiltViewModel
@@ -35,6 +39,7 @@ class EntryDetailViewModel
 @Inject
 constructor(
     private val journalRepository: JournalRepository,
+    private val photoRepository: PhotoRepository,
     private val syncWithDriveUseCase: SyncWithDriveUseCase,
     private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
     private val improveTextUseCase: ImproveTextUseCase,
@@ -50,6 +55,7 @@ constructor(
 
     init {
         loadEntry()
+        loadPhotos()
     }
 
     private fun loadEntry() {
@@ -58,6 +64,22 @@ constructor(
             _uiState.value =
                 _uiState.value.copy(entry = entry, editedDisplayText = entry?.displayText ?: "")
         }
+    }
+
+    private fun loadPhotos() {
+        viewModelScope.launch {
+            photoRepository.getPhotosForEntry(entryId).collect { photos ->
+                _uiState.value = _uiState.value.copy(photos = photos)
+            }
+        }
+    }
+
+    fun addPhotos(uris: List<Uri>) {
+        viewModelScope.launch { uris.forEach { uri -> photoRepository.addPhoto(entryId, uri) } }
+    }
+
+    fun deletePhoto(photoId: Long) {
+        viewModelScope.launch { photoRepository.deletePhoto(photoId) }
     }
 
     fun updateDisplayText(newText: String) {
@@ -162,8 +184,6 @@ constructor(
         viewModelScope.launch {
             _uiState.value.entry?.let { entry ->
                 journalRepository.deleteEntry(entry)
-                // Launch backup + dashboard update in independent scope — viewModelScope gets
-                // cancelled on navigation
                 kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                     try {
                         encryptedPrefs
@@ -182,7 +202,6 @@ constructor(
                             .putBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
                             .apply()
                     }
-                    // Refresh dashboard so deleted entry's data is removed from analysis
                     val autoUpdate =
                         encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true)
                     if (autoUpdate) {
