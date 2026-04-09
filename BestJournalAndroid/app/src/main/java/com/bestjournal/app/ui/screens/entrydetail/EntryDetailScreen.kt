@@ -610,7 +610,11 @@ fun EntryDetailScreen(
             properties = DialogProperties(usePlatformDefaultWidth = false),
         ) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    userScrollEnabled = true,
+                ) { page ->
                     var scale by remember { mutableStateOf(1f) }
                     var offsetX by remember { mutableStateOf(0f) }
                     var offsetY by remember { mutableStateOf(0f) }
@@ -621,19 +625,26 @@ fun EntryDetailScreen(
                             contentDescription = "Foto ${page + 1}",
                             modifier =
                                 Modifier.fillMaxSize()
-                                    .pointerInput(Unit) {
-                                        detectTransformGestures { _, pan, zoom, _ ->
-                                            scale = (scale * zoom).coerceIn(1f, 5f)
-                                            if (scale > 1f) {
+                                    .pointerInput(scale) {
+                                        if (scale > 1f) {
+                                            detectTransformGestures { _, pan, zoom, _ ->
+                                                scale = (scale * zoom).coerceIn(1f, 5f)
                                                 offsetX += pan.x
                                                 offsetY += pan.y
                                                 val maxX = (size.width * (scale - 1)) / 2
                                                 val maxY = (size.height * (scale - 1)) / 2
                                                 offsetX = offsetX.coerceIn(-maxX, maxX)
                                                 offsetY = offsetY.coerceIn(-maxY, maxY)
-                                            } else {
-                                                offsetX = 0f
-                                                offsetY = 0f
+                                                if (scale <= 1f) {
+                                                    offsetX = 0f
+                                                    offsetY = 0f
+                                                }
+                                            }
+                                        } else {
+                                            detectTransformGestures { _, _, zoom, _ ->
+                                                if (zoom != 1f) {
+                                                    scale = (scale * zoom).coerceIn(1f, 5f)
+                                                }
                                             }
                                         }
                                     }
