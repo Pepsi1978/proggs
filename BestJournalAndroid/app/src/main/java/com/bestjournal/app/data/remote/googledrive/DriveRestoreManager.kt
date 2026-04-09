@@ -105,33 +105,44 @@ constructor(
             }
         }
 
-    suspend fun restorePhotos(targetZipFile: File): Result<Unit> =
+    suspend fun restoreAllPhotos(targetDir: File): Int =
         withContext(Dispatchers.IO) {
             try {
-                val driveService = getDriveService() ?: return@withContext Result.success(Unit)
+                val driveService = getDriveService() ?: return@withContext 0
 
                 val files =
                     driveService
                         .files()
                         .list()
                         .setSpaces("appDataFolder")
-                        .setQ("name = '${Constants.DRIVE_PHOTOS_FILENAME}'")
-                        .setFields("files(id)")
+                        .setQ("name contains 'photo_'")
+                        .setFields("files(id, name)")
+                        .setPageSize(100)
                         .execute()
 
-                val photoZip = files.files?.firstOrNull() ?: return@withContext Result.success(Unit)
-
-                FileOutputStream(targetZipFile).use { outputStream ->
-                    driveService.files().get(photoZip.id).executeMediaAndDownloadTo(outputStream)
+                var count = 0
+                files.files?.forEach { driveFile ->
+                    val localName = driveFile.name.removePrefix("photo_")
+                    val localFile = File(targetDir, localName)
+                    if (!localFile.exists()) {
+                        try {
+                            FileOutputStream(localFile).use { os ->
+                                driveService.files().get(driveFile.id).executeMediaAndDownloadTo(os)
+                            }
+                            count++
+                            android.util.Log.d(
+                                "DriveRestore",
+                                "Restored: $localName (${localFile.length()} bytes)",
+                            )
+                        } catch (e: Exception) {
+                            android.util.Log.e("DriveRestore", "Failed: $localName: ${e.message}")
+                        }
+                    }
                 }
-                android.util.Log.d(
-                    "DriveRestore",
-                    "Photos restored: ${targetZipFile.length()} bytes",
-                )
-                Result.success(Unit)
+                count
             } catch (e: Exception) {
-                android.util.Log.e("DriveRestore", "Photos restore FAILED: ${e.message}", e)
-                Result.failure(e)
+                android.util.Log.e("DriveRestore", "restoreAllPhotos FAILED: ${e.message}", e)
+                0
             }
         }
 }

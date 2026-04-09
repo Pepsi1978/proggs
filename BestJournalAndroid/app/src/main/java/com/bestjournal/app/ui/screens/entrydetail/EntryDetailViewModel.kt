@@ -75,24 +75,26 @@ constructor(
         }
     }
 
+    @Suppress("OPT_IN_USAGE")
     private fun triggerAutoBackup() {
         val email = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null)
         if (email.isNullOrBlank()) return
         autoBackupJob?.cancel()
-        autoBackupJob = viewModelScope.launch {
-            delay(Constants.SYNC_DEBOUNCE_MS)
-            try {
-                encryptedPrefs.edit().putBoolean(Constants.PREF_SYNC_IN_PROGRESS, true).apply()
-                syncWithDriveUseCase.backup()
-                encryptedPrefs
-                    .edit()
-                    .putBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
-                    .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
-                    .apply()
-            } catch (_: Exception) {
-                encryptedPrefs.edit().putBoolean(Constants.PREF_SYNC_IN_PROGRESS, false).apply()
+        autoBackupJob =
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                delay(5000)
+                try {
+                    encryptedPrefs.edit().putBoolean(Constants.PREF_SYNC_IN_PROGRESS, true).apply()
+                    syncWithDriveUseCase.backup()
+                    encryptedPrefs
+                        .edit()
+                        .putBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
+                        .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
+                        .apply()
+                } catch (_: Exception) {
+                    encryptedPrefs.edit().putBoolean(Constants.PREF_SYNC_IN_PROGRESS, false).apply()
+                }
             }
-        }
     }
 
     fun addMedia(uris: List<Uri>) {

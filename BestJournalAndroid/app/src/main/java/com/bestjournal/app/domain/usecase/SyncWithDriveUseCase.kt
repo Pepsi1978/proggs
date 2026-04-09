@@ -72,20 +72,25 @@ constructor(
         val backupPhotos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_PHOTOS, false)
         val backupVideos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_VIDEOS, false)
 
+        Log.d("SyncDebug", "Photo backup: photos=$backupPhotos, videos=$backupVideos")
+
         if (backupPhotos || backupVideos) {
             val photosDir = File(context.filesDir, "photos")
-            if (photosDir.exists() && photosDir.listFiles()?.isNotEmpty() == true) {
-                val zipFile = File(context.cacheDir, "photos_backup.zip")
-                try {
-                    zipPhotos(photosDir, zipFile, backupPhotos, backupVideos)
-                    if (zipFile.length() > 0) {
-                        driveBackupManager.backupPhotos(zipFile)
-                        Log.d("SyncDebug", "Photos ZIP: ${zipFile.length()} bytes uploaded")
+            val files = photosDir.listFiles() ?: emptyArray()
+            Log.d("SyncDebug", "Photos dir: exists=${photosDir.exists()}, files=${files.size}")
+
+            for (file in files) {
+                val isVideo =
+                    file.extension.lowercase() in listOf("mp4", "3gp", "mkv", "webm", "avi")
+                val isPhoto =
+                    file.extension.lowercase() in listOf("jpg", "jpeg", "png", "webp", "gif")
+                if ((isPhoto && backupPhotos) || (isVideo && backupVideos)) {
+                    try {
+                        driveBackupManager.backupFile(file, "photo_${file.name}")
+                        Log.d("SyncDebug", "Uploaded: ${file.name} (${file.length()} bytes)")
+                    } catch (e: Exception) {
+                        Log.e("SyncDebug", "Upload failed: ${file.name}: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    Log.e("SyncDebug", "Photos backup failed: ${e.message}", e)
-                } finally {
-                    zipFile.delete()
                 }
             }
         }
@@ -103,18 +108,12 @@ constructor(
         val dbResult = driveRestoreManager.restore(dbFile)
         if (dbResult.isFailure) return dbResult
 
-        val zipFile = File(context.cacheDir, "photos_restore.zip")
         try {
-            val photoResult = driveRestoreManager.restorePhotos(zipFile)
-            if (photoResult.isSuccess && zipFile.exists() && zipFile.length() > 0) {
-                val photosDir = File(context.filesDir, "photos").also { it.mkdirs() }
-                unzipPhotos(zipFile, photosDir)
-                Log.d("SyncDebug", "Photos restored from ZIP: ${zipFile.length()} bytes")
-            }
+            val photosDir = File(context.filesDir, "photos").also { it.mkdirs() }
+            val restoredCount = driveRestoreManager.restoreAllPhotos(photosDir)
+            Log.d("SyncDebug", "Photos restored: $restoredCount files")
         } catch (e: Exception) {
             Log.e("SyncDebug", "Photos restore failed: ${e.message}", e)
-        } finally {
-            zipFile.delete()
         }
 
         return Result.success(Unit)

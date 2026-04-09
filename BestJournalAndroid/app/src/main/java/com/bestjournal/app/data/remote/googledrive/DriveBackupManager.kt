@@ -69,15 +69,14 @@ constructor(
             }
         }
 
-    suspend fun backupPhotos(zipFile: File): Result<Unit> =
+    suspend fun backupFile(localFile: File, remoteName: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 val driveService = getDriveService()
-                uploadFile(driveService, zipFile, Constants.DRIVE_PHOTOS_FILENAME)
-                android.util.Log.d("DriveBackup", "Photos backup: ${zipFile.length()} bytes")
+                uploadFile(driveService, localFile, remoteName)
                 Result.success(Unit)
             } catch (e: Exception) {
-                android.util.Log.e("DriveBackup", "Photos backup FAILED: ${e.message}", e)
+                android.util.Log.e("DriveBackup", "File backup FAILED ($remoteName): ${e.message}")
                 Result.failure(e)
             }
         }
