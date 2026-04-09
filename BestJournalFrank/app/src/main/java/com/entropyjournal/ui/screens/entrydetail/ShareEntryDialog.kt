@@ -141,11 +141,16 @@ fun ShareEntryDialog(
 }
 
 fun buildShareText(entry: JournalEntry, useImproved: Boolean): String = buildString {
+    append("Tagebucheintrag von der BestJournal App")
+    append("\n")
     append(DateTimeFormatter.formatFull(entry.timestamp))
-    if (!entry.title.isNullOrBlank()) append("\n\n${entry.title}")
-    val bodyText = if (useImproved) entry.improvedText!! else entry.rawText
+    if (!entry.moodTag.isNullOrBlank()) append(" \u00b7 ${entry.moodTag}")
+    append(
+        "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+    )
+    if (!entry.title.isNullOrBlank()) append("\n\n\u2728 ${entry.title}")
+    val bodyText = if (useImproved) entry.improvedText!! else entry.displayText
     append("\n\n$bodyText")
-    if (!entry.moodTag.isNullOrBlank()) append("\n\nStimmung: ${entry.moodTag}")
 }
 
 fun getPhotoUri(context: Context, photo: EntryPhotoEntity): Uri =
@@ -162,15 +167,21 @@ fun executeShare(context: Context, text: String, photoUris: List<Uri>) {
             Intent(Intent.ACTION_SEND).apply {
                 putExtra(Intent.EXTRA_TEXT, text)
                 putExtra(Intent.EXTRA_STREAM, photoUris[0])
-                type = "*/*"
+                type = "image/*"
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                clipData = android.content.ClipData.newRawUri("", photoUris[0])
+                clipData?.addItem(android.content.ClipData.Item(photoUris[0]))
             }
         } else {
             Intent(Intent.ACTION_SEND_MULTIPLE).apply {
                 putExtra(Intent.EXTRA_TEXT, text)
                 putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(photoUris))
-                type = "*/*"
+                type = "image/*"
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                clipData =
+                    android.content.ClipData.newRawUri("", photoUris[0]).apply {
+                        photoUris.drop(1).forEach { addItem(android.content.ClipData.Item(it)) }
+                    }
             }
         }
     context.startActivity(Intent.createChooser(intent, "Eintrag teilen"))

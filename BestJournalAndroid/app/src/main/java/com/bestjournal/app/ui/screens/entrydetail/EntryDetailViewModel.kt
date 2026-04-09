@@ -52,6 +52,7 @@ constructor(
 
     private val entryId: Long = savedStateHandle.get<Long>("entryId") ?: 0L
     private var autoSaveJob: Job? = null
+    private var autoBackupJob: Job? = null
 
     init {
         loadEntry()
@@ -74,18 +75,47 @@ constructor(
         }
     }
 
+    private fun triggerAutoBackup() {
+        val email = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null)
+        if (email.isNullOrBlank()) return
+        autoBackupJob?.cancel()
+        autoBackupJob = viewModelScope.launch {
+            delay(Constants.SYNC_DEBOUNCE_MS)
+            try {
+                encryptedPrefs.edit().putBoolean(Constants.PREF_SYNC_IN_PROGRESS, true).apply()
+                syncWithDriveUseCase.backup()
+                encryptedPrefs
+                    .edit()
+                    .putBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
+                    .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
+                    .apply()
+            } catch (_: Exception) {
+                encryptedPrefs.edit().putBoolean(Constants.PREF_SYNC_IN_PROGRESS, false).apply()
+            }
+        }
+    }
+
     fun addMedia(uris: List<Uri>) {
-        viewModelScope.launch { uris.forEach { uri -> photoRepository.addMedia(entryId, uri) } }
+        viewModelScope.launch {
+            uris.forEach { uri -> photoRepository.addMedia(entryId, uri) }
+            triggerAutoBackup()
+        }
     }
 
     fun createCameraUri() = photoRepository.createCameraUri()
 
     fun onCameraPhotoTaken(file: java.io.File) {
-        viewModelScope.launch { photoRepository.addPhotoFromFile(entryId, file) }
+        viewModelScope.launch {
+            photoRepository.addPhotoFromFile(entryId, file)
+            triggerAutoBackup()
+        }
     }
 
     fun deletePhoto(photoId: Long) {
-        viewModelScope.launch { photoRepository.deletePhoto(photoId) }
+        viewModelScope.launch {
+            photoRepository.deletePhoto(photoId)
+            triggerAutoBackup()
+        }
     }
 
     fun updateDisplayText(newText: String) {
@@ -112,6 +142,7 @@ constructor(
             )
         journalRepository.updateEntry(updatedEntry)
         _uiState.value = _uiState.value.copy(entry = updatedEntry, isSaving = false)
+        triggerAutoBackup()
     }
 
     fun saveNow() {
@@ -127,6 +158,7 @@ constructor(
             delay(1500)
             val current = _uiState.value.entry ?: return@launch
             journalRepository.updateEntry(current)
+            triggerAutoBackup()
         }
     }
 
@@ -152,6 +184,7 @@ constructor(
                             editedDisplayText = improved,
                             isImproving = false,
                         )
+                    triggerAutoBackup()
                 }
                 .onFailure { error ->
                     _uiState.value =

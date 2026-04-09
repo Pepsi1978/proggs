@@ -18,8 +18,11 @@ object Constants {
     const val SYNC_DEBOUNCE_MS = 30_000L
     const val ANALYSIS_DEBOUNCE_MS = 60_000L
     const val DRIVE_BACKUP_FILENAME = "entropy_journal_backup.db"
+    const val DRIVE_PHOTOS_FILENAME = "entropy_journal_photos.zip"
 
     // SharedPreferences keys
+    const val PREF_BACKUP_PHOTOS = "backup_photos"
+    const val PREF_BACKUP_VIDEOS = "backup_videos"
     const val PREF_GROQ_API_KEY = "groq_api_key"
     const val PREF_GEMINI_API_KEY = "gemini_api_key"
     const val PREF_GEMINI_MODEL = "gemini_model"

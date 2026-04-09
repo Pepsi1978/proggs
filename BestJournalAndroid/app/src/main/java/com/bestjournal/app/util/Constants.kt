@@ -16,8 +16,11 @@ object Constants {
     const val SYNC_DEBOUNCE_MS = 30_000L
     const val ANALYSIS_DEBOUNCE_MS = 60_000L
     const val DRIVE_BACKUP_FILENAME = "bestjournal_backup.db"
+    const val DRIVE_PHOTOS_FILENAME = "bestjournal_photos.zip"
 
     // SharedPreferences keys
+    const val PREF_BACKUP_PHOTOS = "backup_photos"
+    const val PREF_BACKUP_VIDEOS = "backup_videos"
     const val PREF_TEXT_IMPROVEMENT_DEFAULT = "text_improvement_default"
     const val PREF_MAX_RECORDING_DURATION = "max_recording_duration"
     const val PREF_AUTO_UPDATE_DASHBOARD = "auto_update_dashboard"

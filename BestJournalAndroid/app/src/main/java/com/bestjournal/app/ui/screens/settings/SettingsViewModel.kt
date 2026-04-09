@@ -3,9 +3,9 @@ package com.bestjournal.app.ui.screens.settings
 import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import android.net.Uri
 import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.local.dao.JournalEntryDao
@@ -36,6 +36,8 @@ data class SettingsUiState(
     val followSun: Boolean = false,
     val biometricLock: Boolean = false,
     val lastSyncTimestamp: Long? = null,
+    val backupPhotos: Boolean = false,
+    val backupVideos: Boolean = false,
     val isSyncing: Boolean = false,
     val syncMessage: String? = null,
     val showLogoutDialog: Boolean = false,
@@ -91,8 +93,9 @@ constructor(
                 _uiState.value =
                     _uiState.value.copy(
                         lastSyncTimestamp =
-                            encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L)
-                                .takeIf { it > 0 },
+                            encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L).takeIf {
+                                it > 0
+                            }
                     )
             }
         }
@@ -130,8 +133,12 @@ constructor(
                 followSystem = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false),
                 followSun = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false),
                 biometricLock = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false),
+                backupPhotos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_PHOTOS, false),
+                backupVideos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_VIDEOS, false),
                 lastSyncTimestamp =
-                    encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L).takeIf { it > 0 },
+                    encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L).takeIf {
+                        it > 0
+                    },
                 reminderEnabled = reminderManager.isReminderEnabled(),
                 reminderHour = reminderManager.getReminderHour(),
                 reminderMinute = reminderManager.getReminderMinute(),
@@ -196,6 +203,16 @@ constructor(
     fun updateBiometricLock(enabled: Boolean) {
         encryptedPrefs.edit().putBoolean(Constants.PREF_BIOMETRIC_LOCK, enabled).apply()
         _uiState.value = _uiState.value.copy(biometricLock = enabled)
+    }
+
+    fun setBackupPhotos(enabled: Boolean) {
+        encryptedPrefs.edit().putBoolean(Constants.PREF_BACKUP_PHOTOS, enabled).apply()
+        _uiState.value = _uiState.value.copy(backupPhotos = enabled)
+    }
+
+    fun setBackupVideos(enabled: Boolean) {
+        encryptedPrefs.edit().putBoolean(Constants.PREF_BACKUP_VIDEOS, enabled).apply()
+        _uiState.value = _uiState.value.copy(backupVideos = enabled)
     }
 
     fun syncNow() {
@@ -325,11 +342,12 @@ constructor(
 
     fun updateWeeklyReviewSchedule(dayOfWeek: Int, hour: Int, minute: Int) {
         reminderManager.scheduleWeeklyReview(dayOfWeek, hour, minute)
-        _uiState.value = _uiState.value.copy(
-            weeklyReviewDay = dayOfWeek,
-            weeklyReviewHour = hour,
-            weeklyReviewMinute = minute,
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                weeklyReviewDay = dayOfWeek,
+                weeklyReviewHour = hour,
+                weeklyReviewMinute = minute,
+            )
     }
 
     fun updateReminderEnabled(enabled: Boolean) {
@@ -351,7 +369,8 @@ constructor(
             reminderManager.scheduleReminder(hour, minute)
         } else {
             // Just persist the time even if not enabled yet
-            encryptedPrefs.edit()
+            encryptedPrefs
+                .edit()
                 .putInt(Constants.PREF_REMINDER_HOUR, hour)
                 .putInt(Constants.PREF_REMINDER_MINUTE, minute)
                 .apply()
@@ -373,42 +392,44 @@ constructor(
             try {
                 val entries = journalEntryDao.getAllEntriesOnce()
                 if (entries.isEmpty()) {
-                    _uiState.value = _uiState.value.copy(
-                        isExporting = false,
-                        exportMessage = "Keine Eintr\u00e4ge vorhanden",
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isExporting = false,
+                            exportMessage = "Keine Eintr\u00e4ge vorhanden",
+                        )
                     delay(3000)
                     _uiState.value = _uiState.value.copy(exportMessage = null)
                     return@launch
                 }
 
                 // PDF generation is CPU+IO intensive — run off Main thread
-                val count = withContext(Dispatchers.IO) {
-                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                        PdfExporter.export(entries, outputStream)
+                val count =
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                            PdfExporter.export(entries, outputStream)
+                        }
                     }
-                }
 
                 if (count != null) {
                     analyticsTracker.trackExportCompleted(count)
-                    _uiState.value = _uiState.value.copy(
-                        isExporting = false,
-                        exportMessage = "$count Eintr\u00e4ge exportiert",
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isExporting = false,
+                            exportMessage = "$count Eintr\u00e4ge exportiert",
+                        )
                 } else {
-                    _uiState.value = _uiState.value.copy(
-                        isExporting = false,
-                        exportMessage = "Fehler: Datei konnte nicht ge\u00f6ffnet werden",
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isExporting = false,
+                            exportMessage = "Fehler: Datei konnte nicht ge\u00f6ffnet werden",
+                        )
                 }
 
                 delay(4000)
                 _uiState.value = _uiState.value.copy(exportMessage = null)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isExporting = false,
-                    exportMessage = "Fehler: ${e.message}",
-                )
+                _uiState.value =
+                    _uiState.value.copy(isExporting = false, exportMessage = "Fehler: ${e.message}")
                 delay(4000)
                 _uiState.value = _uiState.value.copy(exportMessage = null)
             }

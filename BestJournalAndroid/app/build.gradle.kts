@@ -14,6 +14,12 @@ android {
     compileSdk = 35
 
     signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("debug-shared.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         create("release") {
             val props = rootProject.file("local.properties")
             if (props.exists()) {
