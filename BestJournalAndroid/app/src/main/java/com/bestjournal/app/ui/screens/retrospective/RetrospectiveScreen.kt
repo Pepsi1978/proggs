@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.VolumeUp
@@ -908,15 +909,25 @@ private fun SummaryDetailDialog(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             photos.forEach { photo ->
-                                AsyncImage(
-                                    model = photo.filePath,
-                                    contentDescription = if (photo.isVideo) "Video" else "Foto",
-                                    contentScale = ContentScale.Crop,
-                                    modifier =
-                                        Modifier.size(120.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .clickable { fullScreenPhotoPath = photo.filePath },
-                                )
+                                Box {
+                                    AsyncImage(
+                                        model = photo.filePath,
+                                        contentDescription = if (photo.isVideo) "Video" else "Foto",
+                                        contentScale = ContentScale.Crop,
+                                        modifier =
+                                            Modifier.size(120.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .clickable { fullScreenPhotoPath = photo.filePath },
+                                    )
+                                    if (photo.isVideo) {
+                                        Icon(
+                                            Icons.Rounded.PlayCircle,
+                                            contentDescription = "Video abspielen",
+                                            modifier = Modifier.size(40.dp).align(Alignment.Center),
+                                            tint = Color.White.copy(alpha = 0.9f),
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

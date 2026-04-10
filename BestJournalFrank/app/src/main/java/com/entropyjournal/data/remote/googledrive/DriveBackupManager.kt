@@ -136,7 +136,8 @@ constructor(
      * - Lists existing files once — skips already-uploaded (name + size match)
      * - Largest files first so big uploads start early and run in parallel
      * - Resumable upload for files > 5 MB (survives connection drops)
-     * - 3 parallel uploads via Semaphore
+     * - Uses update() for changed files (1 API call instead of delete+create = 3)
+     * - 5 parallel uploads via Semaphore
      */
     suspend fun backupFiles(
         files: List<Pair<File, String>>,
@@ -146,8 +147,9 @@ constructor(
             try {
                 val driveService = getSessionDriveService()
 
-                // List all existing photo files on Drive in one call (name + size)
-                val existingFiles = mutableMapOf<String, Long>() // name -> size
+                // List all existing photo files on Drive in one call (name + size + id)
+                data class DriveFileInfo(val id: String, val size: Long)
+                val existingFiles = mutableMapOf<String, DriveFileInfo>() // name -> info
                 var pageToken: String? = null
                 do {
                     val request =
@@ -156,18 +158,20 @@ constructor(
                             .list()
                             .setSpaces("appDataFolder")
                             .setQ("name contains 'photo_'")
-                            .setFields("nextPageToken, files(name, size)")
+                            .setFields("nextPageToken, files(id, name, size)")
                             .setPageSize(1000)
                     if (pageToken != null) request.pageToken = pageToken
                     val result = request.execute()
-                    result.files?.forEach { f -> existingFiles[f.name] = f.getSize() ?: 0L }
+                    result.files?.forEach { f ->
+                        existingFiles[f.name] = DriveFileInfo(f.id, f.getSize() ?: 0L)
+                    }
                     pageToken = result.nextPageToken
                 } while (pageToken != null)
 
                 // Delta sync: skip files where name AND size match
                 val newFiles = files.filter { (localFile, remoteName) ->
-                    val driveSize = existingFiles[remoteName]
-                    driveSize == null || driveSize != localFile.length()
+                    val info = existingFiles[remoteName]
+                    info == null || info.size != localFile.length()
                 }
                 val alreadyUploaded = files.size - newFiles.size
                 android.util.Log.d(
@@ -185,8 +189,8 @@ constructor(
 
                 onProgress(alreadyUploaded, files.size)
 
-                // Parallel upload with Semaphore(3)
-                val semaphore = Semaphore(3)
+                // Parallel upload with Semaphore(5)
+                val semaphore = Semaphore(5)
                 val uploaded = AtomicInteger(alreadyUploaded)
                 val errors = AtomicInteger(0)
 
@@ -198,43 +202,47 @@ constructor(
                                     var success = false
                                     for (attempt in 0..1) { // 1 retry
                                         try {
-                                            // Delete old version if exists on Drive
-                                            if (attempt == 0 && remoteName in existingFiles) {
-                                                val old =
-                                                    driveService
-                                                        .files()
-                                                        .list()
-                                                        .setSpaces("appDataFolder")
-                                                        .setQ("name = '$remoteName'")
-                                                        .setFields("files(id)")
-                                                        .execute()
-                                                old.files?.forEach {
-                                                    driveService.files().delete(it.id).execute()
-                                                }
-                                            }
-
-                                            val fileMetadata =
-                                                com.google.api.services.drive.model.File().apply {
-                                                    name = remoteName
-                                                    parents = listOf("appDataFolder")
-                                                }
                                             val mediaContent =
                                                 FileContent("application/octet-stream", localFile)
-                                            val createRequest =
-                                                driveService
-                                                    .files()
-                                                    .create(fileMetadata, mediaContent)
-                                                    .setFields("id")
+                                            val existingInfo = existingFiles[remoteName]
 
-                                            // Resumable upload for large files (> 5 MB)
-                                            if (localFile.length() > RESUMABLE_THRESHOLD) {
-                                                createRequest.mediaHttpUploader?.apply {
-                                                    isDirectUploadEnabled = false
-                                                    chunkSize = 2 * 1024 * 1024 // 2 MB chunks
+                                            if (existingInfo != null) {
+                                                // Update existing file — 1 API call instead of
+                                                // delete+create (3 calls)
+                                                val updateRequest =
+                                                    driveService
+                                                        .files()
+                                                        .update(existingInfo.id, null, mediaContent)
+                                                if (localFile.length() > RESUMABLE_THRESHOLD) {
+                                                    updateRequest.mediaHttpUploader?.apply {
+                                                        isDirectUploadEnabled = false
+                                                        chunkSize = 5 * 1024 * 1024 // 5 MB chunks
+                                                    }
                                                 }
+                                                updateRequest.execute()
+                                            } else {
+                                                // Create new file
+                                                val fileMetadata =
+                                                    com.google.api.services.drive.model
+                                                        .File()
+                                                        .apply {
+                                                            name = remoteName
+                                                            parents = listOf("appDataFolder")
+                                                        }
+                                                val createRequest =
+                                                    driveService
+                                                        .files()
+                                                        .create(fileMetadata, mediaContent)
+                                                        .setFields("id")
+                                                if (localFile.length() > RESUMABLE_THRESHOLD) {
+                                                    createRequest.mediaHttpUploader?.apply {
+                                                        isDirectUploadEnabled = false
+                                                        chunkSize = 5 * 1024 * 1024 // 5 MB chunks
+                                                    }
+                                                }
+                                                createRequest.execute()
                                             }
 
-                                            createRequest.execute()
                                             val current = uploaded.incrementAndGet()
                                             onProgress(current, files.size)
                                             android.util.Log.d(
@@ -278,6 +286,74 @@ constructor(
             } catch (e: Exception) {
                 android.util.Log.e("DriveBackup", "Batch upload FAILED: ${e.message}", e)
                 Result.failure(e)
+            }
+        }
+
+    /**
+     * Delete orphaned files from Drive that no longer exist locally. Call after upload to keep
+     * Drive in sync with the local photos directory.
+     */
+    suspend fun cleanupOrphanedDriveFiles(localFileNames: Set<String>): Int =
+        withContext(Dispatchers.IO) {
+            try {
+                val driveService = getSessionDriveService()
+
+                // List all photo/video files on Drive
+                val driveFiles = mutableListOf<com.google.api.services.drive.model.File>()
+                var pageToken: String? = null
+                do {
+                    val request =
+                        driveService
+                            .files()
+                            .list()
+                            .setSpaces("appDataFolder")
+                            .setQ("name contains 'photo_'")
+                            .setFields("nextPageToken, files(id, name, size)")
+                            .setPageSize(1000)
+                    if (pageToken != null) request.pageToken = pageToken
+                    val result = request.execute()
+                    result.files?.let { driveFiles.addAll(it) }
+                    pageToken = result.nextPageToken
+                } while (pageToken != null)
+
+                // Find orphans: files on Drive whose local counterpart no longer exists
+                val orphans = driveFiles.filter { it.name !in localFileNames }
+
+                if (orphans.isEmpty()) {
+                    android.util.Log.d(
+                        "DriveBackup",
+                        "Cleanup: no orphaned files on Drive (${driveFiles.size} files OK)",
+                    )
+                    return@withContext 0
+                }
+
+                val totalBytes = orphans.sumOf { it.getSize() ?: 0L }
+                android.util.Log.d(
+                    "DriveBackup",
+                    "Cleanup: deleting ${orphans.size} orphaned files from Drive (${totalBytes / 1024 / 1024} MB)",
+                )
+
+                var deleted = 0
+                for (orphan in orphans) {
+                    try {
+                        driveService.files().delete(orphan.id).execute()
+                        deleted++
+                        android.util.Log.d(
+                            "DriveBackup",
+                            "Deleted orphan: ${orphan.name} (${(orphan.getSize() ?: 0L) / 1024} KB)",
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.w(
+                            "DriveBackup",
+                            "Failed to delete orphan ${orphan.name}: ${e.message}",
+                        )
+                    }
+                }
+                android.util.Log.d("DriveBackup", "Cleanup complete: $deleted orphans removed")
+                deleted
+            } catch (e: Exception) {
+                android.util.Log.e("DriveBackup", "Cleanup FAILED: ${e.message}", e)
+                0
             }
         }
 

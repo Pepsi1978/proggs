@@ -23,4 +23,6 @@ interface EntryPhotoDao {
         "SELECT p.* FROM entry_photos p INNER JOIN journal_entries e ON p.entryId = e.id WHERE e.timestamp BETWEEN :startDate AND :endDate ORDER BY p.timestamp ASC"
     )
     suspend fun getPhotosForDateRange(startDate: Long, endDate: Long): List<EntryPhotoEntity>
+
+    @Query("SELECT filePath FROM entry_photos") suspend fun getAllFilePaths(): List<String>
 }

@@ -18,8 +18,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
 @Singleton
@@ -29,6 +31,22 @@ constructor(
     @ApplicationContext private val context: Context,
     private val encryptedPrefs: SharedPreferences,
 ) {
+    // Reuse the same authenticated Drive service within a restore session
+    // (avoids redundant GoogleAuthUtil.getToken() calls)
+    @Volatile private var sessionService: Drive? = null
+
+    private suspend fun getSessionDriveService(): Drive? {
+        sessionService?.let {
+            return it
+        }
+        return getDriveService()?.also { sessionService = it }
+    }
+
+    /** Clear cached service after a restore session is complete. */
+    fun endSession() {
+        sessionService = null
+    }
+
     private suspend fun getDriveService(): Drive? =
         withContext(Dispatchers.IO) {
             val accountEmail =
@@ -115,7 +133,7 @@ constructor(
     ): Int =
         withContext(Dispatchers.IO) {
             try {
-                val driveService = getDriveService()
+                val driveService = getSessionDriveService()
                 if (driveService == null) {
                     android.util.Log.e(
                         "DriveRestore",
@@ -152,7 +170,7 @@ constructor(
                     pageToken = result.nextPageToken
                 } while (pageToken != null)
 
-                // Sort: largest files first so big downloads start early
+                // Sort: largest files first so big downloads start early across all parallel slots
                 filesToDownload.sortByDescending { it.getSize() ?: 0L }
 
                 val total = filesToDownload.size
@@ -163,63 +181,63 @@ constructor(
                 )
                 onProgress?.invoke(0, total)
 
-                // Second pass: parallel downloads with Semaphore(4)
-                val dlSemaphore = Semaphore(4)
+                // Parallel downloads with Semaphore(6)
+                val dlSemaphore = Semaphore(6)
                 val dlCount = AtomicInteger(0)
 
                 coroutineScope {
-                    val dlJobs = filesToDownload.map { driveFile ->
-                        launch {
-                            dlSemaphore.acquire()
-                            try {
-                                val localName = driveFile.name.removePrefix("photo_")
-                                val localFile = File(targetDir, localName)
-                                var success = false
-                                for (attempt in 0..1) {
-                                    try {
-                                        FileOutputStream(localFile).use { os ->
-                                            driveService
-                                                .files()
-                                                .get(driveFile.id)
-                                                .executeMediaAndDownloadTo(os)
-                                        }
-                                        success = true
-                                        break
-                                    } catch (e: Exception) {
-                                        localFile.delete()
-                                        if (attempt == 0) {
-                                            android.util.Log.w(
-                                                "DriveRestore",
-                                                "Download retry $localName: ${e.message}",
-                                            )
-                                            kotlinx.coroutines.delay(1000)
-                                        } else {
-                                            throw e
+                    filesToDownload
+                        .map { driveFile ->
+                            launch {
+                                dlSemaphore.withPermit {
+                                    val localName = driveFile.name.removePrefix("photo_")
+                                    val localFile = File(targetDir, localName)
+                                    var success = false
+                                    for (attempt in 0..1) { // 1 retry
+                                        try {
+                                            java.io
+                                                .BufferedOutputStream(
+                                                    FileOutputStream(localFile),
+                                                    64 * 1024,
+                                                )
+                                                .use { os ->
+                                                    driveService
+                                                        .files()
+                                                        .get(driveFile.id)
+                                                        .executeMediaAndDownloadTo(os)
+                                                }
+                                            success = true
+                                            break
+                                        } catch (e: Exception) {
+                                            localFile.delete() // clean up partial download
+                                            if (attempt == 0) {
+                                                android.util.Log.w(
+                                                    "DriveRestore",
+                                                    "Download retry $localName: ${e.message}",
+                                                )
+                                                kotlinx.coroutines.delay(1000)
+                                            } else {
+                                                throw e
+                                            }
                                         }
                                     }
+                                    if (success) {
+                                        val current = dlCount.incrementAndGet()
+                                        onProgress?.invoke(current, total)
+                                        android.util.Log.d(
+                                            "DriveRestore",
+                                            "Restored ($current/$total): $localName (${localFile.length()} bytes)",
+                                        )
+                                    } else {
+                                        android.util.Log.e("DriveRestore", "Failed: $localName")
+                                    }
                                 }
-                                if (success) {
-                                    val current = dlCount.incrementAndGet()
-                                    onProgress?.invoke(current, total)
-                                    android.util.Log.d(
-                                        "DriveRestore",
-                                        "Restored ($current/$total): $localName (${localFile.length()} bytes)",
-                                    )
-                                }
-                            } catch (e: Exception) {
-                                val localName = driveFile.name.removePrefix("photo_")
-                                android.util.Log.e(
-                                    "DriveRestore",
-                                    "Failed: $localName: ${e.message}",
-                                )
-                            } finally {
-                                dlSemaphore.release()
                             }
                         }
-                    }
-                    for (j in dlJobs) j.join()
+                        .joinAll()
                 }
 
+                endSession()
                 val count = dlCount.get()
                 android.util.Log.d(
                     "DriveRestore",

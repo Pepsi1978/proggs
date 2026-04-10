@@ -110,6 +110,40 @@ constructor(
                     "Photo backup done: ${batchResult.getOrDefault(0)} new files uploaded",
                 )
             }
+
+            // Cleanup: DATABASE is the single source of truth.
+            // Only files referenced in entry_photos may exist on Drive.
+            // Everything else is an orphan and gets deleted.
+            try {
+                val dbPaths = database.entryPhotoDao().getAllFilePaths()
+                val referencedDriveNames =
+                    dbPaths.map { path -> "photo_${File(path).name}" }.toSet()
+                Log.d(
+                    "SyncDebug",
+                    "DB references ${referencedDriveNames.size} files — cleaning Drive orphans",
+                )
+                val deletedFromDrive =
+                    driveBackupManager.cleanupOrphanedDriveFiles(referencedDriveNames)
+                if (deletedFromDrive > 0) {
+                    Log.d("SyncDebug", "Cleaned up $deletedFromDrive orphaned files from Drive")
+                }
+
+                // Also clean local orphans: files in photos/ not referenced in DB
+                val referencedLocalNames = dbPaths.map { File(it).name }.toSet()
+                var localOrphans = 0
+                allFiles.forEach { file ->
+                    if (file.name !in referencedLocalNames) {
+                        file.delete()
+                        localOrphans++
+                        Log.d("SyncDebug", "Deleted local orphan: ${file.name}")
+                    }
+                }
+                if (localOrphans > 0) {
+                    Log.d("SyncDebug", "Cleaned up $localOrphans orphaned local files")
+                }
+            } catch (e: Exception) {
+                Log.e("SyncDebug", "Cleanup failed: ${e.message}", e)
+            }
         }
 
         driveBackupManager.endSession()
