@@ -14,9 +14,15 @@ import com.google.api.services.drive.Drive
 import com.google.api.services.drive.DriveScopes
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
 class NeedConsentException(val consentIntent: Intent) :
@@ -71,6 +77,111 @@ constructor(
                 Result.success(Unit)
             } catch (e: Exception) {
                 android.util.Log.e("DriveBackup", "File backup FAILED ($remoteName): ${e.message}")
+                Result.failure(e)
+            }
+        }
+
+    /**
+     * Batch upload with delta sync + parallel uploads.
+     * - Single OAuth token / Drive service for all files
+     * - Lists existing files once to skip already-uploaded
+     * - 3 parallel uploads via Semaphore
+     */
+    suspend fun backupFiles(
+        files: List<Pair<File, String>>,
+        onProgress: (uploaded: Int, total: Int) -> Unit,
+    ): Result<Int> =
+        withContext(Dispatchers.IO) {
+            try {
+                val driveService = getDriveService()
+
+                // List all existing photo files on Drive in one call
+                val existingNames = mutableSetOf<String>()
+                var pageToken: String? = null
+                do {
+                    val request =
+                        driveService
+                            .files()
+                            .list()
+                            .setSpaces("appDataFolder")
+                            .setQ("name contains 'photo_'")
+                            .setFields("nextPageToken, files(name)")
+                            .setPageSize(1000)
+                    if (pageToken != null) request.pageToken = pageToken
+                    val result = request.execute()
+                    result.files?.forEach { existingNames.add(it.name) }
+                    pageToken = result.nextPageToken
+                } while (pageToken != null)
+
+                // Filter to only new files
+                val newFiles = files.filter { (_, remoteName) -> remoteName !in existingNames }
+                val alreadyUploaded = files.size - newFiles.size
+                android.util.Log.d(
+                    "DriveBackup",
+                    "Delta sync: ${files.size} total, $alreadyUploaded already on Drive, ${newFiles.size} to upload",
+                )
+
+                if (newFiles.isEmpty()) {
+                    onProgress(files.size, files.size)
+                    return@withContext Result.success(0)
+                }
+
+                onProgress(alreadyUploaded, files.size)
+
+                // Parallel upload with Semaphore(3)
+                val semaphore = Semaphore(3)
+                val uploaded = AtomicInteger(alreadyUploaded)
+                val errors = AtomicInteger(0)
+
+                coroutineScope {
+                    newFiles
+                        .map { (localFile, remoteName) ->
+                            launch {
+                                semaphore.withPermit {
+                                    try {
+                                        val fileMetadata =
+                                            com.google.api.services.drive.model.File().apply {
+                                                name = remoteName
+                                                parents = listOf("appDataFolder")
+                                            }
+                                        val mediaContent =
+                                            FileContent("application/octet-stream", localFile)
+                                        driveService
+                                            .files()
+                                            .create(fileMetadata, mediaContent)
+                                            .setFields("id")
+                                            .execute()
+                                        val current = uploaded.incrementAndGet()
+                                        onProgress(current, files.size)
+                                        android.util.Log.d(
+                                            "DriveBackup",
+                                            "Uploaded ($current/${files.size}): $remoteName (${localFile.length()} bytes)",
+                                        )
+                                    } catch (e: Exception) {
+                                        errors.incrementAndGet()
+                                        android.util.Log.e(
+                                            "DriveBackup",
+                                            "Upload failed ($remoteName): ${e.message}",
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        .joinAll()
+                }
+
+                val errorCount = errors.get()
+                if (errorCount > 0) {
+                    android.util.Log.w(
+                        "DriveBackup",
+                        "$errorCount of ${newFiles.size} uploads failed",
+                    )
+                }
+                Result.success(newFiles.size - errorCount)
+            } catch (e: UserRecoverableAuthException) {
+                Result.failure(NeedConsentException(e.intent ?: Intent()))
+            } catch (e: Exception) {
+                android.util.Log.e("DriveBackup", "Batch upload FAILED: ${e.message}", e)
                 Result.failure(e)
             }
         }
