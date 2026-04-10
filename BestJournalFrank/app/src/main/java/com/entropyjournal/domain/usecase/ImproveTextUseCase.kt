@@ -4,14 +4,13 @@ import android.content.SharedPreferences
 import com.entropyjournal.data.remote.gemini.GeminiApi
 import com.entropyjournal.data.remote.gemini.GeminiRequestBuilder
 import com.entropyjournal.util.Constants
+import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import javax.inject.Inject
 
-class ImproveTextUseCase @Inject constructor(
-    private val geminiApi: GeminiApi,
-    private val encryptedPrefs: SharedPreferences
-) {
+class ImproveTextUseCase
+@Inject
+constructor(private val geminiApi: GeminiApi, private val encryptedPrefs: SharedPreferences) {
     companion object {
         private const val TEMPERATURE = 0.4f
         private const val MAX_OUTPUT_TOKENS = 8192
@@ -19,7 +18,8 @@ class ImproveTextUseCase @Inject constructor(
         private const val CHUNK_MAX_CHARS = 3500
     }
 
-    private fun buildPrompt(text: String): String = """
+    private fun buildPrompt(text: String): String =
+        """
 Du bist ein deutscher Textredakteur für diktierte Spracheingaben.
 
 AUFGABE:
@@ -38,6 +38,7 @@ GRENZEN (strikt):
 - Keine neuen Informationen, Fakten oder Inhalte hinzufügen.
 - Keine Vermutungen über nicht Gesagtes.
 - Die Intention des Originals muss vollständig erhalten bleiben.
+- Keine langen Gedankenstriche (—). Nutze Kommas oder kurze Sätze.
 - Sprache: Deutsch.
 
 REGEL:
@@ -46,7 +47,8 @@ Keine Kommentare. Keine Erklärungen. Kein Präfix.
 
 TEXT:
 $text
-    """.trim()
+    """
+            .trim()
 
     private fun getSelectedModel(): String {
         return encryptedPrefs.getString(Constants.PREF_GEMINI_MODEL, Constants.DEFAULT_GEMINI_MODEL)
@@ -58,22 +60,24 @@ $text
     }
 
     private suspend fun rewriteChunk(text: String): String {
-        val request = GeminiRequestBuilder.build(
-            userText = buildPrompt(text),
-            temperature = TEMPERATURE,
-            maxOutputTokens = MAX_OUTPUT_TOKENS
-        )
-        val response = geminiApi.generateContent(
-            model = getSelectedModel(),
-            apiKey = getApiKey(),
-            request = request
-        )
-        return response.extractText()?.trim() ?: text
+        val request =
+            GeminiRequestBuilder.build(
+                userText = buildPrompt(text),
+                temperature = TEMPERATURE,
+                maxOutputTokens = MAX_OUTPUT_TOKENS,
+            )
+        val response =
+            geminiApi.generateContent(
+                model = getSelectedModel(),
+                apiKey = getApiKey(),
+                request = request,
+            )
+        return response.extractText()?.trim()?.replace("—", ", ") ?: text
     }
 
     /**
-     * Split text into chunks by paragraphs, respecting sentence boundaries.
-     * Mirrors the Tampermonkey chatgpt.user.js splitIntoChunksByParagraphs logic.
+     * Split text into chunks by paragraphs, respecting sentence boundaries. Mirrors the
+     * Tampermonkey chatgpt.user.js splitIntoChunksByParagraphs logic.
      */
     private fun splitIntoChunks(text: String): List<String> {
         if (text.length <= CHUNK_MAX_CHARS) return listOf(text)
@@ -87,7 +91,10 @@ $text
             if (p.isEmpty()) continue
 
             if (p.length > CHUNK_MAX_CHARS) {
-                if (buffer.isNotBlank()) { chunks.add(buffer); buffer = "" }
+                if (buffer.isNotBlank()) {
+                    chunks.add(buffer)
+                    buffer = ""
+                }
                 // Split long paragraph at sentence boundaries
                 var start = 0
                 while (start < p.length) {
@@ -95,12 +102,13 @@ $text
                     if (end < p.length) {
                         val windowStart = maxOf(start, end - (CHUNK_MAX_CHARS / 2))
                         val slice = p.substring(windowStart, end)
-                        val lastBreak = maxOf(
-                            slice.lastIndexOf('.'),
-                            slice.lastIndexOf('!'),
-                            slice.lastIndexOf('?'),
-                            slice.lastIndexOf(';')
-                        )
+                        val lastBreak =
+                            maxOf(
+                                slice.lastIndexOf('.'),
+                                slice.lastIndexOf('!'),
+                                slice.lastIndexOf('?'),
+                                slice.lastIndexOf(';'),
+                            )
                         if (lastBreak > -1) end = windowStart + lastBreak + 1
                     }
                     chunks.add(p.substring(start, end).trim())
@@ -124,7 +132,8 @@ $text
     suspend operator fun invoke(rawText: String): Result<String> {
         return try {
             val apiKey = getApiKey()
-            if (apiKey.isBlank()) return Result.failure(IllegalStateException("Gemini API-Key nicht konfiguriert"))
+            if (apiKey.isBlank())
+                return Result.failure(IllegalStateException("Gemini API-Key nicht konfiguriert"))
 
             // First attempt: one-shot
             val oneShot = rewriteChunk(rawText)
@@ -138,9 +147,7 @@ $text
             // Text was truncated — split into chunks and process in parallel
             val chunks = splitIntoChunks(rawText)
             val results = coroutineScope {
-                chunks.map { chunk ->
-                    async { rewriteChunk(chunk) }
-                }.map { it.await() }
+                chunks.map { chunk -> async { rewriteChunk(chunk) } }.map { it.await() }
             }
 
             Result.success(results.joinToString("\n\n").trim())

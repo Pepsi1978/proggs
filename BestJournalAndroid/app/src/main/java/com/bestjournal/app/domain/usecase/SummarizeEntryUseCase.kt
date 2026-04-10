@@ -27,6 +27,7 @@ TITEL: [3-4 Wörter Überschrift]
 REGELN:
 - Überschrift: Maximal 4 Wörter, fängt den Kern des Eintrags ein
 - Stichpunkte: Kurz und prägnant, nur Kernaussagen
+- Keine langen Gedankenstriche (—). Nutze Kommas oder Punkte.
 - Sprache: Deutsch
 - Gib NUR das Format oben zurück, nichts anderes
 
@@ -44,7 +45,7 @@ $text
                         prompt = buildPrompt(displayText),
                         temperature = 0.3f,
                     )
-                val resultText = result.getOrNull()?.trim()
+                val resultText = result.getOrNull()?.trim()?.replace("—", ", ")
                 if (resultText == null) {
                     val errorMsg = result.exceptionOrNull()?.message ?: "unknown"
                     if (errorMsg.contains("quota", ignoreCase = true) && attempt < MAX_RETRIES) {

@@ -172,6 +172,7 @@ REGELN:
 - Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 200 Wörter
+- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
 - Sprache: Deutsch$profileStyle
 
 EINTRÄGE DER WOCHE:
@@ -191,11 +192,11 @@ ${task.entriesText}"""
                 return null
             }
 
-            val summaryText = result.getOrThrow().trim()
+            val summaryText = result.getOrThrow().trim().replace("—", ", ")
 
             val titlePrompt =
                 """Basierend auf diesem Wochenrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter).
-Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen.
+Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).
 
 Rückblick:
 ${summaryText.take(500)}"""
@@ -207,7 +208,8 @@ ${summaryText.take(500)}"""
                     temperature = 0.6f,
                     maxOutputTokens = 50,
                 )
-            val title = titleResult.getOrNull()?.trim()?.take(60) ?: "Wochenrückblick"
+            val title =
+                titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60) ?: "Wochenrückblick"
 
             val weekOfMonth =
                 if (task.weekStart.get(Calendar.MONTH) != task.weekEnd.get(Calendar.MONTH)) {
@@ -354,6 +356,7 @@ REGELN:
 - Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 300 Wörter
+- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
 - Sprache: Deutsch$profileStyle
 
 WOCHENRÜCKBLICKE:
@@ -373,11 +376,11 @@ ${'$'}{task.weeksText}"""
                 return null
             }
 
-            val summaryText = result.getOrThrow().trim()
+            val summaryText = result.getOrThrow().trim().replace("—", ", ")
 
             val titlePrompt =
                 """Basierend auf diesem Monatsrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter).
-Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen.
+Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).
 
 Rückblick:
 ${summaryText.take(500)}"""
@@ -389,7 +392,8 @@ ${summaryText.take(500)}"""
                     temperature = 0.6f,
                     maxOutputTokens = 50,
                 )
-            val title = titleResult.getOrNull()?.trim()?.take(60) ?: "Monatsrückblick"
+            val title =
+                titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60) ?: "Monatsrückblick"
 
             return RetrospectiveSummaryEntity(
                 type = "MONTHLY",
@@ -479,6 +483,7 @@ REGELN:
 - Schließe mit einem Gedanken der nach vorne blickt
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 400 Wörter
+- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
 - Sprache: Deutsch$profileStyle
 
 MONATSRÜCKBLICKE:
@@ -486,7 +491,7 @@ $monthsText"""
 
         val titlePrompt =
             """Basierend auf diesem Jahresrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter).
-Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen.
+Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).
 
 Rückblick:
 """
@@ -505,7 +510,7 @@ Rückblick:
             return 0
         }
 
-        val summaryText = result.getOrThrow().trim()
+        val summaryText = result.getOrThrow().trim().replace("—", ", ")
         val titleResult =
             aiService.generateContent(
                 prompt = titlePrompt + summaryText.take(500),
@@ -513,7 +518,8 @@ Rückblick:
                 temperature = 0.6f,
                 maxOutputTokens = 50,
             )
-        val title = titleResult.getOrNull()?.trim()?.take(60) ?: "Jahresrückblick $year"
+        val title =
+            titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60) ?: "Jahresrückblick $year"
 
         retroRepo.insert(
             RetrospectiveSummaryEntity(

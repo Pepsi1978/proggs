@@ -33,6 +33,7 @@ GRENZEN (strikt):
 - Keine neuen Informationen, Fakten oder Inhalte hinzufügen.
 - Keine Vermutungen über nicht Gesagtes.
 - Die Intention des Originals muss vollständig erhalten bleiben.
+- Keine langen Gedankenstriche (—). Nutze Kommas oder kurze Sätze.
 - Sprache: Deutsch.
 
 REGEL:
@@ -52,7 +53,7 @@ $text
                 temperature = TEMPERATURE,
                 maxOutputTokens = MAX_OUTPUT_TOKENS,
             )
-        return result.getOrNull()?.trim() ?: text
+        return result.getOrNull()?.trim()?.replace("—", ", ") ?: text
     }
 
     /**
