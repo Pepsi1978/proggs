@@ -36,7 +36,6 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.VolumeUp
@@ -56,6 +55,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -690,6 +690,7 @@ private fun SummaryDetailDialog(
     var fullScreenPhotoPath by remember { mutableStateOf<String?>(null) }
     val tts = remember { EdgeTtsPlayer(context) }
     val photos by viewModel.currentPhotos.collectAsState()
+    val parsed = remember(summary.summaryText) { parseRetrospectiveText(summary.summaryText) }
 
     LaunchedEffect(summary.startDate, summary.endDate) {
         viewModel.loadPhotosForPeriod(summary.startDate, summary.endDate)
@@ -756,8 +757,6 @@ private fun SummaryDetailDialog(
                 }
 
                 // Body — structured rendering with bullet summary + timeline sections
-                val parsed =
-                    remember(summary.summaryText) { parseRetrospectiveText(summary.summaryText) }
                 val bodyScrollState = rememberScrollState()
                 Column(
                     modifier =
@@ -967,143 +966,122 @@ private fun SummaryDetailDialog(
         }
     }
 
-    // Share dialog — like diary entry sharing
+    // Share dialog with checkboxes — like diary entry sharing
     if (showShareDialog) {
-        val hasPhotos = photos.isNotEmpty()
+        var shareText by remember { mutableStateOf(true) }
+        val selectedPhotos = remember { List(photos.size) { true }.toMutableStateList() }
+
         AlertDialog(
             onDismissRequest = { showShareDialog = false },
             title = { Text("Rückblick teilen", color = MaterialTheme.colorScheme.onSurface) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    // Text option
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Text checkbox
                     Row(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(
-                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                )
-                                .clickable {
-                                    val parsed = parseRetrospectiveText(summary.summaryText)
-                                    val shareText = buildShareText(summary, parsed)
-                                    val intent =
-                                        android.content
-                                            .Intent(android.content.Intent.ACTION_SEND)
-                                            .apply {
-                                                type = "text/plain"
-                                                putExtra(
-                                                    android.content.Intent.EXTRA_TEXT,
-                                                    shareText,
-                                                )
-                                            }
-                                    context.startActivity(
-                                        android.content.Intent.createChooser(
-                                            intent,
-                                            "Rückblick teilen",
-                                        )
-                                    )
-                                    showShareDialog = false
-                                }
-                                .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth().clickable { shareText = !shareText },
                     ) {
-                        Icon(
-                            Icons.Rounded.Share,
-                            contentDescription = null,
-                            tint = Color(0xFFE07830),
+                        androidx.compose.material3.Checkbox(
+                            checked = shareText,
+                            onCheckedChange = { shareText = it },
                         )
-                        Column {
-                            Text(
-                                "Text",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                "Zusammenfassung + Rückblick als Text",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Rückblick-Text", color = MaterialTheme.colorScheme.onSurface)
                     }
-                    // Fotos/Videos option — grey if none available
-                    val photoAlpha = if (hasPhotos) 1f else 0.35f
-                    Row(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(
-                                    MaterialTheme.colorScheme.surfaceVariant.copy(
-                                        alpha = 0.5f * photoAlpha
-                                    )
-                                )
-                                .then(
-                                    if (hasPhotos)
-                                        Modifier.clickable {
-                                            val photoUris = photos.map { photo ->
-                                                androidx.core.content.FileProvider.getUriForFile(
-                                                    context,
-                                                    "${context.packageName}.fileprovider",
-                                                    java.io.File(photo.filePath),
-                                                )
-                                            }
-                                            val intent =
-                                                android.content
-                                                    .Intent(
-                                                        android.content.Intent.ACTION_SEND_MULTIPLE
-                                                    )
-                                                    .apply {
-                                                        type = "image/*"
-                                                        putParcelableArrayListExtra(
-                                                            android.content.Intent.EXTRA_STREAM,
-                                                            ArrayList(photoUris),
-                                                        )
-                                                        addFlags(
-                                                            android.content.Intent
-                                                                .FLAG_GRANT_READ_URI_PERMISSION
-                                                        )
-                                                    }
-                                            context.startActivity(
-                                                android.content.Intent.createChooser(
-                                                    intent,
-                                                    "Fotos teilen",
-                                                )
-                                            )
-                                            showShareDialog = false
-                                        }
-                                    else Modifier
-                                )
-                                .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Icon(
-                            Icons.Rounded.Image,
-                            contentDescription = null,
-                            tint = Color(0xFFE07830).copy(alpha = photoAlpha),
+
+                    // Photo/Video checkboxes
+                    if (photos.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Fotos & Videos:",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Column {
-                            Text(
-                                "Fotos & Videos",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = photoAlpha),
-                            )
-                            Text(
-                                if (hasPhotos) "${photos.size} Medien aus diesem Zeitraum"
-                                else "Keine Fotos oder Videos vorhanden",
-                                style = MaterialTheme.typography.bodySmall,
-                                color =
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                        alpha = photoAlpha
-                                    ),
-                            )
+                        photos.forEachIndexed { index, photo ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier =
+                                    Modifier.fillMaxWidth().clickable {
+                                        selectedPhotos[index] = !selectedPhotos[index]
+                                    },
+                            ) {
+                                androidx.compose.material3.Checkbox(
+                                    checked = selectedPhotos[index],
+                                    onCheckedChange = { selectedPhotos[index] = it },
+                                )
+                                coil3.compose.AsyncImage(
+                                    model = photo.filePath,
+                                    contentDescription = null,
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                    modifier =
+                                        Modifier.size(48.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .padding(end = 8.dp),
+                                )
+                                Text(
+                                    if (photo.isVideo) "Video" else "Foto",
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
                         }
                     }
                 }
             },
-            confirmButton = {},
+            confirmButton = {
+                androidx.compose.material3.Button(
+                    onClick = {
+                        val textContent = if (shareText) buildShareText(summary, parsed) else null
+                        val photoUris =
+                            photos
+                                .filterIndexed { i, _ ->
+                                    i < selectedPhotos.size && selectedPhotos[i]
+                                }
+                                .map { photo ->
+                                    androidx.core.content.FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.fileprovider",
+                                        java.io.File(photo.filePath),
+                                    )
+                                }
+                        val intent =
+                            if (photoUris.isNotEmpty()) {
+                                android.content
+                                    .Intent(android.content.Intent.ACTION_SEND_MULTIPLE)
+                                    .apply {
+                                        type = "image/*"
+                                        putParcelableArrayListExtra(
+                                            android.content.Intent.EXTRA_STREAM,
+                                            ArrayList(photoUris),
+                                        )
+                                        if (textContent != null) {
+                                            putExtra(android.content.Intent.EXTRA_TEXT, textContent)
+                                        }
+                                        addFlags(
+                                            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                        )
+                                    }
+                            } else if (textContent != null) {
+                                android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(android.content.Intent.EXTRA_TEXT, textContent)
+                                }
+                            } else null
+
+                        if (intent != null) {
+                            context.startActivity(
+                                android.content.Intent.createChooser(intent, "Rückblick teilen")
+                            )
+                        }
+                        showShareDialog = false
+                    },
+                    colors =
+                        androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE07830)
+                        ),
+                ) {
+                    Text("Teilen")
+                }
+            },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { showShareDialog = false }) {
                     Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
