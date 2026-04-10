@@ -695,7 +695,9 @@ private fun SummaryDetailDialog(summary: RetrospectiveSummaryEntity, onDismiss: 
                     }
                 }
 
-                // Body text — takes remaining space and scrolls with scrollbar
+                // Body — structured rendering with bullet summary + timeline sections
+                val parsed =
+                    remember(summary.summaryText) { parseRetrospectiveText(summary.summaryText) }
                 val bodyScrollState = rememberScrollState()
                 Column(
                     modifier =
@@ -711,16 +713,118 @@ private fun SummaryDetailDialog(summary: RetrospectiveSummaryEntity, onDismiss: 
                             .padding(horizontal = 20.dp)
                             .padding(top = 24.dp, bottom = 120.dp)
                 ) {
-                    Text(
-                        text = summary.summaryText,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight,
-                    )
+                    // Bullet point summary card
+                    if (parsed.bulletPoints.isNotEmpty()) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor =
+                                        if (isDark) Color(0xFF1E1E1E) else Color(0xFFF5F5F5)
+                                ),
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    "Auf einen Blick",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = RetrospectiveColors.monthDividerColor,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                parsed.bulletPoints.forEach { point ->
+                                    Row(modifier = Modifier.padding(bottom = 6.dp)) {
+                                        Text(
+                                            "\u2022 ",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = RetrospectiveColors.monthDividerColor,
+                                        )
+                                        Text(
+                                            point,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    // Timeline sections with icons
+                    if (parsed.sections.isNotEmpty()) {
+                        parsed.sections.forEachIndexed { index, section ->
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                // Timeline: icon circle + vertical line
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.width(44.dp),
+                                ) {
+                                    Box(
+                                        modifier =
+                                            Modifier.size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(RetrospectiveColors.categoryIconCircle),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            section.icon,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp),
+                                            tint = RetrospectiveColors.monthDividerColor,
+                                        )
+                                    }
+                                    if (index < parsed.sections.lastIndex) {
+                                        Box(
+                                            modifier =
+                                                Modifier.width(2.dp)
+                                                    .height(20.dp)
+                                                    .background(
+                                                        RetrospectiveColors.monthDividerColor.copy(
+                                                            alpha = 0.3f
+                                                        )
+                                                    )
+                                        )
+                                    }
+                                }
 
-                    // Divider line
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                // Section content
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        section.heading,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        section.body,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color =
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight,
+                                    )
+                                    if (index < parsed.sections.lastIndex) {
+                                        Spacer(modifier = Modifier.height(20.dp))
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Fallback: plain text if parsing found no sections (old format)
+                        Text(
+                            text = summary.summaryText,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            lineHeight = MaterialTheme.typography.bodyLarge.lineHeight,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Divider + action buttons
                     Box(
                         modifier =
                             Modifier.fillMaxWidth()
@@ -730,7 +834,7 @@ private fun SummaryDetailDialog(summary: RetrospectiveSummaryEntity, onDismiss: 
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Speaker button below divider, left-aligned, orange
+                    // Speaker button, left-aligned, orange
                     IconButton(
                         onClick = {
                             if (isSpeaking) {
