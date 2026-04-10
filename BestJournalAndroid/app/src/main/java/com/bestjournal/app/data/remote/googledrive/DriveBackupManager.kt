@@ -25,6 +25,8 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
+private const val RESUMABLE_THRESHOLD = 5L * 1024 * 1024 // 5 MB
+
 class NeedConsentException(val consentIntent: Intent) :
     Exception("Drive-Zugriff muss erlaubt werden")
 
@@ -90,7 +92,9 @@ constructor(
     /**
      * Batch upload with delta sync + parallel uploads.
      * - Single OAuth token / Drive service for all files
-     * - Lists existing files once to skip already-uploaded
+     * - Lists existing files once — skips already-uploaded (name + size match)
+     * - Largest files first so big uploads start early and run in parallel
+     * - Resumable upload for files > 5 MB (survives connection drops)
      * - 3 parallel uploads via Semaphore
      */
     suspend fun backupFiles(
@@ -101,8 +105,8 @@ constructor(
             try {
                 val driveService = getDriveService()
 
-                // List all existing photo files on Drive in one call
-                val existingNames = mutableSetOf<String>()
+                // List all existing photo files on Drive in one call (name + size)
+                val existingFiles = mutableMapOf<String, Long>() // name -> size
                 var pageToken: String? = null
                 do {
                     val request =
@@ -111,26 +115,32 @@ constructor(
                             .list()
                             .setSpaces("appDataFolder")
                             .setQ("name contains 'photo_'")
-                            .setFields("nextPageToken, files(name)")
+                            .setFields("nextPageToken, files(name, size)")
                             .setPageSize(1000)
                     if (pageToken != null) request.pageToken = pageToken
                     val result = request.execute()
-                    result.files?.forEach { existingNames.add(it.name) }
+                    result.files?.forEach { f -> existingFiles[f.name] = f.getSize() ?: 0L }
                     pageToken = result.nextPageToken
                 } while (pageToken != null)
 
-                // Filter to only new files
-                val newFiles = files.filter { (_, remoteName) -> remoteName !in existingNames }
+                // Delta sync: skip files where name AND size match
+                val newFiles = files.filter { (localFile, remoteName) ->
+                    val driveSize = existingFiles[remoteName]
+                    driveSize == null || driveSize != localFile.length()
+                }
                 val alreadyUploaded = files.size - newFiles.size
                 android.util.Log.d(
                     "DriveBackup",
-                    "Delta sync: ${files.size} total, $alreadyUploaded already on Drive, ${newFiles.size} to upload",
+                    "Delta sync: ${files.size} total, $alreadyUploaded unchanged, ${newFiles.size} to upload",
                 )
 
                 if (newFiles.isEmpty()) {
                     onProgress(files.size, files.size)
                     return@withContext Result.success(0)
                 }
+
+                // Sort: largest files first so big uploads start early
+                val sorted = newFiles.sortedByDescending { (file, _) -> file.length() }
 
                 onProgress(alreadyUploaded, files.size)
 
@@ -140,11 +150,26 @@ constructor(
                 val errors = AtomicInteger(0)
 
                 coroutineScope {
-                    newFiles
+                    sorted
                         .map { (localFile, remoteName) ->
                             launch {
                                 semaphore.withPermit {
                                     try {
+                                        // Delete old version if exists on Drive
+                                        if (remoteName in existingFiles) {
+                                            val old =
+                                                driveService
+                                                    .files()
+                                                    .list()
+                                                    .setSpaces("appDataFolder")
+                                                    .setQ("name = '$remoteName'")
+                                                    .setFields("files(id)")
+                                                    .execute()
+                                            old.files?.forEach {
+                                                driveService.files().delete(it.id).execute()
+                                            }
+                                        }
+
                                         val fileMetadata =
                                             com.google.api.services.drive.model.File().apply {
                                                 name = remoteName
@@ -152,11 +177,21 @@ constructor(
                                             }
                                         val mediaContent =
                                             FileContent("application/octet-stream", localFile)
-                                        driveService
-                                            .files()
-                                            .create(fileMetadata, mediaContent)
-                                            .setFields("id")
-                                            .execute()
+                                        val createRequest =
+                                            driveService
+                                                .files()
+                                                .create(fileMetadata, mediaContent)
+                                                .setFields("id")
+
+                                        // Resumable upload for large files (> 5 MB)
+                                        if (localFile.length() > RESUMABLE_THRESHOLD) {
+                                            createRequest.mediaHttpUploader?.apply {
+                                                isDirectUploadEnabled = false
+                                                chunkSize = 2 * 1024 * 1024 // 2 MB chunks
+                                            }
+                                        }
+
+                                        createRequest.execute()
                                         val current = uploaded.incrementAndGet()
                                         onProgress(current, files.size)
                                         android.util.Log.d(

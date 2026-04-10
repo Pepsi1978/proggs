@@ -124,7 +124,7 @@ constructor(
                     return@withContext 0
                 }
 
-                // First pass: collect all files to download (for total count)
+                // First pass: collect all files to download (with size for sorting)
                 val filesToDownload = mutableListOf<com.google.api.services.drive.model.File>()
                 var pageToken: String? = null
                 do {
@@ -134,8 +134,8 @@ constructor(
                             .list()
                             .setSpaces("appDataFolder")
                             .setQ("name contains 'photo_'")
-                            .setFields("nextPageToken, files(id, name)")
-                            .setPageSize(100)
+                            .setFields("nextPageToken, files(id, name, size)")
+                            .setPageSize(1000)
                     if (pageToken != null) {
                         request.pageToken = pageToken
                     }
@@ -152,12 +152,19 @@ constructor(
                     pageToken = result.nextPageToken
                 } while (pageToken != null)
 
+                // Sort: largest files first so big downloads start early
+                filesToDownload.sortByDescending { it.getSize() ?: 0L }
+
                 val total = filesToDownload.size
-                android.util.Log.d("DriveRestore", "Files to download: $total")
+                val totalBytes = filesToDownload.sumOf { it.getSize() ?: 0L }
+                android.util.Log.d(
+                    "DriveRestore",
+                    "Files to download: $total (${totalBytes / 1024 / 1024} MB total)",
+                )
                 onProgress?.invoke(0, total)
 
-                // Second pass: parallel downloads with Semaphore(3)
-                val dlSemaphore = Semaphore(3)
+                // Second pass: parallel downloads with Semaphore(4)
+                val dlSemaphore = Semaphore(4)
                 val dlCount = AtomicInteger(0)
 
                 coroutineScope {
