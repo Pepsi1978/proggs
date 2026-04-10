@@ -57,7 +57,13 @@ constructor(
     fun loadPhotosForPeriod(startDate: Long, endDate: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                _currentPhotos.value = entryPhotoDao.getPhotosForDateRange(startDate, endDate)
+                val allPhotos = entryPhotoDao.getPhotosForDateRange(startDate, endDate)
+                val existing = allPhotos.filter { java.io.File(it.filePath).exists() }
+                Log.d(
+                    "RetroVM",
+                    "Photos for period: ${allPhotos.size} found, ${existing.size} exist on disk",
+                )
+                _currentPhotos.value = existing
             } catch (e: Exception) {
                 Log.e("RetroVM", "Failed to load photos: ${e.message}")
                 _currentPhotos.value = emptyList()

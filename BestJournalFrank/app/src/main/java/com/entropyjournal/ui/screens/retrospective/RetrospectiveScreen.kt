@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.VolumeUp
@@ -847,7 +848,7 @@ private fun SummaryDetailDialog(
                                         section.heading,
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface,
+                                        color = RetrospectiveColors.monthDividerColor,
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
@@ -920,7 +921,13 @@ private fun SummaryDetailDialog(
                                     isSpeaking = false
                                 } else {
                                     isSpeaking = true
-                                    tts.speak(summary.summaryText) { isSpeaking = false }
+                                    val speakText =
+                                        if (parsed.sections.isNotEmpty())
+                                            parsed.sections.joinToString("\n\n") {
+                                                "${it.heading}.\n${it.body}"
+                                            }
+                                        else summary.summaryText
+                                    tts.speak(speakText) { isSpeaking = false }
                                 }
                             },
                             modifier = Modifier.size(40.dp),
@@ -949,19 +956,14 @@ private fun SummaryDetailDialog(
         }
     }
 
-    // Share dialog
+    // Share dialog — like diary entry sharing
     if (showShareDialog) {
-        val parsed = remember(summary.summaryText) { parseRetrospectiveText(summary.summaryText) }
+        val hasPhotos = photos.isNotEmpty()
         AlertDialog(
             onDismissRequest = { showShareDialog = false },
             title = { Text("Rückblick teilen", color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        "Was möchtest du teilen?",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                     // Text option
                     Row(
                         modifier =
@@ -971,6 +973,7 @@ private fun SummaryDetailDialog(
                                     MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                 )
                                 .clickable {
+                                    val parsed = parseRetrospectiveText(summary.summaryText)
                                     val shareText = buildShareText(summary, parsed)
                                     val intent =
                                         android.content
@@ -1010,6 +1013,80 @@ private fun SummaryDetailDialog(
                                 "Zusammenfassung + Rückblick als Text",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    // Fotos/Videos option — grey if none available
+                    val photoAlpha = if (hasPhotos) 1f else 0.35f
+                    Row(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(
+                                        alpha = 0.5f * photoAlpha
+                                    )
+                                )
+                                .then(
+                                    if (hasPhotos)
+                                        Modifier.clickable {
+                                            val photoUris = photos.map { photo ->
+                                                androidx.core.content.FileProvider.getUriForFile(
+                                                    context,
+                                                    "${context.packageName}.fileprovider",
+                                                    java.io.File(photo.filePath),
+                                                )
+                                            }
+                                            val intent =
+                                                android.content
+                                                    .Intent(
+                                                        android.content.Intent.ACTION_SEND_MULTIPLE
+                                                    )
+                                                    .apply {
+                                                        type = "image/*"
+                                                        putParcelableArrayListExtra(
+                                                            android.content.Intent.EXTRA_STREAM,
+                                                            ArrayList(photoUris),
+                                                        )
+                                                        addFlags(
+                                                            android.content.Intent
+                                                                .FLAG_GRANT_READ_URI_PERMISSION
+                                                        )
+                                                    }
+                                            context.startActivity(
+                                                android.content.Intent.createChooser(
+                                                    intent,
+                                                    "Fotos teilen",
+                                                )
+                                            )
+                                            showShareDialog = false
+                                        }
+                                    else Modifier
+                                )
+                                .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.Image,
+                            contentDescription = null,
+                            tint = Color(0xFFE07830).copy(alpha = photoAlpha),
+                        )
+                        Column {
+                            Text(
+                                "Fotos & Videos",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = photoAlpha),
+                            )
+                            Text(
+                                if (hasPhotos) "${photos.size} Medien aus diesem Zeitraum"
+                                else "Keine Fotos oder Videos vorhanden",
+                                style = MaterialTheme.typography.bodySmall,
+                                color =
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                        alpha = photoAlpha
+                                    ),
                             )
                         }
                     }
