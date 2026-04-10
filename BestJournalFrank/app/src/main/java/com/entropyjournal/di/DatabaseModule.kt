@@ -2,6 +2,7 @@ package com.entropyjournal.di
 
 import android.content.Context
 import com.entropyjournal.data.local.AppDatabase
+import com.entropyjournal.data.local.RetrospectiveDatabase
 import com.entropyjournal.data.local.dao.AdviceDashboardDao
 import com.entropyjournal.data.local.dao.EntryPhotoDao
 import com.entropyjournal.data.local.dao.JournalEntryDao
@@ -24,6 +25,12 @@ object DatabaseModule {
     }
 
     @Provides
+    @Singleton
+    fun provideRetrospectiveDatabase(@ApplicationContext context: Context): RetrospectiveDatabase {
+        return RetrospectiveDatabase.getDatabase(context)
+    }
+
+    @Provides
     fun provideJournalEntryDao(database: AppDatabase): JournalEntryDao {
         return database.journalEntryDao()
     }
@@ -34,7 +41,7 @@ object DatabaseModule {
     }
 
     @Provides
-    fun provideRetrospectiveDao(database: AppDatabase): RetrospectiveDao {
+    fun provideRetrospectiveDao(database: RetrospectiveDatabase): RetrospectiveDao {
         return database.retrospectiveDao()
     }
 

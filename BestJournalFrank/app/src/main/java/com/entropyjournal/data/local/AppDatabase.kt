@@ -9,21 +9,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.entropyjournal.data.local.dao.AdviceDashboardDao
 import com.entropyjournal.data.local.dao.EntryPhotoDao
 import com.entropyjournal.data.local.dao.JournalEntryDao
-import com.entropyjournal.data.local.dao.RetrospectiveDao
 import com.entropyjournal.data.local.entity.AdviceBlockEntity
 import com.entropyjournal.data.local.entity.EntryPhotoEntity
 import com.entropyjournal.data.local.entity.JournalEntryEntity
-import com.entropyjournal.data.local.entity.RetrospectiveSummaryEntity
 
 @Database(
-    entities =
-        [
-            JournalEntryEntity::class,
-            AdviceBlockEntity::class,
-            RetrospectiveSummaryEntity::class,
-            EntryPhotoEntity::class,
-        ],
-    version = 7,
+    entities = [JournalEntryEntity::class, AdviceBlockEntity::class, EntryPhotoEntity::class],
+    version = 8,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -31,8 +23,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun journalEntryDao(): JournalEntryDao
 
     abstract fun adviceDashboardDao(): AdviceDashboardDao
-
-    abstract fun retrospectiveDao(): RetrospectiveDao
 
     abstract fun entryPhotoDao(): EntryPhotoDao
 
@@ -108,6 +98,14 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
 
+        private val MIGRATION_7_8 =
+            object : Migration(7, 8) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // Retrospective summaries moved to separate database (retrospective_db)
+                    db.execSQL("DROP TABLE IF EXISTS retrospective_summaries")
+                }
+            }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE
                 ?: synchronized(this) {
@@ -124,6 +122,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 MIGRATION_4_5,
                                 MIGRATION_5_6,
                                 MIGRATION_6_7,
+                                MIGRATION_7_8,
                             )
                             .build()
                     INSTANCE = instance

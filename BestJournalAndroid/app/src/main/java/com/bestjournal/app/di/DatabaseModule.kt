@@ -2,6 +2,7 @@ package com.bestjournal.app.di
 
 import android.content.Context
 import com.bestjournal.app.data.local.AppDatabase
+import com.bestjournal.app.data.local.RetrospectiveDatabase
 import com.bestjournal.app.data.local.dao.AdviceDashboardDao
 import com.bestjournal.app.data.local.dao.EntryPhotoDao
 import com.bestjournal.app.data.local.dao.JournalEntryDao
@@ -24,6 +25,12 @@ object DatabaseModule {
     }
 
     @Provides
+    @Singleton
+    fun provideRetrospectiveDatabase(@ApplicationContext context: Context): RetrospectiveDatabase {
+        return RetrospectiveDatabase.getDatabase(context)
+    }
+
+    @Provides
     fun provideJournalEntryDao(database: AppDatabase): JournalEntryDao {
         return database.journalEntryDao()
     }
@@ -34,7 +41,7 @@ object DatabaseModule {
     }
 
     @Provides
-    fun provideRetrospectiveDao(database: AppDatabase): RetrospectiveDao {
+    fun provideRetrospectiveDao(database: RetrospectiveDatabase): RetrospectiveDao {
         return database.retrospectiveDao()
     }
 
