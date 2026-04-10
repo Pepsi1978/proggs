@@ -493,10 +493,13 @@ constructor(
             reminderManager.cancelReminder()
             reminderManager.cancelWeeklyReview()
 
-            // Delete local database — data belongs to the account
+            // Delete local databases — data belongs to the account
             context.deleteDatabase("entropy_journal_db")
             context.getDatabasePath("entropy_journal_db-wal")?.delete()
             context.getDatabasePath("entropy_journal_db-shm")?.delete()
+            context.deleteDatabase("retrospective_db")
+            context.getDatabasePath("retrospective_db-wal")?.delete()
+            context.getDatabasePath("retrospective_db-shm")?.delete()
         } catch (_: Exception) {}
 
         // Restart the app process so Room clears its in-memory cache

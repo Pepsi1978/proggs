@@ -162,6 +162,10 @@ constructor(
             Log.e("SyncDebug", "Path rewrite failed: ${e.message}", e)
         }
 
+        // Clear retrospective summaries — they belong to the old data and will be regenerated
+        context.deleteDatabase("retrospective_db")
+        Log.d("SyncDebug", "Cleared retrospective_db for fresh generation after restore")
+
         // Photos are downloaded AFTER app restart via downloadMissingPhotos()
         return Result.success(Unit)
     }

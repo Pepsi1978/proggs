@@ -499,10 +499,13 @@ constructor(
                 .putBoolean(Constants.PREF_BIOMETRIC_LOCK, biometricLock)
                 .commit() // commit() is synchronous — guarantees write before restart
 
-            // Delete local database — data belongs to the account
+            // Delete local databases — data belongs to the account
             context.deleteDatabase("entropy_journal_db")
             context.getDatabasePath("entropy_journal_db-wal")?.delete()
             context.getDatabasePath("entropy_journal_db-shm")?.delete()
+            context.deleteDatabase("retrospective_db")
+            context.getDatabasePath("retrospective_db-wal")?.delete()
+            context.getDatabasePath("retrospective_db-shm")?.delete()
         } catch (e: Exception) {
             android.util.Log.e("Settings", "Sign-out cleanup failed", e)
         }
