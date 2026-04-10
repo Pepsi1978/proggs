@@ -43,7 +43,7 @@ constructor(
             .getYearlySummaries()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _isGenerating = MutableStateFlow(false)
+    private val _isGenerating = MutableStateFlow(true)
     val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
 
     private val _isProfileSwitch = MutableStateFlow(false)
