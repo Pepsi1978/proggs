@@ -81,34 +81,34 @@ constructor(
         if (backupPhotos || backupVideos) {
             val photosDir = File(context.filesDir, "photos")
             val allFiles = photosDir.listFiles() ?: emptyArray()
-            val filesToUpload = allFiles.filter { file ->
-                val isVideo =
-                    file.extension.lowercase() in listOf("mp4", "3gp", "mkv", "webm", "avi")
-                val isPhoto =
-                    file.extension.lowercase() in listOf("jpg", "jpeg", "png", "webp", "gif")
-                (isPhoto && backupPhotos) || (isVideo && backupVideos)
-            }
-            Log.d("SyncDebug", "Photos dir: ${filesToUpload.size} files to upload")
+            val filesToUpload =
+                allFiles
+                    .filter { file ->
+                        val isVideo =
+                            file.extension.lowercase() in listOf("mp4", "3gp", "mkv", "webm", "avi")
+                        val isPhoto =
+                            file.extension.lowercase() in
+                                listOf("jpg", "jpeg", "png", "webp", "gif")
+                        (isPhoto && backupPhotos) || (isVideo && backupVideos)
+                    }
+                    .map { file -> file to "photo_${file.name}" }
+            Log.d("SyncDebug", "Photos dir: ${filesToUpload.size} files to check")
             SyncProgressHolder.setUploading(0, filesToUpload.size)
 
-            var uploaded = 0
-            var uploadErrors = 0
-            for (file in filesToUpload) {
-                try {
-                    driveBackupManager.backupFile(file, "photo_${file.name}")
-                    uploaded++
-                    SyncProgressHolder.setUploading(uploaded, filesToUpload.size)
-                    Log.d(
-                        "SyncDebug",
-                        "Uploaded ($uploaded/${filesToUpload.size}): ${file.name} (${file.length()} bytes)",
-                    )
-                } catch (e: Exception) {
-                    uploadErrors++
-                    Log.e("SyncDebug", "Upload failed: ${file.name}: ${e.message}")
+            val batchResult =
+                driveBackupManager.backupFiles(filesToUpload) { current, total ->
+                    SyncProgressHolder.setUploading(current, total)
                 }
-            }
-            if (uploadErrors > 0) {
-                Log.w("SyncDebug", "$uploadErrors of ${filesToUpload.size} photo uploads failed")
+            if (batchResult.isFailure) {
+                Log.e(
+                    "SyncDebug",
+                    "Photo batch upload failed: ${batchResult.exceptionOrNull()?.message}",
+                )
+            } else {
+                Log.d(
+                    "SyncDebug",
+                    "Photo backup done: ${batchResult.getOrDefault(0)} new files uploaded",
+                )
             }
         }
 
