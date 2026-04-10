@@ -201,12 +201,17 @@ Rückblick:
             val title = titleResult.getOrNull()?.trim()?.take(60) ?: "Wochenrückblick"
 
             val weekOfMonth =
-                weekStart.get(Calendar.DAY_OF_MONTH).let { day ->
-                    when {
-                        day <= 7 -> 1
-                        day <= 14 -> 2
-                        day <= 21 -> 3
-                        else -> 4
+                if (weekStart.get(Calendar.MONTH) != weekEnd.get(Calendar.MONTH)) {
+                    // Week crosses month boundary → counts as Week 1 of the new month
+                    1
+                } else {
+                    weekStart.get(Calendar.DAY_OF_MONTH).let { day ->
+                        when {
+                            day <= 7 -> 1
+                            day <= 14 -> 2
+                            day <= 21 -> 3
+                            else -> 4
+                        }
                     }
                 }
 
