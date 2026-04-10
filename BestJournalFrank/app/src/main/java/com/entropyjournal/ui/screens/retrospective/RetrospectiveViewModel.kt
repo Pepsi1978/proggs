@@ -56,6 +56,33 @@ constructor(
     val currentPhotos: StateFlow<List<EntryPhotoEntity>> = _currentPhotos.asStateFlow()
 
     private suspend fun awaitSyncComplete() {
+        // Only wait if user is signed in — no account means no sync can happen
+        val prefs =
+            try {
+                val masterKey =
+                    androidx.security.crypto.MasterKeys.getOrCreate(
+                        androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
+                    )
+                androidx.security.crypto.EncryptedSharedPreferences.create(
+                    com.entropyjournal.util.Constants.ENCRYPTED_PREFS_NAME,
+                    masterKey,
+                    context,
+                    androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme
+                        .AES256_SIV,
+                    androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme
+                        .AES256_GCM,
+                )
+            } catch (_: Exception) {
+                return
+            }
+        val hasAccount =
+            prefs.getString(com.entropyjournal.util.Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null) !=
+                null
+        if (!hasAccount) {
+            Log.d("RetroVM", "No Google account, skipping sync wait")
+            return
+        }
+
         kotlinx.coroutines.delay(3000)
         val syncStatus = com.entropyjournal.domain.usecase.SyncProgressHolder.status
         val currentStatus = syncStatus.value

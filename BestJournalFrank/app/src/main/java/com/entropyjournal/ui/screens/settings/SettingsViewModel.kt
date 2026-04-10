@@ -500,6 +500,7 @@ constructor(
             context.deleteDatabase("retrospective_db")
             context.getDatabasePath("retrospective_db-wal")?.delete()
             context.getDatabasePath("retrospective_db-shm")?.delete()
+            java.io.File(context.filesDir, ".retro_cleaned_v3").delete()
         } catch (_: Exception) {}
 
         // Restart the app process so Room clears its in-memory cache

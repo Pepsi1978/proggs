@@ -60,8 +60,34 @@ constructor(
      * ensure diary entries and photos are fully available.
      */
     private suspend fun awaitSyncComplete() {
-        // Initial delay: gives SettingsVM time to start downloadMissingPhotos()
-        // and set SyncProgressHolder to DOWNLOADING before we check
+        // Only wait if user is signed in — no account means no sync can happen
+        val prefs =
+            try {
+                val masterKey =
+                    androidx.security.crypto.MasterKeys.getOrCreate(
+                        androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
+                    )
+                androidx.security.crypto.EncryptedSharedPreferences.create(
+                    com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME,
+                    masterKey,
+                    context,
+                    androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme
+                        .AES256_SIV,
+                    androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme
+                        .AES256_GCM,
+                )
+            } catch (_: Exception) {
+                return
+            }
+        val hasAccount =
+            prefs.getString(com.bestjournal.app.util.Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null) !=
+                null
+        if (!hasAccount) {
+            Log.d("RetroVM", "No Google account, skipping sync wait")
+            return
+        }
+
+        // Delay gives SettingsVM time to start downloadMissingPhotos()
         kotlinx.coroutines.delay(3000)
         val syncStatus = com.bestjournal.app.domain.usecase.SyncProgressHolder.status
         val currentStatus = syncStatus.value
