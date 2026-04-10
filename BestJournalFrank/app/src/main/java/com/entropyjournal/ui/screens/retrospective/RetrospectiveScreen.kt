@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -363,9 +365,10 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                         Spacer(modifier = Modifier.height(10.dp))
                                     }
                                 }
-                                SummaryEntryCard(
+                                TimelineSummaryEntry(
                                     summary = summary,
                                     color = RetrospectiveColors.forWeek(summary.periodIndex),
+                                    isLast = index == weekly.lastIndex,
                                     onClick = { selectedSummary = summary },
                                 )
                             }
@@ -407,9 +410,10 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                         Spacer(modifier = Modifier.height(10.dp))
                                     }
                                 }
-                                SummaryEntryCard(
+                                TimelineSummaryEntry(
                                     summary = summary,
                                     color = RetrospectiveColors.forMonth(summary.periodIndex),
+                                    isLast = index == monthly.lastIndex,
                                     onClick = { selectedSummary = summary },
                                 )
                             }
@@ -438,14 +442,12 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                             )
                         } else {
                             yearly.forEachIndexed { index, summary ->
-                                SummaryEntryCard(
+                                TimelineSummaryEntry(
                                     summary = summary,
                                     color = RetrospectiveColors.yearColor,
+                                    isLast = index == yearly.lastIndex,
                                     onClick = { selectedSummary = summary },
                                 )
-                                if (index < yearly.lastIndex) {
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                }
                             }
                         }
                     }
@@ -454,6 +456,41 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
+    }
+}
+
+/** Wraps a SummaryEntryCard with a timeline dot + connecting line on the left. */
+@Composable
+private fun TimelineSummaryEntry(
+    summary: RetrospectiveSummaryEntity,
+    color: Color,
+    isLast: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        // Timeline dot + vertical connecting line
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.width(24.dp).padding(top = 8.dp),
+        ) {
+            Box(
+                modifier =
+                    Modifier.size(8.dp)
+                        .clip(CircleShape)
+                        .background(RetrospectiveColors.monthDividerColor)
+            )
+            if (!isLast) {
+                // Connecting line stretches to fill remaining height of the card
+                Box(
+                    modifier =
+                        Modifier.width(2.dp)
+                            .height(80.dp) // approximate card height; line is visual only
+                            .background(RetrospectiveColors.monthDividerColor.copy(alpha = 0.2f))
+                )
+            }
+        }
+        // The actual card fills the remaining width
+        SummaryEntryCard(summary = summary, color = color, onClick = onClick)
     }
 }
 
@@ -641,6 +678,7 @@ private fun SummaryDetailDialog(
     val isDark = LocalIsDarkTheme.current
     val context = LocalContext.current
     var isSpeaking by remember { mutableStateOf(false) }
+    var showShareDialog by remember { mutableStateOf(false) }
     val tts = remember { EdgeTtsPlayer(context) }
     val photos by viewModel.currentPhotos.collectAsState()
 
@@ -895,19 +933,7 @@ private fun SummaryDetailDialog(
                             )
                         }
                         IconButton(
-                            onClick = {
-                                val shareText = buildShareText(summary, parsed)
-                                val intent =
-                                    android.content
-                                        .Intent(android.content.Intent.ACTION_SEND)
-                                        .apply {
-                                            type = "text/plain"
-                                            putExtra(android.content.Intent.EXTRA_TEXT, shareText)
-                                        }
-                                context.startActivity(
-                                    android.content.Intent.createChooser(intent, "Rückblick teilen")
-                                )
-                            },
+                            onClick = { showShareDialog = true },
                             modifier = Modifier.size(40.dp),
                         ) {
                             Icon(
@@ -921,6 +947,81 @@ private fun SummaryDetailDialog(
                 }
             }
         }
+    }
+
+    // Share dialog
+    if (showShareDialog) {
+        val parsed = remember(summary.summaryText) { parseRetrospectiveText(summary.summaryText) }
+        AlertDialog(
+            onDismissRequest = { showShareDialog = false },
+            title = { Text("Rückblick teilen", color = MaterialTheme.colorScheme.onSurface) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "Was möchtest du teilen?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    // Text option
+                    Row(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                )
+                                .clickable {
+                                    val shareText = buildShareText(summary, parsed)
+                                    val intent =
+                                        android.content
+                                            .Intent(android.content.Intent.ACTION_SEND)
+                                            .apply {
+                                                type = "text/plain"
+                                                putExtra(
+                                                    android.content.Intent.EXTRA_TEXT,
+                                                    shareText,
+                                                )
+                                            }
+                                    context.startActivity(
+                                        android.content.Intent.createChooser(
+                                            intent,
+                                            "Rückblick teilen",
+                                        )
+                                    )
+                                    showShareDialog = false
+                                }
+                                .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.Share,
+                            contentDescription = null,
+                            tint = Color(0xFFE07830),
+                        )
+                        Column {
+                            Text(
+                                "Text",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "Zusammenfassung + Rückblick als Text",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showShareDialog = false }) {
+                    Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+        )
     }
 }
 

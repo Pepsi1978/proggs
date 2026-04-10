@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -681,6 +683,7 @@ private fun SummaryDetailDialog(
     val isDark = LocalIsDarkTheme.current
     val context = LocalContext.current
     var isSpeaking by remember { mutableStateOf(false) }
+    var showShareDialog by remember { mutableStateOf(false) }
     val tts = remember { EdgeTtsPlayer(context) }
     val photos by viewModel.currentPhotos.collectAsState()
 
@@ -936,19 +939,7 @@ private fun SummaryDetailDialog(
                             )
                         }
                         IconButton(
-                            onClick = {
-                                val shareText = buildShareText(summary, parsed)
-                                val intent =
-                                    android.content
-                                        .Intent(android.content.Intent.ACTION_SEND)
-                                        .apply {
-                                            type = "text/plain"
-                                            putExtra(android.content.Intent.EXTRA_TEXT, shareText)
-                                        }
-                                context.startActivity(
-                                    android.content.Intent.createChooser(intent, "Rückblick teilen")
-                                )
-                            },
+                            onClick = { showShareDialog = true },
                             modifier = Modifier.size(40.dp),
                         ) {
                             Icon(
@@ -962,6 +953,81 @@ private fun SummaryDetailDialog(
                 }
             }
         }
+    }
+
+    // Share dialog
+    if (showShareDialog) {
+        val parsed = remember(summary.summaryText) { parseRetrospectiveText(summary.summaryText) }
+        AlertDialog(
+            onDismissRequest = { showShareDialog = false },
+            title = { Text("Rückblick teilen", color = MaterialTheme.colorScheme.onSurface) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "Was möchtest du teilen?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    // Text option
+                    Row(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                )
+                                .clickable {
+                                    val shareText = buildShareText(summary, parsed)
+                                    val intent =
+                                        android.content
+                                            .Intent(android.content.Intent.ACTION_SEND)
+                                            .apply {
+                                                type = "text/plain"
+                                                putExtra(
+                                                    android.content.Intent.EXTRA_TEXT,
+                                                    shareText,
+                                                )
+                                            }
+                                    context.startActivity(
+                                        android.content.Intent.createChooser(
+                                            intent,
+                                            "Rückblick teilen",
+                                        )
+                                    )
+                                    showShareDialog = false
+                                }
+                                .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.Share,
+                            contentDescription = null,
+                            tint = Color(0xFFE07830),
+                        )
+                        Column {
+                            Text(
+                                "Text",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "Zusammenfassung + Rückblick als Text",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showShareDialog = false }) {
+                    Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+        )
     }
 }
 
