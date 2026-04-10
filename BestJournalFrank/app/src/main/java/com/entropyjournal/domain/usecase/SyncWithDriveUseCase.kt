@@ -66,11 +66,15 @@ constructor(
 
         Log.d("SyncDebug", "Backup: $entryCount Eintraege, Datei: ${dbFile.length()} Bytes")
 
+        SyncProgressHolder.setUploading(0, 1)
         val dbResult = driveBackupManager.backup(dbFile)
-        if (dbResult.isFailure) return dbResult
+        if (dbResult.isFailure) {
+            SyncProgressHolder.setError()
+            return dbResult
+        }
 
-        val backupPhotos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_PHOTOS, false)
-        val backupVideos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_VIDEOS, false)
+        val backupPhotos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_PHOTOS, true)
+        val backupVideos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_VIDEOS, true)
 
         Log.d("SyncDebug", "Photo backup: photos=$backupPhotos, videos=$backupVideos")
 
