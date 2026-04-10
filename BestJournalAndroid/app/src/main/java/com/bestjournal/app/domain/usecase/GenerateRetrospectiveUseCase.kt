@@ -49,6 +49,8 @@ constructor(
 
     suspend fun generateMissing(): Int {
         lastFailureCount = 0
+        // Cleanup: remove monthly reviews for months without actual diary entries
+        cleanupOrphanedMonthlyReviews()
         var generated = 0
         generated += generateMissingWeekly()
         generated += generateMissingMonthly()
@@ -217,6 +219,14 @@ Rückblick:
 
             // Skip if already generated
             if (retroRepo.existsForPeriod("MONTHLY", monthStart.timeInMillis)) continue
+
+            // First check: actual diary entries must exist in this month
+            val monthEntries =
+                journalDao.getEntriesBetween(monthStart.timeInMillis, monthEnd.timeInMillis)
+            if (monthEntries.isEmpty()) {
+                Log.d("Retro", "Month ${monthsBack}m ago: no diary entries in this month, skipping")
+                continue
+            }
 
             // Get weekly reviews for this month — need at least 1
             val weeklyReviews =
@@ -441,6 +451,34 @@ Rückblick:
         generated++
         Log.d("Retro", "Yearly review saved: $year — $title")
         return generated
+    }
+
+    // ── Cleanup ─────────────────────────────────────────────────────────────
+
+    /**
+     * Remove monthly reviews for months that have no actual diary entries (cross-month week bug).
+     */
+    private suspend fun cleanupOrphanedMonthlyReviews() {
+        try {
+            for (monthsBack in 1..3) {
+                val (monthStart, monthEnd) = getMonthRange(monthsBack)
+                val entries =
+                    journalDao.getEntriesBetween(monthStart.timeInMillis, monthEnd.timeInMillis)
+                if (
+                    entries.isEmpty() &&
+                        retroRepo.existsForPeriod("MONTHLY", monthStart.timeInMillis)
+                ) {
+                    retroRepo.deleteByTypeAndRange(
+                        "MONTHLY",
+                        monthStart.timeInMillis,
+                        monthEnd.timeInMillis,
+                    )
+                    Log.d("Retro", "Cleaned up orphaned monthly review (no diary entries in month)")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("Retro", "Cleanup failed: ${e.message}")
+        }
     }
 
     // ── Profile style ───────────────────────────────────────────────────────

@@ -43,6 +43,11 @@ interface RetrospectiveDao {
     suspend fun countTestData(): Int
 
     @Query(
+        "DELETE FROM retrospective_summaries WHERE type = :type AND startDate BETWEEN :rangeStart AND :rangeEnd"
+    )
+    suspend fun deleteByTypeAndRange(type: String, rangeStart: Long, rangeEnd: Long)
+
+    @Query(
         "SELECT * FROM retrospective_summaries WHERE type = :type AND startDate BETWEEN :rangeStart AND :rangeEnd ORDER BY startDate ASC"
     )
     suspend fun getByTypeAndRange(

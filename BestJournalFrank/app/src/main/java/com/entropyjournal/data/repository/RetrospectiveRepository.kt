@@ -24,6 +24,9 @@ class RetrospectiveRepository @Inject constructor(private val dao: Retrospective
 
     suspend fun deleteAll() = dao.deleteAll()
 
+    suspend fun deleteByTypeAndRange(type: String, rangeStart: Long, rangeEnd: Long) =
+        dao.deleteByTypeAndRange(type, rangeStart, rangeEnd)
+
     suspend fun getFirstWeeklyLabel(): String? = dao.getFirstWeeklyLabel()
 
     suspend fun containsTestData(): Boolean = dao.countTestData() > 0
