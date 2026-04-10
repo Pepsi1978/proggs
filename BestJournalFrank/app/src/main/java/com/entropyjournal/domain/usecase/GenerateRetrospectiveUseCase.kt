@@ -140,18 +140,25 @@ constructor(
             val prompt =
                 """Du bist ein Erzähler, der aus Tagebucheinträgen einen natürlichen, gut lesbaren Wochenrückblick schreibt.
 
-AUFGABE: Fasse die folgenden Tagebucheinträge zu einem zusammenhängenden Wochenrückblick zusammen.
+AUFGABE: Fasse die folgenden Tagebucheinträge zu einem strukturierten Wochenrückblick zusammen.
+
+FORMAT (bitte genau einhalten):
+1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (3-5 Punkte), jeweils mit "• " am Anfang
+2. Dann eine Leerzeile
+3. Dann der Fließtext, aufgeteilt in 2-4 thematische Abschnitte
+4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Neue Begegnungen] oder [Kleine Siege])
+5. Nach der Überschrift folgt der erzählende Text des Abschnitts
+6. Die Abschnitte chronologisch vom Wochenanfang bis Wochenende ordnen
 
 REGELN:
 - Schreibe in der Du-Form, als würde das Tagebuch selbst zurückblicken
 - Keine Anrede, keine Grußformel — direkt in die Erzählung
-- Fließender Stil mit guten Übergängen — kein Markdown, keine Aufzählungen, keine Überschriften
-- Beginne nie mit "Diese Woche" — finde einen natürlichen Einstieg
-- Erwähne konkrete Ereignisse, Gefühle und Erkenntnisse aus den Einträgen
+- Fließender Stil mit guten Übergängen innerhalb der Abschnitte
+- Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)
+- Erwähne konkrete Ereignisse, Gefühle und Erkenntnisse
 - Alltägliches nur erwähnen, wenn es bedeutsam war
-- Hebe Positives besonders hervor — Erfolge, schöne Momente, Fortschritte — aber verschweige Herausforderungen und Rückschläge nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
-- Wendepunkte und persönliches Wachstum verdienen besondere Aufmerksamkeit
-- Schreibe warm und persönlich, aber nicht übertrieben emotional — wie ein guter Freund der zurückblickt
+- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
+- Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 200 Wörter
 - Sprache: Deutsch$profileStyle
 
@@ -272,19 +279,26 @@ Rückblick:
             val prompt =
                 """Du bist ein Erzähler, der aus Wochenrückblicken einen natürlichen, gut lesbaren Monatsrückblick schreibt.
 
-AUFGABE: Fasse die folgenden Wochenrückblicke zu einem zusammenhängenden Monatsrückblick für $monthName $year zusammen.
+AUFGABE: Fasse die folgenden Wochenrückblicke zu einem strukturierten Monatsrückblick für $monthName $year zusammen.
+
+FORMAT (bitte genau einhalten):
+1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (4-6 Punkte), jeweils mit "• " am Anfang
+2. Dann eine Leerzeile
+3. Dann der Fließtext, aufgeteilt in 3-5 thematische Abschnitte
+4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Aufbruch und Neustart] oder [Stille Erkenntnisse])
+5. Nach der Überschrift folgt der erzählende Text des Abschnitts
+6. Die Abschnitte chronologisch vom Monatsanfang bis Monatsende ordnen
 
 REGELN:
 - Schreibe in der Du-Form, als würde das Tagebuch selbst auf den Monat zurückblicken
 - Keine Anrede, keine Grußformel — direkt in die Erzählung
-- Fließender Stil mit guten Übergängen — kein Markdown, keine Aufzählungen, keine Überschriften
-- Beginne nie mit "Dieser Monat" — finde einen natürlichen Einstieg
-- Ziehe Verbindungen zwischen den Wochen — zeige Entwicklungen und rote Fäden über den Monat hinweg
+- Fließender Stil mit guten Übergängen innerhalb der Abschnitte
+- Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)
+- Ziehe Verbindungen zwischen den Wochen — zeige Entwicklungen und rote Fäden
 - Wiederhole nicht einfach die Rückblicke nacheinander, sondern verbinde sie thematisch
 - Alltägliches nur erwähnen, wenn es bedeutsam war
-- Hebe Positives besonders hervor — aber verschweige Herausforderungen und Rückschläge nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
-- Wendepunkte, persönliches Wachstum und wiederkehrende Muster verdienen besondere Aufmerksamkeit
-- Schreibe warm und persönlich, aber nicht übertrieben — wie ein guter Freund der den Monat zusammenfasst
+- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht
+- Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 300 Wörter
 - Sprache: Deutsch$profileStyle
 
@@ -389,21 +403,27 @@ Rückblick:
         val prompt =
             """Du bist ein Erzähler, der aus Monatsrückblicken einen natürlichen, gut lesbaren Jahresrückblick schreibt.
 
-AUFGABE: Fasse die folgenden Monatsrückblicke zu einem zusammenhängenden Jahresrückblick für $year zusammen.
+AUFGABE: Fasse die folgenden Monatsrückblicke zu einem strukturierten Jahresrückblick für $year zusammen.
+
+FORMAT (bitte genau einhalten):
+1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (5-8 Punkte), jeweils mit "• " am Anfang
+2. Dann eine Leerzeile
+3. Dann der Fließtext, aufgeteilt in 4-6 thematische Abschnitte
+4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Der Frühling des Aufbruchs] oder [Ruhe finden])
+5. Nach der Überschrift folgt der erzählende Text des Abschnitts
+6. Die Abschnitte chronologisch vom Jahresanfang bis Jahresende ordnen
 
 REGELN:
 - Schreibe in der Du-Form, als würde das Tagebuch selbst auf das Jahr zurückblicken
 - Keine Anrede, keine Grußformel — direkt in die Erzählung
-- Fließender Stil mit guten Übergängen — kein Markdown, keine Aufzählungen, keine Überschriften
-- Beginne nie mit "Dieses Jahr" — finde einen natürlichen Einstieg
-- Ziehe Verbindungen zwischen den Monaten — zeige Entwicklungen und Veränderungen über das Jahr hinweg
-- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verbinde sie thematisch zu einem Gesamtbild
+- Fließender Stil mit guten Übergängen innerhalb der Abschnitte
+- Die Überschriften sollen kurz und thematisch passend sein (2-5 Wörter)
+- Ziehe Verbindungen zwischen den Monaten — zeige Entwicklungen über das Jahr
 - Erkenne die großen Themen des Jahres und ordne Ereignisse in diese Linien ein
 - Alltägliches nur erwähnen, wenn es bedeutsam war
-- Hebe Positives besonders hervor — aber verschweige Herausforderungen und Rückschläge nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
-- Wendepunkte und persönliches Wachstum verdienen besondere Aufmerksamkeit
+- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht
 - Schließe mit einem Gedanken der nach vorne blickt
-- Schreibe warm und persönlich, aber nicht übertrieben — wie ein guter Freund der das Jahr zusammenfasst
+- Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 400 Wörter
 - Sprache: Deutsch$profileStyle
 
