@@ -31,4 +31,23 @@ interface RetrospectiveDao {
 
     @Query("SELECT periodLabel FROM retrospective_summaries WHERE type = 'WEEKLY' LIMIT 1")
     suspend fun getFirstWeeklyLabel(): String?
+
+    @Query(
+        "SELECT COUNT(*) FROM retrospective_summaries WHERE type = :type AND startDate = :startDate"
+    )
+    suspend fun existsForPeriod(type: String, startDate: Long): Int
+
+    @Query(
+        "SELECT COUNT(*) FROM retrospective_summaries WHERE title IN ('Ein Anfang voller kleiner Wunder', 'Stürme und stille Siege', 'Farben des Alltags', 'Ein Monat wie ein guter Roman', 'Ein Jahr, das alles verändert hat')"
+    )
+    suspend fun countTestData(): Int
+
+    @Query(
+        "SELECT * FROM retrospective_summaries WHERE type = :type AND startDate BETWEEN :rangeStart AND :rangeEnd ORDER BY startDate ASC"
+    )
+    suspend fun getByTypeAndRange(
+        type: String,
+        rangeStart: Long,
+        rangeEnd: Long,
+    ): List<RetrospectiveSummaryEntity>
 }

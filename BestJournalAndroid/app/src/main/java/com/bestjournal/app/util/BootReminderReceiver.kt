@@ -8,29 +8,39 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 
 /**
- * Re-schedules the daily reminder alarm after device reboot.
- * AlarmManager alarms are lost on reboot, so this receiver restores them.
+ * Re-schedules all alarms after device reboot, timezone change, or time adjustment. AlarmManager
+ * alarms are stored as UTC millis — when the timezone changes, we must re-calculate and re-set them
+ * so they fire at the correct LOCAL time.
  */
 class BootReminderReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
+        val validActions =
+            setOf(
+                Intent.ACTION_BOOT_COMPLETED,
+                Intent.ACTION_TIMEZONE_CHANGED,
+                Intent.ACTION_TIME_CHANGED,
+            )
+        if (intent.action !in validActions) return
 
-        Log.d("BootReminderReceiver", "Device rebooted, checking reminder state")
+        Log.d("BootReminderReceiver", "Re-scheduling alarms (reason: ${intent.action})")
 
         try {
             val masterKey = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
-            val prefs = EncryptedSharedPreferences.create(
-                Constants.ENCRYPTED_PREFS_NAME,
-                masterKey,
-                context,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
+            val prefs =
+                EncryptedSharedPreferences.create(
+                    Constants.ENCRYPTED_PREFS_NAME,
+                    masterKey,
+                    context,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                )
 
             val manager = DailyReminderManager(context, prefs)
             manager.rescheduleIfEnabled()
             manager.ensureWeeklyReviewScheduled()
+            manager.ensureMonthlyReviewScheduled()
+            manager.ensureYearlyReviewScheduled()
 
             if (manager.isReminderEnabled()) {
                 Log.d(
@@ -41,7 +51,13 @@ class BootReminderReceiver : BroadcastReceiver() {
                 )
             }
             if (manager.isWeeklyReviewEnabled()) {
-                Log.d("BootReminderReceiver", "Weekly review re-scheduled for Sunday 19:00")
+                Log.d("BootReminderReceiver", "Weekly review re-scheduled")
+            }
+            if (manager.isMonthlyReviewEnabled()) {
+                Log.d("BootReminderReceiver", "Monthly review re-scheduled")
+            }
+            if (manager.isYearlyReviewEnabled()) {
+                Log.d("BootReminderReceiver", "Yearly review re-scheduled")
             }
         } catch (e: Exception) {
             Log.e("BootReminderReceiver", "Failed to re-schedule reminder", e)

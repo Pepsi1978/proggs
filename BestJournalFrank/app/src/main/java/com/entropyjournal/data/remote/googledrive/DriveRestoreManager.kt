@@ -100,37 +100,77 @@ constructor(
             }
         }
 
-    suspend fun restoreAllPhotos(targetDir: File): Int =
+    suspend fun restoreAllPhotos(
+        targetDir: File,
+        onProgress: ((current: Int, total: Int) -> Unit)? = null,
+    ): Int =
         withContext(Dispatchers.IO) {
             try {
-                val driveService = getDriveService() ?: return@withContext 0
+                val driveService = getDriveService()
+                if (driveService == null) {
+                    android.util.Log.e(
+                        "DriveRestore",
+                        "restoreAllPhotos: DriveService is null — not signed in or token error",
+                    )
+                    return@withContext 0
+                }
 
-                val files =
-                    driveService
-                        .files()
-                        .list()
-                        .setSpaces("appDataFolder")
-                        .setQ("name contains 'photo_'")
-                        .setFields("files(id, name)")
-                        .setPageSize(100)
-                        .execute()
-
-                var count = 0
-                files.files?.forEach { driveFile ->
-                    val localName = driveFile.name.removePrefix("photo_")
-                    val localFile = File(targetDir, localName)
-                    if (!localFile.exists()) {
-                        try {
-                            FileOutputStream(localFile).use { os ->
-                                driveService.files().get(driveFile.id).executeMediaAndDownloadTo(os)
-                            }
-                            count++
-                            android.util.Log.d("DriveRestore", "Restored: $localName (${localFile.length()} bytes)")
-                        } catch (e: Exception) {
-                            android.util.Log.e("DriveRestore", "Failed: $localName: ${e.message}")
+                // First pass: collect all files to download (for total count)
+                val filesToDownload = mutableListOf<com.google.api.services.drive.model.File>()
+                var pageToken: String? = null
+                do {
+                    val request =
+                        driveService
+                            .files()
+                            .list()
+                            .setSpaces("appDataFolder")
+                            .setQ("name contains 'photo_'")
+                            .setFields("nextPageToken, files(id, name)")
+                            .setPageSize(100)
+                    if (pageToken != null) {
+                        request.pageToken = pageToken
+                    }
+                    val result = request.execute()
+                    result.files?.forEach { driveFile ->
+                        val localName = driveFile.name.removePrefix("photo_")
+                        val localFile = File(targetDir, localName)
+                        if (!localFile.exists()) {
+                            filesToDownload.add(driveFile)
+                        } else {
+                            android.util.Log.d("DriveRestore", "Skipped (exists): $localName")
                         }
                     }
+                    pageToken = result.nextPageToken
+                } while (pageToken != null)
+
+                val total = filesToDownload.size
+                android.util.Log.d("DriveRestore", "Files to download: $total")
+                onProgress?.invoke(0, total)
+
+                // Second pass: download files with progress
+                var count = 0
+                for (driveFile in filesToDownload) {
+                    val localName = driveFile.name.removePrefix("photo_")
+                    val localFile = File(targetDir, localName)
+                    try {
+                        FileOutputStream(localFile).use { os ->
+                            driveService.files().get(driveFile.id).executeMediaAndDownloadTo(os)
+                        }
+                        count++
+                        onProgress?.invoke(count, total)
+                        android.util.Log.d(
+                            "DriveRestore",
+                            "Restored ($count/$total): $localName (${localFile.length()} bytes)",
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.e("DriveRestore", "Failed: $localName: ${e.message}")
+                    }
                 }
+
+                android.util.Log.d(
+                    "DriveRestore",
+                    "restoreAllPhotos complete: $count files restored",
+                )
                 count
             } catch (e: Exception) {
                 android.util.Log.e("DriveRestore", "restoreAllPhotos FAILED: ${e.message}", e)

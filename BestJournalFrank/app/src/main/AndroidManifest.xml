@@ -8,8 +8,6 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-
     <queries>
         <package android:name="com.google.android.gms" />
     </queries>
@@ -42,11 +40,16 @@
             android:name=".util.WeeklyReviewReceiver"
             android:exported="false" />
 
+        <receiver android:name=".util.MonthlyReviewReceiver" android:exported="false" />
+        <receiver android:name=".util.YearlyReviewReceiver" android:exported="false" />
+
         <receiver
             android:name=".util.BootReminderReceiver"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
             </intent-filter>
         </receiver>
         <provider

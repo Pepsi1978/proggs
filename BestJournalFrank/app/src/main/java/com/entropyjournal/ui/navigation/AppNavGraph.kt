@@ -37,7 +37,7 @@ private val mainPages =
     )
 
 @Composable
-fun AppNavGraph(navController: NavHostController = rememberNavController()) {
+fun AppNavGraph(navController: NavHostController = rememberNavController(), initialTab: Int = 2) {
     // NavHost WITHOUT Scaffold — splash and login get full screen, no bottom bar
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
@@ -52,8 +52,10 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
         composable("main", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
             // Scaffold with bottom bar ONLY wraps the main content —
             // splash and login screens are completely isolated
-            val pagerState = rememberPagerState(initialPage = 2) { mainPages.size }
+            val pagerState = rememberPagerState(initialPage = initialTab) { mainPages.size }
             val coroutineScope = rememberCoroutineScope()
+            val retroViewModel: com.entropyjournal.ui.screens.retrospective.RetrospectiveViewModel =
+                hiltViewModel()
 
             Scaffold(
                 containerColor = MaterialTheme.colorScheme.background,
@@ -75,7 +77,7 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
                     modifier = Modifier.padding(innerPadding),
                 ) { page ->
                     when (page) {
-                        0 -> RetrospectiveScreen(viewModel = hiltViewModel())
+                        0 -> RetrospectiveScreen(viewModel = retroViewModel)
                         1 -> DashboardScreen(viewModel = hiltViewModel())
                         2 ->
                             JournalScreen(
@@ -84,7 +86,12 @@ fun AppNavGraph(navController: NavHostController = rememberNavController()) {
                                     navController.navigate("entry_detail/$entryId?q=$query")
                                 },
                             )
-                        3 -> SettingsScreen(viewModel = hiltViewModel(), onSignOut = {})
+                        3 ->
+                            SettingsScreen(
+                                viewModel = hiltViewModel(),
+                                onSignOut = {},
+                                // Profile change only updates Dashboard, not retrospectives
+                            )
                     }
                 }
             }

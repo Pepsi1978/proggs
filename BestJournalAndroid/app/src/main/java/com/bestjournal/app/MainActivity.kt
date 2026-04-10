@@ -60,10 +60,9 @@ class MainActivity : FragmentActivity() {
             analyticsTracker.trackReminderOpened()
         }
 
-        // Track weekly review notification and flag for dashboard navigation
-        if (intent?.getBooleanExtra("from_weekly_review", false) == true) {
+        // Track review notification open (any review notification uses open_tab=0)
+        if (intent?.getIntExtra("open_tab", -1) == 0) {
             analyticsTracker.trackWeeklyReviewNotificationOpened()
-            encryptedPrefs.edit().putBoolean(Constants.PREF_FROM_WEEKLY_REVIEW, true).apply()
         }
 
         // Restore unlock state across configuration changes (e.g. screen rotation)
@@ -155,7 +154,11 @@ class MainActivity : FragmentActivity() {
                 }
 
             val initialTab =
-                if (intent?.getBooleanExtra("from_weekly_review", false) == true) 1 else 2
+                when {
+                    intent?.getIntExtra("open_tab", -1) == 0 -> 0
+                    intent?.getBooleanExtra("from_weekly_review", false) == true -> 0
+                    else -> 2
+                }
 
             BestJournalTheme(darkTheme = isDark) {
                 if (isUnlocked.value) {

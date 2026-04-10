@@ -14,6 +14,7 @@
 
 **UI & Navigation:**
 - [HorizontalPager fuer Wisch-Navigation](#horizontalpager-fuer-wisch-navigation-zwischen-tabs-wichtig) ⭐
+- [Pinch-to-Zoom + Pager: awaitEachGesture](#pinch-to-zoom--horizontalpager-awaiteachgesture-pflicht-kritisch) ⭐⭐
 - [Scroll-Pattern: LazyRow](#scroll-pattern-lazyrow-statt-rowhorizontalscroll)
 - [TextField in AlertDialog: heightIn begrenzen](#textfield-in-alertdialog-heightin-begrenzen-wichtig) ⭐
 - [Tastatur-Steuerung: Kontextabhaengiger Auto-Focus](#tastatur-steuerung-kontextabhaengiger-auto-focus)
@@ -602,3 +603,116 @@ CoroutineScope(Dispatchers.IO).launch {
 2. **WAL-Checkpoint ueber `database.openHelper.writableDatabase.query()`** statt eigene Verbindung
 3. **Kritische Operationen (Save, Sync) in eigenem CoroutineScope** statt viewModelScope
 4. Wenn ein Fix `database.close()` enthaelt → SOFORT pruefen ob danach noch Writes kommen
+
+---
+
+## Pinch-to-Zoom + HorizontalPager: awaitEachGesture PFLICHT (KRITISCH)
+
+> Datum: 2026-04-09 | Quelle: BestJournal Foto-Feature | 3 fehlgeschlagene Versuche bevor Loesung gefunden
+
+### Problem
+
+Fullscreen-Bildbetrachter mit **gleichzeitigem** Pinch-to-Zoom UND horizontalem Blaettern
+zwischen Bildern (HorizontalPager). Die Standard-Compose-APIs fuer Gesten blockieren den Pager.
+
+### Was NICHT funktioniert (3 Versuche, alle gescheitert)
+
+| Versuch | API | Warum es scheitert |
+|---------|-----|-------------------|
+| 1 | `detectTransformGestures()` | Verschluckt ALLE Touch-Events inkl. Einzelfinger-Swipes. Pager bekommt nichts. |
+| 2 | `Modifier.transformable()` | Gleiche Ursache — konsumiert intern alle Pointer-Events. |
+| 3 | `pointerInput(scale)` mit bedingtem `detectTransformGestures` | `detectTransformGestures` konsumiert auch im "nur Zoom"-Modus den initialen Down-Event. |
+
+### Die EINZIGE funktionierende Loesung: awaitEachGesture
+
+```kotlin
+.pointerInput(Unit) {
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false)
+        do {
+            val event = awaitPointerEvent()
+            val pressed = event.changes.count { it.pressed }
+
+            if (pressed >= 2) {
+                // Multi-touch: Zoom + Pan, Events konsumieren
+                val zoom = event.calculateZoom()
+                val pan = event.calculatePan()
+                scale = (scale * zoom).coerceIn(1f, 5f)
+                if (scale > 1f) {
+                    offsetX += pan.x; offsetY += pan.y
+                    // ... coerceIn fuer maxX/maxY ...
+                } else { offsetX = 0f; offsetY = 0f }
+                event.changes.forEach { it.consume() }
+
+            } else if (pressed == 1 && scale > 1f) {
+                // Einzelfinger + gezoomt: Pan, Events konsumieren
+                val pan = event.calculatePan()
+                offsetX += pan.x; offsetY += pan.y
+                // ... coerceIn ...
+                event.changes.forEach { it.consume() }
+            }
+            // Einzelfinger + NICHT gezoomt: NICHT konsumieren → Pager bekommt Swipe!
+        } while (event.changes.any { it.pressed })
+    }
+}
+```
+
+### Warum das funktioniert
+
+Der Schluessel ist **selektives Konsumieren**: `event.changes.forEach { it.consume() }` wird
+NUR aufgerufen wenn 2+ Finger erkannt werden ODER wenn bereits gezoomt ist. Bei normalem
+Einzelfinger-Wischen wird das Event NICHT konsumiert — es "faellt durch" zum HorizontalPager,
+der es als Swipe-Geste interpretiert.
+
+### Zusaetzlich benoetigte Mechanismen
+
+```kotlin
+// Pager-Scrolling deaktivieren wenn gezoomt
+var currentPageZoomed by remember { mutableStateOf(false) }
+HorizontalPager(userScrollEnabled = !currentPageZoomed) { page ->
+    // Zoom-State tracken
+    LaunchedEffect(scale, pagerState.currentPage) {
+        if (page == pagerState.currentPage) currentPageZoomed = scale > 1f
+    }
+    // Zoom zuruecksetzen beim Seitenwechsel
+    LaunchedEffect(pagerState.currentPage) {
+        if (page != pagerState.currentPage) { scale = 1f; offsetX = 0f; offsetY = 0f }
+    }
+}
+```
+
+### Doppeltipp-Zoom (separater pointerInput)
+
+```kotlin
+.pointerInput(Unit) {
+    detectTapGestures(
+        onDoubleTap = {
+            if (scale > 1f) { scale = 1f; offsetX = 0f; offsetY = 0f }
+            else { scale = 2.5f }
+        },
+        onTap = { fullScreenPhotoPath = null },  // Schliessen bei Tap
+    )
+}
+```
+
+### Benoetigte Imports
+
+```kotlin
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+```
+
+### Regeln
+
+1. **NIEMALS `detectTransformGestures()` verwenden** wenn ein HorizontalPager im Spiel ist
+2. **NIEMALS `Modifier.transformable()`** verwenden wenn ein HorizontalPager im Spiel ist
+3. **IMMER `awaitEachGesture`** mit manueller Pointer-Zaehlung fuer Zoom+Pager-Kombination
+4. **Events nur konsumieren wenn noetig** — das ist der Kern der Loesung
+5. **graphicsLayer fuer die Transformation** — scaleX, scaleY, translationX, translationY

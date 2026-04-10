@@ -20,11 +20,12 @@ class BestJournalApp : Application() {
         FirebaseApp.initializeApp(this)
         // Debug builds use DebugAppCheckProvider (no Play Integrity needed).
         // Release builds use Play Integrity for production App Check.
-        val factory = if (BuildConfig.DEBUG) {
-            DebugAppCheckProviderFactory.getInstance()
-        } else {
-            PlayIntegrityAppCheckProviderFactory.getInstance()
-        }
+        val factory =
+            if (BuildConfig.DEBUG) {
+                DebugAppCheckProviderFactory.getInstance()
+            } else {
+                PlayIntegrityAppCheckProviderFactory.getInstance()
+            }
         FirebaseAppCheck.getInstance().installAppCheckProviderFactory(factory)
 
         createNotificationChannels()
@@ -34,23 +35,42 @@ class BestJournalApp : Application() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
 
-            val dailyChannel = NotificationChannel(
-                ReminderReceiver.CHANNEL_ID,
-                "T\u00e4gliche Erinnerung",
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ).apply {
-                description = "Erinnert dich t\u00e4glich ans Tagebuchschreiben"
-            }
+            val dailyChannel =
+                NotificationChannel(
+                        ReminderReceiver.CHANNEL_ID,
+                        "T\u00e4gliche Erinnerung",
+                        NotificationManager.IMPORTANCE_DEFAULT,
+                    )
+                    .apply { description = "Erinnert dich t\u00e4glich ans Tagebuchschreiben" }
             manager.createNotificationChannel(dailyChannel)
 
-            val weeklyChannel = NotificationChannel(
-                WeeklyReviewReceiver.CHANNEL_ID,
-                "W\u00f6chentlicher R\u00fcckblick",
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ).apply {
-                description = "Dein Wochenr\u00fcckblick jeden Sonntag um 19:00 Uhr"
-            }
+            val weeklyChannel =
+                NotificationChannel(
+                        WeeklyReviewReceiver.CHANNEL_ID,
+                        "W\u00f6chentlicher R\u00fcckblick",
+                        NotificationManager.IMPORTANCE_DEFAULT,
+                    )
+                    .apply { description = "Dein Wochenr\u00fcckblick jeden Sonntag um 15:00 Uhr" }
             manager.createNotificationChannel(weeklyChannel)
+
+            NotificationChannel(
+                    "monthly_review",
+                    "Monatsrückblick",
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                )
+                .also {
+                    it.description = "Benachrichtigung wenn dein Monatsrückblick fertig ist"
+                    manager.createNotificationChannel(it)
+                }
+            NotificationChannel(
+                    "yearly_review",
+                    "Jahresrückblick",
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                )
+                .also {
+                    it.description = "Benachrichtigung wenn dein Jahresrückblick fertig ist"
+                    manager.createNotificationChannel(it)
+                }
         }
     }
 }

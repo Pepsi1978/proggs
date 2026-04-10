@@ -67,6 +67,9 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
             // splash and login screens are completely isolated
             val pagerState = rememberPagerState(initialPage = initialTab) { mainPages.size }
             val coroutineScope = rememberCoroutineScope()
+            val retroViewModel:
+                com.bestjournal.app.ui.screens.retrospective.RetrospectiveViewModel =
+                hiltViewModel()
 
             Scaffold(
                 containerColor = MaterialTheme.colorScheme.background,
@@ -88,7 +91,7 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                     modifier = Modifier.padding(innerPadding),
                 ) { page ->
                     when (page) {
-                        0 -> RetrospectiveScreen(viewModel = hiltViewModel())
+                        0 -> RetrospectiveScreen(viewModel = retroViewModel)
                         1 ->
                             DashboardScreen(
                                 viewModel = hiltViewModel(),
@@ -116,6 +119,7 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                                 onNavigateToPaywall = { source ->
                                     navController.navigate("paywall?source=$source")
                                 },
+                                // Profile change only updates Dashboard, not retrospectives
                             )
                     }
                 }

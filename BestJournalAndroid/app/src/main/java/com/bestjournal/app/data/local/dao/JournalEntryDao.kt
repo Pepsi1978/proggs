@@ -38,6 +38,11 @@ interface JournalEntryDao {
     @Query("SELECT * FROM journal_entries ORDER BY timestamp DESC")
     suspend fun getAllEntriesOnce(): List<JournalEntryEntity>
 
+    @Query(
+        "SELECT * FROM journal_entries WHERE timestamp BETWEEN :startTime AND :endTime ORDER BY timestamp ASC"
+    )
+    suspend fun getEntriesBetween(startTime: Long, endTime: Long): List<JournalEntryEntity>
+
     @Query("SELECT * FROM journal_entries WHERE isSynced = 0")
     suspend fun getUnsyncedEntries(): List<JournalEntryEntity>
 

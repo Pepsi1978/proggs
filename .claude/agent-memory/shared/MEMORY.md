@@ -136,6 +136,38 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-06 16:54 — Hook: safety-gate.sh — Befehl blockiert: rm[[:space:]]+-rf[[:space:]]+[/~]
 ### 2026-04-06 17:36 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
 ### [2026-04-06 17:48] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-08 09:12 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### 2026-04-08 09:25 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### 2026-04-08 11:11 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### [2026-04-08 11:25] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-08 11:27 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### 2026-04-08 11:27 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### 2026-04-08 11:33 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### [2026-04-08 11:36] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-08 11:37 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### [2026-04-08 11:44] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### [2026-04-08 11:47] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-08 11:47 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### [2026-04-08 11:53] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### [2026-04-08 11:57] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-08 12:00 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### 2026-04-08 12:05 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### [2026-04-08 12:10] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-08 12:12 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### [2026-04-08 12:21] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-08 12:23 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### [2026-04-08 12:33] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### [2026-04-08 12:36] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### [2026-04-08 12:39] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-08 12:44 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### 2026-04-08 15:16 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### 2026-04-08 18:14 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### 2026-04-09 07:57 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
+### 2026-04-09 12:44 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-09 18:03 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-10 05:58 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### [2026-04-10 08:01] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-10 08:01 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
 ---
 
 ## Systemzustand (aktuell)
@@ -174,7 +206,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **macOS Settings-Fix (2026-03-31):** allow-Liste entfernt (war Whitelist-Blocker bei bypassPermissions), 2 fehlende Hooks hinzugefuegt (mcp-auth-check, doctor-lite), tote Plugins deaktiviert (boostvolt, FlineDev)
 - **Neue Hooks:** StopFailure (v2.1.78) — loggt API-Fehler/Rate-Limits ins Whiteboard
 - **Windows→macOS Porting (2026-03-25):** 6 Hook-Upgrades portiert (Semantic Search Check, config-guard PostToolUse, Enhanced PostToolUseFailure/SubagentStop/PostCompact, session-scorer 25s Timeout)
-- **Pending Admin Updates (5):** fzf,harfbuzz,node,ollama,simdjson,
+- **Pending Admin Updates (15):** biome,deno,fzf,go,harfbuzz,htop,libomp,node,ollama,openssl@3,python@3.13,python@3.14,simdjson,steipete/tap/summarize,uv,
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -368,6 +400,48 @@ _Noch keine Eintraege._
 - **[2026-04-03] self-observation-checker**: [WARNING] Session 4b80f958 (250 Turns) zeigte keine Selbstbeobachtung
 - **[2026-04-06] intelligence-checker**: [WARNING] Session 4b80f958 (250 Turns) hatte keinen Intelligenz-Vorschlag
 - **[2026-04-06] self-observation-checker**: [WARNING] Session 4b80f958 (250 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] intelligence-checker**: [WARNING] Session a19459db (84 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-08] self-observation-checker**: [WARNING] Session a19459db (84 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] intelligence-checker**: [WARNING] Session a19459db (84 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-08] self-observation-checker**: [WARNING] Session a19459db (84 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] intelligence-checker**: [WARNING] Session b0cfcb0b (244 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (244 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (266 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (271 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (273 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (273 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (273 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (275 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (280 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (280 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (280 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (280 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (346 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] intelligence-checker**: [WARNING] Session 134564f1 (84 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-08] self-observation-checker**: [WARNING] Session 134564f1 (84 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] intelligence-checker**: [WARNING] Session 134564f1 (84 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-08] self-observation-checker**: [WARNING] Session 134564f1 (84 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] intelligence-checker**: [WARNING] Session d5bc72e0 (210 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-08] self-observation-checker**: [WARNING] Session d5bc72e0 (210 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] intelligence-checker**: [WARNING] Session d5bc72e0 (210 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-08] self-observation-checker**: [WARNING] Session d5bc72e0 (210 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-08] intelligence-checker**: [WARNING] Session 303a4385 (474 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-08] self-observation-checker**: [WARNING] Session 303a4385 (474 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-09] intelligence-checker**: [WARNING] Session 303a4385 (474 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-09] self-observation-checker**: [WARNING] Session 303a4385 (474 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-09] intelligence-checker**: [WARNING] Session 55c4453b (464 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-09] self-observation-checker**: [WARNING] Session 55c4453b (464 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-09] intelligence-checker**: [WARNING] Session 55c4453b (464 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-09] self-observation-checker**: [WARNING] Session 55c4453b (464 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-09] intelligence-checker**: [WARNING] Session acfefb7b (482 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-09] self-observation-checker**: [WARNING] Session acfefb7b (482 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-09] intelligence-checker**: [WARNING] Session acfefb7b (482 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-09] self-observation-checker**: [WARNING] Session acfefb7b (482 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-09] intelligence-checker**: [WARNING] Session f27dd6ab (291 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-10] intelligence-checker**: [WARNING] Session f27dd6ab (291 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-10] self-observation-checker**: [WARNING] Session f27dd6ab (291 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-10] intelligence-checker**: [WARNING] Session 41965248 (253 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-10] self-observation-checker**: [WARNING] Session 41965248 (253 Turns) zeigte keine Selbstbeobachtung
 ---
 
 ## Regeln & Konventionen

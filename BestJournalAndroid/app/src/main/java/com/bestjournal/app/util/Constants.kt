@@ -108,6 +108,9 @@ object Constants {
     const val PREF_WEEKLY_REVIEW_HOUR = "weekly_review_hour"
     const val PREF_WEEKLY_REVIEW_MINUTE = "weekly_review_minute"
     const val PREF_FROM_WEEKLY_REVIEW = "from_weekly_review"
+    const val PREF_MONTHLY_REVIEW_ENABLED = "monthly_review_enabled"
+    const val PREF_YEARLY_REVIEW_ENABLED = "yearly_review_enabled"
+    const val PREF_USER_TIMEZONE = "user_timezone"
 
     // Daily Writing Prompt
     const val PREF_PROMPT_DISMISSED_DATE = "prompt_dismissed_date"

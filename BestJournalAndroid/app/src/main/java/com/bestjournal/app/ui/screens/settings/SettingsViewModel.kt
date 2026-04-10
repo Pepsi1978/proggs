@@ -48,8 +48,11 @@ data class SettingsUiState(
     val reminderMinute: Int = 0,
     val weeklyReviewEnabled: Boolean = true,
     val weeklyReviewDay: Int = java.util.Calendar.SUNDAY,
-    val weeklyReviewHour: Int = 19,
+    val weeklyReviewHour: Int = 15,
     val weeklyReviewMinute: Int = 0,
+    val monthlyReviewEnabled: Boolean = true,
+    val yearlyReviewEnabled: Boolean = true,
+    val userTimezone: String = "",
     val isExporting: Boolean = false,
     val exportMessage: String? = null,
 )
@@ -104,12 +107,34 @@ constructor(
     init {
         loadSettings()
         encryptedPrefs.registerOnSharedPreferenceChangeListener(prefsListener)
-        // Ensure weekly review alarm is scheduled (default: enabled)
-        reminderManager.ensureWeeklyReviewScheduled()
+        // Ensure review alarms are scheduled (default: enabled)
+        try {
+            reminderManager.ensureWeeklyReviewScheduled()
+            reminderManager.ensureMonthlyReviewScheduled()
+            reminderManager.ensureYearlyReviewScheduled()
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsVM", "Failed to schedule review alarms: ${e.message}")
+        }
         viewModelScope.launch {
             billingManager.subscriptionState.collect { state ->
                 _uiState.value =
                     _uiState.value.copy(isSubscribed = state is SubscriptionState.Subscribed)
+            }
+        }
+        // Download missing photos in background after app restart (post-restore)
+        if (signInUseCase.getProfile() != null) {
+            viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val count = syncUseCase.downloadMissingPhotos()
+                    if (count > 0) {
+                        android.util.Log.d("SettingsVM", "Background photo download: $count files")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e(
+                        "SettingsVM",
+                        "Background photo download failed: ${e.message}",
+                    )
+                }
             }
         }
     }
@@ -146,6 +171,9 @@ constructor(
                 weeklyReviewDay = reminderManager.getWeeklyReviewDay(),
                 weeklyReviewHour = reminderManager.getWeeklyReviewHour(),
                 weeklyReviewMinute = reminderManager.getWeeklyReviewMinute(),
+                monthlyReviewEnabled = reminderManager.isMonthlyReviewEnabled(),
+                yearlyReviewEnabled = reminderManager.isYearlyReviewEnabled(),
+                userTimezone = encryptedPrefs.getString(Constants.PREF_USER_TIMEZONE, "") ?: "",
             )
     }
 
@@ -338,6 +366,23 @@ constructor(
             reminderManager.cancelWeeklyReview()
         }
         _uiState.value = _uiState.value.copy(weeklyReviewEnabled = enabled)
+    }
+
+    fun updateMonthlyReviewEnabled(enabled: Boolean) {
+        if (enabled) reminderManager.scheduleMonthlyReview()
+        else reminderManager.cancelMonthlyReview()
+        _uiState.value = _uiState.value.copy(monthlyReviewEnabled = enabled)
+    }
+
+    fun updateYearlyReviewEnabled(enabled: Boolean) {
+        if (enabled) reminderManager.scheduleYearlyReview()
+        else reminderManager.cancelYearlyReview()
+        _uiState.value = _uiState.value.copy(yearlyReviewEnabled = enabled)
+    }
+
+    fun setUserTimezone(timezone: String) {
+        encryptedPrefs.edit().putString(Constants.PREF_USER_TIMEZONE, timezone).apply()
+        _uiState.value = _uiState.value.copy(userTimezone = timezone)
     }
 
     fun updateWeeklyReviewSchedule(dayOfWeek: Int, hour: Int, minute: Int) {

@@ -1,7 +1,6 @@
 package com.bestjournal.app.ui.screens.journal
 
 import android.Manifest
-import androidx.compose.material3.Surface
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,16 +30,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Warning
@@ -51,12 +54,13 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -70,23 +74,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import com.bestjournal.app.ui.components.AnimatedMicButton
@@ -190,8 +193,10 @@ fun JournalScreen(
                             color = MaterialTheme.colorScheme.outline,
                         )
                     },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-                        .focusRequester(searchFocusRequester),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .focusRequester(searchFocusRequester),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                     colors =
@@ -218,7 +223,9 @@ fun JournalScreen(
             }
 
             // Sync status + search toggle
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -234,57 +241,82 @@ fun JournalScreen(
                         SunMoonToggle()
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = {
-                        if (uiState.syncStatus == SyncStatus.ERROR) {
-                            viewModel.retrySyncNow()
-                        } else {
-                            showSyncLegend = true
-                        }
-                    }) {
-                        Icon(
-                            imageVector =
-                                when (uiState.syncStatus) {
-                                    SyncStatus.NOT_SIGNED_IN -> Icons.Rounded.Warning
-                                    SyncStatus.ERROR -> Icons.Rounded.CloudOff
-                                    SyncStatus.SYNCING -> Icons.Rounded.Cloud
-                                    else -> Icons.Rounded.CloudDone
-                                },
-                            contentDescription = "Sync-Status",
-                            tint =
-                                when (uiState.syncStatus) {
-                                    SyncStatus.NOT_SIGNED_IN -> NeonAmber
-                                    SyncStatus.SYNCING -> NeonCyan
-                                    SyncStatus.ERROR -> NeonRed
-                                    else -> NeonEmerald
-                                },
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-                    Surface(
-                        onClick = { viewModel.toggleSearch() },
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        IconButton(
+                            onClick = {
+                                if (uiState.syncStatus == SyncStatus.ERROR) {
+                                    viewModel.retrySyncNow()
+                                } else {
+                                    showSyncLegend = true
+                                }
+                            }
                         ) {
-                            Icon(
-                                Icons.Rounded.Search,
-                                "Suchen",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                "Suche",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector =
+                                        when (uiState.syncStatus) {
+                                            SyncStatus.NOT_SIGNED_IN -> Icons.Rounded.Warning
+                                            SyncStatus.ERROR -> Icons.Rounded.CloudOff
+                                            SyncStatus.SYNCING -> Icons.Rounded.Cloud
+                                            SyncStatus.UPLOADING -> Icons.Filled.CloudUpload
+                                            SyncStatus.DOWNLOADING -> Icons.Filled.CloudDownload
+                                            else -> Icons.Rounded.CloudDone
+                                        },
+                                    contentDescription = "Sync-Status",
+                                    tint =
+                                        when (uiState.syncStatus) {
+                                            SyncStatus.NOT_SIGNED_IN -> NeonAmber
+                                            SyncStatus.SYNCING -> NeonCyan
+                                            SyncStatus.UPLOADING -> NeonCyan
+                                            SyncStatus.DOWNLOADING -> NeonCyan
+                                            SyncStatus.ERROR -> NeonRed
+                                            else -> NeonEmerald
+                                        },
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                if (
+                                    (uiState.syncStatus == SyncStatus.DOWNLOADING ||
+                                        uiState.syncStatus == SyncStatus.UPLOADING) &&
+                                        uiState.downloadTotal > 0
+                                ) {
+                                    Text(
+                                        text =
+                                            "${uiState.downloadCurrent}/${uiState.downloadTotal}",
+                                        fontSize = 9.sp,
+                                        color = NeonCyan,
+                                        lineHeight = 10.sp,
+                                    )
+                                }
+                            }
+                        }
+                        Surface(
+                            onClick = { viewModel.toggleSearch() },
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border =
+                                androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                ),
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Search,
+                                    "Suchen",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "Suche",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
-                }
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -296,17 +328,18 @@ fun JournalScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (uiState.currentStreak > 0) {
-                        val streakColor = if (uiState.currentStreak > 7) NeonAmber
+                        val streakColor =
+                            if (uiState.currentStreak > 7) NeonAmber
                             else MaterialTheme.colorScheme.onSurfaceVariant
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .background(
-                                    streakColor.copy(alpha = 0.1f),
-                                    RoundedCornerShape(12.dp),
-                                )
-                                .clickable { showStreakDialog = true }
-                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                            modifier =
+                                Modifier.background(
+                                        streakColor.copy(alpha = 0.1f),
+                                        RoundedCornerShape(12.dp),
+                                    )
+                                    .clickable { showStreakDialog = true }
+                                    .padding(horizontal = 8.dp, vertical = 3.dp),
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.LocalFireDepartment,
@@ -333,7 +366,9 @@ fun JournalScreen(
                     WritingPromptBanner(
                         promptText = uiState.dailyPromptText,
                         promptCategory = uiState.dailyPromptCategory,
-                        onWriteClick = { viewModel.startTextEntryWithPrompt(uiState.dailyPromptText) },
+                        onWriteClick = {
+                            viewModel.startTextEntryWithPrompt(uiState.dailyPromptText)
+                        },
                         onDismiss = { viewModel.dismissPromptBanner() },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
@@ -374,7 +409,9 @@ fun JournalScreen(
                             WritingPromptBanner(
                                 promptText = uiState.dailyPromptText,
                                 promptCategory = uiState.dailyPromptCategory,
-                                onWriteClick = { viewModel.startTextEntryWithPrompt(uiState.dailyPromptText) },
+                                onWriteClick = {
+                                    viewModel.startTextEntryWithPrompt(uiState.dailyPromptText)
+                                },
                                 onDismiss = { viewModel.dismissPromptBanner() },
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -412,10 +449,16 @@ fun JournalScreen(
                                 }
                             TimelineItem(
                                 entry = sectionEntries[index],
-                                onClick = { onEntryClick(sectionEntries[index].id, if (uiState.isSearchActive) uiState.searchQuery else "") },
+                                onClick = {
+                                    onEntryClick(
+                                        sectionEntries[index].id,
+                                        if (uiState.isSearchActive) uiState.searchQuery else "",
+                                    )
+                                },
                                 position = position,
                                 modifier = Modifier.padding(vertical = 6.dp),
-                                searchQuery = if (uiState.isSearchActive) uiState.searchQuery else "",
+                                searchQuery =
+                                    if (uiState.isSearchActive) uiState.searchQuery else "",
                             )
                         }
                     }
@@ -571,7 +614,7 @@ fun JournalScreen(
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                Icons.Rounded.Cloud,
+                                Icons.Filled.CloudUpload,
                                 null,
                                 tint = NeonCyan,
                                 modifier = Modifier.size(24.dp),
@@ -579,6 +622,20 @@ fun JournalScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 "Backup wird hochgeladen\u2026",
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Filled.CloudDownload,
+                                null,
+                                tint = NeonCyan,
+                                modifier = Modifier.size(24.dp),
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                "Fotos/Videos werden heruntergeladen\u2026",
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
@@ -599,7 +656,7 @@ fun JournalScreen(
                         }
                         if (uiState.lastSyncTimestamp > 0L) {
                             androidx.compose.material3.HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                             )
                             Text(
                                 "Letzte Synchronisierung: ${DTFormatter.formatFull(uiState.lastSyncTimestamp)}",
@@ -687,7 +744,9 @@ private fun PreviewDialog(
             onDismiss()
         },
         modifier = if (hasPrompt) Modifier.fillMaxWidth(0.95f) else Modifier,
-        properties = if (hasPrompt) DialogProperties(usePlatformDefaultWidth = false) else DialogProperties(),
+        properties =
+            if (hasPrompt) DialogProperties(usePlatformDefaultWidth = false)
+            else DialogProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
         title = {
             Row(
@@ -734,31 +793,36 @@ private fun PreviewDialog(
                 // Inspirational prompt card
                 if (hasPrompt) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                brush = Brush.linearGradient(
-                                    listOf(
-                                        NeonAmber.copy(alpha = 0.10f),
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                    )
-                                ),
-                                shape = RoundedCornerShape(16.dp),
-                            )
-                            .padding(16.dp),
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .background(
+                                    brush =
+                                        Brush.linearGradient(
+                                            listOf(
+                                                NeonAmber.copy(alpha = 0.10f),
+                                                MaterialTheme.colorScheme.surfaceVariant.copy(
+                                                    alpha = 0.4f
+                                                ),
+                                            )
+                                        ),
+                                    shape = RoundedCornerShape(16.dp),
+                                )
+                                .padding(16.dp)
                     ) {
                         Column {
                             Text(
                                 text = "\u201E$activePrompt\u201C",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontStyle = FontStyle.Italic,
-                                    fontWeight = FontWeight.Medium,
-                                ),
+                                style =
+                                    MaterialTheme.typography.titleMedium.copy(
+                                        fontStyle = FontStyle.Italic,
+                                        fontWeight = FontWeight.Medium,
+                                    ),
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                text = "Lass deine Gedanken frei flie\u00dfen. Es gibt kein richtig oder falsch.",
+                                text =
+                                    "Lass deine Gedanken frei flie\u00dfen. Es gibt kein richtig oder falsch.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -782,7 +846,10 @@ private fun PreviewDialog(
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
                                     contentColor = MaterialTheme.colorScheme.onSurface,
                                     shape = CircleShape,
-                                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp),
+                                    elevation =
+                                        FloatingActionButtonDefaults.elevation(
+                                            defaultElevation = 8.dp
+                                        ),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.Edit,
@@ -802,10 +869,10 @@ private fun PreviewDialog(
 
                             // Divider
                             Box(
-                                modifier = Modifier
-                                    .height(32.dp)
-                                    .width(1.dp)
-                                    .background(MaterialTheme.colorScheme.outlineVariant)
+                                modifier =
+                                    Modifier.height(32.dp)
+                                        .width(1.dp)
+                                        .background(MaterialTheme.colorScheme.outlineVariant)
                             )
 
                             Spacer(modifier = Modifier.width(16.dp))
@@ -818,7 +885,10 @@ private fun PreviewDialog(
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
                                     contentColor = MaterialTheme.colorScheme.onSurface,
                                     shape = CircleShape,
-                                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp),
+                                    elevation =
+                                        FloatingActionButtonDefaults.elevation(
+                                            defaultElevation = 8.dp
+                                        ),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.Mic,
@@ -843,15 +913,17 @@ private fun PreviewDialog(
                         ) {
                             Text(
                                 "Deine Antwort:",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.Medium,
-                                ),
+                                style =
+                                    MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Medium
+                                    ),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Surface(
                                 onClick = onRecordClick,
                                 shape = RoundedCornerShape(20.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                color =
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -951,32 +1023,37 @@ private fun PreviewDialog(
                             color = Color.Transparent,
                         ) {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(
-                                        brush = Brush.linearGradient(
-                                            listOf(
-                                                NeonAmber.copy(alpha = 0.12f),
-                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                                            )
-                                        ),
-                                        shape = RoundedCornerShape(16.dp),
-                                    )
-                                    .padding(14.dp),
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .background(
+                                            brush =
+                                                Brush.linearGradient(
+                                                    listOf(
+                                                        NeonAmber.copy(alpha = 0.12f),
+                                                        MaterialTheme.colorScheme.surfaceVariant
+                                                            .copy(alpha = 0.6f),
+                                                    )
+                                                ),
+                                            shape = RoundedCornerShape(16.dp),
+                                        )
+                                        .padding(14.dp)
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.Top,
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 ) {
                                     Box(
-                                        modifier = Modifier
-                                            .size(30.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                Brush.linearGradient(
-                                                    listOf(NeonAmber, NeonAmber.copy(alpha = 0.6f))
-                                                )
-                                            ),
+                                        modifier =
+                                            Modifier.size(30.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    Brush.linearGradient(
+                                                        listOf(
+                                                            NeonAmber,
+                                                            NeonAmber.copy(alpha = 0.6f),
+                                                        )
+                                                    )
+                                                ),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Icon(
@@ -989,14 +1066,16 @@ private fun PreviewDialog(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = "Beeindruckend, oder?",
-                                            style = MaterialTheme.typography.labelLarge.copy(
-                                                fontWeight = FontWeight.Bold,
-                                            ),
+                                            style =
+                                                MaterialTheme.typography.labelLarge.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                ),
                                             color = NeonAmber,
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = "Mit Premium kannst du jeden Eintrag verbessern.",
+                                            text =
+                                                "Mit Premium kannst du jeden Eintrag verbessern.",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -1008,9 +1087,10 @@ private fun PreviewDialog(
                                         ) {
                                             Text(
                                                 text = "Premium entdecken \u2192",
-                                                style = MaterialTheme.typography.labelMedium.copy(
-                                                    fontWeight = FontWeight.Bold,
-                                                ),
+                                                style =
+                                                    MaterialTheme.typography.labelMedium.copy(
+                                                        fontWeight = FontWeight.Bold
+                                                    ),
                                                 color = NeonAmber,
                                                 modifier = Modifier.clickable { onUpsellClick() },
                                             )
@@ -1028,7 +1108,12 @@ private fun PreviewDialog(
                     }
                 }
 
-                if (inputModeChosen && improvedText == null && !isImproving && displayText.isNotBlank()) {
+                if (
+                    inputModeChosen &&
+                        improvedText == null &&
+                        !isImproving &&
+                        displayText.isNotBlank()
+                ) {
                     Button(
                         onClick = onImproveClick,
                         modifier = Modifier.fillMaxWidth(),
@@ -1043,10 +1128,7 @@ private fun PreviewDialog(
                 }
 
                 if (isImproving) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
                         ShimmerLoadingEffect(height = 60.dp, cornerRadius = 12.dp)
                         Text(
                             "KI verbessert Text \u2014 bitte warten",
@@ -1095,29 +1177,37 @@ private fun StreakDialog(
     val milestones = listOf(7, 14, 30, 60, 90, 180, 365)
     val nextMilestone = milestones.firstOrNull { it > currentStreak } ?: (currentStreak + 30)
     val prevMilestone = milestones.lastOrNull { it <= currentStreak } ?: 0
-    val progress = if (nextMilestone > prevMilestone) {
-        (currentStreak - prevMilestone).toFloat() / (nextMilestone - prevMilestone)
-    } else 0f
+    val progress =
+        if (nextMilestone > prevMilestone) {
+            (currentStreak - prevMilestone).toFloat() / (nextMilestone - prevMilestone)
+        } else 0f
 
     // Emotional headline based on streak length
-    val headline = when {
-        currentStreak >= 365 -> "Ein ganzes Jahr!"
-        currentStreak >= 180 -> "Unglaubliche Disziplin!"
-        currentStreak >= 90 -> "Du bist unstoppbar!"
-        currentStreak >= 30 -> "Ein ganzer Monat!"
-        currentStreak >= 14 -> "Zwei Wochen stark!"
-        currentStreak >= 7 -> "Eine ganze Woche!"
-        currentStreak >= 3 -> "Du bleibst dran!"
-        else -> "Jeder Tag z\u00e4hlt!"
-    }
+    val headline =
+        when {
+            currentStreak >= 365 -> "Ein ganzes Jahr!"
+            currentStreak >= 180 -> "Unglaubliche Disziplin!"
+            currentStreak >= 90 -> "Du bist unstoppbar!"
+            currentStreak >= 30 -> "Ein ganzer Monat!"
+            currentStreak >= 14 -> "Zwei Wochen stark!"
+            currentStreak >= 7 -> "Eine ganze Woche!"
+            currentStreak >= 3 -> "Du bleibst dran!"
+            else -> "Jeder Tag z\u00e4hlt!"
+        }
 
-    val motivationText = when {
-        currentStreak >= 30 -> "Was als kleine Gewohnheit begann, ist jetzt ein fester Teil deines Lebens. Dein Tagebuch kennt dich besser als je zuvor."
-        currentStreak >= 14 -> "Zwei Wochen am St\u00fcck, das schaffen die wenigsten. Dein zuk\u00fcnftiges Ich wird dir daf\u00fcr danken."
-        currentStreak >= 7 -> "Eine Woche voller Gedanken, Gef\u00fchle und Erinnerungen. Du baust gerade etwas Wertvolles auf."
-        currentStreak >= 3 -> "Drei Tage in Folge sind der Anfang einer echten Gewohnheit. Bleib dran, es lohnt sich!"
-        else -> "Jeder Eintrag ist ein kleines Geschenk an dein zuk\u00fcnftiges Ich. Schreib morgen wieder!"
-    }
+    val motivationText =
+        when {
+            currentStreak >= 30 ->
+                "Was als kleine Gewohnheit begann, ist jetzt ein fester Teil deines Lebens. Dein Tagebuch kennt dich besser als je zuvor."
+            currentStreak >= 14 ->
+                "Zwei Wochen am St\u00fcck, das schaffen die wenigsten. Dein zuk\u00fcnftiges Ich wird dir daf\u00fcr danken."
+            currentStreak >= 7 ->
+                "Eine Woche voller Gedanken, Gef\u00fchle und Erinnerungen. Du baust gerade etwas Wertvolles auf."
+            currentStreak >= 3 ->
+                "Drei Tage in Folge sind der Anfang einer echten Gewohnheit. Bleib dran, es lohnt sich!"
+            else ->
+                "Jeder Eintrag ist ein kleines Geschenk an dein zuk\u00fcnftiges Ich. Schreib morgen wieder!"
+        }
 
     val isDarkTheme = !MaterialTheme.colorScheme.background.luminance().let { it > 0.5f }
     val accentColor = if (currentStreak > 7) NeonAmber else MaterialTheme.colorScheme.primary
@@ -1152,9 +1242,7 @@ private fun StreakDialog(
             }
         },
         text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 // Motivation text
                 Text(
                     motivationText,
@@ -1220,10 +1308,11 @@ private fun StreakDialog(
         confirmButton = {
             Button(
                 onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = accentColor,
-                    contentColor = if (isDarkTheme) Color.Black else Color.White,
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = accentColor,
+                        contentColor = if (isDarkTheme) Color.Black else Color.White,
+                    ),
             ) {
                 Text("Weiter so!")
             }
@@ -1285,14 +1374,14 @@ private fun WritingPromptBanner(
                     modifier = Modifier.weight(1f),
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(NeonAmber, NeonAmber.copy(alpha = 0.6f))
-                                )
-                            ),
+                        modifier =
+                            Modifier.size(36.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(NeonAmber, NeonAmber.copy(alpha = 0.6f))
+                                    )
+                                ),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -1306,9 +1395,10 @@ private fun WritingPromptBanner(
                     Column {
                         Text(
                             "Schreibimpuls des Tages",
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                            ),
+                            style =
+                                MaterialTheme.typography.labelLarge.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
                             color = NeonAmber,
                         )
                         Text(
@@ -1318,10 +1408,7 @@ private fun WritingPromptBanner(
                         )
                     }
                 }
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.size(28.dp),
-                ) {
+                IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
                     Icon(
                         Icons.Rounded.Close,
                         "Schlie\u00dfen",
@@ -1335,9 +1422,7 @@ private fun WritingPromptBanner(
 
             Text(
                 text = "\u201E$promptText\u201C",
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontStyle = FontStyle.Italic,
-                ),
+                style = MaterialTheme.typography.bodyLarge.copy(fontStyle = FontStyle.Italic),
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
@@ -1346,23 +1431,17 @@ private fun WritingPromptBanner(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 Button(
                     onClick = onWriteClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = NeonAmber,
-                        contentColor = Color.White,
-                    ),
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = NeonAmber,
+                            contentColor = Color.White,
+                        ),
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
-                    Icon(
-                        Icons.Rounded.Edit,
-                        null,
-                        modifier = Modifier.size(16.dp),
-                    )
+                    Icon(Icons.Rounded.Edit, null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        "Dar\u00fcber schreiben",
-                        style = MaterialTheme.typography.labelLarge,
-                    )
+                    Text("Dar\u00fcber schreiben", style = MaterialTheme.typography.labelLarge)
                 }
             }
         }

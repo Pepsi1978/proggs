@@ -40,11 +40,16 @@
             android:name=".util.WeeklyReviewReceiver"
             android:exported="false" />
 
+        <receiver android:name=".util.MonthlyReviewReceiver" android:exported="false" />
+        <receiver android:name=".util.YearlyReviewReceiver" android:exported="false" />
+
         <receiver
             android:name=".util.BootReminderReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
             </intent-filter>
         </receiver>
         <provider

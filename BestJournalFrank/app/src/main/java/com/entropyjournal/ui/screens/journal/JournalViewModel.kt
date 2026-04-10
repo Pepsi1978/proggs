@@ -56,11 +56,15 @@ data class JournalUiState(
     val showPromptBanner: Boolean = true,
     val activePrompt: String = "",
     val lastSyncTimestamp: Long = 0L,
+    val downloadCurrent: Int = 0,
+    val downloadTotal: Int = 0,
 )
 
 enum class SyncStatus {
     IDLE,
     SYNCING,
+    UPLOADING,
+    DOWNLOADING,
     SYNCED,
     ERROR,
     NOT_SIGNED_IN,
@@ -154,6 +158,28 @@ constructor(
                     }
                 }
                 return@collect
+            }
+        }
+
+        // Observe background download progress from SyncProgressHolder
+        viewModelScope.launch {
+            com.entropyjournal.domain.usecase.SyncProgressHolder.status.collect { status ->
+                if (status == SyncStatus.DOWNLOADING || status == SyncStatus.UPLOADING) {
+                    _uiState.value = _uiState.value.copy(syncStatus = status)
+                } else if (status == SyncStatus.SYNCED) {
+                    _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
+                }
+            }
+        }
+        viewModelScope.launch {
+            com.entropyjournal.domain.usecase.SyncProgressHolder.downloadCurrent.collect { current
+                ->
+                _uiState.value = _uiState.value.copy(downloadCurrent = current)
+            }
+        }
+        viewModelScope.launch {
+            com.entropyjournal.domain.usecase.SyncProgressHolder.downloadTotal.collect { total ->
+                _uiState.value = _uiState.value.copy(downloadTotal = total)
             }
         }
 
@@ -480,7 +506,7 @@ constructor(
     private fun triggerSync() {
         syncDebounceJob?.cancel()
         syncDebounceJob = viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCING)
+            _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.UPLOADING)
             syncWithDriveUseCase
                 .backup()
                 .onSuccess { _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED) }

@@ -76,28 +76,38 @@ constructor(
 
         if (backupPhotos || backupVideos) {
             val photosDir = File(context.filesDir, "photos")
-            val files = photosDir.listFiles() ?: emptyArray()
-            Log.d("SyncDebug", "Photos dir: exists=${photosDir.exists()}, files=${files.size}")
-
-            for (file in files) {
+            val allFiles = photosDir.listFiles() ?: emptyArray()
+            val filesToUpload = allFiles.filter { file ->
                 val isVideo =
                     file.extension.lowercase() in listOf("mp4", "3gp", "mkv", "webm", "avi")
                 val isPhoto =
                     file.extension.lowercase() in listOf("jpg", "jpeg", "png", "webp", "gif")
-                if ((isPhoto && backupPhotos) || (isVideo && backupVideos)) {
-                    try {
-                        driveBackupManager.backupFile(file, "photo_${file.name}")
-                        Log.d("SyncDebug", "Uploaded: ${file.name} (${file.length()} bytes)")
-                    } catch (e: Exception) {
-                        Log.e("SyncDebug", "Upload failed: ${file.name}: ${e.message}")
-                    }
+                (isPhoto && backupPhotos) || (isVideo && backupVideos)
+            }
+            Log.d("SyncDebug", "Photos dir: ${filesToUpload.size} files to upload")
+            SyncProgressHolder.setUploading(0, filesToUpload.size)
+
+            var uploaded = 0
+            for (file in filesToUpload) {
+                try {
+                    driveBackupManager.backupFile(file, "photo_${file.name}")
+                    uploaded++
+                    SyncProgressHolder.setUploading(uploaded, filesToUpload.size)
+                    Log.d(
+                        "SyncDebug",
+                        "Uploaded ($uploaded/${filesToUpload.size}): ${file.name} (${file.length()} bytes)",
+                    )
+                } catch (e: Exception) {
+                    Log.e("SyncDebug", "Upload failed: ${file.name}: ${e.message}")
                 }
             }
         }
 
+        SyncProgressHolder.setSynced()
         return Result.success(Unit)
     }
 
+    /** Fast restore: DB only + path rewrite. App restarts immediately after this. */
     suspend fun restore(): Result<Unit> {
         val dbFile = context.getDatabasePath(dbName)
 
@@ -108,15 +118,154 @@ constructor(
         val dbResult = driveRestoreManager.restore(dbFile)
         if (dbResult.isFailure) return dbResult
 
+        // Clear old photos — they belong to the previous account/device
+        val photosDir = File(context.filesDir, "photos")
+        if (photosDir.exists()) {
+            val deleted = photosDir.listFiles()?.size ?: 0
+            photosDir.deleteRecursively()
+            Log.d("SyncDebug", "Cleared $deleted old photos from local dir")
+        }
+        photosDir.mkdirs()
+
+        // Rewrite photo paths in the restored DB to match this device's filesDir
         try {
-            val photosDir = File(context.filesDir, "photos").also { it.mkdirs() }
-            val restoredCount = driveRestoreManager.restoreAllPhotos(photosDir)
-            Log.d("SyncDebug", "Photos restored: $restoredCount files")
+            val localPhotosPath = photosDir.absolutePath
+            val db =
+                android.database.sqlite.SQLiteDatabase.openDatabase(
+                    dbFile.path,
+                    null,
+                    android.database.sqlite.SQLiteDatabase.OPEN_READWRITE,
+                )
+            val countCursor = db.rawQuery("SELECT COUNT(*) FROM entry_photos", null)
+            val photoCount = if (countCursor.moveToFirst()) countCursor.getInt(0) else 0
+            countCursor.close()
+            Log.d(
+                "SyncDebug",
+                "DB references $photoCount photos/videos — downloading after restart",
+            )
+
+            if (photoCount > 0) {
+                db.execSQL(
+                    """
+                    UPDATE entry_photos
+                    SET filePath = ? || '/' ||
+                        substr(filePath, instr(filePath, '/photos/') + 8)
+                    WHERE filePath LIKE '%/photos/%'
+                    """
+                        .trimIndent(),
+                    arrayOf(localPhotosPath),
+                )
+                Log.d("SyncDebug", "Rewrote photo paths to: $localPhotosPath/")
+            }
+            // Clear retrospective summaries — will be regenerated fresh from real entries
+            db.execSQL("DELETE FROM retrospective_summaries")
+            Log.d("SyncDebug", "Cleared retrospective summaries for fresh generation")
+
+            db.close()
         } catch (e: Exception) {
-            Log.e("SyncDebug", "Photos restore failed: ${e.message}", e)
+            Log.e("SyncDebug", "Path rewrite failed: ${e.message}", e)
         }
 
+        // Photos are downloaded AFTER app restart via downloadMissingPhotos()
         return Result.success(Unit)
+    }
+
+    /**
+     * Downloads photos/videos from Drive that are referenced in the DB but missing on disk. Called
+     * in the background after app restart, so the user sees entries immediately.
+     */
+    suspend fun downloadMissingPhotos(): Int {
+        val photosDir = File(context.filesDir, "photos").also { it.mkdirs() }
+        val dbFile = context.getDatabasePath(dbName)
+
+        // Check which files are missing
+        val missingFiles = mutableListOf<String>()
+        try {
+            val db =
+                android.database.sqlite.SQLiteDatabase.openDatabase(
+                    dbFile.path,
+                    null,
+                    android.database.sqlite.SQLiteDatabase.OPEN_READONLY,
+                )
+            val cursor = db.rawQuery("SELECT filePath FROM entry_photos", null)
+            while (cursor.moveToNext()) {
+                val path = cursor.getString(0)
+                if (!File(path).exists()) {
+                    missingFiles.add(path)
+                }
+            }
+            cursor.close()
+            db.close()
+        } catch (e: Exception) {
+            Log.e("SyncDebug", "Missing file check failed: ${e.message}")
+            return 0
+        }
+
+        if (missingFiles.isEmpty()) {
+            Log.d("SyncDebug", "All photos already on disk — nothing to download")
+            return 0
+        }
+
+        Log.d("SyncDebug", "Downloading ${missingFiles.size} missing photos from Drive...")
+        SyncProgressHolder.setDownloading(0, missingFiles.size)
+
+        // Download all photos from Drive
+        val restoredCount =
+            try {
+                driveRestoreManager.restoreAllPhotos(photosDir) { current, total ->
+                    SyncProgressHolder.setDownloading(current, total)
+                }
+            } catch (e: Exception) {
+                Log.e("SyncDebug", "Photo download failed: ${e.message}", e)
+                SyncProgressHolder.setError()
+                0
+            }
+
+        Log.d("SyncDebug", "Downloaded $restoredCount photos from Drive")
+
+        // Clean up orphaned entries (files still missing after download = not on Drive)
+        try {
+            val db =
+                android.database.sqlite.SQLiteDatabase.openDatabase(
+                    dbFile.path,
+                    null,
+                    android.database.sqlite.SQLiteDatabase.OPEN_READWRITE,
+                )
+            val cursor = db.rawQuery("SELECT id, filePath FROM entry_photos", null)
+            val orphanIds = mutableListOf<Long>()
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(0)
+                val path = cursor.getString(1)
+                if (!File(path).exists()) {
+                    orphanIds.add(id)
+                    Log.w("SyncDebug", "Orphaned photo (not on Drive): $path")
+                }
+            }
+            cursor.close()
+            if (orphanIds.isNotEmpty()) {
+                val idList = orphanIds.joinToString(",")
+                db.execSQL("DELETE FROM entry_photos WHERE id IN ($idList)")
+                Log.d("SyncDebug", "Removed ${orphanIds.size} orphaned photo entries from DB")
+            }
+            db.close()
+        } catch (e: Exception) {
+            Log.e("SyncDebug", "Orphan cleanup failed: ${e.message}", e)
+        }
+
+        // Trigger Room's invalidation tracker so the UI refreshes with the new photos
+        if (restoredCount > 0) {
+            try {
+                database.openHelper.writableDatabase.execSQL(
+                    "UPDATE entry_photos SET filePath = filePath WHERE 1=1"
+                )
+                Log.d("SyncDebug", "Triggered UI refresh for downloaded photos")
+            } catch (e: Exception) {
+                Log.e("SyncDebug", "UI refresh trigger failed: ${e.message}")
+            }
+        }
+
+        SyncProgressHolder.setSynced()
+        return restoredCount
     }
 
     suspend fun hasBackup(): Boolean {

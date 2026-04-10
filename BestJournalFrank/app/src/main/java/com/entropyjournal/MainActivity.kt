@@ -4,7 +4,6 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.fragment.app.FragmentActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
@@ -28,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import com.entropyjournal.ui.navigation.AppNavGraph
 import com.entropyjournal.ui.theme.EntropyJournalTheme
 import com.entropyjournal.util.Constants
@@ -61,48 +61,68 @@ class MainActivity : FragmentActivity() {
         val quickPrefs = getSharedPreferences("entropy_theme_quick", MODE_PRIVATE)
 
         setContent {
-            val followSystem = remember { mutableStateOf(encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)) }
-            val followSun = remember { mutableStateOf(encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false)) }
-            val manualDark = remember { mutableStateOf(encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false)) }
+            val followSystem = remember {
+                mutableStateOf(encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false))
+            }
+            val followSun = remember {
+                mutableStateOf(encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false))
+            }
+            val manualDark = remember {
+                mutableStateOf(encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false))
+            }
             val sunDark = remember {
-                mutableStateOf(try {
-                    val lat = encryptedPrefs.getFloat(Constants.PREF_LATITUDE, 0f).toDouble()
-                    val lon = encryptedPrefs.getFloat(Constants.PREF_LONGITUDE, 0f).toDouble()
-                    if (lat != 0.0 && lon != 0.0) SunCalculator.isDarkNow(lat, lon) else false
-                } catch (_: Exception) { false })
+                mutableStateOf(
+                    try {
+                        val lat = encryptedPrefs.getFloat(Constants.PREF_LATITUDE, 0f).toDouble()
+                        val lon = encryptedPrefs.getFloat(Constants.PREF_LONGITUDE, 0f).toDouble()
+                        if (lat != 0.0 && lon != 0.0) SunCalculator.isDarkNow(lat, lon) else false
+                    } catch (_: Exception) {
+                        false
+                    }
+                )
             }
             val systemDark = isSystemInDarkTheme()
 
             DisposableEffect(Unit) {
                 val encListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
                     when (key) {
-                        Constants.PREF_DARK_THEME -> manualDark.value = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false)
-                        Constants.PREF_THEME_FOLLOW_SYSTEM -> followSystem.value = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)
+                        Constants.PREF_DARK_THEME ->
+                            manualDark.value =
+                                encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, false)
+                        Constants.PREF_THEME_FOLLOW_SYSTEM ->
+                            followSystem.value =
+                                encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)
                         Constants.PREF_THEME_FOLLOW_SUN -> {
-                            followSun.value = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false)
+                            followSun.value =
+                                encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false)
                             try {
-                                val lat = encryptedPrefs.getFloat(Constants.PREF_LATITUDE, 0f).toDouble()
-                                val lon = encryptedPrefs.getFloat(Constants.PREF_LONGITUDE, 0f).toDouble()
-                                if (lat != 0.0 && lon != 0.0) sunDark.value = SunCalculator.isDarkNow(lat, lon)
+                                val lat =
+                                    encryptedPrefs.getFloat(Constants.PREF_LATITUDE, 0f).toDouble()
+                                val lon =
+                                    encryptedPrefs.getFloat(Constants.PREF_LONGITUDE, 0f).toDouble()
+                                if (lat != 0.0 && lon != 0.0)
+                                    sunDark.value = SunCalculator.isDarkNow(lat, lon)
                             } catch (_: Exception) {}
                         }
                     }
                 }
                 encryptedPrefs.registerOnSharedPreferenceChangeListener(encListener)
 
-                val quickListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
-                    if (key == "toggle_time") {
-                        val newDark = prefs.getBoolean("toggle_dark", false)
-                        encryptedPrefs.edit()
-                            .putBoolean(Constants.PREF_DARK_THEME, newDark)
-                            .putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)
-                            .putBoolean(Constants.PREF_THEME_FOLLOW_SUN, false)
-                            .apply()
-                        manualDark.value = newDark
-                        followSystem.value = false
-                        followSun.value = false
+                val quickListener =
+                    SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+                        if (key == "toggle_time") {
+                            val newDark = prefs.getBoolean("toggle_dark", false)
+                            encryptedPrefs
+                                .edit()
+                                .putBoolean(Constants.PREF_DARK_THEME, newDark)
+                                .putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)
+                                .putBoolean(Constants.PREF_THEME_FOLLOW_SUN, false)
+                                .apply()
+                            manualDark.value = newDark
+                            followSystem.value = false
+                            followSun.value = false
+                        }
                     }
-                }
                 quickPrefs.registerOnSharedPreferenceChangeListener(quickListener)
 
                 onDispose {
@@ -111,33 +131,53 @@ class MainActivity : FragmentActivity() {
                 }
             }
 
-            val isDark = when {
-                followSun.value -> sunDark.value
-                followSystem.value -> systemDark
-                else -> manualDark.value
-            }
+            val isDark =
+                when {
+                    followSun.value -> sunDark.value
+                    followSystem.value -> systemDark
+                    else -> manualDark.value
+                }
+
+            val initialTab =
+                when {
+                    intent?.getIntExtra("open_tab", -1) == 0 -> 0
+                    intent?.getBooleanExtra("from_weekly_review", false) == true -> 0
+                    else -> 2
+                }
 
             EntropyJournalTheme(darkTheme = isDark) {
                 if (isUnlocked.value) {
-                    AppNavGraph()
+                    AppNavGraph(initialTab = initialTab)
                 } else {
                     // Lock screen
                     Column(
-                        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+                        modifier =
+                            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
                         verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Icon(
-                            Icons.Rounded.Fingerprint, "Entsperren",
+                            Icons.Rounded.Fingerprint,
+                            "Entsperren",
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(72.dp)
+                            modifier = Modifier.size(72.dp),
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Best Journal", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+                        Text(
+                            "Best Journal",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Zum Entsperren authentifizieren", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "Zum Entsperren authentifizieren",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Spacer(modifier = Modifier.height(24.dp))
-                        OutlinedButton(onClick = { showBiometricPrompt { isUnlocked.value = true } }) {
+                        OutlinedButton(
+                            onClick = { showBiometricPrompt { isUnlocked.value = true } }
+                        ) {
                             Text("Entsperren")
                         }
                     }
@@ -181,7 +221,12 @@ class MainActivity : FragmentActivity() {
         biometricPromptActive = true
 
         val biometricManager = BiometricManager.from(this)
-        val canAuth = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+        val canAuth =
+            biometricManager.canAuthenticate(
+                BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                    BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                    BiometricManager.Authenticators.DEVICE_CREDENTIAL
+            )
         if (canAuth != BiometricManager.BIOMETRIC_SUCCESS) {
             biometricPromptActive = false
             onSuccess()
@@ -189,24 +234,38 @@ class MainActivity : FragmentActivity() {
         }
 
         val executor = ContextCompat.getMainExecutor(this)
-        val prompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                biometricPromptActive = false
-                onSuccess()
-            }
-            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                biometricPromptActive = false
-            }
-            override fun onAuthenticationFailed() {
-                // Single attempt failed — prompt stays open for retry
-            }
-        })
+        val prompt =
+            BiometricPrompt(
+                this,
+                executor,
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(
+                        result: BiometricPrompt.AuthenticationResult
+                    ) {
+                        biometricPromptActive = false
+                        onSuccess()
+                    }
 
-        val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Best Journal")
-            .setSubtitle("Entsperre dein Tagebuch")
-            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
-            .build()
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        biometricPromptActive = false
+                    }
+
+                    override fun onAuthenticationFailed() {
+                        // Single attempt failed — prompt stays open for retry
+                    }
+                },
+            )
+
+        val promptInfo =
+            BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Best Journal")
+                .setSubtitle("Entsperre dein Tagebuch")
+                .setAllowedAuthenticators(
+                    BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                        BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                        BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                )
+                .build()
 
         prompt.authenticate(promptInfo)
     }

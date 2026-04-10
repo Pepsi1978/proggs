@@ -107,6 +107,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     onSignOut: () -> Unit,
     onNavigateToPaywall: (String) -> Unit = {},
+    onProfileChanged: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -849,7 +850,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        var showWeeklyPicker by remember { mutableStateOf(false) }
+                        // Wöchentlicher Rückblick (Sonntag 15:00 Uhr lokal)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -861,24 +862,15 @@ fun SettingsScreen(
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
-                                if (uiState.weeklyReviewEnabled) {
-                                    val dayName = weekDayName(uiState.weeklyReviewDay)
-                                    Text(
-                                        "Jeden $dayName um %02d:%02d Uhr"
-                                            .format(
-                                                uiState.weeklyReviewHour,
-                                                uiState.weeklyReviewMinute,
-                                            ),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                } else {
-                                    Text(
-                                        "Wähle einen Tag und eine Uhrzeit",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
+                                Text(
+                                    if (uiState.weeklyReviewEnabled) "Erinnerung an"
+                                    else "Sonntags um 15:00 Uhr",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color =
+                                        if (uiState.weeklyReviewEnabled)
+                                            MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                             Switch(
                                 checked = uiState.weeklyReviewEnabled,
@@ -900,7 +892,6 @@ fun SettingsScreen(
                                             if (!hasPermission) {
                                                 pendingPermissionAction = {
                                                     viewModel.updateWeeklyReviewEnabled(true)
-                                                    showWeeklyPicker = true
                                                 }
                                                 notificationPermissionLauncher.launch(
                                                     android.Manifest.permission.POST_NOTIFICATIONS
@@ -909,7 +900,6 @@ fun SettingsScreen(
                                             }
                                         }
                                         viewModel.updateWeeklyReviewEnabled(true)
-                                        showWeeklyPicker = true
                                     } else {
                                         viewModel.updateWeeklyReviewEnabled(false)
                                     }
@@ -921,18 +911,149 @@ fun SettingsScreen(
                             )
                         }
 
-                        if (showWeeklyPicker) {
-                            WeeklyReviewPickerDialog(
-                                initialDay = uiState.weeklyReviewDay,
-                                initialHour = uiState.weeklyReviewHour,
-                                initialMinute = uiState.weeklyReviewMinute,
-                                onConfirm = { day, h, m ->
-                                    viewModel.updateWeeklyReviewSchedule(day, h, m)
-                                    showWeeklyPicker = false
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Monatsrückblick (letzter Tag des Monats 15:00 Uhr lokal)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Monatsrückblick",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    if (uiState.monthlyReviewEnabled) "Erinnerung an"
+                                    else "Am letzten Tag des Monats um 15:00 Uhr",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color =
+                                        if (uiState.monthlyReviewEnabled)
+                                            MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = uiState.monthlyReviewEnabled,
+                                onCheckedChange = { enabled ->
+                                    if (enabled) {
+                                        if (
+                                            android.os.Build.VERSION.SDK_INT >=
+                                                android.os.Build.VERSION_CODES.TIRAMISU
+                                        ) {
+                                            val hasPermission =
+                                                androidx.core.content.ContextCompat
+                                                    .checkSelfPermission(
+                                                        context,
+                                                        android.Manifest.permission
+                                                            .POST_NOTIFICATIONS,
+                                                    ) ==
+                                                    android.content.pm.PackageManager
+                                                        .PERMISSION_GRANTED
+                                            if (!hasPermission) {
+                                                pendingPermissionAction = {
+                                                    viewModel.updateMonthlyReviewEnabled(true)
+                                                }
+                                                notificationPermissionLauncher.launch(
+                                                    android.Manifest.permission.POST_NOTIFICATIONS
+                                                )
+                                                return@Switch
+                                            }
+                                        }
+                                        viewModel.updateMonthlyReviewEnabled(true)
+                                    } else {
+                                        viewModel.updateMonthlyReviewEnabled(false)
+                                    }
                                 },
-                                onDismiss = { showWeeklyPicker = false },
+                                colors =
+                                    SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    ),
                             )
                         }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Jahresrückblick (31. Dezember 23:00 Uhr lokal)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Jahresrückblick",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    if (uiState.yearlyReviewEnabled) "Erinnerung an"
+                                    else "Am letzten Tag des Jahres um 15:00 Uhr",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color =
+                                        if (uiState.yearlyReviewEnabled)
+                                            MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = uiState.yearlyReviewEnabled,
+                                onCheckedChange = { enabled ->
+                                    if (enabled) {
+                                        if (
+                                            android.os.Build.VERSION.SDK_INT >=
+                                                android.os.Build.VERSION_CODES.TIRAMISU
+                                        ) {
+                                            val hasPermission =
+                                                androidx.core.content.ContextCompat
+                                                    .checkSelfPermission(
+                                                        context,
+                                                        android.Manifest.permission
+                                                            .POST_NOTIFICATIONS,
+                                                    ) ==
+                                                    android.content.pm.PackageManager
+                                                        .PERMISSION_GRANTED
+                                            if (!hasPermission) {
+                                                pendingPermissionAction = {
+                                                    viewModel.updateYearlyReviewEnabled(true)
+                                                }
+                                                notificationPermissionLauncher.launch(
+                                                    android.Manifest.permission.POST_NOTIFICATIONS
+                                                )
+                                                return@Switch
+                                            }
+                                        }
+                                        viewModel.updateYearlyReviewEnabled(true)
+                                    } else {
+                                        viewModel.updateYearlyReviewEnabled(false)
+                                    }
+                                },
+                                colors =
+                                    SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    ),
+                            )
+                        }
+
+                        // Zeitzone immer aktuell halten (ändert sich bei Reisen)
+                        val currentTimezone = java.util.TimeZone.getDefault().id
+                        androidx.compose.runtime.LaunchedEffect(currentTimezone) {
+                            if (uiState.userTimezone != currentTimezone) {
+                                viewModel.setUserTimezone(currentTimezone)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        androidx.compose.material3.HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Zeitzone: $currentTimezone",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
 
@@ -1083,6 +1204,7 @@ fun SettingsScreen(
                                                 .apply()
                                             showScenarioInfoIndex = index
                                             if (index == 4) showCustomPromptDialog = true
+                                            onProfileChanged()
                                         }
                                         .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -1097,6 +1219,7 @@ fun SettingsScreen(
                                             .apply()
                                         showScenarioInfoIndex = index
                                         if (index == 4) showCustomPromptDialog = true
+                                        onProfileChanged()
                                     },
                                     colors =
                                         RadioButtonDefaults.colors(
