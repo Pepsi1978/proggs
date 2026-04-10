@@ -88,6 +88,7 @@ constructor(
             SyncProgressHolder.setUploading(0, filesToUpload.size)
 
             var uploaded = 0
+            var uploadErrors = 0
             for (file in filesToUpload) {
                 try {
                     driveBackupManager.backupFile(file, "photo_${file.name}")
@@ -98,8 +99,12 @@ constructor(
                         "Uploaded ($uploaded/${filesToUpload.size}): ${file.name} (${file.length()} bytes)",
                     )
                 } catch (e: Exception) {
+                    uploadErrors++
                     Log.e("SyncDebug", "Upload failed: ${file.name}: ${e.message}")
                 }
+            }
+            if (uploadErrors > 0) {
+                Log.w("SyncDebug", "$uploadErrors of ${filesToUpload.size} photo uploads failed")
             }
         }
 
