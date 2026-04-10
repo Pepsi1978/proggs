@@ -65,8 +65,10 @@ fun parseRetrospectiveText(text: String): ParsedRetrospective {
             parsingBullets = false
         }
 
-        // Section heading: [Something]
-        val headingMatch = Regex("""^\[(.+?)]$""").find(trimmed)
+        // Section heading: [Something] — also handles **[Something]**, *[Something]*, ###
+        // [Something]
+        val cleaned = trimmed.replace("*", "").replace("#", "").trim()
+        val headingMatch = Regex("""^\[(.+?)]$""").find(cleaned)
         if (headingMatch != null) {
             // Save previous section
             if (currentHeading != null) {
