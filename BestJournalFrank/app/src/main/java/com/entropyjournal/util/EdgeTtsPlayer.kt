@@ -52,6 +52,7 @@ class EdgeTtsPlayer(private val context: Context) {
                 request,
                 object : WebSocketListener() {
                     override fun onOpen(webSocket: WebSocket, response: Response) {
+                        android.util.Log.d("EdgeTTS", "WebSocket connected")
                         val config =
                             "Content-Type:application/json; charset=utf-8\r\n" +
                                 "Path:speech.config\r\n\r\n" +
@@ -66,7 +67,7 @@ class EdgeTtsPlayer(private val context: Context) {
                                 "Content-Type:application/ssml+xml\r\n" +
                                 "Path:ssml\r\n\r\n" +
                                 "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='de-DE'>" +
-                                "<voice name='de-DE-ConradNeural'>$escaped</voice>" +
+                                "<voice name='de-DE-KatjaNeural'>$escaped</voice>" +
                                 "</speak>"
                         webSocket.send(ssml)
                     }
@@ -95,6 +96,7 @@ class EdgeTtsPlayer(private val context: Context) {
                         t: Throwable,
                         response: Response?,
                     ) {
+                        android.util.Log.e("EdgeTTS", "WebSocket failure: ${t.message}", t)
                         try {
                             outputStream.close()
                         } catch (_: Exception) {}
