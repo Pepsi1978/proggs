@@ -42,8 +42,11 @@ constructor(
             .getYearlySummaries()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _isGenerating = MutableStateFlow(true)
+    private val _isGenerating = MutableStateFlow(false)
     val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
+
+    private val _isWaitingForRestore = MutableStateFlow(false)
+    val isWaitingForRestore: StateFlow<Boolean> = _isWaitingForRestore.asStateFlow()
 
     private val _isProfileSwitch = MutableStateFlow(false)
     val isProfileSwitch: StateFlow<Boolean> = _isProfileSwitch.asStateFlow()
@@ -55,6 +58,15 @@ constructor(
     val currentPhotos: StateFlow<List<EntryPhotoEntity>> = _currentPhotos.asStateFlow()
 
     private suspend fun awaitSyncComplete() {
+        _isWaitingForRestore.value = true
+        try {
+            awaitSyncCompleteInternal()
+        } finally {
+            _isWaitingForRestore.value = false
+        }
+    }
+
+    private suspend fun awaitSyncCompleteInternal() {
         // Only wait if user is signed in — no account means no sync can happen
         val prefs =
             try {

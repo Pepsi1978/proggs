@@ -150,6 +150,7 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
     val monthly by viewModel.monthlySummaries.collectAsState()
     val yearly by viewModel.yearlySummaries.collectAsState()
     val isGenerating by viewModel.isGenerating.collectAsState()
+    val isWaitingForRestore by viewModel.isWaitingForRestore.collectAsState()
     val isProfileSwitch by viewModel.isProfileSwitch.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
@@ -251,7 +252,7 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                     }
                 }
 
-                if (isGenerating) {
+                if (isWaitingForRestore || isGenerating) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
                         com.bestjournal.app.ui.components.ShimmerLoadingEffect(
@@ -270,9 +271,13 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                if (isProfileSwitch)
-                                    "Rückblicke werden nach Profilwechsel automatisch aktualisiert"
-                                else "Rückblicke werden erstellt\u2026",
+                                when {
+                                    isWaitingForRestore ->
+                                        "Backup wird geladen\u2026 Rückblicke starten danach automatisch."
+                                    isProfileSwitch ->
+                                        "Rückblicke werden nach Profilwechsel automatisch aktualisiert"
+                                    else -> "Rückblicke werden erstellt\u2026"
+                                },
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
