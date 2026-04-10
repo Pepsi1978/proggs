@@ -118,7 +118,7 @@ REGELN:
 - Hebe Positives besonders hervor — Erfolge, schöne Momente, Fortschritte — aber verschweige Herausforderungen und Rückschläge nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
 - Wendepunkte und persönliches Wachstum verdienen besondere Aufmerksamkeit
 - Schreibe warm und persönlich, aber nicht übertrieben emotional — wie ein guter Freund der zurückblickt
-- Mindestens 300 Wörter
+- Mindestens 200 Wörter
 - Sprache: Deutsch$profileStyle
 
 EINTRÄGE DER WOCHE:
@@ -251,7 +251,7 @@ REGELN:
 - Hebe Positives besonders hervor — aber verschweige Herausforderungen und Rückschläge nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
 - Wendepunkte, persönliches Wachstum und wiederkehrende Muster verdienen besondere Aufmerksamkeit
 - Schreibe warm und persönlich, aber nicht übertrieben — wie ein guter Freund der den Monat zusammenfasst
-- Mindestens 400 Wörter
+- Mindestens 300 Wörter
 - Sprache: Deutsch$profileStyle
 
 WOCHENRÜCKBLICKE:
@@ -370,7 +370,7 @@ REGELN:
 - Wendepunkte und persönliches Wachstum verdienen besondere Aufmerksamkeit
 - Schließe mit einem Gedanken der nach vorne blickt
 - Schreibe warm und persönlich, aber nicht übertrieben — wie ein guter Freund der das Jahr zusammenfasst
-- Mindestens 500 Wörter
+- Mindestens 400 Wörter
 - Sprache: Deutsch$profileStyle
 
 MONATSRÜCKBLICKE:
