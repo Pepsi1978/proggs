@@ -1,10 +1,12 @@
 package com.bestjournal.app.data.remote.ai
 
 import com.google.firebase.Firebase
+import com.google.firebase.ai.GenerativeModel
 import com.google.firebase.ai.ai
 import com.google.firebase.ai.type.GenerativeBackend
 import com.google.firebase.ai.type.content
 import com.google.firebase.ai.type.generationConfig
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,22 +18,35 @@ class FirebaseAiService @Inject constructor() {
         const val MODEL_FLASH_LITE = "gemini-2.5-flash-lite"
     }
 
+    private data class ModelCacheKey(
+        val modelName: String,
+        val temperature: Float,
+        val maxOutputTokens: Int,
+        val systemPrompt: String?,
+    )
+
+    private val modelCache = ConcurrentHashMap<ModelCacheKey, GenerativeModel>()
+
     private fun createModel(
         modelName: String = MODEL_FLASH_LITE,
         temperature: Float = 0.4f,
         maxOutputTokens: Int = 8192,
         systemPrompt: String? = null,
-    ) =
-        Firebase.ai(backend = GenerativeBackend.googleAI())
-            .generativeModel(
-                modelName = modelName,
-                generationConfig =
-                    generationConfig {
-                        this.temperature = temperature
-                        this.maxOutputTokens = maxOutputTokens
-                    },
-                systemInstruction = systemPrompt?.let { content { text(it) } },
-            )
+    ): GenerativeModel {
+        val key = ModelCacheKey(modelName, temperature, maxOutputTokens, systemPrompt)
+        return modelCache.getOrPut(key) {
+            Firebase.ai(backend = GenerativeBackend.googleAI())
+                .generativeModel(
+                    modelName = modelName,
+                    generationConfig =
+                        generationConfig {
+                            this.temperature = temperature
+                            this.maxOutputTokens = maxOutputTokens
+                        },
+                    systemInstruction = systemPrompt?.let { content { text(it) } },
+                )
+        }
+    }
 
     suspend fun generateContent(
         prompt: String,

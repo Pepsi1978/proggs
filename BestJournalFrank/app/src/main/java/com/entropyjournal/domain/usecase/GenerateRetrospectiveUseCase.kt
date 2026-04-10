@@ -11,7 +11,13 @@ import com.entropyjournal.util.Constants
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 class GenerateRetrospectiveUseCase
 @Inject
@@ -22,9 +28,10 @@ constructor(
     private val encryptedPrefs: SharedPreferences,
 ) {
     companion object {
-        // Use a more capable model for the longer retrospective texts
         private const val MODEL_FLASH = "gemini-2.5-flash"
         private const val MODEL_FLASH_LITE = "gemini-2.5-flash-lite"
+        /** Max concurrent AI API calls to avoid rate limiting */
+        private const val MAX_PARALLEL = 3
     }
 
     private val dfLabel = SimpleDateFormat("dd.MM.", Locale.GERMANY)
@@ -67,7 +74,7 @@ constructor(
                 )
             val response =
                 geminiApi.generateContent(model = modelName, apiKey = apiKey, request = request)
-            val text = response.extractText()
+            val text = response.extractText()?.replace("—", ", ")
             if (text != null) Result.success(text)
             else Result.failure(Exception("No response text from Gemini"))
         } catch (e: Exception) {
@@ -79,11 +86,13 @@ constructor(
      * Main entry point: generates all missing weekly, monthly and yearly reviews. Returns the
      * number of new reviews generated.
      */
-    var lastFailureCount: Int = 0
-        private set
+    /** Number of AI failures in last generateMissing() run — thread-safe for parallel generation */
+    private val _lastFailureCount = AtomicInteger(0)
+    val lastFailureCount: Int
+        get() = _lastFailureCount.get()
 
     suspend fun generateMissing(): Int {
-        lastFailureCount = 0
+        _lastFailureCount.set(0)
         // Cleanup: remove monthly reviews for months without actual diary entries
         cleanupOrphanedMonthlyReviews()
         var generated = 0
@@ -100,15 +109,19 @@ constructor(
 
     // ── Weekly ──────────────────────────────────────────────────────────────
 
+    private data class WeeklyTask(
+        val weekStart: Calendar,
+        val weekEnd: Calendar,
+        val entriesText: String,
+    )
+
     private suspend fun generateMissingWeekly(): Int {
         val now = Calendar.getInstance()
-        var generated = 0
 
-        // Go back up to 8 weeks to catch up missed weeks
+        // Phase 1: Collect all weeks that need generation
+        val tasks = mutableListOf<WeeklyTask>()
         for (weeksBack in 1..8) {
             val (weekStart, weekEnd) = getWeekRange(weeksBack)
-
-            // Time gate: Sunday 15:00 of that week must have passed
             val deadline =
                 Calendar.getInstance().apply {
                     timeInMillis = weekEnd.timeInMillis
@@ -118,27 +131,55 @@ constructor(
                     set(Calendar.MILLISECOND, 0)
                 }
             if (deadline.timeInMillis > now.timeInMillis) continue
-
-            // Skip if already generated
             if (retroRepo.existsForPeriod("WEEKLY", weekStart.timeInMillis)) continue
-
-            // Get entries for this week — need at least 2
             val entries = journalDao.getEntriesBetween(weekStart.timeInMillis, weekEnd.timeInMillis)
             if (entries.size < 2) {
                 Log.d("Retro", "Week ${weeksBack}w ago: only ${entries.size} entries, skipping")
                 continue
             }
-
-            Log.d("Retro", "Generating weekly review for ${dfFull.format(weekStart.time)}...")
-
             val entriesText =
                 entries.joinToString("\n\n---\n\n") { entry ->
                     val date = dfFull.format(entry.timestamp)
-                    val text = entry.displayText
-                    "[$date]\n$text"
+                    "[$date]\n${entry.displayText}"
                 }
+            tasks.add(WeeklyTask(weekStart, weekEnd, entriesText))
+        }
 
-            val profileStyle = getProfileStyleInstruction()
+        if (tasks.isEmpty()) return 0
+        Log.d("Retro", "Generating ${tasks.size} weekly reviews in parallel...")
+
+        // Phase 2: Generate all in parallel (max MAX_PARALLEL concurrent API calls)
+        val semaphore = Semaphore(MAX_PARALLEL)
+        val generated = AtomicInteger(0)
+        val profileStyle = getProfileStyleInstruction()
+
+        coroutineScope {
+            tasks
+                .map { task ->
+                    async {
+                        semaphore.withPermit {
+                            generateSingleWeekly(task, profileStyle)?.let { entity ->
+                                retroRepo.insert(entity)
+                                generated.incrementAndGet()
+                                Log.d(
+                                    "Retro",
+                                    "Weekly review saved: ${entity.periodLabel} — ${entity.title}",
+                                )
+                            }
+                        }
+                    }
+                }
+                .awaitAll()
+        }
+
+        return generated.get()
+    }
+
+    private suspend fun generateSingleWeekly(
+        task: WeeklyTask,
+        profileStyle: String,
+    ): RetrospectiveSummaryEntity? {
+        try {
             val prompt =
                 """Du bist ein Erzähler, der aus Tagebucheinträgen einen natürlichen, gut lesbaren Wochenrückblick schreibt.
 
@@ -162,17 +203,11 @@ REGELN:
 - Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 200 Wörter
+- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
 - Sprache: Deutsch$profileStyle
 
 EINTRÄGE DER WOCHE:
-$entriesText"""
-
-            val titlePrompt =
-                """Basierend auf diesem Wochenrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter).
-Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen.
-
-Rückblick:
-"""
+${task.entriesText}"""
 
             val result =
                 generateContent(
@@ -184,16 +219,22 @@ Rückblick:
 
             if (result.isFailure) {
                 Log.e("Retro", "Weekly AI failed: ${result.exceptionOrNull()?.message}")
-                lastFailureCount++
-                continue
+                _lastFailureCount.incrementAndGet()
+                return null
             }
 
             val summaryText = result.getOrThrow().trim()
 
-            // Generate title
+            val titlePrompt =
+                """Basierend auf diesem Wochenrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter).
+Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).
+
+Rückblick:
+${summaryText.take(500)}"""
+
             val titleResult =
                 generateContent(
-                    prompt = titlePrompt + summaryText.take(500),
+                    prompt = titlePrompt,
                     modelName = MODEL_FLASH_LITE,
                     temperature = 0.6f,
                     maxOutputTokens = 50,
@@ -201,11 +242,10 @@ Rückblick:
             val title = titleResult.getOrNull()?.trim()?.take(60) ?: "Wochenrückblick"
 
             val weekOfMonth =
-                if (weekStart.get(Calendar.MONTH) != weekEnd.get(Calendar.MONTH)) {
-                    // Week crosses month boundary → counts as Week 1 of the new month
+                if (task.weekStart.get(Calendar.MONTH) != task.weekEnd.get(Calendar.MONTH)) {
                     1
                 } else {
-                    weekStart.get(Calendar.DAY_OF_MONTH).let { day ->
+                    task.weekStart.get(Calendar.DAY_OF_MONTH).let { day ->
                         when {
                             day <= 7 -> 1
                             day <= 14 -> 2
@@ -216,36 +256,42 @@ Rückblick:
                 }
 
             val label =
-                "Woche $weekOfMonth (${dfLabel.format(weekStart.time)} - ${dfLabel.format(weekEnd.time)})"
+                "Woche $weekOfMonth (${dfLabel.format(task.weekStart.time)} - ${dfLabel.format(task.weekEnd.time)})"
 
-            retroRepo.insert(
-                RetrospectiveSummaryEntity(
-                    type = "WEEKLY",
-                    periodLabel = label,
-                    startDate = weekStart.timeInMillis,
-                    endDate = weekEnd.timeInMillis,
-                    title = title,
-                    summaryText = summaryText,
-                    periodIndex = weekOfMonth,
-                )
+            return RetrospectiveSummaryEntity(
+                type = "WEEKLY",
+                periodLabel = label,
+                startDate = task.weekStart.timeInMillis,
+                endDate = task.weekEnd.timeInMillis,
+                title = title,
+                summaryText = summaryText,
+                periodIndex = weekOfMonth,
             )
-            generated++
-            Log.d("Retro", "Weekly review saved: $label — $title")
+        } catch (e: Exception) {
+            Log.e("Retro", "Weekly generation failed: ${e.message}")
+            _lastFailureCount.incrementAndGet()
+            return null
         }
-        return generated
     }
 
     // ── Monthly ─────────────────────────────────────────────────────────────
 
+    private data class MonthlyTask(
+        val monthStart: Calendar,
+        val monthEnd: Calendar,
+        val weeksText: String,
+        val monthName: String,
+        val month: Int,
+        val year: Int,
+    )
+
     private suspend fun generateMissingMonthly(): Int {
         val now = Calendar.getInstance()
-        var generated = 0
 
-        // Go back up to 3 months to catch up
+        // Phase 1: Collect all months that need generation
+        val tasks = mutableListOf<MonthlyTask>()
         for (monthsBack in 1..3) {
             val (monthStart, monthEnd) = getMonthRange(monthsBack)
-
-            // Time gate: last day of month 15:00 must have passed
             val deadline =
                 Calendar.getInstance().apply {
                     timeInMillis = monthEnd.timeInMillis
@@ -255,19 +301,13 @@ Rückblick:
                     set(Calendar.MILLISECOND, 0)
                 }
             if (deadline.timeInMillis > now.timeInMillis) continue
-
-            // Skip if already generated
             if (retroRepo.existsForPeriod("MONTHLY", monthStart.timeInMillis)) continue
-
-            // First check: actual diary entries must exist in this month
             val monthEntries =
                 journalDao.getEntriesBetween(monthStart.timeInMillis, monthEnd.timeInMillis)
             if (monthEntries.isEmpty()) {
                 Log.d("Retro", "Month ${monthsBack}m ago: no diary entries in this month, skipping")
                 continue
             }
-
-            // Get weekly reviews for this month
             val weeklyReviews =
                 retroRepo.getByTypeAndRange(
                     "WEEKLY",
@@ -278,23 +318,54 @@ Rückblick:
                 Log.d("Retro", "Month ${monthsBack}m ago: no weekly reviews, skipping")
                 continue
             }
-
-            Log.d("Retro", "Generating monthly review from ${weeklyReviews.size} weekly reviews...")
-
             val weeksText =
                 weeklyReviews.joinToString("\n\n---\n\n") { week ->
                     "[${week.periodLabel}] ${week.title}\n${week.summaryText}"
                 }
-
             val month = monthStart.get(Calendar.MONTH)
             val year = monthStart.get(Calendar.YEAR)
-            val monthName = monthNames[month]
+            tasks.add(MonthlyTask(monthStart, monthEnd, weeksText, monthNames[month], month, year))
+        }
 
-            val profileStyle = getProfileStyleInstruction()
+        if (tasks.isEmpty()) return 0
+        Log.d("Retro", "Generating ${tasks.size} monthly reviews in parallel...")
+
+        // Phase 2: Generate all in parallel
+        val semaphore = Semaphore(MAX_PARALLEL)
+        val generated = AtomicInteger(0)
+        val profileStyle = getProfileStyleInstruction()
+
+        coroutineScope {
+            tasks
+                .map { task ->
+                    async {
+                        semaphore.withPermit {
+                            generateSingleMonthly(task, profileStyle)?.let { entity ->
+                                retroRepo.insert(entity)
+                                generated.incrementAndGet()
+                                Log.d(
+                                    "Retro",
+                                    "Monthly review saved: ${entity.periodLabel} — ${entity.title}",
+                                )
+                            }
+                        }
+                    }
+                }
+                .awaitAll()
+        }
+
+        return generated.get()
+    }
+
+    private suspend fun generateSingleMonthly(
+        task: MonthlyTask,
+        profileStyle: String,
+    ): RetrospectiveSummaryEntity? {
+        try {
             val prompt =
                 """Du bist ein Erzähler, der aus Wochenrückblicken einen natürlichen, gut lesbaren Monatsrückblick schreibt.
 
-AUFGABE: Fasse die folgenden Wochenrückblicke zu einem strukturierten Monatsrückblick für $monthName $year zusammen.
+AUFGABE: Fasse die folgenden Wochenrückblicke zu einem strukturierten Monatsrückblick für ${task.monthName} ${task.year} zusammen.
 
 FORMAT (bitte genau einhalten):
 1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (4-6 Punkte), jeweils mit "• " am Anfang
@@ -315,17 +386,11 @@ REGELN:
 - Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 300 Wörter
+- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
 - Sprache: Deutsch$profileStyle
 
 WOCHENRÜCKBLICKE:
-$weeksText"""
-
-            val titlePrompt =
-                """Basierend auf diesem Monatsrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter).
-Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen.
-
-Rückblick:
-"""
+${task.weeksText}"""
 
             val result =
                 generateContent(
@@ -337,35 +402,42 @@ Rückblick:
 
             if (result.isFailure) {
                 Log.e("Retro", "Monthly AI failed: ${result.exceptionOrNull()?.message}")
-                lastFailureCount++
-                continue
+                _lastFailureCount.incrementAndGet()
+                return null
             }
 
             val summaryText = result.getOrThrow().trim()
+
+            val titlePrompt =
+                """Basierend auf diesem Monatsrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter).
+Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).
+
+Rückblick:
+${summaryText.take(500)}"""
+
             val titleResult =
                 generateContent(
-                    prompt = titlePrompt + summaryText.take(500),
+                    prompt = titlePrompt,
                     modelName = MODEL_FLASH_LITE,
                     temperature = 0.6f,
                     maxOutputTokens = 50,
                 )
             val title = titleResult.getOrNull()?.trim()?.take(60) ?: "Monatsrückblick"
 
-            retroRepo.insert(
-                RetrospectiveSummaryEntity(
-                    type = "MONTHLY",
-                    periodLabel = "$monthName $year",
-                    startDate = monthStart.timeInMillis,
-                    endDate = monthEnd.timeInMillis,
-                    title = title,
-                    summaryText = summaryText,
-                    periodIndex = month + 1,
-                )
+            return RetrospectiveSummaryEntity(
+                type = "MONTHLY",
+                periodLabel = "${task.monthName} ${task.year}",
+                startDate = task.monthStart.timeInMillis,
+                endDate = task.monthEnd.timeInMillis,
+                title = title,
+                summaryText = summaryText,
+                periodIndex = task.month + 1,
             )
-            generated++
-            Log.d("Retro", "Monthly review saved: $monthName $year — $title")
+        } catch (e: Exception) {
+            Log.e("Retro", "Monthly generation failed: ${e.message}")
+            _lastFailureCount.incrementAndGet()
+            return null
         }
-        return generated
     }
 
     // ── Yearly ──────────────────────────────────────────────────────────────
@@ -373,7 +445,6 @@ Rückblick:
     private suspend fun generateMissingYearly(): Int {
         val now = Calendar.getInstance()
         val currentYear = now.get(Calendar.YEAR)
-        var generated = 0
 
         // Check only last year
         val year = currentYear - 1
@@ -388,18 +459,14 @@ Rückblick:
                 set(Calendar.MILLISECOND, 999)
             }
 
-        // Time gate: Dec 31 15:00 of that year must have passed
         val deadline =
             Calendar.getInstance().apply {
                 set(year, Calendar.DECEMBER, 31, 15, 0, 0)
                 set(Calendar.MILLISECOND, 0)
             }
         if (deadline.timeInMillis > now.timeInMillis) return 0
-
-        // Skip if already generated
         if (retroRepo.existsForPeriod("YEARLY", yearStart.timeInMillis)) return 0
 
-        // Get monthly reviews for this year — need at least 1
         val monthlyReviews =
             retroRepo.getByTypeAndRange("MONTHLY", yearStart.timeInMillis, yearEnd.timeInMillis)
         if (monthlyReviews.isEmpty()) {
@@ -440,17 +507,11 @@ REGELN:
 - Schließe mit einem Gedanken der nach vorne blickt
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 400 Wörter
+- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
 - Sprache: Deutsch$profileStyle
 
 MONATSRÜCKBLICKE:
 $monthsText"""
-
-        val titlePrompt =
-            """Basierend auf diesem Jahresrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter).
-Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen.
-
-Rückblick:
-"""
 
         val result =
             generateContent(
@@ -462,14 +523,22 @@ Rückblick:
 
         if (result.isFailure) {
             Log.e("Retro", "Yearly AI failed: ${result.exceptionOrNull()?.message}")
-            lastFailureCount++
+            _lastFailureCount.incrementAndGet()
             return 0
         }
 
         val summaryText = result.getOrThrow().trim()
+
+        val titlePrompt =
+            """Basierend auf diesem Jahresrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter).
+Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).
+
+Rückblick:
+${summaryText.take(500)}"""
+
         val titleResult =
             generateContent(
-                prompt = titlePrompt + summaryText.take(500),
+                prompt = titlePrompt,
                 modelName = MODEL_FLASH_LITE,
                 temperature = 0.6f,
                 maxOutputTokens = 50,
@@ -487,9 +556,8 @@ Rückblick:
                 periodIndex = year,
             )
         )
-        generated++
         Log.d("Retro", "Yearly review saved: $year — $title")
-        return generated
+        return 1
     }
 
     // ── Cleanup ─────────────────────────────────────────────────────────────
