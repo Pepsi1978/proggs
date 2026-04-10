@@ -3,6 +3,8 @@ package com.entropyjournal.ui.screens.retrospective
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.entropyjournal.data.local.dao.EntryPhotoDao
+import com.entropyjournal.data.local.entity.EntryPhotoEntity
 import com.entropyjournal.data.repository.RetrospectiveRepository
 import com.entropyjournal.domain.usecase.GenerateRetrospectiveUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,6 +23,7 @@ class RetrospectiveViewModel
 constructor(
     private val repository: RetrospectiveRepository,
     private val generateUseCase: GenerateRetrospectiveUseCase,
+    private val entryPhotoDao: EntryPhotoDao,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
 ) : ViewModel() {
 
@@ -47,6 +50,20 @@ constructor(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    private val _currentPhotos = MutableStateFlow<List<EntryPhotoEntity>>(emptyList())
+    val currentPhotos: StateFlow<List<EntryPhotoEntity>> = _currentPhotos.asStateFlow()
+
+    fun loadPhotosForPeriod(startDate: Long, endDate: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                _currentPhotos.value = entryPhotoDao.getPhotosForDateRange(startDate, endDate)
+            } catch (e: Exception) {
+                Log.e("RetroVM", "Failed to load photos: ${e.message}")
+                _currentPhotos.value = emptyList()
+            }
+        }
+    }
 
     init {
         viewModelScope.launch(Dispatchers.IO) {

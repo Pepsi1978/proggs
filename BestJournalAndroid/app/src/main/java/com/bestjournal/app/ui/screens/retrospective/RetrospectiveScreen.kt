@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +59,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +68,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import coil3.compose.AsyncImage
 import com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity
 import com.bestjournal.app.ui.components.SunMoonToggle
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
@@ -145,7 +149,11 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
     var yearlyExpanded by rememberSaveable { mutableStateOf(false) }
 
     selectedSummary?.let { summary ->
-        SummaryDetailDialog(summary = summary, onDismiss = { selectedSummary = null })
+        SummaryDetailDialog(
+            summary = summary,
+            viewModel = viewModel,
+            onDismiss = { selectedSummary = null },
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -358,9 +366,10 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                         Spacer(modifier = Modifier.height(10.dp))
                                     }
                                 }
-                                SummaryEntryCard(
+                                TimelineSummaryEntry(
                                     summary = summary,
                                     color = RetrospectiveColors.forWeek(summary.periodIndex),
+                                    isLast = index == weekly.lastIndex,
                                     onClick = { selectedSummary = summary },
                                 )
                             }
@@ -403,9 +412,10 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                         Spacer(modifier = Modifier.height(10.dp))
                                     }
                                 }
-                                SummaryEntryCard(
+                                TimelineSummaryEntry(
                                     summary = summary,
                                     color = RetrospectiveColors.forMonth(summary.periodIndex),
+                                    isLast = index == monthly.lastIndex,
                                     onClick = { selectedSummary = summary },
                                 )
                             }
@@ -435,14 +445,12 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                             )
                         } else {
                             yearly.forEachIndexed { index, summary ->
-                                SummaryEntryCard(
+                                TimelineSummaryEntry(
                                     summary = summary,
                                     color = RetrospectiveColors.yearColor,
+                                    isLast = index == yearly.lastIndex,
                                     onClick = { selectedSummary = summary },
                                 )
-                                if (index < yearly.lastIndex) {
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                }
                             }
                         }
                     }
@@ -451,6 +459,41 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
+    }
+}
+
+/** Wraps a SummaryEntryCard with a timeline dot + connecting line on the left. */
+@Composable
+private fun TimelineSummaryEntry(
+    summary: RetrospectiveSummaryEntity,
+    color: Color,
+    isLast: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        // Timeline dot + vertical connecting line
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.width(24.dp).padding(top = 8.dp),
+        ) {
+            Box(
+                modifier =
+                    Modifier.size(8.dp)
+                        .clip(CircleShape)
+                        .background(RetrospectiveColors.monthDividerColor)
+            )
+            if (!isLast) {
+                // Connecting line stretches to fill remaining height of the card
+                Box(
+                    modifier =
+                        Modifier.width(2.dp)
+                            .height(80.dp) // approximate card height; line is visual only
+                            .background(RetrospectiveColors.monthDividerColor.copy(alpha = 0.2f))
+                )
+            }
+        }
+        // The actual card fills the remaining width
+        SummaryEntryCard(summary = summary, color = color, onClick = onClick)
     }
 }
 
@@ -630,11 +673,21 @@ private fun Modifier.drawVerticalScrollbar(scrollState: ScrollState, color: Colo
     }
 
 @Composable
-private fun SummaryDetailDialog(summary: RetrospectiveSummaryEntity, onDismiss: () -> Unit) {
+private fun SummaryDetailDialog(
+    summary: RetrospectiveSummaryEntity,
+    viewModel: RetrospectiveViewModel,
+    onDismiss: () -> Unit,
+) {
     val isDark = LocalIsDarkTheme.current
     val context = LocalContext.current
     var isSpeaking by remember { mutableStateOf(false) }
     val tts = remember { EdgeTtsPlayer(context) }
+    val photos by viewModel.currentPhotos.collectAsState()
+
+    // Load photos for this retrospective period when the dialog opens
+    LaunchedEffect(summary.startDate, summary.endDate) {
+        viewModel.loadPhotosForPeriod(summary.startDate, summary.endDate)
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -821,6 +874,32 @@ private fun SummaryDetailDialog(summary: RetrospectiveSummaryEntity, onDismiss: 
                             color = MaterialTheme.colorScheme.onSurface,
                             lineHeight = MaterialTheme.typography.bodyLarge.lineHeight,
                         )
+                    }
+
+                    // Photos & Videos section — shown after timeline, before divider
+                    if (photos.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            "Fotos & Videos",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = RetrospectiveColors.monthDividerColor,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier =
+                                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            photos.forEach { photo ->
+                                AsyncImage(
+                                    model = photo.filePath,
+                                    contentDescription = if (photo.isVideo) "Video" else "Foto",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(120.dp).clip(RoundedCornerShape(12.dp)),
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))

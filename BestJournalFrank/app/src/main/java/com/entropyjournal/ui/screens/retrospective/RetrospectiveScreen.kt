@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -145,7 +147,11 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
     var yearlyExpanded by rememberSaveable { mutableStateOf(false) }
 
     selectedSummary?.let { summary ->
-        SummaryDetailDialog(summary = summary, onDismiss = { selectedSummary = null })
+        SummaryDetailDialog(
+            summary = summary,
+            viewModel = viewModel,
+            onDismiss = { selectedSummary = null },
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -627,11 +633,20 @@ private fun Modifier.drawVerticalScrollbar(scrollState: ScrollState, color: Colo
     }
 
 @Composable
-private fun SummaryDetailDialog(summary: RetrospectiveSummaryEntity, onDismiss: () -> Unit) {
+private fun SummaryDetailDialog(
+    summary: RetrospectiveSummaryEntity,
+    viewModel: RetrospectiveViewModel,
+    onDismiss: () -> Unit,
+) {
     val isDark = LocalIsDarkTheme.current
     val context = LocalContext.current
     var isSpeaking by remember { mutableStateOf(false) }
     val tts = remember { EdgeTtsPlayer(context) }
+    val photos by viewModel.currentPhotos.collectAsState()
+
+    LaunchedEffect(summary.startDate, summary.endDate) {
+        viewModel.loadPhotosForPeriod(summary.startDate, summary.endDate)
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -818,6 +833,32 @@ private fun SummaryDetailDialog(summary: RetrospectiveSummaryEntity, onDismiss: 
                             color = MaterialTheme.colorScheme.onSurface,
                             lineHeight = MaterialTheme.typography.bodyLarge.lineHeight,
                         )
+                    }
+
+                    // Photos & Videos section
+                    if (photos.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            "Fotos & Videos",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = RetrospectiveColors.monthDividerColor,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier =
+                                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            photos.forEach { photo ->
+                                coil3.compose.AsyncImage(
+                                    model = photo.filePath,
+                                    contentDescription = if (photo.isVideo) "Video" else "Foto",
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                    modifier = Modifier.size(120.dp).clip(RoundedCornerShape(12.dp)),
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
