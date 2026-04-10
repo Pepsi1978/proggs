@@ -37,6 +37,19 @@ constructor(
     @ApplicationContext private val context: Context,
     private val encryptedPrefs: SharedPreferences,
 ) {
+    @Volatile private var sessionService: Drive? = null
+
+    private suspend fun getSessionDriveService(): Drive {
+        sessionService?.let {
+            return it
+        }
+        return getDriveService().also { sessionService = it }
+    }
+
+    fun endSession() {
+        sessionService = null
+    }
+
     private suspend fun getDriveService(): Drive =
         withContext(Dispatchers.IO) {
             val accountEmail =
@@ -57,8 +70,36 @@ constructor(
     suspend fun backup(databaseFile: File): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
-                val driveService = getDriveService()
-                uploadFile(driveService, databaseFile, Constants.DRIVE_BACKUP_FILENAME)
+                val driveService = getSessionDriveService()
+
+                val existing =
+                    driveService
+                        .files()
+                        .list()
+                        .setSpaces("appDataFolder")
+                        .setQ("name = '${Constants.DRIVE_BACKUP_FILENAME}'")
+                        .setFields("files(id)")
+                        .execute()
+                val mediaContent = FileContent("application/octet-stream", databaseFile)
+                val existingId = existing.files?.firstOrNull()?.id
+                if (existingId != null) {
+                    driveService.files().update(existingId, null, mediaContent).execute()
+                    existing.files?.drop(1)?.forEach {
+                        driveService.files().delete(it.id).execute()
+                    }
+                } else {
+                    val fileMetadata =
+                        com.google.api.services.drive.model.File().apply {
+                            name = Constants.DRIVE_BACKUP_FILENAME
+                            parents = listOf("appDataFolder")
+                        }
+                    driveService
+                        .files()
+                        .create(fileMetadata, mediaContent)
+                        .setFields("id")
+                        .execute()
+                }
+
                 encryptedPrefs
                     .edit()
                     .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
@@ -103,7 +144,7 @@ constructor(
     ): Result<Int> =
         withContext(Dispatchers.IO) {
             try {
-                val driveService = getDriveService()
+                val driveService = getSessionDriveService()
 
                 // List all existing photo files on Drive in one call (name + size)
                 val existingFiles = mutableMapOf<String, Long>() // name -> size
@@ -154,57 +195,68 @@ constructor(
                         .map { (localFile, remoteName) ->
                             launch {
                                 semaphore.withPermit {
-                                    try {
-                                        // Delete old version if exists on Drive
-                                        if (remoteName in existingFiles) {
-                                            val old =
+                                    var success = false
+                                    for (attempt in 0..1) {
+                                        try {
+                                            if (attempt == 0 && remoteName in existingFiles) {
+                                                val old =
+                                                    driveService
+                                                        .files()
+                                                        .list()
+                                                        .setSpaces("appDataFolder")
+                                                        .setQ("name = '$remoteName'")
+                                                        .setFields("files(id)")
+                                                        .execute()
+                                                old.files?.forEach {
+                                                    driveService.files().delete(it.id).execute()
+                                                }
+                                            }
+
+                                            val fileMetadata =
+                                                com.google.api.services.drive.model.File().apply {
+                                                    name = remoteName
+                                                    parents = listOf("appDataFolder")
+                                                }
+                                            val mediaContent =
+                                                FileContent("application/octet-stream", localFile)
+                                            val createRequest =
                                                 driveService
                                                     .files()
-                                                    .list()
-                                                    .setSpaces("appDataFolder")
-                                                    .setQ("name = '$remoteName'")
-                                                    .setFields("files(id)")
-                                                    .execute()
-                                            old.files?.forEach {
-                                                driveService.files().delete(it.id).execute()
+                                                    .create(fileMetadata, mediaContent)
+                                                    .setFields("id")
+
+                                            if (localFile.length() > RESUMABLE_THRESHOLD) {
+                                                createRequest.mediaHttpUploader?.apply {
+                                                    isDirectUploadEnabled = false
+                                                    chunkSize = 2 * 1024 * 1024
+                                                }
+                                            }
+
+                                            createRequest.execute()
+                                            val current = uploaded.incrementAndGet()
+                                            onProgress(current, files.size)
+                                            android.util.Log.d(
+                                                "DriveBackup",
+                                                "Uploaded ($current/${files.size}): $remoteName (${localFile.length()} bytes)",
+                                            )
+                                            success = true
+                                            break
+                                        } catch (e: Exception) {
+                                            if (attempt == 0) {
+                                                android.util.Log.w(
+                                                    "DriveBackup",
+                                                    "Upload retry ($remoteName): ${e.message}",
+                                                )
+                                                kotlinx.coroutines.delay(1000)
+                                            } else {
+                                                android.util.Log.e(
+                                                    "DriveBackup",
+                                                    "Upload failed ($remoteName): ${e.message}",
+                                                )
                                             }
                                         }
-
-                                        val fileMetadata =
-                                            com.google.api.services.drive.model.File().apply {
-                                                name = remoteName
-                                                parents = listOf("appDataFolder")
-                                            }
-                                        val mediaContent =
-                                            FileContent("application/octet-stream", localFile)
-                                        val createRequest =
-                                            driveService
-                                                .files()
-                                                .create(fileMetadata, mediaContent)
-                                                .setFields("id")
-
-                                        // Resumable upload for large files (> 5 MB)
-                                        if (localFile.length() > RESUMABLE_THRESHOLD) {
-                                            createRequest.mediaHttpUploader?.apply {
-                                                isDirectUploadEnabled = false
-                                                chunkSize = 2 * 1024 * 1024 // 2 MB chunks
-                                            }
-                                        }
-
-                                        createRequest.execute()
-                                        val current = uploaded.incrementAndGet()
-                                        onProgress(current, files.size)
-                                        android.util.Log.d(
-                                            "DriveBackup",
-                                            "Uploaded ($current/${files.size}): $remoteName (${localFile.length()} bytes)",
-                                        )
-                                    } catch (e: Exception) {
-                                        errors.incrementAndGet()
-                                        android.util.Log.e(
-                                            "DriveBackup",
-                                            "Upload failed ($remoteName): ${e.message}",
-                                        )
                                     }
+                                    if (!success) errors.incrementAndGet()
                                 }
                             }
                         }

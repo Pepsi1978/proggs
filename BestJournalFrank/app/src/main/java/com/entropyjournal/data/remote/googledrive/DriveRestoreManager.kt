@@ -169,18 +169,38 @@ constructor(
                             try {
                                 val localName = driveFile.name.removePrefix("photo_")
                                 val localFile = File(targetDir, localName)
-                                FileOutputStream(localFile).use { os ->
-                                    driveService
-                                        .files()
-                                        .get(driveFile.id)
-                                        .executeMediaAndDownloadTo(os)
+                                var success = false
+                                for (attempt in 0..1) { // 1 retry
+                                    try {
+                                        FileOutputStream(localFile).use { os ->
+                                            driveService
+                                                .files()
+                                                .get(driveFile.id)
+                                                .executeMediaAndDownloadTo(os)
+                                        }
+                                        success = true
+                                        break
+                                    } catch (e: Exception) {
+                                        localFile.delete() // clean up partial download
+                                        if (attempt == 0) {
+                                            android.util.Log.w(
+                                                "DriveRestore",
+                                                "Download retry $localName: ${e.message}",
+                                            )
+                                            kotlinx.coroutines.delay(1000)
+                                        } else {
+                                            throw e
+                                        }
+                                    }
                                 }
-                                val current = dlCount.incrementAndGet()
-                                onProgress?.invoke(current, total)
-                                android.util.Log.d(
-                                    "DriveRestore",
-                                    "Restored ($current/$total): $localName (${localFile.length()} bytes)",
-                                )
+                                if (success) {
+                                    val current = dlCount.incrementAndGet()
+                                    onProgress?.invoke(current, total)
+                                    android.util.Log.d(
+                                        "DriveRestore",
+                                        "Restored ($current/$total): $localName (${localFile.length()} bytes)",
+                                    )
+                                }
                             } catch (e: Exception) {
                                 val localName = driveFile.name.removePrefix("photo_")
                                 android.util.Log.e(

@@ -112,6 +112,7 @@ constructor(
             }
         }
 
+        driveBackupManager.endSession()
         SyncProgressHolder.setSynced()
         return Result.success(Unit)
     }
