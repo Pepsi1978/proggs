@@ -6,6 +6,11 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,8 +65,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -680,6 +687,7 @@ private fun SummaryDetailDialog(
     val context = LocalContext.current
     var isSpeaking by remember { mutableStateOf(false) }
     var showShareDialog by remember { mutableStateOf(false) }
+    var fullScreenPhotoPath by remember { mutableStateOf<String?>(null) }
     val tts = remember { EdgeTtsPlayer(context) }
     val photos by viewModel.currentPhotos.collectAsState()
 
@@ -894,7 +902,10 @@ private fun SummaryDetailDialog(
                                     model = photo.filePath,
                                     contentDescription = if (photo.isVideo) "Video" else "Foto",
                                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                    modifier = Modifier.size(120.dp).clip(RoundedCornerShape(12.dp)),
+                                    modifier =
+                                        Modifier.size(120.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable { fullScreenPhotoPath = photo.filePath },
                                 )
                             }
                         }
@@ -1099,6 +1110,158 @@ private fun SummaryDetailDialog(
                 }
             },
         )
+    }
+
+    // Full-screen photo/video viewer with pinch-to-zoom and paging
+    fullScreenPhotoPath?.let { initialPath ->
+        val initialPage = photos.indexOfFirst { it.filePath == initialPath }.coerceAtLeast(0)
+        val pagerState =
+            androidx.compose.foundation.pager.rememberPagerState(initialPage = initialPage) {
+                photos.size
+            }
+        var currentPageZoomed by remember { mutableStateOf(false) }
+
+        Dialog(
+            onDismissRequest = { fullScreenPhotoPath = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+                androidx.compose.foundation.pager.HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    userScrollEnabled = !currentPageZoomed,
+                ) { page ->
+                    var scale by remember { mutableStateOf(1f) }
+                    var offsetX by remember { mutableStateOf(0f) }
+                    var offsetY by remember { mutableStateOf(0f) }
+
+                    LaunchedEffect(scale, pagerState.currentPage) {
+                        if (page == pagerState.currentPage) {
+                            currentPageZoomed = scale > 1f
+                        }
+                    }
+                    LaunchedEffect(pagerState.currentPage) {
+                        if (page != pagerState.currentPage) {
+                            scale = 1f
+                            offsetX = 0f
+                            offsetY = 0f
+                        }
+                    }
+
+                    Box(
+                        modifier =
+                            Modifier.fillMaxSize()
+                                .pointerInput(Unit) {
+                                    awaitEachGesture {
+                                        awaitFirstDown(requireUnconsumed = false)
+                                        do {
+                                            val event = awaitPointerEvent()
+                                            val pressed = event.changes.count { it.pressed }
+                                            if (pressed >= 2) {
+                                                val zoom = event.calculateZoom()
+                                                val pan = event.calculatePan()
+                                                scale = (scale * zoom).coerceIn(1f, 5f)
+                                                if (scale > 1f) {
+                                                    offsetX += pan.x
+                                                    offsetY += pan.y
+                                                    val mx = 1000f * (scale - 1)
+                                                    val my = 1500f * (scale - 1)
+                                                    offsetX = offsetX.coerceIn(-mx, mx)
+                                                    offsetY = offsetY.coerceIn(-my, my)
+                                                } else {
+                                                    offsetX = 0f
+                                                    offsetY = 0f
+                                                }
+                                                event.changes.forEach { it.consume() }
+                                            } else if (pressed == 1 && scale > 1f) {
+                                                val pan = event.calculatePan()
+                                                offsetX += pan.x
+                                                offsetY += pan.y
+                                                val mx = 1000f * (scale - 1)
+                                                val my = 1500f * (scale - 1)
+                                                offsetX = offsetX.coerceIn(-mx, mx)
+                                                offsetY = offsetY.coerceIn(-my, my)
+                                                event.changes.forEach { it.consume() }
+                                            }
+                                        } while (event.changes.any { it.pressed })
+                                    }
+                                }
+                                .pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onDoubleTap = {
+                                            if (scale > 1f) {
+                                                scale = 1f
+                                                offsetX = 0f
+                                                offsetY = 0f
+                                            } else {
+                                                scale = 2.5f
+                                            }
+                                        },
+                                        onTap = { fullScreenPhotoPath = null },
+                                    )
+                                },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (photos[page].isVideo) {
+                            androidx.compose.ui.viewinterop.AndroidView(
+                                factory = { ctx ->
+                                    android.widget.VideoView(ctx).apply {
+                                        setVideoPath(photos[page].filePath)
+                                        setMediaController(
+                                            android.widget.MediaController(ctx).also {
+                                                it.setAnchorView(this)
+                                            }
+                                        )
+                                        setOnPreparedListener { mp ->
+                                            mp.isLooping = false
+                                            start()
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        } else {
+                            coil3.compose.AsyncImage(
+                                model = java.io.File(photos[page].filePath),
+                                contentDescription = "Foto ${page + 1}",
+                                modifier =
+                                    Modifier.fillMaxSize().graphicsLayer {
+                                        scaleX = scale
+                                        scaleY = scale
+                                        translationX = offsetX
+                                        translationY = offsetY
+                                    },
+                                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                            )
+                        }
+                    }
+                }
+                if (photos.size > 1) {
+                    Text(
+                        "${pagerState.currentPage + 1} / ${photos.size}",
+                        modifier =
+                            Modifier.align(Alignment.BottomCenter)
+                                .padding(bottom = 32.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.5f),
+                                    RoundedCornerShape(16.dp),
+                                )
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+                IconButton(
+                    onClick = { fullScreenPhotoPath = null },
+                    modifier =
+                        Modifier.align(Alignment.TopEnd)
+                            .padding(16.dp)
+                            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                ) {
+                    Icon(Icons.Rounded.Close, "Schließen", tint = Color.White)
+                }
+            }
+        }
     }
 }
 
