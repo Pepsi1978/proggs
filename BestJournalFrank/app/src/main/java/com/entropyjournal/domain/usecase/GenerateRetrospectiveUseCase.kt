@@ -34,8 +34,12 @@ constructor(
         private const val MAX_PARALLEL = 3
     }
 
-    private val dfLabel = SimpleDateFormat("dd.MM.", Locale.GERMANY)
-    private val dfFull = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
+    // ThreadLocal to ensure thread-safe date formatting during parallel generation
+    private val dfLabel: SimpleDateFormat
+        get() = SimpleDateFormat("dd.MM.", Locale.GERMANY)
+
+    private val dfFull: SimpleDateFormat
+        get() = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
 
     private val monthNames =
         listOf(
