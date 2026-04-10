@@ -75,7 +75,10 @@ constructor(
     init {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Wait for any active restore/sync to finish before generating reviews
+                // Wait for any active restore/sync to finish before generating reviews.
+                // Initial delay gives SettingsVM time to start downloadMissingPhotos()
+                // and set SyncProgressHolder to DOWNLOADING before we check.
+                kotlinx.coroutines.delay(3000)
                 val syncStatus = com.entropyjournal.domain.usecase.SyncProgressHolder.status
                 if (
                     syncStatus.value ==
@@ -83,16 +86,15 @@ constructor(
                         syncStatus.value ==
                             com.entropyjournal.ui.screens.journal.SyncStatus.UPLOADING
                 ) {
-                    Log.d(
-                        "RetroVM",
-                        "Waiting for restore/sync to finish before generating reviews...",
-                    )
+                    Log.d("RetroVM", "Sync active (${syncStatus.value}), waiting for completion...")
                     syncStatus.first { status ->
                         status != com.entropyjournal.ui.screens.journal.SyncStatus.DOWNLOADING &&
                             status != com.entropyjournal.ui.screens.journal.SyncStatus.UPLOADING
                     }
                     kotlinx.coroutines.delay(2000)
-                    Log.d("RetroVM", "Restore/sync finished, proceeding with review generation")
+                    Log.d("RetroVM", "Sync finished, proceeding with review generation")
+                } else {
+                    Log.d("RetroVM", "No active sync (${syncStatus.value}), proceeding")
                 }
 
                 // One-time cleanup via local flag file (not backed up to Drive)
