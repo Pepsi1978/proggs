@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -56,8 +55,9 @@ constructor(
     val currentPhotos: StateFlow<List<EntryPhotoEntity>> = _currentPhotos.asStateFlow()
 
     /**
-     * Waits until any active sync/restore is complete. Called before every generation path to
-     * ensure diary entries and photos are fully available.
+     * Waits until ALL photos referenced in DB actually exist on disk. After a restore, photos are
+     * downloaded in the background — we must wait for that to complete before generating
+     * retrospectives, otherwise they'll be missing photos.
      */
     private suspend fun awaitSyncComplete() {
         // Only wait if user is signed in — no account means no sync can happen
@@ -87,23 +87,53 @@ constructor(
             return
         }
 
-        // Delay gives SettingsVM time to start downloadMissingPhotos()
-        kotlinx.coroutines.delay(3000)
-        val syncStatus = com.bestjournal.app.domain.usecase.SyncProgressHolder.status
-        val currentStatus = syncStatus.value
-        if (
-            currentStatus == com.bestjournal.app.ui.screens.journal.SyncStatus.DOWNLOADING ||
-                currentStatus == com.bestjournal.app.ui.screens.journal.SyncStatus.UPLOADING
-        ) {
-            Log.d("RetroVM", "Sync active ($currentStatus), waiting for completion...")
-            syncStatus.first { status ->
-                status != com.bestjournal.app.ui.screens.journal.SyncStatus.DOWNLOADING &&
-                    status != com.bestjournal.app.ui.screens.journal.SyncStatus.UPLOADING
+        // Wait until ALL photos referenced in DB actually exist on disk.
+        val dbFile = context.getDatabasePath("entropy_journal_db")
+        if (!dbFile.exists()) return
+
+        val maxWaitMs = 10L * 60 * 1000 // 10 minutes max
+        val start = System.currentTimeMillis()
+        var lastMissing = -1
+
+        while (System.currentTimeMillis() - start < maxWaitMs) {
+            val missing = countMissingPhotos(dbFile)
+            if (missing == 0) {
+                if (lastMissing > 0) {
+                    Log.d("RetroVM", "All photos on disk, proceeding")
+                }
+                break
             }
-            kotlinx.coroutines.delay(2000)
-            Log.d("RetroVM", "Sync finished, proceeding")
-        } else {
-            Log.d("RetroVM", "No active sync ($currentStatus), proceeding")
+            if (missing != lastMissing) {
+                Log.d("RetroVM", "Waiting for $missing photos to download...")
+                lastMissing = missing
+            }
+            kotlinx.coroutines.delay(3000)
+        }
+
+        if (System.currentTimeMillis() - start >= maxWaitMs) {
+            Log.w("RetroVM", "Timeout waiting for photo downloads, proceeding anyway")
+        }
+    }
+
+    private fun countMissingPhotos(dbFile: java.io.File): Int {
+        return try {
+            val db =
+                android.database.sqlite.SQLiteDatabase.openDatabase(
+                    dbFile.path,
+                    null,
+                    android.database.sqlite.SQLiteDatabase.OPEN_READONLY,
+                )
+            val cursor = db.rawQuery("SELECT filePath FROM entry_photos", null)
+            var missing = 0
+            while (cursor.moveToNext()) {
+                val path = cursor.getString(0)
+                if (!java.io.File(path).exists()) missing++
+            }
+            cursor.close()
+            db.close()
+            missing
+        } catch (_: Exception) {
+            0
         }
     }
 

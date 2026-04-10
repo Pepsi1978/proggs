@@ -78,20 +78,34 @@ constructor(
     @Suppress("OPT_IN_USAGE")
     private fun triggerAutoBackup() {
         val email = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null)
-        if (email.isNullOrBlank()) return
+        if (email.isNullOrBlank()) {
+            android.util.Log.w("SyncDebug", "triggerAutoBackup: skipped — no email")
+            return
+        }
+        android.util.Log.d("SyncDebug", "triggerAutoBackup: scheduled in 5s")
         autoBackupJob?.cancel()
         autoBackupJob =
             kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                 delay(5000)
                 try {
+                    android.util.Log.d("SyncDebug", "triggerAutoBackup: starting backup now")
                     encryptedPrefs.edit().putBoolean(Constants.PREF_SYNC_IN_PROGRESS, true).apply()
-                    syncWithDriveUseCase.backup()
+                    val result = syncWithDriveUseCase.backup()
+                    if (result.isSuccess) {
+                        android.util.Log.d("SyncDebug", "triggerAutoBackup: backup SUCCESS")
+                    } else {
+                        android.util.Log.e(
+                            "SyncDebug",
+                            "triggerAutoBackup: backup FAILED: ${result.exceptionOrNull()?.message}",
+                        )
+                    }
                     encryptedPrefs
                         .edit()
                         .putBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
                         .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
                         .apply()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    android.util.Log.e("SyncDebug", "triggerAutoBackup: EXCEPTION: ${e.message}", e)
                     encryptedPrefs.edit().putBoolean(Constants.PREF_SYNC_IN_PROGRESS, false).apply()
                 }
             }
