@@ -13,9 +13,13 @@ import com.google.api.services.drive.DriveScopes
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 
 @Singleton
@@ -152,26 +156,44 @@ constructor(
                 android.util.Log.d("DriveRestore", "Files to download: $total")
                 onProgress?.invoke(0, total)
 
-                // Second pass: download files with progress
-                var count = 0
-                for (driveFile in filesToDownload) {
-                    val localName = driveFile.name.removePrefix("photo_")
-                    val localFile = File(targetDir, localName)
-                    try {
-                        FileOutputStream(localFile).use { os ->
-                            driveService.files().get(driveFile.id).executeMediaAndDownloadTo(os)
+                // Second pass: parallel downloads with Semaphore(3)
+                val dlSemaphore = Semaphore(3)
+                val dlCount = AtomicInteger(0)
+
+                coroutineScope {
+                    val dlJobs = filesToDownload.map { driveFile ->
+                        launch {
+                            dlSemaphore.acquire()
+                            try {
+                                val localName = driveFile.name.removePrefix("photo_")
+                                val localFile = File(targetDir, localName)
+                                FileOutputStream(localFile).use { os ->
+                                    driveService
+                                        .files()
+                                        .get(driveFile.id)
+                                        .executeMediaAndDownloadTo(os)
+                                }
+                                val current = dlCount.incrementAndGet()
+                                onProgress?.invoke(current, total)
+                                android.util.Log.d(
+                                    "DriveRestore",
+                                    "Restored ($current/$total): $localName (${localFile.length()} bytes)",
+                                )
+                            } catch (e: Exception) {
+                                val localName = driveFile.name.removePrefix("photo_")
+                                android.util.Log.e(
+                                    "DriveRestore",
+                                    "Failed: $localName: ${e.message}",
+                                )
+                            } finally {
+                                dlSemaphore.release()
+                            }
                         }
-                        count++
-                        onProgress?.invoke(count, total)
-                        android.util.Log.d(
-                            "DriveRestore",
-                            "Restored ($count/$total): $localName (${localFile.length()} bytes)",
-                        )
-                    } catch (e: Exception) {
-                        android.util.Log.e("DriveRestore", "Failed: $localName: ${e.message}")
                     }
+                    for (j in dlJobs) j.join()
                 }
 
+                val count = dlCount.get()
                 android.util.Log.d(
                     "DriveRestore",
                     "restoreAllPhotos complete: $count files restored",
