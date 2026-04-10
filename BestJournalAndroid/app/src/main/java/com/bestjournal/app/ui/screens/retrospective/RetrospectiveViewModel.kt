@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -75,6 +76,27 @@ constructor(
     init {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                // Wait for any active restore/sync to finish before generating reviews
+                val syncStatus = com.bestjournal.app.domain.usecase.SyncProgressHolder.status
+                if (
+                    syncStatus.value ==
+                        com.bestjournal.app.ui.screens.journal.SyncStatus.DOWNLOADING ||
+                        syncStatus.value ==
+                            com.bestjournal.app.ui.screens.journal.SyncStatus.UPLOADING
+                ) {
+                    Log.d(
+                        "RetroVM",
+                        "Waiting for restore/sync to finish before generating reviews...",
+                    )
+                    syncStatus.first { status ->
+                        status != com.bestjournal.app.ui.screens.journal.SyncStatus.DOWNLOADING &&
+                            status != com.bestjournal.app.ui.screens.journal.SyncStatus.UPLOADING
+                    }
+                    // Extra delay to let DB writes settle after restore
+                    kotlinx.coroutines.delay(2000)
+                    Log.d("RetroVM", "Restore/sync finished, proceeding with review generation")
+                }
+
                 // One-time cleanup via local flag file (not backed up to Drive)
                 val flagFile = java.io.File(context.filesDir, ".retro_cleaned_v3")
                 if (!flagFile.exists()) {
