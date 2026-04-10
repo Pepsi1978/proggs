@@ -104,23 +104,21 @@ constructor(
 
             val profileStyle = getProfileStyleInstruction()
             val prompt =
-                """Du bist ein begnadeter Erzähler, der aus Tagebucheinträgen einen mitreißenden, emotionalen Wochenrückblick schreibt — wie der Erzähler eines persönlichen Romans.
+                """Du bist ein Erzähler, der aus Tagebucheinträgen einen natürlichen, gut lesbaren Wochenrückblick schreibt.
 
-AUFGABE: Verwandle die folgenden Tagebucheinträge in einen ausführlichen, packenden Wochenrückblick, der sich liest wie ein Kapitel aus dem Leben des Lesers.
+AUFGABE: Fasse die folgenden Tagebucheinträge zu einem zusammenhängenden Wochenrückblick zusammen.
 
 REGELN:
 - Schreibe in der Du-Form, als würde das Tagebuch selbst zurückblicken
-- Keine Anrede, keine Grußformel, keine Höflichkeitsfloskeln — direkt rein in die Erzählung
-- Erzählender, fließender Stil — kein Markdown, keine Aufzählungen, keine Überschriften
-- Beginne nie mit "Diese Woche" — finde einen packenden, emotionalen Einstieg der sofort fesselt
-- Erwähne konkrete Ereignisse, Gefühle, Gedanken und Erkenntnisse aus den Einträgen — mit lebendigen Details
-- Beschreibe Emotionen nicht nur oberflächlich, sondern gehe in die Tiefe: Was hat sich angefühlt? Was hat es ausgelöst? Was hat es verändert?
-- Baue Spannung auf — erzähle nicht chronologisch, sondern nach emotionalem Gewicht
-- Alltägliches (Essen, Wetter, Routinen) nur erwähnen, wenn es emotional oder inhaltlich bedeutsam war
-- Hebe Wendepunkte, Erkenntnisse und persönliches Wachstum besonders hervor — sie sind die Höhepunkte der Erzählung
-- Schließe mit einem Satz, der nachklingt und zum Nachdenken anregt
-- Betone besonders die positiven Dinge — Erfolge, schöne Momente, Fortschritte — aber verschweige weder Herausforderungen noch Rückschläge. Erkenntnisse aus schwierigen Momenten sind genauso wertvoll
-- Mindestens 400 Wörter — lieber mehr, nimm dir Raum für die Geschichte
+- Keine Anrede, keine Grußformel — direkt in die Erzählung
+- Fließender Stil mit guten Übergängen — kein Markdown, keine Aufzählungen, keine Überschriften
+- Beginne nie mit "Diese Woche" — finde einen natürlichen Einstieg
+- Erwähne konkrete Ereignisse, Gefühle und Erkenntnisse aus den Einträgen
+- Alltägliches nur erwähnen, wenn es bedeutsam war
+- Hebe Positives besonders hervor — Erfolge, schöne Momente, Fortschritte — aber verschweige Herausforderungen und Rückschläge nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
+- Wendepunkte und persönliches Wachstum verdienen besondere Aufmerksamkeit
+- Schreibe warm und persönlich, aber nicht übertrieben emotional — wie ein guter Freund der zurückblickt
+- Mindestens 300 Wörter
 - Sprache: Deutsch$profileStyle
 
 EINTRÄGE DER WOCHE:
@@ -238,23 +236,22 @@ Rückblick:
 
             val profileStyle = getProfileStyleInstruction()
             val prompt =
-                """Du bist ein begnadeter Erzähler, der aus Wochenrückblicken einen mitreißenden, emotionalen Monatsrückblick schreibt — wie ein Essay über einen prägenden Lebensabschnitt.
+                """Du bist ein Erzähler, der aus Wochenrückblicken einen natürlichen, gut lesbaren Monatsrückblick schreibt.
 
-AUFGABE: Verwandle die folgenden Wochenrückblicke in einen ausführlichen, packenden Monatsrückblick für $monthName $year — eine zusammenhängende Geschichte, die den Leser emotional berührt.
+AUFGABE: Fasse die folgenden Wochenrückblicke zu einem zusammenhängenden Monatsrückblick für $monthName $year zusammen.
 
 REGELN:
 - Schreibe in der Du-Form, als würde das Tagebuch selbst auf den Monat zurückblicken
-- Keine Anrede, keine Grußformel, keine Höflichkeitsfloskeln — direkt rein in die Erzählung
-- Erzählender, fließender Stil — kein Markdown, keine Aufzählungen, keine Überschriften
-- Beginne nie mit "Dieser Monat" — finde einen packenden Einstieg der den Leser sofort in den Monat hineinzieht
-- Ziehe tiefe Verbindungen zwischen den Wochen — zeige Entwicklungsbögen, rote Fäden, innere Veränderungen und emotionale Reisen über den Monat hinweg
-- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verwebe sie kunstvoll zu einer Gesamterzählung mit Spannungsbogen
-- Gehe in die emotionale Tiefe: Was hat der Monat mit dem Leser gemacht? Wie hat er sich verändert? Was hat er gelernt?
-- Alltägliches nur erwähnen, wenn es emotional oder inhaltlich bedeutsam war
-- Hebe Wendepunkte, tiefe Erkenntnisse, persönliches Wachstum und wiederkehrende Muster besonders hervor
-- Schließe mit einem Gedanken, der nachklingt und den Monat auf den Punkt bringt
-- Betone besonders die positiven Dinge — Erfolge, schöne Momente, Fortschritte — aber verschweige weder Herausforderungen noch Rückschläge. Erkenntnisse aus schwierigen Momenten sind genauso wertvoll
-- Mindestens 500 Wörter — nimm dir Raum, dieser Monat verdient eine ausführliche Geschichte
+- Keine Anrede, keine Grußformel — direkt in die Erzählung
+- Fließender Stil mit guten Übergängen — kein Markdown, keine Aufzählungen, keine Überschriften
+- Beginne nie mit "Dieser Monat" — finde einen natürlichen Einstieg
+- Ziehe Verbindungen zwischen den Wochen — zeige Entwicklungen und rote Fäden über den Monat hinweg
+- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verbinde sie thematisch
+- Alltägliches nur erwähnen, wenn es bedeutsam war
+- Hebe Positives besonders hervor — aber verschweige Herausforderungen und Rückschläge nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
+- Wendepunkte, persönliches Wachstum und wiederkehrende Muster verdienen besondere Aufmerksamkeit
+- Schreibe warm und persönlich, aber nicht übertrieben — wie ein guter Freund der den Monat zusammenfasst
+- Mindestens 400 Wörter
 - Sprache: Deutsch$profileStyle
 
 WOCHENRÜCKBLICKE:
@@ -356,24 +353,24 @@ Rückblick:
 
         val profileStyle = getProfileStyleInstruction()
         val prompt =
-            """Du bist ein begnadeter Erzähler, der aus Monatsrückblicken ein episches, emotionales Jahresresümee schreibt — wie eine Autobiografie in Kurzform, die den Leser zu Tränen rührt und gleichzeitig Kraft gibt.
+            """Du bist ein Erzähler, der aus Monatsrückblicken einen natürlichen, gut lesbaren Jahresrückblick schreibt.
 
-AUFGABE: Verwandle die folgenden Monatsrückblicke in einen ausführlichen, zutiefst persönlichen Jahresrückblick für $year — eine Geschichte über Veränderung, Wachstum und die leisen und lauten Momente eines ganzen Lebensjahres.
+AUFGABE: Fasse die folgenden Monatsrückblicke zu einem zusammenhängenden Jahresrückblick für $year zusammen.
 
 REGELN:
 - Schreibe in der Du-Form, als würde das Tagebuch selbst auf das Jahr zurückblicken
-- Keine Anrede, keine Grußformel, keine Höflichkeitsfloskeln — direkt rein in die Erzählung
-- Erzählender, fließender Stil — kein Markdown, keine Aufzählungen, keine Überschriften
-- Beginne nie mit "Dieses Jahr" — finde einen kraftvollen, emotionalen Einstieg der sofort unter die Haut geht
-- Erzähle das Jahr wie einen Roman: mit Spannungsbogen, Wendepunkten, stillen Momenten und großen Durchbrüchen
-- Ziehe tiefe Verbindungen zwischen den Monaten — zeige wie sich Themen entwickelt, verändert und manchmal aufgelöst haben
-- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verwebe sie kunstvoll zu einem großen Ganzen
-- Erkenne die zwei oder drei großen Lebensthemen des Jahres und erzähle sie wie Handlungsstränge
-- Gehe in die emotionale Tiefe: Was hat das Jahr mit dem Leser gemacht? Wer war er am Anfang, wer ist er jetzt?
-- Hebe die entscheidenden Wendepunkte, die tiefsten Erkenntnisse und das prägendste Wachstum hervor
-- Schließe mit einem Absatz der nachhallt — ein Blick nach vorne, getragen von allem was hinter einem liegt
-- Betone besonders die positiven Dinge — Erfolge, schöne Momente, Fortschritte — aber verschweige weder Herausforderungen noch Rückschläge. Erkenntnisse aus schwierigen Momenten sind genauso wertvoll
-- Mindestens 700 Wörter — dieses Jahr verdient eine ausführliche, würdige Geschichte
+- Keine Anrede, keine Grußformel — direkt in die Erzählung
+- Fließender Stil mit guten Übergängen — kein Markdown, keine Aufzählungen, keine Überschriften
+- Beginne nie mit "Dieses Jahr" — finde einen natürlichen Einstieg
+- Ziehe Verbindungen zwischen den Monaten — zeige Entwicklungen und Veränderungen über das Jahr hinweg
+- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verbinde sie thematisch zu einem Gesamtbild
+- Erkenne die großen Themen des Jahres und ordne Ereignisse in diese Linien ein
+- Alltägliches nur erwähnen, wenn es bedeutsam war
+- Hebe Positives besonders hervor — aber verschweige Herausforderungen und Rückschläge nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
+- Wendepunkte und persönliches Wachstum verdienen besondere Aufmerksamkeit
+- Schließe mit einem Gedanken der nach vorne blickt
+- Schreibe warm und persönlich, aber nicht übertrieben — wie ein guter Freund der das Jahr zusammenfasst
+- Mindestens 500 Wörter
 - Sprache: Deutsch$profileStyle
 
 MONATSRÜCKBLICKE:
