@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.Card
@@ -834,28 +835,79 @@ private fun SummaryDetailDialog(summary: RetrospectiveSummaryEntity, onDismiss: 
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Speaker button, left-aligned, orange
-                    IconButton(
-                        onClick = {
-                            if (isSpeaking) {
-                                tts.stop()
-                                isSpeaking = false
-                            } else {
-                                isSpeaking = true
-                                tts.speak(summary.summaryText) { isSpeaking = false }
-                            }
-                        },
-                        modifier = Modifier.size(40.dp),
-                    ) {
-                        Icon(
-                            if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
-                            contentDescription = if (isSpeaking) "Stoppen" else "Vorlesen",
-                            tint = Color(0xFFE07830),
-                            modifier = Modifier.size(24.dp),
-                        )
+                    // Action buttons: Speaker + Share
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(
+                            onClick = {
+                                if (isSpeaking) {
+                                    tts.stop()
+                                    isSpeaking = false
+                                } else {
+                                    isSpeaking = true
+                                    tts.speak(summary.summaryText) { isSpeaking = false }
+                                }
+                            },
+                            modifier = Modifier.size(40.dp),
+                        ) {
+                            Icon(
+                                if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
+                                contentDescription = if (isSpeaking) "Stoppen" else "Vorlesen",
+                                tint = Color(0xFFE07830),
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                val shareText = buildShareText(summary, parsed)
+                                val intent =
+                                    android.content
+                                        .Intent(android.content.Intent.ACTION_SEND)
+                                        .apply {
+                                            type = "text/plain"
+                                            putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                                        }
+                                context.startActivity(
+                                    android.content.Intent.createChooser(intent, "Rückblick teilen")
+                                )
+                            },
+                            modifier = Modifier.size(40.dp),
+                        ) {
+                            Icon(
+                                Icons.Rounded.Share,
+                                contentDescription = "Teilen",
+                                tint = Color(0xFFE07830),
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+private fun buildShareText(
+    summary: com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity,
+    parsed: ParsedRetrospective,
+): String = buildString {
+    append("Rückblick von der BestJournal App")
+    append("\n")
+    append(summary.periodLabel)
+    append(" \u2014 ")
+    append(summary.title)
+    append(
+        "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+    )
+    if (parsed.bulletPoints.isNotEmpty()) {
+        append("\n\nAuf einen Blick:")
+        parsed.bulletPoints.forEach { append("\n\u2022 $it") }
+    }
+    if (parsed.sections.isNotEmpty()) {
+        parsed.sections.forEach { section ->
+            append("\n\n\u2728 ${section.heading}")
+            append("\n${section.body}")
+        }
+    } else {
+        append("\n\n${summary.summaryText}")
     }
 }
