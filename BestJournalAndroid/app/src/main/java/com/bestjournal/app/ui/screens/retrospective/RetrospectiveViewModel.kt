@@ -55,6 +55,32 @@ constructor(
     private val _currentPhotos = MutableStateFlow<List<EntryPhotoEntity>>(emptyList())
     val currentPhotos: StateFlow<List<EntryPhotoEntity>> = _currentPhotos.asStateFlow()
 
+    /**
+     * Waits until any active sync/restore is complete. Called before every generation path to
+     * ensure diary entries and photos are fully available.
+     */
+    private suspend fun awaitSyncComplete() {
+        // Initial delay: gives SettingsVM time to start downloadMissingPhotos()
+        // and set SyncProgressHolder to DOWNLOADING before we check
+        kotlinx.coroutines.delay(3000)
+        val syncStatus = com.bestjournal.app.domain.usecase.SyncProgressHolder.status
+        val currentStatus = syncStatus.value
+        if (
+            currentStatus == com.bestjournal.app.ui.screens.journal.SyncStatus.DOWNLOADING ||
+                currentStatus == com.bestjournal.app.ui.screens.journal.SyncStatus.UPLOADING
+        ) {
+            Log.d("RetroVM", "Sync active ($currentStatus), waiting for completion...")
+            syncStatus.first { status ->
+                status != com.bestjournal.app.ui.screens.journal.SyncStatus.DOWNLOADING &&
+                    status != com.bestjournal.app.ui.screens.journal.SyncStatus.UPLOADING
+            }
+            kotlinx.coroutines.delay(2000)
+            Log.d("RetroVM", "Sync finished, proceeding")
+        } else {
+            Log.d("RetroVM", "No active sync ($currentStatus), proceeding")
+        }
+    }
+
     fun loadPhotosForPeriod(startDate: Long, endDate: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -76,28 +102,7 @@ constructor(
     init {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Wait for any active restore/sync to finish before generating reviews.
-                // Initial delay gives SettingsVM time to start downloadMissingPhotos()
-                // and set SyncProgressHolder to DOWNLOADING before we check.
-                kotlinx.coroutines.delay(3000)
-                val syncStatus = com.bestjournal.app.domain.usecase.SyncProgressHolder.status
-                if (
-                    syncStatus.value ==
-                        com.bestjournal.app.ui.screens.journal.SyncStatus.DOWNLOADING ||
-                        syncStatus.value ==
-                            com.bestjournal.app.ui.screens.journal.SyncStatus.UPLOADING
-                ) {
-                    Log.d("RetroVM", "Sync active (${syncStatus.value}), waiting for completion...")
-                    syncStatus.first { status ->
-                        status != com.bestjournal.app.ui.screens.journal.SyncStatus.DOWNLOADING &&
-                            status != com.bestjournal.app.ui.screens.journal.SyncStatus.UPLOADING
-                    }
-                    // Extra delay to let DB writes settle after restore
-                    kotlinx.coroutines.delay(2000)
-                    Log.d("RetroVM", "Sync finished, proceeding with review generation")
-                } else {
-                    Log.d("RetroVM", "No active sync (${syncStatus.value}), proceeding")
-                }
+                awaitSyncComplete()
 
                 // One-time cleanup via local flag file (not backed up to Drive)
                 val flagFile = java.io.File(context.filesDir, ".retro_cleaned_v3")
@@ -132,8 +137,7 @@ constructor(
                     _isProfileSwitch.value = true
                     _isGenerating.value = true
                     _errorMessage.value = null
-                    // Delete old and regenerate — if generation fails, error is shown
-                    // and user can retry (which will attempt to fill the gaps)
+                    awaitSyncComplete()
                     repository.deleteAll()
                     Log.d("RetroVM", "Deleted all retrospectives for profile-change regeneration")
                     val count = generateUseCase.generateMissing()
@@ -163,6 +167,7 @@ constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 _isGenerating.value = true
+                awaitSyncComplete()
                 val count = generateUseCase.generateMissing()
                 Log.d("RetroVM", "Retry generated $count reviews")
             } catch (e: Exception) {
