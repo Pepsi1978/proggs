@@ -104,19 +104,23 @@ constructor(
 
             val profileStyle = getProfileStyleInstruction()
             val prompt =
-                """Du bist ein Erzähler, der aus Tagebucheinträgen einen lebendigen Wochenrückblick schreibt.
+                """Du bist ein begnadeter Erzähler, der aus Tagebucheinträgen einen mitreißenden, emotionalen Wochenrückblick schreibt — wie der Erzähler eines persönlichen Romans.
 
-AUFGABE: Fasse die folgenden Tagebucheinträge zu einem zusammenhängenden, erzählenden Wochenrückblick zusammen.
+AUFGABE: Verwandle die folgenden Tagebucheinträge in einen ausführlichen, packenden Wochenrückblick, der sich liest wie ein Kapitel aus dem Leben des Lesers.
 
 REGELN:
 - Schreibe in der Du-Form, als würde das Tagebuch selbst zurückblicken
 - Keine Anrede, keine Grußformel, keine Höflichkeitsfloskeln — direkt rein in die Erzählung
 - Erzählender, fließender Stil — kein Markdown, keine Aufzählungen, keine Überschriften
-- Beginne nie mit "Diese Woche" — finde einen originellen Einstieg
-- Erwähne konkrete Ereignisse, Gefühle und Erkenntnisse aus den Einträgen
+- Beginne nie mit "Diese Woche" — finde einen packenden, emotionalen Einstieg der sofort fesselt
+- Erwähne konkrete Ereignisse, Gefühle, Gedanken und Erkenntnisse aus den Einträgen — mit lebendigen Details
+- Beschreibe Emotionen nicht nur oberflächlich, sondern gehe in die Tiefe: Was hat sich angefühlt? Was hat es ausgelöst? Was hat es verändert?
+- Baue Spannung auf — erzähle nicht chronologisch, sondern nach emotionalem Gewicht
 - Alltägliches (Essen, Wetter, Routinen) nur erwähnen, wenn es emotional oder inhaltlich bedeutsam war
-- Hebe Wendepunkte, Erkenntnisse und persönliches Wachstum hervor
-- Mindestens 200 Wörter
+- Hebe Wendepunkte, Erkenntnisse und persönliches Wachstum besonders hervor — sie sind die Höhepunkte der Erzählung
+- Schließe mit einem Satz, der nachklingt und zum Nachdenken anregt
+- Betone besonders die positiven Dinge — Erfolge, schöne Momente, Fortschritte — aber verschweige weder Herausforderungen noch Rückschläge. Erkenntnisse aus schwierigen Momenten sind genauso wertvoll
+- Mindestens 400 Wörter — lieber mehr, nimm dir Raum für die Geschichte
 - Sprache: Deutsch$profileStyle
 
 EINTRÄGE DER WOCHE:
@@ -134,7 +138,7 @@ Rückblick:
                     prompt = prompt,
                     modelName = FirebaseAiService.MODEL_FLASH,
                     temperature = 0.7f,
-                    maxOutputTokens = 2048,
+                    maxOutputTokens = 8192,
                 )
 
             if (result.isFailure) {
@@ -234,20 +238,23 @@ Rückblick:
 
             val profileStyle = getProfileStyleInstruction()
             val prompt =
-                """Du bist ein Erzähler, der aus Wochenrückblicken einen lebendigen Monatsrückblick schreibt.
+                """Du bist ein begnadeter Erzähler, der aus Wochenrückblicken einen mitreißenden, emotionalen Monatsrückblick schreibt — wie ein Essay über einen prägenden Lebensabschnitt.
 
-AUFGABE: Fasse die folgenden Wochenrückblicke zu einem zusammenhängenden, erzählenden Monatsrückblick für $monthName $year zusammen.
+AUFGABE: Verwandle die folgenden Wochenrückblicke in einen ausführlichen, packenden Monatsrückblick für $monthName $year — eine zusammenhängende Geschichte, die den Leser emotional berührt.
 
 REGELN:
 - Schreibe in der Du-Form, als würde das Tagebuch selbst auf den Monat zurückblicken
 - Keine Anrede, keine Grußformel, keine Höflichkeitsfloskeln — direkt rein in die Erzählung
 - Erzählender, fließender Stil — kein Markdown, keine Aufzählungen, keine Überschriften
-- Beginne nie mit "Dieser Monat" — finde einen originellen Einstieg
-- Ziehe Verbindungen zwischen den Wochen — zeige Entwicklungen, rote Fäden und Veränderungen über den Monat hinweg
-- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verwebe sie thematisch zu einer Gesamterzählung
+- Beginne nie mit "Dieser Monat" — finde einen packenden Einstieg der den Leser sofort in den Monat hineinzieht
+- Ziehe tiefe Verbindungen zwischen den Wochen — zeige Entwicklungsbögen, rote Fäden, innere Veränderungen und emotionale Reisen über den Monat hinweg
+- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verwebe sie kunstvoll zu einer Gesamterzählung mit Spannungsbogen
+- Gehe in die emotionale Tiefe: Was hat der Monat mit dem Leser gemacht? Wie hat er sich verändert? Was hat er gelernt?
 - Alltägliches nur erwähnen, wenn es emotional oder inhaltlich bedeutsam war
-- Hebe Wendepunkte, Erkenntnisse, persönliches Wachstum und wiederkehrende Muster hervor
-- Mindestens 300 Wörter
+- Hebe Wendepunkte, tiefe Erkenntnisse, persönliches Wachstum und wiederkehrende Muster besonders hervor
+- Schließe mit einem Gedanken, der nachklingt und den Monat auf den Punkt bringt
+- Betone besonders die positiven Dinge — Erfolge, schöne Momente, Fortschritte — aber verschweige weder Herausforderungen noch Rückschläge. Erkenntnisse aus schwierigen Momenten sind genauso wertvoll
+- Mindestens 500 Wörter — nimm dir Raum, dieser Monat verdient eine ausführliche Geschichte
 - Sprache: Deutsch$profileStyle
 
 WOCHENRÜCKBLICKE:
@@ -265,7 +272,7 @@ Rückblick:
                     prompt = prompt,
                     modelName = FirebaseAiService.MODEL_FLASH,
                     temperature = 0.7f,
-                    maxOutputTokens = 4096,
+                    maxOutputTokens = 8192,
                 )
 
             if (result.isFailure) {
@@ -349,21 +356,24 @@ Rückblick:
 
         val profileStyle = getProfileStyleInstruction()
         val prompt =
-            """Du bist ein Erzähler, der aus Monatsrückblicken einen lebendigen Jahresrückblick schreibt.
+            """Du bist ein begnadeter Erzähler, der aus Monatsrückblicken ein episches, emotionales Jahresresümee schreibt — wie eine Autobiografie in Kurzform, die den Leser zu Tränen rührt und gleichzeitig Kraft gibt.
 
-AUFGABE: Fasse die folgenden Monatsrückblicke zu einem zusammenhängenden, erzählenden Jahresrückblick für $year zusammen.
+AUFGABE: Verwandle die folgenden Monatsrückblicke in einen ausführlichen, zutiefst persönlichen Jahresrückblick für $year — eine Geschichte über Veränderung, Wachstum und die leisen und lauten Momente eines ganzen Lebensjahres.
 
 REGELN:
 - Schreibe in der Du-Form, als würde das Tagebuch selbst auf das Jahr zurückblicken
 - Keine Anrede, keine Grußformel, keine Höflichkeitsfloskeln — direkt rein in die Erzählung
 - Erzählender, fließender Stil — kein Markdown, keine Aufzählungen, keine Überschriften
-- Beginne nie mit "Dieses Jahr" — finde einen originellen Einstieg
-- Ziehe Verbindungen zwischen den Monaten — zeige große Entwicklungsbögen, Wendepunkte und Transformationen über das Jahr hinweg
-- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verwebe sie thematisch zu einer Gesamterzählung mit klarem Spannungsbogen
-- Erkenne die großen Themen des Jahres und ordne einzelne Ereignisse in diese übergeordneten Linien ein
-- Alltägliches nur erwähnen, wenn es emotional oder inhaltlich bedeutsam war
-- Hebe die entscheidenden Wendepunkte, tiefsten Erkenntnisse, größtes persönliches Wachstum und die prägenden Muster des Jahres hervor
-- Mindestens 400 Wörter
+- Beginne nie mit "Dieses Jahr" — finde einen kraftvollen, emotionalen Einstieg der sofort unter die Haut geht
+- Erzähle das Jahr wie einen Roman: mit Spannungsbogen, Wendepunkten, stillen Momenten und großen Durchbrüchen
+- Ziehe tiefe Verbindungen zwischen den Monaten — zeige wie sich Themen entwickelt, verändert und manchmal aufgelöst haben
+- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verwebe sie kunstvoll zu einem großen Ganzen
+- Erkenne die zwei oder drei großen Lebensthemen des Jahres und erzähle sie wie Handlungsstränge
+- Gehe in die emotionale Tiefe: Was hat das Jahr mit dem Leser gemacht? Wer war er am Anfang, wer ist er jetzt?
+- Hebe die entscheidenden Wendepunkte, die tiefsten Erkenntnisse und das prägendste Wachstum hervor
+- Schließe mit einem Absatz der nachhallt — ein Blick nach vorne, getragen von allem was hinter einem liegt
+- Betone besonders die positiven Dinge — Erfolge, schöne Momente, Fortschritte — aber verschweige weder Herausforderungen noch Rückschläge. Erkenntnisse aus schwierigen Momenten sind genauso wertvoll
+- Mindestens 700 Wörter — dieses Jahr verdient eine ausführliche, würdige Geschichte
 - Sprache: Deutsch$profileStyle
 
 MONATSRÜCKBLICKE:
@@ -381,7 +391,7 @@ Rückblick:
                 prompt = prompt,
                 modelName = FirebaseAiService.MODEL_FLASH,
                 temperature = 0.7f,
-                maxOutputTokens = 6144,
+                maxOutputTokens = 16384,
             )
 
         if (result.isFailure) {
