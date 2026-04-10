@@ -66,7 +66,37 @@ constructor(
 
         Log.d("SyncDebug", "Backup: $entryCount Eintraege, Datei: ${dbFile.length()} Bytes")
 
-        val dbResult = driveBackupManager.backup(dbFile)
+        // Create a clean copy without retrospective summaries — they are AI-generated
+        // and will be regenerated from real entries after restore
+        val cleanDbFile = File(context.cacheDir, "backup_clean.db")
+        try {
+            dbFile.copyTo(cleanDbFile, overwrite = true)
+            // Also copy WAL/SHM if they still exist after checkpoint
+            val walFile = File(dbFile.path + "-wal")
+            val shmFile = File(dbFile.path + "-shm")
+            if (walFile.exists()) walFile.copyTo(File(cleanDbFile.path + "-wal"), overwrite = true)
+            if (shmFile.exists()) shmFile.copyTo(File(cleanDbFile.path + "-shm"), overwrite = true)
+
+            val cleanDb =
+                android.database.sqlite.SQLiteDatabase.openDatabase(
+                    cleanDbFile.path,
+                    null,
+                    android.database.sqlite.SQLiteDatabase.OPEN_READWRITE,
+                )
+            cleanDb.execSQL("DELETE FROM retrospective_summaries")
+            cleanDb.execSQL("VACUUM")
+            cleanDb.close()
+            // Clean up copied WAL/SHM after VACUUM
+            File(cleanDbFile.path + "-wal").delete()
+            File(cleanDbFile.path + "-shm").delete()
+            Log.d("SyncDebug", "Created clean backup without retrospective summaries")
+        } catch (e: Exception) {
+            Log.w("SyncDebug", "Clean copy failed, using original: ${e.message}")
+            dbFile.copyTo(cleanDbFile, overwrite = true)
+        }
+
+        val dbResult = driveBackupManager.backup(cleanDbFile)
+        cleanDbFile.delete()
         if (dbResult.isFailure) return dbResult
 
         val backupPhotos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_PHOTOS, false)
