@@ -122,6 +122,11 @@ constructor(
                         "SettingsVM",
                         "Background photo download failed: ${e.message}",
                     )
+                } finally {
+                    // Always clear restore-pending flag — even if no photos to download
+                    // This unblocks retrospective generation
+                    encryptedPrefs.edit().putBoolean(Constants.PREF_RESTORE_PENDING, false).apply()
+                    android.util.Log.d("SettingsVM", "Cleared PREF_RESTORE_PENDING")
                 }
             }
         }
@@ -386,6 +391,11 @@ constructor(
                     // Auto-restore backup
                     try {
                         if (syncUseCase.hasBackup()) {
+                            // Block retrospective generation until restore+download is complete
+                            encryptedPrefs
+                                .edit()
+                                .putBoolean(Constants.PREF_RESTORE_PENDING, true)
+                                .apply()
                             syncUseCase.restore()
                             // Restart to load restored database
                             val intent =

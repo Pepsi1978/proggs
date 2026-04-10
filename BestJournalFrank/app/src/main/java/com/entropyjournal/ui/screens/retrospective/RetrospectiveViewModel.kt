@@ -74,24 +74,33 @@ constructor(
             } catch (_: Exception) {
                 return
             }
+        // Step 1: Wait for PREF_RESTORE_PENDING flag to clear.
+        // This flag is set BEFORE restore starts and cleared AFTER all photos are downloaded.
+        // It survives app restarts (SharedPreferences), so the new instance sees it.
+        val maxWaitMs = 10L * 60 * 1000 // 10 minutes max
+        val start = System.currentTimeMillis()
+
+        while (System.currentTimeMillis() - start < maxWaitMs) {
+            val restorePending =
+                prefs.getBoolean(com.entropyjournal.util.Constants.PREF_RESTORE_PENDING, false)
+            if (!restorePending) break
+            Log.d("RetroVM", "Restore in progress, waiting...")
+            kotlinx.coroutines.delay(3000)
+        }
+
+        // Step 2: Also verify all photos are actually on disk (belt-and-suspenders)
         val hasAccount =
             prefs.getString(com.entropyjournal.util.Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null) !=
                 null
         if (!hasAccount) {
-            Log.d("RetroVM", "No Google account, skipping sync wait")
+            Log.d("RetroVM", "No Google account, skipping photo check")
             return
         }
 
-        // Wait until ALL photos referenced in DB actually exist on disk.
-        // After a restore, photos are downloaded in the background — we must wait
-        // for that to complete before generating retrospectives.
         val dbFile = context.getDatabasePath("entropy_journal_db")
         if (!dbFile.exists()) return
 
-        val maxWaitMs = 10L * 60 * 1000 // 10 minutes max
-        val start = System.currentTimeMillis()
         var lastMissing = -1
-
         while (System.currentTimeMillis() - start < maxWaitMs) {
             val missing = countMissingPhotos(dbFile)
             if (missing == 0) {
@@ -108,7 +117,7 @@ constructor(
         }
 
         if (System.currentTimeMillis() - start >= maxWaitMs) {
-            Log.w("RetroVM", "Timeout waiting for photo downloads, proceeding anyway")
+            Log.w("RetroVM", "Timeout waiting for restore, proceeding anyway")
         }
     }
 

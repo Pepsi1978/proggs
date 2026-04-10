@@ -274,6 +274,10 @@ constructor(
             }
         }
 
+        // Clear restore-pending flag — retrospectives may now generate
+        encryptedPrefs.edit().putBoolean(Constants.PREF_RESTORE_PENDING, false).apply()
+        Log.d("SyncDebug", "Restore complete — cleared PREF_RESTORE_PENDING")
+
         SyncProgressHolder.setSynced()
         return restoredCount
     }
