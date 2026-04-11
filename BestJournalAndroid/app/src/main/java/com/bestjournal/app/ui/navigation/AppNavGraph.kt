@@ -5,8 +5,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -14,7 +12,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -72,45 +69,9 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                 com.bestjournal.app.ui.screens.retrospective.RetrospectiveViewModel =
                 hiltViewModel()
 
-            Scaffold(containerColor = MaterialTheme.colorScheme.background) { innerPadding ->
-                Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                    HorizontalPager(
-                        state = pagerState,
-                        beyondViewportPageCount = 3,
-                        modifier = Modifier.fillMaxSize(),
-                    ) { page ->
-                        when (page) {
-                            0 -> RetrospectiveScreen(viewModel = retroViewModel)
-                            1 ->
-                                DashboardScreen(
-                                    viewModel = hiltViewModel(),
-                                    onNavigateToPaywall = { source ->
-                                        navController.navigate("paywall?source=$source")
-                                    },
-                                )
-                            2 ->
-                                JournalScreen(
-                                    viewModel = hiltViewModel(),
-                                    onEntryClick = { entryId, searchQuery ->
-                                        val encodedQuery = Uri.encode(searchQuery)
-                                        navController.navigate(
-                                            "entry_detail/$entryId?searchQuery=$encodedQuery"
-                                        )
-                                    },
-                                    onNavigateToPaywall = { source ->
-                                        navController.navigate("paywall?source=$source")
-                                    },
-                                )
-                            3 ->
-                                SettingsScreen(
-                                    viewModel = hiltViewModel(),
-                                    onSignOut = {},
-                                    onNavigateToPaywall = { source ->
-                                        navController.navigate("paywall?source=$source")
-                                    },
-                                )
-                        }
-                    }
+            Scaffold(
+                containerColor = MaterialTheme.colorScheme.background,
+                bottomBar = {
                     BottomNavBar(
                         currentRoute = mainPages[pagerState.currentPage].route,
                         onItemClick = { item ->
@@ -119,8 +80,45 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                                 coroutineScope.launch { pagerState.animateScrollToPage(targetPage) }
                             }
                         },
-                        modifier = Modifier.align(Alignment.BottomCenter),
                     )
+                },
+            ) { innerPadding ->
+                HorizontalPager(
+                    state = pagerState,
+                    beyondViewportPageCount = 3,
+                    modifier = Modifier.padding(innerPadding),
+                ) { page ->
+                    when (page) {
+                        0 -> RetrospectiveScreen(viewModel = retroViewModel)
+                        1 ->
+                            DashboardScreen(
+                                viewModel = hiltViewModel(),
+                                onNavigateToPaywall = { source ->
+                                    navController.navigate("paywall?source=$source")
+                                },
+                            )
+                        2 ->
+                            JournalScreen(
+                                viewModel = hiltViewModel(),
+                                onEntryClick = { entryId, searchQuery ->
+                                    val encodedQuery = Uri.encode(searchQuery)
+                                    navController.navigate(
+                                        "entry_detail/$entryId?searchQuery=$encodedQuery"
+                                    )
+                                },
+                                onNavigateToPaywall = { source ->
+                                    navController.navigate("paywall?source=$source")
+                                },
+                            )
+                        3 ->
+                            SettingsScreen(
+                                viewModel = hiltViewModel(),
+                                onSignOut = {},
+                                onNavigateToPaywall = { source ->
+                                    navController.navigate("paywall?source=$source")
+                                },
+                            )
+                    }
                 }
             }
         }

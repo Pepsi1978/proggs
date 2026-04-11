@@ -366,8 +366,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
 
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding =
-                        PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
                     // Writing Prompt Banner
                     if (uiState.showPromptBanner && uiState.dailyPromptText.isNotBlank()) {
@@ -451,7 +450,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
 
         // Text entry + Mic buttons
         Row(
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 108.dp),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
