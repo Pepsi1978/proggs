@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Book
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -17,21 +18,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.ImageShader
-import androidx.compose.ui.graphics.ShaderBrush
-import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.unit.dp
-import com.bestjournal.app.R
 
 sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
     data object Retrospective :
@@ -82,43 +77,15 @@ fun BottomNavBar(
     val metallicSelectedColor = if (isDark) Color(0xFFE0E0E0) else Color(0xFF1C1C1E)
     val metallicUnselectedColor = if (isDark) Color(0xFF777777) else Color(0xFF9E9E9E)
 
-    // Real brushed metal texture (CC0 from ambientCG Metal009)
-    val brushedMetalImage =
-        androidx.compose.ui.graphics.ImageBitmap.imageResource(R.drawable.brushed_metal)
-    val metalTextureBrush =
-        ShaderBrush(ImageShader(brushedMetalImage, TileMode.Repeated, TileMode.Repeated))
-
     val shape = RoundedCornerShape(28.dp)
     NavigationBar(
         modifier =
             modifier
                 .padding(horizontal = 24.dp, vertical = 10.dp)
                 .shadow(elevation = 8.dp, shape = shape)
-                .clip(shape)
-                .drawBehind {
-                    // Real brushed metal texture
-                    drawRect(brush = metalTextureBrush)
-
-                    // Darken overlay for dark mode
-                    if (isDark) {
-                        drawRect(color = Color.Black.copy(alpha = 0.5f))
-                    }
-
-                    // Top highlight reflection for extra shine
-                    drawRect(
-                        brush =
-                            Brush.verticalGradient(
-                                colors =
-                                    listOf(
-                                        Color.White.copy(alpha = if (isDark) 0.10f else 0.30f),
-                                        Color.Transparent,
-                                    ),
-                                endY = size.height * 0.4f,
-                            )
-                    )
-                },
-        containerColor = Color.Transparent,
-        contentColor = metallicSelectedColor,
+                .clip(shape),
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
         windowInsets = WindowInsets(0, 0, 0, 0),
     ) {
         items.forEach { item ->
