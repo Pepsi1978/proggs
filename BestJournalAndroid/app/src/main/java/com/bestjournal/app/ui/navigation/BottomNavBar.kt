@@ -6,6 +6,9 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,14 +28,17 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Book
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -67,35 +73,34 @@ fun BottomNavBar(
     val activeIndex = items.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
     val isDark = isSystemInDarkTheme()
 
-    // Orange accent for both modes
-    val activeColor = if (isDark) Color(0xFFFFB74D) else Color(0xFFE07830)
-    val inactiveColor = if (isDark) Color(0xFF888888) else Color(0xFF666666)
-    val activeBg = if (isDark) Color(0x20FFB74D) else Color(0x1AE07830)
-
-    // Glassmorphism background
-    val glassBg =
-        if (isDark) Color(0xB3282828) // ~70% opacity dark
-        else Color(0xA6FFFFFF) // ~65% opacity white
-    val glassBorder =
-        if (isDark) Color(0x14FFFFFF) // subtle white border
-        else Color(0x66FFFFFF) // stronger white border
+    // Dark mode: orange accent — Light mode: teal accent
+    val activeColor = if (isDark) Color(0xFFFFB74D) else Color(0xFF0097A7)
+    val inactiveColor = if (isDark) Color(0xFF888888) else Color(0xFF999999)
+    val activeBg = if (isDark) Color(0x20FFB74D) else Color(0x1A0097A7)
 
     val shape = RoundedCornerShape(28.dp)
+
+    // Swipe gesture state
+    var dragAccumulator by remember { mutableFloatStateOf(0f) }
 
     BoxWithConstraints(
         modifier =
             modifier
-                .padding(horizontal = 24.dp, vertical = 10.dp)
-                .shadow(
-                    elevation = if (isDark) 16.dp else 8.dp,
-                    shape = shape,
-                    ambientColor = if (isDark) Color.Black else Color(0x14000000),
-                    spotColor = if (isDark) Color.Black else Color(0x14000000),
-                )
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .shadow(elevation = 8.dp, shape = shape)
                 .clip(shape)
-                .background(glassBg)
-                .background(
-                    Brush.verticalGradient(listOf(glassBorder, Color.Transparent), endY = 2f)
+                .background(MaterialTheme.colorScheme.surface)
+                .draggable(
+                    orientation = Orientation.Horizontal,
+                    state = rememberDraggableState { delta -> dragAccumulator += delta },
+                    onDragStopped = {
+                        if (dragAccumulator < -80f && activeIndex < items.lastIndex) {
+                            onItemClick(items[activeIndex + 1])
+                        } else if (dragAccumulator > 80f && activeIndex > 0) {
+                            onItemClick(items[activeIndex - 1])
+                        }
+                        dragAccumulator = 0f
+                    },
                 )
     ) {
         val itemWidth = maxWidth / items.size
@@ -113,28 +118,28 @@ fun BottomNavBar(
             modifier =
                 Modifier.offset(x = indicatorOffset)
                     .width(itemWidth)
-                    .height(56.dp)
+                    .height(64.dp)
                     .padding(4.dp)
                     .clip(RoundedCornerShape(22.dp))
                     .background(activeBg)
         )
 
         // Items
-        Row(modifier = Modifier.fillMaxWidth().height(56.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().height(64.dp)) {
             items.forEachIndexed { index, item ->
                 val isSelected = index == activeIndex
                 Column(
                     modifier =
                         Modifier.weight(1f)
                             .clickable { onItemClick(item) }
-                            .padding(vertical = 6.dp),
+                            .padding(vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Icon(
                         imageVector = item.icon,
                         contentDescription = item.title,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(26.dp),
                         tint = if (isSelected) activeColor else inactiveColor,
                     )
                     AnimatedVisibility(visible = isSelected) {
