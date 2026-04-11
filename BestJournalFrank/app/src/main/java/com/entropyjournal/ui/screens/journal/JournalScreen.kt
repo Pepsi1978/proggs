@@ -451,7 +451,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
 
         // Text entry + Mic buttons
         Row(
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 108.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {

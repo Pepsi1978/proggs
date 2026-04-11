@@ -84,7 +84,7 @@ fun BottomNavBar(
                 .padding(horizontal = 24.dp, vertical = 10.dp)
                 .shadow(elevation = 8.dp, shape = shape)
                 .clip(shape),
-        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
         windowInsets = WindowInsets(0, 0, 0, 0),
     ) {
@@ -94,6 +94,7 @@ fun BottomNavBar(
             NavigationBarItem(
                 selected = isSelected,
                 onClick = { onItemClick(item) },
+                alwaysShowLabel = false,
                 icon = {
                     Icon(
                         imageVector = item.icon,
