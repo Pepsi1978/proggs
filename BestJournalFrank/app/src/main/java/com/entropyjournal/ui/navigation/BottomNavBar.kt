@@ -20,14 +20,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.ImageShader
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.unit.dp
+import com.entropyjournal.R
 
 sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
     data object Retrospective :
@@ -78,17 +82,11 @@ fun BottomNavBar(
     val metallicSelectedColor = if (isDark) Color(0xFFE0E0E0) else Color(0xFF1C1C1E)
     val metallicUnselectedColor = if (isDark) Color(0xFF777777) else Color(0xFF9E9E9E)
 
-    // Brushed metal background colors
-    val metalBaseGradient =
-        if (isDark) {
-            listOf(Color(0xFF3A3A3C), Color(0xFF2C2C2E), Color(0xFF38383A))
-        } else {
-            listOf(Color(0xFFD6D6DA), Color(0xFFC8C8CC), Color(0xFFD2D2D6))
-        }
-    val brushLineColor = if (isDark) Color.White else Color.White
-    val brushLineAlphaBase = if (isDark) 0.04f else 0.25f
-    val brushLineDarkColor = if (isDark) Color.Black else Color.Black
-    val brushLineDarkAlpha = if (isDark) 0.08f else 0.04f
+    // Real brushed metal texture (CC0 from ambientCG Metal009)
+    val brushedMetalImage =
+        androidx.compose.ui.graphics.ImageBitmap.imageResource(R.drawable.brushed_metal)
+    val metalTextureBrush =
+        ShaderBrush(ImageShader(brushedMetalImage, TileMode.Repeated, TileMode.Repeated))
 
     val shape = RoundedCornerShape(28.dp)
     NavigationBar(
@@ -98,41 +96,24 @@ fun BottomNavBar(
                 .shadow(elevation = 8.dp, shape = shape)
                 .clip(shape)
                 .drawBehind {
-                    // Base metallic gradient
-                    drawRect(brush = Brush.verticalGradient(metalBaseGradient))
+                    // Real brushed metal texture
+                    drawRect(brush = metalTextureBrush)
 
-                    // Brushed horizontal lines for texture
-                    val lineSpacing = 2f
-                    val lineCount = (size.height / lineSpacing).toInt()
-                    for (i in 0..lineCount) {
-                        val y = i * lineSpacing
-                        if (i % 2 == 0) {
-                            drawLine(
-                                color = brushLineColor.copy(alpha = brushLineAlphaBase),
-                                start = Offset(0f, y),
-                                end = Offset(size.width, y),
-                                strokeWidth = 0.5f,
-                            )
-                        } else {
-                            drawLine(
-                                color = brushLineDarkColor.copy(alpha = brushLineDarkAlpha),
-                                start = Offset(0f, y),
-                                end = Offset(size.width, y),
-                                strokeWidth = 0.5f,
-                            )
-                        }
+                    // Darken overlay for dark mode
+                    if (isDark) {
+                        drawRect(color = Color.Black.copy(alpha = 0.5f))
                     }
 
-                    // Top highlight reflection
+                    // Top highlight reflection for extra shine
                     drawRect(
                         brush =
                             Brush.verticalGradient(
                                 colors =
                                     listOf(
-                                        Color.White.copy(alpha = if (isDark) 0.08f else 0.35f),
+                                        Color.White.copy(alpha = if (isDark) 0.10f else 0.30f),
                                         Color.Transparent,
                                     ),
-                                endY = size.height * 0.35f,
+                                endY = size.height * 0.4f,
                             )
                     )
                 },
