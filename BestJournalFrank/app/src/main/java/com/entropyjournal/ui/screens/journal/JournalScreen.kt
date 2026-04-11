@@ -526,98 +526,159 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
         }
 
         if (showSyncLegend) {
+            val currentIcon =
+                when (uiState.syncStatus) {
+                    SyncStatus.NOT_SIGNED_IN -> Icons.Rounded.CloudOff
+                    SyncStatus.ERROR -> Icons.Rounded.CloudOff
+                    SyncStatus.SYNCING -> Icons.Rounded.Cloud
+                    SyncStatus.UPLOADING -> Icons.Filled.CloudUpload
+                    SyncStatus.DOWNLOADING -> Icons.Filled.CloudDownload
+                    else -> Icons.Rounded.CloudDone
+                }
+            val currentColor =
+                when (uiState.syncStatus) {
+                    SyncStatus.NOT_SIGNED_IN -> NeonAmber
+                    SyncStatus.ERROR -> NeonRed
+                    SyncStatus.SYNCING,
+                    SyncStatus.UPLOADING,
+                    SyncStatus.DOWNLOADING -> NeonCyan
+                    else -> NeonEmerald
+                }
+            val currentTitle =
+                when (uiState.syncStatus) {
+                    SyncStatus.NOT_SIGNED_IN -> "Nicht angemeldet"
+                    SyncStatus.ERROR -> "Synchronisierung fehlgeschlagen"
+                    SyncStatus.SYNCING -> "Wird synchronisiert\u2026"
+                    SyncStatus.UPLOADING -> "Backup wird hochgeladen\u2026"
+                    SyncStatus.DOWNLOADING -> "Wird heruntergeladen\u2026"
+                    SyncStatus.SYNCED -> "Alles gesichert"
+                    SyncStatus.IDLE -> "Bereit"
+                }
+            val currentSubtitle =
+                when (uiState.syncStatus) {
+                    SyncStatus.NOT_SIGNED_IN ->
+                        "Melde dich bei Google an, um deine Eintr\u00e4ge zu sichern."
+                    SyncStatus.ERROR -> "Tippe auf die Wolke, um es erneut zu versuchen."
+                    SyncStatus.SYNCING -> "Deine Eintr\u00e4ge werden mit Google Drive abgeglichen."
+                    SyncStatus.UPLOADING ->
+                        if (uiState.downloadTotal > 0)
+                            "${uiState.downloadCurrent} von ${uiState.downloadTotal} Dateien hochgeladen"
+                        else "Deine Eintr\u00e4ge werden in die Cloud hochgeladen."
+                    SyncStatus.DOWNLOADING ->
+                        if (uiState.downloadTotal > 0)
+                            "${uiState.downloadCurrent} von ${uiState.downloadTotal} Dateien heruntergeladen"
+                        else "Fotos und Videos werden aus der Cloud geladen."
+                    SyncStatus.SYNCED ->
+                        "Alle Eintr\u00e4ge, Fotos und Videos sind in Google Drive gesichert."
+                    SyncStatus.IDLE -> "Deine Eintr\u00e4ge werden automatisch gesichert."
+                }
+            val isSyncing =
+                uiState.syncStatus == SyncStatus.SYNCING ||
+                    uiState.syncStatus == SyncStatus.UPLOADING ||
+                    uiState.syncStatus == SyncStatus.DOWNLOADING
+
             AlertDialog(
                 onDismissRequest = { showSyncLegend = false },
                 containerColor = MaterialTheme.colorScheme.surface,
-                title = {
-                    Text("Google Drive Backup", color = MaterialTheme.colorScheme.onSurface)
-                },
+                title = null,
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier =
+                                Modifier.size(72.dp)
+                                    .clip(CircleShape)
+                                    .background(currentColor.copy(alpha = 0.12f)),
+                        ) {
                             Icon(
-                                Icons.Rounded.CloudDone,
-                                null,
-                                tint = NeonEmerald,
-                                modifier = Modifier.size(24.dp),
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "Backup aktuell \u2014 alle Eintr\u00e4ge gesichert",
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
+                                currentIcon,
+                                contentDescription = null,
+                                tint = currentColor,
+                                modifier = Modifier.size(36.dp),
                             )
                         }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Filled.CloudUpload,
-                                null,
-                                tint = NeonCyan,
-                                modifier = Modifier.size(24.dp),
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "Backup wird hochgeladen\u2026",
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Google Drive Backup",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            currentTitle,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                            color = currentColor,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            currentSubtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+
+                        if (isSyncing) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            if (uiState.downloadTotal > 0) {
+                                LinearProgressIndicator(
+                                    progress = {
+                                        uiState.downloadCurrent.toFloat() /
+                                            uiState.downloadTotal.coerceAtLeast(1)
+                                    },
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                            .height(6.dp)
+                                            .clip(RoundedCornerShape(3.dp)),
+                                    color = NeonCyan,
+                                    trackColor = NeonCyan.copy(alpha = 0.15f),
+                                )
+                            } else {
+                                LinearProgressIndicator(
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                            .height(6.dp)
+                                            .clip(RoundedCornerShape(3.dp)),
+                                    color = NeonCyan,
+                                    trackColor = NeonCyan.copy(alpha = 0.15f),
+                                )
+                            }
                         }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Filled.CloudDownload,
-                                null,
-                                tint = NeonCyan,
-                                modifier = Modifier.size(24.dp),
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "Fotos/Videos werden heruntergeladen\u2026",
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Rounded.CloudOff,
-                                null,
-                                tint = NeonRed,
-                                modifier = Modifier.size(24.dp),
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "Backup fehlgeschlagen!",
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Rounded.CloudOff,
-                                null,
-                                tint = Color(0xFFFF9800),
-                                modifier = Modifier.size(24.dp),
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "Nicht angemeldet",
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
+
                         if (uiState.lastSyncTimestamp > 0L) {
+                            Spacer(modifier = Modifier.height(16.dp))
                             androidx.compose.material3.HorizontalDivider(
                                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                             )
-                            Text(
-                                "Letzte Synchronisierung: ${DTFormatter.formatFull(uiState.lastSyncTimestamp)}",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.CloudDone,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Zuletzt gesichert: ${DTFormatter.formatFull(uiState.lastSyncTimestamp)}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 },
                 confirmButton = {
-                    OutlinedButton(onClick = { showSyncLegend = false }) { Text("OK") }
+                    OutlinedButton(onClick = { showSyncLegend = false }) { Text("Schlie\u00dfen") }
                 },
             )
         }
