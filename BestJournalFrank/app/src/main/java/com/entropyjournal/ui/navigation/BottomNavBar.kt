@@ -1,5 +1,6 @@
 package com.entropyjournal.ui.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,7 +33,11 @@ sealed class BottomNavItem(val route: String, val title: String, val icon: Image
 }
 
 @Composable
-fun BottomNavBar(currentRoute: String?, onItemClick: (BottomNavItem) -> Unit) {
+fun BottomNavBar(
+    currentRoute: String?,
+    onItemClick: (BottomNavItem) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val items =
         listOf(
             BottomNavItem.Retrospective,
@@ -44,11 +49,13 @@ fun BottomNavBar(currentRoute: String?, onItemClick: (BottomNavItem) -> Unit) {
     val shape = RoundedCornerShape(28.dp)
     NavigationBar(
         modifier =
-            Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier
+                .padding(horizontal = 16.dp, vertical = 8.dp)
                 .shadow(elevation = 8.dp, shape = shape)
                 .clip(shape),
         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
         contentColor = MaterialTheme.colorScheme.onSurface,
+        windowInsets = WindowInsets(0, 0, 0, 0),
     ) {
         items.forEach { item ->
             val isSelected = currentRoute == item.route

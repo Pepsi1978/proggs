@@ -5,6 +5,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -12,7 +14,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -63,17 +67,51 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
         }
 
         composable("main", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
-            // Scaffold with bottom bar ONLY wraps the main content —
-            // splash and login screens are completely isolated
             val pagerState = rememberPagerState(initialPage = initialTab) { mainPages.size }
             val coroutineScope = rememberCoroutineScope()
             val retroViewModel:
                 com.bestjournal.app.ui.screens.retrospective.RetrospectiveViewModel =
                 hiltViewModel()
 
-            Scaffold(
-                containerColor = MaterialTheme.colorScheme.background,
-                bottomBar = {
+            Scaffold(containerColor = MaterialTheme.colorScheme.background) { innerPadding ->
+                Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                    HorizontalPager(
+                        state = pagerState,
+                        beyondViewportPageCount = 3,
+                        modifier = Modifier.fillMaxSize().padding(bottom = 88.dp),
+                    ) { page ->
+                        when (page) {
+                            0 -> RetrospectiveScreen(viewModel = retroViewModel)
+                            1 ->
+                                DashboardScreen(
+                                    viewModel = hiltViewModel(),
+                                    onNavigateToPaywall = { source ->
+                                        navController.navigate("paywall?source=$source")
+                                    },
+                                )
+                            2 ->
+                                JournalScreen(
+                                    viewModel = hiltViewModel(),
+                                    onEntryClick = { entryId, searchQuery ->
+                                        val encodedQuery = Uri.encode(searchQuery)
+                                        navController.navigate(
+                                            "entry_detail/$entryId?searchQuery=$encodedQuery"
+                                        )
+                                    },
+                                    onNavigateToPaywall = { source ->
+                                        navController.navigate("paywall?source=$source")
+                                    },
+                                )
+                            3 ->
+                                SettingsScreen(
+                                    viewModel = hiltViewModel(),
+                                    onSignOut = {},
+                                    onNavigateToPaywall = { source ->
+                                        navController.navigate("paywall?source=$source")
+                                    },
+                                )
+                        }
+                    }
                     BottomNavBar(
                         currentRoute = mainPages[pagerState.currentPage].route,
                         onItemClick = { item ->
@@ -82,46 +120,8 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                                 coroutineScope.launch { pagerState.animateScrollToPage(targetPage) }
                             }
                         },
+                        modifier = Modifier.align(Alignment.BottomCenter),
                     )
-                },
-            ) { innerPadding ->
-                HorizontalPager(
-                    state = pagerState,
-                    beyondViewportPageCount = 3,
-                    modifier = Modifier.padding(innerPadding),
-                ) { page ->
-                    when (page) {
-                        0 -> RetrospectiveScreen(viewModel = retroViewModel)
-                        1 ->
-                            DashboardScreen(
-                                viewModel = hiltViewModel(),
-                                onNavigateToPaywall = { source ->
-                                    navController.navigate("paywall?source=$source")
-                                },
-                            )
-                        2 ->
-                            JournalScreen(
-                                viewModel = hiltViewModel(),
-                                onEntryClick = { entryId, searchQuery ->
-                                    val encodedQuery = Uri.encode(searchQuery)
-                                    navController.navigate(
-                                        "entry_detail/$entryId?searchQuery=$encodedQuery"
-                                    )
-                                },
-                                onNavigateToPaywall = { source ->
-                                    navController.navigate("paywall?source=$source")
-                                },
-                            )
-                        3 ->
-                            SettingsScreen(
-                                viewModel = hiltViewModel(),
-                                onSignOut = {},
-                                onNavigateToPaywall = { source ->
-                                    navController.navigate("paywall?source=$source")
-                                },
-                                // Profile change only updates Dashboard, not retrospectives
-                            )
-                    }
                 }
             }
         }
