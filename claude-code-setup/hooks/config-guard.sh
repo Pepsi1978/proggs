@@ -118,17 +118,18 @@ if perms:
     if def_mode and def_mode != 'bypassPermissions':
         blocks.append(f"defaultMode={def_mode} (MUSS 'bypassPermissions' sein — Benutzer-Regel)")
 
-# effortLevel: MUST be "high" — BLOCK anything else (CLAUDE.md requirement)
+# effortLevel: User-controlled via /effort — only block invalid values
 eff = data.get('effortLevel')
-if eff and eff != 'high':
-    blocks.append(f"effortLevel={eff} (MUSS 'high' sein — CLAUDE.md-Regel)")
+valid_efforts = ('high', 'medium', 'low', 'max')
+if eff and eff not in valid_efforts:
+    blocks.append(f"effortLevel={eff} (ungueltiger Wert — erlaubt: {', '.join(valid_efforts)})")
 
 env_data = data.get('env', {})
 if env_data:
-    # CLAUDE_CODE_EFFORT_LEVEL in env
+    # CLAUDE_CODE_EFFORT_LEVEL env var MUST NOT EXIST — it overrides /effort command
     env_eff = env_data.get('CLAUDE_CODE_EFFORT_LEVEL')
-    if env_eff and env_eff != 'high':
-        blocks.append(f"CLAUDE_CODE_EFFORT_LEVEL={env_eff} (MUSS 'high' sein)")
+    if env_eff is not None:
+        blocks.append(f"CLAUDE_CODE_EFFORT_LEVEL darf NICHT als env var existieren (blockiert /effort) — entfernen!")
 
     # SUBAGENT_MODEL: BLOCK if changed from sonnet (critical for cost/quality)
     sub_model = env_data.get('CLAUDE_CODE_SUBAGENT_MODEL')

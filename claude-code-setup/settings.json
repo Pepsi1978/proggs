@@ -7,7 +7,6 @@
 		"CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000",
 		"CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "95",
 		"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
-		"CLAUDE_CODE_EFFORT_LEVEL": "high",
 		"CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS": "30000",
 		"ENABLE_TOOL_SEARCH": "1",
 		"ENABLE_SECURITY_REMINDER": "0",
@@ -481,12 +480,7 @@
 		]
 	},
 	"worktree": {
-		"symlinkDirectories": [
-			"node_modules",
-			".cache",
-			".gradle",
-			"build"
-		]
+		"symlinkDirectories": ["node_modules", ".cache", ".gradle", "build"]
 	},
 	"enabledPlugins": {
 		"swift-lsp@claude-plugins-official": true,
@@ -656,10 +650,7 @@
 		"android-adb": {
 			"type": "stdio",
 			"command": "/opt/homebrew/bin/npx",
-			"args": [
-				"-y",
-				"android-debug-bridge-mcp"
-			]
+			"args": ["-y", "android-debug-bridge-mcp"]
 		}
 	}
 }

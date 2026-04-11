@@ -119,10 +119,10 @@ if ($null -ne $eff -and $eff -ne '' -and $eff -notin $validEfforts) {
 
 $envData = $data.env
 if ($envData) {
-    # CLAUDE_CODE_EFFORT_LEVEL in env — same as above, user-controlled
+    # CLAUDE_CODE_EFFORT_LEVEL env var MUST NOT EXIST — it overrides /effort command
     $envEff = $envData.CLAUDE_CODE_EFFORT_LEVEL
-    if ($null -ne $envEff -and $envEff -ne '' -and $envEff -notin $validEfforts) {
-        $blocks += "CLAUDE_CODE_EFFORT_LEVEL=$envEff (ungueltiger Wert)"
+    if ($null -ne $envEff -and $envEff -ne '') {
+        $blocks += "CLAUDE_CODE_EFFORT_LEVEL darf NICHT als env var existieren (blockiert /effort) — entfernen!"
     }
 
     # SUBAGENT_MODEL: BLOCK if changed from sonnet (critical for cost/quality)
