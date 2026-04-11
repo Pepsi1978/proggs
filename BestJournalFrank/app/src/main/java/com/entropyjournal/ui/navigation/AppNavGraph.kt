@@ -15,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -64,7 +63,7 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                     HorizontalPager(
                         state = pagerState,
                         beyondViewportPageCount = 3,
-                        modifier = Modifier.fillMaxSize().padding(bottom = 88.dp),
+                        modifier = Modifier.fillMaxSize(),
                     ) { page ->
                         when (page) {
                             0 -> RetrospectiveScreen(viewModel = retroViewModel)
