@@ -1,5 +1,6 @@
 package com.entropyjournal.ui.navigation
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,7 +18,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
@@ -46,6 +53,30 @@ fun BottomNavBar(
             BottomNavItem.Settings,
         )
 
+    val isDark = isSystemInDarkTheme()
+
+    // Metallic gradient: dark chrome with a highlight band in the middle
+    val metallicSelectedBrush =
+        Brush.verticalGradient(
+            colors =
+                if (isDark) {
+                    listOf(Color(0xFFCCCCCC), Color(0xFFEEEEEE), Color(0xFFAAAAAA))
+                } else {
+                    listOf(Color(0xFF2A2A2A), Color(0xFF585858), Color(0xFF1A1A1A))
+                }
+        )
+    val metallicUnselectedBrush =
+        Brush.verticalGradient(
+            colors =
+                if (isDark) {
+                    listOf(Color(0xFF666666), Color(0xFF888888), Color(0xFF555555))
+                } else {
+                    listOf(Color(0xFF9A9A9A), Color(0xFFBBBBBB), Color(0xFF888888))
+                }
+        )
+    val metallicSelectedColor = if (isDark) Color(0xFFE0E0E0) else Color(0xFF1C1C1E)
+    val metallicUnselectedColor = if (isDark) Color(0xFF777777) else Color(0xFF9E9E9E)
+
     val shape = RoundedCornerShape(28.dp)
     NavigationBar(
         modifier =
@@ -59,6 +90,7 @@ fun BottomNavBar(
     ) {
         items.forEach { item ->
             val isSelected = currentRoute == item.route
+            val brush = if (isSelected) metallicSelectedBrush else metallicUnselectedBrush
             NavigationBarItem(
                 selected = isSelected,
                 onClick = { onItemClick(item) },
@@ -66,22 +98,26 @@ fun BottomNavBar(
                     Icon(
                         imageVector = item.icon,
                         contentDescription = item.title,
-                        tint =
-                            if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outline,
+                        modifier =
+                            Modifier.graphicsLayer {
+                                    compositingStrategy = CompositingStrategy.Offscreen
+                                }
+                                .drawWithContent {
+                                    drawContent()
+                                    drawRect(brush = brush, blendMode = BlendMode.SrcAtop)
+                                },
+                        tint = Color.White,
                     )
                 },
                 label = {
                     Text(
                         text = item.title,
-                        color =
-                            if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outline,
+                        color = if (isSelected) metallicSelectedColor else metallicUnselectedColor,
                     )
                 },
                 colors =
                     NavigationBarItemDefaults.colors(
-                        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        indicatorColor = metallicSelectedColor.copy(alpha = 0.08f)
                     ),
             )
         }
