@@ -1,5 +1,7 @@
 package com.entropyjournal.ui.navigation
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Analytics
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -12,7 +14,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 
 sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
     data object Retrospective :
@@ -35,7 +41,12 @@ fun BottomNavBar(currentRoute: String?, onItemClick: (BottomNavItem) -> Unit) {
             BottomNavItem.Settings,
         )
 
+    val shape = RoundedCornerShape(28.dp)
     NavigationBar(
+        modifier =
+            Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                .shadow(elevation = 8.dp, shape = shape)
+                .clip(shape),
         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
