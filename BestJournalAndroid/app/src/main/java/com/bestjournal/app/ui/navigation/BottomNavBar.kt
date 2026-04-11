@@ -10,7 +10,6 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Book
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -18,8 +17,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -55,7 +56,7 @@ fun BottomNavBar(
 
     val isDark = isSystemInDarkTheme()
 
-    // Metallic gradient: dark chrome with a highlight band in the middle
+    // Metallic gradient brushes for icon tinting
     val metallicSelectedBrush =
         Brush.verticalGradient(
             colors =
@@ -77,15 +78,67 @@ fun BottomNavBar(
     val metallicSelectedColor = if (isDark) Color(0xFFE0E0E0) else Color(0xFF1C1C1E)
     val metallicUnselectedColor = if (isDark) Color(0xFF777777) else Color(0xFF9E9E9E)
 
+    // Brushed metal background colors
+    val metalBaseGradient =
+        if (isDark) {
+            listOf(Color(0xFF3A3A3C), Color(0xFF2C2C2E), Color(0xFF38383A))
+        } else {
+            listOf(Color(0xFFD6D6DA), Color(0xFFC8C8CC), Color(0xFFD2D2D6))
+        }
+    val brushLineColor = if (isDark) Color.White else Color.White
+    val brushLineAlphaBase = if (isDark) 0.04f else 0.25f
+    val brushLineDarkColor = if (isDark) Color.Black else Color.Black
+    val brushLineDarkAlpha = if (isDark) 0.08f else 0.04f
+
     val shape = RoundedCornerShape(28.dp)
     NavigationBar(
         modifier =
             modifier
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 24.dp, vertical = 10.dp)
                 .shadow(elevation = 8.dp, shape = shape)
-                .clip(shape),
-        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
+                .clip(shape)
+                .drawBehind {
+                    // Base metallic gradient
+                    drawRect(brush = Brush.verticalGradient(metalBaseGradient))
+
+                    // Brushed horizontal lines for texture
+                    val lineSpacing = 2f
+                    val lineCount = (size.height / lineSpacing).toInt()
+                    for (i in 0..lineCount) {
+                        val y = i * lineSpacing
+                        // Alternating light and dark lines for realistic brushed look
+                        if (i % 2 == 0) {
+                            drawLine(
+                                color = brushLineColor.copy(alpha = brushLineAlphaBase),
+                                start = Offset(0f, y),
+                                end = Offset(size.width, y),
+                                strokeWidth = 0.5f,
+                            )
+                        } else {
+                            drawLine(
+                                color = brushLineDarkColor.copy(alpha = brushLineDarkAlpha),
+                                start = Offset(0f, y),
+                                end = Offset(size.width, y),
+                                strokeWidth = 0.5f,
+                            )
+                        }
+                    }
+
+                    // Top highlight reflection
+                    drawRect(
+                        brush =
+                            Brush.verticalGradient(
+                                colors =
+                                    listOf(
+                                        Color.White.copy(alpha = if (isDark) 0.08f else 0.35f),
+                                        Color.Transparent,
+                                    ),
+                                endY = size.height * 0.35f,
+                            )
+                    )
+                },
+        containerColor = Color.Transparent,
+        contentColor = metallicSelectedColor,
         windowInsets = WindowInsets(0, 0, 0, 0),
     ) {
         items.forEach { item ->
