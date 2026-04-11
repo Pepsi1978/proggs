@@ -122,7 +122,7 @@ object RetrospectiveColors {
             if (LocalIsDarkTheme.current) {
                 Color(0xFF3D2800) // Deep warm brown (matches primaryContainer)
             } else {
-                Color(0xFFB2EBF2) // Light cyan (matches primaryContainer)
+                Color(0xFFB2DFDB) // Soft teal — like header area but less blue
             }
 
     val categoryButtonGradient: List<Color>
@@ -131,7 +131,10 @@ object RetrospectiveColors {
             if (LocalIsDarkTheme.current) {
                 listOf(Color(0xFF4A2810), Color(0xFF181818)) // Subtle warm brown → dark
             } else {
-                listOf(categoryCardColor, categoryCardColor) // Solid (no visible gradient)
+                listOf(
+                    Color(0xFFE0F2F1),
+                    Color(0xFFFFF8E1),
+                ) // Soft mint-teal → warm cream (like header, less blue)
             }
 
     val monthColors: List<Color>
@@ -526,23 +529,13 @@ private fun CategoryButton(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    if (isDark) Color.Transparent else RetrospectiveColors.categoryCardColor
-            ),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Row(
             modifier =
                 Modifier.fillMaxWidth()
-                    .then(
-                        if (isDark)
-                            Modifier.background(
-                                Brush.verticalGradient(RetrospectiveColors.categoryButtonGradient)
-                            )
-                        else Modifier
-                    )
+                    .background(Brush.verticalGradient(RetrospectiveColors.categoryButtonGradient))
                     .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
