@@ -25,7 +25,6 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Book
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -68,17 +67,36 @@ fun BottomNavBar(
     val activeIndex = items.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
     val isDark = isSystemInDarkTheme()
 
+    // Orange accent for both modes
     val activeColor = if (isDark) Color(0xFFFFB74D) else Color(0xFFE07830)
-    val inactiveColor = if (isDark) Color(0xFF555555) else Color(0xFFBBBBBB)
-    val shape = RoundedCornerShape(24.dp)
+    val inactiveColor = if (isDark) Color(0xFF888888) else Color(0xFF666666)
+    val activeBg = if (isDark) Color(0x20FFB74D) else Color(0x1AE07830)
+
+    // Glassmorphism background
+    val glassBg =
+        if (isDark) Color(0xB3282828) // ~70% opacity dark
+        else Color(0xA6FFFFFF) // ~65% opacity white
+    val glassBorder =
+        if (isDark) Color(0x14FFFFFF) // subtle white border
+        else Color(0x66FFFFFF) // stronger white border
+
+    val shape = RoundedCornerShape(28.dp)
 
     BoxWithConstraints(
         modifier =
             modifier
                 .padding(horizontal = 24.dp, vertical = 10.dp)
-                .shadow(elevation = 8.dp, shape = shape)
+                .shadow(
+                    elevation = if (isDark) 16.dp else 8.dp,
+                    shape = shape,
+                    ambientColor = if (isDark) Color.Black else Color(0x14000000),
+                    spotColor = if (isDark) Color.Black else Color(0x14000000),
+                )
                 .clip(shape)
-                .background(MaterialTheme.colorScheme.surface)
+                .background(glassBg)
+                .background(
+                    Brush.verticalGradient(listOf(glassBorder, Color.Transparent), endY = 2f)
+                )
     ) {
         val itemWidth = maxWidth / items.size
 
@@ -86,19 +104,30 @@ fun BottomNavBar(
         val indicatorOffset by
             animateDpAsState(
                 targetValue = itemWidth * activeIndex,
-                animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
                 label = "indicatorOffset",
             )
 
+        // Sliding active background pill
+        Box(
+            modifier =
+                Modifier.offset(x = indicatorOffset)
+                    .width(itemWidth)
+                    .height(56.dp)
+                    .padding(4.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(activeBg)
+        )
+
         // Items
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.fillMaxWidth().height(56.dp)) {
             items.forEachIndexed { index, item ->
                 val isSelected = index == activeIndex
                 Column(
                     modifier =
                         Modifier.weight(1f)
                             .clickable { onItemClick(item) }
-                            .padding(vertical = 10.dp),
+                            .padding(vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
@@ -120,19 +149,5 @@ fun BottomNavBar(
                 }
             }
         }
-
-        // Sliding orange gradient bar at bottom
-        Box(
-            modifier =
-                Modifier.align(Alignment.BottomStart)
-                    .offset(x = indicatorOffset)
-                    .width(itemWidth)
-                    .height(3.dp)
-                    .padding(horizontal = 12.dp)
-                    .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
-                    .background(
-                        Brush.horizontalGradient(listOf(Color(0xFFE07830), Color(0xFFFFB74D)))
-                    )
-        )
     }
 }
