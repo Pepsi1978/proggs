@@ -136,4 +136,22 @@ else
     echo "$json_line" >> "$SCORES_FILE" 2>/dev/null
 fi
 
+# 7. Session summary for the user (German, plain text)
+summary_parts=""
+if [ "$commit_count" -gt 0 ]; then
+    summary_parts="${commit_count} Commit(s) gepusht"
+else
+    summary_parts="Keine Commits"
+fi
+if [ "$hook_errors" -gt 0 ]; then
+    summary_parts="$summary_parts, $hook_errors Hook-Fehler aufgetreten"
+fi
+if [ "$duration_min" -gt 0 ]; then
+    summary_parts="$summary_parts, Dauer: ca. ${duration_min} Minuten"
+fi
+summary_parts="$summary_parts. IQ-Score: ${iq_score:-0}/100."
+
+SUMMARY_FILE="${TMPDIR:-/tmp}/claude-session-summary.txt"
+printf "%s" "$summary_parts" > "$SUMMARY_FILE" 2>/dev/null
+
 exit 0

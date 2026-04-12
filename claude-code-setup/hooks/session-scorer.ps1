@@ -148,4 +148,26 @@ with open(scores, 'a', encoding='utf-8') as f:
     }
 }
 
+# 7. Session summary for the user (3 sentences, German, plain text)
+$summaryParts = @()
+if ($commitCount -gt 0) {
+    $summaryParts += "$commitCount Commit(s) gepusht"
+} else {
+    $summaryParts += "Keine Commits"
+}
+if ($hookErrors -gt 0) {
+    $summaryParts += "$hookErrors Hook-Fehler aufgetreten"
+}
+if ($durationMin -gt 0) {
+    $summaryParts += "Dauer: ca. $durationMin Minuten"
+}
+$summaryLine = $summaryParts -join ", "
+$summaryLine += ". IQ-Score: $iqScore/100."
+
+# Write summary to temp file for display
+$summaryPath = Join-Path $env:TEMP "claude-session-summary.txt"
+try {
+    Set-Content -Path $summaryPath -Value $summaryLine -Encoding UTF8 -NoNewline
+} catch { }
+
 exit 0

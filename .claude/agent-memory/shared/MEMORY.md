@@ -84,11 +84,12 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Ursache:** Nachwirkung des hyperagent-stop.sh Bugs (exit 0 bei stale goal). Bug am 02.04 gefixt.
 **Status:** BEOBACHTUNG — Evolution-Analyst (12.04): Zu wenig Post-Fix-Daten, 14 Warnings auf macOS deuten auf strukturelles Problem (nicht nur Hook-Bug). Naechste Aktion: session-scorer Logik fuer meta_intelligence auf macOS debuggen.
 
-### 2026-04-12 — AUTOCOMPACT auf 85 statt 95 — Regelverstoss entdeckt und gefixt
-**Quelle:** /self-improve env-checker (2026-04-12)
-**Symptom:** CLAUDE_AUTOCOMPACT_PCT_OVERRIDE war 85 in settings.json (Regel: NIEMALS unter 95)
-**Fix:** Zurueck auf 95 gesetzt via Python atomic write
-**Status:** GEFIXT (2026-04-12)
+### 2026-04-12 — AUTOCOMPACT faelschlich auf 95 geaendert — KORRIGIERT zurueck auf 85
+**Quelle:** /self-improve env-checker (2026-04-12) — FEHLDIAGNOSE
+**Symptom:** /self-improve hat AUTOCOMPACT von 85 auf 95 geaendert basierend auf veralteter CLAUDE.md-Regel
+**Root Cause:** CLAUDE.md enthielt "NIEMALS unter 95" — das war veraltet. Der Benutzer hat klargestellt: 85 ist der korrekte Dauerwert
+**Fix:** (1) settings.json zurueck auf 85, (2) CLAUDE.md korrigiert: "ist IMMER 85", (3) Feedback-Memory gespeichert, (4) config-guard muss 85 als Standard kennen
+**Status:** GEFIXT (2026-04-12) — Benutzer-Korrektur, CLAUDE.md aktualisiert
 ### 2026-04-12 10:40 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ---
 

@@ -331,37 +331,49 @@ This prevents the self-improve skill from making changes that make things worse.
 Use the template from reference file. Includes new **Performance-Benchmark** section.
 Add a "Shared Knowledge" section showing what code-reviewer learned and what self-improve contributed.
 
-**ENTSCHEIDUNGSLISTE (v5.12 — PFLICHT am Ende jedes Reports):**
+**ENTSCHEIDUNGSLISTE (v5.23 — PFLICHT am Ende jedes Reports):**
 ALLE Findings aus ALLEN Stufen muessen am Ende als eine einzige Entscheidungsliste fuer den
 Benutzer zusammengefasst werden. Der Benutzer ist KEIN Programmierer und will nicht selbst
-aus 50 Findings herausfiltern was wichtig ist. Format:
+aus 50 Findings herausfiltern was wichtig ist.
+
+**SORTIERUNG: Nach THEMEN, nicht nach Aufwand.** Der Benutzer interessiert sich fuer WAS
+verbessert wird, nicht wie lange es dauert. Aufwand steht in einer Spalte, ist aber nicht
+das Sortierkriterium.
+
+**Format:**
 
 ```markdown
 ## Entscheidungsliste — Was soll umgesetzt werden?
 
-### A) Sofort umsetzbar (kann ich JETZT machen)
-| # | Was genau? | Aufwand | Was bringt es dir? | Empfehlung | Ja/Nein? |
-|---|-----------|---------|-------------------|------------|----------|
-| A1 | [Konkreter Vorschlag] | [5 Min / 30 Min] | [Nutzen in 1 Satz] | JA/NEIN + Grund | |
+### Fehlerbehebungen & Sicherheit
+| # | Was wird verbessert? | Warum ist das wichtig? | Was genau passiert? | Aufwand | Empfehlung | Ja/Nein? |
+|---|---------------------|----------------------|--------------------| --------|------------|----------|
+| F1 | [Titel — verstaendlich fuer Nicht-Programmierer] | [Warum das ein Problem ist — in Alltagssprache, 2-3 Saetze] | [Was konkret geaendert wird — was passiert wenn man JA sagt, min. 2 Saetze] | [5 Min] | JA/NEIN | |
 
-### B) Mittlerer Aufwand (10-60 Min)
-[Gleiche Spalten]
+### Intelligenz-Forschung (Neue Erkenntnisse aus dem Internet)
+[Gleiche Spalten — hier landen alle Researcher-Findings]
 
-### C) Strategisch (betrifft wie das System langfristig arbeitet)
-[Gleiche Spalten]
+### Plattform & Infrastruktur (Hooks, Regeln, Konfiguration)
+[Gleiche Spalten — hier landen Hook-Sync, neue Regeln, Config-Aenderungen]
 
-### D) Nicht empfohlen (mit Begruendung warum NICHT)
-| # | Was | Warum NICHT |
+### Langfristige Ideen (nicht jetzt, aber gut zu wissen)
+[Gleiche Spalten — hier landen Vorschlaege die mehr als 1 Stunde brauchen]
+
+### Nicht empfohlen (mit Begruendung)
+| # | Was | Warum NICHT — ausfuehrliche Begruendung |
 ```
 
-**REGELN fuer die Entscheidungsliste:**
+**REGELN fuer die Entscheidungsliste (v5.23 — ERWEITERT):**
 - JEDER Researcher-Fund, JEDE Verbesserung, JEDER Fix muss in genau EINER Zeile landen
-- "Was genau?" muss fuer einen Nicht-Programmierer verstaendlich sein
-- "Was bringt es dir?" erklaert den konkreten Nutzen, nicht das technische Detail
+- **"Was wird verbessert?"** = Verstaendlicher Titel, kein Fachjargon. SCHLECHT: "Plan Mode fuer coder-Agent". GUT: "Agenten zeigen dir vor jeder Aenderung was sie vorhaben — wie ein Handwerker der erst fragt bevor er bohrt"
+- **"Warum ist das wichtig?"** = Minimum 2 Saetze die das PROBLEM beschreiben das geloest wird. NICHT den technischen Fix beschreiben, sondern das Problem. Der Benutzer muss verstehen WARUM er JA sagen sollte.
+- **"Was genau passiert?"** = Minimum 2 Saetze die beschreiben was KONKRET passiert wenn der Benutzer JA sagt. Welche Dateien werden erstellt? Was aendert sich im Alltag? Was merkt der Benutzer davon?
 - "Empfehlung" ist IMMER JA oder NEIN mit kurzem Grund
-- Benutzer antwortet nur: "Mach A1, A3, B2" — das ist alles was er sagen muss
+- Benutzer antwortet nur: "Mach F1, I3, P2" — das ist alles was er sagen muss
 - KEINE reinen Informationstabellen ohne Handlungsaufforderung
 - KEINE Findings die nur "zur Info" praesentiert werden — entweder Handlung oder "Nicht empfohlen"
+- **KEINE Abkuerzungen oder Fachbegriffe** ohne Erklaerung. Wenn ein Begriff wie "MCP-Server" oder "Hook" unvermeidbar ist, in Klammern erklaeren: "MCP-Server (ein Zusatz-Werkzeug das Claude schlauer macht)"
+- **Tabellen-Spalten muessen BREIT genug sein** fuer 2-3 Saetze. Nicht auf 5-6 Woerter kuerzen!
 
 ### 3D: Meta-Improve (MANDATORY)
 Present 3 suggestions for THIS SKILL. Apply only after user approval. Backup first.

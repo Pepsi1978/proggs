@@ -2,6 +2,8 @@
 # Schreibt nach jeder nicht-trivialen Session einen Erfahrungs-Eintrag
 # in experience-store.jsonl und eine Trajectory in trajectories.jsonl.
 # Basierend auf JitRL/MemRL (arXiv 2601.18510) und AutoRefine (arXiv 2601.22758).
+# Erweitert um LEGOMem-Felder (arXiv 2601.03192): utility_score, near_miss,
+# task_category, timestamp_decay, tool_sequence.
 #
 # Direktive 3: Graceful Degradation — bei JEDEM Fehler exit 0, nie die Session blockieren.
 
@@ -26,52 +28,122 @@ try {
             try {
                 $scoreData = $lastScore | ConvertFrom-Json
 
-                # Nur nicht-triviale Sessions (>5 Tool-Calls approximiert durch Score-Existenz)
                 $today = Get-Date -Format "yyyy-MM-dd"
+                $toolCount = if ($scoreData.turns) { [int]$scoreData.turns } else { 0 }
+                $errorCount = if ($scoreData.errors) { [int]$scoreData.errors } else { 0 }
+                $successScore = if ($scoreData.overall) { [math]::Round([double]$scoreData.overall) } else { 3 }
+                $taskType = if ($scoreData.task_type) { $scoreData.task_type } else { "general" }
 
-                # Experience Store Eintrag
+                # ── LEGOMem: utility_score (SICA-Formel) ──
+                # 0.5 * (overall/5) + 0.25 * max(0, 1 - errors/tools) + 0.25 * max(0, 1 - tools/50)
+                $perfComponent = 0.5 * ($successScore / 5.0)
+                $effComponent = 0.25 * [math]::Max(0, 1 - $errorCount / [math]::Max($toolCount, 1))
+                $speedComponent = 0.25 * [math]::Max(0, 1 - $toolCount / 50.0)
+                $utilityScore = [math]::Round($perfComponent + $effComponent + $speedComponent, 3)
+                $utilityScore = [math]::Max(0.0, [math]::Min(1.0, $utilityScore))
+
+                # ── LEGOMem: near_miss (Beinahe-Fehler mit hohem Lernwert) ──
+                $nearMiss = ($successScore -ge 2 -and $successScore -le 3 -and $errorCount -gt 0)
+
+                # ── LEGOMem: task_category (grobe Zuordnung) ──
+                $taskTypeLower = $taskType.ToLower()
+                if ($taskTypeLower -match 'build|compile|gradle|error|fix') {
+                    $taskCategory = 'build_fix'
+                } elseif ($taskTypeLower -match 'feature|implement|add|new') {
+                    $taskCategory = 'feature'
+                } elseif ($taskTypeLower -match 'config|setting|hook|setup') {
+                    $taskCategory = 'config'
+                } elseif ($taskTypeLower -match 'debug|bug|crash|investigate') {
+                    $taskCategory = 'debug'
+                } elseif ($taskTypeLower -match 'research|search|find|analyse|analyze') {
+                    $taskCategory = 'research'
+                } elseif ($taskTypeLower -match 'refactor|clean|improve|optimize') {
+                    $taskCategory = 'refactor'
+                } else {
+                    $taskCategory = 'other'
+                }
+
+                # ── LEGOMem: tool_sequence ──
+                $toolSequence = if ($scoreData.tool_sequence) { $scoreData.tool_sequence } else { @() }
+
+                # Experience Store Eintrag (mit LEGOMem-Feldern)
                 $experience = @{
                     date = $today
-                    task_type = if ($scoreData.task_type) { $scoreData.task_type } else { "general" }
+                    task_type = $taskType
                     task_description = if ($scoreData.task_description) { $scoreData.task_description } else { "session-auto-logged" }
-                    strategy = "auto-captured"
-                    tool_count = if ($scoreData.turns) { $scoreData.turns } else { 0 }
-                    error_count = if ($scoreData.errors) { $scoreData.errors } else { 0 }
-                    success_score = if ($scoreData.overall) { [math]::Round($scoreData.overall) } else { 3 }
+                    strategy = if ($scoreData.strategy) { $scoreData.strategy } else { "auto-captured" }
+                    tool_count = $toolCount
+                    error_count = $errorCount
+                    success_score = $successScore
                     tags = @("auto-logged")
+                    # LEGOMem-Erweiterungen (arXiv 2601.03192)
+                    tool_sequence = $toolSequence
+                    utility_score = $utilityScore
+                    near_miss = $nearMiss
+                    task_category = $taskCategory
+                    timestamp_decay = 1.0
                 } | ConvertTo-Json -Compress
 
-                # Append to experience store (atomic via temp file on large writes)
                 Add-Content -Path $experiencePath -Value $experience -Encoding UTF8 -NoNewline:$false
 
-                # Trajectory Eintrag
+                # Trajectory Eintrag (mit LEGOMem-Feldern)
                 $trajectory = @{
                     date = $today
                     task_description = if ($scoreData.task_description) { $scoreData.task_description } else { "session-auto-logged" }
-                    tool_sequence = @()
+                    tool_sequence = $toolSequence
                     errors = @()
-                    corrections = if ($scoreData.corrections) { $scoreData.corrections } else { 0 }
-                    duration_minutes = if ($scoreData.duration_minutes) { $scoreData.duration_minutes } else { 0 }
+                    corrections = if ($scoreData.corrections) { [int]$scoreData.corrections } else { 0 }
+                    duration_minutes = if ($scoreData.duration_minutes) { [int]$scoreData.duration_minutes } else { 0 }
                     success = $true
                     tags = @("auto-logged")
+                    # LEGOMem-Erweiterungen
+                    utility_score = $utilityScore
+                    near_miss = $nearMiss
                 } | ConvertTo-Json -Compress
 
                 Add-Content -Path $trajectoryPath -Value $trajectory -Encoding UTF8 -NoNewline:$false
 
-                # Pruning: Max 200 experience entries, max 100 trajectory entries
-                if (Test-Path $experiencePath) {
-                    $lineCount = (Get-Content $experiencePath -ErrorAction SilentlyContinue | Measure-Object -Line).Lines
-                    if ($lineCount -gt 200) {
-                        $lines = Get-Content $experiencePath -Encoding UTF8
-                        $lines | Select-Object -Last 200 | Set-Content $experiencePath -Encoding UTF8
-                    }
-                }
+                # ── Near-Miss-aware Pruning ──
+                # Near-Miss-Eintraege werden BEVORZUGT behalten (MemRL: hoher Lernwert)
+                foreach ($item in @(@{Path=$experiencePath; Limit=200}, @{Path=$trajectoryPath; Limit=100})) {
+                    $p = $item.Path
+                    $limit = $item.Limit
+                    if (Test-Path $p) {
+                        $allLines = Get-Content $p -Encoding UTF8 | Where-Object { $_.Trim().Length -gt 0 }
+                        if ($allLines.Count -gt $limit) {
+                            $nearMissLines = @()
+                            $normalLines = @()
+                            foreach ($line in $allLines) {
+                                try {
+                                    $entry = $line | ConvertFrom-Json
+                                    if ($entry.near_miss -eq $true) {
+                                        $nearMissLines += $line
+                                    } else {
+                                        $normalLines += $line
+                                    }
+                                } catch {
+                                    $normalLines += $line
+                                }
+                            }
 
-                if (Test-Path $trajectoryPath) {
-                    $lineCount = (Get-Content $trajectoryPath -ErrorAction SilentlyContinue | Measure-Object -Line).Lines
-                    if ($lineCount -gt 100) {
-                        $lines = Get-Content $trajectoryPath -Encoding UTF8
-                        $lines | Select-Object -Last 100 | Set-Content $trajectoryPath -Encoding UTF8
+                            # Zuerst alte normale Eintraege entfernen
+                            $overage = $allLines.Count - $limit
+                            if ($overage -gt 0 -and $normalLines.Count -gt 0) {
+                                $removeCount = [math]::Min($overage, $normalLines.Count)
+                                $normalLines = $normalLines[$removeCount..($normalLines.Count - 1)]
+                            }
+
+                            # Kombinieren und ggf. near_miss kuerzen falls Limit immer noch ueberschritten
+                            $combined = $normalLines + $nearMissLines
+                            if ($combined.Count -gt $limit) {
+                                $combined = $combined[($combined.Count - $limit)..($combined.Count - 1)]
+                            }
+
+                            # Atomic write via temp file + rename
+                            $tempPath = "$p.tmp"
+                            $combined | Set-Content $tempPath -Encoding UTF8
+                            Move-Item -Path $tempPath -Destination $p -Force
+                        }
                     }
                 }
 

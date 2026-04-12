@@ -204,15 +204,8 @@ if [ -d "$hooks_dir" ]; then
     find "$dest_hooks" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
 
     # Copy hook subdirectories (e.g. prompt-injection-defender/)
-    # Guard: remove self-nested duplicates before copying (prevents defender/defender/defender/...)
     hook_subdirs_count=0
     while IFS= read -r -d '' subdir; do
-        subdir_name=$(basename "$subdir")
-        nested_self="$subdir/$subdir_name"
-        if [ -d "$nested_self" ]; then
-            rm -r "$nested_self" 2>/dev/null || true
-            hook_log "Removed self-nested duplicate: $nested_self"
-        fi
         cp -r "$subdir" "$dest_hooks/" 2>/dev/null || true
         hook_subdirs_count=$((hook_subdirs_count + 1))
     done < <(find "$hooks_dir" -mindepth 1 -maxdepth 1 -type d -print0)
