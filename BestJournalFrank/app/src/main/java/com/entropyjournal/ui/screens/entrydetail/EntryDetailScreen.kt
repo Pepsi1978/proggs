@@ -897,6 +897,8 @@ fun EntryDetailScreen(
                             label = "tile_breathe",
                         )
 
+                    val tilePrimary = MaterialTheme.colorScheme.primary
+                    val tileSecondary = MaterialTheme.colorScheme.primaryContainer
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxWidth(),
@@ -915,16 +917,16 @@ fun EntryDetailScreen(
                                             colors =
                                                 listOf(
                                                     lerp(
-                                                        if (isDark) Color(0xFF0A1628) else Color(0xFF1565C0),
-                                                        if (isDark) Color(0xFF2A2A2A) else Color(0xFFBDBDBD),
+                                                        if (isDark) tilePrimary else Color(0xFF1565C0),
+                                                        if (isDark) tileSecondary else Color(0xFFBDBDBD),
                                                         flow,
                                                     ),
                                                     lerp(
-                                                        if (isDark) Color(0xFF111E33) else Color(0xFF1976D2),
-                                                        if (isDark) Color(0xFF0A1628) else Color(0xFF1565C0),
+                                                        if (isDark) tilePrimary.copy(alpha = 0.8f) else Color(0xFF1976D2),
+                                                        if (isDark) tilePrimary else Color(0xFF1565C0),
                                                         flow2,
                                                     ),
-                                                    lerp(if (isDark) Color(0xFF2A2A2A) else Color(0xFFBDBDBD), if (isDark) Color(0xFF111E33) else Color(0xFF1976D2), flow),
+                                                    lerp(if (isDark) tileSecondary else Color(0xFFBDBDBD), if (isDark) tilePrimary.copy(alpha = 0.8f) else Color(0xFF1976D2), flow),
                                                 ),
                                             start = Offset(0f, 300f * flow),
                                             end = Offset(300f, 300f * (1f - flow)),
@@ -972,18 +974,18 @@ fun EntryDetailScreen(
                                             colors =
                                                 listOf(
                                                     lerp(
-                                                        if (isDark) Color(0xFF0B1A2E) else Color(0xFF0D47A1),
-                                                        if (isDark) Color(0xFF2A2A2A) else Color(0xFFBDBDBD),
+                                                        if (isDark) tilePrimary.copy(alpha = 0.9f) else Color(0xFF0D47A1),
+                                                        if (isDark) tileSecondary else Color(0xFFBDBDBD),
                                                         flow2,
                                                     ),
                                                     lerp(
-                                                        if (isDark) Color(0xFF122640) else Color(0xFF1565C0),
-                                                        if (isDark) Color(0xFF0B1A2E) else Color(0xFF0D47A1),
+                                                        if (isDark) tilePrimary.copy(alpha = 0.7f) else Color(0xFF1565C0),
+                                                        if (isDark) tilePrimary.copy(alpha = 0.9f) else Color(0xFF0D47A1),
                                                         flow,
                                                     ),
                                                     lerp(
-                                                        if (isDark) Color(0xFF2A2A2A) else Color(0xFFBDBDBD),
-                                                        if (isDark) Color(0xFF122640) else Color(0xFF1565C0),
+                                                        if (isDark) tileSecondary else Color(0xFFBDBDBD),
+                                                        if (isDark) tilePrimary.copy(alpha = 0.7f) else Color(0xFF1565C0),
                                                         flow2,
                                                     ),
                                                 ),
