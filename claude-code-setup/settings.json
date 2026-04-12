@@ -211,7 +211,7 @@
       {
         "hooks": [
           {
-            "type": "prompt",
+            "type": "command",
             "command": "bash ~/.claude/hooks/hyperagent-stop.sh",
             "timeout": 5
           }

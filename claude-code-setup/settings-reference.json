@@ -317,7 +317,7 @@
       {
         "hooks": [
           {
-            "type": "prompt",
+            "type": "command",
             "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/hyperagent-stop.ps1\"",
             "timeout": 5
           }
