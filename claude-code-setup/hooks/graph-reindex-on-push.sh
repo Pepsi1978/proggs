@@ -37,19 +37,27 @@ elif command -v codebase-memory-mcp &>/dev/null; then
     CMM_BIN="$(command -v codebase-memory-mcp)"
 fi
 
-if [ -z "$CMM_BIN" ]; then
-    hook_log_warn "codebase-memory-mcp not found — graph reindex skipped"
-    exit 0
-fi
-
-# Determine repo path from the command or default to ~/proggs
 REPO_PATH="$HOME/proggs"
 
-# Run incremental reindex detached in background
-# "full" mode with existing index only re-parses changed files (content hash)
-nohup "$CMM_BIN" cli index_repository "{\"repo_path\": \"$REPO_PATH\"}" \
-    > /tmp/graph-reindex.log 2>&1 &
-disown $! 2>/dev/null || true
+# --- GitNexus incremental reindex (nur geaenderte Dateien) ---
+GITNEXUS_BIN=""
+if command -v gitnexus &>/dev/null; then
+    GITNEXUS_BIN="$(command -v gitnexus)"
+elif [ -x "/opt/homebrew/bin/gitnexus" ]; then
+    GITNEXUS_BIN="/opt/homebrew/bin/gitnexus"
+fi
 
-hook_log "graph reindex triggered after git push (PID: $!)"
+if [ -n "$GITNEXUS_BIN" ]; then
+    nohup "$GITNEXUS_BIN" analyze "$REPO_PATH" --skip-agents-md \
+        > /tmp/gitnexus-reindex.log 2>&1 &
+    disown $! 2>/dev/null || true
+fi
+
+# --- codebase-memory-mcp reindex (falls installiert) ---
+if [ -n "$CMM_BIN" ]; then
+    nohup "$CMM_BIN" cli index_repository "{\"repo_path\": \"$REPO_PATH\"}" \
+        > /tmp/graph-reindex.log 2>&1 &
+    disown $! 2>/dev/null || true
+fi
+
 exit 0

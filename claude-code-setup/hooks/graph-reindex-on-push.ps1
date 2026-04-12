@@ -1,7 +1,9 @@
 # graph-reindex-on-push.ps1 — PostToolUse Hook (async, Bash matcher)
-# Triggers incremental codebase-memory-mcp reindex after every git push.
+# Triggers incremental reindex of GitNexus + codebase-memory-mcp after every git push.
 # Runs fully detached in the background — does not block the session.
 # Platform: Windows (PowerShell)
+#
+# UPDATED (2026-04-12): Added GitNexus incremental reindex (gitnexus analyze)
 
 $ErrorActionPreference = "SilentlyContinue"
 
@@ -22,7 +24,18 @@ if (-not $cmd) { exit 0 }
 # Only trigger on git push commands
 if ($cmd -notmatch 'git\s+push') { exit 0 }
 
-# Find the codebase-memory-mcp binary
+$repoPath = "$env:USERPROFILE\proggs"
+
+# --- GitNexus incremental reindex (nur geaenderte Dateien) ---
+$gitnexusBin = "$env:USERPROFILE\AppData\Roaming\npm\gitnexus.cmd"
+if (Test-Path $gitnexusBin) {
+    Start-Process -FilePath $gitnexusBin -ArgumentList "analyze", $repoPath, "--skip-agents-md" `
+        -WindowStyle Hidden -WorkingDirectory $repoPath `
+        -RedirectStandardOutput "$env:TEMP\gitnexus-reindex.log" `
+        -RedirectStandardError "$env:TEMP\gitnexus-reindex-err.log"
+}
+
+# --- codebase-memory-mcp reindex (falls installiert) ---
 $cmmBin = $null
 $candidates = @(
     "$env:USERPROFILE\.local\bin\codebase-memory-mcp.exe",
@@ -36,18 +49,11 @@ foreach ($c in $candidates) {
     }
 }
 
-if (-not $cmmBin) {
-    Write-Host "codebase-memory-mcp not found — graph reindex skipped"
-    exit 0
+if ($cmmBin) {
+    $jsonArg = "{`"repo_path`": `"$($repoPath -replace '\\', '/')`"}"
+    Start-Process -FilePath $cmmBin -ArgumentList "cli", "index_repository", $jsonArg `
+        -WindowStyle Hidden -RedirectStandardOutput "$env:TEMP\graph-reindex.log" `
+        -RedirectStandardError "$env:TEMP\graph-reindex-err.log"
 }
-
-# Determine repo path
-$repoPath = "$env:USERPROFILE\proggs"
-
-# Run incremental reindex as detached background job
-$jsonArg = "{`"repo_path`": `"$($repoPath -replace '\\', '/')`"}"
-Start-Process -FilePath $cmmBin -ArgumentList "cli", "index_repository", $jsonArg `
-    -WindowStyle Hidden -RedirectStandardOutput "$env:TEMP\graph-reindex.log" `
-    -RedirectStandardError "$env:TEMP\graph-reindex-err.log"
 
 exit 0
