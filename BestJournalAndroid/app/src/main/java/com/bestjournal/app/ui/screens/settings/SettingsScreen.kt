@@ -1,5 +1,6 @@
 package com.bestjournal.app.ui.screens.settings
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.bestjournal.app.util.rememberHapticAction
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -1261,6 +1262,7 @@ fun SettingsScreen(
                         val selectedScenario =
                             scenarioPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                         var currentScenario by remember { mutableIntStateOf(selectedScenario) }
+                        var previousScenario by remember { mutableIntStateOf(selectedScenario) }
                         var showCustomPromptDialog by remember { mutableStateOf(false) }
                         var showScenarioInfoIndex by remember { mutableIntStateOf(-1) }
 
@@ -1270,6 +1272,8 @@ fun SettingsScreen(
                                     Modifier.fillMaxWidth()
                                         .clip(RoundedCornerShape(8.dp))
                                         .clickable {
+                                            doHaptic(HapticFeedbackType.LongPress)
+                                            previousScenario = currentScenario
                                             currentScenario = index
                                             scenarioPrefs
                                                 .edit()
@@ -1285,6 +1289,8 @@ fun SettingsScreen(
                                 RadioButton(
                                     selected = currentScenario == index,
                                     onClick = {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        previousScenario = currentScenario
                                         currentScenario = index
                                         scenarioPrefs
                                             .edit()
@@ -1400,6 +1406,22 @@ fun SettingsScreen(
                                         Text(
                                             "Verstanden",
                                             color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = {
+                                        showScenarioInfoIndex = -1
+                                        currentScenario = previousScenario
+                                        scenarioPrefs
+                                            .edit()
+                                            .putInt(Constants.PREF_DASHBOARD_SCENARIO, previousScenario)
+                                            .apply()
+                                        onProfileChanged()
+                                    }) {
+                                        Text(
+                                            "Abbrechen",
+                                            color = MaterialTheme.colorScheme.outline,
                                         )
                                     }
                                 },
@@ -1767,7 +1789,8 @@ fun SettingsScreen(
                                     onClick = {
                                         viewModel.analyticsTracker.trackExportPremiumBlocked()
                                         onNavigateToPaywall("pdf_export")
-                                    }
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                                 ) {
                                     Icon(
                                         Icons.Rounded.Star,
@@ -1896,7 +1919,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Best Journal v0.10.9",
+                            "Best Journal v0.10.10",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
