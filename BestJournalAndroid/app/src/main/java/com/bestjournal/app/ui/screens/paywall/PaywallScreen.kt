@@ -56,10 +56,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.bestjournal.app.ui.components.PulsingOrb
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
-import com.bestjournal.app.ui.theme.NeonAmber
-import com.bestjournal.app.ui.theme.NeonCyan
-import com.bestjournal.app.ui.theme.NeonViolet
-import com.bestjournal.app.ui.theme.WarmCopper
 import com.bestjournal.app.util.Constants
 import kotlinx.coroutines.delay
 
@@ -84,10 +80,10 @@ fun PaywallScreen(
     val displayMonthlyPrice = monthlyPrice.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
     val displayYearlyPrice = yearlyPrice.ifEmpty { Constants.YEARLY_PRICE_DISPLAY }
 
-    // Dark mode: warm orange orb, Light mode: cool cyan orb
+    // Use theme-aware colors so the orb matches the current color scheme (incl. Dynamic Color)
     val isDarkTheme = LocalIsDarkTheme.current
-    val orbPrimaryColor = if (isDarkTheme) WarmCopper else NeonCyan
-    val orbSecondaryColor = if (isDarkTheme) NeonAmber else NeonViolet
+    val orbPrimaryColor = MaterialTheme.colorScheme.primary
+    val orbSecondaryColor = MaterialTheme.colorScheme.tertiary
 
     // Calculate yearly savings vs monthly
     val savingsPercent = remember(displayMonthlyPrice, displayYearlyPrice) {
