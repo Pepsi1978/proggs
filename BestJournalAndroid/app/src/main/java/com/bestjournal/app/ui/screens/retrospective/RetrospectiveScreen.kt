@@ -100,7 +100,7 @@ object RetrospectiveColors {
         @Composable
         get() =
             if (LocalIsDarkTheme.current) {
-                Color(0xFFE07830) // Bold orange for dark mode
+                Color(0xFF3D5A80) // Muted dark blue for dark mode
             } else {
                 Color(0xFF0097A7) // Teal primary — matches journal entry AI titles
             }
@@ -111,9 +111,9 @@ object RetrospectiveColors {
         get() =
             if (LocalIsDarkTheme.current) {
                 listOf(
-                    Color(0xFFE07830),  // Warm orange top
-                    Color(0xFFC25E00),  // Copper mid-upper
-                    Color(0xFF3D2800),  // Deep amber mid-lower
+                    Color(0xFF1A2744),  // Deep navy blue top
+                    Color(0xFF152238),  // Darker navy mid-upper
+                    Color(0xFF0D1929),  // Near-black blue mid-lower
                     cardDark,           // CardSurface bottom
                 )
             } else {
@@ -132,7 +132,7 @@ object RetrospectiveColors {
         @Composable
         get() =
             if (LocalIsDarkTheme.current) {
-                Color(0xFF3D2800) // Deep warm brown (matches primaryContainer)
+                Color(0xFF1A2744) // Deep navy (matches header gradient)
             } else {
                 Color(0xFFB2DFDB) // Soft teal — like header area but less blue
             }
@@ -141,7 +141,7 @@ object RetrospectiveColors {
         @Composable
         get() =
             if (LocalIsDarkTheme.current) {
-                listOf(Color(0xFF4A2810), Color(0xFF181818)) // Subtle warm brown → dark
+                listOf(Color(0xFF1A2744), Color(0xFF181818)) // Deep navy → dark
             } else {
                 listOf(
                     Color(0xFFE0F2F1),
@@ -975,7 +975,7 @@ private fun SummaryDetailDialog(
                             Icon(
                                 if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
                                 contentDescription = if (isSpeaking) "Stoppen" else "Vorlesen",
-                                tint = Color(0xFFE07830),
+                                tint = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFFE07830),
                                 modifier = Modifier.size(24.dp),
                             )
                         }
@@ -986,7 +986,7 @@ private fun SummaryDetailDialog(
                             Icon(
                                 Icons.Rounded.Share,
                                 contentDescription = "Teilen",
-                                tint = Color(0xFFE07830),
+                                tint = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFFE07830),
                                 modifier = Modifier.size(24.dp),
                             )
                         }
@@ -1106,7 +1106,7 @@ private fun SummaryDetailDialog(
                     },
                     colors =
                         androidx.compose.material3.ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFE07830)
+                            containerColor = if (LocalIsDarkTheme.current) Color(0xFF2C4A6E) else Color(0xFFE07830)
                         ),
                 ) {
                     Text("Teilen")

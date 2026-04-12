@@ -1735,6 +1735,21 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
+                            if (!uiState.isSubscribed) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Icon(
+                                    Icons.Rounded.Star,
+                                    null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = Color(0xFFFFD700),
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    "(Premium Feature)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         if (uiState.isSubscribed) {
@@ -1779,36 +1794,9 @@ fun SettingsScreen(
                         } else {
                             Text(
                                 "Tagebucheintr\u00e4ge als PDF exportieren",
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                             )
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                            ) {
-                                OutlinedButton(
-                                    onClick = {
-                                        doHaptic(HapticFeedbackType.LongPress)
-                                        viewModel.analyticsTracker.trackExportPremiumBlocked()
-                                        onNavigateToPaywall("pdf_export")
-                                    },
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Star,
-                                        null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = Color(0xFFFFD700),
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        "Premium-Feature",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = Color.Black,
-                                    )
-                                }
-                            }
                         }
                         uiState.exportMessage?.let { msg ->
                             Spacer(modifier = Modifier.height(10.dp))
@@ -1923,7 +1911,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Best Journal v0.10.11",
+                            "Best Journal v0.10.12",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

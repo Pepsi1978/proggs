@@ -915,16 +915,16 @@ fun EntryDetailScreen(
                                             colors =
                                                 listOf(
                                                     lerp(
-                                                        Color(0xFF4CAF50),
+                                                        if (isDark) Color(0xFF1A237E) else Color(0xFF1976D2),
                                                         Color(0xFFBDBDBD),
                                                         flow,
                                                     ),
                                                     lerp(
-                                                        Color(0xFF81C784),
-                                                        Color(0xFF4CAF50),
+                                                        if (isDark) Color(0xFF283593) else Color(0xFF64B5F6),
+                                                        if (isDark) Color(0xFF1A237E) else Color(0xFF1976D2),
                                                         flow2,
                                                     ),
-                                                    lerp(Color(0xFFBDBDBD), Color(0xFF81C784), flow),
+                                                    lerp(Color(0xFFBDBDBD), if (isDark) Color(0xFF283593) else Color(0xFF64B5F6), flow),
                                                 ),
                                             start = Offset(0f, 300f * flow),
                                             end = Offset(300f, 300f * (1f - flow)),
@@ -972,18 +972,18 @@ fun EntryDetailScreen(
                                             colors =
                                                 listOf(
                                                     lerp(
-                                                        Color(0xFFFF9800),
+                                                        if (isDark) Color(0xFF0D47A1) else Color(0xFF0288D1),
                                                         Color(0xFFBDBDBD),
                                                         flow2,
                                                     ),
                                                     lerp(
-                                                        Color(0xFFFFB74D),
-                                                        Color(0xFFFF9800),
+                                                        if (isDark) Color(0xFF1565C0) else Color(0xFF4FC3F7),
+                                                        if (isDark) Color(0xFF0D47A1) else Color(0xFF0288D1),
                                                         flow,
                                                     ),
                                                     lerp(
                                                         Color(0xFFBDBDBD),
-                                                        Color(0xFFFFB74D),
+                                                        if (isDark) Color(0xFF1565C0) else Color(0xFF4FC3F7),
                                                         flow2,
                                                     ),
                                                 ),

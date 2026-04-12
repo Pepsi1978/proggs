@@ -1889,7 +1889,7 @@ private fun TopActionsBlock(actions: List<TopAction>) {
                     Box(
                         modifier =
                             Modifier.size(32.dp)
-                                .clip(CircleShape)
+                                .clip(RoundedCornerShape(8.dp))
                                 .background(
                                     when (index) {
                                         0 -> NeonRed
