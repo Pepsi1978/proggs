@@ -90,7 +90,6 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Root Cause:** CLAUDE.md enthielt "NIEMALS unter 95" — das war veraltet. Der Benutzer hat klargestellt: 85 ist der korrekte Dauerwert
 **Fix:** (1) settings.json zurueck auf 85, (2) CLAUDE.md korrigiert: "ist IMMER 85", (3) Feedback-Memory gespeichert, (4) config-guard muss 85 als Standard kennen
 **Status:** GEFIXT (2026-04-12) — Benutzer-Korrektur, CLAUDE.md aktualisiert
-### 2026-04-12 10:40 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ---
 
 ## Systemzustand (aktuell)
@@ -103,7 +102,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Sprachen:** Rust 1.94.0, Go 1.26.1, Kotlin 2.3.20, Java OpenJDK 21.0.10, Python 3.13.12
 - **Node.js:** v24.14.0, npm 11.12.0, Bun 1.3.11
 - **Effort Level:** medium (Standard), High per /effort high
-- **AUTOCOMPACT:** 95 (gefixt 2026-04-12, war faelschlich auf 85)
+- **AUTOCOMPACT:** 85 (korrigiert 2026-04-12, ist der dauerhafte Standard)
 - **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
 - **Agents:** 29+ aktiv
 - **Hooks:** 46+ PS1, 46+ SH. Backup-Drift bei 13 Hooks (env-checker 12.04)
@@ -118,7 +117,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Evolution-Analyst (2026-04-12):** Quality 8.7-8.8 (PLATEAU), Meta-Intelligence KRITISCH (14 Warnings ohne Vorschlaege auf macOS), Corrections fast null
 - **Cross-Platform:** 82 Commits von macOS synchronisiert (12.04). Massive Feature-Arbeit: Retrospektiven, Fotos, TTS, Share-Dialog, Nav-Redesign, Cloud-Backup-Redesign.
 - **Neue Features seit 07.04 (macOS):** Retrospective-Screen, EntryPhoto, EdgeTtsPlayer, ShareEntryDialog, DriveRestoreManager, SyncProgressHolder, MonthlyReviewReceiver, YearlyReviewReceiver. DB Schema v4→v8.
-- **[2026-04-12 10:42] env-checker**: Gesamtstatus GELB -- 2 Kernprobleme: CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=85 (erwartet 95, Kontext wird zu frueh komprimiert), 13 Hook-Dateien + 1 Rule-Datei nicht im Backup synchronisiert; 7 npm-Updates verfuegbar (Biome, openclaw, Codex, Gemini-CLI u.a.); Gradle PATH-Konflikt 9.4.0 vs 9.4.1; alle Tool-Versionen aktuell; Disk 148GB frei; bypassPermissions OK
+- **Speicherplatz (macOS):** 16 GB frei (42%) — bereinigt, stabil
 ---
 
 ## Erkenntnisse aus Code Reviews
