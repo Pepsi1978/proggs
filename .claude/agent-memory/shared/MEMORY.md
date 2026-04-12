@@ -90,6 +90,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Root Cause:** CLAUDE.md enthielt "NIEMALS unter 95" — das war veraltet. Der Benutzer hat klargestellt: 85 ist der korrekte Dauerwert
 **Fix:** (1) settings.json zurueck auf 85, (2) CLAUDE.md korrigiert: "ist IMMER 85", (3) Feedback-Memory gespeichert, (4) config-guard muss 85 als Standard kennen
 **Status:** GEFIXT (2026-04-12) — Benutzer-Korrektur, CLAUDE.md aktualisiert
+### 2026-04-12 16:51 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
 ---
 
 ## Systemzustand (aktuell)
@@ -118,6 +119,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Cross-Platform:** 82 Commits von macOS synchronisiert (12.04). Massive Feature-Arbeit: Retrospektiven, Fotos, TTS, Share-Dialog, Nav-Redesign, Cloud-Backup-Redesign.
 - **Neue Features seit 07.04 (macOS):** Retrospective-Screen, EntryPhoto, EdgeTtsPlayer, ShareEntryDialog, DriveRestoreManager, SyncProgressHolder, MonthlyReviewReceiver, YearlyReviewReceiver. DB Schema v4→v8.
 - **Speicherplatz (macOS):** 16 GB frei (42%) — bereinigt, stabil
+- **Pending Admin Updates (19):** biome,oven-sh/bun/bun,deno,fzf,go,harfbuzz,htop,libomp,libpng,node,ollama,openssl@3,python@3.13,python@3.14,simdjson,sqlite,steipete/tap/summarize,uv,codex,
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -329,6 +331,10 @@ _Noch keine Eintraege._
 - **[2026-04-03] self-observation-checker**: [WARNING] Session 4b80f958 (250 Turns) zeigte keine Selbstbeobachtung
 - **[2026-04-06] intelligence-checker**: [WARNING] Session 4b80f958 (250 Turns) hatte keinen Intelligenz-Vorschlag
 - **[2026-04-06] self-observation-checker**: [WARNING] Session 4b80f958 (250 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-12] intelligence-checker**: [WARNING] Session 4fcdf1e4 (77 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-12] self-observation-checker**: [WARNING] Session 4fcdf1e4 (77 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-12] intelligence-checker**: [WARNING] Session 4fcdf1e4 (77 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-12] self-observation-checker**: [WARNING] Session 4fcdf1e4 (77 Turns) zeigte keine Selbstbeobachtung
 ---
 
 ## Regeln & Konventionen

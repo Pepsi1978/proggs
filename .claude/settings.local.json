@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(mkdir -p /Users/frank/.claude/scripts)",
+      "Read(//Users/frank/.claude/scripts/**)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git stash:*)",
+      "Bash(git fetch:*)",
+      "Bash(git rebase:*)",
+      "Bash(mv /Users/frank/.claude/skills/android-design-audit /Users/frank/.claude/skills/designer)",
+      "Bash(mkdir -p /Users/frank/.claude/skills/designer/references)"
+    ]
+  }
+}
