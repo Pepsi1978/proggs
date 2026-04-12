@@ -282,12 +282,12 @@ fun SettingsScreen(
                                     Icon(
                                         Icons.Rounded.PhotoCamera,
                                         null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp),
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        "Fotos mitsichern",
+                                        "Fotos sichern",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
@@ -306,12 +306,12 @@ fun SettingsScreen(
                                     Icon(
                                         Icons.Rounded.Videocam,
                                         null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp),
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        "Videos mitsichern",
+                                        "Videos sichern",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
@@ -1970,7 +1970,7 @@ private fun SettingsPhoneIcon(isDark: Boolean) {
 
 @Composable
 private fun SettingsSoundIcon(isEnabled: Boolean) {
-    val activeColor = Color(0xFF4CAF50)
+    val activeColor = MaterialTheme.colorScheme.primary
     val mutedGray = Color(0xFF666666)
     val onSize by
         animateDpAsState(
