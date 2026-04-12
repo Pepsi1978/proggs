@@ -153,48 +153,15 @@ function Check-SemanticSearch {
 }
 
 # ============================================================
-# CHECK 5: MCP-Auth (ehemals mcp-auth-check.ps1)
+# CHECK 5: MCP-Auth (DISABLED 2026-04-12)
 # ============================================================
+# REMOVED: "claude mcp list" spawns orphan MCP server processes on every call.
+# This was a root cause of the process leak and session destruction bug.
+# The check provided minimal value (just showing auth status) while actively
+# making the system worse by spawning 2-5 orphan node.exe processes per session start.
+# See observation #4072: "MCP Server Duplication Root Cause: claude mcp list Spawns Orphans"
 function Check-McpAuth {
-    # WICHTIG: claude mcp list kann haengen wenn MCP-Server nicht antworten.
-    # Deshalb: Als Background-Job mit 5-Sekunden-Timeout ausfuehren.
-    try {
-        $job = Start-Job -ScriptBlock { claude mcp list 2>&1 } -ErrorAction Stop
-        $completed = Wait-Job $job -Timeout 5
-        if (-not $completed) {
-            Stop-Job $job -ErrorAction SilentlyContinue
-            Remove-Job $job -Force -ErrorAction SilentlyContinue
-            $script:okChecks += "MCP-Auth: Timeout (uebersprungen)"
-            return
-        }
-        $output = Receive-Job $job | Out-String
-        Remove-Job $job -Force -ErrorAction SilentlyContinue
-
-        $authNeeded = @()
-        $failed = @()
-
-        foreach ($line in $output -split "`n") {
-            $line = $line.Trim()
-            if ($line -match '^(.+?)\s*[-:].+Needs authentication') {
-                $authNeeded += $Matches[1].Trim()
-            }
-            elseif ($line -match '^(.+?)\s*[-:].+Failed to connect') {
-                $failed += $Matches[1].Trim()
-            }
-        }
-
-        if ($authNeeded.Count -gt 0) {
-            $script:warnings += "MCP-Auth: $($authNeeded.Count) abgelaufene Session(s): $($authNeeded -join ', ')"
-        }
-        if ($failed.Count -gt 0) {
-            $script:warnings += "MCP-Server nicht erreichbar: $($failed -join ', ')"
-        }
-        if ($authNeeded.Count -eq 0 -and $failed.Count -eq 0) {
-            $script:okChecks += "MCP-Auth: Alle verbunden"
-        }
-    } catch {
-        $script:okChecks += "MCP-Auth: Pruefung uebersprungen"
-    }
+    $script:okChecks += "MCP-Auth: Pruefung deaktiviert (spawnte Orphans)"
 }
 
 # ============================================================

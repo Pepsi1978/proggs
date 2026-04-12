@@ -127,55 +127,13 @@ check_semantic_search() {
 }
 
 # ============================================================
-# CHECK 5: MCP-Auth (ehemals mcp-auth-check.sh)
+# CHECK 5: MCP-Auth (DISABLED 2026-04-12)
 # ============================================================
+# REMOVED: "claude mcp list" spawns orphan MCP server processes on every call.
+# This was a root cause of the process leak and session destruction bug.
+# See observation #4072: "MCP Server Duplication Root Cause: claude mcp list Spawns Orphans"
 check_mcp_auth() {
-    # WICHTIG: claude mcp list kann haengen wenn MCP-Server nicht antworten.
-    # Deshalb: Mit 5-Sekunden-Timeout ausfuehren (gtimeout auf macOS, timeout auf Linux).
-    local timeout_cmd="timeout"
-    if [ "$(uname)" = "Darwin" ]; then
-        # macOS: gtimeout von coreutils, oder skip wenn nicht installiert
-        if command -v gtimeout >/dev/null 2>&1; then
-            timeout_cmd="gtimeout"
-        else
-            # Kein Timeout verfuegbar — direkt ausfuehren aber mit Risiko
-            timeout_cmd=""
-        fi
-    fi
-
-    local output
-    if [ -n "$timeout_cmd" ]; then
-        output=$($timeout_cmd 5 claude mcp list 2>&1) || true
-    else
-        output=$(claude mcp list 2>&1) || true
-    fi
-
-    # Timeout-Exit-Code ist 124 — dann uebersprungen
-    if [ $? -eq 124 ] 2>/dev/null; then
-        ok_checks+=("MCP-Auth: Timeout (uebersprungen)")
-        return
-    fi
-
-    local auth_needed=0
-    local failed=0
-
-    while IFS= read -r line; do
-        if echo "$line" | grep -qi "Needs authentication"; then
-            auth_needed=$((auth_needed + 1))
-        elif echo "$line" | grep -qi "Failed to connect"; then
-            failed=$((failed + 1))
-        fi
-    done <<< "$output"
-
-    if [ "$auth_needed" -gt 0 ]; then
-        warnings+=("MCP-Auth: $auth_needed abgelaufene Session(s)")
-    fi
-    if [ "$failed" -gt 0 ]; then
-        warnings+=("MCP-Server: $failed nicht erreichbar")
-    fi
-    if [ "$auth_needed" -eq 0 ] && [ "$failed" -eq 0 ]; then
-        ok_checks+=("MCP-Auth: Alle verbunden")
-    fi
+    ok_checks+=("MCP-Auth: Pruefung deaktiviert (spawnte Orphans)")
 }
 
 # ============================================================

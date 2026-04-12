@@ -164,10 +164,13 @@ if [ -d "$TMPDIR_REAL/claude" ]; then
     find "$TMPDIR_REAL/claude" -type d -empty -delete 2>/dev/null
 fi
 
-# Clean intent-anker files
-for f in claude-session-goal.txt claude-turn-counter.txt claude-intent-reminder.txt; do
-    rm -f "$TMPDIR_REAL/$f" 2>/dev/null
-done
+# Intent-anker files: DO NOT DELETE (fixed 2026-04-12)
+# These files are in TMPDIR with fixed names — shared across ALL sessions.
+# Deleting them here destroys the turn counter and goal for any OTHER running session.
+# They are small text files (<1KB each) that get overwritten on next session start.
+# for f in claude-session-goal.txt claude-turn-counter.txt claude-intent-reminder.txt; do
+#     rm -f "$TMPDIR_REAL/$f" 2>/dev/null
+# done
 
 # Clean old agent-writeback sentinel files
 find "$TMPDIR_REAL" -name "agent-writeback-*.json" -mmin +120 -delete 2>/dev/null

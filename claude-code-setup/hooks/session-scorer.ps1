@@ -192,11 +192,12 @@ if (Test-Path $nodeCache) {
         ForEach-Object { try { Remove-Item $_.FullName -Force -ErrorAction Stop; $cleaned++ } catch { } }
 }
 
-# Clean intent-anker files
-@("claude-session-goal.txt", "claude-turn-counter.txt", "claude-intent-reminder.txt") | ForEach-Object {
-    $f = Join-Path $env:TEMP $_
-    if (Test-Path $f) { Remove-Item $f -Force -ErrorAction SilentlyContinue }
-}
+# Intent-anker files: DO NOT DELETE (fixed 2026-04-12)
+# These files are in $env:TEMP with fixed names — shared across ALL sessions.
+# Deleting them here destroys the turn counter and goal for any OTHER running session.
+# They are small text files (<1KB each) that get overwritten on next session start
+# by intent-anker.ps1, so there is no accumulation problem.
+# @("claude-session-goal.txt", "claude-turn-counter.txt", "claude-intent-reminder.txt")
 
 # Clean old agent-writeback sentinel files
 Get-ChildItem (Join-Path $env:TEMP "agent-writeback-*.json") -ErrorAction SilentlyContinue |
