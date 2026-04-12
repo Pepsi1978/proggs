@@ -1,5 +1,6 @@
 package com.bestjournal.app.ui.navigation
 
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Analytics
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -12,8 +13,14 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import com.bestjournal.app.util.rememberHapticAction
 
 sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
@@ -38,9 +45,30 @@ fun BottomNavBar(currentRoute: String?, onItemClick: (BottomNavItem) -> Unit) {
             BottomNavItem.Settings,
         )
 
+    val currentIndex = items.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
+    var dragAccumulator by remember { mutableFloatStateOf(0f) }
+    val swipeThreshold = 100f
+
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.pointerInput(currentIndex) {
+            detectHorizontalDragGestures(
+                onDragStart = { dragAccumulator = 0f },
+                onHorizontalDrag = { _, dragAmount ->
+                    dragAccumulator += dragAmount
+                    if (dragAccumulator < -swipeThreshold && currentIndex < items.lastIndex) {
+                        dragAccumulator = 0f
+                        doHaptic(HapticFeedbackType.TextHandleMove)
+                        onItemClick(items[currentIndex + 1])
+                    } else if (dragAccumulator > swipeThreshold && currentIndex > 0) {
+                        dragAccumulator = 0f
+                        doHaptic(HapticFeedbackType.TextHandleMove)
+                        onItemClick(items[currentIndex - 1])
+                    }
+                },
+            )
+        },
     ) {
         items.forEach { item ->
             val isSelected = currentRoute == item.route
