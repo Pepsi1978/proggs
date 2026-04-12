@@ -58,11 +58,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -192,167 +188,184 @@ fun JournalScreen(
         }
     }
 
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            containerColor = MaterialTheme.colorScheme.background,
-            topBar = {
-                Column {
-                    MediumTopAppBar(
-                        title = {
-                            Column {
-                                Text("Tagebuch")
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Search bar
+            AnimatedVisibility(visible = uiState.isSearchActive) {
+                TextField(
+                    value = uiState.searchQuery,
+                    onValueChange = { viewModel.setSearchQuery(it) },
+                    placeholder = {
+                        Text(
+                            "Einträge durchsuchen...",
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                    },
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .focusRequester(searchFocusRequester),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions =
+                        KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                    colors =
+                        TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = Color.Transparent,
+                        ),
+                    trailingIcon = {
+                        IconButton(onClick = { viewModel.toggleSearch() }) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                "Suche schließen",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                )
+            }
+
+            // Fixed title bar (does not scroll) — same pattern as DashboardScreen
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Tagebuch",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        SunMoonToggle()
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = {
+                                if (uiState.syncStatus == SyncStatus.ERROR) {
+                                    viewModel.retrySyncNow()
+                                } else {
+                                    showSyncLegend = true
+                                }
+                            }
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector =
+                                        when (uiState.syncStatus) {
+                                            SyncStatus.NOT_SIGNED_IN -> Icons.Rounded.Warning
+                                            SyncStatus.ERROR -> Icons.Rounded.CloudOff
+                                            SyncStatus.SYNCING -> Icons.Rounded.Cloud
+                                            SyncStatus.UPLOADING -> Icons.Filled.CloudUpload
+                                            SyncStatus.DOWNLOADING -> Icons.Filled.CloudDownload
+                                            else -> Icons.Rounded.CloudDone
+                                        },
+                                    contentDescription = "Sync-Status",
+                                    tint =
+                                        when (uiState.syncStatus) {
+                                            SyncStatus.NOT_SIGNED_IN -> NeonAmber
+                                            SyncStatus.SYNCING -> NeonCyan
+                                            SyncStatus.UPLOADING -> NeonCyan
+                                            SyncStatus.DOWNLOADING -> NeonCyan
+                                            SyncStatus.ERROR -> NeonRed
+                                            else -> NeonEmerald
+                                        },
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                if (
+                                    (uiState.syncStatus == SyncStatus.DOWNLOADING ||
+                                        uiState.syncStatus == SyncStatus.UPLOADING) &&
+                                        uiState.downloadTotal > 0
                                 ) {
                                     Text(
-                                        text = "${allEntries.size} Einträge",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        text =
+                                            "${uiState.downloadCurrent}/${uiState.downloadTotal}",
+                                        fontSize = 9.sp,
+                                        color = NeonCyan,
+                                        lineHeight = 10.sp,
                                     )
-                                    if (uiState.currentStreak > 0) {
-                                        val streakColor =
-                                            if (uiState.currentStreak > 7) NeonAmber
-                                            else MaterialTheme.colorScheme.onSurfaceVariant
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier =
-                                                Modifier.background(
-                                                        streakColor.copy(alpha = 0.1f),
-                                                        RoundedCornerShape(12.dp),
-                                                    )
-                                                    .clickable { showStreakDialog = true }
-                                                    .padding(horizontal = 8.dp, vertical = 3.dp),
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.LocalFireDepartment,
-                                                contentDescription = "Tage in Folge",
-                                                tint = streakColor,
-                                                modifier = Modifier.size(16.dp),
-                                            )
-                                            Spacer(modifier = Modifier.width(3.dp))
-                                            Text(
-                                                text = "${uiState.currentStreak} Tage",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = streakColor,
-                                            )
-                                        }
-                                    }
                                 }
                             }
-                        },
-                        actions = {
-                            SunMoonToggle()
-                            IconButton(
-                                onClick = {
-                                    if (uiState.syncStatus == SyncStatus.ERROR) {
-                                        viewModel.retrySyncNow()
-                                    } else {
-                                        showSyncLegend = true
-                                    }
-                                }
+                        }
+                        Surface(
+                            onClick = { viewModel.toggleSearch() },
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border =
+                                androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                ),
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        imageVector =
-                                            when (uiState.syncStatus) {
-                                                SyncStatus.NOT_SIGNED_IN -> Icons.Rounded.Warning
-                                                SyncStatus.ERROR -> Icons.Rounded.CloudOff
-                                                SyncStatus.SYNCING -> Icons.Rounded.Cloud
-                                                SyncStatus.UPLOADING -> Icons.Filled.CloudUpload
-                                                SyncStatus.DOWNLOADING -> Icons.Filled.CloudDownload
-                                                else -> Icons.Rounded.CloudDone
-                                            },
-                                        contentDescription = "Sync-Status",
-                                        tint =
-                                            when (uiState.syncStatus) {
-                                                SyncStatus.NOT_SIGNED_IN -> NeonAmber
-                                                SyncStatus.SYNCING -> NeonCyan
-                                                SyncStatus.UPLOADING -> NeonCyan
-                                                SyncStatus.DOWNLOADING -> NeonCyan
-                                                SyncStatus.ERROR -> NeonRed
-                                                else -> NeonEmerald
-                                            },
-                                        modifier = Modifier.size(20.dp),
-                                    )
-                                    if (
-                                        (uiState.syncStatus == SyncStatus.DOWNLOADING ||
-                                            uiState.syncStatus == SyncStatus.UPLOADING) &&
-                                            uiState.downloadTotal > 0
-                                    ) {
-                                        Text(
-                                            text =
-                                                "${uiState.downloadCurrent}/${uiState.downloadTotal}",
-                                            fontSize = 9.sp,
-                                            color = NeonCyan,
-                                            lineHeight = 10.sp,
-                                        )
-                                    }
-                                }
-                            }
-                            IconButton(onClick = { viewModel.toggleSearch() }) {
                                 Icon(
                                     Icons.Rounded.Search,
                                     "Suchen",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "Suche",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                        },
-                        scrollBehavior = scrollBehavior,
-                        colors =
-                            TopAppBarDefaults.mediumTopAppBarColors(
-                                containerColor = MaterialTheme.colorScheme.background,
-                                scrolledContainerColor = MaterialTheme.colorScheme.surface,
-                            ),
-                    )
-
-                    // Search bar
-                    AnimatedVisibility(visible = uiState.isSearchActive) {
-                        TextField(
-                            value = uiState.searchQuery,
-                            onValueChange = { viewModel.setSearchQuery(it) },
-                            placeholder = {
-                                Text(
-                                    "Einträge durchsuchen...",
-                                    color = MaterialTheme.colorScheme.outline,
-                                )
-                            },
-                            modifier =
-                                Modifier.fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                                    .focusRequester(searchFocusRequester),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions =
-                                KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                            colors =
-                                TextFieldDefaults.colors(
-                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                    cursorColor = MaterialTheme.colorScheme.primary,
-                                    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedIndicatorColor = Color.Transparent,
-                                ),
-                            trailingIcon = {
-                                IconButton(onClick = { viewModel.toggleSearch() }) {
-                                    Icon(
-                                        Icons.Rounded.Close,
-                                        "Suche schließen",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            },
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                        )
+                        }
                     }
                 }
-            },
-        ) { innerPadding ->
-            Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        text = "${allEntries.size} Einträge",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (uiState.currentStreak > 0) {
+                        val streakColor =
+                            if (uiState.currentStreak > 7) NeonAmber
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier =
+                                Modifier.background(
+                                        streakColor.copy(alpha = 0.1f),
+                                        RoundedCornerShape(12.dp),
+                                    )
+                                    .clickable { showStreakDialog = true }
+                                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.LocalFireDepartment,
+                                contentDescription = "Tage in Folge",
+                                tint = streakColor,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "${uiState.currentStreak} Tage",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = streakColor,
+                            )
+                        }
+                    }
+                }
+            }
             // Transcribing state — no visual indicator needed (transcription is near-instant)
 
             if (entries.isEmpty() && uiState.recordingState == RecordingState.IDLE) {
@@ -472,7 +485,6 @@ fun JournalScreen(
                     // Bottom padding for buttons
                     item { Spacer(modifier = Modifier.height(80.dp)) }
                 }
-            }
             }
         }
 
