@@ -4,10 +4,12 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import android.media.ExifInterface
 import com.entropyjournal.data.local.entity.EntryPhotoEntity
 import com.entropyjournal.data.local.entity.JournalEntryEntity
 import java.io.File
@@ -200,12 +202,33 @@ object PdfExporter {
         options.inSampleSize = calculateInSampleSize(options.outWidth, options.outHeight, targetWidth)
         options.inJustDecodeBounds = false
 
-        return try {
+        val rawBitmap = try {
             BitmapFactory.decodeFile(filePath, options)
         } catch (_: OutOfMemoryError) {
             options.inSampleSize *= 2
             try { BitmapFactory.decodeFile(filePath, options) } catch (_: OutOfMemoryError) { null }
-        }
+        } ?: return null
+
+        return applyExifRotation(rawBitmap, filePath)
+    }
+
+    private fun applyExifRotation(bitmap: Bitmap, filePath: String): Bitmap {
+        val rotation = try {
+            val exif = ExifInterface(filePath)
+            when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                else -> 0f
+            }
+        } catch (_: Exception) { 0f }
+
+        if (rotation == 0f) return bitmap
+
+        val matrix = Matrix().apply { postRotate(rotation) }
+        val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        if (rotated !== bitmap) bitmap.recycle()
+        return rotated
     }
 
     private fun calculateInSampleSize(width: Int, height: Int, reqWidth: Int): Int {
