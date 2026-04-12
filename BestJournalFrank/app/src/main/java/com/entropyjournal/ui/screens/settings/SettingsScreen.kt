@@ -1,5 +1,7 @@
 package com.entropyjournal.ui.screens.settings
 
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import com.entropyjournal.util.rememberHapticAction
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
@@ -158,6 +160,8 @@ fun SettingsScreen(
         }
     }
 
+    val doHaptic = rememberHapticAction()
+
     val consentLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { _ ->
             viewModel.syncNow()
@@ -297,7 +301,10 @@ fun SettingsScreen(
                                 }
                                 Switch(
                                     checked = uiState.backupPhotos,
-                                    onCheckedChange = { viewModel.setBackupPhotos(it) },
+                                    onCheckedChange = {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        viewModel.setBackupPhotos(it)
+                                    },
                                 )
                             }
                             Row(
@@ -321,7 +328,10 @@ fun SettingsScreen(
                                 }
                                 Switch(
                                     checked = uiState.backupVideos,
-                                    onCheckedChange = { viewModel.setBackupVideos(it) },
+                                    onCheckedChange = {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        viewModel.setBackupVideos(it)
+                                    },
                                 )
                             }
                             Spacer(modifier = Modifier.height(12.dp))
@@ -439,6 +449,7 @@ fun SettingsScreen(
                             Switch(
                                 checked = uiState.isDarkTheme,
                                 onCheckedChange = {
+                                    doHaptic(HapticFeedbackType.LongPress)
                                     if (uiState.followSystem) viewModel.updateFollowSystem(false)
                                     viewModel.updateDarkTheme(it)
                                 },
@@ -477,7 +488,10 @@ fun SettingsScreen(
                             }
                             Switch(
                                 checked = uiState.followSystem,
-                                onCheckedChange = { viewModel.updateFollowSystem(it) },
+                                onCheckedChange = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    viewModel.updateFollowSystem(it)
+                                },
                                 colors =
                                     SwitchDefaults.colors(
                                         checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -538,6 +552,7 @@ fun SettingsScreen(
                             Switch(
                                 checked = uiState.followSun,
                                 onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
                                     if (enabled) {
                                         val hasPerm =
                                             androidx.core.content.ContextCompat.checkSelfPermission(
@@ -657,6 +672,7 @@ fun SettingsScreen(
                             Switch(
                                 checked = soundsEnabled,
                                 onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
                                     soundsEnabled = enabled
                                     soundsPrefs
                                         .edit()
@@ -776,6 +792,7 @@ fun SettingsScreen(
                             Switch(
                                 checked = hapticEnabled,
                                 onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
                                     hapticEnabled = enabled
                                     soundsPrefs
                                         .edit()
@@ -841,6 +858,7 @@ fun SettingsScreen(
                             Switch(
                                 checked = uiState.reminderEnabled,
                                 onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
                                     if (enabled) {
                                         if (
                                             android.os.Build.VERSION.SDK_INT >=
@@ -918,6 +936,7 @@ fun SettingsScreen(
                             Switch(
                                 checked = uiState.weeklyReviewEnabled,
                                 onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
                                     if (enabled) {
                                         if (
                                             android.os.Build.VERSION.SDK_INT >=
@@ -981,6 +1000,7 @@ fun SettingsScreen(
                             Switch(
                                 checked = uiState.monthlyReviewEnabled,
                                 onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
                                     if (enabled) {
                                         if (
                                             android.os.Build.VERSION.SDK_INT >=
@@ -1044,6 +1064,7 @@ fun SettingsScreen(
                             Switch(
                                 checked = uiState.yearlyReviewEnabled,
                                 onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
                                     if (enabled) {
                                         if (
                                             android.os.Build.VERSION.SDK_INT >=
@@ -1207,6 +1228,7 @@ fun SettingsScreen(
                             Switch(
                                 checked = uiState.biometricLock,
                                 onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
                                     val activity = context as? com.entropyjournal.MainActivity
                                     if (activity != null) {
                                         activity.showBiometricPrompt {
@@ -1549,7 +1571,10 @@ fun SettingsScreen(
                             }
                             Switch(
                                 checked = uiState.textImprovementDefault,
-                                onCheckedChange = { viewModel.updateTextImprovementDefault(it) },
+                                onCheckedChange = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    viewModel.updateTextImprovementDefault(it)
+                                },
                                 colors =
                                     SwitchDefaults.colors(
                                         checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -1576,7 +1601,10 @@ fun SettingsScreen(
                             }
                             Switch(
                                 checked = uiState.autoUpdateDashboard,
-                                onCheckedChange = { viewModel.updateAutoUpdateDashboard(it) },
+                                onCheckedChange = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    viewModel.updateAutoUpdateDashboard(it)
+                                },
                                 colors =
                                     SwitchDefaults.colors(
                                         checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -1782,7 +1810,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal v0.5.4",
+                            "Entropy Journal v0.5.5",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
