@@ -366,53 +366,51 @@ fun JournalScreen(
                         entries.groupBy { DTFormatter.getSectionLabel(it.timestamp) }
                     }
 
+                // Fixed search bar (does not scroll with entries)
+                AnimatedVisibility(visible = uiState.isSearchActive) {
+                    TextField(
+                        value = uiState.searchQuery,
+                        onValueChange = { viewModel.setSearchQuery(it) },
+                        placeholder = {
+                            Text(
+                                "Einträge durchsuchen...",
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                        },
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .focusRequester(searchFocusRequester),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions =
+                            KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                        colors =
+                            TextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                cursorColor = MaterialTheme.colorScheme.primary,
+                                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                unfocusedIndicatorColor = Color.Transparent,
+                            ),
+                        trailingIcon = {
+                            IconButton(onClick = { viewModel.toggleSearch() }) {
+                                Icon(
+                                    Icons.Rounded.Close,
+                                    "Suche schließen",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                    )
+                }
+
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
-                    // Search bar (appears inline, between header and entries)
-                    if (uiState.isSearchActive) {
-                        item(key = "search_bar") {
-                            TextField(
-                                value = uiState.searchQuery,
-                                onValueChange = { viewModel.setSearchQuery(it) },
-                                placeholder = {
-                                    Text(
-                                        "Einträge durchsuchen...",
-                                        color = MaterialTheme.colorScheme.outline,
-                                    )
-                                },
-                                modifier =
-                                    Modifier.fillMaxWidth()
-                                        .padding(vertical = 4.dp)
-                                        .focusRequester(searchFocusRequester),
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                keyboardActions =
-                                    KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                                colors =
-                                    TextFieldDefaults.colors(
-                                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                        cursorColor = MaterialTheme.colorScheme.primary,
-                                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                                        unfocusedIndicatorColor = Color.Transparent,
-                                    ),
-                                trailingIcon = {
-                                    IconButton(onClick = { viewModel.toggleSearch() }) {
-                                        Icon(
-                                            Icons.Rounded.Close,
-                                            "Suche schließen",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                },
-                                singleLine = true,
-                                shape = RoundedCornerShape(12.dp),
-                            )
-                        }
-                    }
-
                     // Daily writing prompt banner with entrance animation
                     if (uiState.showPromptBanner && uiState.dailyPromptText.isNotBlank()) {
                         item(key = "writing_prompt") {
@@ -512,7 +510,10 @@ fun JournalScreen(
         ) {
             // Text entry button (left)
             FloatingActionButton(
-                onClick = { viewModel.startTextEntry() },
+                onClick = {
+                    doHaptic(HapticFeedbackType.LongPress)
+                    viewModel.startTextEntry()
+                },
                 modifier = Modifier.size(64.dp),
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurface,
@@ -525,14 +526,6 @@ fun JournalScreen(
                     modifier = Modifier.size(28.dp),
                 )
             }
-
-            // Divider
-            Box(
-                modifier =
-                    Modifier.height(32.dp)
-                        .width(1.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant)
-            )
 
             // Mic button (right)
             AnimatedMicButton(
