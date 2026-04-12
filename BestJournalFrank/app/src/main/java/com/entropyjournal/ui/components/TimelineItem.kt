@@ -35,10 +35,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.entropyjournal.domain.model.JournalEntry
-import com.entropyjournal.ui.theme.NeonCyan
-import com.entropyjournal.ui.theme.NeonEmerald
-import com.entropyjournal.ui.theme.NeonAmber
-import com.entropyjournal.ui.theme.NeonRed
 import com.entropyjournal.ui.theme.TextMuted
 import com.entropyjournal.util.DateTimeFormatter
 
@@ -55,11 +51,7 @@ fun TimelineItem(
 ) {
     val highlightColor = if (LocalIsDarkTheme.current) Color(0x44FFFFFF) else Color(0xFFFFEB3B)
     val lineColor = MaterialTheme.colorScheme.outlineVariant
-    val dotColor = when (entry.moodTag) {
-        "positiv" -> NeonEmerald
-        "belastend" -> NeonRed
-        else -> NeonCyan
-    }
+    val dotColor = MaterialTheme.colorScheme.primary
 
     Row(
         modifier = modifier

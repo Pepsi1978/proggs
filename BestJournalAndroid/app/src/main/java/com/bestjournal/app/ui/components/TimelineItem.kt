@@ -35,10 +35,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.bestjournal.app.domain.model.JournalEntry
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
-import com.bestjournal.app.ui.theme.NeonCyan
-import com.bestjournal.app.ui.theme.NeonEmerald
-import com.bestjournal.app.ui.theme.NeonAmber
-import com.bestjournal.app.ui.theme.NeonRed
 import com.bestjournal.app.ui.theme.TextMuted
 import com.bestjournal.app.util.DateTimeFormatter
 
@@ -55,11 +51,7 @@ fun TimelineItem(
 ) {
     val highlightColor = if (LocalIsDarkTheme.current) Color(0x44FFFFFF) else Color(0xFFFFEB3B)
     val lineColor = MaterialTheme.colorScheme.outlineVariant
-    val dotColor = when (entry.moodTag) {
-        "positiv" -> NeonEmerald
-        "belastend" -> NeonRed
-        else -> NeonCyan
-    }
+    val dotColor = MaterialTheme.colorScheme.primary
 
     Row(
         modifier = modifier
