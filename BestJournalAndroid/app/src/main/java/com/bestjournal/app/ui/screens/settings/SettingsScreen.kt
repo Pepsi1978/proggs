@@ -1,6 +1,9 @@
 package com.bestjournal.app.ui.screens.settings
 
 import androidx.compose.foundation.layout.PaddingValues
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.bestjournal.app.util.rememberHapticAction
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -1798,7 +1801,8 @@ fun SettingsScreen(
                                     showExportDialog = false
                                     playClick()
                                     viewModel.analyticsTracker.trackExportInitiated()
-                                    pdfLauncher.launch("BestJournal_Export.pdf")
+                                    val timestamp = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault()).format(Date())
+                                    pdfLauncher.launch("BestJournal_Export_$timestamp.pdf")
                                 },
                                 enabled = exportIncludeEntries,
                             ) {

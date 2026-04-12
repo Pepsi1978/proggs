@@ -1,6 +1,9 @@
 package com.entropyjournal.ui.screens.settings
 
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import com.entropyjournal.util.rememberHapticAction
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -269,7 +272,8 @@ fun SettingsScreen(
                 Button(
                     onClick = {
                         showExportDialog = false
-                        pdfLauncher.launch("EntropyJournal_Export.pdf")
+                        val timestamp = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault()).format(Date())
+                        pdfLauncher.launch("EntropyJournal_Export_$timestamp.pdf")
                     },
                     enabled = exportIncludeEntries,
                 ) {
