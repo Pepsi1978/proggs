@@ -36,6 +36,10 @@ namespace TerminalVoiceOverlay.Views
         // Copy/Paste buttons
         private static readonly SolidColorBrush BtnCopy      = Brush("#29B6F6");
         private static readonly SolidColorBrush BtnPaste     = Brush("#AB47BC");
+        // Ultrathink star
+        private static readonly SolidColorBrush BtnUltrathinkOn  = Brush("#B8860B");
+        private static readonly SolidColorBrush StarGold         = Brush("#FFD700");
+        private static readonly SolidColorBrush StarMuted        = Brush("#8B7355");
 
         // Pulse colours for main mic
         private static readonly SolidColorBrush BtnRecordingBright = Brush("#FF6666");
@@ -53,6 +57,7 @@ namespace TerminalVoiceOverlay.Views
         private bool geminiEnabled          = false; // macOS default
         private bool autoEnterEnabled       = true;  // macOS default (was false in Windows)
         private bool hasPastedText          = false;
+        private bool ultrathinkEnabled      = false;
         private string? lastRawTranscript   = null;
 
         // ── Right-click drag state ──
@@ -115,6 +120,7 @@ namespace TerminalVoiceOverlay.Views
             EnterButton.Background = BtnProcessing;  // orange (autoEnter starts true)
             CopyButton.Background  = BtnCopy;        // light blue
             PasteButton.Background = BtnPaste;       // purple
+            UltrathinkButton.Background = ToggleOff;  // dark (ultrathink starts disabled)
 
             // ── Hover animations ──
             AttachHover(XButton);
@@ -122,6 +128,7 @@ namespace TerminalVoiceOverlay.Views
             AttachHover(BtwButton);
             AttachHover(MicButton);
             AttachHover(GButton);
+            AttachHover(UltrathinkButton);
             AttachHover(EnterButton);
             AttachHover(CopyButton);
             AttachHover(PasteButton);
@@ -322,6 +329,10 @@ namespace TerminalVoiceOverlay.Views
                         finalText = transcript;
                     }
 
+                    // Prepend ultrathink prefix if enabled
+                    if (ultrathinkEnabled && !hasPastedText)
+                        finalText = "ultrathink - " + finalText;
+
                     // Prepend space if text was already pasted on this line
                     if (hasPastedText)
                         finalText = " " + finalText;
@@ -419,11 +430,14 @@ namespace TerminalVoiceOverlay.Views
                         finalText = transcript;
                     }
 
-                    // Prepend space if text was already pasted on this line, then /btw prefix
+                    // Build prefix: ultrathink + /btw
+                    var prefix = ultrathinkEnabled ? "ultrathink - /btw " : "/btw ";
+
+                    // Prepend space if text was already pasted on this line, then prefix
                     if (hasPastedText)
-                        finalText = " /btw " + finalText;
+                        finalText = " " + prefix + finalText;
                     else
-                        finalText = "/btw " + finalText;
+                        finalText = prefix + finalText;
 
                     TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
                     SetBtwMicState(RecordingState.Success);
@@ -534,6 +548,26 @@ namespace TerminalVoiceOverlay.Views
                 // Fire a Return key press into the active terminal
                 TerminalController.PressReturn(_terminalWatcher.ActiveTerminalHwnd);
             }
+        }
+
+        /// <summary>Star button — toggle ultrathink prefix.
+        /// When ON, "ultrathink - " is prepended to every voice input.</summary>
+        private void BtnUltrathink_Click(object sender, RoutedEventArgs e)
+        {
+            ultrathinkEnabled = !ultrathinkEnabled;
+
+            if (ultrathinkEnabled)
+            {
+                UltrathinkButton.Background = BtnUltrathinkOn;
+                UltrathinkStar.Fill = StarGold;
+            }
+            else
+            {
+                UltrathinkButton.Background = ToggleOff;
+                UltrathinkStar.Fill = StarMuted;
+            }
+
+            Console.WriteLine($"Ultrathink {(ultrathinkEnabled ? "ON" : "OFF")}");
         }
 
         /// <summary>C button — copy selected text via Ctrl+C.</summary>
