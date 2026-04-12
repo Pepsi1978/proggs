@@ -537,8 +537,7 @@
     "fpf@context-engineering-kit": true,
     "xclaude-plugin@xclaude-plugin-marketplace": false,
     "claude-reflect@claude-reflect-marketplace": true,
-    "coderabbit@claude-plugins-official": true,
-    "aikido@claude-plugins-official": true
+    "coderabbit@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "superpowers-marketplace": {

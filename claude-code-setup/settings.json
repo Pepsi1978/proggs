@@ -443,7 +443,6 @@
     "playwright@claude-plugins-official": true,
     "coderabbit@claude-plugins-official": true,
     "explanatory-output-style@claude-plugins-official": true,
-    "aikido@claude-plugins-official": true,
     "superpowers-lab@superpowers-marketplace": true,
     "superpowers-developing-for-claude-code@superpowers-marketplace": true,
     "elements-of-style@superpowers-marketplace": true,
