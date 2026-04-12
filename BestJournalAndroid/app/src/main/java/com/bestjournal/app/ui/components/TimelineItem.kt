@@ -35,13 +35,11 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.bestjournal.app.domain.model.JournalEntry
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
-import com.bestjournal.app.ui.theme.CosmosLayer
 import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonRed
 import com.bestjournal.app.ui.theme.TextMuted
-import com.bestjournal.app.ui.theme.TextSecondary
 import com.bestjournal.app.util.DateTimeFormatter
 
 enum class TimelinePosition { FIRST, MIDDLE, LAST, ONLY }
@@ -172,12 +170,12 @@ fun TimelineItem(
                         entry.adviceCategoryTags.split(",").map { it.trim() }.filter { it.isNotBlank() }.forEach { tag ->
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
-                                color = CosmosLayer
+                                color = MaterialTheme.colorScheme.surfaceVariant
                             ) {
                                 Text(
                                     text = tag,
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = TextSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }

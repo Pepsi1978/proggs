@@ -1,12 +1,16 @@
 package com.bestjournal.app.ui.theme
 
+import android.os.Build
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 
 val LocalIsDarkTheme = staticCompositionLocalOf { true }
 
@@ -41,9 +45,9 @@ private val WarmDarkScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF0097A7),
+    primary = Color(0xFF00796B),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFB2EBF2),
+    primaryContainer = Color(0xFFA7D8D0),
     onPrimaryContainer = Color(0xFF00363D),
     secondary = Color(0xFF5E35B1),
     onSecondary = Color.White,
@@ -67,15 +71,24 @@ private val LightColorScheme = lightColorScheme(
     outlineVariant = Color(0xFFD8D8E0),
     inverseSurface = LightTextPrimary,
     inverseOnSurface = LightBackground,
-    surfaceTint = Color(0xFF0097A7)
+    surfaceTint = Color(0xFF00796B)
 )
 
 @Composable
 fun BestJournalTheme(
     darkTheme: Boolean = true,
+    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) WarmDarkScheme else LightColorScheme
+    val context = LocalContext.current
+    val colorScheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            if (darkTheme) dynamicDarkColorScheme(context)
+            else dynamicLightColorScheme(context)
+        }
+        darkTheme -> WarmDarkScheme
+        else -> LightColorScheme
+    }
 
     CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
         MaterialTheme(

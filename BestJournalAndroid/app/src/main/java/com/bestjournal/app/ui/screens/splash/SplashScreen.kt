@@ -53,8 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestjournal.app.ui.theme.NeonCyan
-import com.bestjournal.app.ui.theme.NeonMagenta
-import com.bestjournal.app.ui.theme.NeonViolet
+import com.bestjournal.app.ui.theme.WarmCopper
+import com.bestjournal.app.ui.theme.WarmGold
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -197,7 +197,7 @@ fun SplashScreen(
 
     // Particles
     val particles = remember {
-        val colors = listOf(NeonCyan, NeonViolet, NeonMagenta)
+        val colors = listOf(NeonCyan, WarmGold, WarmCopper)
         List(250) { i ->
             val depth = 0.4f + Random.nextFloat() * 1.2f
             SplashParticle(
@@ -215,7 +215,7 @@ fun SplashScreen(
     }
 
     val rainParticles = remember {
-        val colors = listOf(NeonCyan, NeonViolet, NeonMagenta)
+        val colors = listOf(NeonCyan, WarmGold, WarmCopper)
         List(80) { i ->
             RainParticle(
                 Random.nextFloat(),
@@ -371,7 +371,7 @@ fun SplashScreen(
                     Offset(centerX, centerY),
                 )
                 drawCircle(
-                    NeonViolet.copy(alpha = gA * 0.12f),
+                    WarmGold.copy(alpha = gA * 0.12f),
                     100f * density,
                     Offset(centerX, centerY),
                 )
@@ -397,12 +397,12 @@ fun SplashScreen(
                         Offset(centerX, centerY - 20f * density),
                     )
                     drawCircle(
-                        NeonViolet.copy(alpha = glowStrength * 0.1f),
+                        WarmGold.copy(alpha = glowStrength * 0.1f),
                         280f * density * hb,
                         Offset(centerX, centerY - 20f * density),
                     )
                     drawCircle(
-                        NeonMagenta.copy(alpha = glowStrength * 0.06f),
+                        WarmCopper.copy(alpha = glowStrength * 0.06f),
                         350f * density * hb,
                         Offset(centerX, centerY - 20f * density),
                         style = Stroke(2f * density),

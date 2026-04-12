@@ -82,12 +82,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bestjournal.app.ui.components.GlassCard
-import com.bestjournal.app.ui.theme.CustomAmber
-import com.bestjournal.app.ui.theme.GoalEmerald
-import com.bestjournal.app.ui.theme.InsightViolet
+import com.bestjournal.app.ui.theme.CustomPalette
+import com.bestjournal.app.ui.theme.GoalPalette
+import com.bestjournal.app.ui.theme.InsightPalette
 import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonEmerald
-import com.bestjournal.app.ui.theme.SummaryTeal
+import com.bestjournal.app.ui.theme.SummaryPalette
 import com.bestjournal.app.ui.theme.WarmCopper
 import com.bestjournal.app.ui.theme.WarmGold
 import kotlinx.coroutines.launch
@@ -487,7 +487,7 @@ private fun HowItWorksPage() {
             "Dein Text wird automatisch verfeinert und aus verschiedenen Perspektiven analysiert."
         ),
         Step(
-            Icons.Rounded.Dashboard, InsightViolet,
+            Icons.Rounded.Dashboard, InsightPalette.primary,
             "Entdecke Muster und Einsichten",
             "Das Dashboard zeigt dir Zusammenh\u00e4nge, die dir im Alltag verborgen bleiben."
         )
@@ -611,11 +611,11 @@ private data class ProfileInfo(
 )
 
 private val profiles = listOf(
-    ProfileInfo("Zusammenfassung", "Fasst Themen, Muster und Erlebnisse zusammen", Icons.Rounded.AutoStories, SummaryTeal),
+    ProfileInfo("Zusammenfassung", "Fasst Themen, Muster und Erlebnisse zusammen", Icons.Rounded.AutoStories, SummaryPalette.accent),
     ProfileInfo("Belastung", "Erkennt Stress, Unordnung und Belastung", Icons.Rounded.Whatshot, WarmCopper),
-    ProfileInfo("Selbsterkenntnis", "Deckt verborgene Denk- und Gef\u00fchlsmuster auf", Icons.Rounded.SelfImprovement, InsightViolet),
-    ProfileInfo("Pers\u00f6nliche Ziele", "Erkennt Ziele, W\u00fcnsche und Fortschritte", Icons.Rounded.RocketLaunch, GoalEmerald),
-    ProfileInfo("Individuelle Analyse", "Eigenen Analyse-Fokus festlegen", Icons.Rounded.Science, CustomAmber)
+    ProfileInfo("Selbsterkenntnis", "Deckt verborgene Denk- und Gef\u00fchlsmuster auf", Icons.Rounded.SelfImprovement, InsightPalette.primary),
+    ProfileInfo("Pers\u00f6nliche Ziele", "Erkennt Ziele, W\u00fcnsche und Fortschritte", Icons.Rounded.RocketLaunch, GoalPalette.primary),
+    ProfileInfo("Individuelle Analyse", "Eigenen Analyse-Fokus festlegen", Icons.Rounded.Science, CustomPalette.primary)
 )
 
 @Composable
