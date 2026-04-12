@@ -1744,14 +1744,14 @@ fun SettingsScreen(
                                     Icon(
                                         Icons.Rounded.Star,
                                         null,
-                                        modifier = Modifier.size(14.dp),
-                                        tint = Color(0xFFF97316),
+                                        modifier = Modifier.size(20.dp),
+                                        tint = Color(0xFFFFD700),
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         "Premium-Feature",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color(0xFFF97316),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = Color.Black,
                                     )
                                 }
                             }
@@ -1868,7 +1868,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Best Journal v0.10.2",
+                            "Best Journal v0.10.3",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
