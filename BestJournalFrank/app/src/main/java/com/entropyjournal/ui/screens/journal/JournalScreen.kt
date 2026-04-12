@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -78,7 +79,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
@@ -114,6 +117,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
     val amplitude by viewModel.amplitude.collectAsState()
     val duration by viewModel.durationSeconds.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
 
     val permissionLauncher =
@@ -132,6 +136,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
     }
 
     val onMicClick: () -> Unit = {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         if (uiState.recordingState == RecordingState.RECORDING) {
             viewModel.toggleRecording()
         } else {
@@ -368,24 +373,35 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
-                    // Writing Prompt Banner
+                    // Writing Prompt Banner with entrance animation
                     if (uiState.showPromptBanner && uiState.dailyPromptText.isNotBlank()) {
                         item(key = "writing_prompt") {
-                            WritingPromptBanner(
-                                promptText = uiState.dailyPromptText,
-                                promptCategory = uiState.dailyPromptCategory,
-                                onWriteClick = {
-                                    viewModel.startPromptEntry(uiState.dailyPromptText)
-                                },
-                                onDismiss = { viewModel.dismissPromptBanner() },
-                            )
+                            var bannerVisible by remember { mutableStateOf(false) }
+                            LaunchedEffect(Unit) { bannerVisible = true }
+                            AnimatedVisibility(
+                                visible = bannerVisible,
+                                enter = fadeIn(animationSpec = tween(400)) +
+                                    slideInVertically(
+                                        animationSpec = tween(400),
+                                        initialOffsetY = { -it / 4 },
+                                    ),
+                            ) {
+                                WritingPromptBanner(
+                                    promptText = uiState.dailyPromptText,
+                                    promptCategory = uiState.dailyPromptCategory,
+                                    onWriteClick = {
+                                        viewModel.startPromptEntry(uiState.dailyPromptText)
+                                    },
+                                    onDismiss = { viewModel.dismissPromptBanner() },
+                                )
+                            }
                         }
                     }
 
                     groupedEntries.forEach { (sectionLabel, sectionEntries) ->
                         // Section header
                         item(key = "header_$sectionLabel") {
-                            Column(modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)) {
+                            Column(modifier = Modifier.animateItem().padding(top = 12.dp, bottom = 4.dp)) {
                                 Text(
                                     text = sectionLabel,
                                     style = MaterialTheme.typography.titleSmall,
@@ -420,7 +436,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                                     )
                                 },
                                 position = position,
-                                modifier = Modifier.padding(vertical = 6.dp),
+                                modifier = Modifier.animateItem().padding(vertical = 6.dp),
                                 searchQuery =
                                     if (uiState.isSearchActive) uiState.searchQuery else "",
                             )

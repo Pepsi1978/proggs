@@ -86,27 +86,15 @@ import com.entropyjournal.ui.components.NeonDivider
 import com.entropyjournal.ui.components.ParticleBackground
 import com.entropyjournal.ui.components.ShimmerLoadingEffect
 import com.entropyjournal.ui.components.TwinklingStars
-import com.entropyjournal.ui.theme.CustomAmber
-import com.entropyjournal.ui.theme.CustomSage
-import com.entropyjournal.ui.theme.CustomSand
-import com.entropyjournal.ui.theme.CustomStone
-import com.entropyjournal.ui.theme.GoalCoral
-import com.entropyjournal.ui.theme.GoalEmerald
-import com.entropyjournal.ui.theme.GoalGold
-import com.entropyjournal.ui.theme.GoalSky
-import com.entropyjournal.ui.theme.InsightMauve
-import com.entropyjournal.ui.theme.InsightRose
-import com.entropyjournal.ui.theme.InsightViolet
-import com.entropyjournal.ui.theme.InsightWarm
+import com.entropyjournal.ui.theme.CustomPalette
+import com.entropyjournal.ui.theme.GoalPalette
+import com.entropyjournal.ui.theme.InsightPalette
+import com.entropyjournal.ui.theme.SummaryPalette
 import com.entropyjournal.ui.theme.LocalIsDarkTheme
 import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
-import com.entropyjournal.ui.theme.SummaryBlue
-import com.entropyjournal.ui.theme.SummaryIndigo
-import com.entropyjournal.ui.theme.SummarySlate
-import com.entropyjournal.ui.theme.SummaryTeal
 
 @Composable
 fun DashboardScreen(viewModel: DashboardViewModel) {
@@ -295,7 +283,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
                         item {
                             val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
-                            GlassCard(glowColor = SummaryBlue, glowIntensity = 0.2f) {
+                            GlassCard(glowColor = SummaryPalette.primary, glowIntensity = 0.2f) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -306,13 +294,13 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                             modifier =
                                                 Modifier.size(32.dp)
                                                     .clip(CircleShape)
-                                                    .background(SummaryBlue.copy(alpha = 0.12f)),
+                                                    .background(SummaryPalette.primary.copy(alpha = 0.12f)),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Icon(
                                                 Icons.Rounded.AutoStories,
                                                 contentDescription = null,
-                                                tint = SummaryBlue,
+                                                tint = SummaryPalette.primary,
                                                 modifier = Modifier.size(18.dp),
                                             )
                                         }
@@ -321,7 +309,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                             "\u00dcberblick",
                                             style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold,
-                                            color = SummaryBlue,
+                                            color = SummaryPalette.primary,
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
@@ -381,13 +369,13 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                     modifier =
                                         Modifier.size(32.dp)
                                             .clip(CircleShape)
-                                            .background(SummaryIndigo.copy(alpha = 0.12f)),
+                                            .background(SummaryPalette.secondary.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.Search,
                                         contentDescription = null,
-                                        tint = SummaryIndigo,
+                                        tint = SummaryPalette.secondary,
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }
@@ -396,7 +384,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                     "Alle Beobachtungen",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = SummaryIndigo,
+                                    color = SummaryPalette.secondary,
                                 )
                             }
                         }
@@ -433,7 +421,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
                         item {
                             val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
-                            GlassCard(glowColor = InsightViolet, glowIntensity = 0.2f) {
+                            GlassCard(glowColor = InsightPalette.primary, glowIntensity = 0.2f) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -444,13 +432,13 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                             modifier =
                                                 Modifier.size(32.dp)
                                                     .clip(CircleShape)
-                                                    .background(InsightViolet.copy(alpha = 0.12f)),
+                                                    .background(InsightPalette.primary.copy(alpha = 0.12f)),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Icon(
                                                 Icons.Rounded.SelfImprovement,
                                                 contentDescription = null,
-                                                tint = InsightViolet,
+                                                tint = InsightPalette.primary,
                                                 modifier = Modifier.size(18.dp),
                                             )
                                         }
@@ -459,7 +447,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                             "Innerer Spiegel",
                                             style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold,
-                                            color = InsightViolet,
+                                            color = InsightPalette.primary,
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
@@ -519,13 +507,13 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                     modifier =
                                         Modifier.size(32.dp)
                                             .clip(CircleShape)
-                                            .background(InsightViolet.copy(alpha = 0.12f)),
+                                            .background(InsightPalette.primary.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.Visibility,
                                         contentDescription = null,
-                                        tint = InsightViolet,
+                                        tint = InsightPalette.primary,
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }
@@ -534,7 +522,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                     "Alle Einsichten",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = InsightViolet,
+                                    color = InsightPalette.primary,
                                 )
                             }
                         }
@@ -571,7 +559,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
                         item {
                             val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
-                            GlassCard(glowColor = GoalEmerald, glowIntensity = 0.2f) {
+                            GlassCard(glowColor = GoalPalette.primary, glowIntensity = 0.2f) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -582,13 +570,13 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                             modifier =
                                                 Modifier.size(32.dp)
                                                     .clip(CircleShape)
-                                                    .background(GoalEmerald.copy(alpha = 0.12f)),
+                                                    .background(GoalPalette.primary.copy(alpha = 0.12f)),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Icon(
                                                 Icons.Rounded.Map,
                                                 contentDescription = null,
-                                                tint = GoalEmerald,
+                                                tint = GoalPalette.primary,
                                                 modifier = Modifier.size(18.dp),
                                             )
                                         }
@@ -597,7 +585,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                             "Ziel-\u00dcberblick",
                                             style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold,
-                                            color = GoalEmerald,
+                                            color = GoalPalette.primary,
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
@@ -657,13 +645,13 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                     modifier =
                                         Modifier.size(32.dp)
                                             .clip(CircleShape)
-                                            .background(GoalEmerald.copy(alpha = 0.12f)),
+                                            .background(GoalPalette.primary.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.RocketLaunch,
                                         contentDescription = null,
-                                        tint = GoalEmerald,
+                                        tint = GoalPalette.primary,
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }
@@ -672,7 +660,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                     "Alle Ziele",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = GoalEmerald,
+                                    color = GoalPalette.primary,
                                 )
                             }
                         }
@@ -715,7 +703,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
 
                         item {
                             val overallAnalysis = blocks.firstOrNull()?.overallAnalysis ?: ""
-                            GlassCard(glowColor = CustomAmber, glowIntensity = 0.2f) {
+                            GlassCard(glowColor = CustomPalette.primary, glowIntensity = 0.2f) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -726,13 +714,13 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                             modifier =
                                                 Modifier.size(32.dp)
                                                     .clip(CircleShape)
-                                                    .background(CustomAmber.copy(alpha = 0.12f)),
+                                                    .background(CustomPalette.primary.copy(alpha = 0.12f)),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Icon(
                                                 Icons.Rounded.Science,
                                                 contentDescription = null,
-                                                tint = CustomAmber,
+                                                tint = CustomPalette.primary,
                                                 modifier = Modifier.size(18.dp),
                                             )
                                         }
@@ -743,7 +731,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                                 MaterialTheme.typography.titleLarge.copy(
                                                     fontWeight = FontWeight.Bold
                                                 ),
-                                            color = CustomAmber,
+                                            color = CustomPalette.primary,
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
@@ -803,13 +791,13 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                     modifier =
                                         Modifier.size(32.dp)
                                             .clip(CircleShape)
-                                            .background(CustomAmber.copy(alpha = 0.12f)),
+                                            .background(CustomPalette.primary.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.Assignment,
                                         contentDescription = null,
-                                        tint = CustomAmber,
+                                        tint = CustomPalette.primary,
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }
@@ -820,7 +808,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                         MaterialTheme.typography.titleLarge.copy(
                                             fontWeight = FontWeight.Bold
                                         ),
-                                    color = CustomAmber,
+                                    color = CustomPalette.primary,
                                 )
                             }
                         }
@@ -1033,7 +1021,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                         Text(
                             "Aktivit\u00e4tslevel",
                             style = MaterialTheme.typography.titleMedium,
-                            color = SummaryBlue,
+                            color = SummaryPalette.primary,
                         )
                         Text(
                             "Der Halbkreis zeigt wie viel in diesem Bereich passiert:",
@@ -1055,7 +1043,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                         Text(
                             "Relevanz der Beobachtungen",
                             style = MaterialTheme.typography.titleMedium,
-                            color = SummaryBlue,
+                            color = SummaryPalette.primary,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1063,13 +1051,13 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                     modifier =
                                         Modifier.size(20.dp)
                                             .clip(CircleShape)
-                                            .background(SummaryIndigo.copy(alpha = 0.12f)),
+                                            .background(SummaryPalette.secondary.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.Star,
                                         contentDescription = null,
-                                        tint = SummaryIndigo,
+                                        tint = SummaryPalette.secondary,
                                         modifier = Modifier.size(12.dp),
                                     )
                                 }
@@ -1085,13 +1073,13 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                     modifier =
                                         Modifier.size(20.dp)
                                             .clip(CircleShape)
-                                            .background(SummaryBlue.copy(alpha = 0.12f)),
+                                            .background(SummaryPalette.primary.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.PushPin,
                                         contentDescription = null,
-                                        tint = SummaryBlue,
+                                        tint = SummaryPalette.primary,
                                         modifier = Modifier.size(12.dp),
                                     )
                                 }
@@ -1107,13 +1095,13 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                     modifier =
                                         Modifier.size(20.dp)
                                             .clip(CircleShape)
-                                            .background(SummaryTeal.copy(alpha = 0.12f)),
+                                            .background(SummaryPalette.accent.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.BookmarkBorder,
                                         contentDescription = null,
-                                        tint = SummaryTeal,
+                                        tint = SummaryPalette.accent,
                                         modifier = Modifier.size(12.dp),
                                     )
                                 }
@@ -1130,7 +1118,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                         Text(
                             "Reflexionstiefe",
                             style = MaterialTheme.typography.titleMedium,
-                            color = InsightViolet,
+                            color = InsightPalette.primary,
                         )
                         Text(
                             "Der Halbkreis zeigt die Tiefe deiner Selbstreflexion:",
@@ -1138,15 +1126,15 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            LegendDot(color = InsightViolet, label = "Tiefgehend (67\u2013100%)")
-                            LegendDot(color = InsightMauve, label = "Bewusst (34\u201366%)")
-                            LegendDot(color = InsightWarm, label = "Oberfl\u00e4che (0\u201333%)")
+                            LegendDot(color = InsightPalette.primary, label = "Tiefgehend (67\u2013100%)")
+                            LegendDot(color = InsightPalette.muted, label = "Bewusst (34\u201366%)")
+                            LegendDot(color = InsightPalette.accent, label = "Oberfl\u00e4che (0\u201333%)")
                         }
                         NeonDivider()
                         Text(
                             "Tiefe der Einsichten",
                             style = MaterialTheme.typography.titleMedium,
-                            color = InsightViolet,
+                            color = InsightPalette.primary,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1154,13 +1142,13 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                     modifier =
                                         Modifier.size(20.dp)
                                             .clip(CircleShape)
-                                            .background(InsightViolet.copy(alpha = 0.12f)),
+                                            .background(InsightPalette.primary.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.Psychology,
                                         contentDescription = null,
-                                        tint = InsightViolet,
+                                        tint = InsightPalette.primary,
                                         modifier = Modifier.size(12.dp),
                                     )
                                 }
@@ -1176,13 +1164,13 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                     modifier =
                                         Modifier.size(20.dp)
                                             .clip(CircleShape)
-                                            .background(InsightMauve.copy(alpha = 0.12f)),
+                                            .background(InsightPalette.muted.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.FavoriteBorder,
                                         contentDescription = null,
-                                        tint = InsightMauve,
+                                        tint = InsightPalette.muted,
                                         modifier = Modifier.size(12.dp),
                                     )
                                 }
@@ -1198,13 +1186,13 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                     modifier =
                                         Modifier.size(20.dp)
                                             .clip(CircleShape)
-                                            .background(InsightWarm.copy(alpha = 0.12f)),
+                                            .background(InsightPalette.accent.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.Eco,
                                         contentDescription = null,
-                                        tint = InsightWarm,
+                                        tint = InsightPalette.accent,
                                         modifier = Modifier.size(12.dp),
                                     )
                                 }
@@ -1221,7 +1209,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                         Text(
                             "Fortschritt",
                             style = MaterialTheme.typography.titleMedium,
-                            color = GoalEmerald,
+                            color = GoalPalette.primary,
                         )
                         Text(
                             "Der Halbkreis zeigt den Fortschritt deiner Ziele:",
@@ -1229,15 +1217,15 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            LegendDot(color = GoalCoral, label = "Blockiert (0\u201333%)")
-                            LegendDot(color = GoalGold, label = "In Arbeit (34\u201366%)")
-                            LegendDot(color = GoalEmerald, label = "Fortschritt (67\u2013100%)")
+                            LegendDot(color = GoalPalette.muted, label = "Blockiert (0\u201333%)")
+                            LegendDot(color = GoalPalette.accent, label = "In Arbeit (34\u201366%)")
+                            LegendDot(color = GoalPalette.primary, label = "Fortschritt (67\u2013100%)")
                         }
                         NeonDivider()
                         Text(
                             "Zielstatus",
                             style = MaterialTheme.typography.titleMedium,
-                            color = GoalEmerald,
+                            color = GoalPalette.primary,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1245,13 +1233,13 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                     modifier =
                                         Modifier.size(20.dp)
                                             .clip(CircleShape)
-                                            .background(GoalCoral.copy(alpha = 0.12f)),
+                                            .background(GoalPalette.muted.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.Block,
                                         contentDescription = null,
-                                        tint = GoalCoral,
+                                        tint = GoalPalette.muted,
                                         modifier = Modifier.size(12.dp),
                                     )
                                 }
@@ -1267,13 +1255,13 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                     modifier =
                                         Modifier.size(20.dp)
                                             .clip(CircleShape)
-                                            .background(GoalGold.copy(alpha = 0.12f)),
+                                            .background(GoalPalette.accent.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.LockOpen,
                                         contentDescription = null,
-                                        tint = GoalGold,
+                                        tint = GoalPalette.accent,
                                         modifier = Modifier.size(12.dp),
                                     )
                                 }
@@ -1289,13 +1277,13 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                     modifier =
                                         Modifier.size(20.dp)
                                             .clip(CircleShape)
-                                            .background(GoalEmerald.copy(alpha = 0.12f)),
+                                            .background(GoalPalette.primary.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.CheckCircle,
                                         contentDescription = null,
-                                        tint = GoalEmerald,
+                                        tint = GoalPalette.primary,
                                         modifier = Modifier.size(12.dp),
                                     )
                                 }
@@ -1312,7 +1300,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                         Text(
                             "Analysewert",
                             style = MaterialTheme.typography.titleMedium,
-                            color = CustomAmber,
+                            color = CustomPalette.primary,
                         )
                         Text(
                             "Der Halbkreis zeigt die Relevanz f\u00fcr deinen Fokus:",
@@ -1321,15 +1309,15 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             LegendDot(
-                                color = CustomAmber,
+                                color = CustomPalette.primary,
                                 label = "Hoch (67\u2013100%) \u2014 Kern deines Fokus",
                             )
                             LegendDot(
-                                color = CustomSand,
+                                color = CustomPalette.secondary,
                                 label = "Mittel (34\u201366%) \u2014 Verbindung erkannt",
                             )
                             LegendDot(
-                                color = CustomSage,
+                                color = CustomPalette.accent,
                                 label = "Niedrig (0\u201333%) \u2014 Am Rand",
                             )
                         }
@@ -1337,7 +1325,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                         Text(
                             "Relevanz der Ergebnisse",
                             style = MaterialTheme.typography.titleMedium,
-                            color = CustomAmber,
+                            color = CustomPalette.primary,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1345,13 +1333,13 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                     modifier =
                                         Modifier.size(20.dp)
                                             .clip(CircleShape)
-                                            .background(CustomAmber.copy(alpha = 0.12f)),
+                                            .background(CustomPalette.primary.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.Whatshot,
                                         contentDescription = null,
-                                        tint = CustomAmber,
+                                        tint = CustomPalette.primary,
                                         modifier = Modifier.size(12.dp),
                                     )
                                 }
@@ -1367,13 +1355,13 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                     modifier =
                                         Modifier.size(20.dp)
                                             .clip(CircleShape)
-                                            .background(CustomSand.copy(alpha = 0.12f)),
+                                            .background(CustomPalette.secondary.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.TipsAndUpdates,
                                         contentDescription = null,
-                                        tint = CustomSand,
+                                        tint = CustomPalette.secondary,
                                         modifier = Modifier.size(12.dp),
                                     )
                                 }
@@ -1389,13 +1377,13 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                     modifier =
                                         Modifier.size(20.dp)
                                             .clip(CircleShape)
-                                            .background(CustomSage.copy(alpha = 0.12f)),
+                                            .background(CustomPalette.accent.copy(alpha = 0.12f)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Rounded.EditNote,
                                         contentDescription = null,
-                                        tint = CustomSage,
+                                        tint = CustomPalette.accent,
                                         modifier = Modifier.size(12.dp),
                                     )
                                 }
@@ -2017,7 +2005,7 @@ private fun TopActionDetailDialog(action: TopAction, index: Int, onDismiss: () -
 private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
 
-    GlassCard(glowColor = SummaryIndigo, glowIntensity = 0.25f) {
+    GlassCard(glowColor = SummaryPalette.secondary, glowIntensity = 0.25f) {
         Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -2028,13 +2016,13 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
                     modifier =
                         Modifier.size(32.dp)
                             .clip(CircleShape)
-                            .background(SummaryIndigo.copy(alpha = 0.12f)),
+                            .background(SummaryPalette.secondary.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         Icons.Rounded.TipsAndUpdates,
                         contentDescription = null,
-                        tint = SummaryIndigo,
+                        tint = SummaryPalette.secondary,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -2042,14 +2030,14 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
                 Text(
                     "Kernerkenntnisse",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = SummaryIndigo,
+                    color = SummaryPalette.secondary,
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "Die wichtigsten Punkte aus deinen Eintr\u00e4gen",
                 style = MaterialTheme.typography.labelMedium,
-                color = SummarySlate,
+                color = SummaryPalette.muted,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
             )
@@ -2068,7 +2056,7 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
                             Modifier.size(34.dp)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(
-                                    Brush.linearGradient(listOf(SummaryBlue, SummaryIndigo))
+                                    Brush.linearGradient(listOf(SummaryPalette.primary, SummaryPalette.secondary))
                                 ),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -2108,7 +2096,7 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
                             Modifier.fillMaxWidth()
                                 .padding(vertical = 4.dp)
                                 .height(1.dp)
-                                .background(SummaryBlue.copy(alpha = 0.15f))
+                                .background(SummaryPalette.primary.copy(alpha = 0.15f))
                     )
                 }
             }
@@ -2135,7 +2123,7 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
                     modifier =
                         Modifier.size(38.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Brush.linearGradient(listOf(SummaryBlue, SummaryIndigo))),
+                            .background(Brush.linearGradient(listOf(SummaryPalette.primary, SummaryPalette.secondary))),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -2162,7 +2150,7 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
                             fontWeight = FontWeight.Bold,
                             fontStyle = FontStyle.Italic,
                         ),
-                    color = SummaryBlue,
+                    color = SummaryPalette.primary,
                 )
                 if (action.detailedDescription.isNotBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
@@ -2170,7 +2158,7 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
                         modifier =
                             Modifier.fillMaxWidth()
                                 .height(1.dp)
-                                .background(SummaryBlue.copy(alpha = 0.2f))
+                                .background(SummaryPalette.primary.copy(alpha = 0.2f))
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
@@ -2182,7 +2170,7 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = SummaryBlue) }
+            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = SummaryPalette.primary) }
         },
     )
 }
@@ -2190,12 +2178,12 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
 @Composable
 private fun SummaryRelevanceLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        SummaryLegendItem(icon = Icons.Rounded.Star, label = "Zentral", color = SummaryIndigo)
-        SummaryLegendItem(icon = Icons.Rounded.PushPin, label = "Relevant", color = SummaryBlue)
+        SummaryLegendItem(icon = Icons.Rounded.Star, label = "Zentral", color = SummaryPalette.secondary)
+        SummaryLegendItem(icon = Icons.Rounded.PushPin, label = "Relevant", color = SummaryPalette.primary)
         SummaryLegendItem(
             icon = Icons.Rounded.BookmarkBorder,
             label = "Randnotiz",
-            color = SummaryTeal,
+            color = SummaryPalette.accent,
         )
     }
 }
@@ -2226,9 +2214,9 @@ private fun SummaryObservationCard(
 ) {
     val (icon, glowColor) =
         when (advice.priority) {
-            AdvicePriority.HIGH -> Icons.Rounded.Star to SummaryIndigo
-            AdvicePriority.MEDIUM -> Icons.Rounded.PushPin to SummaryBlue
-            AdvicePriority.LOW -> Icons.Rounded.BookmarkBorder to SummaryTeal
+            AdvicePriority.HIGH -> Icons.Rounded.Star to SummaryPalette.secondary
+            AdvicePriority.MEDIUM -> Icons.Rounded.PushPin to SummaryPalette.primary
+            AdvicePriority.LOW -> Icons.Rounded.BookmarkBorder to SummaryPalette.accent
         }
 
     GlassCard(
@@ -2265,13 +2253,13 @@ private fun SummaryObservationCard(
                 if (categoryName.isNotBlank()) {
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = SummaryBlue.copy(alpha = 0.12f),
+                        color = SummaryPalette.primary.copy(alpha = 0.12f),
                     ) {
                         Text(
                             categoryName,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelMedium,
-                            color = SummaryBlue,
+                            color = SummaryPalette.primary,
                         )
                     }
                 }
@@ -2287,7 +2275,7 @@ private fun SummaryObservationCard(
                 Text(
                     text = "\u2194 ${advice.connection}",
                     style = MaterialTheme.typography.labelMedium,
-                    color = SummaryTeal.copy(alpha = 0.8f),
+                    color = SummaryPalette.accent.copy(alpha = 0.8f),
                 )
             }
         }
@@ -2302,7 +2290,7 @@ private fun SummaryObservationCard(
 private fun InsightKeyBlock(actions: List<TopAction>) {
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
 
-    GlassCard(glowColor = InsightViolet, glowIntensity = 0.25f) {
+    GlassCard(glowColor = InsightPalette.primary, glowIntensity = 0.25f) {
         Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -2313,13 +2301,13 @@ private fun InsightKeyBlock(actions: List<TopAction>) {
                     modifier =
                         Modifier.size(32.dp)
                             .clip(CircleShape)
-                            .background(InsightViolet.copy(alpha = 0.12f)),
+                            .background(InsightPalette.primary.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         Icons.Rounded.Psychology,
                         contentDescription = null,
-                        tint = InsightViolet,
+                        tint = InsightPalette.primary,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -2327,14 +2315,14 @@ private fun InsightKeyBlock(actions: List<TopAction>) {
                 Text(
                     "Tiefste Erkenntnisse",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = InsightViolet,
+                    color = InsightPalette.primary,
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "Was deine Eintr\u00e4ge \u00fcber dich verraten",
                 style = MaterialTheme.typography.labelMedium,
-                color = InsightMauve,
+                color = InsightPalette.muted,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
             )
@@ -2353,7 +2341,7 @@ private fun InsightKeyBlock(actions: List<TopAction>) {
                             Modifier.size(34.dp)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(
-                                    Brush.linearGradient(listOf(InsightViolet, InsightRose))
+                                    Brush.linearGradient(listOf(InsightPalette.primary, InsightPalette.secondary))
                                 ),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -2393,7 +2381,7 @@ private fun InsightKeyBlock(actions: List<TopAction>) {
                             Modifier.fillMaxWidth()
                                 .padding(vertical = 4.dp)
                                 .height(1.dp)
-                                .background(InsightViolet.copy(alpha = 0.15f))
+                                .background(InsightPalette.primary.copy(alpha = 0.15f))
                     )
                 }
             }
@@ -2415,7 +2403,7 @@ private fun InsightDetailDialog(action: TopAction, index: Int, onDismiss: () -> 
                     modifier =
                         Modifier.size(38.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Brush.linearGradient(listOf(InsightViolet, InsightRose))),
+                            .background(Brush.linearGradient(listOf(InsightPalette.primary, InsightPalette.secondary))),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -2442,7 +2430,7 @@ private fun InsightDetailDialog(action: TopAction, index: Int, onDismiss: () -> 
                             fontWeight = FontWeight.Bold,
                             fontStyle = FontStyle.Italic,
                         ),
-                    color = InsightViolet,
+                    color = InsightPalette.primary,
                 )
                 if (action.detailedDescription.isNotBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
@@ -2450,7 +2438,7 @@ private fun InsightDetailDialog(action: TopAction, index: Int, onDismiss: () -> 
                         modifier =
                             Modifier.fillMaxWidth()
                                 .height(1.dp)
-                                .background(InsightViolet.copy(alpha = 0.2f))
+                                .background(InsightPalette.primary.copy(alpha = 0.2f))
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
@@ -2462,7 +2450,7 @@ private fun InsightDetailDialog(action: TopAction, index: Int, onDismiss: () -> 
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = InsightViolet) }
+            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = InsightPalette.primary) }
         },
     )
 }
@@ -2473,14 +2461,14 @@ private fun InsightDepthLegend() {
         InsightLegendItem(
             icon = Icons.Rounded.Visibility,
             label = "Tiefgehend",
-            color = InsightViolet,
+            color = InsightPalette.primary,
         )
         InsightLegendItem(
             icon = Icons.Rounded.FavoriteBorder,
             label = "Bewusst",
-            color = InsightMauve,
+            color = InsightPalette.muted,
         )
-        InsightLegendItem(icon = Icons.Rounded.Eco, label = "Oberfläche", color = InsightWarm)
+        InsightLegendItem(icon = Icons.Rounded.Eco, label = "Oberfläche", color = InsightPalette.accent)
     }
 }
 
@@ -2506,9 +2494,9 @@ private fun InsightLegendItem(
 private fun InsightCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
     val (icon, glowColor) =
         when (advice.priority) {
-            AdvicePriority.HIGH -> Icons.Rounded.Visibility to InsightViolet
-            AdvicePriority.MEDIUM -> Icons.Rounded.FavoriteBorder to InsightMauve
-            AdvicePriority.LOW -> Icons.Rounded.Eco to InsightWarm
+            AdvicePriority.HIGH -> Icons.Rounded.Visibility to InsightPalette.primary
+            AdvicePriority.MEDIUM -> Icons.Rounded.FavoriteBorder to InsightPalette.muted
+            AdvicePriority.LOW -> Icons.Rounded.Eco to InsightPalette.accent
         }
 
     GlassCard(
@@ -2545,13 +2533,13 @@ private fun InsightCard(advice: Advice, categoryName: String = "", onClick: () -
                 if (categoryName.isNotBlank()) {
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = InsightViolet.copy(alpha = 0.12f),
+                        color = InsightPalette.primary.copy(alpha = 0.12f),
                     ) {
                         Text(
                             categoryName,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelMedium,
-                            color = InsightViolet,
+                            color = InsightPalette.primary,
                         )
                     }
                 }
@@ -2567,7 +2555,7 @@ private fun InsightCard(advice: Advice, categoryName: String = "", onClick: () -
                 Text(
                     "\uD83D\uDD17 ${advice.connection}",
                     style = MaterialTheme.typography.labelMedium,
-                    color = InsightRose.copy(alpha = 0.8f),
+                    color = InsightPalette.secondary.copy(alpha = 0.8f),
                 )
             }
         }
@@ -2582,7 +2570,7 @@ private fun InsightCard(advice: Advice, categoryName: String = "", onClick: () -
 private fun GoalNextStepsBlock(actions: List<TopAction>) {
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
 
-    GlassCard(glowColor = GoalEmerald, glowIntensity = 0.25f) {
+    GlassCard(glowColor = GoalPalette.primary, glowIntensity = 0.25f) {
         Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -2593,13 +2581,13 @@ private fun GoalNextStepsBlock(actions: List<TopAction>) {
                     modifier =
                         Modifier.size(32.dp)
                             .clip(CircleShape)
-                            .background(GoalEmerald.copy(alpha = 0.12f)),
+                            .background(GoalPalette.primary.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         Icons.Rounded.RocketLaunch,
                         contentDescription = null,
-                        tint = GoalEmerald,
+                        tint = GoalPalette.primary,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -2607,14 +2595,14 @@ private fun GoalNextStepsBlock(actions: List<TopAction>) {
                 Text(
                     "N\u00e4chste Schritte",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = GoalEmerald,
+                    color = GoalPalette.primary,
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "Die wichtigsten Schritte f\u00fcr deine Ziele",
                 style = MaterialTheme.typography.labelMedium,
-                color = GoalGold,
+                color = GoalPalette.accent,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
             )
@@ -2632,7 +2620,7 @@ private fun GoalNextStepsBlock(actions: List<TopAction>) {
                         modifier =
                             Modifier.size(34.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Brush.linearGradient(listOf(GoalEmerald, GoalSky))),
+                                .background(Brush.linearGradient(listOf(GoalPalette.primary, GoalPalette.secondary))),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -2668,7 +2656,7 @@ private fun GoalNextStepsBlock(actions: List<TopAction>) {
                             Modifier.fillMaxWidth()
                                 .padding(vertical = 4.dp)
                                 .height(1.dp)
-                                .background(GoalEmerald.copy(alpha = 0.15f))
+                                .background(GoalPalette.primary.copy(alpha = 0.15f))
                     )
                 }
             }
@@ -2690,7 +2678,7 @@ private fun GoalStepDetailDialog(action: TopAction, index: Int, onDismiss: () ->
                     modifier =
                         Modifier.size(38.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Brush.linearGradient(listOf(GoalEmerald, GoalSky))),
+                            .background(Brush.linearGradient(listOf(GoalPalette.primary, GoalPalette.secondary))),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -2713,7 +2701,7 @@ private fun GoalStepDetailDialog(action: TopAction, index: Int, onDismiss: () ->
                 Text(
                     action.description,
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                    color = GoalEmerald,
+                    color = GoalPalette.primary,
                 )
                 if (action.detailedDescription.isNotBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
@@ -2721,7 +2709,7 @@ private fun GoalStepDetailDialog(action: TopAction, index: Int, onDismiss: () ->
                         modifier =
                             Modifier.fillMaxWidth()
                                 .height(1.dp)
-                                .background(GoalEmerald.copy(alpha = 0.2f))
+                                .background(GoalPalette.primary.copy(alpha = 0.2f))
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
@@ -2733,7 +2721,7 @@ private fun GoalStepDetailDialog(action: TopAction, index: Int, onDismiss: () ->
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = GoalEmerald) }
+            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = GoalPalette.primary) }
         },
     )
 }
@@ -2741,9 +2729,9 @@ private fun GoalStepDetailDialog(action: TopAction, index: Int, onDismiss: () ->
 @Composable
 private fun GoalStatusLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        GoalLegendItem(icon = Icons.Rounded.Block, label = "Blockiert", color = GoalCoral)
-        GoalLegendItem(icon = Icons.Rounded.LockOpen, label = "Offen", color = GoalGold)
-        GoalLegendItem(icon = Icons.Rounded.CheckCircle, label = "Fortschritt", color = GoalEmerald)
+        GoalLegendItem(icon = Icons.Rounded.Block, label = "Blockiert", color = GoalPalette.muted)
+        GoalLegendItem(icon = Icons.Rounded.LockOpen, label = "Offen", color = GoalPalette.accent)
+        GoalLegendItem(icon = Icons.Rounded.CheckCircle, label = "Fortschritt", color = GoalPalette.primary)
     }
 }
 
@@ -2769,9 +2757,9 @@ private fun GoalLegendItem(
 private fun GoalCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
     val (icon, glowColor) =
         when (advice.priority) {
-            AdvicePriority.HIGH -> Icons.Rounded.Block to GoalCoral
-            AdvicePriority.MEDIUM -> Icons.Rounded.LockOpen to GoalGold
-            AdvicePriority.LOW -> Icons.Rounded.CheckCircle to GoalEmerald
+            AdvicePriority.HIGH -> Icons.Rounded.Block to GoalPalette.muted
+            AdvicePriority.MEDIUM -> Icons.Rounded.LockOpen to GoalPalette.accent
+            AdvicePriority.LOW -> Icons.Rounded.CheckCircle to GoalPalette.primary
         }
 
     GlassCard(
@@ -2808,13 +2796,13 @@ private fun GoalCard(advice: Advice, categoryName: String = "", onClick: () -> U
                 if (categoryName.isNotBlank()) {
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = GoalEmerald.copy(alpha = 0.12f),
+                        color = GoalPalette.primary.copy(alpha = 0.12f),
                     ) {
                         Text(
                             categoryName,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelMedium,
-                            color = GoalEmerald,
+                            color = GoalPalette.primary,
                         )
                     }
                 }
@@ -2830,7 +2818,7 @@ private fun GoalCard(advice: Advice, categoryName: String = "", onClick: () -> U
                 Text(
                     "\u27A1 ${advice.connection}",
                     style = MaterialTheme.typography.labelMedium,
-                    color = GoalSky.copy(alpha = 0.8f),
+                    color = GoalPalette.secondary.copy(alpha = 0.8f),
                 )
             }
         }
@@ -2844,7 +2832,7 @@ private fun GoalCard(advice: Advice, categoryName: String = "", onClick: () -> U
 @Composable
 private fun CustomInsightsBlock(actions: List<TopAction>, title: String = "Wichtigste Ergebnisse") {
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
-    GlassCard(glowColor = CustomAmber, glowIntensity = 0.25f) {
+    GlassCard(glowColor = CustomPalette.primary, glowIntensity = 0.25f) {
         Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -2855,13 +2843,13 @@ private fun CustomInsightsBlock(actions: List<TopAction>, title: String = "Wicht
                     modifier =
                         Modifier.size(32.dp)
                             .clip(CircleShape)
-                            .background(CustomAmber.copy(alpha = 0.12f)),
+                            .background(CustomPalette.primary.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         Icons.Rounded.Lightbulb,
                         contentDescription = null,
-                        tint = CustomAmber,
+                        tint = CustomPalette.primary,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -2869,14 +2857,14 @@ private fun CustomInsightsBlock(actions: List<TopAction>, title: String = "Wicht
                 Text(
                     title,
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = CustomAmber,
+                    color = CustomPalette.primary,
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "Basierend auf deiner individuellen Analyse",
                 style = MaterialTheme.typography.labelMedium,
-                color = CustomStone,
+                color = CustomPalette.muted,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
             )
@@ -2894,7 +2882,7 @@ private fun CustomInsightsBlock(actions: List<TopAction>, title: String = "Wicht
                         modifier =
                             Modifier.size(34.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Brush.linearGradient(listOf(CustomAmber, CustomSand))),
+                                .background(Brush.linearGradient(listOf(CustomPalette.primary, CustomPalette.secondary))),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -2930,7 +2918,7 @@ private fun CustomInsightsBlock(actions: List<TopAction>, title: String = "Wicht
                             Modifier.fillMaxWidth()
                                 .padding(vertical = 4.dp)
                                 .height(1.dp)
-                                .background(CustomAmber.copy(alpha = 0.15f))
+                                .background(CustomPalette.primary.copy(alpha = 0.15f))
                     )
                 }
             }
@@ -2952,7 +2940,7 @@ private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> U
                     modifier =
                         Modifier.size(38.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Brush.linearGradient(listOf(CustomAmber, CustomSand))),
+                            .background(Brush.linearGradient(listOf(CustomPalette.primary, CustomPalette.secondary))),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -2975,7 +2963,7 @@ private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> U
                 Text(
                     action.description,
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                    color = CustomAmber,
+                    color = CustomPalette.primary,
                 )
                 if (action.detailedDescription.isNotBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
@@ -2983,7 +2971,7 @@ private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> U
                         modifier =
                             Modifier.fillMaxWidth()
                                 .height(1.dp)
-                                .background(CustomAmber.copy(alpha = 0.2f))
+                                .background(CustomPalette.primary.copy(alpha = 0.2f))
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
@@ -2995,7 +2983,7 @@ private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> U
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = CustomAmber) }
+            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = CustomPalette.primary) }
         },
     )
 }
@@ -3003,13 +2991,13 @@ private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> U
 @Composable
 private fun CustomRelevanceLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        CustomLegendItem(icon = Icons.Rounded.Whatshot, label = "Wichtig", color = CustomAmber)
+        CustomLegendItem(icon = Icons.Rounded.Whatshot, label = "Wichtig", color = CustomPalette.primary)
         CustomLegendItem(
             icon = Icons.Rounded.TipsAndUpdates,
             label = "Relevant",
-            color = CustomSand,
+            color = CustomPalette.secondary,
         )
-        CustomLegendItem(icon = Icons.Rounded.EditNote, label = "Notiz", color = CustomSage)
+        CustomLegendItem(icon = Icons.Rounded.EditNote, label = "Notiz", color = CustomPalette.accent)
     }
 }
 
@@ -3035,9 +3023,9 @@ private fun CustomLegendItem(
 private fun CustomResultCard(advice: Advice, categoryName: String = "", onClick: () -> Unit = {}) {
     val (icon, glowColor) =
         when (advice.priority) {
-            AdvicePriority.HIGH -> Icons.Rounded.Whatshot to CustomAmber
-            AdvicePriority.MEDIUM -> Icons.Rounded.TipsAndUpdates to CustomSand
-            AdvicePriority.LOW -> Icons.Rounded.EditNote to CustomSage
+            AdvicePriority.HIGH -> Icons.Rounded.Whatshot to CustomPalette.primary
+            AdvicePriority.MEDIUM -> Icons.Rounded.TipsAndUpdates to CustomPalette.secondary
+            AdvicePriority.LOW -> Icons.Rounded.EditNote to CustomPalette.accent
         }
     GlassCard(
         modifier = Modifier.clickable { onClick() },
@@ -3073,13 +3061,13 @@ private fun CustomResultCard(advice: Advice, categoryName: String = "", onClick:
                 if (categoryName.isNotBlank()) {
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = CustomAmber.copy(alpha = 0.12f),
+                        color = CustomPalette.primary.copy(alpha = 0.12f),
                     ) {
                         Text(
                             categoryName,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelMedium,
-                            color = CustomAmber,
+                            color = CustomPalette.primary,
                         )
                     }
                 }
@@ -3095,7 +3083,7 @@ private fun CustomResultCard(advice: Advice, categoryName: String = "", onClick:
                 Text(
                     "\u2194 ${advice.connection}",
                     style = MaterialTheme.typography.labelMedium,
-                    color = CustomSage.copy(alpha = 0.8f),
+                    color = CustomPalette.accent.copy(alpha = 0.8f),
                 )
             }
         }

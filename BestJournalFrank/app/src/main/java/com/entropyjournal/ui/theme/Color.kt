@@ -13,7 +13,7 @@ val CosmosLayer = Color(0xFF282828)       // Elevated surface — hover/dialog (
 val CosmosSurface = Color(0xFF8B6914)     // Container accent — warm gold-brown
 
 // Warm accents (dark mode primary palette — unchanged)
-val WarmCopper = Color(0xFFD36B00)        // Primary accent — vibrant orange
+val WarmCopper = Color(0xFFC25E00)        // Primary accent — warm copper (WCAG AA on white)
 val WarmSand = Color(0xFFE0DCD4)          // Secondary accent — soft cream
 val WarmGold = Color(0xFF8B6914)          // Tertiary — warm gold
 
@@ -23,33 +23,45 @@ val NeonAmber = Color(0xFFFFB300)         // Warning / medium entropy
 val NeonRed = Color(0xFFFF5252)           // Error / high entropy
 val NeonCyan = Color(0xFF4ECDC4)          // Info / low priority dot
 
-// Legacy neon (still used in some components)
+// @Deprecated: Use semantic colors (NeonEmerald, NeonAmber, NeonRed) instead
 val NeonViolet = Color(0xFF7C4DFF)
 val NeonMagenta = Color(0xFFFF00E5)
 
-// Summary dashboard palette (cool, informative, non-urgent)
-val SummaryBlue = Color(0xFF5B8DEF)
-val SummaryIndigo = Color(0xFF6366F1)
-val SummaryTeal = Color(0xFF14B8A6)
-val SummarySlate = Color(0xFF94A3B8)
+// Dashboard category palette — each category has 4 semantic color roles
+data class DashboardPalette(
+    val primary: Color,       // Main accent — glow, headings, buttons
+    val secondary: Color,     // Gradient partner, HIGH priority
+    val accent: Color,        // Highlight — LOW priority, tertiary elements
+    val muted: Color,         // Subdued — subtitle text, legend dots
+)
 
-// Self-insight dashboard palette (warm, introspective, personal)
-val InsightViolet = Color(0xFFA78BFA)
-val InsightRose = Color(0xFFF472B6)
-val InsightWarm = Color(0xFFFBBF24)
-val InsightMauve = Color(0xFFC084FC)
+val SummaryPalette = DashboardPalette(
+    primary = Color(0xFF5B8DEF),     // Blue
+    secondary = Color(0xFF6366F1),   // Indigo
+    accent = Color(0xFF14B8A6),      // Teal
+    muted = Color(0xFF94A3B8),       // Slate
+)
 
-// Goals dashboard palette (motivating, progress-oriented)
-val GoalEmerald = Color(0xFF10B981)
-val GoalGold = Color(0xFFF59E0B)
-val GoalSky = Color(0xFF38BDF8)
-val GoalCoral = Color(0xFFFB7185)
+val InsightPalette = DashboardPalette(
+    primary = Color(0xFFA78BFA),     // Violet
+    secondary = Color(0xFFF472B6),   // Rose
+    accent = Color(0xFFFBBF24),      // Warm
+    muted = Color(0xFFC084FC),       // Mauve
+)
 
-// Custom/Individual analysis palette (neutral, warm, adaptable)
-val CustomAmber = Color(0xFFE8A838)          // Primary — warm amber
-val CustomSand = Color(0xFFD4A574)           // Secondary — earthy sand
-val CustomSage = Color(0xFF8FAE8B)           // Highlight — soft sage green
-val CustomStone = Color(0xFFA09890)          // Muted — warm stone
+val GoalPalette = DashboardPalette(
+    primary = Color(0xFF10B981),     // Emerald
+    secondary = Color(0xFF38BDF8),   // Sky
+    accent = Color(0xFFF59E0B),      // Gold
+    muted = Color(0xFFFB7185),       // Coral
+)
+
+val CustomPalette = DashboardPalette(
+    primary = Color(0xFFE8A838),     // Amber
+    secondary = Color(0xFFD4A574),   // Sand
+    accent = Color(0xFF8FAE8B),      // Sage
+    muted = Color(0xFFA09890),       // Stone
+)
 
 // Dark mode card surfaces (tonal layering — Spotify principle)
 val CardSurface = Color(0xFF181818)       // Standard card — barely visible over background
@@ -80,7 +92,7 @@ val LightSurfaceContainer = Color(0xFFE8E8F0)
 // Light mode text
 val LightTextPrimary = Color(0xFF1A1A2E)
 val LightTextSecondary = Color(0xFF5A5A70)
-val LightTextMuted = Color(0xFF9090A8)
+val LightTextMuted = Color(0xFF6E6E86)
 
 // Light mode glass
 val LightGlassBorder = Color(0x15000000)

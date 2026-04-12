@@ -106,9 +106,19 @@ object RetrospectiveColors {
         @Composable
         get() =
             if (LocalIsDarkTheme.current) {
-                listOf(Color(0xFFE07830), cardDark) // Orange → CardSurface
+                listOf(
+                    Color(0xFFE07830),  // Warm orange top
+                    Color(0xFFC25E00),  // Copper mid-upper
+                    Color(0xFF3D2800),  // Deep amber mid-lower
+                    cardDark,           // CardSurface bottom
+                )
             } else {
-                listOf(Color(0xFFE0F7FA), Color(0xFFFFF8E1)) // Soft teal → warm cream
+                listOf(
+                    Color(0xFFE0F7FA),  // Soft teal top
+                    Color(0xFFB2EBF2),  // Light cyan mid-upper
+                    Color(0xFFFFF3E0),  // Soft peach mid-lower
+                    Color(0xFFFFF8E1),  // Warm cream bottom
+                )
             }
 
     val categoryCardColor: Color

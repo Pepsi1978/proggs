@@ -35,13 +35,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.entropyjournal.domain.model.JournalEntry
-import com.entropyjournal.ui.theme.CosmosLayer
 import com.entropyjournal.ui.theme.NeonCyan
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonRed
 import com.entropyjournal.ui.theme.TextMuted
-import com.entropyjournal.ui.theme.TextSecondary
 import com.entropyjournal.util.DateTimeFormatter
 
 enum class TimelinePosition { FIRST, MIDDLE, LAST, ONLY }
@@ -161,12 +159,12 @@ fun TimelineItem(
                         entry.adviceCategoryTags.split(",").map { it.trim() }.filter { it.isNotBlank() }.forEach { tag ->
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
-                                color = CosmosLayer
+                                color = MaterialTheme.colorScheme.surfaceVariant
                             ) {
                                 Text(
                                     text = tag,
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = TextSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }

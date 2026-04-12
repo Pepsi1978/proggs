@@ -13,6 +13,8 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 
 sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
     data object Retrospective :
@@ -27,6 +29,7 @@ sealed class BottomNavItem(val route: String, val title: String, val icon: Image
 
 @Composable
 fun BottomNavBar(currentRoute: String?, onItemClick: (BottomNavItem) -> Unit) {
+    val haptic = LocalHapticFeedback.current
     val items =
         listOf(
             BottomNavItem.Retrospective,
@@ -43,7 +46,10 @@ fun BottomNavBar(currentRoute: String?, onItemClick: (BottomNavItem) -> Unit) {
             val isSelected = currentRoute == item.route
             NavigationBarItem(
                 selected = isSelected,
-                onClick = { onItemClick(item) },
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onItemClick(item)
+                },
                 icon = {
                     Icon(
                         imageVector = item.icon,
@@ -63,7 +69,7 @@ fun BottomNavBar(currentRoute: String?, onItemClick: (BottomNavItem) -> Unit) {
                 },
                 colors =
                     NavigationBarItemDefaults.colors(
-                        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        indicatorColor = MaterialTheme.colorScheme.secondaryContainer
                     ),
             )
         }
