@@ -1663,35 +1663,31 @@ fun SettingsScreen(
                                     },
                             )
                             Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                "\u2022  Deine Gedanken in klare Worte fassen, die KI macht jeden Eintrag ausdrucksstärker",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            val bulletColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            val bulletStyle = MaterialTheme.typography.bodyMedium
+                            val bullets = listOf(
+                                "Deine Gedanken in klare Worte fassen, die KI macht jeden Eintrag ausdrucksst\u00e4rker",
+                                "5 Perspektiven auf dein Leben, von Stressabbau bis Selbsterkenntnis",
+                                "Dein Dashboard w\u00e4chst mit dir, automatisch nach jedem Eintrag",
+                                "Entdecke was du bisher \u00fcbersehen hast, die KI findet Muster die dir nicht auffallen",
+                                "Dein sicherer Raum, ungest\u00f6rt schreiben, reflektieren, wachsen",
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                "\u2022  5 Perspektiven auf dein Leben, von Stressabbau bis Selbsterkenntnis",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                "\u2022  Dein Dashboard wächst mit dir, automatisch nach jedem Eintrag",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                "\u2022  Entdecke was du bisher übersehen hast, die KI findet Muster die dir nicht auffallen",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                "\u2022  Dein sicherer Raum, ungestört schreiben, reflektieren, wachsen",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            bullets.forEachIndexed { idx, text ->
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    Text(
+                                        "\u2022",
+                                        style = bulletStyle,
+                                        color = bulletColor,
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text,
+                                        style = bulletStyle,
+                                        color = bulletColor,
+                                    )
+                                }
+                                if (idx < bullets.lastIndex) Spacer(modifier = Modifier.height(4.dp))
+                            }
                             Spacer(modifier = Modifier.height(16.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1916,7 +1912,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Best Journal v0.10.13",
+                            "Best Journal v0.10.14",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
