@@ -1,5 +1,7 @@
 package com.bestjournal.app.ui.screens.dashboard
 
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import com.bestjournal.app.util.rememberHapticAction
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -106,6 +108,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
     val blocks by viewModel.adviceBlocks.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val isDark = LocalIsDarkTheme.current
+    val doHaptic = rememberHapticAction()
     var showLegendDialog by remember { mutableStateOf(false) }
     var selectedAdvice by remember { mutableStateOf<Pair<Advice, String>?>(null) }
     var selectedCategoryBlock by remember {
@@ -141,7 +144,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                         com.bestjournal.app.ui.components.SunMoonToggle()
                     }
                     Row {
-                        IconButton(onClick = { showLegendDialog = true }) {
+                        IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); showLegendDialog = true }) {
                             Icon(
                                 Icons.Rounded.Info,
                                 "Legende",
@@ -149,11 +152,11 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                             )
                         }
                         if (uiState.canUndo) {
-                            IconButton(onClick = { viewModel.undoDashboard() }) {
+                            IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.undoDashboard() }) {
                                 Icon(Icons.Rounded.Undo, "R\u00fcckg\u00e4ngig", tint = NeonAmber)
                             }
                         }
-                        IconButton(onClick = { viewModel.refreshDashboard() }) {
+                        IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.refreshDashboard() }) {
                             Icon(
                                 Icons.Rounded.Refresh,
                                 "Aktualisieren",
@@ -525,7 +528,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         ) {
                                             TextButton(
                                                 onClick = {
-                                                    viewModel.dismissAnalysisUpsellBanner()
+                                                    doHaptic(HapticFeedbackType.LongPress); viewModel.dismissAnalysisUpsellBanner()
                                                 }
                                             ) {
                                                 Text(
@@ -537,6 +540,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                             Spacer(modifier = Modifier.width(4.dp))
                                             Button(
                                                 onClick = {
+                                                    doHaptic(HapticFeedbackType.LongPress)
                                                     viewModel.onAnalysisUpsellClicked()
                                                     onNavigateToPaywall("first_analysis")
                                                 },

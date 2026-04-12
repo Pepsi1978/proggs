@@ -23,9 +23,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
+import com.bestjournal.app.util.rememberHapticAction
 
 private val GlowingYellow = Color(0xFFFFD54F)
 private val MutedGray = Color(0xFF666666)
@@ -36,6 +38,7 @@ fun SunMoonToggle(
 ) {
     val isDark = LocalIsDarkTheme.current
     val context = LocalContext.current
+    val doHaptic = rememberHapticAction()
 
     val sunSize by animateDpAsState(
         targetValue = if (!isDark) 26.dp else 18.dp,
@@ -53,6 +56,7 @@ fun SunMoonToggle(
             interactionSource = remember { MutableInteractionSource() },
             indication = null
         ) {
+            doHaptic(HapticFeedbackType.LongPress)
             val themePrefs = context.getSharedPreferences(
                 "entropy_theme_quick", Context.MODE_PRIVATE
             )

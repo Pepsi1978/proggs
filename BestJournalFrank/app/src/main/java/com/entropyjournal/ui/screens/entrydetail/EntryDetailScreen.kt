@@ -236,6 +236,7 @@ fun EntryDetailScreen(
             actions = {
                 IconButton(
                     onClick = {
+                        doHaptic(HapticFeedbackType.LongPress)
                         uiState.entry?.let { entry ->
                             val hasImproved =
                                 entry.isImproved && !entry.improvedText.isNullOrBlank()
@@ -564,7 +565,7 @@ fun EntryDetailScreen(
                                 )
                             }
                             Button(
-                                onClick = { showPhotoSourceDialog = true },
+                                onClick = { doHaptic(HapticFeedbackType.LongPress); showPhotoSourceDialog = true },
                                 shape = RoundedCornerShape(12.dp),
                             ) {
                                 Icon(
@@ -930,6 +931,7 @@ fun EntryDetailScreen(
                                         )
                                     )
                                     .clickable {
+                                        doHaptic(HapticFeedbackType.LongPress)
                                         showPhotoSourceDialog = false
                                         cameraPermissionLauncher.launch(
                                             android.Manifest.permission.CAMERA
@@ -990,6 +992,7 @@ fun EntryDetailScreen(
                                         )
                                     )
                                     .clickable {
+                                        doHaptic(HapticFeedbackType.LongPress)
                                         showPhotoSourceDialog = false
                                         photoPickerLauncher.launch(
                                             PickVisualMediaRequest(

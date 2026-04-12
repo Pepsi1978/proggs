@@ -1,5 +1,7 @@
 package com.bestjournal.app.ui.screens.retrospective
 
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import com.bestjournal.app.util.rememberHapticAction
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -160,6 +162,7 @@ object RetrospectiveColors {
 
 @Composable
 fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
+    val doHaptic = rememberHapticAction()
     val weekly by viewModel.weeklySummaries.collectAsState()
     val monthly by viewModel.monthlySummaries.collectAsState()
     val yearly by viewModel.yearlySummaries.collectAsState()
@@ -699,6 +702,7 @@ private fun SummaryDetailDialog(
 ) {
     val isDark = LocalIsDarkTheme.current
     val context = LocalContext.current
+    val doHaptic = rememberHapticAction()
     var isSpeaking by remember { mutableStateOf(false) }
     var showShareDialog by remember { mutableStateOf(false) }
     var fullScreenPhotoPath by remember { mutableStateOf<String?>(null) }
@@ -951,6 +955,7 @@ private fun SummaryDetailDialog(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         IconButton(
                             onClick = {
+                                doHaptic(HapticFeedbackType.LongPress)
                                 if (isSpeaking) {
                                     tts.stop()
                                     isSpeaking = false
@@ -975,7 +980,7 @@ private fun SummaryDetailDialog(
                             )
                         }
                         IconButton(
-                            onClick = { showShareDialog = true },
+                            onClick = { doHaptic(HapticFeedbackType.LongPress); showShareDialog = true },
                             modifier = Modifier.size(40.dp),
                         ) {
                             Icon(

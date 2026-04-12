@@ -1,6 +1,8 @@
 package com.entropyjournal.ui.components
 
 import android.content.Context
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import com.entropyjournal.util.rememberHapticAction
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
@@ -36,6 +38,7 @@ fun SunMoonToggle(
 ) {
     val isDark = LocalIsDarkTheme.current
     val context = LocalContext.current
+    val doHaptic = rememberHapticAction()
 
     val sunSize by animateDpAsState(
         targetValue = if (!isDark) 26.dp else 18.dp,
@@ -53,6 +56,7 @@ fun SunMoonToggle(
             interactionSource = remember { MutableInteractionSource() },
             indication = null
         ) {
+            doHaptic(HapticFeedbackType.LongPress)
             val themePrefs = context.getSharedPreferences(
                 "entropy_theme_quick", Context.MODE_PRIVATE
             )

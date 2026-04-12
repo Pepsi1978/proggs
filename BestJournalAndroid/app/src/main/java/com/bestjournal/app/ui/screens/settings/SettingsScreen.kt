@@ -255,7 +255,7 @@ fun SettingsScreen(
                                     }
                                 }
                                 OutlinedButton(
-                                    onClick = { viewModel.showLogoutDialog(true) },
+                                    onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.showLogoutDialog(true) },
                                     colors =
                                         ButtonDefaults.outlinedButtonColors(contentColor = NeonRed),
                                 ) {
@@ -336,7 +336,7 @@ fun SettingsScreen(
                                 horizontalArrangement = Arrangement.Center,
                             ) {
                                 Button(
-                                    onClick = { viewModel.syncNow() },
+                                    onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.syncNow() },
                                     enabled = !uiState.isSyncing,
                                     colors =
                                         ButtonDefaults.buttonColors(
@@ -384,7 +384,7 @@ fun SettingsScreen(
                                 horizontalArrangement = Arrangement.Center,
                             ) {
                                 Button(
-                                    onClick = { viewModel.signIn(context) },
+                                    onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.signIn(context) },
                                     colors =
                                         ButtonDefaults.buttonColors(
                                             containerColor = MaterialTheme.colorScheme.primary,
@@ -788,12 +788,14 @@ fun SettingsScreen(
                             Switch(
                                 checked = hapticEnabled,
                                 onCheckedChange = { enabled ->
-                                    doHaptic(HapticFeedbackType.LongPress)
                                     hapticEnabled = enabled
                                     soundsPrefs
                                         .edit()
                                         .putBoolean(Constants.PREF_HAPTIC_ENABLED, enabled)
-                                        .apply()
+                                        .commit()
+                                    if (enabled) {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                    }
                                 },
                                 colors =
                                     SwitchDefaults.colors(
@@ -1696,7 +1698,7 @@ fun SettingsScreen(
                                 horizontalArrangement = Arrangement.Center,
                             ) {
                                 Button(
-                                    onClick = { onNavigateToPaywall("settings_tap") },
+                                    onClick = { doHaptic(HapticFeedbackType.LongPress); onNavigateToPaywall("settings_tap") },
                                     colors =
                                         ButtonDefaults.buttonColors(
                                             containerColor = MaterialTheme.colorScheme.primary
@@ -1787,6 +1789,7 @@ fun SettingsScreen(
                             ) {
                                 OutlinedButton(
                                     onClick = {
+                                        doHaptic(HapticFeedbackType.LongPress)
                                         viewModel.analyticsTracker.trackExportPremiumBlocked()
                                         onNavigateToPaywall("pdf_export")
                                     },
@@ -1854,6 +1857,7 @@ fun SettingsScreen(
                         ) {
                             Button(
                                 onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
                                     showFeedbackDialog = true
                                     feedbackSent = false
                                 },
@@ -1919,7 +1923,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Best Journal v0.10.10",
+                            "Best Journal v0.10.11",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -1953,14 +1957,14 @@ fun SettingsScreen(
                     },
                     confirmButton = {
                         Button(
-                            onClick = { viewModel.signOut(context) },
+                            onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.signOut(context) },
                             colors = ButtonDefaults.buttonColors(containerColor = NeonRed),
                         ) {
                             Text("Abmelden")
                         }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { viewModel.showLogoutDialog(false) }) {
+                        OutlinedButton(onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.showLogoutDialog(false) }) {
                             Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },

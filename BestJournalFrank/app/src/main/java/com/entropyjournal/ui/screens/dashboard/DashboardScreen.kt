@@ -1,5 +1,7 @@
 package com.entropyjournal.ui.screens.dashboard
 
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import com.entropyjournal.util.rememberHapticAction
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -101,6 +103,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
     val blocks by viewModel.adviceBlocks.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val isDark = LocalIsDarkTheme.current
+    val doHaptic = rememberHapticAction()
     var showLegendDialog by remember { mutableStateOf(false) }
     var selectedAdvice by remember { mutableStateOf<Pair<Advice, String>?>(null) }
     var selectedCategoryBlock by remember {
@@ -133,7 +136,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                         com.entropyjournal.ui.components.SunMoonToggle()
                     }
                     Row {
-                        IconButton(onClick = { showLegendDialog = true }) {
+                        IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); showLegendDialog = true }) {
                             Icon(
                                 Icons.Rounded.Info,
                                 "Legende",
@@ -141,11 +144,11 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                             )
                         }
                         if (uiState.canUndo) {
-                            IconButton(onClick = { viewModel.undoDashboard() }) {
+                            IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.undoDashboard() }) {
                                 Icon(Icons.Rounded.Undo, "R\u00fcckg\u00e4ngig", tint = NeonAmber)
                             }
                         }
-                        IconButton(onClick = { viewModel.refreshDashboard() }) {
+                        IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.refreshDashboard() }) {
                             Icon(
                                 Icons.Rounded.Refresh,
                                 "Aktualisieren",

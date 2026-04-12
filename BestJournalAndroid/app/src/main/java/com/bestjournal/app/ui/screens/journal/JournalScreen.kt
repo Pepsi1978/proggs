@@ -211,6 +211,7 @@ fun JournalScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
                             onClick = {
+                                doHaptic(HapticFeedbackType.LongPress)
                                 if (uiState.syncStatus == SyncStatus.ERROR) {
                                     viewModel.retrySyncNow()
                                 } else {
@@ -306,7 +307,7 @@ fun JournalScreen(
                                         streakColor.copy(alpha = 0.1f),
                                         RoundedCornerShape(12.dp),
                                     )
-                                    .clickable { showStreakDialog = true }
+                                    .clickable { doHaptic(HapticFeedbackType.LongPress); showStreakDialog = true }
                                     .padding(horizontal = 8.dp, vertical = 3.dp),
                         ) {
                             Icon(
