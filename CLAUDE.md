@@ -30,6 +30,49 @@
 - Format: "💡 **Intelligenz-Vorschlag N**: [Was] → [Konkreter Vorschlag] — Soll ich das umsetzen?"
 - Mindestens 1 pro Session, gerne 3-5. Kommen NACH der Status-Meldung, nie mittendrin.
 
+## Commit + Push nach JEDER Aenderung (KRITISCH — FUNDAMENTALE REGEL)
+
+> **Diese Regel ist so fundamental wie Atmen: Nach JEDER abgeschlossenen Aenderung — egal wie klein —
+> wird SOFORT committed und gepusht. Keine Ausnahmen. Keine Ausreden. Kein "mache ich spaeter".**
+
+**Warum:** Ohne Commit kann der Benutzer nicht zurueck. Jeder nicht-committete Zustand ist ein
+Zustand den der Benutzer verlieren kann. Commits sind Rettungspunkte — je mehr, desto sicherer.
+
+### Die Regel in einem Satz
+**Aufgabe erledigt → Commit → Push → Status-Meldung. IMMER. SOFORT. AUSNAHMSLOS.**
+
+### Was "eine Aenderung" ist (alles davon loest Commit + Push aus)
+- Eine Datei editiert? → Commit + Push
+- Einen Bug gefixt? → Commit + Push
+- Ein Feature hinzugefuegt? → Commit + Push
+- Eine Config geaendert? → Commit + Push
+- Eine Regel aktualisiert? → Commit + Push
+- Mehrere zusammenhaengende Edits fuer EINE Aufgabe gemacht? → Commit + Push nach der Aufgabe
+- Einen Teilschritt eines groesseren Features abgeschlossen? → Commit + Push nach dem Teilschritt
+
+### Was NIEMALS passieren darf
+- ❌ Mehrere unabhaengige Aufgaben erledigen und erst am Ende EINMAL committen
+- ❌ "Ich committe spaeter" — es gibt kein spaeter, nur jetzt
+- ❌ Aenderungen machen und den Benutzer fragen "soll ich committen?" — einfach MACHEN
+- ❌ Nur committen aber nicht pushen — Push gehoert IMMER dazu
+- ❌ Eine Session beenden mit uncommitteten Aenderungen
+- ❌ Zur naechsten Aufgabe uebergehen ohne die aktuelle committed und gepusht zu haben
+
+### Ablauf (JEDES MAL, ohne Ausnahme)
+1. Aufgabe erledigen
+2. Cross-Platform pruefen (wenn relevant)
+3. `git add` (betroffene Dateien)
+4. `git commit` (mit fortlaufender Nummer)
+5. `git fetch origin && git rebase origin/main` (Pflicht vor Push)
+6. `git push`
+7. Status-Meldung an den Benutzer
+
+### Frequenz-Richtwert
+- Kleine Aufgabe (1-5 Minuten): 1 Commit danach
+- Mittlere Aufgabe (5-15 Minuten): 1-2 Commits (Teilschritte + Abschluss)
+- Grosse Aufgabe (15+ Minuten): Mehrere Commits nach logischen Teilschritten
+- **Faustregel: Lieber 5 kleine Commits als 1 grosser. Jeder Commit ist ein Rettungspunkt.**
+
 ## Sichtbarkeit (KRITISCH)
 - NIEMALS unsichtbar im Hintergrund arbeiten. Kein `context: fork`, keine stillen Subagents die der Benutzer nicht sehen kann.
 - Der Benutzer MUSS jede Aktion in Echtzeit mitlesen koennen.
