@@ -14,7 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import com.bestjournal.app.util.rememberHapticAction
 
 sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
     data object Retrospective :
@@ -29,7 +29,7 @@ sealed class BottomNavItem(val route: String, val title: String, val icon: Image
 
 @Composable
 fun BottomNavBar(currentRoute: String?, onItemClick: (BottomNavItem) -> Unit) {
-    val haptic = LocalHapticFeedback.current
+    val doHaptic = rememberHapticAction()
     val items =
         listOf(
             BottomNavItem.Retrospective,
@@ -47,7 +47,7 @@ fun BottomNavBar(currentRoute: String?, onItemClick: (BottomNavItem) -> Unit) {
             NavigationBarItem(
                 selected = isSelected,
                 onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    doHaptic(HapticFeedbackType.TextHandleMove)
                     onItemClick(item)
                 },
                 icon = {

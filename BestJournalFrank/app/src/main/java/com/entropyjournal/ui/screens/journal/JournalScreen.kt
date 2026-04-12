@@ -81,7 +81,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
+import com.entropyjournal.util.rememberHapticAction
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
@@ -117,7 +117,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
     val amplitude by viewModel.amplitude.collectAsState()
     val duration by viewModel.durationSeconds.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val haptic = LocalHapticFeedback.current
+    val doHaptic = rememberHapticAction()
     val context = LocalContext.current
 
     val permissionLauncher =
@@ -136,7 +136,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
     }
 
     val onMicClick: () -> Unit = {
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        doHaptic(HapticFeedbackType.LongPress)
         if (uiState.recordingState == RecordingState.RECORDING) {
             viewModel.toggleRecording()
         } else {

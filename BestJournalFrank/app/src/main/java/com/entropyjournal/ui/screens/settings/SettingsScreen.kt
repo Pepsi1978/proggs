@@ -741,8 +741,6 @@ fun SettingsScreen(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        Spacer(modifier = Modifier.height(16.dp))
 
                         var hapticEnabled by remember {
                             mutableStateOf(

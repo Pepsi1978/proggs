@@ -85,7 +85,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
+import com.bestjournal.app.util.rememberHapticAction
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontStyle
@@ -130,7 +130,7 @@ fun JournalScreen(
     val amplitude by viewModel.amplitude.collectAsState()
     val duration by viewModel.durationSeconds.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val haptic = LocalHapticFeedback.current
+    val doHaptic = rememberHapticAction()
     val context = LocalContext.current
 
     val permissionLauncher =
@@ -160,7 +160,7 @@ fun JournalScreen(
     }
 
     val onMicClick: () -> Unit = {
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        doHaptic(HapticFeedbackType.LongPress)
         if (uiState.recordingState == RecordingState.RECORDING) {
             viewModel.toggleRecording()
         } else {
@@ -715,7 +715,7 @@ private fun PreviewDialog(
     val displayText = if (showingImproved) improvedText!! else rawText
     val hasPrompt = activePrompt.isNotBlank()
     var showSuccess by remember { mutableStateOf(false) }
-    val haptic = LocalHapticFeedback.current
+    val doHaptic = rememberHapticAction()
 
     if (showSuccess) {
         LaunchedEffect(Unit) {
@@ -1175,7 +1175,7 @@ private fun PreviewDialog(
             } else {
                 Button(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        doHaptic(HapticFeedbackType.LongPress)
                         showSuccess = true
                     },
                     colors =

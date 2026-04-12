@@ -100,7 +100,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalHapticFeedback
+import com.entropyjournal.util.rememberHapticAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -122,7 +122,7 @@ fun EntryDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
-    val haptic = LocalHapticFeedback.current
+    val doHaptic = rememberHapticAction()
     val isDark = com.entropyjournal.ui.theme.LocalIsDarkTheme.current
     val highlightColor = if (isDark) Color(0x44FFFFFF) else Color(0xFFFFEB3B)
     val searchHighlight =
@@ -1050,7 +1050,7 @@ fun EntryDetailScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        doHaptic(HapticFeedbackType.LongPress)
                         viewModel.deleteEntry()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = NeonRed),

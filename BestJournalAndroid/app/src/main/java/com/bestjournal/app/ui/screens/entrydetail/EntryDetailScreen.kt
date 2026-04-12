@@ -101,7 +101,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalHapticFeedback
+import com.bestjournal.app.util.rememberHapticAction
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
@@ -151,7 +151,7 @@ fun EntryDetailScreen(
     var showShareDialog by remember { mutableStateOf(false) }
     var cameraFile by remember { mutableStateOf<File?>(null) }
     val context = LocalContext.current
-    val haptic = LocalHapticFeedback.current
+    val doHaptic = rememberHapticAction()
     val appContext = context.applicationContext
     val videoImageLoader = remember {
         coil3.ImageLoader.Builder(appContext)
@@ -1077,7 +1077,7 @@ fun EntryDetailScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        doHaptic(HapticFeedbackType.LongPress)
                         viewModel.deleteEntry()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = NeonRed),
