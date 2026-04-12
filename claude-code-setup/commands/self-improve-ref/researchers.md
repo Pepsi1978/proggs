@@ -59,6 +59,53 @@ ROBUSTNESS RULES (befolge diese IMMER, sie haben Vorrang vor allem anderen):
 6. ANTWORT-PFLICHT: Du MUSST IMMER eine Antwort zurueckgeben. Auch wenn leer. Auch wenn fehlerhaft. NIEMALS still haengen bleiben.
 ```
 
+## Researcher Output Format (v5.23 — PFLICHT fuer ALLE Researcher)
+
+**JEDER Researcher MUSS seine Ergebnisse als JSON-Array zurueckgeben.** Freitext-Antworten
+werden nicht akzeptiert. Der Haupt-Claude parst das JSON und baut daraus automatisch die
+Entscheidungsliste. Das verhindert dass Findings vergessen oder falsch zusammengefasst werden.
+
+**Format (PFLICHT — an den Schluss jedes Researcher-Prompts anhaengen):**
+
+```
+AUSGABE-FORMAT (PFLICHT — du MUSST dieses Format verwenden):
+
+Schreibe am Ende deiner Antwort einen JSON-Block zwischen ```json und ``` Markern.
+Jedes Finding ist ein Objekt im Array:
+
+```json
+[
+  {
+    "id": "R1-1",
+    "titel": "Verstaendlicher Titel fuer Nicht-Programmierer",
+    "kategorie": "update|sicherheit|intelligenz|plattform|kreativ",
+    "problem": "Was ist das Problem das geloest wird? 2-3 Saetze in einfachem Deutsch.",
+    "loesung": "Was genau passiert wenn man JA sagt? 2-3 Saetze, konkret.",
+    "aufwand": "5 Min|15 Min|30 Min|1 Std|1 Tag",
+    "empfehlung": "JA sofort|JA spaeter|NEIN",
+    "quelle": "URL oder Paper-Referenz"
+  }
+]
+```
+
+Kategorien:
+- "update" = Software-Updates, neue Versionen
+- "sicherheit" = CVEs, Vulnerabilities, Supply-Chain-Risiken
+- "intelligenz" = Neue Denkwege, kognitive Werkzeuge, Forschungs-Findings
+- "plattform" = Hooks, Regeln, Konfiguration, Cross-Platform
+- "kreativ" = Unkonventionelle Ideen, neue Ansaetze
+
+REGELN:
+- "titel" muss fuer einen Nicht-Programmierer verstaendlich sein
+- "problem" und "loesung" muessen jeweils MINDESTENS 2 Saetze lang sein
+- Fachbegriffe in Klammern erklaeren: "MCP-Server (ein Zusatz-Werkzeug)"
+- KEIN Finding ohne alle 7 Felder
+```
+
+**Fuer den Haupt-Claude (Parsing):** Nach Rueckkehr jedes Researchers den ```json-Block
+extrahieren und in eine Gesamtliste zusammenfuehren. Doppelte Findings (gleicher Titel)
+entfernen. Die Gesamtliste wird zur Entscheidungsliste im Report.
+
 ## Researcher Templates
 
 **MANDATORY: Spawn ALL active researchers in ONE message block.**

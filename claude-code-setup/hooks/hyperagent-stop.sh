@@ -41,8 +41,10 @@ if [ -f "$GOAL_FILE" ]; then
     else
         goal_age=$(( $(date +%s) - $(stat -c %Y "$GOAL_FILE" 2>/dev/null || echo 0) ))
     fi
+    # FIX (2026-04-12): NICHT exit 0 bei stale goal — nur goal leeren.
+    # exit 0 wuerde die GESAMTE metacognitive Analyse ueberspringen!
     if [ "$goal_age" -gt 7200 ] 2>/dev/null; then
-        exit 0
+        goal=""  # Goal vergessen, aber Hook laeuft weiter
     fi
 fi
 
@@ -58,7 +60,7 @@ fi
 
 # Determine analysis depth
 depth="leicht"
-if [ "$turn" -gt 20 ] 2>/dev/null || [ "$error_count" -gt 3 ] 2>/dev/null; then
+if [ "$turn" -gt 12 ] 2>/dev/null || [ "$error_count" -gt 2 ] 2>/dev/null; then
     depth="voll"
 fi
 

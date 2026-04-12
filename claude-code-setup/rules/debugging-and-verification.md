@@ -94,7 +94,32 @@ Bei technisch praezisen Aussagen MUSS Claude seine eigene Sicherheit bewerten:
 
 > Quelle: Cursor Debug Mode 2.2, arXiv 2604.00167 (Fault Localization)
 
-Bei nicht-trivialen Bugs (Root Cause nicht sofort sichtbar) dieser 4-Schritte-Loop:
+### Stufenregel: Wann Logging-Sonden einsetzen (PFLICHT)
+
+> Quelle: TraceCoder (arXiv 2602.06875) — Execution-Trace-Debugging hat empirisch
+> hoehere Trefferquote als reines Fehlermeldungs-Debugging. Sonden VOR dem Raten
+> einbauen spart Token weil weniger Fehlversuche noetig sind.
+
+| Stufe | Situation | Aktion | Sonden noetig? |
+|-------|-----------|--------|---------------|
+| **1** | Fehlermeldung ist eindeutig (Compiler-Error, falscher Import, Tippfehler) | Direkt fixen — die Fehlermeldung IST die Diagnose | NEIN |
+| **2** | Root Cause nach 30 Sekunden noch unklar | SOFORT Logging-Sonden einbauen, NICHT erst raten | **JA — PFLICHT** |
+| **3** | Erster Fix-Versuch ist gescheitert | Ab jetzt sind Sonden PFLICHT fuer jeden weiteren Versuch | **JA — PFLICHT** |
+
+**Warum bei Stufe 2 schon, nicht erst bei Stufe 3:**
+Ein einziger Sonden-Durchlauf kostet ~500-1000 Token (2-3 Log-Zeilen einbauen + Output lesen).
+Ein gescheiterter Rateverversuch kostet ~2000-5000 Token (Edit + Build + Fehler analysieren + zurueckrollen).
+Sonden bei Stufe 2 sind also GUENSTIGER als ein Fehlversuch bei Stufe 3.
+
+**Sonden-Muster (TraceCoder-Pattern):**
+1. Funktion identifizieren die den Fehler ausloest (Function-level, siehe Fault Localization)
+2. Am Eingang der Funktion: Alle Eingabewerte loggen
+3. An Verzweigungen (if/when/switch): Welcher Pfad wird genommen?
+4. Am Ausgang: Rueckgabewert loggen
+5. Code LAUFEN lassen und Logs LESEN
+6. ERST DANN Hypothese formulieren basierend auf echten Daten
+
+Bei jedem nicht-trivialen Bug (Stufe 2+3) dieser 4-Schritte-Loop:
 
 ### Schritt 1: HYPOTHESEN FORMULIEREN (2-3 Stueck)
 

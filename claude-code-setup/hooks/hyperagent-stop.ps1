@@ -32,11 +32,13 @@ if (Test-Path $GoalFile) {
 }
 
 # Check if goal file is stale (older than 2 hours = different session)
+# FIX (2026-04-12): NICHT exit 0 bei stale goal — nur goal leeren.
+# exit 0 wuerde die GESAMTE metacognitive Analyse ueberspringen!
+# Der Hook muss IMMER weiterlaufen, nur ohne Goal-Kontext bei stale Goal.
 if (Test-Path $GoalFile) {
     $goalAge = (Get-Date) - (Get-Item $GoalFile).LastWriteTime
     if ($goalAge.TotalHours -gt 2) {
-        # Stale goal — don't inject analysis for a previous session
-        exit 0
+        $goal = ""  # Goal vergessen, aber Hook laeuft weiter
     }
 }
 
@@ -59,7 +61,7 @@ if (Test-Path $LogFile) {
 
 # Determine analysis depth based on session complexity
 $depth = "leicht"  # default: inline analysis
-if ($turn -gt 20 -or $errorCount -gt 3) {
+if ($turn -gt 12 -or $errorCount -gt 2) {
     $depth = "voll"  # spawn hyperagent sub-agent
 }
 
