@@ -140,13 +140,13 @@ if command -v flock >/dev/null 2>&1; then
         hook_log "lock released"
     else
         hook_log_warn "flock timeout after 5s — skipping write"
-        echo "WriteBack-Enforcer: lock timeout — skipping write" >&2
+        echo "WriteBack-Enforcer: lock timeout — skipping write"
         exit 1
     fi
     exec 9>&-
 else
     # flock not available (macOS without Homebrew) — proceed without locking
-    echo "WriteBack-Enforcer: flock not found — proceeding without lock (install via: brew install flock)" >&2
+    echo "WriteBack-Enforcer: flock not found — proceeding without lock (install via: brew install flock)"
     hook_log_warn "flock not available — proceeding without file locking"
     _do_merge
 fi

@@ -14,7 +14,7 @@ try { . "$PSScriptRoot/whiteboard-insert.ps1" } catch { }
 function Write-Status {
     param([string]$Message)
     Write-Output $Message
-    [Console]::Error.WriteLine($Message)
+    Write-Host ($Message)
 }
 
 $warnings = @()

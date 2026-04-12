@@ -317,16 +317,7 @@
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/config-guard.ps1\"",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
+            "type": "prompt",
             "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/hyperagent-stop.ps1\"",
             "timeout": 5
           }

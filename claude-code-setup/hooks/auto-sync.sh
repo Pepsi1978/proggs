@@ -11,7 +11,7 @@ source "$SCRIPT_DIR/whiteboard-insert.sh"
 # Write to both stdout (AI context) and stderr (user-visible terminal)
 write_status() {
     echo "$1"
-    echo "$1" >&2
+    echo "$1"
 }
 
 REPO_DIR="$HOME/proggs"

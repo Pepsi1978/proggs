@@ -58,21 +58,38 @@ check_dangerous() {
 # ============================================================
 
 check_forbidden() {
-    # Codex directory
-    if echo "$cmd" | grep -qE 'cd[[:space:]]+.*[~/]Codex[/]?' 2>/dev/null; then
-        echo '{"reason":"BLOCKIERT: ~/Codex/ ist gesperrt. Verwende ~/proggs/."}'
-        exit 2
-    fi
-    if echo "$cmd" | grep -qE '(ls|cat|rm|mv|cp|touch|mkdir)[[:space:]]+.*[~/]Codex[/]' 2>/dev/null; then
-        echo '{"reason":"BLOCKIERT: ~/Codex/ ist gesperrt. Verwende ~/proggs/."}'
-        exit 2
-    fi
+    # Befehle an && ; || aufsplitten und jeden Teilbefehl einzeln pruefen
+    # (wie die PS1-Version — sonst werden verkettete Befehle nicht erkannt)
+    local IFS_OLD="$IFS"
+    echo "$cmd" | tr '&;|' '\n' | while IFS= read -r part; do
+        local stripped
+        stripped=$(echo "$part" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+        [ -z "$stripped" ] && continue
 
-    # sed on JSON
-    if echo "$cmd" | grep -qE '^sed[[:space:]]' 2>/dev/null && echo "$cmd" | grep -qE '\.json' 2>/dev/null; then
-        echo '{"reason":"BLOCKIERT: sed auf JSON verboten. Benutze Edit-Tool oder python3 json.load/dump."}'
-        exit 2
-    fi
+        # Codex directory — cd
+        if echo "$stripped" | grep -qE '^cd[[:space:]]+.*[~/]Codex[/]?' 2>/dev/null; then
+            echo '{"reason":"BLOCKIERT: ~/Codex/ ist gesperrt. Verwende ~/proggs/."}'
+            exit 2
+        fi
+
+        # Codex directory — file operations
+        if echo "$stripped" | grep -qE '^(ls|cat|rm|mv|cp|touch|mkdir|chmod|head|tail|wc|stat|file)[[:space:]]' 2>/dev/null; then
+            if echo "$stripped" | grep -qE '[~/]Codex[/]' 2>/dev/null; then
+                echo '{"reason":"BLOCKIERT: ~/Codex/ ist gesperrt. Verwende ~/proggs/."}'
+                exit 2
+            fi
+        fi
+
+        # sed on JSON — jetzt pro Teilbefehl (nicht nur am Zeilenanfang)
+        if echo "$stripped" | grep -qE '^sed[[:space:]]' 2>/dev/null; then
+            if echo "$stripped" | grep -qE '\.json' 2>/dev/null; then
+                echo '{"reason":"BLOCKIERT: sed auf JSON verboten. Benutze Edit-Tool oder python3 json.load/dump."}'
+                exit 2
+            fi
+        fi
+    done
+    # Wenn die while-Subshell mit exit 2 beendet hat, ist $? = 2
+    [ $? -eq 2 ] && exit 2
 }
 
 # ============================================================
@@ -93,9 +110,21 @@ check_shell_updates() {
     done
 }
 
+# ============================================================
+# PART 4: settings.json-via-Bash-Warnung (ex safety-gate)
+# ============================================================
+
+check_settings_write() {
+    if echo "$cmd" | grep -qE '>[[:space:]]*.*settings\.json' 2>/dev/null; then
+        echo "WARNING: Schreibzugriff auf settings.json per Bash erkannt. config-guard prueft danach."
+        exit 0
+    fi
+}
+
 # Run all checks
 check_dangerous
 check_forbidden
 check_shell_updates
+check_settings_write
 
 exit 0

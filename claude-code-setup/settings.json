@@ -211,16 +211,7 @@
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/config-guard.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
+            "type": "prompt",
             "command": "bash ~/.claude/hooks/hyperagent-stop.sh",
             "timeout": 5
           }

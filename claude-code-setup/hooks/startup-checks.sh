@@ -79,17 +79,20 @@ check_path_health() {
 # CHECK 3: Doctor-Lite (ehemals doctor-lite.sh)
 # ============================================================
 check_doctor_lite() {
+    local local_warnings=0
     local claude_json="$HOME/.claude.json"
     if [ -f "$claude_json" ]; then
         # Cloud MCP connectors
         if grep -q '"tengu_claudeai_mcp_connectors": true' "$claude_json" 2>/dev/null; then
             if ! grep -q '"claude\.ai' "$claude_json" 2>/dev/null; then
                 warnings+=("Cloud-MCP-Connectoren aktiv und NICHT blockiert (~21K Token)")
+                local_warnings=$((local_warnings + 1))
             fi
         fi
         # sequential-thinking
         if grep -q '"sequential-thinking"' "$claude_json" 2>/dev/null; then
             warnings+=("sequential-thinking MCP-Server ist wieder konfiguriert (redundant)")
+            local_warnings=$((local_warnings + 1))
         fi
     fi
 
@@ -98,10 +101,13 @@ check_doctor_lite() {
     if [ -f "$mcp_json" ] && [ "$(uname)" = "Darwin" ]; then
         if grep -v "code-search" "$mcp_json" 2>/dev/null | grep -q 'C:\\Users\\' 2>/dev/null; then
             warnings+=(".mcp.json: Windows-Pfade auf macOS gefunden")
+            local_warnings=$((local_warnings + 1))
         fi
     fi
 
-    ok_checks+=("Doctor-Lite: OK")
+    if [ "$local_warnings" -eq 0 ]; then
+        ok_checks+=("Doctor-Lite: OK")
+    fi
 }
 
 # ============================================================
@@ -124,8 +130,31 @@ check_semantic_search() {
 # CHECK 5: MCP-Auth (ehemals mcp-auth-check.sh)
 # ============================================================
 check_mcp_auth() {
+    # WICHTIG: claude mcp list kann haengen wenn MCP-Server nicht antworten.
+    # Deshalb: Mit 5-Sekunden-Timeout ausfuehren (gtimeout auf macOS, timeout auf Linux).
+    local timeout_cmd="timeout"
+    if [ "$(uname)" = "Darwin" ]; then
+        # macOS: gtimeout von coreutils, oder skip wenn nicht installiert
+        if command -v gtimeout >/dev/null 2>&1; then
+            timeout_cmd="gtimeout"
+        else
+            # Kein Timeout verfuegbar — direkt ausfuehren aber mit Risiko
+            timeout_cmd=""
+        fi
+    fi
+
     local output
-    output=$(claude mcp list 2>&1) || true
+    if [ -n "$timeout_cmd" ]; then
+        output=$($timeout_cmd 5 claude mcp list 2>&1) || true
+    else
+        output=$(claude mcp list 2>&1) || true
+    fi
+
+    # Timeout-Exit-Code ist 124 — dann uebersprungen
+    if [ $? -eq 124 ] 2>/dev/null; then
+        ok_checks+=("MCP-Auth: Timeout (uebersprungen)")
+        return
+    fi
 
     local auth_needed=0
     local failed=0
@@ -172,12 +201,13 @@ check_mirror_ledger() {
 # MAIN: Alle Checks ausfuehren
 # ============================================================
 
+# Reihenfolge: Schnelle lokale Checks zuerst, langsamer externer Check (MCP-Auth) zuletzt.
 check_disk_space
 check_path_health
 check_doctor_lite
 check_semantic_search
-check_mcp_auth
 check_mirror_ledger
+check_mcp_auth  # LETZTER Check — ruft claude mcp list auf (kann bis zu 5s dauern)
 
 # ============================================================
 # OUTPUT: Kompakte Zusammenfassung

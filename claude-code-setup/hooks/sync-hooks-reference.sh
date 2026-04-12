@@ -3,7 +3,7 @@
 # Runs at SessionEnd (async). Keeps hooks-macos.json always in sync with live settings.
 # Created: 2026-03-25 by Intelligenz-Vorschlag #715
 
-set -euo pipefail
+set +e  # Hooks muessen IMMER weiterlaufen, nie bei Fehler abbrechen
 
 SETTINGS="$HOME/.claude/settings.json"
 SETUP_DIR="$HOME/proggs/claude-code-setup"

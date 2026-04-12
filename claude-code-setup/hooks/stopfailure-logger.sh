@@ -65,9 +65,9 @@ ENTRY_EOF
 WHITEBOARD="$HOME/proggs/.claude/agent-memory/shared/MEMORY.md"
 if [ -f "$WHITEBOARD" ]; then
     insert_whiteboard_entry "Offene Fehler & Probleme" "$ENTRY" || \
-        echo "[stopfailure-logger] whiteboard-insert failed — error NOT logged to whiteboard. Manual check required." >&2
+        echo "[stopfailure-logger] whiteboard-insert failed — error NOT logged to whiteboard. Manual check required."
 else
-    echo "[stopfailure-logger] whiteboard-insert failed — error NOT logged to whiteboard. Manual check required." >&2
+    echo "[stopfailure-logger] whiteboard-insert failed — error NOT logged to whiteboard. Manual check required."
 fi
 
 echo "StopFailure logged to whiteboard at $TIMESTAMP"

@@ -4,7 +4,7 @@
 # Strategy: pull remote changes first, retry on conflict with auto-resolve
 # Created: 2026-03-25 by Intelligenz-Vorschlag #715
 
-set -euo pipefail
+set +e  # Hooks muessen IMMER weiterlaufen, nie bei Fehler abbrechen
 
 REPO_DIR="$HOME/proggs"
 WHITEBOARD=".claude/agent-memory/shared/MEMORY.md"

@@ -9,7 +9,7 @@
 
 source "$(dirname "$0")/hook-log.sh"
 
-set -euo pipefail
+set +e  # Hooks muessen IMMER weiterlaufen, nie bei Fehler abbrechen
 
 if [ $# -ne 2 ]; then
     echo "Usage: $0 <resource> <acquire|release|check>"

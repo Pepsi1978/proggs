@@ -12,7 +12,7 @@
 # - Logs to /tmp/claude-mem-worker.log for debugging
 # - Never exit 1 immediately — wait and retry to avoid launchd crash-loop
 
-set -e
+set +e  # Hooks muessen IMMER weiterlaufen, nie bei Fehler abbrechen
 
 LOG_PREFIX() { echo "$(date -Iseconds 2>/dev/null || date)"; }
 
@@ -37,27 +37,27 @@ MAX_WAIT=60
 waited=0
 
 while [ ! -d "$PLUGIN_DIR" ] && [ "$waited" -lt "$MAX_WAIT" ]; do
-    echo "$(LOG_PREFIX) Waiting for plugin directory ($waited/${MAX_WAIT}s)..." >&2
+    echo "$(LOG_PREFIX) Waiting for plugin directory ($waited/${MAX_WAIT}s)..."
     sleep 5
     waited=$((waited + 5))
 done
 
 if [ ! -d "$PLUGIN_DIR" ]; then
-    echo "$(LOG_PREFIX) Plugin not installed after ${MAX_WAIT}s — sleeping 5min before retry" >&2
+    echo "$(LOG_PREFIX) Plugin not installed after ${MAX_WAIT}s — sleeping 5min before retry"
     sleep 300
     exit 0  # Exit 0 so KeepAlive respawns us after ThrottleInterval
 fi
 
 LATEST_VERSION=$(ls -1d "$PLUGIN_DIR"/*/ 2>/dev/null | sort -V | tail -1)
 if [ -z "$LATEST_VERSION" ]; then
-    echo "$(LOG_PREFIX) No plugin versions found — sleeping 5min before retry" >&2
+    echo "$(LOG_PREFIX) No plugin versions found — sleeping 5min before retry"
     sleep 300
     exit 0
 fi
 
 WORKER_SCRIPT="${LATEST_VERSION}scripts/worker-service.cjs"
 if [ ! -f "$WORKER_SCRIPT" ]; then
-    echo "$(LOG_PREFIX) worker-service.cjs not found at $WORKER_SCRIPT — sleeping 5min" >&2
+    echo "$(LOG_PREFIX) worker-service.cjs not found at $WORKER_SCRIPT — sleeping 5min"
     sleep 300
     exit 0
 fi
@@ -81,7 +81,7 @@ if [ -z "$BUN" ]; then
 fi
 
 if [ -z "$BUN" ]; then
-    echo "$(LOG_PREFIX) Neither bun nor node found — sleeping 5min" >&2
+    echo "$(LOG_PREFIX) Neither bun nor node found — sleeping 5min"
     sleep 300
     exit 0
 fi

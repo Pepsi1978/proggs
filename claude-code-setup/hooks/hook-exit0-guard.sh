@@ -4,7 +4,7 @@
 # stdout -> AI context (system-reminder), stderr -> user terminal
 # Platform: macOS/Linux
 
-set -euo pipefail
+set +e  # Hooks muessen IMMER weiterlaufen, nie bei Fehler abbrechen
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/hook-log.sh"
@@ -50,7 +50,7 @@ done <<< "$hook_files"
 if [ -n "$problems" ]; then
     msg="Hook-Exit0-Guard: WARNUNG — folgende Hook-Dateien haben kein 'exit 0' am Ende:$problems\nBitte 'exit 0' am Ende jeder Hook-Datei hinzufuegen!"
     echo -e "$msg"
-    echo -e "$msg" >&2
+    echo -e "$msg"
     hook_log_warn "Hook files missing exit 0:$problems"
 fi
 

@@ -10,7 +10,7 @@
 function Write-Status {
     param([string]$Message)
     Write-Output $Message
-    [Console]::Error.WriteLine($Message)
+    Write-Host ($Message)
 }
 
 $RepoDir = Join-Path $env:USERPROFILE "proggs"

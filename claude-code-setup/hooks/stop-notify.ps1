@@ -11,7 +11,7 @@ try { [Console]::In.ReadToEnd() | Out-Null } catch { }
 
 # --- 1. Terminal BEL (instant — triggers Windows Terminal "braucht deine Aufmerksamkeit") ---
 try {
-    [Console]::Error.Write([char]7)
+    Write-Host -NoNewline ([char]7)
 } catch { }
 
 # --- 2. Fast Toast notification (async — non-blocking) ---

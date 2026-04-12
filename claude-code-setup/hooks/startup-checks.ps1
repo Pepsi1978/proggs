@@ -93,6 +93,7 @@ function Check-PathHealth {
 # CHECK 3: Doctor-Lite (ehemals doctor-lite.ps1)
 # ============================================================
 function Check-DoctorLite {
+    $localWarnings = 0
     $claudeJson = "$env:USERPROFILE\.claude.json"
     if (Test-Path $claudeJson) {
         $raw = Get-Content $claudeJson -Raw -ErrorAction SilentlyContinue
@@ -102,11 +103,13 @@ function Check-DoctorLite {
         $hasBlocker = $raw -match '"disabledMcpjsonServers":\s*\[' -and $raw -match '"claude\.ai'
         if ($flagActive -and -not $hasBlocker) {
             $script:warnings += "Cloud-MCP-Connectoren aktiv und NICHT blockiert (~21K Token)"
+            $localWarnings++
         }
 
         # sequential-thinking sneaked back?
         if ($raw -match '"sequential-thinking"') {
             $script:warnings += "sequential-thinking MCP-Server ist wieder konfiguriert (redundant)"
+            $localWarnings++
         }
     }
 
@@ -123,10 +126,13 @@ function Check-DoctorLite {
         }
         if ($macosServers.Count -gt 0) {
             $script:warnings += ".mcp.json: macOS-Pfade auf Windows: $($macosServers -join ', ')"
+            $localWarnings++
         }
     }
 
-    $script:okChecks += "Doctor-Lite: OK"
+    if ($localWarnings -eq 0) {
+        $script:okChecks += "Doctor-Lite: OK"
+    }
 }
 
 # ============================================================
@@ -150,8 +156,20 @@ function Check-SemanticSearch {
 # CHECK 5: MCP-Auth (ehemals mcp-auth-check.ps1)
 # ============================================================
 function Check-McpAuth {
+    # WICHTIG: claude mcp list kann haengen wenn MCP-Server nicht antworten.
+    # Deshalb: Als Background-Job mit 5-Sekunden-Timeout ausfuehren.
     try {
-        $output = & claude mcp list 2>&1 | Out-String
+        $job = Start-Job -ScriptBlock { claude mcp list 2>&1 } -ErrorAction Stop
+        $completed = Wait-Job $job -Timeout 5
+        if (-not $completed) {
+            Stop-Job $job -ErrorAction SilentlyContinue
+            Remove-Job $job -Force -ErrorAction SilentlyContinue
+            $script:okChecks += "MCP-Auth: Timeout (uebersprungen)"
+            return
+        }
+        $output = Receive-Job $job | Out-String
+        Remove-Job $job -Force -ErrorAction SilentlyContinue
+
         $authNeeded = @()
         $failed = @()
 
@@ -199,12 +217,14 @@ function Check-MirrorLedger {
 # MAIN: Alle Checks ausfuehren
 # ============================================================
 
+# Reihenfolge: Schnelle lokale Checks zuerst, langsamer externer Check (MCP-Auth) zuletzt.
+# So bekommt der Benutzer die lokalen Ergebnisse sofort, auch wenn MCP-Auth haengt.
 Check-DiskSpace
 Check-PathHealth
 Check-DoctorLite
 Check-SemanticSearch
-Check-McpAuth
 Check-MirrorLedger
+Check-McpAuth  # LETZTER Check — ruft claude mcp list auf (kann bis zu 5s dauern)
 
 # ============================================================
 # OUTPUT: Kompakte Zusammenfassung

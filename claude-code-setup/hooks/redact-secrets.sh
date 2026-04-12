@@ -10,7 +10,7 @@
 #
 # ROBUSTNESS: Entire script is safe-fail. Any error → exit 0 (allow).
 
-set -euo pipefail
+set +e  # Hooks muessen IMMER weiterlaufen, nie bei Fehler abbrechen
 
 # Read stdin into variable
 HOOK_INPUT=$(cat)

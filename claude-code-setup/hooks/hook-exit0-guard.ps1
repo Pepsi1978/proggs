@@ -5,7 +5,7 @@
 
 . "$PSScriptRoot/hook-log.ps1"
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "SilentlyContinue"
 
 try {
     $input_data = $input | Out-String | ConvertFrom-Json
@@ -51,7 +51,7 @@ try {
         $list = $problems -join "`n  - "
         $msg = "Hook-Exit0-Guard: WARNUNG — folgende Hook-Dateien haben kein 'exit 0' am Ende:`n  - $list`nBitte 'exit 0' am Ende jeder Hook-Datei hinzufuegen!"
         Write-Output $msg
-        [Console]::Error.WriteLine($msg)
+        Write-Host ($msg)
         Hook-LogWarn "Hook files missing exit 0: $($problems -join ', ')"
     }
 } catch {

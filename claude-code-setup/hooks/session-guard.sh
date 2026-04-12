@@ -12,7 +12,7 @@ source "$SCRIPT_DIR/whiteboard-insert.sh" 2>/dev/null || true
 
 write_status() {
     echo "$1"
-    echo "$1" >&2
+    echo "$1"
 }
 
 fixes=()
