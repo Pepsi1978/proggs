@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -47,6 +48,7 @@ fun BottomNavBar(currentRoute: String?, onItemClick: (BottomNavItem) -> Unit) {
 
     val currentIndex = items.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
     var dragAccumulator by remember { mutableFloatStateOf(0f) }
+    var swipeHandled by remember { mutableStateOf(false) }
     val swipeThreshold = 100f
 
     NavigationBar(
@@ -54,15 +56,19 @@ fun BottomNavBar(currentRoute: String?, onItemClick: (BottomNavItem) -> Unit) {
         contentColor = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.pointerInput(currentIndex) {
             detectHorizontalDragGestures(
-                onDragStart = { dragAccumulator = 0f },
+                onDragStart = {
+                    dragAccumulator = 0f
+                    swipeHandled = false
+                },
                 onHorizontalDrag = { _, dragAmount ->
+                    if (swipeHandled) return@detectHorizontalDragGestures
                     dragAccumulator += dragAmount
                     if (dragAccumulator < -swipeThreshold && currentIndex < items.lastIndex) {
-                        dragAccumulator = 0f
+                        swipeHandled = true
                         doHaptic(HapticFeedbackType.TextHandleMove)
                         onItemClick(items[currentIndex + 1])
                     } else if (dragAccumulator > swipeThreshold && currentIndex > 0) {
-                        dragAccumulator = 0f
+                        swipeHandled = true
                         doHaptic(HapticFeedbackType.TextHandleMove)
                         onItemClick(items[currentIndex - 1])
                     }

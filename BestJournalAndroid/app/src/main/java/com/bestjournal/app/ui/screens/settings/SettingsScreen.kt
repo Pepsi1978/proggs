@@ -1720,7 +1720,12 @@ fun SettingsScreen(
                             viewModel.exportToPdf(context, uri)
                         }
                     }
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                GlassCard(modifier = Modifier.fillMaxWidth().then(
+                    if (!uiState.isSubscribed) Modifier.clickable {
+                        doHaptic(HapticFeedbackType.LongPress)
+                        onNavigateToPaywall("pdf_export")
+                    } else Modifier
+                )) {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
@@ -1911,7 +1916,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Best Journal v0.10.12",
+                            "Best Journal v0.10.13",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

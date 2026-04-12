@@ -314,6 +314,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                             fontWeight = FontWeight.Bold,
                                             color = SummaryPalette.primary,
                                         )
+                                Spacer(modifier = Modifier.width(40.dp))
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
@@ -389,6 +390,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                     fontWeight = FontWeight.Bold,
                                     color = SummaryPalette.secondary,
                                 )
+                                Spacer(modifier = Modifier.width(40.dp))
                             }
                         }
 
@@ -452,6 +454,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                             fontWeight = FontWeight.Bold,
                                             color = InsightPalette.primary,
                                         )
+                                Spacer(modifier = Modifier.width(40.dp))
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
@@ -527,6 +530,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                     fontWeight = FontWeight.Bold,
                                     color = InsightPalette.primary,
                                 )
+                                Spacer(modifier = Modifier.width(40.dp))
                             }
                         }
 
@@ -590,6 +594,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                             fontWeight = FontWeight.Bold,
                                             color = GoalPalette.primary,
                                         )
+                                Spacer(modifier = Modifier.width(40.dp))
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
@@ -665,6 +670,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
                                     fontWeight = FontWeight.Bold,
                                     color = GoalPalette.primary,
                                 )
+                                Spacer(modifier = Modifier.width(40.dp))
                             }
                         }
 

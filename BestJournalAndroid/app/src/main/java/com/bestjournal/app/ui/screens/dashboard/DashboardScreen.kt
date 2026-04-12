@@ -612,6 +612,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                             fontWeight = FontWeight.Bold,
                                             color = SummaryPalette.primary,
                                         )
+                                Spacer(modifier = Modifier.width(40.dp))
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
@@ -690,6 +691,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     fontWeight = FontWeight.Bold,
                                     color = SummaryPalette.secondary,
                                 )
+                                Spacer(modifier = Modifier.width(40.dp))
                             }
                         }
 
@@ -757,6 +759,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                             fontWeight = FontWeight.Bold,
                                             color = InsightPalette.primary,
                                         )
+                                Spacer(modifier = Modifier.width(40.dp))
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
@@ -832,6 +835,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     fontWeight = FontWeight.Bold,
                                     color = InsightPalette.primary,
                                 )
+                                Spacer(modifier = Modifier.width(40.dp))
                             }
                         }
 
@@ -898,6 +902,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                             fontWeight = FontWeight.Bold,
                                             color = GoalPalette.primary,
                                         )
+                                Spacer(modifier = Modifier.width(40.dp))
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
@@ -973,6 +978,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     fontWeight = FontWeight.Bold,
                                     color = GoalPalette.primary,
                                 )
+                                Spacer(modifier = Modifier.width(40.dp))
                             }
                         }
 
@@ -2356,6 +2362,7 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
                     fontWeight = FontWeight.Bold,
                     color = SummaryPalette.secondary,
                 )
+                                Spacer(modifier = Modifier.width(40.dp))
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -2643,6 +2650,7 @@ private fun InsightKeyBlock(actions: List<TopAction>) {
                     fontWeight = FontWeight.Bold,
                     color = InsightPalette.primary,
                 )
+                                Spacer(modifier = Modifier.width(40.dp))
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -2925,6 +2933,7 @@ private fun GoalNextStepsBlock(actions: List<TopAction>) {
                     fontWeight = FontWeight.Bold,
                     color = GoalPalette.primary,
                 )
+                                Spacer(modifier = Modifier.width(40.dp))
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
