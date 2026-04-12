@@ -520,9 +520,21 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         Spacer(modifier = Modifier.height(12.dp))
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            horizontalArrangement = Arrangement.End,
                                             verticalAlignment = Alignment.CenterVertically,
                                         ) {
+                                            TextButton(
+                                                onClick = {
+                                                    viewModel.dismissAnalysisUpsellBanner()
+                                                }
+                                            ) {
+                                                Text(
+                                                    "Sp\u00e4ter",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.outline,
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(4.dp))
                                             Button(
                                                 onClick = {
                                                     viewModel.onAnalysisUpsellClicked()
@@ -546,17 +558,6 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                                         MaterialTheme.typography.labelMedium.copy(
                                                             fontWeight = FontWeight.Bold
                                                         ),
-                                                )
-                                            }
-                                            TextButton(
-                                                onClick = {
-                                                    viewModel.dismissAnalysisUpsellBanner()
-                                                }
-                                            ) {
-                                                Text(
-                                                    "Sp\u00e4ter",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.outline,
                                                 )
                                             }
                                         }
