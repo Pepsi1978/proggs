@@ -47,6 +47,8 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.VolumeOff
+import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.MobileOff
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -725,6 +727,57 @@ fun SettingsScreen(
                                             t.play()
                                         } catch (_: Exception) {}
                                     }
+                                },
+                                colors =
+                                    SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    ),
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        var hapticEnabled by remember {
+                            mutableStateOf(
+                                soundsPrefs.getBoolean(Constants.PREF_HAPTIC_ENABLED, true)
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                SettingsHapticIcon(isEnabled = hapticEnabled)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        "Haptik",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Text(
+                                        if (hapticEnabled) "Haptik ist eingeschaltet"
+                                        else "Haptik ist ausgeschaltet",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = hapticEnabled,
+                                onCheckedChange = { enabled ->
+                                    hapticEnabled = enabled
+                                    soundsPrefs
+                                        .edit()
+                                        .putBoolean(Constants.PREF_HAPTIC_ENABLED, enabled)
+                                        .apply()
                                 },
                                 colors =
                                     SwitchDefaults.colors(
@@ -2049,6 +2102,55 @@ private fun SettingsSoundIcon(isEnabled: Boolean) {
             Icon(
                 Icons.Rounded.VolumeOff,
                 "Ton aus",
+                tint = if (!isEnabled) Color(0xFFEF4444) else mutedGray,
+                modifier = Modifier.size(offSize),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsHapticIcon(isEnabled: Boolean) {
+    val activeColor = MaterialTheme.colorScheme.primary
+    val mutedGray = Color(0xFF666666)
+    val onSize by
+        animateDpAsState(
+            targetValue = if (isEnabled) 22.dp else 14.dp,
+            animationSpec = tween(300),
+            label = "hapticOnSize",
+        )
+    val offSize by
+        animateDpAsState(
+            targetValue = if (!isEnabled) 22.dp else 14.dp,
+            animationSpec = tween(300),
+            label = "hapticOffSize",
+        )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        androidx.compose.foundation.layout.Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(24.dp),
+        ) {
+            Icon(
+                Icons.Rounded.Vibration,
+                "Haptik an",
+                tint = if (isEnabled) activeColor else mutedGray,
+                modifier = Modifier.size(onSize),
+            )
+        }
+        Divider(
+            color = MaterialTheme.colorScheme.outlineVariant,
+            modifier = Modifier.height(16.dp).width(1.dp),
+        )
+        androidx.compose.foundation.layout.Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(24.dp),
+        ) {
+            Icon(
+                Icons.Rounded.MobileOff,
+                "Haptik aus",
                 tint = if (!isEnabled) Color(0xFFEF4444) else mutedGray,
                 modifier = Modifier.size(offSize),
             )

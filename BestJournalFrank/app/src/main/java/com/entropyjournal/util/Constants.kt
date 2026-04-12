@@ -55,6 +55,9 @@ object Constants {
     // Töne
     const val PREF_SOUNDS_ENABLED = "sounds_enabled"
 
+    // Haptik
+    const val PREF_HAPTIC_ENABLED = "haptic_enabled"
+
     // Dashboard-Szenario
     const val PREF_DASHBOARD_SCENARIO = "dashboard_scenario"
     const val PREF_CUSTOM_PROMPT = "custom_dashboard_prompt"
