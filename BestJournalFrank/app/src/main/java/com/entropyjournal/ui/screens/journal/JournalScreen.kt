@@ -154,56 +154,19 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
     var showSyncLegend by remember { mutableStateOf(false) }
     var showStreakDialog by remember { mutableStateOf(false) }
 
+    val searchFocusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    // Auto-focus search field when search opens
+    LaunchedEffect(uiState.isSearchActive) {
+        if (uiState.isSearchActive) {
+            delay(100)
+            searchFocusRequester.requestFocus()
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Search bar
-            AnimatedVisibility(visible = uiState.isSearchActive) {
-                val searchFocusRequester = remember { FocusRequester() }
-                val focusManager = LocalFocusManager.current
-
-                LaunchedEffect(Unit) {
-                    delay(100)
-                    searchFocusRequester.requestFocus()
-                }
-
-                TextField(
-                    value = uiState.searchQuery,
-                    onValueChange = { viewModel.setSearchQuery(it) },
-                    placeholder = {
-                        Text(
-                            "Eintr\u00e4ge durchsuchen...",
-                            color = MaterialTheme.colorScheme.outline,
-                        )
-                    },
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .focusRequester(searchFocusRequester),
-                    colors =
-                        TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            cursorColor = MaterialTheme.colorScheme.primary,
-                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                            unfocusedIndicatorColor = Color.Transparent,
-                        ),
-                    trailingIcon = {
-                        IconButton(onClick = { viewModel.toggleSearch() }) {
-                            Icon(
-                                Icons.Rounded.Close,
-                                "Suche schlie\u00dfen",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                    shape = RoundedCornerShape(12.dp),
-                )
-            }
-
             // Sync status + search toggle
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
@@ -373,6 +336,49 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
+                    // Search bar (appears inline, between header and entries)
+                    if (uiState.isSearchActive) {
+                        item(key = "search_bar") {
+                            TextField(
+                                value = uiState.searchQuery,
+                                onValueChange = { viewModel.setSearchQuery(it) },
+                                placeholder = {
+                                    Text(
+                                        "Eintr\u00e4ge durchsuchen...",
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                },
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                        .focusRequester(searchFocusRequester),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions =
+                                    KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                                colors =
+                                    TextFieldDefaults.colors(
+                                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                        cursorColor = MaterialTheme.colorScheme.primary,
+                                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                    ),
+                                trailingIcon = {
+                                    IconButton(onClick = { viewModel.toggleSearch() }) {
+                                        Icon(
+                                            Icons.Rounded.Close,
+                                            "Suche schlie\u00dfen",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                },
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                            )
+                        }
+                    }
+
                     // Writing Prompt Banner with entrance animation
                     if (uiState.showPromptBanner && uiState.dailyPromptText.isNotBlank()) {
                         item(key = "writing_prompt") {

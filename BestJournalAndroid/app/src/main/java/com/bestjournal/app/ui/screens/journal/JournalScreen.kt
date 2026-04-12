@@ -190,47 +190,6 @@ fun JournalScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Search bar
-            AnimatedVisibility(visible = uiState.isSearchActive) {
-                TextField(
-                    value = uiState.searchQuery,
-                    onValueChange = { viewModel.setSearchQuery(it) },
-                    placeholder = {
-                        Text(
-                            "Einträge durchsuchen...",
-                            color = MaterialTheme.colorScheme.outline,
-                        )
-                    },
-                    modifier =
-                        Modifier.fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .focusRequester(searchFocusRequester),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions =
-                        KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                    colors =
-                        TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            cursorColor = MaterialTheme.colorScheme.primary,
-                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                            unfocusedIndicatorColor = Color.Transparent,
-                        ),
-                    trailingIcon = {
-                        IconButton(onClick = { viewModel.toggleSearch() }) {
-                            Icon(
-                                Icons.Rounded.Close,
-                                "Suche schließen",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                )
-            }
-
             // Fixed title bar (does not scroll) — same pattern as DashboardScreen
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
@@ -411,6 +370,49 @@ fun JournalScreen(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
+                    // Search bar (appears inline, between header and entries)
+                    if (uiState.isSearchActive) {
+                        item(key = "search_bar") {
+                            TextField(
+                                value = uiState.searchQuery,
+                                onValueChange = { viewModel.setSearchQuery(it) },
+                                placeholder = {
+                                    Text(
+                                        "Einträge durchsuchen...",
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                },
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                        .focusRequester(searchFocusRequester),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions =
+                                    KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                                colors =
+                                    TextFieldDefaults.colors(
+                                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                        cursorColor = MaterialTheme.colorScheme.primary,
+                                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                    ),
+                                trailingIcon = {
+                                    IconButton(onClick = { viewModel.toggleSearch() }) {
+                                        Icon(
+                                            Icons.Rounded.Close,
+                                            "Suche schließen",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                },
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                            )
+                        }
+                    }
+
                     // Daily writing prompt banner with entrance animation
                     if (uiState.showPromptBanner && uiState.dailyPromptText.isNotBlank()) {
                         item(key = "writing_prompt") {
