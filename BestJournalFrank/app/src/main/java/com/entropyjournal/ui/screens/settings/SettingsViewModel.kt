@@ -160,8 +160,8 @@ constructor(
                 followSystem = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false),
                 followSun = encryptedPrefs.getBoolean(Constants.PREF_THEME_FOLLOW_SUN, false),
                 biometricLock = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false),
-                backupPhotos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_PHOTOS, false),
-                backupVideos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_VIDEOS, false),
+                backupPhotos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_PHOTOS, true),
+                backupVideos = encryptedPrefs.getBoolean(Constants.PREF_BACKUP_VIDEOS, true),
                 lastSyncTimestamp =
                     encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L).takeIf {
                         it > 0

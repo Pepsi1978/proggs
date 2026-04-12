@@ -994,15 +994,17 @@ private fun PreviewDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = onSave,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-            ) {
-                Text(if (showingImproved) "Verbessert speichern" else "Speichern")
+            if (displayText.isNotBlank()) {
+                Button(
+                    onClick = onSave,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                ) {
+                    Text(if (showingImproved) "Verbessert speichern" else "Speichern")
+                }
             }
         },
         dismissButton = {
@@ -1013,7 +1015,7 @@ private fun PreviewDialog(
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     ),
             ) {
-                Text("Verwerfen")
+                Text(if (displayText.isBlank()) "Abbrechen" else "Verwerfen")
             }
         },
     )

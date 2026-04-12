@@ -1166,21 +1166,23 @@ private fun PreviewDialog(
             }
         },
         confirmButton = {
-            if (showSuccess) {
-                SuccessAnimation()
-            } else {
-                Button(
-                    onClick = {
-                        doHaptic(HapticFeedbackType.LongPress)
-                        showSuccess = true
-                    },
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                ) {
-                    Text(if (showingImproved) "Verbessert speichern" else "Speichern")
+            if (displayText.isNotBlank()) {
+                if (showSuccess) {
+                    SuccessAnimation()
+                } else {
+                    Button(
+                        onClick = {
+                            doHaptic(HapticFeedbackType.LongPress)
+                            showSuccess = true
+                        },
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                    ) {
+                        Text(if (showingImproved) "Verbessert speichern" else "Speichern")
+                    }
                 }
             }
         },
@@ -1192,7 +1194,7 @@ private fun PreviewDialog(
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     ),
             ) {
-                Text("Verwerfen")
+                Text(if (displayText.isBlank()) "Abbrechen" else "Verwerfen")
             }
         },
     )
