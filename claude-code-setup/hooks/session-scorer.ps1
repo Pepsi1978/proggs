@@ -164,10 +164,53 @@ if ($durationMin -gt 0) {
 $summaryLine = $summaryParts -join ", "
 $summaryLine += ". IQ-Score: $iqScore/100."
 
-# Write summary to temp file for display
 $summaryPath = Join-Path $env:TEMP "claude-session-summary.txt"
 try {
     Set-Content -Path $summaryPath -Value $summaryLine -Encoding UTF8 -NoNewline
 } catch { }
+
+# 8. Session cleanup (consolidated from session-cleanup.ps1, 2026-04-12)
+# Clean temp files to prevent accumulation across sessions
+$cleaned = 0
+
+# Clean Claude temp directory (files older than 2 hours)
+$claudeTemp = Join-Path $env:TEMP "claude"
+if (Test-Path $claudeTemp) {
+    Get-ChildItem $claudeTemp -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -lt (Get-Date).AddHours(-2) } |
+        ForEach-Object { try { Remove-Item $_.FullName -Force -ErrorAction Stop; $cleaned++ } catch { } }
+    Get-ChildItem $claudeTemp -Directory -Recurse -ErrorAction SilentlyContinue |
+        Where-Object { (Get-ChildItem $_.FullName -ErrorAction SilentlyContinue).Count -eq 0 } |
+        ForEach-Object { try { Remove-Item $_.FullName -Force } catch { } }
+}
+
+# Clean node compile cache (files older than 1 day)
+$nodeCache = Join-Path $env:TEMP "node-compile-cache"
+if (Test-Path $nodeCache) {
+    Get-ChildItem $nodeCache -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-1) } |
+        ForEach-Object { try { Remove-Item $_.FullName -Force -ErrorAction Stop; $cleaned++ } catch { } }
+}
+
+# Clean intent-anker files
+@("claude-session-goal.txt", "claude-turn-counter.txt", "claude-intent-reminder.txt") | ForEach-Object {
+    $f = Join-Path $env:TEMP $_
+    if (Test-Path $f) { Remove-Item $f -Force -ErrorAction SilentlyContinue }
+}
+
+# Clean old agent-writeback sentinel files
+Get-ChildItem (Join-Path $env:TEMP "agent-writeback-*.json") -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddHours(-2) } |
+    ForEach-Object { try { Remove-Item $_.FullName -Force; $cleaned++ } catch { } }
+
+# Clean old hook log files (older than 14 days)
+$hookLogs = Join-Path $env:USERPROFILE ".claude" "logs" "hooks"
+if (Test-Path $hookLogs) {
+    Get-ChildItem $hookLogs -Filter "*.log" -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-14) } |
+        ForEach-Object { try { Remove-Item $_.FullName -Force; $cleaned++ } catch { } }
+}
+
+Hook-Log "Session end: score written, $cleaned temp files cleaned"
 
 exit 0

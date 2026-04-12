@@ -154,4 +154,28 @@ summary_parts="$summary_parts. IQ-Score: ${iq_score:-0}/100."
 SUMMARY_FILE="${TMPDIR:-/tmp}/claude-session-summary.txt"
 printf "%s" "$summary_parts" > "$SUMMARY_FILE" 2>/dev/null
 
+# 8. Session cleanup (consolidated from session-cleanup.sh, 2026-04-12)
+cleaned=0
+TMPDIR_REAL="${TMPDIR:-/tmp}"
+
+# Clean Claude temp directory (files older than 2 hours)
+if [ -d "$TMPDIR_REAL/claude" ]; then
+    find "$TMPDIR_REAL/claude" -type f -mmin +120 -delete 2>/dev/null
+    find "$TMPDIR_REAL/claude" -type d -empty -delete 2>/dev/null
+fi
+
+# Clean intent-anker files
+for f in claude-session-goal.txt claude-turn-counter.txt claude-intent-reminder.txt; do
+    rm -f "$TMPDIR_REAL/$f" 2>/dev/null
+done
+
+# Clean old agent-writeback sentinel files
+find "$TMPDIR_REAL" -name "agent-writeback-*.json" -mmin +120 -delete 2>/dev/null
+
+# Clean old hook log files (older than 14 days)
+HOOK_LOGS="$HOME/.claude/logs/hooks"
+if [ -d "$HOOK_LOGS" ]; then
+    find "$HOOK_LOGS" -name "*.log" -mtime +14 -delete 2>/dev/null
+fi
+
 exit 0
