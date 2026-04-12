@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.entropyjournal.data.local.dao.EntryPhotoDao
 import com.entropyjournal.data.local.dao.JournalEntryDao
 import com.entropyjournal.data.remote.googledrive.NeedConsentException
 import com.entropyjournal.domain.model.UserProfile
@@ -63,6 +64,7 @@ constructor(
     private val syncUseCase: SyncWithDriveUseCase,
     private val encryptedPrefs: SharedPreferences,
     private val journalEntryDao: JournalEntryDao,
+    private val entryPhotoDao: EntryPhotoDao,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
 ) : ViewModel() {
 
@@ -428,7 +430,7 @@ constructor(
         _uiState.value = _uiState.value.copy(consentIntent = null)
     }
 
-    fun exportToPdf(context: android.content.Context, uri: Uri) {
+    fun exportToPdf(context: android.content.Context, uri: Uri, includePhotos: Boolean = false) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isExporting = true, exportMessage = null)
             try {
@@ -446,8 +448,16 @@ constructor(
 
                 val count =
                     withContext(Dispatchers.IO) {
+                        val photosPerEntry = if (includePhotos) {
+                            entries.associate { entry ->
+                                entry.id to entryPhotoDao.getPhotoOnlyForEntryOnce(entry.id)
+                            }
+                        } else {
+                            emptyMap()
+                        }
+
                         context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                            PdfExporter.export(entries, outputStream)
+                            PdfExporter.export(entries, outputStream, photosPerEntry)
                         }
                     }
 

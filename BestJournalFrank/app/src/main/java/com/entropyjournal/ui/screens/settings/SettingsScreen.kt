@@ -49,6 +49,8 @@ import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.MobileOff
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
@@ -182,14 +184,111 @@ fun SettingsScreen(
             pendingPermissionAction = null
         }
 
+    var showExportDialog by remember { mutableStateOf(false) }
+    var exportIncludeEntries by remember { mutableStateOf(true) }
+    var exportIncludePhotos by remember { mutableStateOf(true) }
+
     val pdfLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.CreateDocument("application/pdf")
         ) { uri ->
             if (uri != null) {
-                viewModel.exportToPdf(context, uri)
+                viewModel.exportToPdf(context, uri, includePhotos = exportIncludePhotos && exportIncludeEntries)
             }
         }
+
+    // Export options dialog
+    if (showExportDialog) {
+        AlertDialog(
+            onDismissRequest = { showExportDialog = false },
+            title = {
+                Text(
+                    "PDF-Export",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        "Was soll exportiert werden?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { /* entries always included */ }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked = exportIncludeEntries,
+                            onCheckedChange = { checked ->
+                                exportIncludeEntries = checked
+                                if (!checked) exportIncludePhotos = false
+                            },
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Tagebucheinträge",
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (exportIncludeEntries) exportIncludePhotos = !exportIncludePhotos
+                            }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked = exportIncludePhotos,
+                            onCheckedChange = { checked ->
+                                if (exportIncludeEntries) exportIncludePhotos = checked
+                            },
+                            enabled = exportIncludeEntries,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Fotos",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (exportIncludeEntries)
+                                MaterialTheme.colorScheme.onSurface
+                            else
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showExportDialog = false
+                        pdfLauncher.launch("EntropyJournal_Export.pdf")
+                    },
+                    enabled = exportIncludeEntries,
+                ) {
+                    Icon(
+                        Icons.Rounded.Description,
+                        null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Exportieren")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExportDialog = false }) {
+                    Text("Abbrechen")
+                }
+            },
+        )
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -1146,23 +1245,30 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.Center,
                         ) {
                             Button(
-                                onClick = { pdfLauncher.launch("EntropyJournal_Export.pdf") },
+                                onClick = { showExportDialog = true },
                                 enabled = !uiState.isExporting,
                                 colors =
                                     ButtonDefaults.buttonColors(
                                         containerColor = MaterialTheme.colorScheme.primary
                                     ),
                             ) {
-                                Icon(
-                                    Icons.Rounded.Description,
-                                    null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    if (uiState.isExporting) "Wird exportiert..."
-                                    else "Tagebucheinträge als PDF exportieren"
-                                )
+                                if (uiState.isExporting) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        strokeWidth = 2.dp,
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Wird exportiert...")
+                                } else {
+                                    Icon(
+                                        Icons.Rounded.Description,
+                                        null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Tagebucheinträge als PDF exportieren")
+                                }
                             }
                         }
                         uiState.exportMessage?.let { msg ->

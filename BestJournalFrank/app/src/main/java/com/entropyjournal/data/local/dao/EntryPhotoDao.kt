@@ -25,4 +25,7 @@ interface EntryPhotoDao {
     suspend fun getPhotosForDateRange(startDate: Long, endDate: Long): List<EntryPhotoEntity>
 
     @Query("SELECT filePath FROM entry_photos") suspend fun getAllFilePaths(): List<String>
+
+    @Query("SELECT * FROM entry_photos WHERE entryId = :entryId AND isVideo = 0 ORDER BY timestamp ASC")
+    suspend fun getPhotoOnlyForEntryOnce(entryId: Long): List<EntryPhotoEntity>
 }

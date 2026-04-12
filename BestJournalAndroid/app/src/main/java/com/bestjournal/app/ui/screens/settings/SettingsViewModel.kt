@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.billing.SubscriptionState
+import com.bestjournal.app.data.local.dao.EntryPhotoDao
 import com.bestjournal.app.data.local.dao.JournalEntryDao
 import com.bestjournal.app.data.remote.googledrive.NeedConsentException
 import com.bestjournal.app.domain.model.UserProfile
@@ -67,6 +68,7 @@ constructor(
     private val billingManager: BillingManager,
     private val reminderManager: DailyReminderManager,
     private val journalEntryDao: JournalEntryDao,
+    private val entryPhotoDao: EntryPhotoDao,
     val analyticsTracker: AnalyticsTracker,
 ) : ViewModel() {
 
@@ -440,7 +442,7 @@ constructor(
         _uiState.value = _uiState.value.copy(consentIntent = null)
     }
 
-    fun exportToPdf(context: android.content.Context, uri: Uri) {
+    fun exportToPdf(context: android.content.Context, uri: Uri, includePhotos: Boolean = false) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isExporting = true, exportMessage = null)
             try {
@@ -459,8 +461,17 @@ constructor(
                 // PDF generation is CPU+IO intensive — run off Main thread
                 val count =
                     withContext(Dispatchers.IO) {
+                        // Build photo map if requested
+                        val photosPerEntry = if (includePhotos) {
+                            entries.associate { entry ->
+                                entry.id to entryPhotoDao.getPhotoOnlyForEntryOnce(entry.id)
+                            }
+                        } else {
+                            emptyMap()
+                        }
+
                         context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                            PdfExporter.export(entries, outputStream)
+                            PdfExporter.export(entries, outputStream, photosPerEntry)
                         }
                     }
 

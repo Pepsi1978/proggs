@@ -1,16 +1,21 @@
 package com.bestjournal.app.util
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import com.bestjournal.app.data.local.entity.EntryPhotoEntity
 import com.bestjournal.app.data.local.entity.JournalEntryEntity
+import java.io.File
 import java.io.OutputStream
 
 /**
  * Generates a PDF document from journal entries using android.graphics.pdf.PdfDocument.
- * Each entry gets its own page(s) with date, title, summary, and full text.
+ * Each entry gets its own page(s) with date, title, summary, full text, and optional photos.
  */
 object PdfExporter {
 
@@ -26,6 +31,9 @@ object PdfExporter {
 
     // Content area
     private const val CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT
+
+    // Photo spacing
+    private const val PHOTO_SPACING = 8f
 
     // Colors matching app palette
     private val COLOR_COPPER = Color.parseColor("#D36B00")
@@ -86,16 +94,21 @@ object PdfExporter {
 
     /**
      * Generate a PDF from the given entries and write it to the output stream.
+     * @param photosPerEntry map of entryId to list of photos (only non-video). Pass empty map to skip photos.
      * Returns the number of entries successfully written.
      */
-    fun export(entries: List<JournalEntryEntity>, outputStream: OutputStream): Int {
+    fun export(
+        entries: List<JournalEntryEntity>,
+        outputStream: OutputStream,
+        photosPerEntry: Map<Long, List<EntryPhotoEntity>> = emptyMap(),
+    ): Int {
         val document = PdfDocument()
-        val totalPages = entries.size
         var pageNumber = 0
 
         for ((index, entry) in entries.withIndex()) {
             pageNumber++
-            val pages = renderEntry(document, entry, pageNumber, totalPages, index + 1)
+            val photos = photosPerEntry[entry.id] ?: emptyList()
+            val pages = renderEntry(document, entry, pageNumber, entries.size, index + 1, photos)
             pageNumber = pages
         }
 
@@ -106,6 +119,7 @@ object PdfExporter {
 
     /**
      * Renders a single entry, potentially across multiple pages if text is long.
+     * Photos are rendered below the text, each scaled to page width.
      * Returns the last page number used.
      */
     private fun renderEntry(
@@ -114,6 +128,7 @@ object PdfExporter {
         startPageNum: Int,
         totalEntries: Int,
         entryIndex: Int,
+        photos: List<EntryPhotoEntity>,
     ): Int {
         val dateText = DateTimeFormatter.formatFull(entry.timestamp)
         val titleText = entry.title ?: "Eintrag #$entryIndex"
@@ -232,11 +247,87 @@ object PdfExporter {
             }
         }
 
+        // Draw photos below text
+        if (photos.isNotEmpty()) {
+            currentY += PHOTO_SPACING * 2
+
+            for (photo in photos) {
+                val bitmap = loadAndScaleBitmap(photo.filePath) ?: continue
+                val scaledHeight = (bitmap.height.toFloat() / bitmap.width.toFloat()) * CONTENT_WIDTH
+
+                // Check if photo fits on current page
+                if (currentY + scaledHeight > maxY) {
+                    drawFooter(canvas, currentPage)
+                    document.finishPage(page)
+
+                    currentPage++
+                    pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, currentPage).create()
+                    page = document.startPage(pageInfo)
+                    canvas = page.canvas
+                    currentY = MARGIN_TOP
+                }
+
+                // Draw the photo scaled to content width
+                val destRect = Rect(
+                    MARGIN_LEFT.toInt(),
+                    currentY.toInt(),
+                    (MARGIN_LEFT + CONTENT_WIDTH).toInt(),
+                    (currentY + scaledHeight).toInt(),
+                )
+                canvas.drawBitmap(bitmap, null, destRect, Paint(Paint.FILTER_BITMAP_FLAG))
+                bitmap.recycle()
+
+                currentY += scaledHeight + PHOTO_SPACING
+            }
+        }
+
         // Draw footer and finish page
         drawFooter(canvas, currentPage)
         document.finishPage(page)
 
         return currentPage
+    }
+
+    /**
+     * Load a bitmap from file and scale it down to fit page width.
+     * Returns null if the file doesn't exist or can't be decoded.
+     */
+    private fun loadAndScaleBitmap(filePath: String): Bitmap? {
+        val file = File(filePath)
+        if (!file.exists()) return null
+
+        // First, decode bounds only to calculate scaling factor
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(filePath, options)
+        if (options.outWidth <= 0 || options.outHeight <= 0) return null
+
+        // Calculate sample size to avoid loading huge images into memory
+        val targetWidth = CONTENT_WIDTH.toInt() * 2 // 2x for quality
+        options.inSampleSize = calculateInSampleSize(options.outWidth, options.outHeight, targetWidth)
+        options.inJustDecodeBounds = false
+
+        return try {
+            BitmapFactory.decodeFile(filePath, options)
+        } catch (_: OutOfMemoryError) {
+            // If we run out of memory, try with larger sample size
+            options.inSampleSize *= 2
+            try {
+                BitmapFactory.decodeFile(filePath, options)
+            } catch (_: OutOfMemoryError) {
+                null
+            }
+        }
+    }
+
+    private fun calculateInSampleSize(width: Int, height: Int, reqWidth: Int): Int {
+        var inSampleSize = 1
+        if (width > reqWidth) {
+            val halfWidth = width / 2
+            while (halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
     }
 
     private fun drawFooter(canvas: Canvas, pageNumber: Int) {

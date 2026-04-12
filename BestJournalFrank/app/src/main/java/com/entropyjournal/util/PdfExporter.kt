@@ -1,11 +1,16 @@
 package com.entropyjournal.util
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import com.entropyjournal.data.local.entity.EntryPhotoEntity
 import com.entropyjournal.data.local.entity.JournalEntryEntity
+import java.io.File
 import java.io.OutputStream
 
 object PdfExporter {
@@ -17,6 +22,7 @@ object PdfExporter {
     private const val MARGIN_TOP = 50f
     private const val MARGIN_BOTTOM = 60f
     private const val CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT
+    private const val PHOTO_SPACING = 8f
 
     private val COLOR_COPPER = Color.parseColor("#D36B00")
     private val COLOR_TEXT = Color.parseColor("#1A1A2E")
@@ -57,12 +63,17 @@ object PdfExporter {
         color = COLOR_DIVIDER; strokeWidth = 1f
     }
 
-    fun export(entries: List<JournalEntryEntity>, outputStream: OutputStream): Int {
+    fun export(
+        entries: List<JournalEntryEntity>,
+        outputStream: OutputStream,
+        photosPerEntry: Map<Long, List<EntryPhotoEntity>> = emptyMap(),
+    ): Int {
         val document = PdfDocument()
         var pageNumber = 0
         for ((index, entry) in entries.withIndex()) {
             pageNumber++
-            pageNumber = renderEntry(document, entry, pageNumber, entries.size, index + 1)
+            val photos = photosPerEntry[entry.id] ?: emptyList()
+            pageNumber = renderEntry(document, entry, pageNumber, entries.size, index + 1, photos)
         }
         document.writeTo(outputStream)
         document.close()
@@ -72,6 +83,7 @@ object PdfExporter {
     private fun renderEntry(
         document: PdfDocument, entry: JournalEntryEntity,
         startPageNum: Int, totalEntries: Int, entryIndex: Int,
+        photos: List<EntryPhotoEntity>,
     ): Int {
         val dateText = DateTimeFormatter.formatFull(entry.timestamp)
         val titleText = entry.title ?: "Eintrag #$entryIndex"
@@ -140,9 +152,69 @@ object PdfExporter {
             if (line.isBlank()) { currentY += lineHeight * 0.5f } else { canvas.drawText(line, MARGIN_LEFT, currentY, bodyP); currentY += lineHeight }
         }
 
+        // Draw photos below text
+        if (photos.isNotEmpty()) {
+            currentY += PHOTO_SPACING * 2
+
+            for (photo in photos) {
+                val bitmap = loadAndScaleBitmap(photo.filePath) ?: continue
+                val scaledHeight = (bitmap.height.toFloat() / bitmap.width.toFloat()) * CONTENT_WIDTH
+
+                if (currentY + scaledHeight > maxY) {
+                    drawFooter(canvas, currentPage)
+                    document.finishPage(page)
+                    currentPage++
+                    pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, currentPage).create()
+                    page = document.startPage(pageInfo)
+                    canvas = page.canvas
+                    currentY = MARGIN_TOP
+                }
+
+                val destRect = Rect(
+                    MARGIN_LEFT.toInt(),
+                    currentY.toInt(),
+                    (MARGIN_LEFT + CONTENT_WIDTH).toInt(),
+                    (currentY + scaledHeight).toInt(),
+                )
+                canvas.drawBitmap(bitmap, null, destRect, Paint(Paint.FILTER_BITMAP_FLAG))
+                bitmap.recycle()
+
+                currentY += scaledHeight + PHOTO_SPACING
+            }
+        }
+
         drawFooter(canvas, currentPage)
         document.finishPage(page)
         return currentPage
+    }
+
+    private fun loadAndScaleBitmap(filePath: String): Bitmap? {
+        val file = File(filePath)
+        if (!file.exists()) return null
+
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(filePath, options)
+        if (options.outWidth <= 0 || options.outHeight <= 0) return null
+
+        val targetWidth = CONTENT_WIDTH.toInt() * 2
+        options.inSampleSize = calculateInSampleSize(options.outWidth, options.outHeight, targetWidth)
+        options.inJustDecodeBounds = false
+
+        return try {
+            BitmapFactory.decodeFile(filePath, options)
+        } catch (_: OutOfMemoryError) {
+            options.inSampleSize *= 2
+            try { BitmapFactory.decodeFile(filePath, options) } catch (_: OutOfMemoryError) { null }
+        }
+    }
+
+    private fun calculateInSampleSize(width: Int, height: Int, reqWidth: Int): Int {
+        var inSampleSize = 1
+        if (width > reqWidth) {
+            val halfWidth = width / 2
+            while (halfWidth / inSampleSize >= reqWidth) { inSampleSize *= 2 }
+        }
+        return inSampleSize
     }
 
     private fun drawFooter(canvas: Canvas, pageNumber: Int) {
