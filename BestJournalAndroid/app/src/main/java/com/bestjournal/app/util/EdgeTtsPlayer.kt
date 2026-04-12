@@ -20,6 +20,7 @@ class EdgeTtsPlayer(private val context: Context) {
     private var mediaPlayer: MediaPlayer? = null
     private var webSocket: WebSocket? = null
     private var onDone: (() -> Unit)? = null
+    private var onPlayStart: (() -> Unit)? = null
     private val client = OkHttpClient()
 
     private companion object {
@@ -42,9 +43,10 @@ class EdgeTtsPlayer(private val context: Context) {
         fun generateMuid(): String = UUID.randomUUID().toString().replace("-", "").uppercase()
     }
 
-    fun speak(text: String, onComplete: () -> Unit) {
+    fun speak(text: String, onPlaybackStart: (() -> Unit)? = null, onComplete: () -> Unit) {
         stop()
         onDone = onComplete
+        onPlayStart = onPlaybackStart
 
         val connectionId = UUID.randomUUID().toString().replace("-", "")
         val requestId = UUID.randomUUID().toString().replace("-", "")
@@ -150,6 +152,7 @@ class EdgeTtsPlayer(private val context: Context) {
                 }
                 prepare()
                 start()
+                onPlayStart?.invoke()
             }
     }
 

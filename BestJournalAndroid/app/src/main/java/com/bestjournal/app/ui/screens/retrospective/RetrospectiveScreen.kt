@@ -44,6 +44,7 @@ import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -704,6 +705,7 @@ private fun SummaryDetailDialog(
     val context = LocalContext.current
     val doHaptic = rememberHapticAction()
     var isSpeaking by remember { mutableStateOf(false) }
+    var isTtsLoading by remember { mutableStateOf(false) }
     var showShareDialog by remember { mutableStateOf(false) }
     var fullScreenPhotoPath by remember { mutableStateOf<String?>(null) }
     val tts = remember { EdgeTtsPlayer(context) }
@@ -956,10 +958,12 @@ private fun SummaryDetailDialog(
                         IconButton(
                             onClick = {
                                 doHaptic(HapticFeedbackType.LongPress)
-                                if (isSpeaking) {
+                                if (isSpeaking || isTtsLoading) {
                                     tts.stop()
                                     isSpeaking = false
+                                    isTtsLoading = false
                                 } else {
+                                    isTtsLoading = true
                                     isSpeaking = true
                                     val speakText =
                                         if (parsed.sections.isNotEmpty())
@@ -967,7 +971,13 @@ private fun SummaryDetailDialog(
                                                 "${it.heading}.\n${it.body}"
                                             }
                                         else summary.summaryText
-                                    tts.speak(speakText) { isSpeaking = false }
+                                    tts.speak(
+                                        speakText,
+                                        onPlaybackStart = { isTtsLoading = false },
+                                    ) {
+                                        isSpeaking = false
+                                        isTtsLoading = false
+                                    }
                                 }
                             },
                             modifier = Modifier.size(40.dp),
@@ -988,6 +998,27 @@ private fun SummaryDetailDialog(
                                 contentDescription = "Teilen",
                                 tint = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFFE07830),
                                 modifier = Modifier.size(24.dp),
+                            )
+                        }
+                    }
+
+                    // TTS loading indicator
+                    if (isTtsLoading) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFFE07830),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Bitte warten, Text-to-Speech wird erzeugt\u2026",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
