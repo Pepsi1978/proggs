@@ -7,6 +7,31 @@ Wird von /self-improve Stufe 0b und Stufe 5C gelesen und ausgewertet.
 <!-- Hier kommen Paper und Ideen rein die noch bewertet werden muessen -->
 <!-- Format: Titel, Quelle, Kurzbeschreibung, Status (NEU/BEWERTET/VERWORFEN) -->
 
+### [2026-04-12] TraceCoder — Execution-Trace-Debugging (arXiv 2602.06875)
+- **Quelle:** arxiv.org/abs/2602.06875
+- **Beschreibung:** Multi-Agent: Logging-Sonden einbauen, Laufzeit-Traces aufzeichnen, dann Root Cause analysieren. Hoehere Trefferquote als reines Fehlermeldungs-Debugging.
+- **Status:** UMZUSETZEN — Als Erweiterung der Hypothesen-Debugging-Regel (30 Min)
+
+### [2026-04-12] AGENTS.md — Strukturiertes Agent-Context-File (arXiv 2601.20404)
+- **Quelle:** arxiv.org/abs/2601.20404
+- **Beschreibung:** Empirisch: Agenten mit AGENTS.md brauchen 15-30% weniger Tool-Calls.
+- **Status:** UMGESETZT (2026-04-12) — ~/proggs/AGENTS.md erstellt
+
+### [2026-04-12] GitNexus Code-Knowledge-Graph MCP
+- **Quelle:** github.com/pebblous-ai/gitnexus + blog.pebblous.ai
+- **Beschreibung:** Tree-sitter Code-Graph mit Graph-RAG. Strukturelle Codebase-Navigation statt Text-Suche. Schliesst Luecke zu Windsurf Codemaps.
+- **Status:** EVALUIERT — Installation und Test empfohlen (1 Std)
+
+### [2026-04-12] Agent Cognitive Compressor (arXiv 2601.11653)
+- **Quelle:** arxiv.org/abs/2601.11653
+- **Beschreibung:** Schema-gesteuerter Kontext-Kompressor. Kontext bleibt konstant statt linear zu wachsen. Fundamental fuer lange Sessions.
+- **Status:** EVALUIERT — Hoher Aufwand, aber fundamentaler Durchbruch
+
+### [2026-04-12] CVE-2026-35021 — OS-Command-Injection in Claude Code CLI
+- **Quelle:** tenable.com/cve/CVE-2026-35021, phoenix.security
+- **Beschreibung:** 3er-CVE-Kette (35020/21/22) fuer Credential-Exfiltration via praeparierte Dateipfade. In v2.1.104 gepatcht.
+- **Status:** BESTAETIGT — Kein Handlungsbedarf (bereits gepatcht)
+
 ### [2026-03-31] Cursor Invariant Sentinel Pattern
 - **Quelle:** cursor.com/blog/security-agents
 - **Beschreibung:** Taegliche Pruefung aller System-Invarianten gegen definierte Liste. 200+ Vulnerabilities in 3000+ PRs/Woche gefunden.

@@ -76,137 +76,48 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 <!-- ARCHIV (2026-03-31, /self-improve Focus:Resilienz): 4x StopFailure Rate-Limit (Ollama 429, macOS, Sessions 417bedd7 + 2026-03-28) — temporaere API-Session-Limits, kein dauerhaftes Problem. 8x Write-Back nicht erfolgt (memory-watchdog 2026-03-25 bis 2026-03-29) — Informativ, Agents loggen korrekt. disk-guard 95% (2026-03-27) — aktuell 83%, nicht mehr kritisch. session-guard Auto-Reparatur (2026-03-28) — korrekt AUTO-GEFIXT. -->
 <!-- ARCHIV (2026-04-02): 8x disk-guard 96-97% (2026-03-31 bis 2026-04-02) — Speicherplatz dauerhaft kritisch, siehe aktiven Eintrag unten. 3x Write-Back AUTO-LOGGED (2026-03-31 bis 2026-04-01) — informativ, kein Fehler. 2x StopFailure authentication_failed (coder-Agents in Worktree, 2026-04-01 21:48 + 22:50) — Worktree-Agents verlieren Auth-Kontext, temporaer, Session laeuft normal weiter. -->
 
-### 2026-04-02 — Speicherplatz war KRITISCH (97%) — bereinigt
-**Quelle:** Hook: disk-guard.sh (8 Meldungen seit 2026-03-31)
-**Fix:** Gradle clean + Build-Cache-Bereinigung. Jetzt 16 GB frei (42%).
-**Status:** GEFIXT (2026-04-02)
-
-### 2026-04-02 — Meta-Intelligence-Kollaps (50% → 10%) — hyperagent-stop.sh Bug
-**Quelle:** evolution-analyst Trend-Analyse
-**Symptom:** 9/10 letzten Sessions ohne Meta-Intelligence >=2, Intelligenz-Vorschlaege fehlend
-**Ursache:** hyperagent-stop.sh hat bei stale Goal (>2h) kompletten Hook uebersprungen (exit 0)
-**Fix:** exit 0 → goal="" (Hook laeuft weiter). Zusaetzlich: Volle-Analyse-Schwelle 20→12 Turns, Error-Schwelle 3→2.
-**Betroffene Dateien:** ~/.claude/hooks/hyperagent-stop.sh, claude-code-setup/hooks/hyperagent-stop.sh
-**Status:** GEFIXT (2026-04-02)
-<!-- ARCHIV: safety-gate.sh blockierte rm -rf waehrend /self-improve Cache-Cleanup (2026-04-02 18:51) — erwartetes Verhalten -->
-### 2026-04-03 — IQ-Score in session-scorer immer 0 — seit 24.03 ungefixt
-**Quelle:** Traumsession-Konsolidierung (evolution-analyst + session-scores.jsonl Analyse)
-**Symptom:** `iq_score` ist in ALLEN Session-Score-Eintraegen 0 (altes Format) oder schwankt unrealistisch (0, 14, 32, 89) im neuen Format
-**Ursache:** Die IQ-Score-Berechnung in session-scorer war NIE implementiert — das Feld wurde schlicht nicht geschrieben
-**Betroffene Dateien:** `~/.claude/hooks/session-scorer.ps1`, `~/.claude/hooks/session-scorer.sh`, `claude-code-setup/hooks/session-scorer.*`
-**Fix:** IQ-Score-Berechnung in session-scorer.ps1 implementiert (2026-04-04): efficiency(40) + quality(30) + duration(30) = 0-100
-**Status:** GEFIXT (2026-04-04) — .sh-Version muss noch auf macOS aktualisiert werden
+<!-- ARCHIV (2026-04-12, /self-improve Cleanup): Speicherplatz KRITISCH 97-98% (8x disk-guard.sh, 2026-04-02 bis 2026-04-06, macOS) — bereinigt 2026-04-02, seitdem Windows 84% frei. Meta-Intelligence-Kollaps (hyperagent-stop.sh exit 0 Bug, 2026-04-02) — GEFIXT. IQ-Score immer 0 (session-scorer.ps1, 2026-04-03) — GEFIXT 2026-04-04. 3x StopFailure API/Rate-Limit (2026-04-03/04, temporaer). 5x session-guard effortLevel-Reset (2026-04-04/05, erwartetes Verhalten). 6x memory-watchdog Write-Back (2026-04-02 bis 2026-04-12, informativ). 1x safety-gate rm-rf blockiert (2026-04-06, erwartetes Verhalten). 1x auto-sync Merge-Konflikt (2026-04-12, manuell geloest). StopFailure bafc0d45 "Request too large" (2026-04-03, macOS, einmalig — Datei war >20MB). -->
 
 ### 2026-04-03 — Meta-Intelligence Score = 0 seit 26.03 — Erholung nach hyperagent-fix pruefen
 **Quelle:** Traumsession-Konsolidierung (session-scores.jsonl Trend-Analyse)
 **Symptom:** meta_intelligence_score ist in allen Sessions nach 26.03 gleich 0
-**Ursache:** Wahrscheinlich Nachwirkung des hyperagent-stop.sh Bugs (exit 0 bei stale goal). Bug wurde am 02.04 gefixt, aber Scoring-Erholung nicht bestaetigt
-**Betroffene Dateien:** `~/.claude/hooks/hyperagent-stop.ps1/.sh`, session-scorer
-**Fix-Vorschlag:** In naechsten 3-5 Sessions beobachten ob meta_intelligence_score > 0 wird. Falls nicht: session-scorer Logik fuer meta_intelligence debuggen
-**Status:** BEOBACHTUNG (Fix deployed, Wirkung noch nicht bestaetigt)
+**Ursache:** Nachwirkung des hyperagent-stop.sh Bugs (exit 0 bei stale goal). Bug am 02.04 gefixt.
+**Status:** BEOBACHTUNG — Evolution-Analyst (12.04): Zu wenig Post-Fix-Daten, 14 Warnings auf macOS deuten auf strukturelles Problem (nicht nur Hook-Bug). Naechste Aktion: session-scorer Logik fuer meta_intelligence auf macOS debuggen.
 
-<!-- ARCHIV (2026-04-03): memory-watchdog Write-Back 3x nicht erfolgt + session-guard Auto-Reparatur settings.local.json — beides einmalige Events, korrekt AUTO-LOGGED/AUTO-GEFIXT -->
-### 2026-04-04 16:09 — StopFailure: API/Rate-Limit Error — Status: OFFEN
-### 2026-04-04 16:17 — Hook: session-guard.ps1 — Auto-Reparatur: allow-Liste aus settings.json entfernt — Status: AUTO-GEFIXT
-### 2026-04-04 17:38 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
-### 2026-04-04 17:39 — StopFailure: API/Rate-Limit Error — Status: OFFEN
-### 2026-04-04 17:53 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
-### 2026-04-04 17:53 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
-### 2026-04-04 18:27 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-05 13:27 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
-### 2026-04-05 15:42 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-05 18:03 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-05 20:23 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-02 19:13 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### 2026-04-02 20:32 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### [2026-04-02 22:45] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-03 01:24 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-
-### 2026-04-03 02:27 — StopFailure: API/Rate-Limit Error — Status: OFFEN
-**Quelle:** Hook: StopFailure (command-type, no API dependency)
-**Symptom:** Session-Turn endete durch API-Fehler
-**Details:** {"session_id":"bafc0d45-050d-45ba-b5b4-d88d66c30159","transcript_path":"/Users/frank/.claude/projects/-Users-frank-proggs/bafc0d45-050d-45ba-b5b4-d88d66c30159.jsonl","cwd":"/Users/frank/proggs/BestJournalAndroid","hook_event_name":"StopFailure","error":"invalid_request","last_assistant_message":"Request too large (max 20MB). Double press esc to go back and try with a smaller file."}
-**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
-**Status:** OFFEN
-### 2026-04-03 02:56 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-03 03:17 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### 2026-04-03 03:20 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### 2026-04-06 16:18 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### [2026-04-06 16:25] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-06 16:54 — Hook: safety-gate.sh — Befehl blockiert: rm[[:space:]]+-rf[[:space:]]+[/~]
-### 2026-04-06 17:36 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### [2026-04-06 17:48] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-08 09:12 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### 2026-04-08 09:25 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### 2026-04-08 11:11 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### [2026-04-08 11:25] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-08 11:27 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### 2026-04-08 11:27 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### 2026-04-08 11:33 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### [2026-04-08 11:36] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-08 11:37 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### [2026-04-08 11:44] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### [2026-04-08 11:47] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-08 11:47 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### [2026-04-08 11:53] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### [2026-04-08 11:57] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-08 12:00 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### 2026-04-08 12:05 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### [2026-04-08 12:10] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-08 12:12 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### [2026-04-08 12:21] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-08 12:23 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### [2026-04-08 12:33] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### [2026-04-08 12:36] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### [2026-04-08 12:39] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-08 12:44 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### 2026-04-08 15:16 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### 2026-04-08 18:14 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### 2026-04-09 07:57 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 97%
-### 2026-04-09 12:44 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-09 18:03 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-10 05:58 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### [2026-04-10 08:01] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-10 08:01 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-12 — AUTOCOMPACT auf 85 statt 95 — Regelverstoss entdeckt und gefixt
+**Quelle:** /self-improve env-checker (2026-04-12)
+**Symptom:** CLAUDE_AUTOCOMPACT_PCT_OVERRIDE war 85 in settings.json (Regel: NIEMALS unter 95)
+**Fix:** Zurueck auf 95 gesetzt via Python atomic write
+**Status:** GEFIXT (2026-04-12)
+### 2026-04-12 10:40 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ---
 
 ## Systemzustand (aktuell)
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
 
-**Stand:** 2026-04-04 (aktualisiert durch /self-improve auf Windows)
+**Stand:** 2026-04-12 (aktualisiert durch /self-improve Thorough auf Windows)
 
-- **Plattform:** Windows 11 Home 10.0.26200 (x64), Claude Code v2.1.92, Opus 4.6 (1M context)
+- **Plattform:** Windows 11 Home 10.0.26200 (x64), Claude Code **v2.1.104**, Opus 4.6 (1M context)
 - **Sprachen:** Rust 1.94.0, Go 1.26.1, Kotlin 2.3.20, Java OpenJDK 21.0.10, Python 3.13.12
 - **Node.js:** v24.14.0, npm 11.12.0, Bun 1.3.11
 - **Effort Level:** medium (Standard), High per /effort high
+- **AUTOCOMPACT:** 95 (gefixt 2026-04-12, war faelschlich auf 85)
 - **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
-- **Agents:** 29 aktiv (3 neu seit 03.04: ace-curator, experience-retriever, trajectory-analyzer)
-- **Hooks:** 46 PS1, 46 SH, 10 SessionStart. 4 neue Registrierungen (04.04)
-- **Rules:** 57 in ~/.claude/rules/ (9 neu seit 03.04, inkl. hook-exit-safety)
-- **Skills:** 21 in ~/.claude/commands/ (14 neu seit 03.04)
-- **Plugins:** 88 installiert, 91 aktiviert
-- **Whiteboard-Anbindung:** Alle Hooks nutzen whiteboard-insert.ps1/.sh (sektionsbasiert)
-- **Session-Scorer:** v4 — schreibt jetzt iq_score (0-100) basierend auf efficiency+quality+duration
+- **Agents:** 29+ aktiv
+- **Hooks:** 46+ PS1, 46+ SH. Backup-Drift bei 13 Hooks (env-checker 12.04)
+- **Rules:** 57+ in ~/.claude/rules/
+- **Plugins:** 88+ installiert
+- **Session-Scorer:** v4 — schreibt iq_score (0-100) basierend auf efficiency+quality+duration
 - **Self-Improve Skill:** v5.19
 - **Git:** v2.53.0, Git Credential Manager aktiv
-- **Sicherheit:** Alle CVEs gepatcht (v2.1.92), Prompt-Injection-Defender aktiv
-- **Speicherplatz (Windows):** 139 GB frei (84%) — stabil
+- **Sicherheit:** Claude Code v2.1.104 (alle bekannten CVEs gepatcht inkl. CVE-2026-35021). Neues Risiko: Axios Supply-Chain-Kompromittierung (04.2026), mcp-remote CVE-2025-6514 pruefen.
+- **Speicherplatz (Windows):** Stabil, >80% frei
 - **PATH:** Alle kritischen Verzeichnisse vorhanden (verifiziert 04.04)
-- **Cross-Platform Sync:** Alle Rules, Agents, Skills, Hooks synchron zwischen Setup-Repo und lokal
-- **[2026-04-04 16:11] env-checker**: Gesamtstatus GELB — 1 Problem: effortLevel ist medium statt high in settings.json. Alle anderen Checks OK: Claude Code 2.1.92 aktuell, 92 Hook-Dateien, 88 Plugins, 57 Rules, 29 Agents, Disk 84%, PATH vollstaendig, bypassPermissions aktiv.
-- **Sicherheit:** Prompt-Injection-Defender aktiv, cargo-audit 0.22.1 OK, Axios Supply-Chain SAUBER (geprueft 2026-04-02)
-- **Evolution-Analyst (2026-04-02):** Quality 8.66 (PLATEAU), IQ 89.5 (STEIGEND), Meta-Intelligence 10% (KOLLAPS → Bug gefixt), Corrections fast null
-- **Speicherplatz (macOS):** 16 GB frei (42%) — bereinigt, stabil
-- **Pending Shell-Updates (macOS):** Claude Code CLI v2.1.90, node, deno, powershell, uv, xz, harfbuzz, util-linux, codex
-- **Neuer Hook (2026-03-31):** invariant-check.ps1/.sh — Proaktive System-Invarianten-Pruefung bei SessionStart (Cursor-Pattern)
-- **Speicherplatz (macOS):** 22 GB frei (36% belegt) — reichlich Platz
-- **Cross-Tool:** Codex + Gemini Delta Bridges aktiv, 8 Intelligenz-Dimensionen im Whiteboard portiert
-- **macOS-Update (2026-03-31):** Claude Code v2.1.83, Node v25.8.1, npm 11.11.1, Bun 1.3.11, Go 1.26.1, Swift 6.3, Rust/Cargo 1.94.0 (→1.94.1 verfuegbar), 25 Homebrew-Pakete veraltet
-- **macOS Settings-Fix (2026-03-31):** allow-Liste entfernt (war Whitelist-Blocker bei bypassPermissions), 2 fehlende Hooks hinzugefuegt (mcp-auth-check, doctor-lite), tote Plugins deaktiviert (boostvolt, FlineDev)
-- **Neue Hooks:** StopFailure (v2.1.78) — loggt API-Fehler/Rate-Limits ins Whiteboard
-- **Windows→macOS Porting (2026-03-25):** 6 Hook-Upgrades portiert (Semantic Search Check, config-guard PostToolUse, Enhanced PostToolUseFailure/SubagentStop/PostCompact, session-scorer 25s Timeout)
-- **Pending Admin Updates (15):** biome,deno,fzf,go,harfbuzz,htop,libomp,node,ollama,openssl@3,python@3.13,python@3.14,simdjson,steipete/tap/summarize,uv,
+- **Evolution-Analyst (2026-04-12):** Quality 8.7-8.8 (PLATEAU), Meta-Intelligence KRITISCH (14 Warnings ohne Vorschlaege auf macOS), Corrections fast null
+- **Cross-Platform:** 82 Commits von macOS synchronisiert (12.04). Massive Feature-Arbeit: Retrospektiven, Fotos, TTS, Share-Dialog, Nav-Redesign, Cloud-Backup-Redesign.
+- **Neue Features seit 07.04 (macOS):** Retrospective-Screen, EntryPhoto, EdgeTtsPlayer, ShareEntryDialog, DriveRestoreManager, SyncProgressHolder, MonthlyReviewReceiver, YearlyReviewReceiver. DB Schema v4→v8.
+- **[2026-04-12 10:42] env-checker**: Gesamtstatus GELB -- 2 Kernprobleme: CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=85 (erwartet 95, Kontext wird zu frueh komprimiert), 13 Hook-Dateien + 1 Rule-Datei nicht im Backup synchronisiert; 7 npm-Updates verfuegbar (Biome, openclaw, Codex, Gemini-CLI u.a.); Gradle PATH-Konflikt 9.4.0 vs 9.4.1; alle Tool-Versionen aktuell; Disk 148GB frei; bypassPermissions OK
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -335,7 +246,25 @@ _Noch keine Eintraege._
 
 - **[2026-04-02] Awesome Context Engineering Sammlung** — Status: EVALUIERT | Empfehlung: JA sofort (als Forschungsquelle)
   100+ Papers zu Write/Select/Compress/Isolate Paradigma. Context Engineering hat Prompt Engineering als Industriestandard abgeloest.
+- **[2026-04-12] TraceCoder: Execution-Trace-Debugging (arXiv 2602.06875)** — Status: UMZUSETZEN | Empfehlung: JA sofort
+  Multi-Agent-Framework: Logging-Sonden einbauen → Laufzeit-Traces aufzeichnen → dann erst Root Cause analysieren. Erweitert Hypothesen-Debugging-Loop. Hoechste Trefferquote bei Runtime-Bugs.
+
+- **[2026-04-12] AGENTS.md Impact Study (arXiv 2601.20404)** — Status: BESTAETIGT (2026-04-12)
+  Strukturiertes Agent-Context-File reduziert Tool-Calls um 15-30%. UMGESETZT: ~/proggs/AGENTS.md erstellt mit Repo-Struktur, Build-Befehlen, verbotenen Dateien und Ownership-Regeln.
+
+- **[2026-04-12] GitNexus Code-Knowledge-Graph MCP** — Status: EVALUIERT | Empfehlung: JA sofort
+  Tree-sitter-basierter Code-Graph mit Graph-RAG-Navigation. 1.195 GitHub-Stars in einem Tag. Strukturell besser als Grep/Glob fuer "wer ruft diese Funktion auf?". Schliesst Luecke zu Windsurf Codemaps.
+
+- **[2026-04-12] Agent Cognitive Compressor (arXiv 2601.11653)** — Status: EVALUIERT | Empfehlung: JA spaeter
+  Schema-gesteuerter interner Zustand der bei jedem Turn komprimiert wird — Kontext bleibt konstant statt linear zu wachsen. Fundamental fuer lange Sessions (50+ Turns).
+
+- **[2026-04-12] CVE-2026-35021 (OS-Command-Injection in Claude Code CLI)** — Status: BESTAETIGT | Empfehlung: GEPATCHT
+  Teil einer 3er-Kette (CVE-2026-35020/21/22). Credential-Exfiltration via praeparierte Dateipfade. Gefixt in neueren Versionen — v2.1.104 ist sicher.
+
 - **[2026-04-04 16:11] researcher**: Claude Code Security Audit: 4 CVEs gefunden — CVE-2025-59536 (RCE, CVSS 8.7, gefixt in v1.0.111), CVE-2026-21852 (API-Key-Exfiltration, CVSS 5.3, gefixt in v2.0.65), CVE-2026-33068 (Workspace Trust Bypass, HIGH, gefixt in v2.1.53), CVE-2026-25725 (Sandbox Escape/Privilege Escalation, gefixt in v2.1.2). Ausserdem: npm-Source-Leak (v2.1.88, 31.03.2026). MCP Supply Chain: Tool-Mutation-Angriffe, mcp-remote 437k Downloads als Angriffsvektor. Slopsquatting: 5-22% halluzinierte npm-Paketnamen.
+- **[2026-04-12 10:41] researcher**: Security R5: CVE-2026-35021 (OS-Command-Injection Claude Code CLI, v2.1.91 betroffen), MCP-Angriff mcp-remote CVE-2025-6514 (437k Umgebungen), Axios npm Supply-Chain-Kompromittierung April 2026, Prompt-Injection 2.0 Hybrid-Angriffe auf AI-Coding-Tools (Cursor hoch anfaellig, Claude Code besser abgesichert)
+- **[2026-04-12 10:42] intelligence-researcher**: 7 neue Findings: TraceCoder Execution-Trace-Debugging (arXiv 2602.06875), TraceRepair Multi-Agent-Debate mit Runtime-Evidence (arXiv 2604.02647), GitNexus Code-Knowledge-Graph MCP (#1 GitHub Trending 10.04.2026), Windsurf Codemaps Visual-Codemap-Navigation, Gemini Plan Mode als Default (v0.34.0), Agent Cognitive Compressor (arXiv 2601.11653), CodeGraphContext MCP Multi-Language-Graph
+- **[2026-04-12 10:44] researcher**: Neue Android-MCP-Server gefunden: Android Studio MCP (vitosolin, März 2026, noch experimentell), Android ADB MCP (xuegao-tzx, 41 Tools), Kotlin Android MCP (normaltusker, 31+ Tools). Kein neuer offizieller Anthropic-Marketplace-Plugin seit März 2026. Firebase MCP-Plugin existiert (Firestore/Auth/Functions). claudemarketplaces.com zeigt 2566+ Plugins gesamt.
 ---
 
 ## Meta-Intelligenz & Selbstverbesserung
@@ -400,48 +329,6 @@ _Noch keine Eintraege._
 - **[2026-04-03] self-observation-checker**: [WARNING] Session 4b80f958 (250 Turns) zeigte keine Selbstbeobachtung
 - **[2026-04-06] intelligence-checker**: [WARNING] Session 4b80f958 (250 Turns) hatte keinen Intelligenz-Vorschlag
 - **[2026-04-06] self-observation-checker**: [WARNING] Session 4b80f958 (250 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] intelligence-checker**: [WARNING] Session a19459db (84 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-08] self-observation-checker**: [WARNING] Session a19459db (84 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] intelligence-checker**: [WARNING] Session a19459db (84 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-08] self-observation-checker**: [WARNING] Session a19459db (84 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] intelligence-checker**: [WARNING] Session b0cfcb0b (244 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (244 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (266 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (271 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (273 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (273 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (273 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (275 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (280 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (280 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (280 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (280 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] self-observation-checker**: [WARNING] Session b0cfcb0b (346 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] intelligence-checker**: [WARNING] Session 134564f1 (84 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-08] self-observation-checker**: [WARNING] Session 134564f1 (84 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] intelligence-checker**: [WARNING] Session 134564f1 (84 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-08] self-observation-checker**: [WARNING] Session 134564f1 (84 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] intelligence-checker**: [WARNING] Session d5bc72e0 (210 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-08] self-observation-checker**: [WARNING] Session d5bc72e0 (210 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] intelligence-checker**: [WARNING] Session d5bc72e0 (210 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-08] self-observation-checker**: [WARNING] Session d5bc72e0 (210 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-08] intelligence-checker**: [WARNING] Session 303a4385 (474 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-08] self-observation-checker**: [WARNING] Session 303a4385 (474 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-09] intelligence-checker**: [WARNING] Session 303a4385 (474 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-09] self-observation-checker**: [WARNING] Session 303a4385 (474 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-09] intelligence-checker**: [WARNING] Session 55c4453b (464 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-09] self-observation-checker**: [WARNING] Session 55c4453b (464 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-09] intelligence-checker**: [WARNING] Session 55c4453b (464 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-09] self-observation-checker**: [WARNING] Session 55c4453b (464 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-09] intelligence-checker**: [WARNING] Session acfefb7b (482 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-09] self-observation-checker**: [WARNING] Session acfefb7b (482 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-09] intelligence-checker**: [WARNING] Session acfefb7b (482 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-09] self-observation-checker**: [WARNING] Session acfefb7b (482 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-09] intelligence-checker**: [WARNING] Session f27dd6ab (291 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-10] intelligence-checker**: [WARNING] Session f27dd6ab (291 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-10] self-observation-checker**: [WARNING] Session f27dd6ab (291 Turns) zeigte keine Selbstbeobachtung
-- **[2026-04-10] intelligence-checker**: [WARNING] Session 41965248 (253 Turns) hatte keinen Intelligenz-Vorschlag
-- **[2026-04-10] self-observation-checker**: [WARNING] Session 41965248 (253 Turns) zeigte keine Selbstbeobachtung
 ---
 
 ## Regeln & Konventionen
