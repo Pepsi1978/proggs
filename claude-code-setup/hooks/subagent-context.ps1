@@ -4,6 +4,7 @@
 # DESIGN: Output MUST be valid JSON on stdout. Any error → empty output + exit 0.
 # PowerShell equivalent of subagent-context.sh
 
+$ErrorActionPreference = 'SilentlyContinue'
 . "$PSScriptRoot/hook-log.ps1"
 
 try {

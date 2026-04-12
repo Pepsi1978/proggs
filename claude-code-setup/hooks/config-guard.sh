@@ -135,12 +135,12 @@ if env_data:
     if sub_model and sub_model != 'sonnet':
         blocks.append(f"CLAUDE_CODE_SUBAGENT_MODEL={sub_model} (erwartet: sonnet)")
 
-    # AUTOCOMPACT: BLOCK if below 95
+    # AUTOCOMPACT: BLOCK if below 85 (85 is the correct standard, NOT 95)
     acp = env_data.get('CLAUDE_AUTOCOMPACT_PCT_OVERRIDE')
     if acp is not None:
         try:
-            if int(acp) < 95:
-                blocks.append(f"AUTOCOMPACT={acp} (minimum: 95)")
+            if int(acp) < 85:
+                blocks.append(f"AUTOCOMPACT={acp} (minimum: 85)")
         except (ValueError, TypeError):
             pass
 

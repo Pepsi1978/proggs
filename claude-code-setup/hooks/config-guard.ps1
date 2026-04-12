@@ -131,10 +131,10 @@ if ($envData) {
         $blocks += "CLAUDE_CODE_SUBAGENT_MODEL=$subModel (erwartet: sonnet)"
     }
 
-    # AUTOCOMPACT: BLOCK if below 95 (value "0" is a real value — must not be falsy-skipped)
+    # AUTOCOMPACT: BLOCK if below 85 (85 is the correct standard, NOT 95)
     $acp = $envData.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE
-    if ($null -ne $acp -and $acp -ne '' -and [int]$acp -lt 95) {
-        $blocks += "AUTOCOMPACT=$acp (minimum: 95)"
+    if ($null -ne $acp -and $acp -ne '' -and [int]$acp -lt 85) {
+        $blocks += "AUTOCOMPACT=$acp (minimum: 85)"
     }
 }
 

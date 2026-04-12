@@ -4,6 +4,7 @@
 # Zweck: Prueft ob geschriebene JSON-Dateien valide sind
 
 param()
+$ErrorActionPreference = 'SilentlyContinue'
 
 $input_data = $null
 try {

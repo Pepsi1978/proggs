@@ -4,6 +4,7 @@
 # Zweck: Prueft ob ein Bash-Befehl ein bekanntes Fehlermuster enthaelt
 
 param()
+$ErrorActionPreference = 'SilentlyContinue'
 
 $input_data = $null
 try {

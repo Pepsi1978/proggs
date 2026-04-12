@@ -58,8 +58,8 @@ try:
 
     env = data.get('env', {})
     acp = env.get('CLAUDE_AUTOCOMPACT_PCT_OVERRIDE', '')
-    if acp and int(acp) < 95:
-        violations.append(f'AUTOCOMPACT={acp} (Minimum: 95)')
+    if acp and int(acp) < 85:
+        violations.append(f'AUTOCOMPACT={acp} (Minimum: 85)')
 
     sub = env.get('CLAUDE_CODE_SUBAGENT_MODEL', '')
     if sub and sub != 'sonnet':

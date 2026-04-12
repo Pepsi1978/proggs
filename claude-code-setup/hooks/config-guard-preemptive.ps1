@@ -67,11 +67,11 @@ foreach ($settingsPath in $settingsFiles) {
             }
         }
 
-        # AUTOCOMPACT darf nicht unter 95 fallen
+        # AUTOCOMPACT darf nicht unter 85 fallen (85 ist der korrekte Standard)
         if ($data.env) {
             $acp = $data.env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE
-            if ($null -ne $acp -and $acp -ne "" -and [int]$acp -lt 95) {
-                $violations += "AUTOCOMPACT=$acp (Minimum: 95)"
+            if ($null -ne $acp -and $acp -ne "" -and [int]$acp -lt 85) {
+                $violations += "AUTOCOMPACT=$acp (Minimum: 85)"
             }
 
             # SUBAGENT_MODEL muss sonnet bleiben
