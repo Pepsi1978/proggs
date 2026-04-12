@@ -138,19 +138,20 @@ if [ -d "$PROJECTS_DIR" ]; then
 fi
 
 # =============================================
-# CHECK 3: Effort Level — MUST reset to "medium"
+# CHECK 3: Effort Level — MUST reset to "high"
 # =============================================
-# effortLevel is persistent in settings.json. /effort high stays across sessions.
-# Rule: Every new session starts with "medium". This check enforces that.
+# effortLevel is persistent in settings.json. /effort medium or /effort low
+# are session-only overrides. The DEFAULT is "high" (user rule since 2026-04-12).
+# This check ensures every new session starts with "high".
 
 if [ -f "$SETTINGS" ]; then
     effort=$(python3 -c "import json; d=json.load(open('$SETTINGS')); print(d.get('effortLevel',''))" 2>/dev/null)
-    if [ -n "$effort" ] && [ "$effort" != "medium" ]; then
+    if [ -n "$effort" ] && [ "$effort" != "high" ]; then
         python3 -c "
 import json, os, tempfile
 with open('$SETTINGS', 'r') as f:
     d = json.load(f)
-d['effortLevel'] = 'medium'
+d['effortLevel'] = 'high'
 dir_name = os.path.dirname('$SETTINGS')
 fd, tmp = tempfile.mkstemp(dir=dir_name, suffix='.tmp')
 with os.fdopen(fd, 'w') as f:
@@ -158,8 +159,8 @@ with os.fdopen(fd, 'w') as f:
     f.write('\n')
 os.replace(tmp, '$SETTINGS')
 " 2>/dev/null
-        fixes+=("effortLevel zurueckgesetzt (war: $effort, jetzt: medium)")
-        hook_log "AUTO-FIX: effortLevel reset to medium (was: $effort)" 2>/dev/null || true
+        fixes+=("effortLevel zurueckgesetzt (war: $effort, jetzt: high)")
+        hook_log "AUTO-FIX: effortLevel reset to high (was: $effort)" 2>/dev/null || true
     fi
 fi
 

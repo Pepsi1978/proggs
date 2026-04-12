@@ -91,6 +91,8 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Fix:** (1) settings.json zurueck auf 85, (2) CLAUDE.md korrigiert: "ist IMMER 85", (3) Feedback-Memory gespeichert, (4) config-guard muss 85 als Standard kennen
 **Status:** GEFIXT (2026-04-12) — Benutzer-Korrektur, CLAUDE.md aktualisiert
 ### 2026-04-12 16:51 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-12 16:58 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
+### 2026-04-12 17:34 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
 ---
 
 ## Systemzustand (aktuell)
@@ -102,7 +104,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Plattform:** Windows 11 Home 10.0.26200 (x64), Claude Code **v2.1.104**, Opus 4.6 (1M context)
 - **Sprachen:** Rust 1.94.0, Go 1.26.1, Kotlin 2.3.20, Java OpenJDK 21.0.10, Python 3.13.12
 - **Node.js:** v24.14.0, npm 11.12.0, Bun 1.3.11
-- **Effort Level:** medium (Standard), High per /effort high
+- **Effort Level:** high (Standard seit 2026-04-12), Medium/Low per /effort medium oder /effort low
 - **AUTOCOMPACT:** 85 (korrigiert 2026-04-12, ist der dauerhafte Standard)
 - **Quality Gate:** quality-gate Agent fuer kombiniertes test+review+optimize
 - **Agents:** 29+ aktiv
@@ -150,7 +152,7 @@ _Noch keine Eintraege._
 <!-- Writer: optimizer Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._
 
-- **[2026-04-07 14:16] Code-Suche Index:** ? Dateien, ? Chunks indexiert.
+- **[2026-04-12 16:52] Code-Suche Index:** ? Dateien, ? Chunks indexiert.
 ## UI/UX-Patterns
 <!-- Writer: ui-polisher Agent | Leser: alle Agents, /self-improve -->
 _Noch keine Eintraege._

@@ -170,23 +170,24 @@ try {
 }
 
 # ================================================
-# CHECK 3: Effort Level — MUST reset to "medium"
+# CHECK 3: Effort Level — MUST reset to "high"
 # ================================================
-# effortLevel is persistent in settings.json. /effort high stays across sessions.
-# Rule: Every new session starts with "medium". This check enforces that.
+# effortLevel is persistent in settings.json. /effort medium or /effort low
+# are session-only overrides. The DEFAULT is "high" (user rule since 2026-04-12).
+# This check ensures every new session starts with "high".
 
 try {
     if (Test-Path $settingsPath) {
         $raw = Get-Content $settingsPath -Raw -Encoding UTF8
         $parsed = $raw | ConvertFrom-Json
-        if ($parsed.effortLevel -and $parsed.effortLevel -ne 'medium') {
+        if ($parsed.effortLevel -and $parsed.effortLevel -ne 'high') {
             $oldEffort = $parsed.effortLevel
-            $fixed = $raw -replace '"effortLevel"\s*:\s*"[^"]*"', '"effortLevel": "medium"'
+            $fixed = $raw -replace '"effortLevel"\s*:\s*"[^"]*"', '"effortLevel": "high"'
             $tmpFile = "$settingsPath.tmp"
             [System.IO.File]::WriteAllText($tmpFile, $fixed, [System.Text.Encoding]::UTF8)
             Move-Item -Path $tmpFile -Destination $settingsPath -Force
-            $fixes += "effortLevel zurueckgesetzt (war: $oldEffort, jetzt: medium)"
-            Hook-Log "AUTO-FIX: effortLevel reset to medium (was: $oldEffort)"
+            $fixes += "effortLevel zurueckgesetzt (war: $oldEffort, jetzt: high)"
+            Hook-Log "AUTO-FIX: effortLevel reset to high (was: $oldEffort)"
         }
     }
 } catch {
