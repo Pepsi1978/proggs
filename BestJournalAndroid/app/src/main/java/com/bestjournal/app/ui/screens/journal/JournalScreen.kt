@@ -1030,7 +1030,7 @@ private fun PreviewDialog(
                     // Toggle between versions
                     OutlinedButton(
                         onClick = { onToggleVersion(!showingImproved) },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.align(Alignment.End),
                         colors =
                             ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.primary
