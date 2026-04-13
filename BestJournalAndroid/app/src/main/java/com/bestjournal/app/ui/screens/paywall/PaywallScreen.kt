@@ -23,7 +23,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -52,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -268,7 +271,7 @@ fun PaywallScreen(
                     enter = fadeIn(tween(300)),
                 ) {
                     Column(
-                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Box(
@@ -277,15 +280,15 @@ fun PaywallScreen(
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp),
                         ) {
-                            // Connecting line at icon center height
+                            // Connecting line at circle center height
                             HorizontalDivider(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 24.dp)
+                                        .padding(horizontal = 36.dp)
                                         .align(Alignment.TopCenter)
-                                        .padding(top = 9.dp),
-                                thickness = 1.dp,
+                                        .padding(top = 16.dp),
+                                thickness = 2.dp,
                                 color = MaterialTheme.colorScheme.outlineVariant,
                             )
                             Row(
@@ -293,15 +296,26 @@ fun PaywallScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        Icons.Rounded.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                        tint = NeonEmerald,
-                                    )
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(NeonEmerald.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.Check,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                            tint = NeonEmerald,
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(6.dp))
                                     Text(
                                         text = "Heute",
                                         style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Medium,
                                     )
                                     Text(
                                         text = "Voller Zugang",
@@ -310,15 +324,26 @@ fun PaywallScreen(
                                     )
                                 }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        Icons.Rounded.Notifications,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                        tint = NeonAmber,
-                                    )
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(NeonAmber.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.Notifications,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                            tint = NeonAmber,
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(6.dp))
                                     Text(
                                         text = "Tag 6",
                                         style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Medium,
                                     )
                                     Text(
                                         text = "Erinnerung",
@@ -327,15 +352,28 @@ fun PaywallScreen(
                                     )
                                 }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        Icons.Rounded.CreditCard,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                        tint = MaterialTheme.colorScheme.primary,
-                                    )
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                                ),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.CreditCard,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(6.dp))
                                     Text(
                                         text = "Tag 7",
                                         style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Medium,
                                     )
                                     Text(
                                         text = "Erste Zahlung",
@@ -466,108 +504,156 @@ fun PaywallScreen(
                     onDismiss()
                 }) {
                     Surface(
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(28.dp),
                         color = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 6.dp,
+                        tonalElevation = 8.dp,
                     ) {
-                        Column(modifier = Modifier.padding(24.dp)) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 28.dp, vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            // ── Decorative top icon ──
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = "%",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            // ── Title ──
                             Text(
                                 text = "Warte kurz!",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center,
                             )
 
                             Spacer(modifier = Modifier.height(8.dp))
 
                             Text(
-                                text = "Wir m\u00f6chten dir den Einstieg leicht machen:",
+                                text = "Wir haben ein besonderes\nAngebot f\u00fcr dich:",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // ── 50% discount highlight ──
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        text = "50%",
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(
-                                            text = "Rabatt im ersten Monat",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        )
-                                        Text(
-                                            text = "Nur $halfMonthlyPrice statt $displayMonthlyPrice",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Text(
-                                text = "+ 3 zus\u00e4tzliche Test-Tage, komplett kostenlos",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
                             )
 
                             Spacer(modifier = Modifier.height(24.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End,
-                                verticalAlignment = Alignment.CenterVertically,
+                            // ── 50% discount hero card ──
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
                             ) {
-                                TextButton(onClick = {
-                                    viewModel.analyticsTracker.trackExitIntentRejected()
-                                    onDismiss()
-                                }) {
-                                    Text(
-                                        text = "Nein danke",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Button(
-                                    onClick = {
-                                        viewModel.analyticsTracker.trackExitIntentAccepted()
-                                        activity?.let { act ->
-                                            if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
-                                                Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                        showExitDialog = false
-                                    },
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                    ),
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 20.dp, horizontal = 16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
                                     Text(
-                                        text = "10 Tage kostenlos testen",
+                                        text = "50%",
+                                        style = MaterialTheme.typography.displaySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Rabatt im ersten Monat",
+                                        style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = Color.White,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Nur $halfMonthlyPrice statt $displayMonthlyPrice",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                                     )
                                 }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // ── Bonus: extra trial days ──
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .clip(CircleShape)
+                                        .background(NeonEmerald.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = NeonEmerald,
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = "+ 3 zus\u00e4tzliche Test-Tage gratis",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(28.dp))
+
+                            // ── Full-width CTA ──
+                            Button(
+                                onClick = {
+                                    viewModel.analyticsTracker.trackExitIntentAccepted()
+                                    activity?.let { act ->
+                                        if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
+                                            Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                    showExitDialog = false
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            ) {
+                                Text(
+                                    text = "10 Tage kostenlos testen",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White,
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // ── Subtle dismiss ──
+                            TextButton(onClick = {
+                                viewModel.analyticsTracker.trackExitIntentRejected()
+                                onDismiss()
+                            }) {
+                                Text(
+                                    text = "Nein danke",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
