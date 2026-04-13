@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -66,7 +67,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.bestjournal.app.ui.components.PulsingOrb
@@ -413,6 +413,68 @@ fun PaywallScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // ── Yearly subscription (highlighted — best value) ──
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.analyticsTracker.trackYearlyCtaClicked()
+                            activity?.let { act ->
+                                if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
+                                    Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "Ab $dailyPrice pro Tag",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                text = "statt $displayMonthlyPrice pro Monat",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
+                    // ── "Beliebteste Wahl" badge ──
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = (-16).dp, y = (-11).dp),
+                        shape = RoundedCornerShape(11.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        shadowElevation = 4.dp,
+                    ) {
+                        Text(
+                            text = "Beliebteste Wahl",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                        )
+                    }
+
+                    // Track badge visibility
+                    LaunchedEffect(Unit) {
+                        viewModel.analyticsTracker.trackYearlyBadgeViewed()
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 // ── Monthly subscription ──
                 OutlinedButton(
                     onClick = {
@@ -423,38 +485,13 @@ fun PaywallScreen(
                             }
                         }
                     },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
                     shape = RoundedCornerShape(16.dp),
                 ) {
                     Text(
                         text = "Monatsabo, $displayMonthlyPrice pro Monat",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // ── Yearly subscription (direct) ──
-                OutlinedButton(
-                    onClick = {
-                        viewModel.analyticsTracker.trackYearlyCtaClicked()
-                        activity?.let { act ->
-                            if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
-                                Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                    shape = RoundedCornerShape(16.dp),
-                ) {
-                    Text(
-                        text = "Jahresabo, $displayYearlyPrice pro Jahr",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
