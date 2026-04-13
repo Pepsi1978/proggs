@@ -339,6 +339,7 @@ namespace TerminalVoiceOverlay.Views
 
                     TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
                     SetMicState(RecordingState.Success);
+                    ResetUltrathink();
                     Console.WriteLine("Text inserted");
 
                     // Track paste state
@@ -441,6 +442,7 @@ namespace TerminalVoiceOverlay.Views
 
                     TerminalController.PasteText(finalText, _terminalWatcher.ActiveTerminalHwnd, autoEnterEnabled);
                     SetBtwMicState(RecordingState.Success);
+                    ResetUltrathink();
                     Console.WriteLine("BTW text inserted");
 
                     hasPastedText = !autoEnterEnabled;
@@ -550,8 +552,9 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
-        /// <summary>Star button — toggle ultrathink prefix.
-        /// When ON, "ultrathink - " is prepended to every voice input.</summary>
+        /// <summary>Star button — one-shot ultrathink toggle.
+        /// When ON, "ultrathink - " is prepended to the NEXT voice input only,
+        /// then automatically turns off.</summary>
         private void BtnUltrathink_Click(object sender, RoutedEventArgs e)
         {
             ultrathinkEnabled = !ultrathinkEnabled;
@@ -567,7 +570,20 @@ namespace TerminalVoiceOverlay.Views
                 UltrathinkStar.Fill = StarMuted;
             }
 
-            Console.WriteLine($"Ultrathink {(ultrathinkEnabled ? "ON" : "OFF")}");
+            Console.WriteLine($"Ultrathink {(ultrathinkEnabled ? "ON (one-shot)" : "OFF")}");
+        }
+
+        /// <summary>Reset ultrathink after one-shot use (auto-disable after text insertion).</summary>
+        private void ResetUltrathink()
+        {
+            if (!ultrathinkEnabled) return;
+            ultrathinkEnabled = false;
+            Dispatcher.Invoke(() =>
+            {
+                UltrathinkButton.Background = ToggleOff;
+                UltrathinkStar.Fill = StarMuted;
+            });
+            Console.WriteLine("Ultrathink auto-OFF (one-shot used)");
         }
 
         /// <summary>C button — copy selected text via Ctrl+C.</summary>
