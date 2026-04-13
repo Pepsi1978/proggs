@@ -8,3 +8,14 @@ BestJournalAndroid/app/google-services.json
 BestJournalAndroid/local.properties
 BestJournalAndroid/*.jks
 BestJournalAndroid/**/*.jks
+
+# Build cache
+**/.kotlin/
+**/__pycache__/
+.gitnexus/
+.claude/worktrees/
+.claude/skills/
+
+# Screenshots (managed manually for monetization/designer skills)
+BestJournalAndroid/Screenshots/
+BestJournalFrank/Screenshots/
