@@ -607,7 +607,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // Töne
+                // Töne – Haptik
                 GlassCard {
                     Column {
                         Row(
@@ -623,10 +623,12 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Töne",
+                                "T\u00f6ne \u2013 Haptik",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
+                            // Invisible counterbalance for icon+spacer so text is visually centered
+                            Spacer(modifier = Modifier.width(28.dp))
                         }
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -1886,21 +1888,6 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
-                            if (!uiState.isSubscribed) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Icon(
-                                    Icons.Rounded.Star,
-                                    null,
-                                    modifier = Modifier.size(14.dp),
-                                    tint = Color(0xFFFFD700),
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text(
-                                    "(Premium Feature)",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                            }
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         if (uiState.isSubscribed) {
