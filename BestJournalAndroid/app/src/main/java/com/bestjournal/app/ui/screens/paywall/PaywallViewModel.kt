@@ -27,6 +27,7 @@ constructor(
     val source: String = savedStateHandle["source"] ?: "limit_reached"
     val monthlyPrice: StateFlow<String> = billingManager.monthlyPrice
     val yearlyPrice: StateFlow<String> = billingManager.yearlyPrice
+    val lifetimePrice: StateFlow<String> = billingManager.lifetimePrice
 
     /** Personalized headline + subtitle based on onboarding goals. */
     val personalizedHeadline: StateFlow<Pair<String, String>>
@@ -71,17 +72,26 @@ constructor(
     }
 
     /** Returns false if product details are not loaded yet (billing unavailable). */
-    fun launchPurchaseFlow(activity: Activity, isYearly: Boolean): Boolean {
-        val priceLoaded =
-            if (isYearly) yearlyPrice.value.isNotEmpty() else monthlyPrice.value.isNotEmpty()
+    fun launchPurchaseFlow(
+        activity: Activity,
+        isYearly: Boolean = false,
+        isLifetime: Boolean = false,
+    ): Boolean {
+        val priceLoaded = when {
+            isLifetime -> lifetimePrice.value.isNotEmpty()
+            isYearly -> yearlyPrice.value.isNotEmpty()
+            else -> monthlyPrice.value.isNotEmpty()
+        }
         if (!priceLoaded) {
-            Log.w(
-                "PaywallViewModel",
-                "Product details not loaded for ${if (isYearly) "yearly" else "monthly"}",
-            )
+            val type = when {
+                isLifetime -> "lifetime"
+                isYearly -> "yearly"
+                else -> "monthly"
+            }
+            Log.w("PaywallViewModel", "Product details not loaded for $type")
             return false
         }
-        billingManager.launchPurchaseFlow(activity, isYearly)
+        billingManager.launchPurchaseFlow(activity, isYearly = isYearly, isLifetime = isLifetime)
         return true
     }
 }

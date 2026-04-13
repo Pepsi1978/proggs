@@ -20,6 +20,7 @@ class BillingManager @Inject constructor(
         private const val TAG = "BillingManager"
         const val MONTHLY_PRODUCT_ID = "bestjournal_ai_monthly"
         const val YEARLY_PRODUCT_ID = "bestjournal_ai_yearly"
+        const val LIFETIME_PRODUCT_ID = "bestjournal_lifetime"
     }
 
     private var billingClient: BillingClient? = null
@@ -32,15 +33,21 @@ class BillingManager @Inject constructor(
     private val _yearlyPrice = MutableStateFlow("")
     val yearlyPrice: StateFlow<String> = _yearlyPrice.asStateFlow()
 
+    private val _lifetimePrice = MutableStateFlow("")
+    val lifetimePrice: StateFlow<String> = _lifetimePrice.asStateFlow()
+
     private var monthlyProductDetails: ProductDetails? = null
     private var yearlyProductDetails: ProductDetails? = null
+    private var lifetimeProductDetails: ProductDetails? = null
 
     private val connectionListener =
         object : BillingClientStateListener {
             override fun onBillingSetupFinished(billingResult: BillingResult) {
                 if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                     querySubscriptions()
+                    queryInAppPurchases()
                     queryProductDetails()
+                    queryLifetimeDetails()
                 }
             }
 
@@ -71,6 +78,28 @@ class BillingManager @Inject constructor(
                     if (hasActive) SubscriptionState.Subscribed else SubscriptionState.Free
 
                 // K-2 fix: Acknowledge unacknowledged purchases — only set Subscribed AFTER success
+                purchases
+                    .filter {
+                        it.purchaseState == Purchase.PurchaseState.PURCHASED && !it.isAcknowledged
+                    }
+                    .forEach { purchase -> acknowledgePurchase(purchase) }
+            }
+        }
+    }
+
+    private fun queryInAppPurchases() {
+        val params =
+            QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build()
+        billingClient?.queryPurchasesAsync(params) { billingResult, purchases ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                val hasLifetime = purchases.any { purchase ->
+                    purchase.products.contains(LIFETIME_PRODUCT_ID) &&
+                        purchase.purchaseState == Purchase.PurchaseState.PURCHASED &&
+                        purchase.isAcknowledged
+                }
+                if (hasLifetime) {
+                    _subscriptionState.value = SubscriptionState.Subscribed
+                }
                 purchases
                     .filter {
                         it.purchaseState == Purchase.PurchaseState.PURCHASED && !it.isAcknowledged
@@ -118,7 +147,46 @@ class BillingManager @Inject constructor(
         }
     }
 
-    fun launchPurchaseFlow(activity: Activity, isYearly: Boolean) {
+    private fun queryLifetimeDetails() {
+        val productList =
+            listOf(
+                QueryProductDetailsParams.Product.newBuilder()
+                    .setProductId(LIFETIME_PRODUCT_ID)
+                    .setProductType(BillingClient.ProductType.INAPP)
+                    .build(),
+            )
+        val params = QueryProductDetailsParams.newBuilder().setProductList(productList).build()
+        billingClient?.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                productDetailsList
+                    .firstOrNull { it.productId == LIFETIME_PRODUCT_ID }
+                    ?.let { details ->
+                        lifetimeProductDetails = details
+                        _lifetimePrice.value =
+                            details.oneTimePurchaseOfferDetails?.formattedPrice ?: ""
+                    }
+            }
+        }
+    }
+
+    fun launchPurchaseFlow(
+        activity: Activity,
+        isYearly: Boolean = false,
+        isLifetime: Boolean = false,
+    ) {
+        if (isLifetime) {
+            val details = lifetimeProductDetails ?: return
+            val productDetailsParams =
+                BillingFlowParams.ProductDetailsParams.newBuilder()
+                    .setProductDetails(details)
+                    .build()
+            val billingFlowParams =
+                BillingFlowParams.newBuilder()
+                    .setProductDetailsParamsList(listOf(productDetailsParams))
+                    .build()
+            billingClient?.launchBillingFlow(activity, billingFlowParams)
+            return
+        }
         val productDetails = if (isYearly) yearlyProductDetails else monthlyProductDetails
         productDetails ?: return
         val offerToken =
@@ -158,22 +226,31 @@ class BillingManager @Inject constructor(
         billingClient?.acknowledgePurchase(ackParams) { result ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                 _subscriptionState.value = SubscriptionState.Subscribed
+                val isLifetime = purchase.products.contains(LIFETIME_PRODUCT_ID)
                 val isYearly = purchase.products.contains(YEARLY_PRODUCT_ID)
-                val type = when {
-                    isYearly -> "yearly"
-                    purchase.products.contains(MONTHLY_PRODUCT_ID) -> "monthly"
-                    else -> "unknown"
+                if (isLifetime) {
+                    val offer = lifetimeProductDetails?.oneTimePurchaseOfferDetails
+                    analyticsTracker.trackLifetimePurchased(
+                        value = (offer?.priceAmountMicros ?: 0L) / 1_000_000.0,
+                        currency = offer?.priceCurrencyCode ?: "EUR",
+                    )
+                } else {
+                    val type = when {
+                        isYearly -> "yearly"
+                        purchase.products.contains(MONTHLY_PRODUCT_ID) -> "monthly"
+                        else -> "unknown"
+                    }
+                    val details = if (isYearly) yearlyProductDetails else monthlyProductDetails
+                    val pricingPhase = details?.subscriptionOfferDetails
+                        ?.firstOrNull()?.pricingPhases?.pricingPhaseList?.firstOrNull()
+                    val valueMicros = pricingPhase?.priceAmountMicros ?: 0L
+                    val currency = pricingPhase?.priceCurrencyCode ?: "EUR"
+                    analyticsTracker.trackSubscriptionPurchased(
+                        type = type,
+                        value = valueMicros / 1_000_000.0,
+                        currency = currency,
+                    )
                 }
-                val details = if (isYearly) yearlyProductDetails else monthlyProductDetails
-                val pricingPhase = details?.subscriptionOfferDetails
-                    ?.firstOrNull()?.pricingPhases?.pricingPhaseList?.firstOrNull()
-                val valueMicros = pricingPhase?.priceAmountMicros ?: 0L
-                val currency = pricingPhase?.priceCurrencyCode ?: "EUR"
-                analyticsTracker.trackSubscriptionPurchased(
-                    type = type,
-                    value = valueMicros / 1_000_000.0,
-                    currency = currency,
-                )
             } else {
                 Log.e(TAG, "Acknowledge failed: ${result.debugMessage}")
             }

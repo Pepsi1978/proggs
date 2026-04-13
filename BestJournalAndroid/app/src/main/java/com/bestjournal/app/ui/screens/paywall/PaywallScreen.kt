@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.AllInclusive
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CreditCard
 import androidx.compose.material.icons.rounded.Info
@@ -63,6 +64,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -92,11 +94,13 @@ fun PaywallScreen(
 ) {
     val monthlyPrice by viewModel.monthlyPrice.collectAsState()
     val yearlyPrice by viewModel.yearlyPrice.collectAsState()
+    val lifetimePrice by viewModel.lifetimePrice.collectAsState()
     val personalizedHeadline by viewModel.personalizedHeadline.collectAsState()
     val activity = LocalContext.current as? Activity
 
     val displayMonthlyPrice = monthlyPrice.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
     val displayYearlyPrice = yearlyPrice.ifEmpty { Constants.YEARLY_PRICE_DISPLAY }
+    val displayLifetimePrice = lifetimePrice.ifEmpty { Constants.LIFETIME_PRICE_DISPLAY }
 
     // Use theme-aware colors so the orb matches the current color scheme (incl. Dynamic Color)
     val isDarkTheme = LocalIsDarkTheme.current
@@ -505,6 +509,112 @@ fun PaywallScreen(
                     textAlign = TextAlign.Center,
                 )
 
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // ── Divider with "oder" separator ──
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    )
+                    Text(
+                        text = "oder",
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // ── Lifetime one-time purchase (premium card with amber accent) ──
+                Surface(
+                    onClick = {
+                        viewModel.analyticsTracker.trackLifetimeCtaClicked()
+                        activity?.let { act ->
+                            if (!viewModel.launchPurchaseFlow(act, isLifetime = true)) {
+                                Toast.makeText(
+                                    act,
+                                    "Kaufvorgang wird geladen, bitte versuche es gleich nochmal.",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(
+                        1.5.dp,
+                        Brush.linearGradient(
+                            colors = listOf(
+                                NeonAmber.copy(alpha = 0.5f),
+                                NeonAmber.copy(alpha = 0.15f),
+                            ),
+                        ),
+                    ),
+                    shadowElevation = 2.dp,
+                    tonalElevation = 1.dp,
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(NeonAmber.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Rounded.AllInclusive,
+                                contentDescription = null,
+                                modifier = Modifier.size(22.dp),
+                                tint = NeonAmber,
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Einmalkauf",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = "Einmal zahlen, f\u00fcr immer nutzen",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Text(
+                            text = displayLifetimePrice,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonAmber,
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Kein Abo, keine Verl\u00e4ngerung",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // ── Free tier note (two lines for readability) ──
@@ -594,30 +704,30 @@ fun PaywallScreen(
                     viewModel.analyticsTracker.trackExitIntentRejected()
                     onDismiss()
                 }) {
+                    // Blue → Green gradient (theme-aware)
+                    val gradientTop = if (isDarkTheme) Color(0xFF162D42) else Color(0xFFE4EFFE)
+                    val gradientBottom = if (isDarkTheme) Color(0xFF1A3329) else Color(0xFFE2F5E8)
+
                     Surface(
-                        modifier = Modifier.graphicsLayer {
-                            scaleX = dialogScale
-                            scaleY = dialogScale
-                            alpha = dialogAlpha
-                        },
+                        modifier = Modifier
+                            .graphicsLayer {
+                                scaleX = dialogScale
+                                scaleY = dialogScale
+                                alpha = dialogAlpha
+                            }
+                            .offset(y = (-52).dp),
                         shape = RoundedCornerShape(28.dp),
-                        color = MaterialTheme.colorScheme.surface,
+                        color = gradientTop,
                         shadowElevation = 24.dp,
-                        tonalElevation = 4.dp,
                     ) {
                         Box {
-                            // ── Gradient wash at top for warmth ──
+                            // ── Full blue → green gradient background ──
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(180.dp)
+                                    .matchParentSize()
                                     .background(
                                         Brush.verticalGradient(
-                                            colors = listOf(
-                                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.08f),
-                                                Color.Transparent,
-                                            ),
+                                            colors = listOf(gradientTop, gradientBottom),
                                         ),
                                     ),
                             )
@@ -768,10 +878,9 @@ fun PaywallScreen(
                                                 showExitDialog = false
                                             },
                                             modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(54.dp)
+                                                .height(50.dp)
                                                 .scale(exitCtaScale),
-                                            shape = RoundedCornerShape(16.dp),
+                                            shape = RoundedCornerShape(25.dp),
                                             colors = ButtonDefaults.buttonColors(
                                                 containerColor = MaterialTheme.colorScheme.primary,
                                             ),
