@@ -231,7 +231,7 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                             imageVector = Icons.Rounded.AutoAwesome,
                             contentDescription = null,
                             modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = RetrospectiveColors.monthDividerColor,
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -263,7 +263,7 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                             text = "Schau zurück und entdecke, was dich bewegt hat.",
                             style = MaterialTheme.typography.bodyMedium,
                             fontStyle = FontStyle.Italic,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = RetrospectiveColors.monthDividerColor,
                             textAlign = TextAlign.Center,
                         )
                     }
@@ -329,7 +329,7 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                 onClick = { viewModel.retryGeneration() },
                                 colors =
                                     androidx.compose.material3.ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary
+                                        containerColor = RetrospectiveColors.monthDividerColor
                                     ),
                             ) {
                                 Text("Nochmal versuchen")
@@ -563,7 +563,7 @@ private fun CategoryButton(
                     imageVector = icon,
                     contentDescription = title,
                     modifier = Modifier.size(28.dp),
-                    tint = if (isDark) Color.White else MaterialTheme.colorScheme.primary,
+                    tint = if (isDark) Color.White else RetrospectiveColors.monthDividerColor,
                 )
             }
 
