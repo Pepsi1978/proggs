@@ -93,6 +93,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-12 16:51 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
 ### 2026-04-12 16:58 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
 ### 2026-04-12 17:34 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
+### 2026-04-13 13:50 — StopFailure: API/Rate-Limit Error — Status: OFFEN
 ---
 
 ## Systemzustand (aktuell)

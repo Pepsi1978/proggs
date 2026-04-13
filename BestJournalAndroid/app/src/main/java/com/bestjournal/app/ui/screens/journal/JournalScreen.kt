@@ -1115,6 +1115,12 @@ private fun PreviewDialog(
                                             verticalAlignment = Alignment.CenterVertically,
                                         ) {
                                             Text(
+                                                text = "Sp\u00e4ter",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.outline,
+                                                modifier = Modifier.clickable { onUpsellDismiss() },
+                                            )
+                                            Text(
                                                 text = "Premium entdecken \u2192",
                                                 style =
                                                     MaterialTheme.typography.labelMedium.copy(
@@ -1122,12 +1128,6 @@ private fun PreviewDialog(
                                                     ),
                                                 color = NeonAmber,
                                                 modifier = Modifier.clickable { onUpsellClick() },
-                                            )
-                                            Text(
-                                                text = "Sp\u00e4ter",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.outline,
-                                                modifier = Modifier.clickable { onUpsellDismiss() },
                                             )
                                         }
                                     }
