@@ -41,8 +41,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.SelfImprovement
@@ -487,10 +489,20 @@ private fun HowItWorksPage() {
             "Dein Text wird automatisch verfeinert und aus verschiedenen Perspektiven analysiert."
         ),
         Step(
+            Icons.Rounded.PhotoCamera, NeonEmerald,
+            "F\u00fcge Fotos hinzu",
+            "Halte besondere Momente fest, die KI ber\u00fccksichtigt sie in der Analyse."
+        ),
+        Step(
             Icons.Rounded.Dashboard, InsightPalette.primary,
             "Entdecke Muster und Einsichten",
             "Das Dashboard zeigt dir Zusammenh\u00e4nge, die dir im Alltag verborgen bleiben."
-        )
+        ),
+        Step(
+            Icons.Rounded.CalendarMonth, GoalPalette.primary,
+            "Wochen-, Monats- und Jahresr\u00fcckblick",
+            "Automatische R\u00fcckblicke zeigen dir, wie du dich \u00fcber die Zeit entwickelst."
+        ),
     )
 
     Column(
@@ -734,8 +746,10 @@ private fun TrialPage(onStartTrial: () -> Unit, onSkip: () -> Unit) {
         "Unbegrenzte KI-Textverbesserung, jeder Eintrag wird klarer und ausdrucksst\u00e4rker",
         "5 intelligente Dashboard-Profile f\u00fcr tiefe Einblicke in dein Leben",
         "Automatische Dashboard-Updates bei jedem neuen Eintrag",
+        "Wochen-, Monats- und Jahresr\u00fcckblicke zeigen deine Entwicklung",
         "Pers\u00f6nliche Muster erkennen, die KI findet verborgene Denk- und Gef\u00fchlsmuster",
-        "Keine Werbung, ungest\u00f6rt schreiben und reflektieren"
+        "PDF-Export mit Fotos, sichere deine Eintr\u00e4ge als Dokument",
+        "Keine Werbung, ungest\u00f6rt schreiben und reflektieren",
     )
 
     Column(
