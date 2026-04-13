@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.billing.SubscriptionState
+import com.bestjournal.app.data.remote.ai.AiPhase
 import com.bestjournal.app.data.remote.ai.AiRateLimiter
 import com.bestjournal.app.data.remote.ai.AiUsageTracker
 import com.bestjournal.app.data.repository.AdviceRepository
@@ -61,7 +62,29 @@ constructor(
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState
 
+    private val _weeklyDashboardUsed = MutableStateFlow(0)
+    val weeklyDashboardUsed: StateFlow<Int> = _weeklyDashboardUsed
+
+    private val _weeklyDashboardMax = MutableStateFlow(Constants.FREE_WEEKLY_DASHBOARD_LIMIT)
+    val weeklyDashboardMax: StateFlow<Int> = _weeklyDashboardMax
+
+    val isFreemiumUser: StateFlow<Boolean> =
+        billingManager.subscriptionState
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SubscriptionState.Free)
+            .let { subState ->
+                MutableStateFlow(false).also { flow ->
+                    viewModelScope.launch {
+                        subState.collect { state ->
+                            flow.value = state is SubscriptionState.Free &&
+                                aiUsageTracker.getCurrentPhase() == AiPhase.FREEMIUM
+                        }
+                    }
+                }
+            }
+
     init {
+        _weeklyDashboardUsed.value = aiUsageTracker.getWeeklyDashboardCount()
+        _weeklyDashboardMax.value = Constants.FREE_WEEKLY_DASHBOARD_LIMIT
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
         analyticsTracker.trackDashboardViewed(scenario)
         _uiState.update {
@@ -198,6 +221,8 @@ constructor(
                     manualRefreshActive = false
 
                     // Track analysis count and check for first-analysis upsell
+                    _weeklyDashboardUsed.value = aiUsageTracker.getWeeklyDashboardCount()
+
                     val analysisCount =
                         encryptedPrefs.getInt(Constants.PREF_DASHBOARD_ANALYSIS_COUNT, 0) + 1
                     encryptedPrefs
@@ -273,6 +298,14 @@ constructor(
     fun onAnalysisUpsellClicked() {
         analyticsTracker.trackUpsellBannerClicked("first_analysis")
         dismissAnalysisUpsellBanner()
+    }
+
+    fun trackFreeLimitShown(remaining: Int) {
+        analyticsTracker.trackFreeLimitIndicatorShown(remaining)
+    }
+
+    fun onFreeLimitUpgradeClicked() {
+        analyticsTracker.trackFreeLimitUpgradeClicked()
     }
 
     fun dismissWeeklyReviewBanner() {

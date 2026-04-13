@@ -86,8 +86,10 @@ import androidx.compose.ui.unit.dp
 import com.bestjournal.app.domain.model.Advice
 import com.bestjournal.app.domain.model.AdvicePriority
 import com.bestjournal.app.domain.model.TopAction
+import androidx.compose.runtime.LaunchedEffect
 import com.bestjournal.app.ui.components.AdviceCategoryCard
 import com.bestjournal.app.ui.components.AiInfoBanner
+import com.bestjournal.app.ui.components.FreeLimitIndicator
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.components.NeonDivider
 import com.bestjournal.app.ui.components.ParticleBackground
@@ -107,6 +109,9 @@ import com.bestjournal.app.ui.theme.SummaryPalette
 fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String) -> Unit = {}) {
     val blocks by viewModel.adviceBlocks.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val dashboardUsed by viewModel.weeklyDashboardUsed.collectAsState()
+    val dashboardMax by viewModel.weeklyDashboardMax.collectAsState()
+    val isFreemiumUser by viewModel.isFreemiumUser.collectAsState()
     val isDark = LocalIsDarkTheme.current
     val doHaptic = rememberHapticAction()
     var showLegendDialog by remember { mutableStateOf(false) }
@@ -568,6 +573,26 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    // Free-limit progress indicator for freemium users
+                    if (isFreemiumUser) {
+                        item(key = "free_limit_indicator") {
+                            val remaining = (dashboardMax - dashboardUsed).coerceAtLeast(0)
+                            LaunchedEffect(dashboardUsed) {
+                                viewModel.trackFreeLimitShown(remaining)
+                            }
+                            FreeLimitIndicator(
+                                usedCount = dashboardUsed,
+                                maxCount = dashboardMax,
+                                featureLabel = "Analysen",
+                                onUpgradeClick = {
+                                    viewModel.onFreeLimitUpgradeClicked()
+                                    onNavigateToPaywall("free_limit")
+                                },
+                                visible = true,
+                            )
                         }
                     }
 

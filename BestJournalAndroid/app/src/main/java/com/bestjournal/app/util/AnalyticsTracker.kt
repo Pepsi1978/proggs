@@ -279,6 +279,16 @@ class AnalyticsTracker @Inject constructor(
 
     // ── Churn Flow Events ───────────────────────────────────────────────
 
+    fun trackFreeLimitIndicatorShown(remaining: Int) {
+        firebaseAnalytics.logEvent("free_limit_indicator_shown", Bundle().apply {
+            putInt("remaining", remaining)
+        })
+    }
+
+    fun trackFreeLimitUpgradeClicked() {
+        firebaseAnalytics.logEvent("free_limit_upgrade_clicked", null)
+    }
+
     fun trackChurnFlowOpened() {
         firebaseAnalytics.logEvent("churn_flow_opened", null)
     }
