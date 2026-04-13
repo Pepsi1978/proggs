@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -1698,7 +1699,6 @@ fun SettingsScreen(
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
                                 ) {
                                     Box(
                                         modifier = Modifier
@@ -1715,7 +1715,7 @@ fun SettingsScreen(
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             title,
                                             style = MaterialTheme.typography.bodyMedium,
@@ -1908,6 +1908,8 @@ fun SettingsScreen(
                                 "Exportiere alle Tagebucheinträge und Fotos als PDF-Dokument.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Button(
@@ -1916,7 +1918,6 @@ fun SettingsScreen(
                                     doHaptic(HapticFeedbackType.LongPress)
                                     showExportDialog = true
                                 },
-                                modifier = Modifier.fillMaxWidth(),
                                 enabled = !uiState.isExporting,
                                 colors =
                                     ButtonDefaults.buttonColors(
@@ -1947,6 +1948,8 @@ fun SettingsScreen(
                                 "Tagebucheintr\u00e4ge und Fotos als PDF exportieren",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
                         uiState.exportMessage?.let { msg ->
@@ -2065,17 +2068,14 @@ fun SettingsScreen(
                 // 9. Ueber die App
                 GlassCard(
                     modifier = Modifier
-                        .widthIn(max = 360.dp)
+                        .wrapContentWidth()
                         .align(Alignment.CenterHorizontally),
                 ) {
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
                         ) {
                             Icon(
                                 Icons.Rounded.Info,
