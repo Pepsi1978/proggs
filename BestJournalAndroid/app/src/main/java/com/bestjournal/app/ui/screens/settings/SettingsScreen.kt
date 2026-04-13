@@ -1891,8 +1891,8 @@ fun SettingsScreen(
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
                         if (uiState.isSubscribed) {
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 "Exportiere alle Tagebucheinträge und Fotos als PDF-Dokument.",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -1940,7 +1940,7 @@ fun SettingsScreen(
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth(),
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
                                 "Tagebucheintr\u00e4ge und Fotos als PDF exportieren",
                                 style = MaterialTheme.typography.bodyMedium,
