@@ -24,6 +24,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/zombie-cleanup.ps1\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
             "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/session-guard.ps1\"",
             "timeout": 10
           }
@@ -156,14 +165,14 @@
         ]
       },
       {
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
             "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/bash-guard.ps1\"",
             "timeout": 5
           }
-        ],
-        "matcher": "Bash"
+        ]
       }
     ],
     "Notification": [
@@ -592,6 +601,11 @@
         "repo": "trailofbits/skills-curated"
       }
     }
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline.sh",
+    "refreshInterval": 5
   },
   "language": "de",
   "alwaysThinkingEnabled": true,
