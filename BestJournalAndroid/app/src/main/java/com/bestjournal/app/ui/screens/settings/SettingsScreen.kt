@@ -1875,7 +1875,7 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         if (uiState.isSubscribed) {
                             Text(
-                                "Exportiere alle Tagebucheinträge als PDF-Dokument.",
+                                "Exportiere alle Tagebucheinträge und Fotos als PDF-Dokument.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -1909,12 +1909,12 @@ fun SettingsScreen(
                                         modifier = Modifier.size(18.dp),
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Tagebucheinträge als PDF exportieren")
+                                    Text("Tagebucheinträge und Fotos als PDF exportieren")
                                 }
                             }
                         } else {
                             Text(
-                                "Tagebucheintr\u00e4ge als PDF exportieren",
+                                "Tagebucheintr\u00e4ge und Fotos als PDF exportieren",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                             )
