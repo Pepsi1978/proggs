@@ -2032,7 +2032,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Best Journal v0.10.32",
+                            "Best Journal v0.10.34",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -2049,6 +2049,21 @@ fun SettingsScreen(
                         )
                     }
                 }
+
+                // 9. Achievements (hidden trophies)
+                val achievementsWithStatus = remember {
+                    com.bestjournal.app.util.AchievementTracker.ALL_ACHIEVEMENTS.map { a ->
+                        val ts = clickPrefs.getLong("achievement_unlocked_${a.id}", 0L)
+                        a.copy(unlockedAt = if (ts > 0L) ts else null)
+                    }
+                }
+                AchievementsSection(
+                    achievements = achievementsWithStatus,
+                    onSectionViewed = {
+                        com.google.firebase.analytics.FirebaseAnalytics.getInstance(context)
+                            .logEvent("achievements_viewed", null)
+                    },
+                )
 
                 Spacer(modifier = Modifier.height(80.dp))
             }

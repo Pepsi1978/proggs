@@ -310,4 +310,16 @@ class AnalyticsTracker @Inject constructor(
     fun trackChurnConfirmed() {
         firebaseAnalytics.logEvent("churn_confirmed", null)
     }
+
+    // ── Achievement Events ──────────────────────────────────────────────
+
+    fun trackAchievementUnlocked(achievementId: String) {
+        firebaseAnalytics.logEvent("achievement_unlocked", Bundle().apply {
+            putString("achievement_id", achievementId)
+        })
+    }
+
+    fun trackAchievementsViewed() {
+        firebaseAnalytics.logEvent("achievements_viewed", null)
+    }
 }
