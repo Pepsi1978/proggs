@@ -692,7 +692,7 @@ fun PaywallScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 40.dp)
-                                .offset(y = (-110).dp),
+                                .offset(y = (-60).dp),
                             shape = RoundedCornerShape(28.dp),
                             color = gradientTop,
                             shadowElevation = 24.dp,
