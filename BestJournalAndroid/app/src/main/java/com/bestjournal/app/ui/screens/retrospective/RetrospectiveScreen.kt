@@ -383,13 +383,15 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                 )
                             weekly.forEachIndexed { index, summary ->
                                 if (index > 0) {
+                                    // Use endDate (Sunday) for month grouping so cross-month
+                                    // weeks (e.g. Mar 30 – Apr 5) appear under the later month
                                     val prevCal =
                                         Calendar.getInstance().apply {
-                                            timeInMillis = weekly[index - 1].startDate
+                                            timeInMillis = weekly[index - 1].endDate
                                         }
                                     val curCal =
                                         Calendar.getInstance().apply {
-                                            timeInMillis = summary.startDate
+                                            timeInMillis = summary.endDate
                                         }
                                     if (prevCal.get(Calendar.MONTH) != curCal.get(Calendar.MONTH)) {
                                         val name = monthNames[curCal.get(Calendar.MONTH)]
@@ -985,7 +987,7 @@ private fun SummaryDetailDialog(
                             Icon(
                                 if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
                                 contentDescription = if (isSpeaking) "Stoppen" else "Vorlesen",
-                                tint = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFF1976D2),
+                                tint = Color(0xFFFF8C00),
                                 modifier = Modifier.size(24.dp),
                             )
                         }
@@ -996,7 +998,7 @@ private fun SummaryDetailDialog(
                             Icon(
                                 Icons.Rounded.Share,
                                 contentDescription = "Teilen",
-                                tint = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFF1976D2),
+                                tint = Color(0xFFFF8C00),
                                 modifier = Modifier.size(24.dp),
                             )
                         }
