@@ -41,7 +41,7 @@ constructor(
         val (headline, subtitle, goalType) = when {
             firstGoal.contains("Stress", ignoreCase = true) -> Triple(
                 "Finde deine innere Ruhe",
-                "Erkenne was dich belastet, bevor es dich \u00fcberw\u00e4ltigt",
+                "Erkenne was dich belastet, bevor es dich überwältigt",
                 "stress",
             )
             firstGoal.contains("Klarheit", ignoreCase = true) -> Triple(
@@ -51,17 +51,17 @@ constructor(
             )
             firstGoal.contains("Wachstum", ignoreCase = true) -> Triple(
                 "Entdecke das Gute in jedem Tag",
-                "Dein pers\u00f6nlicher Raum f\u00fcr Dankbarkeit und Wachstum",
+                "Dein persönlicher Raum für Dankbarkeit und Wachstum",
                 "wachstum",
             )
             firstGoal.contains("Gedanken", ignoreCase = true) -> Triple(
-                "Lass deine Gedanken flie\u00dfen",
+                "Lass deine Gedanken fließen",
                 "Dein kreativer Begleiter ohne Grenzen",
                 "gedanken",
             )
             else -> Triple(
-                "Entdecke dich selbst\nJeden Tag ein St\u00fcck mehr",
-                "Dein pers\u00f6nlicher KI-Begleiter ohne Grenzen",
+                "Entdecke dich selbst\nJeden Tag ein Stück mehr",
+                "Dein persönlicher KI-Begleiter ohne Grenzen",
                 "default",
             )
         }
