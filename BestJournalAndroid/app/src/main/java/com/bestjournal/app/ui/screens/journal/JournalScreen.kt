@@ -47,8 +47,10 @@ import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -97,6 +99,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import com.bestjournal.app.ui.components.AnimatedMicButton
+import com.bestjournal.app.ui.components.EvolvingStreakIcon
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.components.ShimmerLoadingEffect
 import com.bestjournal.app.ui.components.SuccessAnimation
@@ -587,6 +590,7 @@ fun JournalScreen(
                 longestStreak = uiState.longestStreak,
                 totalEntries = allEntries.size,
                 onDismiss = { showStreakDialog = false },
+                onNavigateToPaywall = onNavigateToPaywall,
             )
         }
 
@@ -1206,6 +1210,7 @@ private fun StreakDialog(
     longestStreak: Int,
     totalEntries: Int,
     onDismiss: () -> Unit,
+    onNavigateToPaywall: (String) -> Unit = {},
 ) {
     // Find next milestone
     val milestones = listOf(7, 14, 30, 60, 90, 180, 365)
@@ -1251,12 +1256,7 @@ private fun StreakDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
         icon = {
-            Icon(
-                imageVector = Icons.Rounded.LocalFireDepartment,
-                contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.size(40.dp),
-            )
+            EvolvingStreakIcon(streakDays = currentStreak)
         },
         title = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1336,6 +1336,31 @@ private fun StreakDialog(
                         label = "Eintr\u00e4ge",
                         tint = NeonEmerald,
                     )
+                }
+
+                // Streak freeze premium hint (only for streaks > 7)
+                if (currentStreak > 7) {
+                    TextButton(
+                        onClick = {
+                            onDismiss()
+                            onNavigateToPaywall("streak_freeze")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(vertical = 4.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Shield,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            "Streak-Schutz: Erh\u00e4ltlich mit Premium",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         },
