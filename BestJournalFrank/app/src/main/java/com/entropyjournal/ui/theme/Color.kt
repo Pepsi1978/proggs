@@ -22,6 +22,7 @@ val NeonEmerald = Color(0xFF4CAF7D)       // Success / low entropy
 val NeonAmber = Color(0xFFFFB300)         // Warning / medium entropy
 val NeonRed = Color(0xFFFF5252)           // Error / high entropy
 val NeonCyan = Color(0xFF4ECDC4)          // Info / low priority dot
+val FeatureAccentOrange = Color(0xFFFF8C00) // TTS speaker + share buttons — highlights special features
 
 // @Deprecated: Use semantic colors (NeonEmerald, NeonAmber, NeonRed) instead
 val NeonViolet = Color(0xFF7C4DFF)

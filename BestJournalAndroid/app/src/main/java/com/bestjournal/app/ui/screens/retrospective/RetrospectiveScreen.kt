@@ -85,6 +85,7 @@ import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity
 import com.bestjournal.app.ui.components.SunMoonToggle
+import com.bestjournal.app.ui.theme.FeatureAccentOrange
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.util.EdgeTtsPlayer
 import java.util.Calendar
@@ -987,7 +988,7 @@ private fun SummaryDetailDialog(
                             Icon(
                                 if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
                                 contentDescription = if (isSpeaking) "Stoppen" else "Vorlesen",
-                                tint = Color(0xFFFF8C00),
+                                tint = FeatureAccentOrange,
                                 modifier = Modifier.size(24.dp),
                             )
                         }
@@ -998,7 +999,7 @@ private fun SummaryDetailDialog(
                             Icon(
                                 Icons.Rounded.Share,
                                 contentDescription = "Teilen",
-                                tint = Color(0xFFFF8C00),
+                                tint = FeatureAccentOrange,
                                 modifier = Modifier.size(24.dp),
                             )
                         }

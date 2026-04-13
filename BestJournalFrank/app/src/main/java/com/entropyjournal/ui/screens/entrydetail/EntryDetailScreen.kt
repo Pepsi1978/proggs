@@ -106,6 +106,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.entropyjournal.ui.components.GlassCard
+import com.entropyjournal.ui.theme.FeatureAccentOrange
 import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
@@ -259,7 +260,7 @@ fun EntryDetailScreen(
                     Icon(
                         Icons.Rounded.IosShare,
                         "Teilen",
-                        tint = MaterialTheme.colorScheme.onBackground,
+                        tint = FeatureAccentOrange,
                     )
                 }
                 IconButton(onClick = { viewModel.showDeleteDialog(true) }) {

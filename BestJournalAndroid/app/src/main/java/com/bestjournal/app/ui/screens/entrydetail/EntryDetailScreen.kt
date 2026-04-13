@@ -113,6 +113,7 @@ import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.components.highlightMatches
+import com.bestjournal.app.ui.theme.FeatureAccentOrange
 import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
@@ -262,7 +263,7 @@ fun EntryDetailScreen(
                     Icon(
                         Icons.Rounded.IosShare,
                         "Teilen",
-                        tint = MaterialTheme.colorScheme.onBackground,
+                        tint = FeatureAccentOrange,
                     )
                 }
                 IconButton(onClick = { viewModel.showDeleteDialog(true) }) {

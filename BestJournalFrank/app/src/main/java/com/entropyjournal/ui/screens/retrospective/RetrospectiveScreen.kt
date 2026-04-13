@@ -83,6 +83,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.entropyjournal.data.local.entity.RetrospectiveSummaryEntity
 import com.entropyjournal.ui.components.SunMoonToggle
+import com.entropyjournal.ui.theme.FeatureAccentOrange
 import com.entropyjournal.ui.theme.LocalIsDarkTheme
 import com.entropyjournal.util.EdgeTtsPlayer
 import java.util.Calendar
@@ -981,7 +982,7 @@ private fun SummaryDetailDialog(
                             Icon(
                                 if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
                                 contentDescription = if (isSpeaking) "Stoppen" else "Vorlesen",
-                                tint = Color(0xFFFF8C00),
+                                tint = FeatureAccentOrange,
                                 modifier = Modifier.size(24.dp),
                             )
                         }
@@ -992,7 +993,7 @@ private fun SummaryDetailDialog(
                             Icon(
                                 Icons.Rounded.Share,
                                 contentDescription = "Teilen",
-                                tint = Color(0xFFFF8C00),
+                                tint = FeatureAccentOrange,
                                 modifier = Modifier.size(24.dp),
                             )
                         }
