@@ -606,10 +606,14 @@ fun SettingsScreen(
                     }
                 }
 
-                // T�ne
+                // Töne
                 GlassCard {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.MusicNote,
                                 null,
