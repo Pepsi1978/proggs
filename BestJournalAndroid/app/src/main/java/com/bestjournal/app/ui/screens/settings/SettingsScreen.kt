@@ -213,7 +213,11 @@ fun SettingsScreen(
                 // 1. Konto
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Person,
                                 null,
@@ -401,7 +405,11 @@ fun SettingsScreen(
                 // 2. Erscheinungsbild
                 GlassCard {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Palette,
                                 null,
@@ -820,7 +828,11 @@ fun SettingsScreen(
 
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Notifications,
                                 null,
@@ -1135,7 +1147,11 @@ fun SettingsScreen(
                 // Sicherheit
                 GlassCard {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Security,
                                 null,
@@ -1214,7 +1230,11 @@ fun SettingsScreen(
                 // KI-Dashboard Profile
                 GlassCard {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Dashboard,
                                 null,
@@ -1514,7 +1534,11 @@ fun SettingsScreen(
                 // KI-Automatisierungen
                 GlassCard {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Tune,
                                 null,
@@ -1594,7 +1618,11 @@ fun SettingsScreen(
                 // Premium
                 GlassCard {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Star,
                                 null,
@@ -1844,7 +1872,11 @@ fun SettingsScreen(
                     } else Modifier
                 )) {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Description,
                                 null,
@@ -1940,7 +1972,11 @@ fun SettingsScreen(
                 var feedbackSent by remember { mutableStateOf(false) }
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Email,
                                 null,
