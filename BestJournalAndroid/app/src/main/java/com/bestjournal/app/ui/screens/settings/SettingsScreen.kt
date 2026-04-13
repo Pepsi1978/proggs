@@ -623,7 +623,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "T\u00f6ne \u2013 Haptik",
+                                "T\u00f6ne / Haptik",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -848,10 +848,12 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Erinnerung / Rückblick",
+                                "Erinnerung / R\u00fcckblick",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
+                            // Invisible counterbalance for icon+spacer so text is visually centered
+                            Spacer(modifier = Modifier.width(28.dp))
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         var showTimePicker by remember { mutableStateOf(false) }
@@ -1931,6 +1933,14 @@ fun SettingsScreen(
                                 }
                             }
                         } else {
+                            Text(
+                                "(\u2B50 Premium)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 "Tagebucheintr\u00e4ge und Fotos als PDF exportieren",
                                 style = MaterialTheme.typography.bodyMedium,
