@@ -80,6 +80,7 @@ fun PaywallScreen(
 ) {
     val monthlyPrice by viewModel.monthlyPrice.collectAsState()
     val yearlyPrice by viewModel.yearlyPrice.collectAsState()
+    val personalizedHeadline by viewModel.personalizedHeadline.collectAsState()
     val activity = LocalContext.current as? Activity
 
     val displayMonthlyPrice = monthlyPrice.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
@@ -103,9 +104,10 @@ fun PaywallScreen(
         }
     }
 
-    // Track paywall_shown on first composition
+    // Track paywall_shown + personalization on first composition
     LaunchedEffect(Unit) {
         viewModel.analyticsTracker.trackPaywallShown(viewModel.source)
+        viewModel.analyticsTracker.trackPaywallPersonalized(viewModel.matchedGoalType)
     }
 
     // Staggered benefit entrance animation
@@ -165,9 +167,9 @@ fun PaywallScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // ── Emotional headline ──
+                // ── Personalized headline (adapts to onboarding goals) ──
                 Text(
-                    text = "Entdecke dich selbst\nJeden Tag ein St\u00fcck mehr",
+                    text = personalizedHeadline.first,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -176,9 +178,9 @@ fun PaywallScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // ── Subtitle ──
+                // ── Personalized subtitle ──
                 Text(
-                    text = "Dein pers\u00f6nlicher KI-Begleiter ohne Grenzen",
+                    text = personalizedHeadline.second,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,

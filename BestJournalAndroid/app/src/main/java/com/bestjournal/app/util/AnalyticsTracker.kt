@@ -119,6 +119,12 @@ class AnalyticsTracker @Inject constructor(
         firebaseAnalytics.logEvent("trial_timeline_viewed", null)
     }
 
+    fun trackPaywallPersonalized(goal: String) {
+        firebaseAnalytics.logEvent("paywall_personalized", Bundle().apply {
+            putString("goal", goal)
+        })
+    }
+
     fun trackSubscriptionPurchased(type: String, value: Double = 0.0, currency: String = "EUR") {
         firebaseAnalytics.logEvent(FirebaseAnalytics.Event.PURCHASE, Bundle().apply {
             putString("subscription_type", type)
