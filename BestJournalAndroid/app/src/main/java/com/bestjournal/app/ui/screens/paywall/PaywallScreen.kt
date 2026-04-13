@@ -5,9 +5,12 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInHorizontally
@@ -23,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -56,10 +60,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.bestjournal.app.ui.components.PulsingOrb
@@ -120,6 +127,17 @@ fun PaywallScreen(
             ((monthly * 12 - yearly) / (monthly * 12) * 100).toInt()
         } else {
             37 // fallback
+        }
+    }
+
+    // Calculate daily price from yearly for price reframing
+    val dailyPrice = remember(displayYearlyPrice) {
+        val yearly = displayYearlyPrice.replace("[^0-9,.]".toRegex(), "")
+            .replace(",", ".").toDoubleOrNull()
+        if (yearly != null) {
+            String.format("%.2f\u00A0\u20AC", yearly / 365).replace(".", ",")
+        } else {
+            "0,08\u00A0\u20AC"
         }
     }
 
@@ -475,185 +493,278 @@ fun PaywallScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // ── No thanks ──
-                TextButton(
-                    onClick = {
-                        viewModel.analyticsTracker.trackNoThanksClicked()
-                        onDismiss()
-                    }
-                ) {
-                    Text(
-                        text = "Weiter ohne Premium",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // ── Exit-intent dialog ──
+            // ── Exit-intent dialog (animated, premium feel) ──
             if (showExitDialog) {
+                // Track + entrance animation state
+                var dialogReady by remember { mutableStateOf(false) }
                 LaunchedEffect(Unit) {
                     viewModel.analyticsTracker.trackExitIntentShown()
+                    dialogReady = true
                 }
+
+                // Entrance: spring scale + fade
+                val dialogScale by animateFloatAsState(
+                    targetValue = if (dialogReady) 1f else 0.8f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                    label = "dialogScale",
+                )
+                val dialogAlpha by animateFloatAsState(
+                    targetValue = if (dialogReady) 1f else 0f,
+                    animationSpec = tween(250),
+                    label = "dialogAlpha",
+                )
+
+                // Staggered content reveal
+                var revealStep by remember { mutableIntStateOf(0) }
+                LaunchedEffect(Unit) {
+                    delay(200)
+                    for (i in 1..5) {
+                        delay(100)
+                        revealStep = i
+                    }
+                }
+
+                // Breathing pulse on CTA button
+                val exitCtaTransition = rememberInfiniteTransition(label = "exitCta")
+                val exitCtaScale by exitCtaTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = 1.03f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1800, easing = EaseInOutSine),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                    label = "exitCtaBreathing",
+                )
+
+                // Subtle glow pulse on 50% badge
+                val badgeGlow by exitCtaTransition.animateFloat(
+                    initialValue = 0.2f,
+                    targetValue = 0.45f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(2400, easing = EaseInOutSine),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                    label = "badgeGlow",
+                )
+
                 Dialog(onDismissRequest = {
                     viewModel.analyticsTracker.trackExitIntentRejected()
                     onDismiss()
                 }) {
                     Surface(
+                        modifier = Modifier.graphicsLayer {
+                            scaleX = dialogScale
+                            scaleY = dialogScale
+                            alpha = dialogAlpha
+                        },
                         shape = RoundedCornerShape(28.dp),
                         color = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 8.dp,
+                        shadowElevation = 24.dp,
+                        tonalElevation = 4.dp,
                     ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 28.dp, vertical = 32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            // ── Decorative top icon ──
+                        Box {
+                            // ── Gradient wash at top for warmth ──
                             Box(
                                 modifier = Modifier
-                                    .size(64.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = "%",
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(20.dp))
-
-                            // ── Title ──
-                            Text(
-                                text = "Warte kurz!",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.Center,
+                                    .fillMaxWidth()
+                                    .height(180.dp)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.08f),
+                                                Color.Transparent,
+                                            ),
+                                        ),
+                                    ),
                             )
 
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Text(
-                                text = "Wir haben ein besonderes\nAngebot f\u00fcr dich:",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                            )
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            // ── 50% discount hero card ──
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer,
+                            Column(
+                                modifier = Modifier.padding(horizontal = 28.dp, vertical = 32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 20.dp, horizontal = 16.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                // ── Living PulsingOrb as hero decoration ──
+                                AnimatedVisibility(
+                                    visible = revealStep >= 1,
+                                    enter = fadeIn(tween(400)),
                                 ) {
-                                    Text(
-                                        text = "50%",
-                                        style = MaterialTheme.typography.displaySmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "Rabatt im ersten Monat",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "Nur $halfMonthlyPrice statt $displayMonthlyPrice",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                                    PulsingOrb(
+                                        size = 64.dp,
+                                        entropyLevel = 0.5f,
+                                        color = orbPrimaryColor,
+                                        secondaryColor = orbSecondaryColor,
                                     )
                                 }
-                            }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(20.dp))
 
-                            // ── Bonus: extra trial days ──
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .clip(CircleShape)
-                                        .background(NeonEmerald.copy(alpha = 0.15f)),
-                                    contentAlignment = Alignment.Center,
+                                // ── Title ──
+                                AnimatedVisibility(
+                                    visible = revealStep >= 2,
+                                    enter = fadeIn(tween(300)) + slideInHorizontally(tween(300)) { -it / 6 },
                                 ) {
-                                    Icon(
-                                        Icons.Rounded.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(14.dp),
-                                        tint = NeonEmerald,
-                                    )
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = "Warte kurz!",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            textAlign = TextAlign.Center,
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "Wir haben ein besonderes\nAngebot f\u00fcr dich:",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center,
+                                        )
+                                    }
                                 }
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = "+ 3 zus\u00e4tzliche Test-Tage gratis",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
 
-                            Spacer(modifier = Modifier.height(28.dp))
+                                Spacer(modifier = Modifier.height(24.dp))
 
-                            // ── Full-width CTA ──
-                            Button(
-                                onClick = {
-                                    viewModel.analyticsTracker.trackExitIntentAccepted()
-                                    activity?.let { act ->
-                                        if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
-                                            Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                                // ── 50% discount hero card with glow border ──
+                                AnimatedVisibility(
+                                    visible = revealStep >= 3,
+                                    enter = fadeIn(tween(400)),
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(20.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        border = BorderStroke(
+                                            width = 1.5.dp,
+                                            brush = Brush.verticalGradient(
+                                                colors = listOf(
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = badgeGlow),
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = badgeGlow * 0.3f),
+                                                ),
+                                            ),
+                                        ),
+                                        shadowElevation = 8.dp,
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 24.dp, horizontal = 20.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                        ) {
+                                            Text(
+                                                text = "50%",
+                                                style = MaterialTheme.typography.displayMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "Rabatt im ersten Monat",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "Nur $halfMonthlyPrice statt $displayMonthlyPrice",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                                            )
                                         }
                                     }
-                                    showExitDialog = false
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(52.dp),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                ),
-                            ) {
-                                Text(
-                                    text = "10 Tage kostenlos testen",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color.White,
-                                )
-                            }
+                                }
 
-                            Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(16.dp))
 
-                            // ── Subtle dismiss ──
-                            TextButton(onClick = {
-                                viewModel.analyticsTracker.trackExitIntentRejected()
-                                onDismiss()
-                            }) {
-                                Text(
-                                    text = "Nein danke",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                                // ── Bonus: extra trial days ──
+                                AnimatedVisibility(
+                                    visible = revealStep >= 4,
+                                    enter = fadeIn(tween(300)) + slideInHorizontally(tween(300)) { -it / 6 },
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .clip(CircleShape)
+                                                .background(NeonEmerald.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Icon(
+                                                Icons.Rounded.Check,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(14.dp),
+                                                tint = NeonEmerald,
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            text = "+ 3 zus\u00e4tzliche Test-Tage gratis",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(28.dp))
+
+                                // ── Full-width CTA with breathing pulse ──
+                                AnimatedVisibility(
+                                    visible = revealStep >= 5,
+                                    enter = fadeIn(tween(400)),
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Button(
+                                            onClick = {
+                                                viewModel.analyticsTracker.trackExitIntentAccepted()
+                                                activity?.let { act ->
+                                                    if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
+                                                        Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                                showExitDialog = false
+                                            },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(54.dp)
+                                                .scale(exitCtaScale),
+                                            shape = RoundedCornerShape(16.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.primary,
+                                            ),
+                                            elevation = ButtonDefaults.buttonElevation(
+                                                defaultElevation = 6.dp,
+                                                pressedElevation = 2.dp,
+                                            ),
+                                        ) {
+                                            Text(
+                                                text = "10 Tage kostenlos testen",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Color.White,
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(12.dp))
+
+                                        TextButton(onClick = {
+                                            viewModel.analyticsTracker.trackExitIntentRejected()
+                                            onDismiss()
+                                        }) {
+                                            Text(
+                                                text = "Nein danke",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
