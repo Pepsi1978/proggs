@@ -125,6 +125,18 @@ class AnalyticsTracker @Inject constructor(
         })
     }
 
+    fun trackExitIntentShown() {
+        firebaseAnalytics.logEvent("exit_intent_shown", null)
+    }
+
+    fun trackExitIntentAccepted() {
+        firebaseAnalytics.logEvent("exit_intent_accepted", null)
+    }
+
+    fun trackExitIntentRejected() {
+        firebaseAnalytics.logEvent("exit_intent_rejected", null)
+    }
+
     fun trackSubscriptionPurchased(type: String, value: Double = 0.0, currency: String = "EUR") {
         firebaseAnalytics.logEvent(FirebaseAnalytics.Event.PURCHASE, Bundle().apply {
             putString("subscription_type", type)

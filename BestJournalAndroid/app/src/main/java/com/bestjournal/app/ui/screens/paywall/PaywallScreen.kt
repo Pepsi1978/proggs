@@ -47,6 +47,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,6 +58,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.bestjournal.app.ui.components.PulsingOrb
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.NeonAmber
@@ -90,6 +92,20 @@ fun PaywallScreen(
     val isDarkTheme = LocalIsDarkTheme.current
     val orbPrimaryColor = MaterialTheme.colorScheme.primary
     val orbSecondaryColor = MaterialTheme.colorScheme.tertiary
+
+    // Exit-intent dialog state
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    // Calculate half monthly price for exit-intent 50% offer
+    val halfMonthlyPrice = remember(displayMonthlyPrice) {
+        val price = displayMonthlyPrice.replace("[^0-9,.]".toRegex(), "")
+            .replace(",", ".").toDoubleOrNull()
+        if (price != null) {
+            String.format("%.2f\u00A0\u20AC", price / 2).replace(".", ",")
+        } else {
+            "2,50\u00A0\u20AC"
+        }
+    }
 
     // Calculate yearly savings vs monthly
     val savingsPercent = remember(displayMonthlyPrice, displayYearlyPrice) {
@@ -440,11 +456,129 @@ fun PaywallScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // ── Fixed close button (stays visible while scrolling) ──
+            // ── Exit-intent dialog ──
+            if (showExitDialog) {
+                LaunchedEffect(Unit) {
+                    viewModel.analyticsTracker.trackExitIntentShown()
+                }
+                Dialog(onDismissRequest = {
+                    viewModel.analyticsTracker.trackExitIntentRejected()
+                    onDismiss()
+                }) {
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 6.dp,
+                    ) {
+                        Column(modifier = Modifier.padding(24.dp)) {
+                            Text(
+                                text = "Warte kurz!",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "Wir m\u00f6chten dir den Einstieg leicht machen:",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // ── 50% discount highlight ──
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = "50%",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = "Rabatt im ersten Monat",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        )
+                                        Text(
+                                            text = "Nur $halfMonthlyPrice statt $displayMonthlyPrice",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Text(
+                                text = "+ 3 zus\u00e4tzliche Test-Tage, komplett kostenlos",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                TextButton(onClick = {
+                                    viewModel.analyticsTracker.trackExitIntentRejected()
+                                    onDismiss()
+                                }) {
+                                    Text(
+                                        text = "Nein danke",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Button(
+                                    onClick = {
+                                        viewModel.analyticsTracker.trackExitIntentAccepted()
+                                        activity?.let { act ->
+                                            if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
+                                                Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                        showExitDialog = false
+                                    },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                                ) {
+                                    Text(
+                                        text = "10 Tage kostenlos testen",
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Fixed close button (shows exit-intent dialog on first tap) ──
             IconButton(
                 onClick = {
                     viewModel.analyticsTracker.trackPaywallDismissed()
-                    onDismiss()
+                    showExitDialog = true
                 },
                 modifier =
                     Modifier
