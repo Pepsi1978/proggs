@@ -99,7 +99,7 @@ fun TimelineItem(
         ) {
             Column {
                 if (!entry.title.isNullOrBlank()) {
-                    val highlightedTitle = remember(entry.title, searchQuery) { highlightMatches(entry.title, searchQuery, highlightColor) }
+                    val highlightedTitle = remember(entry.title, searchQuery, highlightColor) { highlightMatches(entry.title, searchQuery, highlightColor) }
                     Text(
                         text = highlightedTitle,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline),
@@ -118,7 +118,7 @@ fun TimelineItem(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 if (searchQuery.isNotBlank()) {
-                    val snippetText = remember(entry.displayText, searchQuery) {
+                    val snippetText = remember(entry.displayText, searchQuery, highlightColor) {
                         val matchIndex = entry.displayText.lowercase().indexOf(searchQuery.lowercase())
                         val snippetStart = if (matchIndex > 50) {
                             val lineStart = entry.displayText.lastIndexOf('\n', matchIndex - 1)
@@ -126,7 +126,7 @@ fun TimelineItem(
                         } else 0
                         if (snippetStart > 0) "\u2026 " + entry.displayText.substring(snippetStart) else entry.displayText
                     }
-                    val highlighted = remember(snippetText, searchQuery) { highlightMatches(snippetText, searchQuery, highlightColor) }
+                    val highlighted = remember(snippetText, searchQuery, highlightColor) { highlightMatches(snippetText, searchQuery, highlightColor) }
                     Text(
                         text = highlighted,
                         style = MaterialTheme.typography.bodyLarge,
