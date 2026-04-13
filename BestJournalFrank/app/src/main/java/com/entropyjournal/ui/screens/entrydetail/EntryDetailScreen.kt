@@ -734,9 +734,10 @@ fun EntryDetailScreen(
                         }
                     }
                     Text(
-                        text = DateTimeFormatter.formatDuration(entry.audioDurationSeconds),
+                        text = "Aufnahmedauer: ${DateTimeFormatter.formatDuration(entry.audioDurationSeconds)}",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(end = 34.dp),
                     )
                 }
 
