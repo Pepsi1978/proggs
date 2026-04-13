@@ -470,8 +470,6 @@ fun EntryDetailScreen(
                     }
                 }
 
-                Text(
-                    text =
                 if (!hasImproved) {
                     GlassCard(
                         modifier = Modifier.fillMaxWidth(),
