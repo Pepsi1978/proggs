@@ -215,17 +215,14 @@ ${summaryText.take(500)}"""
             val title =
                 titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60) ?: "Wochenrückblick"
 
+            // Use endDate to determine week number — consistent with month grouping by endDate
             val weekOfMonth =
-                if (task.weekStart.get(Calendar.MONTH) != task.weekEnd.get(Calendar.MONTH)) {
-                    1
-                } else {
-                    task.weekStart.get(Calendar.DAY_OF_MONTH).let { day ->
-                        when {
-                            day <= 7 -> 1
-                            day <= 14 -> 2
-                            day <= 21 -> 3
-                            else -> 4
-                        }
+                task.weekEnd.get(Calendar.DAY_OF_MONTH).let { day ->
+                    when {
+                        day <= 7 -> 1
+                        day <= 14 -> 2
+                        day <= 21 -> 3
+                        else -> 4
                     }
                 }
 
