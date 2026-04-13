@@ -680,8 +680,9 @@ fun PaywallScreen(
                     },
                     properties = DialogProperties(usePlatformDefaultWidth = false),
                 ) {
-                    val gradientTop = if (isDarkTheme) Color(0xFF3D2A14) else Color(0xFFFFF3E0)
-                    val gradientBottom = if (isDarkTheme) Color(0xFF1A3329) else Color(0xFFE2F5E8)
+                    // Warm ivory → soft cool sage (harmonizes with teal accents)
+                    val gradientTop = if (isDarkTheme) Color(0xFF2A2622) else Color(0xFFFFF8F0)
+                    val gradientBottom = if (isDarkTheme) Color(0xFF222926) else Color(0xFFF0F5F2)
 
                     // Full-height wrapper prevents top clipping from offset
                     Box(
