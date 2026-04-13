@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
@@ -691,8 +692,9 @@ fun PaywallScreen(
                     ) {
                         Surface(
                             modifier = Modifier
+                                .widthIn(max = 420.dp)
                                 .fillMaxWidth()
-                                .padding(horizontal = 40.dp)
+                                .padding(horizontal = 24.dp)
                                 .offset(y = (-60).dp),
                             shape = RoundedCornerShape(28.dp),
                             color = gradientTop,
