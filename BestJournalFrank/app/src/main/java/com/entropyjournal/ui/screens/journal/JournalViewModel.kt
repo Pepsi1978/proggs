@@ -303,6 +303,16 @@ constructor(
                             showPreviewDialog = true,
                         )
                     audioFile.delete()
+
+                    // Auto-trigger AI text improvement if enabled in settings
+                    val autoImprove =
+                        encryptedPrefs.getBoolean(
+                            Constants.PREF_TEXT_IMPROVEMENT_DEFAULT,
+                            false,
+                        )
+                    if (autoImprove) {
+                        improveText()
+                    }
                 }
                 .onFailure { error ->
                     _uiState.value =
