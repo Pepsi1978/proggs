@@ -339,6 +339,8 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
+                            // Invisible counterbalance for icon+spacer so text is visually centered
+                            Spacer(modifier = Modifier.width(28.dp))
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         if (uiState.userProfile != null) {
@@ -531,6 +533,8 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
+                            // Invisible counterbalance for icon+spacer so text is visually centered
+                            Spacer(modifier = Modifier.width(28.dp))
                         }
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -1268,6 +1272,8 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
+                            // Invisible counterbalance for icon+spacer so text is visually centered
+                            Spacer(modifier = Modifier.width(28.dp))
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
@@ -1334,6 +1340,8 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
+                            // Invisible counterbalance for icon+spacer so text is visually centered
+                            Spacer(modifier = Modifier.width(28.dp))
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
@@ -1417,6 +1425,8 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
+                            // Invisible counterbalance for icon+spacer so text is visually centered
+                            Spacer(modifier = Modifier.width(28.dp))
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -1723,6 +1733,8 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
+                            // Invisible counterbalance for icon+spacer so text is visually centered
+                            Spacer(modifier = Modifier.width(28.dp))
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Row(
@@ -1917,6 +1929,8 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
+                            // Invisible counterbalance for icon+spacer so text is visually centered
+                            Spacer(modifier = Modifier.width(28.dp))
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -2002,6 +2016,8 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
+                            // Invisible counterbalance for icon+spacer so text is visually centered
+                            Spacer(modifier = Modifier.width(28.dp))
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
