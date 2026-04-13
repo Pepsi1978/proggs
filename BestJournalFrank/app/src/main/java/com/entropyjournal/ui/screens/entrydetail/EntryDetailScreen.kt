@@ -53,7 +53,6 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Share
@@ -250,34 +249,6 @@ fun EntryDetailScreen(
                 }
             },
             actions = {
-                IconButton(
-                    onClick = {
-                        doHaptic(HapticFeedbackType.LongPress)
-                        uiState.entry?.let { entry ->
-                            val hasImproved =
-                                entry.isImproved && !entry.improvedText.isNullOrBlank()
-                            val photos = uiState.photos
-                            if (!hasImproved && photos.size <= 1) {
-                                val shareText = buildShareText(entry, useImproved = false)
-                                val photoUris =
-                                    if (photos.size == 1) {
-                                        listOf(getPhotoUri(context, photos[0]))
-                                    } else {
-                                        emptyList()
-                                    }
-                                executeShare(context, shareText, photoUris)
-                            } else {
-                                showShareDialog = true
-                            }
-                        }
-                    }
-                ) {
-                    Icon(
-                        Icons.Rounded.IosShare,
-                        "Teilen",
-                        tint = FeatureAccentOrange,
-                    )
-                }
                 IconButton(onClick = { viewModel.showDeleteDialog(true) }) {
                     Icon(Icons.Rounded.Delete, "L\u00f6schen", tint = NeonRed)
                 }
@@ -501,12 +472,6 @@ fun EntryDetailScreen(
 
                 Text(
                     text =
-                        "Aufnahmedauer: ${DateTimeFormatter.formatDuration(entry.audioDurationSeconds)}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(start = 4.dp),
-                )
-
                 if (!hasImproved) {
                     GlassCard(
                         modifier = Modifier.fillMaxWidth(),
@@ -699,72 +664,82 @@ fun EntryDetailScreen(
                             )
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconButton(
-                        onClick = {
-                            doHaptic(HapticFeedbackType.LongPress)
-                            if (isSpeaking || isTtsLoading) {
-                                tts.stop()
-                                isSpeaking = false
-                                isTtsLoading = false
-                            } else {
-                                isTtsLoading = true
-                                isSpeaking = true
-                                val speakText =
-                                    if (isShowingOriginal) entry.rawText
-                                    else entry.displayText
-                                tts.speak(
-                                    speakText,
-                                    onPlaybackStart = { isTtsLoading = false },
-                                ) {
+                // Action icons + recording duration directly below divider
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        IconButton(
+                            onClick = {
+                                doHaptic(HapticFeedbackType.LongPress)
+                                if (isSpeaking || isTtsLoading) {
+                                    tts.stop()
                                     isSpeaking = false
                                     isTtsLoading = false
-                                }
-                            }
-                        },
-                        modifier = Modifier.size(40.dp),
-                    ) {
-                        Icon(
-                            if (isSpeaking) Icons.Rounded.Stop
-                            else Icons.Rounded.VolumeUp,
-                            contentDescription =
-                                if (isSpeaking) "Stoppen" else "Vorlesen",
-                            tint = FeatureAccentOrange,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            doHaptic(HapticFeedbackType.LongPress)
-                            val hasImprovedForShare =
-                                entry.isImproved &&
-                                    !entry.improvedText.isNullOrBlank()
-                            val photos = uiState.photos
-                            if (!hasImprovedForShare && photos.size <= 1) {
-                                val shareText =
-                                    buildShareText(entry, useImproved = false)
-                                val photoUris =
-                                    if (photos.size == 1) {
-                                        listOf(getPhotoUri(context, photos[0]))
-                                    } else {
-                                        emptyList()
+                                } else {
+                                    isTtsLoading = true
+                                    isSpeaking = true
+                                    val speakText =
+                                        if (isShowingOriginal) entry.rawText
+                                        else entry.displayText
+                                    tts.speak(
+                                        speakText,
+                                        onPlaybackStart = { isTtsLoading = false },
+                                    ) {
+                                        isSpeaking = false
+                                        isTtsLoading = false
                                     }
-                                executeShare(context, shareText, photoUris)
-                            } else {
-                                showShareDialog = true
-                            }
-                        },
-                        modifier = Modifier.size(40.dp),
-                    ) {
-                        Icon(
-                            Icons.Rounded.Share,
-                            contentDescription = "Teilen",
-                            tint = FeatureAccentOrange,
-                            modifier = Modifier.size(24.dp),
-                        )
+                                }
+                            },
+                            modifier = Modifier.size(36.dp),
+                        ) {
+                            Icon(
+                                if (isSpeaking) Icons.Rounded.Stop
+                                else Icons.Rounded.VolumeUp,
+                                contentDescription =
+                                    if (isSpeaking) "Stoppen" else "Vorlesen",
+                                tint = FeatureAccentOrange,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                doHaptic(HapticFeedbackType.LongPress)
+                                val hasImprovedForShare =
+                                    entry.isImproved &&
+                                        !entry.improvedText.isNullOrBlank()
+                                val photos = uiState.photos
+                                if (!hasImprovedForShare && photos.size <= 1) {
+                                    val shareText =
+                                        buildShareText(entry, useImproved = false)
+                                    val photoUris =
+                                        if (photos.size == 1) {
+                                            listOf(getPhotoUri(context, photos[0]))
+                                        } else {
+                                            emptyList()
+                                        }
+                                    executeShare(context, shareText, photoUris)
+                                } else {
+                                    showShareDialog = true
+                                }
+                            },
+                            modifier = Modifier.size(36.dp),
+                        ) {
+                            Icon(
+                                Icons.Rounded.Share,
+                                contentDescription = "Teilen",
+                                tint = FeatureAccentOrange,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
                     }
+                    Text(
+                        text = DateTimeFormatter.formatDuration(entry.audioDurationSeconds),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
                 }
 
                 if (isTtsLoading) {
