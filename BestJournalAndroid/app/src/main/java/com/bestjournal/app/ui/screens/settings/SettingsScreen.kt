@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -1595,7 +1596,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // KI-Abo
+                // Premium
                 GlassCard {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1607,7 +1608,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "KI-Abo",
+                                "Premium",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -1621,7 +1622,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Du nutzt Best Journal Premium mit voller KI-Qualität.",
+                                text = "Alle Features freigeschaltet, unbegrenzte KI, PDF-Export und mehr.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -1640,8 +1641,7 @@ fun SettingsScreen(
                                 )
                             }
                             if (showChurnDialog) {
-                                ChurnRetentionDialog(
-                                    userEmail = uiState.userProfile?.email,
+                                ChurnFlowDialog(
                                     onDismiss = { showChurnDialog = false },
                                     onOfferAccepted = { showChurnDialog = false },
                                     onCancelConfirmed = { showChurnDialog = false },
@@ -1667,30 +1667,49 @@ fun SettingsScreen(
                                     },
                             )
                             Spacer(modifier = Modifier.height(10.dp))
-                            val bulletColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            val bulletStyle = MaterialTheme.typography.bodyMedium
-                            val bullets = listOf(
-                                "Deine Gedanken in klare Worte fassen, die KI macht jeden Eintrag ausdrucksst\u00e4rker",
-                                "5 Perspektiven auf dein Leben, von Stressabbau bis Selbsterkenntnis",
-                                "Dein Dashboard w\u00e4chst mit dir, automatisch nach jedem Eintrag",
-                                "Entdecke was du bisher \u00fcbersehen hast, die KI findet Muster die dir nicht auffallen",
-                                "Dein sicherer Raum, ungest\u00f6rt schreiben, reflektieren, wachsen",
+                            val featureItems = listOf(
+                                Triple(Icons.Rounded.Star, "Unbegrenzte KI-Textverbesserung", "Jeder Eintrag wird ausdrucksst\u00e4rker"),
+                                Triple(Icons.Rounded.Dashboard, "Unbegrenzte Dashboard-Analysen", "Dein Dashboard w\u00e4chst mit dir"),
+                                Triple(Icons.Rounded.Favorite, "5 KI-Perspektiven", "Von Stressabbau bis Selbsterkenntnis"),
+                                Triple(Icons.Rounded.Tune, "Muster-Erkennung", "Die KI findet Zusammenh\u00e4nge die dir nicht auffallen"),
+                                Triple(Icons.Rounded.PictureAsPdf, "PDF-Export mit Fotos", "Alle Eintr\u00e4ge und Bilder als Dokument"),
+                                Triple(Icons.Rounded.MusicNote, "Pr\u00e4zisere Spracherkennung", "H\u00f6here Qualit\u00e4t f\u00fcr deine Spracheintr\u00e4ge"),
                             )
-                            bullets.forEachIndexed { idx, text ->
-                                Row(modifier = Modifier.fillMaxWidth()) {
-                                    Text(
-                                        "\u2022",
-                                        style = bulletStyle,
-                                        color = bulletColor,
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text,
-                                        style = bulletStyle,
-                                        color = bulletColor,
-                                    )
+                            featureItems.forEachIndexed { idx, (icon, title, subtitle) ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            icon,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            title,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                        Text(
+                                            subtitle,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 }
-                                if (idx < bullets.lastIndex) Spacer(modifier = Modifier.height(4.dp))
+                                if (idx < featureItems.lastIndex) Spacer(modifier = Modifier.height(8.dp))
                             }
                             Spacer(modifier = Modifier.height(16.dp))
                             Row(
