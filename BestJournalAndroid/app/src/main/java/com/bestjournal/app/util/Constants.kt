@@ -126,4 +126,5 @@ object Constants {
     const val MONTHLY_PRICE_DISPLAY = "3,99\u00A0\u20AC"
     const val YEARLY_PRICE_DISPLAY = "29,99\u00A0\u20AC"
     const val YEARLY_MONTHLY_EQUIVALENT = "2,50\u00A0\u20AC"
+    const val LIFETIME_PRICE_DISPLAY = "79,99\u00A0\u20AC"
 }

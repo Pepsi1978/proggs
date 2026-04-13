@@ -125,6 +125,10 @@ class AnalyticsTracker @Inject constructor(
         })
     }
 
+    fun trackYearlyBadgeViewed() {
+        firebaseAnalytics.logEvent("yearly_badge_viewed", null)
+    }
+
     fun trackExitIntentShown() {
         firebaseAnalytics.logEvent("exit_intent_shown", null)
     }
@@ -135,6 +139,14 @@ class AnalyticsTracker @Inject constructor(
 
     fun trackExitIntentRejected() {
         firebaseAnalytics.logEvent("exit_intent_rejected", null)
+    }
+
+    fun trackLifetimePurchased(value: Double = 0.0, currency: String = "EUR") {
+        firebaseAnalytics.logEvent(FirebaseAnalytics.Event.PURCHASE, Bundle().apply {
+            putString("subscription_type", "lifetime")
+            putDouble(FirebaseAnalytics.Param.VALUE, value)
+            putString(FirebaseAnalytics.Param.CURRENCY, currency)
+        })
     }
 
     fun trackSubscriptionPurchased(type: String, value: Double = 0.0, currency: String = "EUR") {
