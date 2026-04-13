@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -320,7 +321,11 @@ fun SettingsScreen(
                 // 1. Konto
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Person,
                                 null,
@@ -508,7 +513,11 @@ fun SettingsScreen(
                 // 2. Erscheinungsbild
                 GlassCard {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Palette,
                                 null,
@@ -916,7 +925,11 @@ fun SettingsScreen(
                 // Erinnerung / Rückblick
                 GlassCard {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Notifications,
                                 null,
@@ -1226,10 +1239,14 @@ fun SettingsScreen(
                     }
                 }
 
-                // Daten
+                // Daten exportieren
                 GlassCard {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Description,
                                 null,
@@ -1238,7 +1255,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Daten",
+                                "Daten exportieren",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -1291,7 +1308,11 @@ fun SettingsScreen(
                 // Sicherheit
                 GlassCard {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Security,
                                 null,
@@ -1370,7 +1391,11 @@ fun SettingsScreen(
                 // KI-Dashboard Profile
                 GlassCard {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Dashboard,
                                 null,
@@ -1389,6 +1414,8 @@ fun SettingsScreen(
                             "W\u00e4hle ein Profil aus. Tippe auf ein Profil f\u00fcr eine genauere Erkl\u00e4rung.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
                         )
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -1670,7 +1697,11 @@ fun SettingsScreen(
                 // KI-Automatisierungen
                 GlassCard {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Tune,
                                 null,
@@ -1860,7 +1891,11 @@ fun SettingsScreen(
                 var feedbackSent by remember { mutableStateOf(false) }
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Email,
                                 null,
@@ -1935,29 +1970,52 @@ fun SettingsScreen(
                 }
 
                 // 7. Ueber die App
-                GlassCard {
-                    Column {
-                        Text(
-                            "\u00dcber die App",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+                GlassCard(
+                    modifier = Modifier
+                        .widthIn(max = 360.dp)
+                        .align(Alignment.CenterHorizontally),
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Icon(
+                                Icons.Rounded.Info,
+                                null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "\u00dcber die App",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal v0.5.12",
+                            "Entropy Journal V0.9.0",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
                         )
                         Text(
                             "Dein pers\u00f6nliches KI-Tagebuch",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.outline,
+                            textAlign = TextAlign.Center,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             "\u00a9 Barwandt Digital Labs",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.outline,
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
