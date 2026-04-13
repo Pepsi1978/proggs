@@ -4,12 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -84,6 +81,13 @@ fun ChurnFlowDialog(
         analyticsTracker.trackChurnFlowOpened()
     }
 
+    LaunchedEffect(currentStep) {
+        if (currentStep == 1 && !offerShownTracked) {
+            analyticsTracker.trackChurnOfferShown()
+            offerShownTracked = true
+        }
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -119,32 +123,28 @@ fun ChurnFlowDialog(
                         },
                         onCancel = onDismiss,
                     )
-                    1 -> {
-                        if (!offerShownTracked) {
-                            LaunchedEffect(Unit) {
-                                analyticsTracker.trackChurnOfferShown()
-                                offerShownTracked = true
-                            }
-                        }
-                        StepOffer(
-                            selectedReason = selectedReason ?: "",
-                            onAccept = {
-                                analyticsTracker.trackChurnOfferAccepted()
-                                saveChurnOfferAccepted(context)
-                                onOfferAccepted()
-                            },
-                            onDecline = { currentStep = 2 },
-                        )
-                    }
+                    1 -> StepOffer(
+                        selectedReason = selectedReason ?: "",
+                        onAccept = {
+                            analyticsTracker.trackChurnOfferAccepted()
+                            saveChurnOfferAccepted(context)
+                            onOfferAccepted()
+                        },
+                        onDecline = { currentStep = 2 },
+                    )
                     2 -> StepConfirm(
                         onGoBack = { currentStep = 1 },
                         onConfirmCancel = {
                             analyticsTracker.trackChurnConfirmed()
-                            val intent = Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse("https://play.google.com/store/account/subscriptions"),
-                            )
-                            context.startActivity(intent)
+                            try {
+                                val intent = Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://play.google.com/store/account/subscriptions"),
+                                )
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                // No browser available — graceful degradation
+                            }
                             onCancelConfirmed()
                         },
                     )
