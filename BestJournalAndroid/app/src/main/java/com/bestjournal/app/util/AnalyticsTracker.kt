@@ -115,6 +115,10 @@ class AnalyticsTracker @Inject constructor(
         firebaseAnalytics.logEvent("no_thanks_clicked", null)
     }
 
+    fun trackTrialTimelineViewed() {
+        firebaseAnalytics.logEvent("trial_timeline_viewed", null)
+    }
+
     fun trackSubscriptionPurchased(type: String, value: Double = 0.0, currency: String = "EUR") {
         firebaseAnalytics.logEvent(FirebaseAnalytics.Event.PURCHASE, Bundle().apply {
             putString("subscription_type", type)

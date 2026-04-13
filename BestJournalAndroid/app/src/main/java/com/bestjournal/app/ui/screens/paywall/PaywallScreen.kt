@@ -29,9 +29,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.CreditCard
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +59,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.bestjournal.app.ui.components.PulsingOrb
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
+import com.bestjournal.app.ui.theme.NeonAmber
+import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.util.Constants
 import kotlinx.coroutines.delay
 
@@ -126,6 +131,13 @@ fun PaywallScreen(
                 ),
             label = "ctaBreathing",
         )
+
+    // Track trial_timeline_viewed when all benefits have animated in
+    LaunchedEffect(visibleBenefits >= benefits.size) {
+        if (visibleBenefits >= benefits.size) {
+            viewModel.analyticsTracker.trackTrialTimelineViewed()
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -225,13 +237,98 @@ fun PaywallScreen(
                         ),
                 ) {
                     Text(
-                        text = "7 Tage kostenlos testen",
+                        text = "Weiter",
                         style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
                         color = Color.White,
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                // ── Trial Timeline ──
+                AnimatedVisibility(
+                    visible = visibleBenefits >= benefits.size,
+                    enter = fadeIn(tween(300)),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                        ) {
+                            // Connecting line at icon center height
+                            HorizontalDivider(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp)
+                                        .align(Alignment.TopCenter)
+                                        .padding(top = 9.dp),
+                                thickness = 1.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Rounded.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = NeonEmerald,
+                                    )
+                                    Text(
+                                        text = "Heute",
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    Text(
+                                        text = "Voller Zugang",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Rounded.Notifications,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = NeonAmber,
+                                    )
+                                    Text(
+                                        text = "Tag 6",
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    Text(
+                                        text = "Erinnerung",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Rounded.CreditCard,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                    Text(
+                                        text = "Tag 7",
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    Text(
+                                        text = "Erste Zahlung",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
 
                 Text(
                     text = "Danach $displayYearlyPrice pro Jahr\nIn der Testphase jederzeit k\u00fcndbar",
