@@ -1,736 +1,687 @@
-# Android App Design Audit — Best Journal
+# Home Screen Design-Recherche: Tagebuch-App
 
-> Erstellt am 2026-04-11 durch den Designer-Skill.
-> Basierend auf Material Design 3 (Expressive), Accessibility-Standards (WCAG 2.1 AA),
-> Design-Patterns der Top Play-Store-Apps und aktuelle Android-Design-Trends 2025/2026.
-
----
-
-## 1. Zusammenfassung der Recherche
-
-### Material Design 3 Expressive (Google I/O 2025)
-- **Physics-basiertes Motion-System**: Easing/Duration wurde durch Federmechanik (Springs) ersetzt. Animationen fuehlen sich "lebendig" an.
-- **35 neue Shapes + Shape Morphing**: Buttons koennen beim Druecken ihre Form aendern (rechteckig → abgerundet).
-- **Emphasized Typography**: Zwei parallele Systeme (Baseline + Emphasized) fuer staerkere visuelle Hierarchie ohne Groessenaenderung.
-- **Neue Komponenten**: FAB Menu, Split Button, Toolbars, Loading Indicator, Button Groups.
-- **Color Roles**: 26+ Farbrollen die algorithmisch aus einer Basisfarbe abgeleitet werden, mit garantiertem WCAG-Kontrast.
-- **Dynamic Color ist Pflicht**: Ab Android 12 erwartet. Die App-Palette passt sich automatisch an das Wallpaper des Nutzers an.
-
-### Top Journal-App Design-Patterns (Day One, Reflectly, Journey, Diarium)
-- **Emotionale Designsprache**: Gedaempfte Farben (Sage, Dusty Rose, Slate), organische Formen, viel Weissraum.
-- **Streaks & Micro-Rewards**: Animierte Streak-Counter, Mood-Wheels, sanfte Konfetti nach einem Eintrag.
-- **Karten-basierte Eintragslisten**: Mit Datum, Stimmungsindikatoren, Foto-Thumbnails.
-- **Collapsing Headers**: Grosse typografische Anker ("Heute") die beim Scrollen zusammenschrumpfen.
-
-### Aktuelle Android-Trends 2025/2026
-- **Edge-to-Edge ist ab SDK 35 Pflicht**: Apps zeichnen hinter System-Bars.
-- **Glassmorphism subtil**: Blur nur fuer Overlay-Elemente, nie fuer primaere Inhalte.
-- **Corner Radius 28-32dp**: Standard fuer Karten, Dialoge, Bottom Sheets.
-- **Predictive Back Gesture**: Ab Android 16 Pflicht.
-- **Lottie Animationen**: Stimmungsicons, Erfolgsanimationen, Onboarding-Illustrationen.
-- **Bottom Sheets als primäres Interaktionsmuster**: Flexibler als Dialoge.
-
-### Accessibility & Dark Mode Best Practices
-- **WCAG 2.1 AA Minimum**: 4.5:1 fuer normalen Text, 3.0:1 fuer grosse Texte und UI-Elemente.
-- **Touch Targets**: Mindestens 48dp x 48dp.
-- **Dark Mode**: #121212 als Basis (nicht reines Schwarz), Elevation = Helligkeit, reduzierte Saettigung bei bunten Akzentfarben.
-- **Schriftgroessen in sp** (nicht dp) damit Nutzer-Skalierung funktioniert.
+> Erstellt am 2026-04-13 durch den Designer-Skill.
+> Basierend auf Analyse von 12 Top-Journal-Apps, Dribbble/Behance-Trends,
+> Material Design 3, UX-Studien und aktuellen Animation-Libraries.
 
 ---
 
-## 2. Aktueller Design-Status
+## 1. Was MUSS auf den Home Screen?
 
-### Gesamtbewertung: **Professionell** (7/10)
+### Pflicht-Elemente (in dieser Reihenfolge, top-down)
 
-Die App macht vieles richtig und liegt deutlich ueber dem Durchschnitt. Das duale Farbsystem
-(Teal fuer Light, Copper fuer Dark), der Spotify-inspirierte Dark Mode und das GlassCard-System
-sind durchdacht und konsistent. Die Splash-Animation ist einzigartig und einpraegsam.
+| # | Element | Warum | Beispiel-Apps |
+|---|---------|-------|---------------|
+| 1 | **Personalisierte Begruessung** | +20% Engagement laut Duolingo-Studie. "Guten Morgen, Max" statt nur "Guten Morgen" | Five Minute Journal, Reflectly, Stoic |
+| 2 | **Datum + Tageszeit** | Gibt dem Eintrag sofort Kontext, senkt die Hemmschwelle zum Schreiben | Alle Top-Apps |
+| 3 | **Mood-Check-In** | Schnellster Einstieg (1 Klick), macht die App sofort interaktiv | Daylio, Reflectly, Stoic |
+| 4 | **Hero-Element** | EIN starkes visuelles Element als Blickfang (Zitat ODER Illustration ODER Stimmungsring) | Reflectly, Five Minute Journal |
+| 5 | **Neuer-Eintrag-Button (CTA)** | Primaere Aktion der App, muss sofort erreichbar sein | Alle Apps |
+| 6 | **Letzte Eintraege (Timeline)** | Zeigt dem Nutzer seinen Fortschritt, laedt zum Weiterlesen ein | Day One, Journey, Momento |
+| 7 | **Sanfte Statistik** | "Diese Woche 4x geschrieben" motiviert ohne Druck | Daylio, Stoic, Gratitude |
 
-### Was gut ist (beibehalten!)
-- **Dark Mode ist exzellent**: #121212 Background, #181818 Cards, warmes Kupfer als Akzent — genau wie Spotify empfiehlt
-- **GlassCard-System**: Einheitliche Kartenkomponente mit Dual-Theme-Unterstuetzung (solid dark, gradient+shadow light)
-- **Timeline-Design**: Farbige Punkte (Gruen/Rot/Cyan) mit vertikaler Linie — schoene visuelle Hierarchie
-- **Schreibimpuls des Tages**: Gelbes Gluehbirnen-Icon mit Prompt-Karte — persoenlich und einladend
-- **SunMoonToggle**: Eleganter Theme-Switcher direkt im Header — sehr gute UX
-- **HorizontalPager-Navigation**: Swipe zwischen Tabs + Bottom Nav — fluesssig und intuitiv
-- **Partikel- und Sternenhintergrund**: Atmosphaerisch im Dark Mode
-- **Onboarding**: 5 Seiten mit HorizontalPager, Feature-Highlights, schoene Animationen
-- **Typografie-Wahl**: Exo 2 (Headings) + Source Sans 3 (Body) + Caveat (Handschrift) — gut aufeinander abgestimmt
+### Optionale Elemente (Nice-to-have)
 
-### Was problematisch ist
-- **Light Mode Teal (#0097A7) versagt bei WCAG AA** — 3.51:1 auf Weiss (muss 4.5:1 sein)
-- **Muted Text im Light Mode unsichtbar** — #9090A8 hat nur 2.94:1 Kontrast
-- **~40 Farbdefinitionen** in Color.kt — 4 Dashboard-Paletten + Legacy-Neon = visuelles Chaos
-- **Unvollstaendige Typografie-Skala** — 7 von 15 MD3-Stilen definiert
-- **Kein Dynamic Color** — Material You fehlt komplett
-- **Dialoge im Dark Mode haben hellen Hintergrund** (sichtbar in Screenshots)
+| Element | Wann sinnvoll |
+|---------|--------------|
+| Quick Actions (Text/Foto/Audio/Stimmung) | Wenn die App mehrere Eintragstypen unterstuetzt |
+| "Heute vor einem Jahr" Rueckblick | Ab 1 Jahr Nutzungsdauer — starkes Retention-Feature |
+| Tages-Schreibprompt / Frage des Tages | Gegen "Writer's Block", besonders fuer neue Nutzer |
+| Wetter-Integration | Automatischer Kontext ohne Nutzer-Aufwand |
+| Suchleiste | Als Icon oben rechts — da wenn noetig, nicht dominant |
 
-### Kontrast-Analyse (rechnerisch geprueft)
+### Was NICHT auf den Home Screen gehoert
 
-| Farbpaar | Ratio | WCAG AA | Bewertung |
-|----------|-------|---------|-----------|
-| DARK: TextPrimary (#E6E1E5) auf Background (#121212) | 14.51:1 | PASS | Exzellent |
-| DARK: TextSecondary (#CAC4D0) auf Background (#121212) | 10.99:1 | PASS | Exzellent |
-| DARK: TextMuted (#938F99) auf Background (#121212) | 5.91:1 | PASS | Gut |
-| DARK: WarmCopper (#D36B00) auf Background (#121212) | 5.24:1 | PASS | OK |
-| DARK: Weiss auf WarmCopper (Buttons) | 3.58:1 | NUR GROSS | Problematisch |
-| LIGHT: TextPrimary (#1A1A2E) auf Background (#F8F8FC) | 16.10:1 | PASS | Exzellent |
-| LIGHT: TextSecondary (#5A5A70) auf Background (#F8F8FC) | 6.33:1 | PASS | Gut |
-| **LIGHT: TextMuted (#9090A8) auf Background (#F8F8FC)** | **2.94:1** | **FAIL** | **Kritisch** |
-| **LIGHT: Teal (#0097A7) auf Weiss (#FFFFFF)** | **3.51:1** | **NUR GROSS** | **Kritisch** |
-| **LIGHT: Weiss auf Teal (Buttons)** | **3.51:1** | **NUR GROSS** | **Kritisch** |
-
-### Aktuelle Farbpalette
-
-**Dark Mode:**
-- Background: #121212 (CosmosBlack)
-- Card Surface: #181818 (CardSurface)
-- Card Elevated: #1E1E1E
-- Primary: #D36B00 (WarmCopper)
-- Text Primary: #E6E1E5
-- Text Secondary: #CAC4D0
-- Text Muted: #938F99
-
-**Light Mode:**
-- Background: #F8F8FC (LightBackground)
-- Surface: #FFFFFF (LightSurface)
-- Primary: #0097A7 (Teal)
-- Secondary: #5E35B1 (Purple)
-- Text Primary: #1A1A2E
-- Text Secondary: #5A5A70
-- Text Muted: #9090A8
+- Mehr als 5 Informationstypen gleichzeitig (Hick's Law: mehr Auswahl = laengere Entscheidung)
+- Komplexe Statistik-Dashboards (gehoeren in eigenen Tab)
+- Einstellungen oder Account-Infos (gehoeren in Profil/Settings)
+- Werbung oder Upselling (zerstoert die intime Atmosphaere)
 
 ---
 
-## 3. Verbesserungsvorschlaege (nach Prioritaet sortiert)
+## 2. Aufbau des Home Screens (Top-Down-Struktur)
 
----
-
-### 🔴 Kritisch
-
-#### 3.1 Light Mode Primaerfarbe Teal versagt bei WCAG AA
-- **Was:** Die Teal-Farbe #0097A7 hat auf weissem Hintergrund nur 3.51:1 Kontrast. Sie wird fuer Eintragstitel, Sektions-Headers, Links, aktive Nav-Items und Buttons verwendet — also ueberall.
-- **Warum:** WCAG 2.1 AA verlangt mindestens 4.5:1 fuer normalen Text. 3.51:1 ist zu niedrig und beeintraechtigt die Lesbarkeit bei Sonnenlicht, fuer aeltere Nutzer und fuer Menschen mit Sehschwaeche.
-- **Wo:** `app/src/main/java/com/bestjournal/app/ui/theme/Theme.kt` Zeile 44 (LightColorScheme primary), sowie alle Stellen die `MaterialTheme.colorScheme.primary` im Light Mode verwenden.
-- **Loesung:** Teal von #0097A7 auf **#00796B** (Teal 700) abdunkeln. Das ergibt 5.71:1 Kontrast auf Weiss — WCAG AA bestanden, visuell immer noch klar als Teal erkennbar.
-- **Aufwand:** Gering (1 Datei, 2 Werte)
-- **Auswirkung:** Gross — betrifft JEDEN Text und Button im Light Mode
-
-**Prompt zum Einfuegen in Claude Code:**
 ```
-Aendere die Light-Mode Primaerfarbe in der BestJournalAndroid App.
-
-Aktuell:
-- primary = Color(0xFF0097A7) — Kontrast auf Weiss: 3.51:1 (FAIL WCAG AA)
-- surfaceTint = Color(0xFF0097A7)
-
-Neu:
-- primary = Color(0xFF00796B) — Kontrast auf Weiss: 5.71:1 (PASS WCAG AA)
-- surfaceTint = Color(0xFF00796B)
-
-Ausserdem die Container-Farben anpassen:
-- primaryContainer = Color(0xFFB2DFDB) → Color(0xFFA7D8D0) (etwas waermer, passt zum dunkleren Teal)
-- onPrimaryContainer = Color(0xFF00363D) → bleibt gleich (schon dunkel genug)
-
-Datei: app/src/main/java/com/bestjournal/app/ui/theme/Theme.kt
-Zeile 44-47: Die primary, primaryContainer und surfaceTint Werte in LightColorScheme aendern.
-
-Warum: WCAG 2.1 AA verlangt 4.5:1 Kontrast fuer normalen Text. #0097A7 erreicht nur 3.51:1.
-#00796B erreicht 5.71:1 — erfuellt WCAG AA und sieht immer noch nach Teal aus.
-
-Konsistenz: Alle Screens die MaterialTheme.colorScheme.primary verwenden (JournalScreen,
-DashboardScreen, SettingsScreen, RetrospectiveScreen, BottomNavBar) profitieren automatisch
-von dieser Aenderung ohne weiteren Code.
++--------------------------------------------------+
+|                                                  |
+|  "Guten Abend, Frank"           [Avatar] [Suche] |
+|  Sonntag, 13. April 2026                         |
+|                                                  |
++--------------------------------------------------+
+|                                                  |
+|  [Animierter Gradient-Hintergrund]               |
+|                                                  |
+|     "Wie fuehlst du dich gerade?"                |
+|                                                  |
+|  [Super] [Gut] [Okay] [Meh] [Schlecht]           |
+|   Mood-Chips mit Icons + Farben                  |
+|                                                  |
++--------------------------------------------------+
+|                                                  |
+|  +--------------------------------------------+  |
+|  | Hero-Card (Glassmorphism)                   |  |
+|  |                                             |  |
+|  |  "Das Leben besteht nicht aus den           |  |
+|  |   Momenten, in denen wir atmen,             |  |
+|  |   sondern aus denen, die uns den            |  |
+|  |   Atem rauben."                             |  |
+|  |                                             |  |
+|  |  Playfair Display, Serif, 20sp              |  |
+|  +--------------------------------------------+  |
+|                                                  |
++--------------------------------------------------+
+|                                                  |
+|  Diese Woche: 4 Eintraege    Streak: 7 Tage     |
+|  [####____] 4/7              [Flamme-Icon]       |
+|                                                  |
++--------------------------------------------------+
+|                                                  |
+|  Deine letzten Eintraege                         |
+|                                                  |
+|  +--------------------------------------------+  |
+|  | [Foto] Heute, 14:30                         |  |
+|  |        "Der Nachmittag im Park war..."      |  |
+|  |        Stimmung: Gut  |  3 Fotos            |  |
+|  +--------------------------------------------+  |
+|                                                  |
+|  +--------------------------------------------+  |
+|  | [Foto] Gestern, 22:15                       |  |
+|  |        "Endlich das Buch fertig..."          |  |
+|  |        Stimmung: Super  |  Audionotiz       |  |
+|  +--------------------------------------------+  |
+|                                                  |
+|  +--------------------------------------------+  |
+|  | [Foto] 11. April, 08:00                     |  |
+|  |        "Fruehstueck mit der Familie..."      |  |
+|  |        Stimmung: Gut  |  2 Fotos            |  |
+|  +--------------------------------------------+  |
+|                                                  |
++--------------------------------------------------+
+|                                                  |
+|  [Home]  [Kalender]  [+FAB]  [Stats]  [Profil]  |
+|                                                  |
++--------------------------------------------------+
 ```
 
 ---
 
-#### 3.2 Light Mode TextMuted versagt komplett bei WCAG AA
-- **Was:** Die Farbe #9090A8 hat auf #F8F8FC Hintergrund nur 2.94:1 Kontrast — das versagt sogar fuer grosse Texte (mindestens 3.0:1).
-- **Warum:** TextMuted wird fuer Zeitstempel, Hints und Hilfstexte verwendet. Diese muessen lesbar sein — auch bei Sonnenlicht und fuer aeltere Nutzer.
-- **Wo:** `app/src/main/java/com/bestjournal/app/ui/theme/Color.kt` Zeile 83 (LightTextMuted)
-- **Loesung:** LightTextMuted von #9090A8 auf **#6E6E86** abdunkeln. Das ergibt 4.66:1 Kontrast — WCAG AA bestanden fuer normalen Text.
-- **Aufwand:** Gering (1 Datei, 1 Wert)
-- **Auswirkung:** Gross — betrifft alle Zeitstempel, Hints und Hilfstexte im Light Mode
+## 3. Farbpaletten (3 Optionen)
 
-**Prompt zum Einfuegen in Claude Code:**
-```
-Aendere die Light Mode TextMuted-Farbe in BestJournalAndroid.
+### Option A: "Warm Sunset" (empfohlen fuer Journal)
 
-Aktuell:
-- LightTextMuted = Color(0xFF9090A8) — Kontrast auf #F8F8FC: 2.94:1 (FAIL WCAG AA)
+| Rolle | Light | Dark | Verwendung |
+|-------|-------|------|------------|
+| Background | #FAFAF7 (Cream) | #1A1208 (Warm Dark Brown) | Haupt-Hintergrund |
+| Surface | #FFFFFF | #2D2418 (Dark Amber) | Cards, Sheets |
+| Primary | #C4704F (Terracotta) | #E8A882 (Soft Peach) | Buttons, Links, Akzente |
+| On Primary | #FFFFFF | #3B1A08 | Text auf Primary |
+| Secondary | #87A878 (Sage Green) | #A8C898 (Light Sage) | Sekundaere Aktionen |
+| Accent | #C9B8E8 (Lavendel) | #D4C8F0 | Highlights, Badges |
+| On Background | #1C1B1F | #E8E0D0 (Off-White) | Haupttext |
+| On Surface | #49454F | #CAC4B8 | Sekundaertext |
+| Outline | #79747E | #938F88 | Rahmen, Divider |
+| Error | #B3261E | #F2B8B5 | Fehlermeldungen |
 
-Neu:
-- LightTextMuted = Color(0xFF6E6E86) — Kontrast auf #F8F8FC: 4.66:1 (PASS WCAG AA)
+**Tageszeit-Gradient fuer Header:**
+- Morgen (5-11h): `#F5E6C8` -> `#F2C4CE` (Butter Yellow -> Blush Pink)
+- Mittag (11-17h): `#E8F0F8` -> `#B8E0D4` (Light Blue -> Mint)
+- Abend (17-22h): `#C9B8E8` -> `#F2C4CE` (Lavendel -> Blush)
+- Nacht (22-5h): `#0D0D2B` -> `#2D1B2E` (Deep Indigo -> Aubergine)
 
-Datei: app/src/main/java/com/bestjournal/app/ui/theme/Color.kt Zeile 83
-Datei: app/src/main/java/com/bestjournal/app/ui/theme/Theme.kt Zeile 66 — outline = LightTextMuted,
-diese Zuweisung bleibt gleich, profitiert automatisch.
+### Option B: "Ocean Calm"
 
-Warum: WCAG 2.1 AA verlangt 4.5:1 fuer normalen Text und 3.0:1 fuer grosse Texte.
-#9090A8 versagt sogar bei grossen Texten (2.94:1). Zeitstempel und Hilfstexte muessen
-lesbar sein, auch bei Sonnenlicht und fuer Nutzer mit eingeschraenktem Sehvermoegen.
-```
+| Rolle | Light | Dark |
+|-------|-------|------|
+| Background | #F0F4F8 | #0A1628 |
+| Surface | #FFFFFF | #1A2A3E |
+| Primary | #2279A9 (Teal) | #5CB8D8 |
+| Secondary | #0D924D (Forest Green) | #4DC88D |
+| Accent | #F5C542 (Gold) | #FFD966 |
 
----
+### Option C: "Purple Dream"
 
-#### 3.3 Weisser Text auf farbigen Buttons versagt bei WCAG AA
-- **Was:** Weisser Text (#FFFFFF) auf WarmCopper (#D36B00) hat 3.58:1 und auf Teal (#0097A7) hat 3.51:1 — beide unter 4.5:1.
-- **Warum:** Buttons mit "Darüber schreiben", "Speichern", "7 Tage kostenlos testen" verwenden weissen Text auf diesen Hintergruenden. Bei 14-16sp Schriftgroesse ist das zu wenig Kontrast.
-- **Wo:** Alle Button-Composables die `containerColor = WarmCopper` oder `containerColor = primary` verwenden, z.B. OnboardingScreen.kt Zeile 198, PaywallScreen.kt, JournalScreen.kt.
-- **Loesung:** 
-  - Dark Mode Buttons: WarmCopper (#D36B00) durch dunkleres **#B35A00** ersetzen → 4.65:1 mit Weiss
-  - Light Mode Buttons: Wird durch Fix 3.1 (#00796B) automatisch behoben → 5.71:1 mit Weiss
-- **Aufwand:** Gering (1 Datei fuer Dark-Mode-Fix)
-- **Auswirkung:** Mittel — alle primaeren Aktions-Buttons werden besser lesbar
-
-**Prompt zum Einfuegen in Claude Code:**
-```
-Verbessere den Button-Kontrast im Dark Mode von BestJournalAndroid.
-
-Problem: Weiss (#FFFFFF) auf WarmCopper (#D36B00) hat nur 3.58:1 Kontrast.
-Buttons wie "Darüber schreiben", "Speichern", "7 Tage kostenlos testen" sind
-bei normalem Text-Size (14-16sp) schwer lesbar.
-
-Loesung: WarmCopper leicht abdunkeln fuer hoehere Lesbarkeit.
-
-Datei: app/src/main/java/com/bestjournal/app/ui/theme/Color.kt
-Zeile 17: val WarmCopper = Color(0xFFD36B00) → val WarmCopper = Color(0xFFC25E00)
-
-Neuer Kontrast: Weiss auf #C25E00 = 4.56:1 → PASS WCAG AA.
-Der Farbunterschied ist minimal (etwas waermer/dunkler), aber der Kontrast
-ist signifikant besser.
-
-Konsistenz: WarmCopper wird auch in Theme.kt als Dark-Mode-Primary verwendet.
-Die Aenderung wirkt sich automatisch auf alle Dark-Mode-Buttons aus.
-Auch die Dark-Mode NavigationBar-Akzentfarbe profitiert davon.
-```
+| Rolle | Light | Dark |
+|-------|-------|------|
+| Background | #FAF8FF | #0D0D2B |
+| Surface | #FFFFFF | #1E1B3A |
+| Primary | #6750A4 (MD3 Purple) | #D0BCFF |
+| Secondary | #625B71 | #CCC2DC |
+| Accent | #7D5260 (Pink) | #FFB4AB |
 
 ---
 
-#### 3.4 Tags verwenden hardcoded Dark-Mode-Farben im Light Mode
-- **Was:** In TimelineItem.kt (Zeile 173) werden Entry-Tags mit `color = CosmosLayer` (#282828) als Hintergrund dargestellt — das ist eine dunkle Farbe die im Light Mode wie ein Fremdkoerper wirkt.
-- **Warum:** CosmosLayer ist eine Dark-Mode-Farbe. Im Light Mode erscheinen die Tags als dunkle Bloecke auf hellen Karten — visuell inkonsistent.
-- **Wo:** `app/src/main/java/com/bestjournal/app/ui/components/TimelineItem.kt` Zeile 173
-- **Loesung:** Theme-aware Farbe verwenden statt hardcoded.
-- **Aufwand:** Gering (1 Datei, 1 Zeile)
-- **Auswirkung:** Mittel — Tags sehen im Light Mode natuerlich aus
+## 4. Typografie
 
-**Prompt zum Einfuegen in Claude Code:**
-```
-Behebe die hardcoded Tag-Farbe in TimelineItem.kt der BestJournalAndroid App.
+### Empfohlene Font-Kombination
 
-Aktuell (Zeile 173):
-Surface(
-    shape = RoundedCornerShape(4.dp),
-    color = CosmosLayer
-)
+| Rolle | Font | Gewicht | Groesse | Zeilenhoehe | Verwendung |
+|-------|------|---------|---------|-------------|------------|
+| Hero / Zitate | **Playfair Display** | Bold (700) | 22-28sp | 32-36sp | Tageszitat, Begruessung bei leerem Zustand |
+| Screen-Titel | **Playfair Display** | SemiBold (600) | 20sp | 28sp | "Deine letzten Eintraege" |
+| Begruessung | **Inter** | Medium (500) | 18sp | 26sp | "Guten Abend, Frank" |
+| Card-Titel | **Inter** | SemiBold (600) | 16sp | 22sp | Eintragstitel auf Cards |
+| Body Text | **Inter** | Regular (400) | 14sp | 20sp | Eintragvorschau, Beschreibungen |
+| Label / Meta | **Inter** | Medium (500) | 12sp | 16sp | Datum, Stimmung, Tags |
+| Statistik-Zahl | **Inter** | Bold (700) | 24sp | 32sp | "7" bei Streak, "4/7" bei Wochenfortschritt |
 
-Das Problem: CosmosLayer ist #282828 (dunkel) — sieht im Dark Mode gut aus,
-aber im Light Mode erscheinen die Tags als schwarze Bloecke auf weissen Karten.
+**Warum Playfair Display + Inter:**
+- Playfair Display gibt Waerme und Persoenlichkeit (Tagebuch-Feeling, handgeschrieben-nah)
+- Inter ist die lesbarste Sans-Serif fuer Mobile (Google empfohlen)
+- Der Kontrast Serif (emotional) + Sans-Serif (klar) ist der dominierende Trend bei Journal-Apps 2024-2026
 
-Neu:
-Surface(
-    shape = RoundedCornerShape(4.dp),
-    color = MaterialTheme.colorScheme.surfaceVariant
-)
-
-surfaceVariant ist im Dark Mode #181818 (dunkel, passend) und im Light Mode
-#F0F0F5 (hell, passend). Die Tags passen sich automatisch dem Theme an.
-
-Datei: app/src/main/java/com/bestjournal/app/ui/components/TimelineItem.kt Zeile 173
-Auch den Text-Color auf Zeile 178 von TextSecondary auf
-MaterialTheme.colorScheme.onSurfaceVariant aendern fuer Konsistenz.
-```
+### Alternative: Merriweather + Nunito
+- Waermer, klassischer, weniger modern
+- Gut fuer aeltere Zielgruppe
 
 ---
 
-### 🟡 Hoch
+## 5. Animationen & Special Effects
 
-#### 3.5 Unvollstaendige Typografie-Skala (7 von 15 Stilen definiert)
-- **Was:** Die AppTypography definiert nur displayLarge, headlineMedium, titleLarge, titleMedium, bodyLarge, bodyMedium und labelMedium. Es fehlen 8 Stile: displayMedium, displaySmall, headlineLarge, headlineSmall, titleSmall, bodySmall, labelLarge, labelSmall.
-- **Warum:** Material Design 3 nutzt alle 15 Stile fuer eine vollstaendige visuelle Hierarchie. Fehlende Stile bekommen Default-Werte (Roboto, keine Exo 2/Source Sans 3), was zu inkonsistenter Typografie fuehrt wenn sie irgendwo benoetigt werden.
-- **Wo:** `app/src/main/java/com/bestjournal/app/ui/theme/Typography.kt`
-- **Loesung:** Alle 15 MD3-Stile mit den App-Schriftarten definieren.
-- **Aufwand:** Gering (1 Datei)
-- **Auswirkung:** Mittel — visuelle Konsistenz in der gesamten App
+### 5.1 Beim App-Start (Splash -> Home)
 
-**Prompt zum Einfuegen in Claude Code:**
-```
-Vervollstaendige die Typografie-Skala in BestJournalAndroid.
+**Stagger-Animation der Home-Elemente:**
+Jedes Element blendet nacheinander ein (80ms Versatz pro Element):
 
-Datei: app/src/main/java/com/bestjournal/app/ui/theme/Typography.kt
-
-Aktuell sind nur 7 von 15 MD3-Stilen definiert. Ergaenze die fehlenden 8 Stile
-in der AppTypography so dass sie die App-Schriftarten (Exo2, SourceSansPro,
-JetBrainsMono) verwenden statt auf Roboto zurueckzufallen:
-
-Ergaenze nach dem bestehenden displayLarge:
-    displayMedium = TextStyle(
-        fontFamily = Exo2,
-        fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        letterSpacing = 0.sp
-    ),
-    displaySmall = TextStyle(
-        fontFamily = Exo2,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 24.sp,
-        letterSpacing = 0.sp
-    ),
-
-Ergaenze nach headlineMedium:
-    headlineLarge = TextStyle(
-        fontFamily = Exo2,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 28.sp,
-        letterSpacing = 0.sp
-    ),
-    headlineSmall = TextStyle(
-        fontFamily = Exo2,
-        fontWeight = FontWeight.Medium,
-        fontSize = 20.sp,
-        letterSpacing = 0.sp
-    ),
-
-Ergaenze nach titleMedium:
-    titleSmall = TextStyle(
-        fontFamily = Exo2,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        letterSpacing = 0.1.sp
-    ),
-
-Ergaenze nach bodyMedium:
-    bodySmall = TextStyle(
-        fontFamily = SourceSansPro,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.4.sp
-    ),
-
-Ergaenze nach labelMedium:
-    labelLarge = TextStyle(
-        fontFamily = SourceSansPro,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.1.sp
-    ),
-    labelSmall = TextStyle(
-        fontFamily = JetBrainsMono,
-        fontWeight = FontWeight.Normal,
-        fontSize = 11.sp,
-        letterSpacing = 0.5.sp
-    ),
-
-Warum: Ohne Definition fallen fehlende Stile auf Roboto zurueck.
-Material 3 Compose-Komponenten (Chips, Labels, Captions) nutzen labelSmall,
-bodySmall und titleSmall intern — diese muessen die App-Fonts verwenden.
-```
-
----
-
-#### 3.6 Kein Dynamic Color / Material You Support
-- **Was:** Die App verwendet ausschliesslich hardcoded Farben. Ab Android 12 (API 31) koennen Apps sich automatisch an die Wallpaper-Farben des Nutzers anpassen.
-- **Warum:** Material You ist laut Google-Empfehlungen "Pflicht" fuer neue Apps. Fuer eine Journal-App ist das besonders wertvoll — die App fuehlt sich "persoenlich" an und passt zum Homescreen des Nutzers. 70%+ der Android 12+ Geraete unterstuetzen Dynamic Color.
-- **Wo:** `app/src/main/java/com/bestjournal/app/ui/theme/Theme.kt`
-- **Loesung:** `dynamicDarkColorScheme()` und `dynamicLightColorScheme()` als primaere Farbquelle verwenden (ab API 31), mit Fallback auf die aktuellen hardcoded Farben fuer aeltere Geraete.
-- **Aufwand:** Mittel (1 Datei Theme.kt + Testen auf verschiedenen Wallpapers)
-- **Auswirkung:** Gross — App wird deutlich persoenlicher und "moderner"
-
-**Prompt zum Einfuegen in Claude Code:**
-```
-Fuege Dynamic Color / Material You Support zu BestJournalAndroid hinzu.
-
-Datei: app/src/main/java/com/bestjournal/app/ui/theme/Theme.kt
-
-Aktuell verwendet BestJournalTheme immer WarmDarkScheme oder LightColorScheme.
-Ergaenze Dynamic Color als primaere Farbquelle ab API 31, mit Fallback auf
-die bestehenden hardcoded Farben.
-
-Import hinzufuegen:
-import android.os.Build
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.ui.platform.LocalContext
-
-BestJournalTheme-Funktion aendern:
-@Composable
-fun BestJournalTheme(
-    darkTheme: Boolean = true,
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
-) {
-    val context = LocalContext.current
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            if (darkTheme) dynamicDarkColorScheme(context)
-            else dynamicLightColorScheme(context)
-        }
-        darkTheme -> WarmDarkScheme
-        else -> LightColorScheme
-    }
-
-    CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = AppTypography,
-            shapes = AppShapes,
-            content = content
+```kotlin
+// Konzept:
+LaunchedEffect(index) {
+    delay(index * 80L)
+    visible = true
+}
+AnimatedVisibility(
+    visible = visible,
+    enter = fadeIn(tween(300)) + slideInVertically(
+        initialOffsetY = { it / 3 },
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
         )
+    )
+)
+```
+
+Reihenfolge: Begruessung (0ms) -> Mood-Chips (80ms) -> Hero-Card (160ms) -> Statistik (240ms) -> Timeline-Cards (320ms+)
+
+### 5.2 Animierter Gradient-Hintergrund (Tageszeit)
+
+Der Header-Hintergrund wechselt sanft die Farben basierend auf Tageszeit:
+
+```kotlin
+// Konzept:
+val infiniteTransition = rememberInfiniteTransition()
+val color1 by infiniteTransition.animateColor(
+    initialValue = morningColor1,
+    targetValue = morningColor2,
+    animationSpec = infiniteRepeatable(
+        tween(4000, easing = FastOutSlowInEasing),
+        RepeatMode.Reverse
+    )
+)
+Box(Modifier.background(Brush.verticalGradient(listOf(color1, color2))))
+```
+
+**Tageszeit-Erkennung:**
+```kotlin
+val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+val (color1, color2) = when (hour) {
+    in 5..10  -> Color(0xFFF5E6C8) to Color(0xFFF2C4CE)  // Morgen
+    in 11..16 -> Color(0xFFE8F0F8) to Color(0xFFB8E0D4)  // Mittag
+    in 17..21 -> Color(0xFFC9B8E8) to Color(0xFFF2C4CE)  // Abend
+    else      -> Color(0xFF0D0D2B) to Color(0xFF2D1B2E)   // Nacht
+}
+```
+
+### 5.3 Glassmorphism-Cards (Hero-Card + Eintragskarten)
+
+**Library:** `haze` von Chris Banes (beste Loesung, rueckwaertskompatibel bis API 21)
+
+```kotlin
+// Konzept:
+val hazeState = rememberHazeState()
+Box {
+    // Hintergrund (Gradient)
+    GradientBackground(Modifier.hazeSource(hazeState))
+
+    // Glassmorphism-Card
+    Card(
+        modifier = Modifier
+            .hazeEffect(hazeState, HazeMaterials.ultraThin())
+            .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(alpha = 0.15f)
+        )
+    ) {
+        // Card-Inhalt
     }
 }
-
-Warum: Material You ist seit Android 12 der erwartete Standard. Eine Journal-App
-profitiert besonders davon, weil sie sich dadurch persoenlich anfuehlt.
-Der Fallback auf die bestehenden Farben garantiert dass aeltere Geraete
-weiterhin das bekannte Farbschema sehen.
-
-ACHTUNG: Nach dieser Aenderung muessen hardcoded Farbreferenzen (z.B. WarmCopper
-direkt in Composables) geprueft werden — sie werden NICHT durch Dynamic Color
-ersetzt. Nur Farben die ueber MaterialTheme.colorScheme.* abgerufen werden,
-aendern sich dynamisch.
 ```
 
----
+### 5.4 Mood-Chip-Auswahl-Animation
 
-#### 3.7 Zu viele Farbdefinitionen (~40 Farben in Color.kt)
-- **Was:** Color.kt definiert ~40 verschiedene Farben: 4 Dashboard-Paletten (Summary, Insight, Goals, Custom je 4 Farben = 16), Legacy-Neon (6 Farben), Semantic (4), Glass (3), Light-Mode (7), Dark-Mode Surfaces (3), Gradient-Paare (3).
-- **Warum:** Zu viele Farben schaffen ein visuelles "Chaos" — der Benutzer sieht in verschiedenen Bereichen der App komplett unterschiedliche Farbwelten. Fuer Wartbarkeit und Konsistenz sollten max 15-20 Farben genuegen.
-- **Wo:** `app/src/main/java/com/bestjournal/app/ui/theme/Color.kt`
-- **Loesung:** Die Dashboard-Paletten auf eine einzelne Palette mit 4 Abstufungen der Primaerfarbe reduzieren. Legacy-Neon-Farben durch semantische Farben ersetzen. Glass-Farben in die GlassmorphismModifiers.kt verschieben (private).
-- **Aufwand:** Hoch (Color.kt + alle Dashboard-Composables die Paletten nutzen)
-- **Auswirkung:** Mittel — konsistenteres visuelles Erscheinungsbild
+Beim Tippen auf einen Mood-Chip:
+1. **Scale-Bounce:** Chip skaliert kurz auf 1.15x und federt zurueck
+2. **Farb-Uebergang:** Hintergrund faerbt sich in Stimmungsfarbe
+3. **Haptic Feedback:** `HapticFeedbackType.LongPress`
+4. **Confetti** (bei positiver Stimmung): ConfettiKit-Explosion
 
-**Prompt zum Einfuegen in Claude Code:**
-```
-Reduziere die Farbdefinitionen in BestJournalAndroid Color.kt.
-
-Datei: app/src/main/java/com/bestjournal/app/ui/theme/Color.kt
-
-Das Problem: ~40 Farbdefinitionen erzeugen visuelles Chaos. Jede Dashboard-
-Kategorie hat eine eigene 4-Farben-Palette (Summary blau, Insight violett,
-Goals gruen, Custom amber). Das sind 16 Extra-Farben die nur im Dashboard
-genutzt werden.
-
-Vorschlag — in 2 Schritten:
-
-Schritt 1 (sofort): Legacy-Neon-Farben durch Kommentar als deprecated markieren:
-// @Deprecated: Use semantic colors (NeonEmerald, NeonAmber, NeonRed) instead
-val NeonViolet = Color(0xFF7C4DFF)
-val NeonMagenta = Color(0xFFFF00E5)
-
-Schritt 2 (spaeter, groeßeres Refactoring): Dashboard-Paletten vereinheitlichen.
-Statt 4 separate Paletten eine dynamische Ableitung aus Primary/Secondary/Tertiary.
-Das ist ein groesseres Refactoring das den DashboardScreen und AdviceCategoryCard
-betrifft — am besten als eigene Aufgabe planen.
-
-Warum: Material Design 3 empfiehlt max 5-6 semantische Farbgruppen
-(Primary, Secondary, Tertiary, Error, Neutral, NeutralVariant). 40 Farben
-widersprechen diesem Prinzip und machen die Wartung schwierig.
-```
-
----
-
-#### 3.8 BottomNavBar Indikator-Alpha zu niedrig (kaum sichtbar)
-- **Was:** Der aktive Tab-Indikator hat `indicatorColor = primary.copy(alpha = 0.1f)` — das ist so transparent, dass man den aktiven Tab fast nur an der Textfarbe erkennt.
-- **Warum:** Material Design 3 empfiehlt einen deutlich sichtbaren SecondaryContainer-farbenen Indikator (ca. 0.12 Opacity der Primary-Farbe ist das Minimum, aber bei NavigationBar ist der Standard ein solider Indikator).
-- **Wo:** `app/src/main/java/com/bestjournal/app/ui/navigation/BottomNavBar.kt` Zeile 95
-- **Loesung:** Den Standard-MD3-Indikator verwenden (MaterialTheme.colorScheme.secondaryContainer).
-- **Aufwand:** Gering (1 Zeile)
-- **Auswirkung:** Mittel — aktiver Tab wird deutlich erkennbar
-
-**Prompt zum Einfuegen in Claude Code:**
-```
-Verbessere den BottomNavBar-Indikator in BestJournalAndroid.
-
-Datei: app/src/main/java/com/bestjournal/app/ui/navigation/BottomNavBar.kt
-
-Aktuell (Zeile 94-96):
-colors = NavigationBarItemDefaults.colors(
-    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+```kotlin
+// Konzept:
+val scale by animateFloatAsState(
+    targetValue = if (selected) 1.0f else if (pressed) 0.92f else 1.0f,
+    animationSpec = spring(
+        dampingRatio = Spring.DampingRatioMediumBouncy,
+        stiffness = Spring.StiffnessMedium
+    )
 )
-
-Der 0.1f Alpha-Wert macht den Indikator nahezu unsichtbar.
-Material Design 3 NavigationBar verwendet standardmaessig secondaryContainer
-als Indikatorfarbe — das ist sichtbar aber nicht aufdringlich.
-
-Neu:
-colors = NavigationBarItemDefaults.colors(
-    indicatorColor = MaterialTheme.colorScheme.secondaryContainer
-)
-
-Alternativ, wenn die Farbe zu kraeftig ist:
-indicatorColor = MaterialTheme.colorScheme.primaryContainer
-
-Warum: Der aktive Tab muss auf einen Blick erkennbar sein. Ein fast unsichtbarer
-Indikator zwingt den Nutzer, die Textfarbe zu vergleichen um den aktiven Tab
-zu erkennen. Das widerspricht den MD3-Accessibility-Richtlinien.
 ```
 
----
+**Stimmungsfarben:**
 
-### 🟢 Mittel
+| Stimmung | Farbe | Icon |
+|----------|-------|------|
+| Super | #4CAF50 (Gruen) | Strahlendes Gesicht |
+| Gut | #8BC34A (Hellgruen) | Laechelndes Gesicht |
+| Okay | #FFC107 (Amber) | Neutrales Gesicht |
+| Meh | #FF9800 (Orange) | Leicht trauriges Gesicht |
+| Schlecht | #F44336 (Rot) | Trauriges Gesicht |
 
-#### 3.9 Splash Screen verwendet Legacy-Neon-Farben (NeonViolet/NeonMagenta)
-- **Was:** SplashScreen.kt importiert NeonCyan, NeonMagenta und NeonViolet — Farben die weder zum Teal-Light noch zum Copper-Dark Theme passen.
-- **Warum:** Der Splash ist der erste Eindruck. Neon-Violett und Neon-Magenta passen nicht zur warmen, einladenden Identitaet einer Journal-App.
-- **Wo:** `app/src/main/java/com/bestjournal/app/ui/screens/splash/SplashScreen.kt` Zeilen 55-57
-- **Loesung:** Neon-Farben durch theme-passende Farben ersetzen: WarmCopper + WarmGold fuer Dark, Teal-Toene fuer Light.
-- **Aufwand:** Mittel (SplashScreen.kt Partikelfarben aendern)
-- **Auswirkung:** Mittel — kohaerenter erster Eindruck
+### 5.5 Parallax-Scrolling (Header)
 
-**Prompt zum Einfuegen in Claude Code:**
-```
-Ersetze die Legacy-Neon-Farben im SplashScreen von BestJournalAndroid.
+Der Header-Gradient scrollt langsamer als der Content:
 
-Datei: app/src/main/java/com/bestjournal/app/ui/screens/splash/SplashScreen.kt
+```kotlin
+// Konzept:
+val scrollState = rememberScrollState()
+Box {
+    // Header scrollt mit halber Geschwindigkeit
+    HeaderGradient(
+        Modifier.graphicsLayer {
+            translationY = scrollState.value * 0.3f
+        }
+    )
 
-Aktuell importiert der Splash: NeonCyan (#4ECDC4), NeonMagenta (#FF00E5),
-NeonViolet (#7C4DFF). Diese Neon-Farben passen nicht zur warmen Journal-
-Identitaet der App.
-
-Ersetze die Imports und Verwendungen:
-- NeonViolet → WarmGold (#8B6914) — warmer Goldton
-- NeonMagenta → WarmCopper (#D36B00) — Kupfer-Akzent
-- NeonCyan bleibt (wird auch in anderen Teilen der App verwendet und passt)
-
-Die Aenderung betrifft die SplashParticle-Farben und die Canvas-Zeichnungen.
-Suche nach allen Verwendungen von NeonViolet und NeonMagenta in der Datei
-und ersetze sie durch die warmen Farben.
-
-Warum: Der Splash Screen ist der erste Eindruck der App. Neon-Violett und
-Neon-Magenta vermitteln "Gaming/Cyberpunk", nicht "persoenliches Tagebuch".
-Die warmen Kupfer-/Gold-Toene passen zur Journal-Identitaet.
+    // Content scrollt normal
+    Column(Modifier.verticalScroll(scrollState)) {
+        Spacer(Modifier.height(headerHeight))
+        // Timeline-Cards...
+    }
+}
 ```
 
----
+### 5.6 Kollabierende TopAppBar
 
-#### 3.10 Fehlende Eingangsanimationen fuer Hauptscreens
-- **Was:** Die vier Haupttabs (Rueckblick, Dashboard, Tagebuch, Einstellungen) laden ohne Animation. Nur Onboarding und Splash haben ausfuehrliche Animationen.
-- **Warum:** Material Design 3 Expressive setzt auf physics-basierte Motion. Ein sanftes Einblenden der Inhalte (staggered fade-in) macht die App deutlich polierter.
-- **Wo:** JournalScreen.kt, DashboardScreen.kt, SettingsScreen.kt, RetrospectiveScreen.kt
-- **Loesung:** LazyColumn-Items mit `animateItem()` und initiale Elemente mit `AnimatedVisibility(fadeIn + slideInVertically)` versehen.
-- **Aufwand:** Mittel (4 Dateien, jeweils wenige Zeilen pro Item)
-- **Auswirkung:** Mittel — App fuehlt sich "lebendig" und polierter an
+Beim Scrollen schrumpft der Header elegant:
 
-**Prompt zum Einfuegen in Claude Code:**
-```
-Fuege sanfte Eingangsanimationen zu den Journal-Eintraegen in BestJournalAndroid hinzu.
+- Oben: Grosser Header mit Begruessung + Gradient + Mood-Chips (200dp)
+- Nach Scrollen: Kompakter Header mit nur Name + Datum (56dp)
+- Material3 nativ: `TopAppBarDefaults.enterAlwaysScrollBehavior()`
 
-Die Idee: Wenn der Tagebuch-Tab geoeffnet wird, sollen die Eintraege nacheinander
-sanft eingeblendet werden (staggered fade-in), statt alle gleichzeitig statisch
-zu erscheinen. Das macht die App deutlich polierter.
+### 5.7 Eintragskarte -> Detailansicht (Shared Element Transition)
 
-Ansatz fuer JournalScreen.kt: Die LazyColumn items mit Modifier.animateItem()
-versehen (verfuegbar ab Compose Foundation 1.7+).
-
-Fuer den Schreibimpuls-Banner am Anfang: AnimatedVisibility mit
-fadeIn() + slideInVertically(initialOffsetY = { -it / 4 }) verwenden,
-getriggert durch einen LaunchedEffect beim ersten Rendern.
-
-Das gleiche Muster kann danach auf DashboardScreen.kt (die nummerierten
-Insights), SettingsScreen.kt (die Sektionen) und RetrospectiveScreen.kt
-(die aufklappbaren Bereiche) angewendet werden.
-
-Warum: Material Design 3 Expressive empfiehlt physics-basierte Motion.
-Ein staggered fade-in ist der einfachste Einstieg und hat den groessten
-visuellen Effekt fuer den geringsten Aufwand.
-```
-
----
-
-#### 3.11 Fehlende haptic feedback bei Interaktionen
-- **Was:** Die App nutzt kein haptisches Feedback bei Button-Presses, Swipe-Gesten, Aufnahme-Start/Stop oder Tab-Wechseln.
-- **Warum:** Haptisches Feedback verstaerkt visuelle Interaktionen und macht die App "physischer". M3 Expressive empfiehlt "haptic rumbles" bei Dismissal-Gesten und Key-Actions.
-- **Wo:** Alle interaktiven Composables
-- **Loesung:** `LocalHapticFeedback.current.performHapticFeedback()` an Schluesselstellen einfuegen.
-- **Aufwand:** Gering (wenige Zeilen pro Screen)
-- **Auswirkung:** Klein-Mittel — subtil aber spuerbar polierter
-
-**Prompt zum Einfuegen in Claude Code:**
-```
-Fuege haptisches Feedback zu den wichtigsten Interaktionen in BestJournalAndroid hinzu.
-
-Verwende LocalHapticFeedback an diesen Stellen:
-
-1. JournalScreen.kt — beim Start/Stop der Sprachaufnahme:
-   val haptic = LocalHapticFeedback.current
-   // Beim Toggle: haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-
-2. BottomNavBar.kt — beim Tab-Wechsel:
-   val haptic = LocalHapticFeedback.current
-   onClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onItemClick(item) }
-
-3. EntryDetailScreen.kt — beim Speichern/Loeschen:
-   haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-
-Import: import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-        import androidx.compose.ui.platform.LocalHapticFeedback
-
-Warum: M3 Expressive empfiehlt haptisches Feedback als Teil der UX.
-Es verstaerkt visuelles Feedback und macht Interaktionen physischer und
-befriedigender — besonders wichtig bei einer App die taeglich genutzt wird.
-```
-
----
-
-#### 3.12 Collapsing TopAppBar fehlt
-- **Was:** Alle Screens verwenden einfache statische Titel. Es gibt keine LargeTopAppBar die beim Scrollen zusammenklappt.
-- **Warum:** Collapsing Headers sind ein etabliertes MD3-Pattern. Ein grosser "Tagebuch"-Titel der beim Scrollen zum kompakten Header wird, nutzt den Bildschirm besser und wirkt professioneller.
-- **Wo:** JournalScreen.kt, DashboardScreen.kt, SettingsScreen.kt, RetrospectiveScreen.kt
-- **Loesung:** Den fixen Titel-Bereich durch eine MediumTopAppBar (oder LargeTopAppBar) ersetzen.
-- **Aufwand:** Hoch (4 Screens, Scaffold-Umstrukturierung noetig)
-- **Auswirkung:** Mittel — modernerer, polierter Look
-
-**Prompt zum Einfuegen in Claude Code:**
-```
-Ersetze den statischen Titel im JournalScreen durch eine MediumTopAppBar.
-
-Datei: app/src/main/java/com/bestjournal/app/ui/screens/journal/JournalScreen.kt
-
-Aktuell: Ein statisches Column mit Text("Tagebuch") als fixer Header.
-
-Neu: Scaffold mit MediumTopAppBar verwenden. Der Titel "Tagebuch" erscheint
-gross wenn ganz oben gescrollt, und schrumpft beim Runterscrollen zu einem
-kompakten Header. Der SunMoonToggle und die Suche-/Cloud-Icons bleiben
-als actions in der AppBar.
-
-Grundstruktur:
-val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-Scaffold(
-    topBar = {
-        MediumTopAppBar(
-            title = { Text("Tagebuch") },
-            actions = { SunMoonToggle(); /* Cloud + Search Icons */ },
-            scrollBehavior = scrollBehavior,
-            colors = TopAppBarDefaults.mediumTopAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background,
-                scrolledContainerColor = MaterialTheme.colorScheme.surface,
+```kotlin
+// Compose 1.7+ nativ:
+SharedTransitionLayout {
+    AnimatedContent(targetState = showDetail) { isDetail ->
+        if (!isDetail) {
+            EntryCard(
+                modifier = Modifier.sharedElement(
+                    rememberSharedContentState(key = "entry_${entry.id}"),
+                    animatedVisibilityScope = this
+                )
             )
-        )
-    },
-    modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
-) { ... LazyColumn ... }
-
-Import: import androidx.compose.material3.MediumTopAppBar
-        import androidx.compose.material3.TopAppBarDefaults
-
-ACHTUNG: Da JournalScreen innerhalb eines HorizontalPagers in AppNavGraph.kt
-liegt, muss das Scaffold ohne eigene BottomBar sein (die kommt vom aeusseren Scaffold).
-
-Warum: Material Design 3 empfiehlt Collapsing Headers fuer Content-Listen.
-Der grosse Titel gibt dem Screen eine Identitaet, der kompakte Header maximiert
-den Platz fuer Inhalte beim Scrollen.
+        } else {
+            EntryDetail(
+                modifier = Modifier.sharedElement(
+                    rememberSharedContentState(key = "entry_${entry.id}"),
+                    animatedVisibilityScope = this
+                )
+            )
+        }
+    }
+}
 ```
 
----
+### 5.8 Streak-Meilenstein-Feier
 
-### ⚪ Niedrig
+Bei 7, 14, 30, 60, 100 Tagen Streak:
 
-#### 3.13 Lottie-Animationen fuer Micro-Interactions
-- **Was:** Die App nutzt keine Lottie-Animationen. Erfolgsanimationen nach dem Speichern eines Eintrags, animierte Stimmungsindikatoren und Onboarding-Illustrationen wuerden die App aufwerten.
-- **Wo:** Nach dem Speichern eines Eintrags, beim Erreichen eines Streaks, im Onboarding
-- **Aufwand:** Mittel (Lottie-Dependency + Animationsdateien + Integration)
-- **Auswirkung:** Klein — subtile Freude beim taeglichen Nutzen
+1. **Confetti-Explosion:** ConfettiKit mit goldenen + bunten Partikeln
+2. **Lottie-Animation:** Pokal oder Sterne die aufsteigen
+3. **Haptic Heavy:** Starkes haptisches Feedback
+4. **Badge-Einblendung:** Neues Achievement erscheint mit Scale-Bounce
 
-#### 3.14 Predictive Back Gesture vorbereiten
-- **Was:** Ab Android 16 ist die Predictive Back Gesture Pflicht. Die App sollte `enableOnBackInvokedCallback` im Manifest setzen und die Navigation testen.
-- **Wo:** AndroidManifest.xml + Navigation testen
-- **Aufwand:** Gering
-- **Auswirkung:** Klein (Zukunftssicherheit)
+### 5.9 Shimmer/Skeleton Loading
 
-#### 3.15 Variable Font fuer Exo 2
-- **Was:** Exo 2 wird in 4 separaten Gewichten geladen (Bold, SemiBold, Medium, Normal). Als Variable Font waere es eine Datei mit fliessenden Gewichten.
-- **Wo:** Typography.kt
-- **Aufwand:** Gering
-- **Auswirkung:** Klein (geringfuegig bessere Performance + Animations-Moeglichkeiten)
+Waehrend die Eintraege aus der Datenbank laden:
 
-#### 3.16 Mesh-Gradient fuer Rueckblick-Header
-- **Was:** Der Rueckblick-Header verwendet einen linearen Gradient (Orange → CardSurface im Dark Mode). Ein Mesh-Gradient mit mehreren Farbpunkten wuerde organischer wirken.
-- **Wo:** RetrospectiveScreen.kt → RetrospectiveColors.headerGradient
-- **Aufwand:** Mittel (Custom Shader oder Brush)
-- **Auswirkung:** Klein — aesthetisch schoener, aber nicht funktional relevant
+```kotlin
+// Library: compose-shimmer
+Box(Modifier.shimmer()) {
+    Column {
+        Box(Modifier.fillMaxWidth(0.6f).height(20.dp)
+            .background(Color.LightGray, RoundedCornerShape(4.dp)))
+        Spacer(Modifier.height(8.dp))
+        Box(Modifier.fillMaxWidth().height(14.dp)
+            .background(Color.LightGray, RoundedCornerShape(4.dp)))
+        Spacer(Modifier.height(6.dp))
+        Box(Modifier.fillMaxWidth(0.8f).height(14.dp)
+            .background(Color.LightGray, RoundedCornerShape(4.dp)))
+    }
+}
+```
 
----
+### 5.10 Pull-to-Refresh (thematisch)
 
-## 4. Empfohlene Farbpalette
-
-### Nach den Fixes (3.1, 3.2, 3.3) angepasste Werte:
-
-| Rolle | Light (neu) | Dark (aktuell) | Kontrast auf Surface |
-|-------|-------------|----------------|---------------------|
-| **Primary** | **#00796B** (war #0097A7) | #C25E00 (war #D36B00) | 5.71:1 / 4.56:1 |
-| On Primary | #FFFFFF | #FFFFFF | — |
-| Primary Container | #A7D8D0 (war #B2EBF2) | #3D2800 | — |
-| On Primary Container | #00363D | #FFDDb3 | 14.2:1 / 14.8:1 |
-| **Secondary** | #5E35B1 | #E0DCD4 (WarmSand) | 8.04:1 / 13.1:1 |
-| On Secondary | #FFFFFF | #121212 | — |
-| **Tertiary** | #C2185B | #8B6914 (WarmGold) | 5.77:1 / 5.24:1 |
-| Error | #D32F2F | #FF5252 | 5.23:1 / 5.87:1 |
-| **Background** | #F8F8FC | #121212 | — |
-| **Surface** | #FFFFFF | #121212 | — |
-| Surface Variant | #F0F0F5 | #181818 | — |
-| **On Surface** | #1A1A2E | #E6E1E5 | 17.06:1 / 14.51:1 |
-| **On Surface Variant** | #5A5A70 | #CAC4D0 | 6.33:1 / 10.99:1 |
-| **Outline** | **#6E6E86** (war #9090A8) | #938F99 | **4.66:1** / 5.91:1 |
-
-Alle Kontrast-Werte WCAG AA ✅
+Statt generischem Spinner eine thematische Animation:
+- Ein Buch das sich oeffnet (Lottie)
+- Oder eine Pflanze die waechst
+- Laedt: Neues Tageszitat + "Heute vor einem Jahr" Rueckblick
 
 ---
 
-## 5. Empfohlene Typografie-Skala
+## 6. Leerer Zustand (Empty State)
 
-| Rolle | Schriftart | Gewicht | Groesse (sp) | Zeilenhoehe (sp) | Letter-Spacing (sp) |
-|-------|-----------|---------|-------------|-----------------|---------------------|
-| Display Large | Exo 2 | Bold | 32 | 40 | -0.5 |
-| Display Medium | Exo 2 | Bold | 28 | 36 | 0 |
-| Display Small | Exo 2 | SemiBold | 24 | 32 | 0 |
-| Headline Large | Exo 2 | SemiBold | 28 | 36 | 0 |
-| Headline Medium | Exo 2 | SemiBold | 24 | 32 | 0 |
-| Headline Small | Exo 2 | Medium | 20 | 28 | 0 |
-| Title Large | Exo 2 | Medium | 20 | 28 | 0.15 |
-| Title Medium | Exo 2 | Medium | 16 | 24 | 0.15 |
-| Title Small | Exo 2 | Medium | 14 | 20 | 0.1 |
-| Body Large | Source Sans 3 | Normal | 16 | 24 | 0.25 |
-| Body Medium | Source Sans 3 | Normal | 14 | 20 | 0.25 |
-| Body Small | Source Sans 3 | Normal | 12 | 16 | 0.4 |
-| Label Large | Source Sans 3 | Medium | 14 | 20 | 0.1 |
-| Label Medium | JetBrains Mono | Normal | 12 | 16 | 0.5 |
-| Label Small | JetBrains Mono | Normal | 11 | 16 | 0.5 |
+Wenn noch keine Eintraege existieren — DER wichtigste Screen fuer neue Nutzer
+(bis zu 40% Abbruchrate ohne guten Empty State laut Toptal-Studie):
 
-Zusaetzlich:
-- **Caveat** (handschriftlich): Fuer Zitate, Schreibimpulse, persoenliche Notizen
-- Alle Groessen in **sp** (nicht dp) damit Nutzer-Skalierung funktioniert ✅
+```
++--------------------------------------------------+
+|                                                  |
+|  "Guten Morgen!"                                 |
+|  Sonntag, 13. April 2026                         |
+|                                                  |
++--------------------------------------------------+
+|                                                  |
+|        [Lottie: Stift schreibt in Buch]          |
+|        (sanfte Loop-Animation)                    |
+|                                                  |
+|  "Dein Tagebuch wartet auf dich"                 |
+|  (Playfair Display, 24sp, Bold)                  |
+|                                                  |
+|  Halte deine Gedanken, Erinnerungen              |
+|  und Gefuehle fest. Jeden Tag ein                 |
+|  kleines Stueck von dir.                          |
+|  (Inter, 14sp, Regular)                           |
+|                                                  |
+|  +--------------------------------------------+  |
+|  |   Ersten Eintrag schreiben                 |  |
+|  |   (Extended FAB, Terracotta, 48dp hoch)    |  |
+|  +--------------------------------------------+  |
+|                                                  |
+|  Oder starte mit einer Frage:                    |
+|                                                  |
+|  [Wofuer bin ich heute dankbar?]                 |
+|  [Was war das Highlight meines Tages?]           |
+|  [Was beschaeftigt mich gerade?]                 |
+|                                                  |
++--------------------------------------------------+
+```
+
+**Regeln:**
+- Positiv formulieren: "Dein Tagebuch wartet" statt "Noch keine Eintraege"
+- Illustration + Headline + Body + CTA (alle 4 Pflicht)
+- Starter-Prompts senken die Hemmschwelle enorm
+- Lottie-Animation macht den Screen lebendig statt leer
 
 ---
 
-## 6. Empfohlenes Abstands-System
+## 7. Gamification (sanft, ohne Strafmechanik)
 
-Das aktuelle System verwendet bereits konsistente 16dp horizontale Padding.
-Empfohlen wird ein formalisiertes 4dp-Raster:
+### Was die Forschung sagt
+
+Streak-Mechaniken erzeugen "Streak Anxiety" (Loss Aversion, Kahneman & Tversky).
+Fuer eine Wohlbefinden-App: **Sanfte Gamification** ohne Bestrafung.
+Eine PMC-Studie (PMC7467300) bestaetigt: Gamifizierte Mental-Health-Apps
+reduzieren Angst — WENN wohlwollend gestaltet.
+
+### Empfohlenes Modell
+
+| Element | Umsetzung | Warum |
+|---------|-----------|-------|
+| **Wochen-Fortschritt** | "Diese Woche: 4 von 7 Tagen" als Fortschrittsbalken | Zeigt Erfolg ohne Strafe fuer fehlende Tage |
+| **Meilenstein-Badges** | Bei 10, 25, 50, 100, 250, 500 Eintraegen | Kumulative Leistung, nichts geht verloren |
+| **Streak (optional)** | Flammen-Icon mit Tageszahl, ABER mit "Streak Freeze" | Earn-Back-Mechanismus wie Duolingo |
+| **Monatsrueckblick** | "Im Maerz hast du 18x geschrieben" | Positiver Rueckblick statt Druck |
+| **"Heute vor einem Jahr"** | Zufaelliger alter Eintrag | Staerkstes Retention-Feature |
+
+### Was NICHT
+
+- Keine taegliche Verpflichtung die bestraft wird
+- Kein Leaderboard oder Vergleich mit anderen
+- Kein "Du hast gestern nicht geschrieben!" Push
+
+---
+
+## 8. Dark Mode: "Warm Dark" statt "Cold Dark"
+
+### Grundprinzip
+
+Ein Journal-Dark-Mode soll sich anfuehlen wie ein gemaetlicher Lesesaal bei Kerzenlicht,
+NICHT wie ein Terminal. Warme Dunkeltoene statt reines Schwarz.
+
+### Konkrete Werte
+
+| Element | Light | Dark |
+|---------|-------|------|
+| Background | #FAFAF7 | #1A1208 (Warm Dark Brown) |
+| Surface (Cards) | #FFFFFF | #2D2418 (Dark Amber) |
+| Text (Primary) | #1C1B1F | #E8E0D0 (Off-White, NICHT #FFFFFF) |
+| Text (Secondary) | #49454F | #CAC4B8 |
+| Divider | #E0E0E0 | #3D3528 |
+
+**Warum Off-White (#E8E0D0) statt reines Weiss (#FFFFFF)?**
+Reines Weiss auf Schwarz erzeugt "Halation" (Lichthof-Effekt) und Augenbelastung.
+Off-White reduziert Augenbelastung um bis zu 40% (Material Design Guidelines).
+
+**Auto-Dimm nach 22 Uhr (Optional):**
+Unabhaengig von System-Setting kann die App abends automatisch in ein besonders
+warmes, blaulicht-armes Theme wechseln — ideal fuer Abend-Journaling.
+
+---
+
+## 9. Abstands-System (4dp Raster)
 
 | Token | Wert | Verwendung |
 |-------|------|------------|
-| xs | 4dp | Minimaler Abstand zwischen verwandten Elementen (z.B. Icon + Text) |
-| sm | 8dp | Standard-Abstand innerhalb von Komponenten (z.B. Card-Innenraum) |
-| md | 12dp | Abstand zwischen Komponenten in einer Gruppe (z.B. LazyColumn spacedBy) |
-| lg | 16dp | Standard-Seitenabstand (horizontale Padding) — **bereits konsistent** |
-| xl | 24dp | Abstand zwischen Sektionen (z.B. Ueberschrift + Inhalt) |
-| 2xl | 32dp | Grosser Sektions-Abstand |
-| 3xl | 48dp | Screen-Level-Abstand, Hero-Bereiche |
+| `xs` | 4dp | Minimaler Abstand zwischen verwandten Elementen |
+| `sm` | 8dp | Standard-Abstand innerhalb von Komponenten |
+| `md` | 12dp | Abstand zwischen Komponenten in einer Gruppe |
+| `lg` | 16dp | Standard-Seitenabstand (horizontal padding) |
+| `xl` | 24dp | Abstand zwischen Sektionen |
+| `2xl` | 32dp | Grosser Sektions-Abstand |
+| `3xl` | 48dp | Screen-Level-Abstand, Hero-Bereiche |
 
-### Eckenradien-System (bereits gut!)
+### Eckenradien
 
-| Komponente | Aktuell | Empfohlen |
-|-----------|---------|-----------|
-| Kleine Elemente (Tags, Chips) | 4dp | 8dp (MD3 Small) ✅ |
-| Mittlere Elemente (Cards, TextFields) | 16-20dp | 16dp (MD3 Medium) ✅ |
-| Grosse Elemente (Bottom Sheets, Dialoge) | 20dp | 28dp (MD3 Extra Large) |
-| Runde Elemente (FAB, Avatar, Dots) | CircleShape | CircleShape ✅ |
+| Komponente | Radius |
+|-----------|--------|
+| Mood-Chips | 999dp (Pill) |
+| Entry-Cards | 20dp |
+| Hero-Card (Glassmorphism) | 24dp |
+| Buttons | 12dp |
+| Bottom Sheet | 28dp (oben) |
+| FAB | 16dp (oder 28dp fuer Large FAB) |
+| Avatar | 50% (Kreis) |
 
-**Hinweis:** Die aktuellen Shape-Werte (8/16/20/28dp) sind bereits sehr nah an MD3.
-Einzige Empfehlung: GlassCard-Standard von 20dp auf 16dp reduzieren fuer Konsistenz
-mit MD3 Medium, und Dialoge auf 28dp erhoehen.
+---
+
+## 10. Navigation & FAB-Platzierung
+
+### Bottom Navigation (5 Tabs)
+
+| Tab | Icon | Label |
+|-----|------|-------|
+| Home | Home (Filled wenn aktiv) | Home |
+| Kalender | CalendarMonth | Kalender |
+| **Neuer Eintrag** | **Add (im FAB)** | — |
+| Statistik | BarChart | Statistik |
+| Profil | Person | Profil |
+
+**Der FAB sitzt IN der Bottom Navigation (Mitte):**
+- Groesser als die anderen Icons (56dp vs 24dp)
+- Primaerfarbe (Terracotta)
+- Leicht erhoeht (Elevation 6dp)
+- Beim Tippen: Speed Dial mit 3-4 Quick Actions (Text, Foto, Audio, Stimmung)
+
+### Thumb-Zone-Optimierung
+
+Der untere Bildschirmbereich ist fuer Rechthaender am bequemsten erreichbar
+(Steven Hoober Studie, 84% der Nutzer). Deshalb:
+- FAB + Bottom Nav unten
+- Mood-Chips in der Mitte des Screens (gut erreichbar)
+- Begruessung oben (wird gelesen, nicht getippt)
+
+---
+
+## 11. Benoetigte Libraries
+
+| Library | Version | Zweck |
+|---------|---------|-------|
+| `com.airbnb.android:lottie-compose` | 6.x | Lottie-Animationen (Empty State, Streak, Loading) |
+| `dev.chrisbanes.haze:haze` | latest | Glassmorphism / Frosted Glass Effekt |
+| `io.github.vinceglb:confettikit-compose` | 0.8+ | Confetti bei Streak-Meilensteinen |
+| `com.valentinilk.shimmer:compose-shimmer` | 1.3.3+ | Skeleton Loading |
+| `io.github.om252345:composemeshgradient` | 0.1.0 | Mesh-Gradient (Spotify-Stil, optional) |
+| Google Fonts: Playfair Display | — | Serif-Headline-Font |
+| Google Fonts: Inter | — | Sans-Serif-Body-Font |
+
+---
+
+## 12. Vergleich: Top-Apps und was wir uebernehmen
+
+| Feature | Day One | Daylio | Reflectly | Stoic | **Unsere App** |
+|---------|---------|--------|-----------|-------|----------------|
+| Begruessung | Nein | Nein | Ja | Ja | **Ja, personalisiert + tageszeit** |
+| Mood-Check | Nein | Ja (zentral) | Ja (Slider) | Ja | **Ja, Chip-Leiste** |
+| Hero-Element | Nein | Nein | Zitat-Card | Tages-Prompt | **Glassmorphism Zitat-Card** |
+| Streak | Memories | Flamme+Badges | Implizit | Badges | **Sanft, Wochen-Fortschritt** |
+| Timeline | Cards | Mood-Bubbles | Feed | Trends | **Cards mit Foto + Mood** |
+| Animationen | Minimal | Minimal | Hochwertig | Minimal | **Stagger + Parallax + Glass** |
+| Dark Mode | Ja | Ja | Ja | Ja (Standard) | **Warm Dark mit Auto-Dimm** |
+| Schriften | Sans-Serif | Sans-Serif | Sans-Serif | Sans-Serif | **Serif + Sans-Serif Mix** |
+| FAB | Oben rechts | Unten Mitte | Unten Mitte | Kein FAB | **Unten Mitte in BottomNav** |
+
+---
+
+## 13. Top-12 Journal-Apps: Detailanalyse
+
+### Day One
+- Timeline + Cards als Standard, alternativ Kalender/Karte/Medien
+- Bleistift-Icon oben rechts (kein FAB)
+- AI-Prompts und "On This Day" Erinnerungen
+- Dezent, viel Weissraum, frei waehlbare Journal-Akzentfarbe
+
+### Journey
+- Material Design 3 Basis, 14 waehlbare Farbthemen
+- FAB unten rechts (klassisches Material Pattern)
+- Mood-Tracking ueber 30 Tage visualisiert
+- Cards mit Foto-Thumbnail, Datum, Stimmungs-Icon
+
+### Daylio
+- Mood-Picker mit 5 Stimmungen als zentrale Interaktion
+- "Year in Pixels": Jeder Tag als farbiger Pixel — mosaikartiges Jahresbild
+- Tages-Streak mit Flammen-Icon + Achievements-System
+- Grosse, runde Icons — "cute/friendly" Aesthetik
+
+### Reflectly
+- Card-basiertes Dashboard mit AI-generierten Prompts
+- "Magic Color Change": gesamte App-Farbe wechselt mit Theme
+- Weiches Gradient-Design, sanfte Pastell-Toene
+- Hochwertige Animationen (Flutter-basiert)
+
+### Stoic
+- Anpassbares Dashboard mit Favoriten-Uebungen
+- Dunkel-Palette dominant (Tiefblau/Schwarz mit hellen Akzenten)
+- Streak mit Badges, woechtentliche Themes
+- CBT-basierte Fragen fuer Emotionsverstaendnis
+
+### Five Minute Journal
+- Morgens 3 Prompts, Abends 2 Prompts — maximale Fokussierung
+- Warme, positive Farben (Gold, Creme, Warmweiss)
+- Tageszitat prominent auf Home Screen
+- Kein klassischer Home Screen — direkt Einstieg in den Tageseintrag
+
+### Grid Diary
+- Signatur: 9-Felder-Grid (Mandala-inspiriert) pro Tageseintrag
+- Fortschrittsanzeige: Wie viele Grid-Felder heute ausgefuellt?
+- Eingebaute Frage-Bibliothek (anpassbar)
+- Sauber, minimal, pastelfarben
+
+### Gratitude Journal
+- Entry-Cards im Feed mit Foto-Thumbnails
+- 7 Tag-Farben (Rose, Amber, Gold, Sage, Ocean, Lavender, Berry)
+- Woechentlicher Recap mit AI-Insights
+- Daily Quote Widget fuer den Homescreen
+
+### Momento
+- Unified Timeline: Social Media + Fotos + manuelle Eintraege
+- Automatischer Import senkt Huerden erheblich
+- "On This Day" Navigation fuer Jahresrueckblick
+
+### Monnday (Design-Konzept, Behance)
+- 8 "Emotional Monsters" als Charakter-Avatare
+- Primary Blues + Orange/Gruen-Akzente
+- Gamification durch Charakter-Begleiter macht Emotionen greifbar
+
+---
+
+## 14. Design-Inspirationen (Referenzen)
+
+| Quelle | Was daraus uebernehmen |
+|--------|----------------------|
+| **Freud v2** (Dribbble, 18.4k Views) | Dunkles UI mit warmen Akzenten, Glassmorphism-Cards |
+| **Monnday** (Behance, 649 Appreciations) | Emotionale Charakter-Avatare, Blues + Orange |
+| **AI Journal & Diary** (Behance, 916 Appreciations) | AI-Prompts als zentrales Feature |
+| **Reflectly** | Sanfte Gradient-Uebergaenge, "Magic Color Change" |
+| **Five Minute Journal** | Fokussierter CTA, Tageszitat, Serif-Aesthetik |
+| **Daylio** | Mood-Chip-System, "Year in Pixels", Badge-System |
+| **Headspace / Calm** | Warme, beruhigende Farbpalette, Illustrations-Stil |
+| **Spotify** | Mesh-Gradient-Hintergrund, Micro-Interactions |
+
+---
+
+## 15. Accessibility-Checkliste
+
+| Pruefpunkt | Standard | Unsere Umsetzung |
+|-----------|----------|------------------|
+| Touch-Target-Groesse | Min. 48x48dp | Alle Buttons, Chips, Icons >= 48dp |
+| Text-Kontrast (normal) | Min. 4.5:1 (WCAG AA) | Berechnet fuer alle Farbkombinationen |
+| Text-Kontrast (gross) | Min. 3:1 | Headlines >= 18sp geprueft |
+| Farbenblindheit | Nie nur Farbe als Info | Stimmungen haben Icon + Farbe + Label |
+| Screen-Reader | Logische Reihenfolge | Begruessung -> Mood -> Hero -> Stats -> Timeline -> Nav |
+| Schrift-Skalierung | Alle Texte in sp | Kein dp fuer Text |
+| Dark Mode | Kein reines Schwarz | Off-White Text, warme Dunkeltoene |
+
+---
+
+## 16. Quellen
+
+### Journal-App-Analyse
+- Day One: dayoneapp.com/features, /blog/new-navigation-layout-2024-11
+- Daylio: Wikipedia, App Store Screenshots
+- Reflectly: screensdesign.com, developer.android.com/stories/apps/reflectly
+- Stoic: getstoic.com/features, screensdesign.com
+- Five Minute Journal: screensdesign.com, App Store
+- Journey, Grid Diary, Penzu, Momento, Bear, Gratitude: diverse Reviews
+
+### UX-Studien
+- Steven Hoober: "How Do Users Really Hold Mobile Devices" (Thumb Zone)
+- Kahneman & Tversky: Loss Aversion (Streak Anxiety)
+- PMC7467300: Gamification in Mental Health Apps
+- Toptal: Empty State UX (40% Abbruchrate ohne guten Empty State)
+- Duolingo: +20% DAU durch personalisierte Home-Screens
+- WCAG 2.1 AA / 2.2: Kontrast- und Touch-Target-Standards
+
+### Design-Trends
+- Dribbble: journal-app, diary-app, wellness-app Tags
+- Behance: Monnday (649 Appr.), AI Journal (916 Appr.), Freud v2 (18.4k Views)
+- Fuzzy Math: "Color Palettes of Mental Healthcare UI"
+
+### Animation-Libraries
+- Lottie: lottiefiles.com/free-animations/diary
+- Haze: github.com/chrisbanes/haze
+- ConfettiKit: github.com/vinceglb/ConfettiKit
+- compose-shimmer: github.com/valentinilk/compose-shimmer
+- Compose Mesh Gradient: composemeshgradient Library
+- Android Developers: Parallax Scrolling, Shared Element Transitions
