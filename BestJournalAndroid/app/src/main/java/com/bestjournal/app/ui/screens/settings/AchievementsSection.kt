@@ -10,12 +10,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,7 +40,6 @@ import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,12 +52,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -82,6 +75,9 @@ private val SoftGold = Color(0xFFF5DEB3)
 private val LockedGray = Color(0xFF5A5A5A)
 private val LockedBgDark = Color(0xFF2A2A2E)
 private val LockedBgLight = Color(0xFFE8E8EC)
+// Dark mode unlocked row: warm tone that harmonizes with the app's forest-green palette
+private val UnlockedBgDark = Color(0xFF33382A)
+private val UnlockedBgLight = Color(0xFFFFF8E7)
 
 @Composable
 fun AchievementsSection(
@@ -89,6 +85,7 @@ fun AchievementsSection(
     onSectionViewed: () -> Unit = {},
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var hasTrackedView by remember { mutableStateOf(false) }
     val unlockedCount = achievements.count { it.unlockedAt != null }
     val totalCount = achievements.size
     val isDark = LocalIsDarkTheme.current
@@ -98,7 +95,12 @@ fun AchievementsSection(
 
     LaunchedEffect(expanded) {
         if (expanded) {
-            onSectionViewed()
+            if (!hasTrackedView) {
+                onSectionViewed()
+                hasTrackedView = true
+            }
+            // Reset to 0 first so re-expand shows the animation again
+            progressAnimatable.snapTo(0f)
             progressAnimatable.animateTo(
                 targetValue = targetProgress,
                 animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
@@ -162,7 +164,7 @@ fun AchievementsSection(
                 )
             }
 
-            // Animated progress bar
+            // Animated progress bar + achievement list
             AnimatedVisibility(visible = expanded) {
                 Column {
                     Spacer(modifier = Modifier.height(12.dp))
@@ -244,7 +246,7 @@ private fun AchievementRow(
             .clip(RoundedCornerShape(14.dp))
             .background(
                 if (isUnlocked) {
-                    if (isDark) Color(0xFF3A3525) else Color(0xFFFFF8E7)
+                    if (isDark) UnlockedBgDark else UnlockedBgLight
                 } else {
                     if (isDark) LockedBgDark else LockedBgLight
                 }
@@ -256,7 +258,6 @@ private fun AchievementRow(
         AchievementIcon(
             achievement = achievement,
             isUnlocked = isUnlocked,
-            isDark = isDark,
         )
 
         Spacer(modifier = Modifier.width(12.dp))
@@ -316,7 +317,6 @@ private fun AchievementRow(
 private fun AchievementIcon(
     achievement: Achievement,
     isUnlocked: Boolean,
-    isDark: Boolean,
 ) {
     val icon = if (isUnlocked) {
         getIconForName(achievement.iconName)
@@ -324,43 +324,33 @@ private fun AchievementIcon(
         Icons.Rounded.HelpOutline
     }
 
-    // Subtle shimmer for unlocked achievements
-    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
-    val shimmerAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "shimmer_alpha",
-    )
+    if (isUnlocked) {
+        // Shimmer animation only for unlocked achievements (saves CPU on locked ones)
+        val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+        val shimmerAlpha by infiniteTransition.animateFloat(
+            initialValue = 0.6f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2000, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "shimmer_alpha",
+        )
 
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(44.dp)
-            .clip(CircleShape)
-            .background(
-                if (isUnlocked) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(
                     Brush.radialGradient(
                         colors = listOf(
                             BrightGold.copy(alpha = 0.25f * shimmerAlpha),
                             WarmGold.copy(alpha = 0.1f),
                         )
                     )
-                } else {
-                    Brush.radialGradient(
-                        colors = listOf(
-                            LockedGray.copy(alpha = 0.15f),
-                            Color.Transparent,
-                        )
-                    )
-                }
-            ),
-    ) {
-        // Outer ring for unlocked
-        if (isUnlocked) {
+                ),
+        ) {
             Canvas(modifier = Modifier.size(44.dp)) {
                 drawCircle(
                     color = BrightGold.copy(alpha = 0.3f * shimmerAlpha),
@@ -368,18 +358,36 @@ private fun AchievementIcon(
                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx()),
                 )
             }
+            Icon(
+                icon,
+                contentDescription = achievement.title,
+                tint = LightGold.copy(alpha = shimmerAlpha),
+                modifier = Modifier.size(24.dp),
+            )
         }
-
-        Icon(
-            icon,
-            contentDescription = achievement.title,
-            tint = if (isUnlocked) {
-                LightGold.copy(alpha = shimmerAlpha)
-            } else {
-                LockedGray.copy(alpha = 0.4f)
-            },
-            modifier = Modifier.size(24.dp),
-        )
+    } else {
+        // Static icon for locked achievements — no animation overhead
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            LockedGray.copy(alpha = 0.15f),
+                            Color.Transparent,
+                        )
+                    )
+                ),
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = LockedGray.copy(alpha = 0.4f),
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }
 

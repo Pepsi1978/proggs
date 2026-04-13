@@ -35,61 +35,61 @@ class AchievementTracker @Inject constructor(
             Achievement(
                 id = "nachtfalter",
                 title = "Nachtfalter",
-                description = "50 Eintr\u00e4ge nach 22 Uhr geschrieben",
+                description = "50 Einträge nach 22 Uhr geschrieben",
                 iconName = "Bedtime",
             ),
             Achievement(
                 id = "fruehaufsteher",
-                title = "Fr\u00fchaufsteher",
-                description = "20 Eintr\u00e4ge vor 7 Uhr geschrieben",
+                title = "Frühaufsteher",
+                description = "20 Einträge vor 7 Uhr geschrieben",
                 iconName = "WbSunny",
             ),
             Achievement(
                 id = "gestaendnis",
-                title = "Gest\u00e4ndnis",
-                description = "Einen Eintrag mit \u00fcber 1.000 W\u00f6rtern verfasst",
+                title = "Geständnis",
+                description = "Einen Eintrag mit über 1.000 Wörtern verfasst",
                 iconName = "AutoStories",
             ),
             Achievement(
                 id = "marathonschreiber",
                 title = "Marathonschreiber",
-                description = "100 Tagebucheintr\u00e4ge geschrieben",
+                description = "100 Tagebucheinträge geschrieben",
                 iconName = "EmojiEvents",
             ),
             Achievement(
                 id = "wortkunstler",
-                title = "Wortk\u00fcnstler",
-                description = "500 Tagebucheintr\u00e4ge geschrieben",
+                title = "Wortkünstler",
+                description = "500 Tagebucheinträge geschrieben",
                 iconName = "Brush",
             ),
             Achievement(
                 id = "bestaendigkeit",
-                title = "Best\u00e4ndigkeit",
+                title = "Beständigkeit",
                 description = "30-Tage-Streak erreicht",
                 iconName = "Whatshot",
             ),
             Achievement(
                 id = "jahreschronist",
                 title = "Jahreschronist",
-                description = "365 Eintr\u00e4ge geschrieben",
+                description = "365 Einträge geschrieben",
                 iconName = "CalendarMonth",
             ),
             Achievement(
                 id = "fototagebuch",
                 title = "Fototagebuch",
-                description = "50 Fotos an Eintr\u00e4ge angeh\u00e4ngt",
+                description = "50 Fotos an Einträge angehängt",
                 iconName = "PhotoCamera",
             ),
             Achievement(
                 id = "sprachkuenstler",
-                title = "Sprachk\u00fcnstler",
-                description = "25 Spracheintr\u00e4ge erstellt",
+                title = "Sprachkünstler",
+                description = "25 Spracheinträge erstellt",
                 iconName = "Mic",
             ),
             Achievement(
                 id = "reflexionsmeister",
                 title = "Reflexionsmeister",
-                description = "50 Dashboard-Analysen durchgef\u00fchrt",
+                description = "50 Dashboard-Analysen durchgeführt",
                 iconName = "Psychology",
             ),
         )
@@ -140,4 +140,7 @@ class AchievementTracker @Inject constructor(
     }
 
     fun getUnlockedCount(): Int = ALL_ACHIEVEMENTS.count { isUnlocked(it.id) }
+
+    fun getTitle(id: String): String =
+        ALL_ACHIEVEMENTS.firstOrNull { it.id == id }?.title ?: id
 }

@@ -15,6 +15,8 @@ import com.bestjournal.app.domain.usecase.SaveJournalEntryUseCase
 import com.bestjournal.app.domain.usecase.SummarizeEntryUseCase
 import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
 import com.bestjournal.app.domain.usecase.TranscribeAudioUseCase
+import com.bestjournal.app.util.AchievementStats
+import com.bestjournal.app.util.AchievementTracker
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.DailyPromptProvider
@@ -96,7 +98,16 @@ constructor(
     private val streakTracker: StreakTracker,
     private val inAppReviewHelper: InAppReviewHelper,
     private val analyticsTracker: AnalyticsTracker,
+    private val achievementTracker: AchievementTracker,
 ) : ViewModel() {
+
+    // Emits achievement title when a new one is unlocked (UI shows gold Snackbar)
+    private val _achievementUnlocked = MutableStateFlow<String?>(null)
+    val achievementUnlocked: StateFlow<String?> = _achievementUnlocked
+
+    fun clearAchievementEvent() {
+        _achievementUnlocked.value = null
+    }
 
     fun launchSubscription(activity: android.app.Activity, isYearly: Boolean) {
         billingManager.launchPurchaseFlow(activity, isYearly)
@@ -495,9 +506,49 @@ constructor(
                 try {
                     triggerDebouncedAnalysis()
                 } catch (_: Exception) {}
-                // Signal UI to trigger in-app review at this positive moment
+                // Check achievements after entry save
                 try {
                     val totalEntries = journalRepository.getEntryCount()
+                    val wordCount = displayText.split("\\s+".toRegex()).size
+                    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                    val nightCount = encryptedPrefs.getInt("stat_night_entries", 0)
+                    val morningCount = encryptedPrefs.getInt("stat_morning_entries", 0)
+                    val voiceCount = encryptedPrefs.getInt("stat_voice_entries", 0)
+                    val dashCount = encryptedPrefs.getInt("stat_dashboard_refreshes", 0)
+                    val photoCount = encryptedPrefs.getInt("stat_photo_count", 0)
+                    val longestWords = encryptedPrefs.getInt("stat_longest_entry_words", 0)
+
+                    // Update running stats
+                    // "nach 22 Uhr" = 22:00-23:59, "vor 7 Uhr" = 0:00-6:59
+                    val isNight = hour >= 22
+                    val isMorning = hour < 7
+                    val editor = encryptedPrefs.edit()
+                    if (isNight) editor.putInt("stat_night_entries", nightCount + 1)
+                    if (isMorning) editor.putInt("stat_morning_entries", morningCount + 1)
+                    if (entry.audioDurationSeconds > 0) editor.putInt("stat_voice_entries", voiceCount + 1)
+                    if (wordCount > longestWords) editor.putInt("stat_longest_entry_words", wordCount)
+                    editor.apply()
+
+                    val stats = AchievementStats(
+                        totalEntries = totalEntries,
+                        nightEntries = if (isNight) nightCount + 1 else nightCount,
+                        morningEntries = if (isMorning) morningCount + 1 else morningCount,
+                        longestEntryWords = maxOf(longestWords, wordCount),
+                        currentStreak = streakTracker.getCurrentStreak(),
+                        photoCount = photoCount,
+                        voiceEntries = if (entry.audioDurationSeconds > 0) voiceCount + 1 else voiceCount,
+                        // photoCount and dashboardRefreshes are incremented elsewhere
+                        dashboardRefreshes = dashCount,
+                    )
+                    val newlyUnlocked = achievementTracker.checkAchievements(stats)
+                    if (newlyUnlocked.isNotEmpty()) {
+                        val title = achievementTracker.getTitle(newlyUnlocked.first())
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            _achievementUnlocked.value = title
+                        }
+                    }
+
+                    // Signal UI to trigger in-app review at this positive moment
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                         _reviewEvent.value = totalEntries
                     }

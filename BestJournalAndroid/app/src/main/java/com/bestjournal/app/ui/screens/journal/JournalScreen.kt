@@ -162,6 +162,18 @@ fun JournalScreen(
         }
     }
 
+    // Achievement unlock Snackbar
+    val achievementTitle by viewModel.achievementUnlocked.collectAsState()
+    var showAchievementSnackbar by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(achievementTitle) {
+        achievementTitle?.let {
+            showAchievementSnackbar = it
+            viewModel.clearAchievementEvent()
+            kotlinx.coroutines.delay(4000)
+            showAchievementSnackbar = null
+        }
+    }
+
     val onMicClick: () -> Unit = {
         doHaptic(HapticFeedbackType.LongPress)
         if (uiState.recordingState == RecordingState.RECORDING) {
@@ -582,6 +594,45 @@ fun JournalScreen(
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
             )
+        }
+
+        // Gold Achievement unlock Snackbar
+        AnimatedVisibility(
+            visible = showAchievementSnackbar != null,
+            enter = fadeIn(tween(300)),
+            exit = fadeOut(tween(300)),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp),
+        ) {
+            showAchievementSnackbar?.let { title ->
+                Snackbar(
+                    containerColor = Color(0xFF8B6914),
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Rounded.EmojiEvents,
+                            contentDescription = null,
+                            tint = Color(0xFFFFD700),
+                            modifier = Modifier.size(24.dp),
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                "Achievement freigeschaltet!",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.8f),
+                            )
+                            Text(
+                                title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         if (showStreakDialog) {
