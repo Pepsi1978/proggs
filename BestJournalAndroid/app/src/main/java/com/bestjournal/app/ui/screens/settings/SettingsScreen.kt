@@ -1746,7 +1746,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // Daten (PDF-Export)
+                // Daten exportieren (PDF-Export)
                 var showExportDialog by remember { mutableStateOf(false) }
                 var exportIncludeEntries by remember { mutableStateOf(true) }
                 var exportIncludePhotos by remember { mutableStateOf(true) }
@@ -1878,7 +1878,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Daten",
+                                "Daten exportieren",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
