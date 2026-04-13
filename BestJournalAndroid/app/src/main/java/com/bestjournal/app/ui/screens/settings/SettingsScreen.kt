@@ -1947,16 +1947,16 @@ fun SettingsScreen(
                                 }
                             }
                         } else {
+                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                "(\u2B50 Premium)",
+                                "Tagebucheintr\u00e4ge mit Fotos als PDF exportieren",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth(),
                             )
-                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                "Tagebucheintr\u00e4ge und Fotos als PDF exportieren",
+                                "(\u2B50 Premium)",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                                 textAlign = TextAlign.Center,
