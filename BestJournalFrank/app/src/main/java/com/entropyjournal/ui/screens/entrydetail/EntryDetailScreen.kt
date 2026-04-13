@@ -56,6 +56,9 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -77,6 +80,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -111,6 +115,7 @@ import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
 import com.entropyjournal.util.DateTimeFormatter
+import com.entropyjournal.util.EdgeTtsPlayer
 import java.io.File
 import kotlinx.coroutines.delay
 
@@ -149,8 +154,18 @@ fun EntryDetailScreen(
     var fullScreenIsVideo by remember { mutableStateOf(false) }
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     var showShareDialog by remember { mutableStateOf(false) }
+    var isSpeaking by remember { mutableStateOf(false) }
+    var isTtsLoading by remember { mutableStateOf(false) }
     var cameraFile by remember { mutableStateOf<java.io.File?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
+    val tts = remember { EdgeTtsPlayer(context) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            tts.stop()
+            tts.shutdown()
+        }
+    }
     val appContext = context.applicationContext
     val videoImageLoader = remember {
         coil3.ImageLoader.Builder(appContext)
@@ -484,6 +499,14 @@ fun EntryDetailScreen(
                     }
                 }
 
+                Text(
+                    text =
+                        "Aufnahmedauer: ${DateTimeFormatter.formatDuration(entry.audioDurationSeconds)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+
                 if (!hasImproved) {
                     GlassCard(
                         modifier = Modifier.fillMaxWidth(),
@@ -666,12 +689,105 @@ fun EntryDetailScreen(
                     }
                 }
 
-                Text(
-                    text =
-                        "Aufnahmedauer: ${DateTimeFormatter.formatDuration(entry.audioDurationSeconds)}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline,
+                // Divider + TTS & Share actions
+                Box(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .height(1.dp)
+                            .background(
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                            )
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    IconButton(
+                        onClick = {
+                            doHaptic(HapticFeedbackType.LongPress)
+                            if (isSpeaking || isTtsLoading) {
+                                tts.stop()
+                                isSpeaking = false
+                                isTtsLoading = false
+                            } else {
+                                isTtsLoading = true
+                                isSpeaking = true
+                                val speakText =
+                                    if (isShowingOriginal) entry.rawText
+                                    else entry.displayText
+                                tts.speak(
+                                    speakText,
+                                    onPlaybackStart = { isTtsLoading = false },
+                                ) {
+                                    isSpeaking = false
+                                    isTtsLoading = false
+                                }
+                            }
+                        },
+                        modifier = Modifier.size(40.dp),
+                    ) {
+                        Icon(
+                            if (isSpeaking) Icons.Rounded.Stop
+                            else Icons.Rounded.VolumeUp,
+                            contentDescription =
+                                if (isSpeaking) "Stoppen" else "Vorlesen",
+                            tint = FeatureAccentOrange,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                            doHaptic(HapticFeedbackType.LongPress)
+                            val hasImprovedForShare =
+                                entry.isImproved &&
+                                    !entry.improvedText.isNullOrBlank()
+                            val photos = uiState.photos
+                            if (!hasImprovedForShare && photos.size <= 1) {
+                                val shareText =
+                                    buildShareText(entry, useImproved = false)
+                                val photoUris =
+                                    if (photos.size == 1) {
+                                        listOf(getPhotoUri(context, photos[0]))
+                                    } else {
+                                        emptyList()
+                                    }
+                                executeShare(context, shareText, photoUris)
+                            } else {
+                                showShareDialog = true
+                            }
+                        },
+                        modifier = Modifier.size(40.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.Share,
+                            contentDescription = "Teilen",
+                            tint = FeatureAccentOrange,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                }
+
+                if (isTtsLoading) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color =
+                                if (isDark) Color(0xFF5C7AA3)
+                                else Color(0xFF1976D2),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Bitte warten, Text-to-Speech wird erzeugt\u2026",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(80.dp))
             }
