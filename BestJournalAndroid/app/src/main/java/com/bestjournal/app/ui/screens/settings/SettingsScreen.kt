@@ -2038,7 +2038,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Best Journal v0.10.25",
+                            "Best Journal v0.10.26",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -2711,19 +2711,8 @@ private fun WeeklyReviewPickerDialog(
 }
 
 // ── Churn / Retention Dialog ────────────────────────────────────────────────
-//
-// Emotional retention flow that intercepts the cancellation and offers
-// a 20 % discount.  Collects structured churn reasons + optional free-text
-// and sends them to the developer via the existing FeedbackSender.
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-private fun ChurnRetentionDialog(
-    userEmail: String?,
-    onDismiss: () -> Unit,
-    onOfferAccepted: () -> Unit,
-    onCancelConfirmed: () -> Unit,
-    analyticsTracker: AnalyticsTracker,
+// ChurnFlowDialog is now in its own file: ChurnFlowDialog.kt
+// Old ChurnRetentionDialog removed — replaced by 3-step ChurnFlowDialog
     context: android.content.Context,
 ) {
     val reasons = listOf("Zu teuer", "Nutze ich zu wenig", "Features fehlen", "Andere App gefunden")

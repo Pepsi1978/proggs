@@ -650,13 +650,13 @@ fun PaywallScreen(
                     viewModel.analyticsTracker.trackExitIntentShown()
                 }
 
-                // Very subtle breathing on CTA button
+                // Visible breathing on CTA button
                 val exitCtaTransition = rememberInfiniteTransition(label = "exitCta")
                 val exitCtaScale by exitCtaTransition.animateFloat(
                     initialValue = 1f,
-                    targetValue = 1.015f,
+                    targetValue = 1.04f,
                     animationSpec = infiniteRepeatable(
-                        animation = tween(2200, easing = EaseInOutSine),
+                        animation = tween(1800, easing = EaseInOutSine),
                         repeatMode = RepeatMode.Reverse,
                     ),
                     label = "exitCtaBreathing",
@@ -680,13 +680,15 @@ fun PaywallScreen(
                     },
                     properties = DialogProperties(usePlatformDefaultWidth = false),
                 ) {
-                    val gradientTop = if (isDarkTheme) Color(0xFF162D42) else Color(0xFFE4EFFE)
+                    // Orange → Green gradient (theme-aware)
+                    val gradientTop = if (isDarkTheme) Color(0xFF3D2A14) else Color(0xFFFFF3E0)
                     val gradientBottom = if (isDarkTheme) Color(0xFF1A3329) else Color(0xFFE2F5E8)
 
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp),
+                            .padding(horizontal = 40.dp)
+                            .offset(y = (-40).dp),
                         shape = RoundedCornerShape(28.dp),
                         color = gradientTop,
                         shadowElevation = 24.dp,
@@ -703,18 +705,18 @@ fun PaywallScreen(
                             )
 
                             Column(
-                                modifier = Modifier.padding(horizontal = 28.dp, vertical = 32.dp),
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 // ── PulsingOrb decoration ──
                                 PulsingOrb(
-                                    size = 64.dp,
+                                    size = 56.dp,
                                     entropyLevel = 0.5f,
                                     color = orbPrimaryColor,
                                     secondaryColor = orbSecondaryColor,
                                 )
 
-                                Spacer(modifier = Modifier.height(20.dp))
+                                Spacer(modifier = Modifier.height(16.dp))
 
                                 Text(
                                     text = "Warte kurz!",
@@ -723,7 +725,7 @@ fun PaywallScreen(
                                     color = MaterialTheme.colorScheme.onSurface,
                                     textAlign = TextAlign.Center,
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(6.dp))
                                 Text(
                                     text = "Wir haben ein besonderes\nAngebot f\u00fcr dich:",
                                     style = MaterialTheme.typography.bodyMedium,
@@ -731,7 +733,7 @@ fun PaywallScreen(
                                     textAlign = TextAlign.Center,
                                 )
 
-                                Spacer(modifier = Modifier.height(24.dp))
+                                Spacer(modifier = Modifier.height(20.dp))
 
                                 // ── 50% discount hero card ──
                                 Surface(
@@ -750,13 +752,12 @@ fun PaywallScreen(
                                 ) {
                                     Column(
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 24.dp, horizontal = 20.dp),
+                                            .padding(vertical = 20.dp, horizontal = 24.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                     ) {
                                         Text(
                                             text = "50%",
-                                            style = MaterialTheme.typography.displayMedium,
+                                            style = MaterialTheme.typography.displaySmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary,
                                         )
@@ -806,9 +807,9 @@ fun PaywallScreen(
                                     )
                                 }
 
-                                Spacer(modifier = Modifier.height(28.dp))
+                                Spacer(modifier = Modifier.height(20.dp))
 
-                                // ── CTA: two-line pill button with subtle breathing ──
+                                // ── CTA: two-line pill button with breathing ──
                                 Button(
                                     onClick = {
                                         viewModel.analyticsTracker.trackExitIntentAccepted()
