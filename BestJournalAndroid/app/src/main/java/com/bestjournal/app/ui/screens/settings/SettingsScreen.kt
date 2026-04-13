@@ -1253,6 +1253,8 @@ fun SettingsScreen(
                             "Wähle ein Profil aus. Tippe auf ein Profil für eine genauere Erklärung.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
                         )
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -1674,22 +1676,12 @@ fun SettingsScreen(
                             }
                         } else {
                             var benefitsTracked by remember { mutableStateOf(false) }
-                            Text(
-                                text = "Warum Premium:",
-                                style =
-                                    MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                                    ),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier =
-                                    Modifier.onGloballyPositioned {
-                                        if (!benefitsTracked) {
-                                            benefitsTracked = true
-                                            viewModel.analyticsTracker.trackPremiumBenefitsViewed()
-                                        }
-                                    },
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
+                            LaunchedEffect(Unit) {
+                                if (!benefitsTracked) {
+                                    benefitsTracked = true
+                                    viewModel.analyticsTracker.trackPremiumBenefitsViewed()
+                                }
+                            }
                             val featureItems = listOf(
                                 Triple(Icons.Rounded.Star, "Unbegrenzte KI-Textverbesserung", "Jeder Eintrag wird ausdrucksst\u00e4rker"),
                                 Triple(Icons.Rounded.Dashboard, "Unbegrenzte Dashboard-Analysen", "Dein Dashboard w\u00e4chst mit dir"),
@@ -1702,6 +1694,7 @@ fun SettingsScreen(
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
                                 ) {
                                     Box(
                                         modifier = Modifier
