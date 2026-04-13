@@ -17,6 +17,9 @@ private extension NSColor {
     static let btnMicIdle = NSColor(hex: "#2A5DA8")
     static let btnCopy = NSColor(red: 0x29/255.0, green: 0xB6/255.0, blue: 0xF6/255.0, alpha: 1)   // #29B6F6 sky blue
     static let btnPaste = NSColor(red: 0xAB/255.0, green: 0x47/255.0, blue: 0xBC/255.0, alpha: 1)  // #AB47BC purple
+    static let ultrathinkOn = NSColor(hex: "#B8860B")     // dark gold background
+    static let starGold = NSColor(hex: "#FFD700")          // bright gold star
+    static let starMuted = NSColor(hex: "#8B7355")         // muted brown star
 
     convenience init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
@@ -37,6 +40,7 @@ class RoundButton: NSView {
     var buttonColor: NSColor = .btnIdle { didSet { needsDisplay = true } }
     var label: String = "" { didSet { needsDisplay = true } }
     var labelFont: NSFont = .systemFont(ofSize: 16, weight: .bold)
+    var labelColor: NSColor = .white { didSet { needsDisplay = true } }
     var symbolImage: NSImage?
     var useSquareShape: Bool = false
     var onClick: (() -> Void)?
@@ -75,13 +79,13 @@ class RoundButton: NSView {
             )
             let tinted = img.copy() as! NSImage
             tinted.lockFocus()
-            NSColor.white.set()
+            labelColor.set()
             NSRect(origin: .zero, size: tinted.size).fill(using: .sourceAtop)
             tinted.unlockFocus()
             tinted.draw(in: imgRect, from: .zero, operation: .sourceOver, fraction: 1.0)
         } else {
             let attrs: [NSAttributedString.Key: Any] = [
-                .foregroundColor: NSColor.white,
+                .foregroundColor: labelColor,
                 .font: labelFont
             ]
             let str = NSAttributedString(string: label, attributes: attrs)
@@ -130,6 +134,7 @@ class RoundButton: NSView {
 
 // MARK: - OverlayPanel
 final class OverlayPanel: NSPanel {
+    let ultrathinkButton: RoundButton
     let xButton: RoundButton
     let btwButton: RoundButton
     let micButton: RoundButton
@@ -150,6 +155,7 @@ final class OverlayPanel: NSPanel {
     private var localRightMouseMonitor: Any?
     private static let positionKey = "claudeCodexOverlayPanelPosition"
 
+    var onUltrathinkClicked: (() -> Void)?
     var onXClicked: (() -> Void)?
     var onBtwClicked: (() -> Void)?
     var onMicClicked: (() -> Void)?
@@ -164,11 +170,14 @@ final class OverlayPanel: NSPanel {
         let micSize: CGFloat = 52
         let gap: CGFloat = 8
         let panelWidth: CGFloat = micSize + 20
-        // Height: 6 small buttons + 2 large mic buttons + 7 gaps + padding (16 top + 16 bottom)
-        // 40*6 + 52*2 + 8*7 + 32 = 240 + 104 + 56 + 32 = 432
-        let panelHeight: CGFloat = btnSize * 6 + micSize * 2 + gap * 7 + 32
+        // Height: 7 small buttons + 2 large mic buttons + 8 gaps + padding (16 top + 16 bottom)
+        // = 40*7 + 52*2 + 8*8 + 32 = 280 + 104 + 64 + 32 = 480
+        let panelHeight: CGFloat = btnSize * 7 + micSize * 2 + gap * 8 + 32
 
         // Create buttons
+        ultrathinkButton = RoundButton(label: "★", color: .toggleOff)
+        ultrathinkButton.labelFont = .systemFont(ofSize: 20, weight: .bold)
+        ultrathinkButton.labelColor = .starMuted
         xButton = RoundButton(label: "X", color: .btnX)
         btwButton = RoundButton(label: "BTW", color: .btnBtwIdle)
         btwButton.labelFont = .boldSystemFont(ofSize: 11)
@@ -222,9 +231,8 @@ final class OverlayPanel: NSPanel {
         self.contentView?.layer?.backgroundColor = NSColor(white: 0.12, alpha: 0.9).cgColor
 
         // Layout buttons vertically (in AppKit, y=0 is bottom)
-        // Visual order top-to-bottom: Mic → BTW → W → G → X → Copy → Paste → Enter
-        // AppKit order bottom-to-top: Enter(y=16) → Paste(y=64) → Copy(y=112) → X(y=160)
-        //                             → G(y=208) → W(y=256) → BTW(y=304) → Mic(y=364)
+        // Visual order top→bottom: ★(ultrathink) → Mic(big) → BTW(big) → W → G → X → Copy → Paste → Enter
+        // AppKit order bottom→top: Enter → Paste → Copy → X → G → W → BTW(big) → Mic(big) → ★
         let smallInset = (panelWidth - btnSize) / 2
         let micInset = (panelWidth - micSize) / 2
         var yPos: CGFloat = 16
@@ -243,16 +251,20 @@ final class OverlayPanel: NSPanel {
         btwButton.frame = NSRect(x: micInset, y: yPos, width: micSize, height: micSize)
         yPos += micSize + gap
         micButton.frame = NSRect(x: micInset, y: yPos, width: micSize, height: micSize)
+        yPos += micSize + gap
+        ultrathinkButton.frame = NSRect(x: smallInset, y: yPos, width: btnSize, height: btnSize)
 
-        self.contentView?.addSubview(xButton)
-        self.contentView?.addSubview(btwButton)
+        self.contentView?.addSubview(ultrathinkButton)
         self.contentView?.addSubview(micButton)
+        self.contentView?.addSubview(btwButton)
         self.contentView?.addSubview(wButton)
         self.contentView?.addSubview(gButton)
+        self.contentView?.addSubview(xButton)
         self.contentView?.addSubview(copyButton)
         self.contentView?.addSubview(pasteButton)
         self.contentView?.addSubview(enterButton)
 
+        ultrathinkButton.onClick = { [weak self] in self?.onUltrathinkClicked?() }
         xButton.onClick = { [weak self] in self?.onXClicked?() }
         btwButton.onClick = { [weak self] in self?.onBtwClicked?() }
         micButton.onClick = { [weak self] in self?.onMicClicked?() }
@@ -356,6 +368,14 @@ final class OverlayPanel: NSPanel {
     func setAutoEnterEnabled(_ enabled: Bool) {
         DispatchQueue.main.async { [weak self] in
             self?.enterButton.buttonColor = enabled ? .btnProcessing : .toggleOff
+        }
+    }
+
+    func setUltrathinkEnabled(_ enabled: Bool) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.ultrathinkButton.buttonColor = enabled ? .ultrathinkOn : .toggleOff
+            self.ultrathinkButton.labelColor = enabled ? .starGold : .starMuted
         }
     }
 

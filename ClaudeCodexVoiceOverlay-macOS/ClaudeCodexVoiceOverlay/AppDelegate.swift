@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isProcessing = false
     private var geminiEnabled = false
     private var autoEnterEnabled = true
+    private var ultrathinkEnabled = false
     private var isBtwRecording = false
     private var hasPastedText = false
     private var lastRawTranscript: String?
@@ -67,6 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.clearLine()
             }
         }
+        panel.onUltrathinkClicked = { [weak self] in self?.toggleUltrathink() }
         panel.onMicClicked = { [weak self] in self?.toggleRecording() }
         panel.onWClicked = { [weak self] in self?.whisperUndo() }
         panel.onGClicked = { [weak self] in self?.toggleGemini() }
@@ -267,13 +269,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func insertText(_ text: String, wasBtw: Bool) {
         var finalText = text
         if wasBtw {
-            finalText = "/btw " + finalText
+            let prefix = ultrathinkEnabled ? "ultrathink - /btw " : "/btw "
+            finalText = prefix + finalText
             isBtwRecording = false
-        } else if hasPastedText {
-            finalText = " " + finalText
+        } else {
+            if ultrathinkEnabled && !hasPastedText {
+                finalText = "ultrathink - " + finalText
+            }
+            if hasPastedText {
+                finalText = " " + finalText
+            }
         }
 
         InputController.pasteText(finalText, autoEnter: autoEnterEnabled)
+        resetUltrathink()
         isProcessing = false
 
         if wasBtw {
@@ -341,6 +350,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSLog("Whisper-Rohtext eingefuegt: %@", rawTranscript)
             #endif
         }
+    }
+
+    // MARK: - Ultrathink Toggle (one-shot)
+
+    private func toggleUltrathink() {
+        ultrathinkEnabled.toggle()
+        panel.setUltrathinkEnabled(ultrathinkEnabled)
+        NSLog("Ultrathink %@", ultrathinkEnabled ? "ON (one-shot)" : "OFF")
+    }
+
+    private func resetUltrathink() {
+        guard ultrathinkEnabled else { return }
+        ultrathinkEnabled = false
+        panel.setUltrathinkEnabled(false)
+        NSLog("Ultrathink auto-OFF (one-shot used)")
     }
 
     // MARK: - Gemini Toggle
