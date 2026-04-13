@@ -103,7 +103,16 @@ import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
+import com.bestjournal.app.ui.theme.FeatureAccentOrange
 import com.bestjournal.app.ui.theme.SummaryPalette
+import com.bestjournal.app.util.EdgeTtsPlayer
+import android.content.Intent
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String) -> Unit = {}) {
@@ -118,6 +127,17 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
     var selectedAdvice by remember { mutableStateOf<Pair<Advice, String>?>(null) }
     var selectedCategoryBlock by remember {
         mutableStateOf<com.bestjournal.app.domain.model.AdviceBlock?>(null)
+    }
+    val context = LocalContext.current
+    var isDashboardSpeaking by remember { mutableStateOf(false) }
+    var isDashboardTtsLoading by remember { mutableStateOf(false) }
+    val dashboardTts = remember { EdgeTtsPlayer(context) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            dashboardTts.stop()
+            dashboardTts.shutdown()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -645,6 +665,16 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
+                                    AnalysisTtsShareRow(
+                                        text = overallAnalysis,
+                                        tts = dashboardTts,
+                                        isSpeaking = isDashboardSpeaking,
+                                        isTtsLoading = isDashboardTtsLoading,
+                                        onSpeakingChange = { isDashboardSpeaking = it },
+                                        onTtsLoadingChange = { isDashboardTtsLoading = it },
+                                        doHaptic = doHaptic,
+                                        context = context,
+                                    )
                                 }
                             }
                         }
@@ -792,6 +822,16 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
+                                    AnalysisTtsShareRow(
+                                        text = overallAnalysis,
+                                        tts = dashboardTts,
+                                        isSpeaking = isDashboardSpeaking,
+                                        isTtsLoading = isDashboardTtsLoading,
+                                        onSpeakingChange = { isDashboardSpeaking = it },
+                                        onTtsLoadingChange = { isDashboardTtsLoading = it },
+                                        doHaptic = doHaptic,
+                                        context = context,
+                                    )
                                 }
                             }
                         }
@@ -934,6 +974,16 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         overallAnalysis,
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    AnalysisTtsShareRow(
+                                        text = overallAnalysis,
+                                        tts = dashboardTts,
+                                        isSpeaking = isDashboardSpeaking,
+                                        isTtsLoading = isDashboardTtsLoading,
+                                        onSpeakingChange = { isDashboardSpeaking = it },
+                                        onTtsLoadingChange = { isDashboardTtsLoading = it },
+                                        doHaptic = doHaptic,
+                                        context = context,
                                     )
                                 }
                             }
@@ -1081,6 +1131,16 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
+                                    AnalysisTtsShareRow(
+                                        text = overallAnalysis,
+                                        tts = dashboardTts,
+                                        isSpeaking = isDashboardSpeaking,
+                                        isTtsLoading = isDashboardTtsLoading,
+                                        onSpeakingChange = { isDashboardSpeaking = it },
+                                        onTtsLoadingChange = { isDashboardTtsLoading = it },
+                                        doHaptic = doHaptic,
+                                        context = context,
+                                    )
                                 }
                             }
                         }
@@ -1207,6 +1267,16 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         text = overallAnalysis,
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    AnalysisTtsShareRow(
+                                        text = overallAnalysis,
+                                        tts = dashboardTts,
+                                        isSpeaking = isDashboardSpeaking,
+                                        isTtsLoading = isDashboardTtsLoading,
+                                        onSpeakingChange = { isDashboardSpeaking = it },
+                                        onTtsLoadingChange = { isDashboardTtsLoading = it },
+                                        doHaptic = doHaptic,
+                                        context = context,
                                     )
                                 }
                             }
@@ -3456,3 +3526,94 @@ private fun CustomResultCard(advice: Advice, categoryName: String = "", onClick:
         }
     }
 }
+
+
+@Composable
+private fun AnalysisTtsShareRow(
+    text: String,
+    tts: EdgeTtsPlayer,
+    isSpeaking: Boolean,
+    isTtsLoading: Boolean,
+    onSpeakingChange: (Boolean) -> Unit,
+    onTtsLoadingChange: (Boolean) -> Unit,
+    doHaptic: (HapticFeedbackType) -> Unit,
+    context: android.content.Context,
+) {
+    Spacer(modifier = Modifier.height(12.dp))
+    Box(
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(1.dp)
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)),
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        IconButton(
+            onClick = {
+                doHaptic(HapticFeedbackType.LongPress)
+                if (isSpeaking || isTtsLoading) {
+                    tts.stop()
+                    onSpeakingChange(false)
+                    onTtsLoadingChange(false)
+                } else {
+                    onTtsLoadingChange(true)
+                    onSpeakingChange(true)
+                    tts.speak(
+                        text,
+                        onPlaybackStart = { onTtsLoadingChange(false) },
+                    ) {
+                        onSpeakingChange(false)
+                        onTtsLoadingChange(false)
+                    }
+                }
+            },
+            modifier = Modifier.size(40.dp),
+        ) {
+            Icon(
+                if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
+                contentDescription = if (isSpeaking) "Stoppen" else "Vorlesen",
+                tint = FeatureAccentOrange,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        IconButton(
+            onClick = {
+                doHaptic(HapticFeedbackType.LongPress)
+                val shareIntent =
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, text)
+                    }
+                context.startActivity(Intent.createChooser(shareIntent, "Analyse teilen"))
+            },
+            modifier = Modifier.size(40.dp),
+        ) {
+            Icon(
+                Icons.Rounded.Share,
+                contentDescription = "Teilen",
+                tint = FeatureAccentOrange,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+    }
+    if (isTtsLoading) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFF1976D2),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                "Bitte warten, Text-to-Speech wird erzeugt…",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
