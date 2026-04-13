@@ -715,7 +715,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // Töne
+                // Töne / Haptik
                 GlassCard {
                     Column {
                         Row(
@@ -731,10 +731,12 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "T\u00f6ne",
+                                "T\u00f6ne / Haptik",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
+                            // Invisible counterbalance for icon+spacer so text is visually centered
+                            Spacer(modifier = Modifier.width(28.dp))
                         }
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -947,6 +949,8 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
+                            // Invisible counterbalance for icon+spacer so text is visually centered
+                            Spacer(modifier = Modifier.width(28.dp))
                         }
                         Spacer(modifier = Modifier.height(10.dp))
 

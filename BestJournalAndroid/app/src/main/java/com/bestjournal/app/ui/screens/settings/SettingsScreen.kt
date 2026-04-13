@@ -607,7 +607,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // Töne – Haptik
+                // Töne / Haptik
                 GlassCard {
                     Column {
                         Row(
