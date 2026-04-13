@@ -2013,7 +2013,22 @@ fun SettingsScreen(
                     )
                 }
 
-                // 8. Ueber die App
+                // 8. Achievements
+                val achievementsWithStatus = remember {
+                    com.bestjournal.app.util.AchievementTracker.ALL_ACHIEVEMENTS.map { a ->
+                        val ts = clickPrefs.getLong("achievement_unlocked_${a.id}", 0L)
+                        a.copy(unlockedAt = if (ts > 0L) ts else null)
+                    }
+                }
+                AchievementsSection(
+                    achievements = achievementsWithStatus,
+                    onSectionViewed = {
+                        com.google.firebase.analytics.FirebaseAnalytics.getInstance(context)
+                            .logEvent("achievements_viewed", null)
+                    },
+                )
+
+                // 9. Ueber die App
                 GlassCard {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2049,21 +2064,6 @@ fun SettingsScreen(
                         )
                     }
                 }
-
-                // 9. Achievements (hidden trophies)
-                val achievementsWithStatus = remember {
-                    com.bestjournal.app.util.AchievementTracker.ALL_ACHIEVEMENTS.map { a ->
-                        val ts = clickPrefs.getLong("achievement_unlocked_${a.id}", 0L)
-                        a.copy(unlockedAt = if (ts > 0L) ts else null)
-                    }
-                }
-                AchievementsSection(
-                    achievements = achievementsWithStatus,
-                    onSectionViewed = {
-                        com.google.firebase.analytics.FirebaseAnalytics.getInstance(context)
-                            .logEvent("achievements_viewed", null)
-                    },
-                )
 
                 Spacer(modifier = Modifier.height(80.dp))
             }

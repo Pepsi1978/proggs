@@ -124,19 +124,13 @@ fun AchievementsSection(
                         .size(36.dp)
                         .clip(CircleShape)
                         .background(
-                            brush = Brush.radialGradient(
-                                colors = if (unlockedCount > 0) {
-                                    listOf(BrightGold.copy(alpha = 0.3f), Color.Transparent)
-                                } else {
-                                    listOf(LockedGray.copy(alpha = 0.2f), Color.Transparent)
-                                }
-                            )
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                         ),
                 ) {
                     Icon(
                         Icons.Rounded.EmojiEvents,
                         contentDescription = null,
-                        tint = if (unlockedCount > 0) BrightGold else LockedGray,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp),
                     )
                 }
