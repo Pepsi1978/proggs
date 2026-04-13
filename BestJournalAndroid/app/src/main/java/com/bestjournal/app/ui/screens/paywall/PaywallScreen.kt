@@ -680,33 +680,39 @@ fun PaywallScreen(
                     },
                     properties = DialogProperties(usePlatformDefaultWidth = false),
                 ) {
-                    // Orange → Green gradient (theme-aware)
                     val gradientTop = if (isDarkTheme) Color(0xFF3D2A14) else Color(0xFFFFF3E0)
                     val gradientBottom = if (isDarkTheme) Color(0xFF1A3329) else Color(0xFFE2F5E8)
 
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 40.dp)
-                            .offset(y = (-40).dp),
-                        shape = RoundedCornerShape(28.dp),
-                        color = gradientTop,
-                        shadowElevation = 24.dp,
+                    // Full-height wrapper prevents top clipping from offset
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Box {
-                            Box(
-                                modifier = Modifier
-                                    .matchParentSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(gradientTop, gradientBottom),
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 40.dp)
+                                .offset(y = (-60).dp),
+                            shape = RoundedCornerShape(28.dp),
+                            color = gradientTop,
+                            shadowElevation = 24.dp,
+                        ) {
+                            Box {
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .background(
+                                            Brush.verticalGradient(
+                                                colors = listOf(gradientTop, gradientBottom),
+                                            ),
                                         ),
-                                    ),
-                            )
+                                )
 
-                            Column(
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp, vertical = 24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 // ── PulsingOrb decoration ──
                                 PulsingOrb(
@@ -781,6 +787,7 @@ fun PaywallScreen(
 
                                 // ── Bonus: extra trial days ──
                                 Row(
+                                    modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center,
                                 ) {
@@ -861,6 +868,7 @@ fun PaywallScreen(
                                 }
                             }
                         }
+                    }
                     }
                 }
             }
