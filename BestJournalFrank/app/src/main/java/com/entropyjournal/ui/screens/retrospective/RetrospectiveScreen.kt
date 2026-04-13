@@ -101,7 +101,7 @@ object RetrospectiveColors {
             if (LocalIsDarkTheme.current) {
                 Color(0xFF3D5A80) // Muted dark blue for dark mode
             } else {
-                Color(0xFF0097A7) // Teal primary — matches journal entry AI titles
+                Color(0xFF1976D2) // Standard blue — matches system accent
             }
 
     // --- Theme-aware UI colors for the retrospective start page ---
@@ -117,10 +117,10 @@ object RetrospectiveColors {
                 )
             } else {
                 listOf(
-                    Color(0xFFE0F7FA),  // Soft teal top
-                    Color(0xFFB2EBF2),  // Light cyan mid-upper
-                    Color(0xFFFFF3E0),  // Soft peach mid-lower
-                    Color(0xFFFFF8E1),  // Warm cream bottom
+                    Color(0xFFBBDEFB),  // Light blue top (Material Blue 100)
+                    Color(0xFFE3F2FD),  // Very light blue mid-upper (Blue 50)
+                    Color(0xFFF5F8FF),  // Near-white blue mid-lower
+                    Color.White,         // White bottom
                 )
             }
 
@@ -133,7 +133,7 @@ object RetrospectiveColors {
             if (LocalIsDarkTheme.current) {
                 Color(0xFF1A2744) // Deep navy (matches header gradient)
             } else {
-                Color(0xFFB2DFDB) // Soft teal — like header area but less blue
+                Color(0xFFBBDEFB) // Light blue — matches header gradient
             }
 
     val categoryButtonGradient: List<Color>
@@ -143,9 +143,9 @@ object RetrospectiveColors {
                 listOf(Color(0xFF1A2744), Color(0xFF181818)) // Deep navy → dark
             } else {
                 listOf(
-                    Color(0xFFE0F2F1),
-                    Color(0xFFFFF8E1),
-                ) // Soft mint-teal → warm cream (like header, less blue)
+                    Color(0xFFE3F2FD),
+                    Color.White,
+                ) // Light blue → white (matches header theme)
             }
 
     val monthColors: List<Color>
@@ -979,7 +979,7 @@ private fun SummaryDetailDialog(
                             Icon(
                                 if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
                                 contentDescription = if (isSpeaking) "Stoppen" else "Vorlesen",
-                                tint = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFFE07830),
+                                tint = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFF1976D2),
                                 modifier = Modifier.size(24.dp),
                             )
                         }
@@ -990,7 +990,7 @@ private fun SummaryDetailDialog(
                             Icon(
                                 Icons.Rounded.Share,
                                 contentDescription = "Teilen",
-                                tint = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFFE07830),
+                                tint = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFF1976D2),
                                 modifier = Modifier.size(24.dp),
                             )
                         }
@@ -1006,7 +1006,7 @@ private fun SummaryDetailDialog(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFFE07830),
+                                color = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFF1976D2),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
@@ -1131,7 +1131,7 @@ private fun SummaryDetailDialog(
                     },
                     colors =
                         androidx.compose.material3.ButtonDefaults.buttonColors(
-                            containerColor = if (LocalIsDarkTheme.current) Color(0xFF2C4A6E) else Color(0xFFE07830)
+                            containerColor = if (LocalIsDarkTheme.current) Color(0xFF2C4A6E) else Color(0xFF1976D2)
                         ),
                 ) {
                     Text("Teilen")
