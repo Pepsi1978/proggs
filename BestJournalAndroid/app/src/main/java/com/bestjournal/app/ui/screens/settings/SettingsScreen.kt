@@ -1734,7 +1734,7 @@ fun SettingsScreen(
                                 Triple(Icons.Rounded.Favorite, "5 KI-Perspektiven", "Von Klarheit bis Selbsterkenntnis"),
                                 Triple(Icons.Rounded.AutoAwesome, "Wochen-, Monats- und Jahresr\u00fcckblicke", "Die KI erz\u00e4hlt deine Geschichte"),
                                 Triple(Icons.Rounded.Tune, "Muster-Erkennung", "Die KI findet Zusammenh\u00e4nge die dir nicht auffallen"),
-                                Triple(Icons.Rounded.PictureAsPdf, "PDF-Export mit Fotos", "Alle Eintr\u00e4ge mit Bilder als Dokument"),
+                                Triple(Icons.Rounded.PictureAsPdf, "PDF-Export mit Fotos", "Alle Tagebucheintr\u00e4ge mit Bilder als Dokument"),
                                 Triple(Icons.Rounded.MusicNote, "Pr\u00e4zisere Spracherkennung", "H\u00f6here Qualit\u00e4t f\u00fcr deine Spracheintr\u00e4ge"),
                             )
                             featureItems.forEachIndexed { idx, (icon, title, subtitle) ->
