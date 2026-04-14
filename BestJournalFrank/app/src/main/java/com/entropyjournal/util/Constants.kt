@@ -65,11 +65,8 @@ object Constants {
 
     data class ElevenLabsVoice(val id: String, val name: String)
 
-    // Voices — replace IDs with your picks from elevenlabs.io/voice-library
     val ELEVENLABS_VOICES = listOf(
-        ElevenLabsVoice("", "Stimme 1 (Voice-ID eintragen)"),
-        ElevenLabsVoice("", "Stimme 2 (Voice-ID eintragen)"),
-        ElevenLabsVoice("", "Stimme 3 (Voice-ID eintragen)"),
+        ElevenLabsVoice("TUKJhQmz3RPYBNAgC5A1", "Helmut"),
     )
 
     // Dashboard-Szenario
