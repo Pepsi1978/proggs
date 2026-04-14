@@ -1778,25 +1778,6 @@ fun SettingsScreen(
                                 ) {
                                     Text("Premium freischalten")
                                 }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(
-                                    onClick = {
-                                        playClick()
-                                        viewModel.restorePurchases()
-                                        android.widget.Toast.makeText(
-                                            context,
-                                            "K\u00e4ufe werden wiederhergestellt\u2026",
-                                            android.widget.Toast.LENGTH_SHORT,
-                                        ).show()
-                                    },
-                                    colors =
-                                        ButtonDefaults.buttonColors(
-                                            containerColor = Color(0xFF81C784),
-                                            contentColor = Color.White,
-                                        ),
-                                ) {
-                                    Text("Kauf wiederherstellen")
-                                }
                             }
                         }
                     }
@@ -2159,6 +2140,26 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.outline,
                             textAlign = TextAlign.Center,
                         )
+                        if (!uiState.isSubscribed) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            TextButton(
+                                onClick = {
+                                    playClick()
+                                    viewModel.restorePurchases()
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Käufe werden wiederhergestellt\u2026",
+                                        android.widget.Toast.LENGTH_SHORT,
+                                    ).show()
+                                },
+                            ) {
+                                Text(
+                                    "Kauf wiederherstellen",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                            }
+                        }
                     }
                 }
 
