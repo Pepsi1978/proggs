@@ -6,10 +6,12 @@ import com.bestjournal.app.data.local.dao.JournalEntryDao
 import com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity
 import com.bestjournal.app.data.remote.ai.FirebaseAiService
 import com.bestjournal.app.data.repository.RetrospectiveRepository
+import com.bestjournal.app.util.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import kotlinx.coroutines.async
@@ -63,14 +65,46 @@ constructor(
     val lastFailureCount: Int
         get() = _lastFailureCount.get()
 
-    suspend fun generateMissing(): Int {
+    /**
+     * Represents a week that qualifies for a review but is locked behind premium.
+     * Used to show placeholder cards in the UI.
+     */
+    data class LockedWeekRange(
+        val weekStart: Calendar,
+        val weekEnd: Calendar,
+        val periodLabel: String,
+        val periodIndex: Int,
+    )
+
+    /**
+     * Calculates the free review cutoff: first entry timestamp + FREE_REVIEW_PERIOD_DAYS.
+     * Returns null if no entries exist yet (everything is free).
+     */
+    private suspend fun getFreeCutoffMillis(): Long? {
+        val earliest = journalDao.getEarliestTimestamp() ?: return null
+        return earliest + TimeUnit.DAYS.toMillis(Constants.FREE_REVIEW_PERIOD_DAYS.toLong())
+    }
+
+    /**
+     * Checks whether a given week's review is within the free period.
+     * If cutoff is null (no entries yet), everything is free.
+     */
+    private fun isWeekFree(weekEnd: Calendar, cutoffMillis: Long?): Boolean {
+        if (cutoffMillis == null) return true
+        return weekEnd.timeInMillis <= cutoffMillis
+    }
+
+    suspend fun generateMissing(isPremium: Boolean = false): Int {
         _lastFailureCount.set(0)
         // Cleanup: remove monthly reviews for months without actual diary entries
         cleanupOrphanedMonthlyReviews()
+        val cutoff = if (isPremium) null else getFreeCutoffMillis()
         var generated = 0
-        generated += generateMissingWeekly()
-        generated += generateMissingMonthly()
-        generated += generateMissingYearly()
+        generated += generateMissingWeekly(isPremium, cutoff)
+        if (isPremium) {
+            generated += generateMissingMonthly()
+            generated += generateMissingYearly()
+        }
         // If ALL attempts failed and nothing was generated, signal the error
         if (generated == 0 && lastFailureCount > 0) {
             throw Exception(
@@ -78,6 +112,47 @@ constructor(
             )
         }
         return generated
+    }
+
+    /**
+     * Returns week ranges that have enough entries for a review but are locked
+     * behind premium (outside the free 14-day window). Used for placeholder cards.
+     */
+    suspend fun getLockedWeekRanges(): List<LockedWeekRange> {
+        val cutoff = getFreeCutoffMillis() ?: return emptyList()
+        val now = Calendar.getInstance()
+        val locked = mutableListOf<LockedWeekRange>()
+
+        for (weeksBack in 1..8) {
+            val (weekStart, weekEnd) = getWeekRange(weeksBack)
+            val deadline = Calendar.getInstance().apply {
+                timeInMillis = weekEnd.timeInMillis
+                set(Calendar.HOUR_OF_DAY, 15)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            if (deadline.timeInMillis > now.timeInMillis) continue
+            // Only include weeks OUTSIDE the free window
+            if (isWeekFree(weekEnd, cutoff)) continue
+            // Skip if already generated (user may have upgraded and then downgraded)
+            if (retroRepo.existsForPeriod("WEEKLY", weekStart.timeInMillis)) continue
+            // Check if enough entries exist for this week
+            val entries = journalDao.getEntriesBetween(weekStart.timeInMillis, weekEnd.timeInMillis)
+            if (entries.size < 2) continue
+
+            val weekOfMonth = weekEnd.get(Calendar.DAY_OF_MONTH).let { day ->
+                when {
+                    day <= 7 -> 1
+                    day <= 14 -> 2
+                    day <= 21 -> 3
+                    else -> 4
+                }
+            }
+            val label = "Woche $weekOfMonth (${dfLabel.format(weekStart.time)} - ${dfLabel.format(weekEnd.time)})"
+            locked.add(LockedWeekRange(weekStart, weekEnd, label, weekOfMonth))
+        }
+        return locked
     }
 
     // ── Weekly ──────────────────────────────────────────────────────────────
@@ -88,7 +163,10 @@ constructor(
         val entriesText: String,
     )
 
-    private suspend fun generateMissingWeekly(): Int {
+    private suspend fun generateMissingWeekly(
+        isPremium: Boolean,
+        cutoffMillis: Long?,
+    ): Int {
         val now = Calendar.getInstance()
 
         // Phase 1: Collect all weeks that need generation
@@ -104,6 +182,11 @@ constructor(
                     set(Calendar.MILLISECOND, 0)
                 }
             if (deadline.timeInMillis > now.timeInMillis) continue
+            // Free users: skip weeks outside the free review period
+            if (!isPremium && !isWeekFree(weekEnd, cutoffMillis)) {
+                Log.d("Retro", "Week ${weeksBack}w ago: outside free period, skipping")
+                continue
+            }
             if (retroRepo.existsForPeriod("WEEKLY", weekStart.timeInMillis)) continue
             val entries = journalDao.getEntriesBetween(weekStart.timeInMillis, weekEnd.timeInMillis)
             if (entries.size < 2) {

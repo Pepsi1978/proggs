@@ -38,6 +38,9 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Stop
@@ -83,7 +86,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity
+import com.bestjournal.app.domain.usecase.GenerateRetrospectiveUseCase
+import com.bestjournal.app.ui.components.AiLimitReachedSheet
 import com.bestjournal.app.ui.components.SunMoonToggle
 import com.bestjournal.app.ui.theme.FeatureAccentOrange
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
@@ -172,11 +178,45 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
     val isWaitingForRestore by viewModel.isWaitingForRestore.collectAsState()
     val isProfileSwitch by viewModel.isProfileSwitch.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val lockedWeeks by viewModel.lockedWeeks.collectAsState()
+    val subState by viewModel.subscriptionState.collectAsState()
+    val isPremium = subState is SubscriptionState.Subscribed
 
     var selectedSummary by remember { mutableStateOf<RetrospectiveSummaryEntity?>(null) }
     var weeklyExpanded by rememberSaveable { mutableStateOf(false) }
     var monthlyExpanded by rememberSaveable { mutableStateOf(false) }
     var yearlyExpanded by rememberSaveable { mutableStateOf(false) }
+    var showInfoDialog by remember { mutableStateOf(false) }
+    var showPremiumSheet by remember { mutableStateOf(false) }
+
+    // Info dialog about review benefits
+    if (showInfoDialog) {
+        ReviewBenefitsDialog(onDismiss = { showInfoDialog = false })
+    }
+
+    // Premium upsell sheet
+    if (showPremiumSheet) {
+        val context = LocalContext.current
+        AiLimitReachedSheet(
+            monthlyPrice = viewModel.billingManager.monthlyPrice.collectAsState().value,
+            yearlyPrice = viewModel.billingManager.yearlyPrice.collectAsState().value,
+            onSubscribeMonthly = {
+                showPremiumSheet = false
+                viewModel.billingManager.launchPurchaseFlow(
+                    context as android.app.Activity,
+                    isYearly = false,
+                )
+            },
+            onSubscribeYearly = {
+                showPremiumSheet = false
+                viewModel.billingManager.launchPurchaseFlow(
+                    context as android.app.Activity,
+                    isYearly = true,
+                )
+            },
+            onDismiss = { showPremiumSheet = false },
+        )
+    }
 
     selectedSummary?.let { summary ->
         SummaryDetailDialog(
@@ -206,6 +246,16 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         SunMoonToggle()
+                    }
+                    IconButton(onClick = {
+                        doHaptic(HapticFeedbackType.LongPress)
+                        showInfoDialog = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.Rounded.Info,
+                            contentDescription = "Info zu Rückblicken",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -405,8 +455,37 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                                 TimelineSummaryEntry(
                                     summary = summary,
                                     color = RetrospectiveColors.forWeek(summary.periodIndex),
-                                    isLast = index == weekly.lastIndex,
+                                    isLast = index == weekly.lastIndex && lockedWeeks.isEmpty(),
                                     onClick = { selectedSummary = summary },
+                                )
+                            }
+
+                            // Locked week placeholders (premium-gated)
+                            if (lockedWeeks.isNotEmpty()) {
+                                lockedWeeks.forEachIndexed { index, locked ->
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    LockedWeekEntry(
+                                        periodLabel = locked.periodLabel,
+                                        isLast = index == lockedWeeks.lastIndex,
+                                        onClick = {
+                                            doHaptic(HapticFeedbackType.LongPress)
+                                            showPremiumSheet = true
+                                        },
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "Mit Premium alle Rückblicke freischalten",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            doHaptic(HapticFeedbackType.LongPress)
+                                            showPremiumSheet = true
+                                        }
+                                        .padding(vertical = 8.dp),
                                 )
                             }
                         }
@@ -418,10 +497,19 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                 // Monatsrückblick button + expandable entries
                 CategoryButton(
                     title = "Monatsrückblick",
-                    subtitle = "Dein vergangener Monat auf einen Blick",
+                    subtitle = if (isPremium) "Dein vergangener Monat auf einen Blick"
+                        else "Premium — Dein vergangener Monat auf einen Blick",
                     icon = Icons.Rounded.DateRange,
-                    expanded = monthlyExpanded,
-                    onClick = { monthlyExpanded = !monthlyExpanded },
+                    expanded = if (isPremium) monthlyExpanded else false,
+                    premiumBadge = !isPremium,
+                    onClick = {
+                        if (isPremium) {
+                            monthlyExpanded = !monthlyExpanded
+                        } else {
+                            doHaptic(HapticFeedbackType.LongPress)
+                            showPremiumSheet = true
+                        }
+                    },
                 )
                 AnimatedVisibility(
                     visible = monthlyExpanded,
@@ -464,10 +552,19 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
                 // Jahresrückblick button + expandable entries
                 CategoryButton(
                     title = "Jahresrückblick",
-                    subtitle = "Ein ganzes Jahr voller Erinnerungen",
+                    subtitle = if (isPremium) "Ein ganzes Jahr voller Erinnerungen"
+                        else "Premium — Ein ganzes Jahr voller Erinnerungen",
                     icon = Icons.Rounded.CalendarMonth,
-                    expanded = yearlyExpanded,
-                    onClick = { yearlyExpanded = !yearlyExpanded },
+                    expanded = if (isPremium) yearlyExpanded else false,
+                    premiumBadge = !isPremium,
+                    onClick = {
+                        if (isPremium) {
+                            yearlyExpanded = !yearlyExpanded
+                        } else {
+                            doHaptic(HapticFeedbackType.LongPress)
+                            showPremiumSheet = true
+                        }
+                    },
                 )
                 AnimatedVisibility(
                     visible = yearlyExpanded,
@@ -539,6 +636,7 @@ private fun CategoryButton(
     subtitle: String,
     icon: ImageVector,
     expanded: Boolean,
+    premiumBadge: Boolean = false,
     onClick: () -> Unit,
 ) {
     val isDark = LocalIsDarkTheme.current
@@ -573,12 +671,23 @@ private fun CategoryButton(
             }
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isDark) Color.White else MaterialTheme.colorScheme.onSurface,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isDark) Color.White else MaterialTheme.colorScheme.onSurface,
+                    )
+                    if (premiumBadge) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Rounded.Star,
+                            contentDescription = "Premium",
+                            modifier = Modifier.size(18.dp),
+                            tint = FeatureAccentOrange,
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = subtitle,
@@ -590,10 +699,14 @@ private fun CategoryButton(
             }
 
             Icon(
-                imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
-                contentDescription = if (expanded) "Zuklappen" else "Aufklappen",
+                imageVector = if (premiumBadge) Icons.Rounded.Lock
+                    else if (expanded) Icons.Rounded.ExpandLess
+                    else Icons.Rounded.ExpandMore,
+                contentDescription = if (premiumBadge) "Premium erforderlich"
+                    else if (expanded) "Zuklappen" else "Aufklappen",
                 tint =
-                    if (isDark) Color.White.copy(alpha = 0.7f)
+                    if (premiumBadge) FeatureAccentOrange
+                    else if (isDark) Color.White.copy(alpha = 0.7f)
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
             )
         }
@@ -1330,5 +1443,203 @@ private fun buildShareText(
         }
     } else {
         append("\n\n${summary.summaryText}")
+    }
+}
+
+// ── Locked Week Placeholder ────────────────────────────────────────────────
+
+@Composable
+private fun LockedWeekEntry(
+    periodLabel: String,
+    isLast: Boolean,
+    onClick: () -> Unit,
+) {
+    val isDark = LocalIsDarkTheme.current
+    Row(modifier = Modifier.fillMaxWidth()) {
+        // Timeline dot (lock icon instead of color dot)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.width(32.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(14.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isDark) Color.White.copy(alpha = 0.2f)
+                        else Color.Black.copy(alpha = 0.15f)
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Lock,
+                    contentDescription = "Gesperrt",
+                    modifier = Modifier.size(9.dp),
+                    tint = if (isDark) Color.White.copy(alpha = 0.5f)
+                        else Color.Black.copy(alpha = 0.4f),
+                )
+            }
+            if (!isLast) {
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .height(60.dp)
+                        .background(
+                            if (isDark) Color.White.copy(alpha = 0.08f)
+                            else Color.Black.copy(alpha = 0.08f)
+                        ),
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Locked card
+        Card(
+            onClick = onClick,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isDark) Color(0xFF181818).copy(alpha = 0.5f)
+                    else Color.White.copy(alpha = 0.6f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = periodLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (isDark) Color.White.copy(alpha = 0.4f)
+                            else Color.Black.copy(alpha = 0.35f),
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Premium freischalten",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = FeatureAccentOrange.copy(alpha = 0.8f),
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Rounded.Lock,
+                    contentDescription = "Premium erforderlich",
+                    modifier = Modifier.size(20.dp),
+                    tint = FeatureAccentOrange.copy(alpha = 0.6f),
+                )
+            }
+        }
+    }
+}
+
+// ── Review Benefits Info Dialog ────────────────────────────────────────────
+
+@Composable
+private fun ReviewBenefitsDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text("Verstanden")
+            }
+        },
+        icon = {
+            Icon(
+                imageVector = Icons.Rounded.AutoAwesome,
+                contentDescription = null,
+                modifier = Modifier.size(32.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        },
+        title = {
+            Text(
+                text = "Deine KI-Rückblicke",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                BenefitSection(
+                    title = "Wochenrückblick",
+                    points = listOf(
+                        "Die KI fasst deine Woche zu einer persönlichen Erzählung zusammen",
+                        "Emotionale Muster und Highlights werden sichtbar",
+                        "Jeden Sonntag automatisch erstellt, wenn du mindestens 2 Einträge hast",
+                        "Die ersten 2 Wochen sind kostenlos",
+                    ),
+                )
+                BenefitSection(
+                    title = "Monatsrückblick",
+                    points = listOf(
+                        "Verbindet deine Wochenrückblicke zu einer Monatserzählung",
+                        "Rote Fäden und Entwicklungen über den Monat werden sichtbar",
+                        "Zeigt Veränderungen die dir im Alltag nicht auffallen",
+                    ),
+                    isPremium = true,
+                )
+                BenefitSection(
+                    title = "Jahresrückblick",
+                    points = listOf(
+                        "Dein ganzes Jahr auf einen Blick",
+                        "Die KI erkennt die großen Themen deines Jahres",
+                        "Persönliche Entwicklung wird sichtbar und greifbar",
+                    ),
+                    isPremium = true,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun BenefitSection(
+    title: String,
+    points: List<String>,
+    isPremium: Boolean = false,
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (isPremium) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Icon(
+                    imageVector = Icons.Rounded.Star,
+                    contentDescription = "Premium",
+                    modifier = Modifier.size(14.dp),
+                    tint = FeatureAccentOrange,
+                )
+                Spacer(modifier = Modifier.width(2.dp))
+                Text(
+                    text = "Premium",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = FeatureAccentOrange,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        points.forEach { point ->
+            Row(modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)) {
+                Text(
+                    text = "•",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+                Text(
+                    text = point,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }

@@ -35,6 +35,9 @@ interface JournalEntryDao {
 
     @Query("SELECT COUNT(*) FROM journal_entries") suspend fun getEntryCount(): Int
 
+    @Query("SELECT MIN(timestamp) FROM journal_entries")
+    suspend fun getEarliestTimestamp(): Long?
+
     @Query("SELECT * FROM journal_entries ORDER BY timestamp DESC")
     suspend fun getAllEntriesOnce(): List<JournalEntryEntity>
 

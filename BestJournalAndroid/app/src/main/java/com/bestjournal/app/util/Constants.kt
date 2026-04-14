@@ -66,6 +66,7 @@ object Constants {
 
     // Freemium
     const val TRIAL_USAGE_DAYS = 8
+    const val FREE_REVIEW_PERIOD_DAYS = 14 // Weekly reviews free for 14 days after first entry
     const val FREE_WEEKLY_DASHBOARD_LIMIT = 5
     const val FREE_WEEKLY_TEXT_LIMIT = 5
     const val MAX_ENTRIES_FREE_ANALYSIS = 20

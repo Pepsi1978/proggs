@@ -3,6 +3,8 @@ package com.bestjournal.app.ui.screens.retrospective
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bestjournal.app.billing.BillingManager
+import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.local.dao.EntryPhotoDao
 import com.bestjournal.app.data.local.entity.EntryPhotoEntity
 import com.bestjournal.app.data.repository.RetrospectiveRepository
@@ -24,6 +26,7 @@ constructor(
     private val repository: RetrospectiveRepository,
     private val generateUseCase: GenerateRetrospectiveUseCase,
     private val entryPhotoDao: EntryPhotoDao,
+    val billingManager: BillingManager,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
 ) : ViewModel() {
 
@@ -56,6 +59,16 @@ constructor(
 
     private val _currentPhotos = MutableStateFlow<List<EntryPhotoEntity>>(emptyList())
     val currentPhotos: StateFlow<List<EntryPhotoEntity>> = _currentPhotos.asStateFlow()
+
+    private val _lockedWeeks =
+        MutableStateFlow<List<GenerateRetrospectiveUseCase.LockedWeekRange>>(emptyList())
+    val lockedWeeks: StateFlow<List<GenerateRetrospectiveUseCase.LockedWeekRange>> =
+        _lockedWeeks.asStateFlow()
+
+    val subscriptionState: StateFlow<SubscriptionState> = billingManager.subscriptionState
+
+    private fun isPremium(): Boolean =
+        billingManager.subscriptionState.value is SubscriptionState.Subscribed
 
     /**
      * Waits until ALL photos referenced in DB actually exist on disk. After a restore, photos are
@@ -191,16 +204,43 @@ constructor(
                     Log.d("RetroVM", "One-time cleanup: cleared old retrospective data")
                 }
 
+                val premium = isPremium()
                 _isGenerating.value = true
-                val count = generateUseCase.generateMissing()
+                val count = generateUseCase.generateMissing(isPremium = premium)
                 if (count > 0) {
-                    Log.d("RetroVM", "Generated $count new reviews")
+                    Log.d("RetroVM", "Generated $count new reviews (premium=$premium)")
+                }
+                // Load locked week placeholders for free users
+                if (!premium) {
+                    _lockedWeeks.value = generateUseCase.getLockedWeekRanges()
+                    Log.d("RetroVM", "Locked weeks: ${_lockedWeeks.value.size}")
                 }
             } catch (e: Exception) {
                 Log.e("RetroVM", "Review generation failed: ${e.message}", e)
                 _errorMessage.value = e.message
             } finally {
                 _isGenerating.value = false
+            }
+        }
+
+        // React to subscription state changes: regenerate when user upgrades
+        viewModelScope.launch {
+            billingManager.subscriptionState.collect { state ->
+                if (state is SubscriptionState.Subscribed && _lockedWeeks.value.isNotEmpty()) {
+                    Log.d("RetroVM", "User upgraded to premium — generating locked reviews")
+                    _lockedWeeks.value = emptyList()
+                    launch(Dispatchers.IO) {
+                        try {
+                            _isGenerating.value = true
+                            val count = generateUseCase.generateMissing(isPremium = true)
+                            Log.d("RetroVM", "Post-upgrade generated $count reviews")
+                        } catch (e: Exception) {
+                            Log.e("RetroVM", "Post-upgrade generation failed: ${e.message}", e)
+                        } finally {
+                            _isGenerating.value = false
+                        }
+                    }
+                }
             }
         }
     }
@@ -219,11 +259,15 @@ constructor(
                     awaitSyncComplete()
                     repository.deleteAll()
                     Log.d("RetroVM", "Deleted all retrospectives for profile-change regeneration")
-                    val count = generateUseCase.generateMissing()
+                    val premium = isPremium()
+                    val count = generateUseCase.generateMissing(isPremium = premium)
                     if (count == 0) {
                         Log.w("RetroVM", "Regeneration produced 0 reviews — AI may have failed")
                     } else {
                         Log.d("RetroVM", "Regenerated $count reviews with new profile style")
+                    }
+                    if (!premium) {
+                        _lockedWeeks.value = generateUseCase.getLockedWeekRanges()
                     }
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e // Don't catch cancellation
@@ -247,8 +291,12 @@ constructor(
             try {
                 _isGenerating.value = true
                 awaitSyncComplete()
-                val count = generateUseCase.generateMissing()
+                val premium = isPremium()
+                val count = generateUseCase.generateMissing(isPremium = premium)
                 Log.d("RetroVM", "Retry generated $count reviews")
+                if (!premium) {
+                    _lockedWeeks.value = generateUseCase.getLockedWeekRanges()
+                }
             } catch (e: Exception) {
                 Log.e("RetroVM", "Retry failed: ${e.message}", e)
                 _errorMessage.value = e.message
