@@ -119,7 +119,7 @@ fun PaywallScreen(
         if (price != null) {
             String.format("%.2f\u00A0\u20AC", price / 2).replace(".", ",")
         } else {
-            "2,50\u00A0\u20AC"
+            "2,00\u00A0\u20AC"
         }
     }
 
@@ -646,8 +646,7 @@ fun PaywallScreen(
             }
 
             // ── Exit-intent dialog ──
-            // Shows 50% promo only if a real Google Play offer exists,
-            // otherwise offers the yearly plan as a better deal.
+            // Always shows 50% monthly discount for 2 months + 2 bonus trial days.
             if (showExitDialog) {
                 LaunchedEffect(Unit) {
                     viewModel.analyticsTracker.trackExitIntentShown()
@@ -777,15 +776,16 @@ fun PaywallScreen(
                                     Button(
                                         onClick = {
                                             viewModel.analyticsTracker.trackExitIntentAccepted()
-                                            // Extend trial by 2 days
-                                            viewModel.extendTrial()
                                             activity?.let { act ->
-                                                if (!viewModel.launchPurchaseFlow(
-                                                        act,
-                                                        isYearly = false,
-                                                        usePromoOffer = true,
-                                                    )
-                                                ) {
+                                                val launched = viewModel.launchPurchaseFlow(
+                                                    act,
+                                                    isYearly = false,
+                                                    usePromoOffer = true,
+                                                )
+                                                if (launched) {
+                                                    // Only extend trial when billing flow actually started
+                                                    viewModel.extendTrial()
+                                                } else {
                                                     Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
                                                 }
                                             }
