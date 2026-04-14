@@ -201,24 +201,25 @@ class BillingManager @Inject constructor(
     }
 
     /**
-     * Look for a retention offer on the given subscription (monthly or yearly).
-     * These are developer-determined offers configured in Play Console with specific offer IDs.
+     * Look for a retention base plan on the given subscription (monthly or yearly).
+     * These are separate base plans configured in Play Console with developer-determined visibility.
+     * Using basePlanId (not offerId) because permanent discounts require a base plan, not an offer.
      */
     fun getRetentionOfferToken(isYearly: Boolean): String? {
         val details = if (isYearly) yearlyProductDetails else monthlyProductDetails
         details ?: return null
-        val targetOfferId = if (isYearly) "retention-yearly-75" else "retention-monthly-75"
+        val targetBasePlanId = if (isYearly) "retention-yearly-75" else "retention-monthly-75"
         return details.subscriptionOfferDetails
-            ?.firstOrNull { offer -> offer.offerId == targetOfferId }
+            ?.firstOrNull { offer -> offer.basePlanId == targetBasePlanId }
             ?.offerToken
     }
 
     fun getRetentionPrice(isYearly: Boolean): String? {
         val details = if (isYearly) yearlyProductDetails else monthlyProductDetails
         details ?: return null
-        val targetOfferId = if (isYearly) "retention-yearly-75" else "retention-monthly-75"
+        val targetBasePlanId = if (isYearly) "retention-yearly-75" else "retention-monthly-75"
         return details.subscriptionOfferDetails
-            ?.firstOrNull { offer -> offer.offerId == targetOfferId }
+            ?.firstOrNull { offer -> offer.basePlanId == targetBasePlanId }
             ?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice
     }
 
