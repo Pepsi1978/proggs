@@ -187,13 +187,17 @@ class BillingManager @Inject constructor(
 
     /**
      * Look for a promotional/introductory offer on the monthly plan.
-     * This requires a "developer determined offer" or "introductory price" configured
-     * in Google Play Console for the monthly subscription.
+     * First checks for a dedicated "monthly-50-off-first" base plan,
+     * then falls back to looking for offers with multiple pricing phases (intro + base).
      * Returns the offerToken if found, null otherwise.
      */
     fun getMonthlyPromoOfferToken(): String? {
         val details = monthlyProductDetails ?: return null
-        // Look for offers with more than 1 pricing phase (intro + base)
+        // First: look for dedicated 50%-off base plan by ID
+        val promoBasePlan = details.subscriptionOfferDetails
+            ?.firstOrNull { offer -> offer.basePlanId == "monthly-50-off-first" }
+        if (promoBasePlan != null) return promoBasePlan.offerToken
+        // Fallback: look for offers with more than 1 pricing phase (intro + base)
         return details.subscriptionOfferDetails
             ?.firstOrNull { offer ->
                 offer.pricingPhases.pricingPhaseList.size > 1
