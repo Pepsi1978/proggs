@@ -27,6 +27,9 @@ class BillingManager @Inject constructor(
     private val _subscriptionState = MutableStateFlow<SubscriptionState>(SubscriptionState.Free)
     val subscriptionState: StateFlow<SubscriptionState> = _subscriptionState.asStateFlow()
 
+    private val _subscriptionType = MutableStateFlow(SubscriptionType.NONE)
+    val subscriptionType: StateFlow<SubscriptionType> = _subscriptionType.asStateFlow()
+
     private val _monthlyPrice = MutableStateFlow("")
     val monthlyPrice: StateFlow<String> = _monthlyPrice.asStateFlow()
 
@@ -70,12 +73,20 @@ class BillingManager @Inject constructor(
             QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build()
         billingClient?.queryPurchasesAsync(params) { billingResult, purchases ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                val hasActive = purchases.any { purchase ->
+                val activePurchase = purchases.firstOrNull { purchase ->
                     purchase.purchaseState == Purchase.PurchaseState.PURCHASED &&
                         purchase.isAcknowledged
                 }
-                _subscriptionState.value =
-                    if (hasActive) SubscriptionState.Subscribed else SubscriptionState.Free
+                if (activePurchase != null) {
+                    _subscriptionState.value = SubscriptionState.Subscribed
+                    _subscriptionType.value = when {
+                        activePurchase.products.contains(YEARLY_PRODUCT_ID) -> SubscriptionType.YEARLY
+                        activePurchase.products.contains(MONTHLY_PRODUCT_ID) -> SubscriptionType.MONTHLY
+                        else -> SubscriptionType.MONTHLY
+                    }
+                } else {
+                    _subscriptionState.value = SubscriptionState.Free
+                }
 
                 // K-2 fix: Acknowledge unacknowledged purchases — only set Subscribed AFTER success
                 purchases
@@ -99,6 +110,7 @@ class BillingManager @Inject constructor(
                 }
                 if (hasLifetime) {
                     _subscriptionState.value = SubscriptionState.Subscribed
+                    _subscriptionType.value = SubscriptionType.LIFETIME
                 }
                 purchases
                     .filter {
@@ -182,6 +194,28 @@ class BillingManager @Inject constructor(
             ?.firstOrNull { offer ->
                 offer.pricingPhases.pricingPhaseList.size > 1
             }?.offerToken
+    }
+
+    /**
+     * Look for a retention offer on the given subscription (monthly or yearly).
+     * These are developer-determined offers configured in Play Console with specific offer IDs.
+     */
+    fun getRetentionOfferToken(isYearly: Boolean): String? {
+        val details = if (isYearly) yearlyProductDetails else monthlyProductDetails
+        details ?: return null
+        val targetOfferId = if (isYearly) "retention-yearly-75" else "retention-monthly-75"
+        return details.subscriptionOfferDetails
+            ?.firstOrNull { offer -> offer.offerId == targetOfferId }
+            ?.offerToken
+    }
+
+    fun getRetentionPrice(isYearly: Boolean): String? {
+        val details = if (isYearly) yearlyProductDetails else monthlyProductDetails
+        details ?: return null
+        val targetOfferId = if (isYearly) "retention-yearly-75" else "retention-monthly-75"
+        return details.subscriptionOfferDetails
+            ?.firstOrNull { offer -> offer.offerId == targetOfferId }
+            ?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice
     }
 
     fun restorePurchases() {

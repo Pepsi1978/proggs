@@ -80,6 +80,39 @@ constructor(
         billingManager.restorePurchases()
     }
 
+    val subscriptionType = billingManager.subscriptionType
+
+    fun getCurrentPrice(): String {
+        return when (billingManager.subscriptionType.value) {
+            com.bestjournal.app.billing.SubscriptionType.YEARLY ->
+                billingManager.yearlyPrice.value.ifEmpty { Constants.YEARLY_PRICE_DISPLAY }
+            else ->
+                billingManager.monthlyPrice.value.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
+        }
+    }
+
+    fun getRetentionPrice(): String? {
+        val isYearly = billingManager.subscriptionType.value == com.bestjournal.app.billing.SubscriptionType.YEARLY
+        return billingManager.getRetentionPrice(isYearly)
+    }
+
+    fun launchRetentionOffer(activity: Activity) {
+        val isYearly = billingManager.subscriptionType.value == com.bestjournal.app.billing.SubscriptionType.YEARLY
+        val offerToken = billingManager.getRetentionOfferToken(isYearly)
+        if (offerToken != null) {
+            billingManager.launchPurchaseFlow(activity, isYearly = isYearly, promoOfferToken = offerToken)
+        } else {
+            // Fallback: open Google Play subscription management
+            try {
+                val intent = android.content.Intent(
+                    android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse("https://play.google.com/store/account/subscriptions"),
+                )
+                activity.startActivity(intent)
+            } catch (_: Exception) { }
+        }
+    }
+
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState
 

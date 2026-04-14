@@ -106,6 +106,13 @@ object Constants {
     const val PREF_CHURN_OFFER_ACCEPTED = "churn_offer_accepted"
     const val PREF_CHURN_OFFER_TIMESTAMP = "churn_offer_timestamp"
 
+    // Retention offer (25% discount = pay 75% of the price)
+    const val RETENTION_DISCOUNT_PERCENT = 25
+    const val RETENTION_MONTHLY_PRICE = "2,99\u00A0\u20AC"
+    const val RETENTION_YEARLY_PRICE = "22,49\u00A0\u20AC"
+    const val RETENTION_OFFER_ID_MONTHLY = "retention-monthly-75"
+    const val RETENTION_OFFER_ID_YEARLY = "retention-yearly-75"
+
     // Weekly Review
     const val PREF_WEEKLY_REVIEW_ENABLED = "weekly_review_enabled"
     const val PREF_WEEKLY_REVIEW_DAY = "weekly_review_day" // Calendar.MONDAY=2 .. SUNDAY=1

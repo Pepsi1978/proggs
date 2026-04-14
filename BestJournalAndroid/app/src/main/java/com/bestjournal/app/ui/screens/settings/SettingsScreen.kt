@@ -1687,13 +1687,23 @@ fun SettingsScreen(
                                 )
                             }
                             if (showChurnDialog) {
+                                val subType by viewModel.subscriptionType.collectAsState()
+                                val activity = context as? android.app.Activity
                                 ChurnFlowDialog(
                                     onDismiss = { showChurnDialog = false },
                                     onOfferAccepted = { showChurnDialog = false },
                                     onCancelConfirmed = { showChurnDialog = false },
                                     onSwitchToYearly = {
+                                        showChurnDialog = false
                                         onNavigateToPaywall("churn_yearly_switch")
                                     },
+                                    onRetentionAccepted = {
+                                        showChurnDialog = false
+                                        activity?.let { viewModel.launchRetentionOffer(it) }
+                                    },
+                                    subscriptionType = subType,
+                                    currentPrice = viewModel.getCurrentPrice(),
+                                    retentionPrice = viewModel.getRetentionPrice(),
                                     analyticsTracker = viewModel.analyticsTracker,
                                     context = context,
                                 )
