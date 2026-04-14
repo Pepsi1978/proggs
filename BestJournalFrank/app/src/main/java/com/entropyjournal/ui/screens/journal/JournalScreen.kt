@@ -378,28 +378,17 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
-                    // Writing Prompt Banner with entrance animation
+                    // Daily writing prompt banner — always visible, no animation
                     if (uiState.showPromptBanner && uiState.dailyPromptText.isNotBlank()) {
                         item(key = "writing_prompt") {
-                            var bannerVisible by remember { mutableStateOf(false) }
-                            LaunchedEffect(Unit) { bannerVisible = true }
-                            AnimatedVisibility(
-                                visible = bannerVisible,
-                                enter = fadeIn(animationSpec = tween(400)) +
-                                    slideInVertically(
-                                        animationSpec = tween(400),
-                                        initialOffsetY = { -it / 4 },
-                                    ),
-                            ) {
-                                WritingPromptBanner(
-                                    promptText = uiState.dailyPromptText,
-                                    promptCategory = uiState.dailyPromptCategory,
-                                    onWriteClick = {
-                                        viewModel.startPromptEntry(uiState.dailyPromptText)
-                                    },
-                                    onDismiss = { viewModel.dismissPromptBanner() },
-                                )
-                            }
+                            WritingPromptBanner(
+                                promptText = uiState.dailyPromptText,
+                                promptCategory = uiState.dailyPromptCategory,
+                                onWriteClick = {
+                                    viewModel.startPromptEntry(uiState.dailyPromptText)
+                                },
+                                onDismiss = { viewModel.dismissPromptBanner() },
+                            )
                         }
                     }
 

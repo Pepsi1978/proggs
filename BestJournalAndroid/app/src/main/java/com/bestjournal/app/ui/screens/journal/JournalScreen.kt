@@ -429,24 +429,17 @@ fun JournalScreen(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
-                    // Daily writing prompt banner — fade-in only (no slide to avoid layout shift)
+                    // Daily writing prompt banner — always visible, no animation
                     if (uiState.showPromptBanner && uiState.dailyPromptText.isNotBlank()) {
                         item(key = "writing_prompt") {
-                            val bannerAlpha = remember { Animatable(0f) }
-                            LaunchedEffect(Unit) {
-                                delay(300)
-                                bannerAlpha.animateTo(1f, tween(400))
-                            }
-                            Box(modifier = Modifier.graphicsLayer { alpha = bannerAlpha.value }) {
-                                WritingPromptBanner(
-                                    promptText = uiState.dailyPromptText,
-                                    promptCategory = uiState.dailyPromptCategory,
-                                    onWriteClick = {
-                                        viewModel.startTextEntryWithPrompt(uiState.dailyPromptText)
-                                    },
-                                    onDismiss = { viewModel.dismissPromptBanner() },
-                                )
-                            }
+                            WritingPromptBanner(
+                                promptText = uiState.dailyPromptText,
+                                promptCategory = uiState.dailyPromptCategory,
+                                onWriteClick = {
+                                    viewModel.startTextEntryWithPrompt(uiState.dailyPromptText)
+                                },
+                                onDismiss = { viewModel.dismissPromptBanner() },
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
