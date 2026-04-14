@@ -2140,26 +2140,6 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.outline,
                             textAlign = TextAlign.Center,
                         )
-                        if (!uiState.isSubscribed) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            TextButton(
-                                onClick = {
-                                    playClick()
-                                    viewModel.restorePurchases()
-                                    android.widget.Toast.makeText(
-                                        context,
-                                        "Käufe werden wiederhergestellt\u2026",
-                                        android.widget.Toast.LENGTH_SHORT,
-                                    ).show()
-                                },
-                            ) {
-                                Text(
-                                    "Kauf wiederherstellen",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.outline,
-                                )
-                            }
-                        }
                     }
                 }
 
