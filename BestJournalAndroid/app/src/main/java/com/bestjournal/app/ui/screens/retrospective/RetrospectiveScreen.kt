@@ -702,14 +702,11 @@ private fun CategoryButton(
             }
 
             Icon(
-                imageVector = if (premiumBadge) Icons.Rounded.Lock
-                    else if (expanded) Icons.Rounded.ExpandLess
+                imageVector = if (expanded) Icons.Rounded.ExpandLess
                     else Icons.Rounded.ExpandMore,
-                contentDescription = if (premiumBadge) "Premium erforderlich"
-                    else if (expanded) "Zuklappen" else "Aufklappen",
+                contentDescription = if (expanded) "Zuklappen" else "Aufklappen",
                 tint =
-                    if (premiumBadge) FeatureAccentOrange
-                    else if (isDark) Color.White.copy(alpha = 0.7f)
+                    if (isDark) Color.White.copy(alpha = 0.7f)
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
             )
         }
