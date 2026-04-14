@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,6 +69,18 @@ fun SplashScreen(
     onSplashFinished: (isOnboardingDone: Boolean) -> Unit,
     viewModel: SplashViewModel,
 ) {
+    // ── Exit state: when Start is pressed, fade everything out first ──
+    val isExiting = remember { mutableStateOf(false) }
+    val exitAlpha = remember { Animatable(1f) }
+
+    LaunchedEffect(isExiting.value) {
+        if (isExiting.value) {
+            exitAlpha.animateTo(0f, tween(500, easing = FastOutSlowInEasing))
+            delay(50)
+            onSplashFinished(viewModel.isOnboardingCompleted())
+        }
+    }
+
     // ── Entrance animation states ──
     val heroAlpha = remember { Animatable(0f) }
     val heroScale = remember { Animatable(1.06f) }
@@ -125,6 +138,12 @@ fun SplashScreen(
             .fillMaxSize()
             .background(SplashBg),
     ) {
+        // Exit wrapper: content fades out, background stays solid black
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = exitAlpha.value },
+        ) {
         // Layer 1: Ambient radial glows (warm atmosphere behind everything)
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
@@ -241,7 +260,7 @@ fun SplashScreen(
                 )
 
                 Button(
-                    onClick = { onSplashFinished(viewModel.isOnboardingCompleted()) },
+                    onClick = { if (!isExiting.value) isExiting.value = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -289,5 +308,6 @@ fun SplashScreen(
                 textAlign = TextAlign.Center,
             )
         }
+        } // end exit-wrapper
     }
 }

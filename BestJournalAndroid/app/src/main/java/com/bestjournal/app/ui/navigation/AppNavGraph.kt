@@ -1,6 +1,7 @@
 package com.bestjournal.app.ui.navigation
 
 import android.net.Uri
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -53,7 +54,11 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
             )
         }
 
-        composable("onboarding", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+        composable(
+            "onboarding",
+            enterTransition = { fadeIn(tween(600)) },
+            exitTransition = { fadeOut(tween(400)) },
+        ) {
             OnboardingScreen(
                 viewModel = hiltViewModel(),
                 onFinished = {
@@ -62,7 +67,11 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
             )
         }
 
-        composable("main", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+        composable(
+            "main",
+            enterTransition = { fadeIn(tween(600)) },
+            exitTransition = { fadeOut(tween(400)) },
+        ) {
             val pagerState = rememberPagerState(initialPage = initialTab) { mainPages.size }
             val coroutineScope = rememberCoroutineScope()
             val retroViewModel:
