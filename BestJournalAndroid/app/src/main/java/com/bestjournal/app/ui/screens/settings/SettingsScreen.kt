@@ -1661,7 +1661,7 @@ fun SettingsScreen(
                             Text(
                                 "Premium",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = FeatureAccentOrange,
                             )
                             // Invisible counterbalance for icon+spacer so text is visually centered
                             Spacer(modifier = Modifier.width(28.dp))
