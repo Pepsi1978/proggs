@@ -89,7 +89,6 @@ import coil3.compose.AsyncImage
 import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity
 import com.bestjournal.app.domain.usecase.GenerateRetrospectiveUseCase
-import com.bestjournal.app.ui.components.AiLimitReachedSheet
 import com.bestjournal.app.ui.components.SunMoonToggle
 import com.bestjournal.app.ui.theme.FeatureAccentOrange
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
@@ -189,30 +188,30 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
     var showInfoDialog by remember { mutableStateOf(false) }
     var showPremiumSheet by remember { mutableStateOf(false) }
 
+    // Get Activity reference OUTSIDE the sheet (LocalContext is reliable here)
+    val activity = LocalContext.current as? android.app.Activity
+
     // Info dialog about review benefits
     if (showInfoDialog) {
         ReviewBenefitsDialog(onDismiss = { showInfoDialog = false })
     }
 
-    // Premium upsell sheet
+    // Review-specific premium upsell sheet
     if (showPremiumSheet) {
-        val context = LocalContext.current
-        AiLimitReachedSheet(
+        ReviewPremiumSheet(
             monthlyPrice = viewModel.billingManager.monthlyPrice.collectAsState().value,
             yearlyPrice = viewModel.billingManager.yearlyPrice.collectAsState().value,
             onSubscribeMonthly = {
                 showPremiumSheet = false
-                viewModel.billingManager.launchPurchaseFlow(
-                    context as android.app.Activity,
-                    isYearly = false,
-                )
+                activity?.let {
+                    viewModel.billingManager.launchPurchaseFlow(it, isYearly = false)
+                }
             },
             onSubscribeYearly = {
                 showPremiumSheet = false
-                viewModel.billingManager.launchPurchaseFlow(
-                    context as android.app.Activity,
-                    isYearly = true,
-                )
+                activity?.let {
+                    viewModel.billingManager.launchPurchaseFlow(it, isYearly = true)
+                }
             },
             onDismiss = { showPremiumSheet = false },
         )
@@ -1641,5 +1640,114 @@ private fun BenefitSection(
                 )
             }
         }
+    }
+}
+
+// ── Review-specific Premium Upsell Sheet ───────────────────────────────────
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun ReviewPremiumSheet(
+    monthlyPrice: String,
+    yearlyPrice: String,
+    onSubscribeMonthly: () -> Unit,
+    onSubscribeYearly: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState()
+
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                Icons.Rounded.AutoAwesome,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "Deine persönlichen Rückblicke",
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                "Mit Premium erstellt die KI automatisch Rückblicke aus deinen Tagebucheinträgen:",
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Review-specific benefits
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                ReviewBenefitPoint("Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen")
+                ReviewBenefitPoint("Monatsrückblicke, die rote Fäden und Entwicklungen zeigen")
+                ReviewBenefitPoint("Jahresrückblicke, dein ganzes Jahr als persönliche Erzählung")
+                ReviewBenefitPoint("5 verschiedene KI-Perspektiven auf dein Leben")
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            androidx.compose.material3.Button(
+                onClick = onSubscribeYearly,
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
+            ) {
+                Text(
+                    if (yearlyPrice.isNotBlank()) "Jahresabo — $yearlyPrice/Jahr"
+                    else "Jahresabo starten",
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            androidx.compose.material3.OutlinedButton(
+                onClick = onSubscribeMonthly,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    if (monthlyPrice.isNotBlank()) "Monatsabo — $monthlyPrice/Monat"
+                    else "Monatsabo starten",
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text(
+                    "Später entscheiden",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun ReviewBenefitPoint(text: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(
+            imageVector = Icons.Rounded.Star,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp).padding(top = 2.dp),
+            tint = FeatureAccentOrange,
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
