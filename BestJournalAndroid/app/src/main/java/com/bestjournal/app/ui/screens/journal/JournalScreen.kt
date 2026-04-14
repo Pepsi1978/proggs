@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -79,6 +80,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -427,19 +429,15 @@ fun JournalScreen(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 ) {
-                    // Daily writing prompt banner with entrance animation
+                    // Daily writing prompt banner — fade-in only (no slide to avoid layout shift)
                     if (uiState.showPromptBanner && uiState.dailyPromptText.isNotBlank()) {
                         item(key = "writing_prompt") {
-                            var bannerVisible by remember { mutableStateOf(false) }
-                            LaunchedEffect(Unit) { bannerVisible = true }
-                            AnimatedVisibility(
-                                visible = bannerVisible,
-                                enter = fadeIn(animationSpec = tween(400)) +
-                                    slideInVertically(
-                                        animationSpec = tween(400),
-                                        initialOffsetY = { -it / 4 },
-                                    ),
-                            ) {
+                            val bannerAlpha = remember { Animatable(0f) }
+                            LaunchedEffect(Unit) {
+                                delay(300)
+                                bannerAlpha.animateTo(1f, tween(400))
+                            }
+                            Box(modifier = Modifier.graphicsLayer { alpha = bannerAlpha.value }) {
                                 WritingPromptBanner(
                                     promptText = uiState.dailyPromptText,
                                     promptCategory = uiState.dailyPromptCategory,
