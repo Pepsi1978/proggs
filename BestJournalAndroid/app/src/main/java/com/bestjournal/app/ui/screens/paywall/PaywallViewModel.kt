@@ -80,7 +80,7 @@ constructor(
         prefs.edit().putBoolean(Constants.PREF_EXIT_INTENT_TRIAL_EXTENDED, true).apply()
     }
 
-    /** Returns false if product details are not loaded yet (billing unavailable). */
+    /** Returns false if product details are not loaded yet or promo unavailable. */
     fun launchPurchaseFlow(
         activity: Activity,
         isYearly: Boolean = false,
@@ -93,15 +93,15 @@ constructor(
             else -> monthlyPrice.value.isNotEmpty()
         }
         if (!priceLoaded) {
-            val type = when {
-                isLifetime -> "lifetime"
-                isYearly -> "yearly"
-                else -> "monthly"
-            }
-            Log.w("PaywallViewModel", "Product details not loaded for $type")
+            Log.w("PaywallViewModel", "Product details not loaded")
             return false
         }
         val promoToken = if (usePromoOffer) billingManager.getMonthlyPromoOfferToken() else null
+        // Safety: if promo was requested but not available, don't launch at full price
+        if (usePromoOffer && promoToken == null) {
+            Log.w("PaywallViewModel", "Promo offer requested but not available from Play")
+            return false
+        }
         billingManager.launchPurchaseFlow(
             activity,
             isYearly = isYearly,
