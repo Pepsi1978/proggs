@@ -13,13 +13,14 @@ import javax.inject.Singleton
 class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
     companion object {
         private const val KEY_USAGE_DAYS = "ai_usage_days"
+        private const val KEY_FIRST_USE_DATE = "ai_first_use_date"
         private const val KEY_WEEKLY_DASHBOARD_COUNT = "weekly_dashboard_count"
         private const val KEY_WEEKLY_TEXT_COUNT = "weekly_text_count"
         private const val KEY_WEEKLY_RESET_DATE = "ai_weekly_reset"
         private const val KEY_BANNER_LAST_SHOWN = "ai_banner_last_shown"
         const val TRIAL_DAYS = 8
 
-        // Dashboard daily tracking
+        // Dashboard daily tracking (per scenario)
         private const val KEY_DASHBOARD_DAILY_COUNT = "dashboard_daily_count"
         private const val KEY_DASHBOARD_DAILY_DATE = "dashboard_daily_date"
         private const val KEY_DASHBOARD_COOLDOWN_UNTIL = "dashboard_cooldown_until"
@@ -43,14 +44,21 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
         val days = getUsageDaysSet().toMutableSet()
         days.add(today)
         prefs.edit().putString(KEY_USAGE_DAYS, days.joinToString(",")).apply()
+        // Store first-use date if not set yet (for calendar-day trial)
+        if (prefs.getString(KEY_FIRST_USE_DATE, "").isNullOrBlank()) {
+            prefs.edit().putString(KEY_FIRST_USE_DATE, today).apply()
+        }
     }
 
     fun getUsageDayCount(): Int = getUsageDaysSet().size
 
     fun getCurrentPhase(): AiPhase {
-        val days = getUsageDayCount()
+        val firstUse = prefs.getString(KEY_FIRST_USE_DATE, "") ?: ""
+        if (firstUse.isBlank()) return AiPhase.TRIAL // Never used → still trial
+        val firstDate = LocalDate.parse(firstUse, dateFormatter)
+        val daysSinceFirst = java.time.temporal.ChronoUnit.DAYS.between(firstDate, LocalDate.now())
         return when {
-            days <= TRIAL_DAYS -> AiPhase.TRIAL
+            daysSinceFirst < TRIAL_DAYS -> AiPhase.TRIAL
             else -> AiPhase.FREEMIUM
         }
     }
@@ -105,8 +113,12 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
 
     fun shouldShowAiInfoBanner(): Boolean {
         if (getCurrentPhase() != AiPhase.TRIAL) return false
-        val days = getUsageDayCount()
-        if (days < 5) return false // Only show on days 5-8 of trial
+        val firstUse = prefs.getString(KEY_FIRST_USE_DATE, "") ?: ""
+        if (firstUse.isBlank()) return false
+        val daysSinceFirst = java.time.temporal.ChronoUnit.DAYS.between(
+            LocalDate.parse(firstUse, dateFormatter), LocalDate.now()
+        )
+        if (daysSinceFirst < 5) return false // Only show on calendar days 5-8 of trial
         val today = LocalDate.now().format(dateFormatter)
         val lastShown = prefs.getString(KEY_BANNER_LAST_SHOWN, "") ?: ""
         return lastShown != today
@@ -117,17 +129,27 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
         prefs.edit().putString(KEY_BANNER_LAST_SHOWN, today).apply()
     }
 
-    // ── Dashboard daily limit (4-tier) ──────────────────
+    // ── Dashboard daily limit (4-tier, per scenario) ──────────────────
+
+    private var currentScenario: Int = 0
+
+    fun setCurrentScenario(scenario: Int) {
+        currentScenario = scenario
+    }
+
+    private fun dashboardCountKey() = "${KEY_DASHBOARD_DAILY_COUNT}_$currentScenario"
+    private fun dashboardDateKey() = "${KEY_DASHBOARD_DAILY_DATE}_$currentScenario"
+    private fun dashboardCooldownKey() = "${KEY_DASHBOARD_COOLDOWN_UNTIL}_$currentScenario"
 
     fun recordDashboardRefresh() {
         resetDashboardCounterIfNewDay()
-        val count = prefs.getInt(KEY_DASHBOARD_DAILY_COUNT, 0)
-        prefs.edit().putInt(KEY_DASHBOARD_DAILY_COUNT, count + 1).apply()
+        val count = prefs.getInt(dashboardCountKey(), 0)
+        prefs.edit().putInt(dashboardCountKey(), count + 1).apply()
     }
 
     fun getDashboardDailyCount(): Int {
         resetDashboardCounterIfNewDay()
-        return prefs.getInt(KEY_DASHBOARD_DAILY_COUNT, 0)
+        return prefs.getInt(dashboardCountKey(), 0)
     }
 
     fun getDashboardAccessResult(
@@ -136,10 +158,10 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
         hardLimit: Int,
     ): TieredAccessResult {
         resetDashboardCounterIfNewDay()
-        val count = prefs.getInt(KEY_DASHBOARD_DAILY_COUNT, 0)
+        val count = prefs.getInt(dashboardCountKey(), 0)
         return computeTieredResult(
             count,
-            KEY_DASHBOARD_COOLDOWN_UNTIL,
+            dashboardCooldownKey(),
             premiumLimit,
             cooldownAt,
             hardLimit,
@@ -148,14 +170,14 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
 
     private fun resetDashboardCounterIfNewDay() {
         val today = LocalDate.now().format(dateFormatter)
-        val savedDate = prefs.getString(KEY_DASHBOARD_DAILY_DATE, "") ?: ""
+        val savedDate = prefs.getString(dashboardDateKey(), "") ?: ""
         if (savedDate != today) {
             prefs
                 .edit()
-                .putInt(KEY_DASHBOARD_DAILY_COUNT, 0)
-                .putString(KEY_DASHBOARD_DAILY_DATE, today)
-                .putLong(KEY_DASHBOARD_COOLDOWN_UNTIL, 0L)
-                .putBoolean("${KEY_DASHBOARD_COOLDOWN_UNTIL}_served", false)
+                .putInt(dashboardCountKey(), 0)
+                .putString(dashboardDateKey(), today)
+                .putLong(dashboardCooldownKey(), 0L)
+                .putBoolean("${dashboardCooldownKey()}_served", false)
                 .apply()
         }
     }
@@ -251,9 +273,11 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
         prefs.edit().putInt(KEY_HOURLY_AI_COUNT, count + 1).apply()
     }
 
-    fun isHourlySpamLimitReached(): Boolean {
+    fun isHourlySpamLimitReached(isPremium: Boolean = false): Boolean {
         resetHourlyCounterIfNeeded()
-        return prefs.getInt(KEY_HOURLY_AI_COUNT, 0) >= Constants.SPAM_HOURLY_AI_LIMIT
+        val limit = if (isPremium) Constants.SPAM_HOURLY_AI_LIMIT_PREMIUM
+            else Constants.SPAM_HOURLY_AI_LIMIT
+        return prefs.getInt(KEY_HOURLY_AI_COUNT, 0) >= limit
     }
 
     private fun resetHourlyCounterIfNeeded() {

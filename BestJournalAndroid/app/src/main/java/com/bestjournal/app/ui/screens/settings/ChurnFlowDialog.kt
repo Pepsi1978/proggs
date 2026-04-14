@@ -70,6 +70,7 @@ fun ChurnFlowDialog(
     onDismiss: () -> Unit,
     onOfferAccepted: () -> Unit,
     onCancelConfirmed: () -> Unit,
+    onSwitchToYearly: () -> Unit,
     analyticsTracker: AnalyticsTracker,
     context: Context,
 ) {
@@ -128,6 +129,18 @@ fun ChurnFlowDialog(
                         onAccept = {
                             analyticsTracker.trackChurnOfferAccepted()
                             saveChurnOfferAccepted(context)
+                            if (selectedReason == "Zu teuer") {
+                                onSwitchToYearly()
+                            } else if (selectedReason == "Nutze es zu selten") {
+                                // Open Google Play subscription management for pausing
+                                try {
+                                    val intent = Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("https://play.google.com/store/account/subscriptions"),
+                                    )
+                                    context.startActivity(intent)
+                                } catch (_: Exception) { }
+                            }
                             onOfferAccepted()
                         },
                         onDecline = { currentStep = 2 },

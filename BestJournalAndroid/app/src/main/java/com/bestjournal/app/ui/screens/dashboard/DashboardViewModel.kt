@@ -86,6 +86,7 @@ constructor(
         _weeklyDashboardUsed.value = aiUsageTracker.getWeeklyDashboardCount()
         _weeklyDashboardMax.value = Constants.FREE_WEEKLY_DASHBOARD_LIMIT
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+        aiRateLimiter.setCurrentScenario(scenario)
         analyticsTracker.trackDashboardViewed(scenario)
         _uiState.update {
             it.copy(
@@ -160,6 +161,7 @@ constructor(
                 }
                 val currentScenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                 if (currentScenario != _uiState.value.currentScenario) {
+                    aiRateLimiter.setCurrentScenario(currentScenario)
                     analyticsTracker.trackProfileSwitched(
                         _uiState.value.currentScenario,
                         currentScenario,

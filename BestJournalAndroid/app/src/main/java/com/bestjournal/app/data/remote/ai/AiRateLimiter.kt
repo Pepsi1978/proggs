@@ -7,9 +7,14 @@ import javax.inject.Singleton
 
 @Singleton
 class AiRateLimiter @Inject constructor(private val usageTracker: AiUsageTracker) {
+    fun setCurrentScenario(scenario: Int) {
+        usageTracker.setCurrentScenario(scenario)
+    }
+
     fun checkDashboardAccess(subscriptionState: SubscriptionState): TieredAccessResult {
-        // Spam protection applies to ALL users including subscribers
-        if (usageTracker.isHourlySpamLimitReached()) {
+        // Spam protection applies to ALL users — premium gets higher limit
+        val isPremium = subscriptionState is SubscriptionState.Subscribed
+        if (usageTracker.isHourlySpamLimitReached(isPremium)) {
             return TieredAccessResult.Cooldown(
                 minutesLeft = 5,
                 totalToday = usageTracker.getDashboardDailyCount(),
@@ -41,8 +46,9 @@ class AiRateLimiter @Inject constructor(private val usageTracker: AiUsageTracker
     }
 
     fun checkTextAccess(subscriptionState: SubscriptionState): TieredAccessResult {
-        // Spam protection applies to ALL users including subscribers
-        if (usageTracker.isHourlySpamLimitReached()) {
+        // Spam protection applies to ALL users — premium gets higher limit
+        val isPremium = subscriptionState is SubscriptionState.Subscribed
+        if (usageTracker.isHourlySpamLimitReached(isPremium)) {
             return TieredAccessResult.Cooldown(
                 minutesLeft = 5,
                 totalToday = usageTracker.getTextDailyCount(),

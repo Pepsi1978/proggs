@@ -1691,6 +1691,9 @@ fun SettingsScreen(
                                     onDismiss = { showChurnDialog = false },
                                     onOfferAccepted = { showChurnDialog = false },
                                     onCancelConfirmed = { showChurnDialog = false },
+                                    onSwitchToYearly = {
+                                        onNavigateToPaywall("churn_yearly_switch")
+                                    },
                                     analyticsTracker = viewModel.analyticsTracker,
                                     context = context,
                                 )
