@@ -381,30 +381,30 @@ constructor(
         val rawText = _uiState.value.rawText
         if (rawText.isBlank()) return
 
-        // Check access BEFORE making the API call
-        val subState = billingManager.subscriptionState.value
-        val accessResult = aiRateLimiter.checkTextAccess(subState)
-
-        when (accessResult) {
-            is TieredAccessResult.HardLimitReached -> {
-                _uiState.update { it.copy(showAiLimitReached = true) }
-                return
-            }
-            is TieredAccessResult.Cooldown -> {
-                _uiState.update {
-                    it.copy(errorMessage = "Kurze Pause: Noch ${accessResult.minutesLeft} Minuten bis zur n\u00e4chsten Verbesserung.")
-                }
-                return
-            }
-            is TieredAccessResult.Allowed -> {
-                // Proceed with the allowed model
-            }
-        }
-
-        _uiState.value = _uiState.value.copy(recordingState = RecordingState.IMPROVING)
-
         viewModelScope.launch {
+            // Check access INSIDE the coroutine to prevent race conditions on double-tap
+            val subState = billingManager.subscriptionState.value
+            val accessResult = aiRateLimiter.checkTextAccess(subState)
+
+            when (accessResult) {
+                is TieredAccessResult.HardLimitReached -> {
+                    _uiState.update { it.copy(showAiLimitReached = true) }
+                    return@launch
+                }
+                is TieredAccessResult.Cooldown -> {
+                    _uiState.update {
+                        it.copy(errorMessage = "Kurze Pause: Noch ${accessResult.minutesLeft} Minuten bis zur n\u00e4chsten Verbesserung.")
+                    }
+                    return@launch
+                }
+                is TieredAccessResult.Allowed -> {
+                    // Proceed with the allowed model
+                }
+            }
+
             val modelName = (accessResult as TieredAccessResult.Allowed).modelName
+            _uiState.value = _uiState.value.copy(recordingState = RecordingState.IMPROVING)
+
             // Record attempt (daily + hourly counters) — errors are OK here
             aiRateLimiter.recordTextAttempt()
             improveTextUseCase(rawText, modelName = modelName)
@@ -738,7 +738,15 @@ constructor(
                 .apply()
             try {
                 delay(3_000)
-                analyzeEntropyUseCase(freshAnalysis = true)
+                // Check access for auto-update — silently skip if limit reached
+                val subState = billingManager.subscriptionState.value
+                val accessResult = aiRateLimiter.checkDashboardAccess(subState)
+                if (accessResult !is TieredAccessResult.Allowed) {
+                    return@launch // Silently skip — don't show error for background updates
+                }
+                aiRateLimiter.recordDashboardAttempt()
+                analyzeEntropyUseCase(freshAnalysis = true, modelName = accessResult.modelName)
+                aiRateLimiter.recordDashboardSuccess()
                 // Write timestamp to the scenario-specific key so getLastUpdatedText() finds it
                 val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                 encryptedPrefs

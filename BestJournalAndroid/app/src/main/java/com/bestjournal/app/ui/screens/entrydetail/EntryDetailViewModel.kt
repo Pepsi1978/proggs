@@ -6,6 +6,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.data.local.entity.EntryPhotoEntity
+import com.bestjournal.app.billing.BillingManager
+import com.bestjournal.app.data.remote.ai.AiRateLimiter
+import com.bestjournal.app.data.remote.ai.TieredAccessResult
 import com.bestjournal.app.data.repository.JournalRepository
 import com.bestjournal.app.data.repository.PhotoRepository
 import com.bestjournal.app.domain.model.JournalEntry
@@ -43,6 +46,8 @@ constructor(
     private val syncWithDriveUseCase: SyncWithDriveUseCase,
     private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
     private val improveTextUseCase: ImproveTextUseCase,
+    private val aiRateLimiter: AiRateLimiter,
+    private val billingManager: BillingManager,
     private val encryptedPrefs: SharedPreferences,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -168,11 +173,28 @@ constructor(
         val entry = _uiState.value.entry ?: return
         if (entry.rawText.isBlank()) return
 
-        _uiState.value = _uiState.value.copy(isImproving = true, improveError = null)
-
         viewModelScope.launch {
-            improveTextUseCase(entry.rawText)
+            // Check access BEFORE making the API call
+            val subState = billingManager.subscriptionState.value
+            val accessResult = aiRateLimiter.checkTextAccess(subState)
+            when (accessResult) {
+                is TieredAccessResult.HardLimitReached -> {
+                    _uiState.value = _uiState.value.copy(improveError = "Tageslimit erreicht. Morgen geht es weiter!")
+                    return@launch
+                }
+                is TieredAccessResult.Cooldown -> {
+                    _uiState.value = _uiState.value.copy(improveError = "Kurze Pause: Noch ${accessResult.minutesLeft} Minuten.")
+                    return@launch
+                }
+                is TieredAccessResult.Allowed -> { }
+            }
+            val modelName = (accessResult as TieredAccessResult.Allowed).modelName
+
+            _uiState.value = _uiState.value.copy(isImproving = true, improveError = null)
+            aiRateLimiter.recordTextAttempt()
+            improveTextUseCase(entry.rawText, modelName = modelName)
                 .onSuccess { improved ->
+                    aiRateLimiter.recordTextSuccess()
                     val updatedEntry =
                         entry.copy(
                             improvedText = improved,
@@ -233,12 +255,20 @@ constructor(
                         encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true)
                     if (autoUpdate) {
                         try {
+                            // Check access before auto-update — silently skip if limit reached
+                            val subState = billingManager.subscriptionState.value
+                            val accessResult = aiRateLimiter.checkDashboardAccess(subState)
+                            if (accessResult !is TieredAccessResult.Allowed) {
+                                return@launch
+                            }
                             encryptedPrefs
                                 .edit()
                                 .putBoolean(Constants.PREF_DASHBOARD_UPDATE_IS_DELETE, true)
                                 .putBoolean(Constants.PREF_DASHBOARD_UPDATING, true)
                                 .apply()
-                            analyzeEntropyUseCase(freshAnalysis = true)
+                            aiRateLimiter.recordDashboardAttempt()
+                            analyzeEntropyUseCase(freshAnalysis = true, modelName = accessResult.modelName)
+                            aiRateLimiter.recordDashboardSuccess()
                             val scenario =
                                 encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                             encryptedPrefs
