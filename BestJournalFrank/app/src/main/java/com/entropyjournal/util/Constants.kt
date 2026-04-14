@@ -66,7 +66,26 @@ object Constants {
     data class ElevenLabsVoice(val id: String, val name: String)
 
     val ELEVENLABS_VOICES = listOf(
-        ElevenLabsVoice("TUKJhQmz3RPYBNAgC5A1", "Helmut"),
+        ElevenLabsVoice("TX3LPaxmHKxFdv7VOQHJ", "Liam — jung, klar"),
+        ElevenLabsVoice("pNInz6obpgDQGcFmaJgB", "Adam — tief, ruhig"),
+        ElevenLabsVoice("ErXwobaYiN019PkySvjV", "Antoni — warm, nat\u00fcrlich"),
+        ElevenLabsVoice("onwK4e9ZLuTAKqWW03F9", "Daniel — klar, sachlich"),
+        ElevenLabsVoice("nPczCjzI2devNBz1zQrb", "Brian — erz\u00e4hlend, tief"),
+        ElevenLabsVoice("N2lVS1w4EtoT3dr4eOWO", "Callum — ruhig, sanft"),
+        ElevenLabsVoice("IKne3meq5aSn9XLyUdCD", "Charlie — locker, freundlich"),
+        ElevenLabsVoice("iP95p4xoKVk53GoZ742B", "Chris — lebendig, energisch"),
+        ElevenLabsVoice("JBFqnCBsd6RMkjVDRZzb", "George — reif, w\u00fcrdevoll"),
+        ElevenLabsVoice("SOYHLrjzK2X1ezoPC6cr", "Harry — kraftvoll, markant"),
+        ElevenLabsVoice("TxGEqnHWrfWFTfGW9XjX", "Josh — jung, dynamisch"),
+        ElevenLabsVoice("GBv7mTt0atIp3Br8iCZE", "Thomas — ruhig, vertrauensvoll"),
+        ElevenLabsVoice("EXAVITQu4vr4xnSDxMaL", "Sarah — freundlich, nat\u00fcrlich"),
+        ElevenLabsVoice("XrExE9yKIg1WjnnlVkGX", "Matilda — sanft, warm"),
+        ElevenLabsVoice("jsCqWAovK2LkecY7zXl4", "Freya — ruhig, gelassen"),
+        ElevenLabsVoice("pMsXgVXv3BLzUgSXRplE", "Serena — weich, beruhigend"),
+        ElevenLabsVoice("Xb7hH8MSUJpSbSDYk0k2", "Alice — elegant, klar"),
+        ElevenLabsVoice("XB0fDUnXU5powFXDhCwa", "Charlotte — lebhaft, warm"),
+        ElevenLabsVoice("pFZP5JQG7iQjIQuC4Bku", "Lily — hell, fr\u00f6hlich"),
+        ElevenLabsVoice("21m00Tcm4TlvDq8ikWAM", "Rachel — vielseitig, ausdrucksstark"),
     )
 
     // Dashboard-Szenario
