@@ -99,6 +99,7 @@ constructor(
     private val inAppReviewHelper: InAppReviewHelper,
     private val analyticsTracker: AnalyticsTracker,
     private val achievementTracker: AchievementTracker,
+    private val aiRateLimiter: com.bestjournal.app.data.remote.ai.AiRateLimiter,
 ) : ViewModel() {
 
     // Emits achievement title when a new one is unlocked (UI shows gold Snackbar)
@@ -382,8 +383,12 @@ constructor(
         _uiState.value = _uiState.value.copy(recordingState = RecordingState.IMPROVING)
 
         viewModelScope.launch {
+            // Record attempt (daily + hourly counters) — errors are OK here
+            aiRateLimiter.recordTextAttempt()
             improveTextUseCase(rawText)
                 .onSuccess { improved ->
+                    // Only count toward the free weekly limit on SUCCESS — errors don't count
+                    aiRateLimiter.recordTextSuccess()
                     // Track text improvement count
                     val count = encryptedPrefs.getInt(Constants.PREF_TEXT_IMPROVEMENT_COUNT, 0) + 1
                     encryptedPrefs

@@ -76,6 +76,7 @@ constructor(
         activity: Activity,
         isYearly: Boolean = false,
         isLifetime: Boolean = false,
+        usePromoOffer: Boolean = false,
     ): Boolean {
         val priceLoaded = when {
             isLifetime -> lifetimePrice.value.isNotEmpty()
@@ -91,7 +92,13 @@ constructor(
             Log.w("PaywallViewModel", "Product details not loaded for $type")
             return false
         }
-        billingManager.launchPurchaseFlow(activity, isYearly = isYearly, isLifetime = isLifetime)
+        val promoToken = if (usePromoOffer) billingManager.getMonthlyPromoOfferToken() else null
+        billingManager.launchPurchaseFlow(
+            activity,
+            isYearly = isYearly,
+            isLifetime = isLifetime,
+            promoOfferToken = promoToken,
+        )
         return true
     }
 }

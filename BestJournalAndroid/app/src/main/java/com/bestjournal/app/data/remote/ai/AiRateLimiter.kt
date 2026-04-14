@@ -83,17 +83,28 @@ class AiRateLimiter @Inject constructor(private val usageTracker: AiUsageTracker
     }
 
     // M-3 fix: Centralize ALL recording here so callers can't forget weekly tracking
-    fun recordDashboardRefresh() {
+    // Split into attempt (daily+hourly, always) and success (weekly, only on success)
+    // so that AI errors do NOT count toward the free weekly limit.
+
+    fun recordDashboardAttempt() {
         usageTracker.recordDashboardRefresh()
         usageTracker.recordHourlyAiUsage()
+        usageTracker.recordUsageDay()
+    }
+
+    fun recordDashboardSuccess() {
         if (usageTracker.getCurrentPhase() == AiPhase.FREEMIUM) {
             usageTracker.recordWeeklyDashboardUse()
         }
     }
 
-    fun recordTextImprovement() {
+    fun recordTextAttempt() {
         usageTracker.recordTextImprovement()
         usageTracker.recordHourlyAiUsage()
+        usageTracker.recordUsageDay()
+    }
+
+    fun recordTextSuccess() {
         if (usageTracker.getCurrentPhase() == AiPhase.FREEMIUM) {
             usageTracker.recordWeeklyTextUse()
         }

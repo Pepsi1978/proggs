@@ -311,19 +311,20 @@ private fun StepOffer(
 ) {
     val offerText = when (selectedReason) {
         "Zu teuer" ->
-            "Wie wäre es mit 50% Rabatt für die nächsten 3 Monate?"
+            "Du kannst dein Abo \u00fcber Google Play pausieren oder zum g\u00fcnstigeren " +
+                "Jahresabo wechseln, das spart rund 37%."
         "Nutze es zu selten" ->
-            "Wie wäre es mit einer Abo-Pause für 1 Monat? " +
-                "Deine Daten bleiben erhalten."
+            "Du kannst dein Abo \u00fcber Google Play pausieren. " +
+                "Deine Daten bleiben erhalten und du kannst jederzeit wieder einsteigen."
         else ->
-            "Wir arbeiten ständig an Verbesserungen. " +
-                "Wie wäre es mit 30% Rabatt als Dankeschön für deine Geduld?"
+            "Wir arbeiten st\u00e4ndig an Verbesserungen. " +
+                "Gib uns noch eine Chance, dich zu \u00fcberzeugen!"
     }
 
     val discountLabel = when (selectedReason) {
-        "Zu teuer" -> "50% Rabatt"
-        "Nutze es zu selten" -> "1 Monat Pause"
-        else -> "30% Rabatt"
+        "Zu teuer" -> "Zum Jahresabo wechseln"
+        "Nutze es zu selten" -> "Abo pausieren"
+        else -> "Noch bleiben"
     }
 
     Column(

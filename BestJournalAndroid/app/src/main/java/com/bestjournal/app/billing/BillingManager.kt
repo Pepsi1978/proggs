@@ -169,10 +169,31 @@ class BillingManager @Inject constructor(
         }
     }
 
+    /**
+     * Look for a promotional/introductory offer on the monthly plan.
+     * This requires a "developer determined offer" or "introductory price" configured
+     * in Google Play Console for the monthly subscription.
+     * Returns the offerToken if found, null otherwise.
+     */
+    fun getMonthlyPromoOfferToken(): String? {
+        val details = monthlyProductDetails ?: return null
+        // Look for offers with more than 1 pricing phase (intro + base)
+        return details.subscriptionOfferDetails
+            ?.firstOrNull { offer ->
+                offer.pricingPhases.pricingPhaseList.size > 1
+            }?.offerToken
+    }
+
+    fun restorePurchases() {
+        querySubscriptions()
+        queryInAppPurchases()
+    }
+
     fun launchPurchaseFlow(
         activity: Activity,
         isYearly: Boolean = false,
         isLifetime: Boolean = false,
+        promoOfferToken: String? = null,
     ) {
         if (isLifetime) {
             val details = lifetimeProductDetails ?: return
@@ -189,8 +210,8 @@ class BillingManager @Inject constructor(
         }
         val productDetails = if (isYearly) yearlyProductDetails else monthlyProductDetails
         productDetails ?: return
-        val offerToken =
-            productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return
+        val offerToken = promoOfferToken
+            ?: productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return
         val productDetailsParams =
             BillingFlowParams.ProductDetailsParams.newBuilder()
                 .setProductDetails(productDetails)
@@ -220,7 +241,8 @@ class BillingManager @Inject constructor(
     }
 
     // K-2 fix: Centralized acknowledge — only sets Subscribed after Google confirms
-    private fun acknowledgePurchase(purchase: Purchase) {
+    // Retry up to 3 times on transient failures
+    private fun acknowledgePurchase(purchase: Purchase, retryCount: Int = 0) {
         val ackParams =
             AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchase.purchaseToken).build()
         billingClient?.acknowledgePurchase(ackParams) { result ->
@@ -251,8 +273,13 @@ class BillingManager @Inject constructor(
                         currency = currency,
                     )
                 }
+            } else if (retryCount < 3) {
+                Log.w(TAG, "Acknowledge failed (attempt ${retryCount + 1}/3): ${result.debugMessage}")
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    acknowledgePurchase(purchase, retryCount + 1)
+                }, 2000L * (retryCount + 1))
             } else {
-                Log.e(TAG, "Acknowledge failed: ${result.debugMessage}")
+                Log.e(TAG, "Acknowledge failed after 3 retries: ${result.debugMessage}")
             }
         }
     }

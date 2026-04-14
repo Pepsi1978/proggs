@@ -1761,6 +1761,24 @@ fun SettingsScreen(
                                 ) {
                                     Text("Premium freischalten")
                                 }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                TextButton(
+                                    onClick = {
+                                        playClick()
+                                        viewModel.restorePurchases()
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "K\u00e4ufe werden wiederhergestellt\u2026",
+                                            android.widget.Toast.LENGTH_SHORT,
+                                        ).show()
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(
+                                        "Kauf wiederherstellen",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         }
                     }

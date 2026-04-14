@@ -791,7 +791,7 @@ private fun TrialPage(onStartTrial: () -> Unit, onSkip: () -> Unit) {
                 Spacer(Modifier.height(20.dp))
 
                 Text(
-                    "7 Tage Premium testen",
+                    "8 Tage Premium testen",
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold
                     ),

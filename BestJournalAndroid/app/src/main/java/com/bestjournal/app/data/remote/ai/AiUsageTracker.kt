@@ -17,7 +17,7 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
         private const val KEY_WEEKLY_TEXT_COUNT = "weekly_text_count"
         private const val KEY_WEEKLY_RESET_DATE = "ai_weekly_reset"
         private const val KEY_BANNER_LAST_SHOWN = "ai_banner_last_shown"
-        const val TRIAL_DAYS = 7
+        const val TRIAL_DAYS = 8
 
         // Dashboard daily tracking
         private const val KEY_DASHBOARD_DAILY_COUNT = "dashboard_daily_count"
@@ -106,7 +106,7 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
     fun shouldShowAiInfoBanner(): Boolean {
         if (getCurrentPhase() != AiPhase.TRIAL) return false
         val days = getUsageDayCount()
-        if (days < 4) return false // Only show on days 4-7 of trial
+        if (days < 5) return false // Only show on days 5-8 of trial
         val today = LocalDate.now().format(dateFormatter)
         val lastShown = prefs.getString(KEY_BANNER_LAST_SHOWN, "") ?: ""
         return lastShown != today

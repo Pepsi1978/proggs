@@ -65,7 +65,7 @@ object Constants {
     const val PREF_ONBOARDING_GOALS = "onboarding_goals"
 
     // Freemium
-    const val TRIAL_USAGE_DAYS = 7
+    const val TRIAL_USAGE_DAYS = 8
     const val FREE_WEEKLY_DASHBOARD_LIMIT = 5
     const val FREE_WEEKLY_TEXT_LIMIT = 5
     const val MAX_ENTRIES_FREE_ANALYSIS = 20

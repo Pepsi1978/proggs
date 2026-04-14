@@ -365,7 +365,7 @@ fun PaywallScreen(
                                     }
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "Tag 6",
+                                        text = "Tag 7",
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Medium,
                                     )
@@ -395,7 +395,7 @@ fun PaywallScreen(
                                     }
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "Tag 7",
+                                        text = "Tag 8",
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Medium,
                                     )
@@ -645,13 +645,12 @@ fun PaywallScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // ── Exit-intent dialog ──
+            // ── Exit-intent dialog (50% promotional offer on monthly plan) ──
             if (showExitDialog) {
                 LaunchedEffect(Unit) {
                     viewModel.analyticsTracker.trackExitIntentShown()
                 }
 
-                // Visible breathing on CTA button
                 val exitCtaTransition = rememberInfiniteTransition(label = "exitCta")
                 val exitCtaScale by exitCtaTransition.animateFloat(
                     initialValue = 1f,
@@ -663,17 +662,6 @@ fun PaywallScreen(
                     label = "exitCtaBreathing",
                 )
 
-                // Subtle glow pulse on 50% badge border
-                val badgeGlow by exitCtaTransition.animateFloat(
-                    initialValue = 0.2f,
-                    targetValue = 0.45f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(2400, easing = EaseInOutSine),
-                        repeatMode = RepeatMode.Reverse,
-                    ),
-                    label = "badgeGlow",
-                )
-
                 Dialog(
                     onDismissRequest = {
                         viewModel.analyticsTracker.trackExitIntentRejected()
@@ -681,11 +669,9 @@ fun PaywallScreen(
                     },
                     properties = DialogProperties(usePlatformDefaultWidth = false),
                 ) {
-                    // Warm ivory → soft cool sage (harmonizes with teal accents)
                     val gradientTop = if (isDarkTheme) Color(0xFF2A2622) else Color(0xFFFFF8F0)
                     val gradientBottom = if (isDarkTheme) Color(0xFF222926) else Color(0xFFF0F5F2)
 
-                    // Full-height wrapper prevents top clipping from offset
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
@@ -716,162 +702,116 @@ fun PaywallScreen(
                                         .fillMaxWidth()
                                         .padding(horizontal = 24.dp, vertical = 24.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                // ── PulsingOrb decoration ──
-                                PulsingOrb(
-                                    size = 56.dp,
-                                    entropyLevel = 0.5f,
-                                    color = orbPrimaryColor,
-                                    secondaryColor = orbSecondaryColor,
-                                )
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Text(
-                                    text = "Warte kurz!",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    textAlign = TextAlign.Center,
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "Wir haben ein besonderes\nAngebot f\u00fcr dich:",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
-                                )
-
-                                Spacer(modifier = Modifier.height(20.dp))
-
-                                // ── 50% discount hero card ──
-                                Surface(
-                                    shape = RoundedCornerShape(20.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    border = BorderStroke(
-                                        width = 1.5.dp,
-                                        brush = Brush.verticalGradient(
-                                            colors = listOf(
-                                                MaterialTheme.colorScheme.primary.copy(alpha = badgeGlow),
-                                                MaterialTheme.colorScheme.primary.copy(alpha = badgeGlow * 0.3f),
-                                            ),
-                                        ),
-                                    ),
-                                    shadowElevation = 8.dp,
                                 ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .padding(vertical = 20.dp, horizontal = 24.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                    ) {
-                                        Text(
-                                            text = "50%",
-                                            style = MaterialTheme.typography.displaySmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary,
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = "Rabatt im ersten Monat",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = "Nur $halfMonthlyPrice statt $displayMonthlyPrice",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // ── Bonus: extra trial days ──
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .clip(CircleShape)
-                                            .background(NeonEmerald.copy(alpha = 0.15f)),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            Icons.Rounded.Check,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp),
-                                            tint = NeonEmerald,
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text(
-                                        text = "+ 3 zus\u00e4tzliche Test-Tage gratis",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurface,
+                                    PulsingOrb(
+                                        size = 56.dp,
+                                        entropyLevel = 0.5f,
+                                        color = orbPrimaryColor,
+                                        secondaryColor = orbSecondaryColor,
                                     )
-                                }
 
-                                Spacer(modifier = Modifier.height(20.dp))
+                                    Spacer(modifier = Modifier.height(16.dp))
 
-                                // ── CTA: two-line pill button with breathing ──
-                                Button(
-                                    onClick = {
-                                        viewModel.analyticsTracker.trackExitIntentAccepted()
-                                        activity?.let { act ->
-                                            if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
-                                                Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
-                                            }
+                                    Text(
+                                        text = "Warte kurz!",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "Wir haben ein besonderes\nAngebot f\u00fcr dich:",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center,
+                                    )
+
+                                    Spacer(modifier = Modifier.height(20.dp))
+
+                                    // ── 50% discount hero card ──
+                                    Surface(
+                                        shape = RoundedCornerShape(20.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        shadowElevation = 8.dp,
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .padding(vertical = 20.dp, horizontal = 24.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                        ) {
+                                            Text(
+                                                text = "50%",
+                                                style = MaterialTheme.typography.displaySmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "Rabatt im ersten Monat",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "Nur $halfMonthlyPrice statt $displayMonthlyPrice",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                                            )
                                         }
-                                        showExitDialog = false
-                                    },
-                                    modifier = Modifier
-                                        .height(60.dp)
-                                        .scale(exitCtaScale),
-                                    shape = RoundedCornerShape(30.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                    ),
-                                    elevation = ButtonDefaults.buttonElevation(
-                                        defaultElevation = 6.dp,
-                                        pressedElevation = 2.dp,
-                                    ),
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    }
+
+                                    Spacer(modifier = Modifier.height(20.dp))
+
+                                    // ── CTA: launches monthly plan with promotional offer ──
+                                    Button(
+                                        onClick = {
+                                            viewModel.analyticsTracker.trackExitIntentAccepted()
+                                            activity?.let { act ->
+                                                if (!viewModel.launchPurchaseFlow(
+                                                        act,
+                                                        isYearly = false,
+                                                        usePromoOffer = true,
+                                                    )
+                                                ) {
+                                                    Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                            showExitDialog = false
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(56.dp)
+                                            .scale(exitCtaScale),
+                                        shape = RoundedCornerShape(16.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                        ),
+                                    ) {
                                         Text(
-                                            text = "10 Tage kostenlos testen",
+                                            text = "Monatsabo mit 50% Rabatt starten",
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.SemiBold,
                                             color = Color.White,
                                         )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    TextButton(onClick = {
+                                        viewModel.analyticsTracker.trackExitIntentRejected()
+                                        onDismiss()
+                                    }) {
                                         Text(
-                                            text = "(+ 50% Rabatt im ersten Monat)",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = Color.White.copy(alpha = 0.85f),
+                                            text = "Nein danke",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                TextButton(onClick = {
-                                    viewModel.analyticsTracker.trackExitIntentRejected()
-                                    onDismiss()
-                                }) {
-                                    Text(
-                                        text = "Nein danke",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
                             }
                         }
-                    }
                     }
                 }
             }

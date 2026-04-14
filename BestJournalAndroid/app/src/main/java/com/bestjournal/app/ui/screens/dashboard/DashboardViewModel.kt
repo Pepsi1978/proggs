@@ -214,8 +214,12 @@ constructor(
                     errorMessage = null,
                     dashboardLimitMessage = null,
                 )
+            // Record attempt (daily + hourly counters) — errors are OK here
+            aiRateLimiter.recordDashboardAttempt()
             analyzeEntropyUseCase(freshAnalysis = true)
                 .onSuccess {
+                    // Only count toward the free weekly limit on SUCCESS — errors don't count
+                    aiRateLimiter.recordDashboardSuccess()
                     val scenarioKey = "dashboard_last_updated_${_uiState.value.currentScenario}"
                     encryptedPrefs.edit().putLong(scenarioKey, System.currentTimeMillis()).apply()
                     manualRefreshActive = false

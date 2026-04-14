@@ -76,6 +76,10 @@ constructor(
         billingManager.launchPurchaseFlow(activity, isYearly)
     }
 
+    fun restorePurchases() {
+        billingManager.restorePurchases()
+    }
+
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState
 
