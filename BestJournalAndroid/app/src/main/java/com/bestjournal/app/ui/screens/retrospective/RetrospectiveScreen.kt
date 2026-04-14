@@ -168,7 +168,10 @@ object RetrospectiveColors {
 }
 
 @Composable
-fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
+fun RetrospectiveScreen(
+    viewModel: RetrospectiveViewModel,
+    onNavigateToPaywall: (String) -> Unit = {},
+) {
     val doHaptic = rememberHapticAction()
     val weekly by viewModel.weeklySummaries.collectAsState()
     val monthly by viewModel.monthlySummaries.collectAsState()
@@ -188,9 +191,6 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
     var showInfoDialog by remember { mutableStateOf(false) }
     var showPremiumSheet by remember { mutableStateOf(false) }
 
-    // Get Activity reference OUTSIDE the sheet (LocalContext is reliable here)
-    val activity = LocalContext.current as? android.app.Activity
-
     // Info dialog about review benefits
     if (showInfoDialog) {
         ReviewBenefitsDialog(onDismiss = { showInfoDialog = false })
@@ -199,19 +199,9 @@ fun RetrospectiveScreen(viewModel: RetrospectiveViewModel) {
     // Review-specific premium upsell sheet
     if (showPremiumSheet) {
         ReviewPremiumSheet(
-            monthlyPrice = viewModel.billingManager.monthlyPrice.collectAsState().value,
-            yearlyPrice = viewModel.billingManager.yearlyPrice.collectAsState().value,
-            onSubscribeMonthly = {
+            onSubscribe = {
                 showPremiumSheet = false
-                activity?.let {
-                    viewModel.billingManager.launchPurchaseFlow(it, isYearly = false)
-                }
-            },
-            onSubscribeYearly = {
-                showPremiumSheet = false
-                activity?.let {
-                    viewModel.billingManager.launchPurchaseFlow(it, isYearly = true)
-                }
+                onNavigateToPaywall("review_locked")
             },
             onDismiss = { showPremiumSheet = false },
         )
@@ -1648,13 +1638,13 @@ private fun BenefitSection(
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun ReviewPremiumSheet(
-    monthlyPrice: String,
-    yearlyPrice: String,
-    onSubscribeMonthly: () -> Unit,
-    onSubscribeYearly: () -> Unit,
+    onSubscribe: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = androidx.compose.material3.rememberModalBottomSheetState()
+    // skipPartiallyExpanded = true → sheet opens fully, not half-way
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+    )
 
     androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1686,39 +1676,30 @@ private fun ReviewPremiumSheet(
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Review-specific benefits
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 ReviewBenefitPoint("Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen")
                 ReviewBenefitPoint("Monatsrückblicke, die rote Fäden und Entwicklungen zeigen")
                 ReviewBenefitPoint("Jahresrückblicke, dein ganzes Jahr als persönliche Erzählung")
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(28.dp))
             androidx.compose.material3.Button(
-                onClick = onSubscribeYearly,
-                modifier = Modifier.fillMaxWidth(),
+                onClick = onSubscribe,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                 ),
             ) {
                 Text(
-                    if (yearlyPrice.isNotBlank()) "Jahresabo — $yearlyPrice/Jahr"
-                    else "Jahresabo starten",
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            androidx.compose.material3.OutlinedButton(
-                onClick = onSubscribeMonthly,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    if (monthlyPrice.isNotBlank()) "Monatsabo — $monthlyPrice/Monat"
-                    else "Monatsabo starten",
+                    "Abo starten",
+                    style = MaterialTheme.typography.titleMedium,
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))

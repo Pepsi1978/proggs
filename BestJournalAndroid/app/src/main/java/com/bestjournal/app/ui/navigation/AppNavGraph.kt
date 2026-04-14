@@ -114,7 +114,13 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                     modifier = Modifier.padding(innerPadding),
                 ) { page ->
                     when (page) {
-                        0 -> RetrospectiveScreen(viewModel = retroViewModel)
+                        0 ->
+                            RetrospectiveScreen(
+                                viewModel = retroViewModel,
+                                onNavigateToPaywall = { source ->
+                                    navController.navigate("paywall?source=$source")
+                                },
+                            )
                         1 ->
                             DashboardScreen(
                                 viewModel = hiltViewModel(),
