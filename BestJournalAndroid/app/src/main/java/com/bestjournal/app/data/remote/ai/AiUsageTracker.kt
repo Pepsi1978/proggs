@@ -72,8 +72,12 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
         if (firstUse.isBlank()) return AiPhase.TRIAL // Truly never used → still trial
         val firstDate = LocalDate.parse(firstUse, dateFormatter)
         val daysSinceFirst = java.time.temporal.ChronoUnit.DAYS.between(firstDate, LocalDate.now())
+        // Check if user got bonus trial days from the exit-intent offer
+        val bonusDays = if (prefs.getBoolean(Constants.PREF_EXIT_INTENT_TRIAL_EXTENDED, false))
+            Constants.EXIT_INTENT_TRIAL_BONUS_DAYS else 0
+        val totalTrialDays = Constants.TRIAL_USAGE_DAYS + bonusDays
         return when {
-            daysSinceFirst < Constants.TRIAL_USAGE_DAYS -> AiPhase.TRIAL
+            daysSinceFirst < totalTrialDays -> AiPhase.TRIAL
             else -> AiPhase.FREEMIUM
         }
     }

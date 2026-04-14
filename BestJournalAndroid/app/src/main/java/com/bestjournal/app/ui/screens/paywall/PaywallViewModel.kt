@@ -20,7 +20,7 @@ class PaywallViewModel
 constructor(
     private val billingManager: BillingManager,
     val analyticsTracker: AnalyticsTracker,
-    prefs: SharedPreferences,
+    private val prefs: SharedPreferences,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -74,6 +74,11 @@ constructor(
     /** Whether a real promotional offer exists in Google Play for the monthly plan. */
     val hasPromoOffer: Boolean
         get() = billingManager.getMonthlyPromoOfferToken() != null
+
+    /** Extend trial by bonus days when exit-intent offer is accepted. */
+    fun extendTrial() {
+        prefs.edit().putBoolean(Constants.PREF_EXIT_INTENT_TRIAL_EXTENDED, true).apply()
+    }
 
     /** Returns false if product details are not loaded yet (billing unavailable). */
     fun launchPurchaseFlow(

@@ -731,22 +731,22 @@ constructor(
 
         analysisDebounceJob?.cancel()
         analysisDebounceJob = viewModelScope.launch {
+            delay(3_000)
+            // Sync scenario so per-scenario counter tracks the correct profile
+            val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+            aiRateLimiter.setCurrentScenario(scenario)
+            // Check access for auto-update — silently skip if limit reached
+            val subState = billingManager.subscriptionState.value
+            val accessResult = aiRateLimiter.checkDashboardAccess(subState)
+            if (accessResult !is TieredAccessResult.Allowed) {
+                return@launch // Silently skip — don't show error for background updates
+            }
             encryptedPrefs
                 .edit()
                 .putBoolean(Constants.PREF_DASHBOARD_UPDATE_IS_DELETE, false)
                 .putBoolean(Constants.PREF_DASHBOARD_UPDATING, true)
                 .apply()
             try {
-                delay(3_000)
-                // Sync scenario so per-scenario counter tracks the correct profile
-                val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-                aiRateLimiter.setCurrentScenario(scenario)
-                // Check access for auto-update — silently skip if limit reached
-                val subState = billingManager.subscriptionState.value
-                val accessResult = aiRateLimiter.checkDashboardAccess(subState)
-                if (accessResult !is TieredAccessResult.Allowed) {
-                    return@launch // Silently skip — don't show error for background updates
-                }
                 aiRateLimiter.recordDashboardAttempt()
                 analyzeEntropyUseCase(freshAnalysis = true, modelName = accessResult.modelName)
                 aiRateLimiter.recordDashboardSuccess()

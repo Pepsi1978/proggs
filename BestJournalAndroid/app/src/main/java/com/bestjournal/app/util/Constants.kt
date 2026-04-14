@@ -126,6 +126,11 @@ object Constants {
     // Daily Writing Prompt
     const val PREF_PROMPT_DISMISSED_DATE = "prompt_dismissed_date"
 
+    // Exit-intent offer: 50% for 2 months + 2 extra trial days
+    const val EXIT_INTENT_DISCOUNT_MONTHS = 2
+    const val EXIT_INTENT_TRIAL_BONUS_DAYS = 2
+    const val PREF_EXIT_INTENT_TRIAL_EXTENDED = "exit_intent_trial_extended"
+
     // Spam protection
     const val SPAM_HOURLY_AI_LIMIT = 30
     const val SPAM_HOURLY_AI_LIMIT_PREMIUM = 50
