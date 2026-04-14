@@ -319,9 +319,16 @@ class BillingManager @Inject constructor(
     }
 
     private fun updateSubscriptionType(purchase: Purchase) {
-        activePurchaseToken = purchase.purchaseToken
+        val isLifetime = purchase.products.contains(LIFETIME_PRODUCT_ID)
+        // Only store purchase token for subscriptions — lifetime (INAPP) tokens
+        // cannot be used for subscription update params
+        if (!isLifetime) {
+            activePurchaseToken = purchase.purchaseToken
+        } else {
+            activePurchaseToken = null
+        }
         _subscriptionType.value = when {
-            purchase.products.contains(LIFETIME_PRODUCT_ID) -> SubscriptionType.LIFETIME
+            isLifetime -> SubscriptionType.LIFETIME
             purchase.products.contains(YEARLY_PRODUCT_ID) -> SubscriptionType.YEARLY
             purchase.products.contains(MONTHLY_PRODUCT_ID) -> SubscriptionType.MONTHLY
             else -> _subscriptionType.value
