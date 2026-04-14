@@ -101,6 +101,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
+import com.bestjournal.app.ui.theme.FeatureAccentOrange
 import com.bestjournal.app.ui.theme.NeonRed
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
@@ -1647,7 +1648,7 @@ fun SettingsScreen(
                             Icon(
                                 Icons.Rounded.Star,
                                 null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = FeatureAccentOrange,
                                 modifier = Modifier.size(20.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
