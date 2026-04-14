@@ -486,8 +486,7 @@ fun RetrospectiveScreen(
                 // Monatsrückblick button + expandable entries
                 CategoryButton(
                     title = "Monatsrückblick",
-                    subtitle = if (isPremium) "Dein vergangener Monat auf einen Blick"
-                        else "Premium — Dein vergangener Monat auf einen Blick",
+                    subtitle = "Dein vergangener Monat auf einen Blick",
                     icon = Icons.Rounded.DateRange,
                     expanded = if (isPremium) monthlyExpanded else false,
                     premiumBadge = !isPremium,
@@ -541,8 +540,7 @@ fun RetrospectiveScreen(
                 // Jahresrückblick button + expandable entries
                 CategoryButton(
                     title = "Jahresrückblick",
-                    subtitle = if (isPremium) "Ein ganzes Jahr voller Erinnerungen"
-                        else "Premium — Ein ganzes Jahr voller Erinnerungen",
+                    subtitle = "Ein ganzes Jahr voller Erinnerungen",
                     icon = Icons.Rounded.CalendarMonth,
                     expanded = if (isPremium) yearlyExpanded else false,
                     premiumBadge = !isPremium,
@@ -674,6 +672,13 @@ private fun CategoryButton(
                             contentDescription = "Premium",
                             modifier = Modifier.size(18.dp),
                             tint = FeatureAccentOrange,
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Premium",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = FeatureAccentOrange,
                         )
                     }
                 }
