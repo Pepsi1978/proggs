@@ -255,6 +255,10 @@ constructor(
                         encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true)
                     if (autoUpdate) {
                         try {
+                            // Sync scenario so per-scenario counter tracks the correct profile
+                            val scenario =
+                                encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+                            aiRateLimiter.setCurrentScenario(scenario)
                             // Check access before auto-update — silently skip if limit reached
                             val subState = billingManager.subscriptionState.value
                             val accessResult = aiRateLimiter.checkDashboardAccess(subState)
@@ -269,8 +273,6 @@ constructor(
                             aiRateLimiter.recordDashboardAttempt()
                             analyzeEntropyUseCase(freshAnalysis = true, modelName = accessResult.modelName)
                             aiRateLimiter.recordDashboardSuccess()
-                            val scenario =
-                                encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                             encryptedPrefs
                                 .edit()
                                 .putLong(
