@@ -22,6 +22,9 @@ class BillingManager @Inject constructor(
         const val MONTHLY_PRODUCT_ID = "bestjournal_ai_monthly"
         const val YEARLY_PRODUCT_ID = "bestjournal_ai_yearly"
         const val LIFETIME_PRODUCT_ID = "bestjournal_lifetime"
+        // Base plan IDs for the main (non-retention, non-promo) plans
+        private const val MONTHLY_BASE_PLAN_ID = "monthly"
+        private const val YEARLY_BASE_PLAN_ID = "yearly"
     }
 
     private var billingClient: BillingClient? = null
@@ -89,7 +92,9 @@ class BillingManager @Inject constructor(
                         activePurchase.products.contains(MONTHLY_PRODUCT_ID) -> SubscriptionType.MONTHLY
                         else -> SubscriptionType.MONTHLY
                     }
-                } else {
+                } else if (_subscriptionType.value != SubscriptionType.LIFETIME) {
+                    // Only set Free if no lifetime purchase was already detected
+                    // (prevents race condition between querySubscriptions and queryInAppPurchases)
                     _subscriptionState.value = SubscriptionState.Free
                 }
 
@@ -142,13 +147,20 @@ class BillingManager @Inject constructor(
         billingClient?.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 for (details in productDetailsList) {
-                    val price =
-                        details.subscriptionOfferDetails
-                            ?.firstOrNull()
-                            ?.pricingPhases
-                            ?.pricingPhaseList
-                            ?.firstOrNull()
-                            ?.formattedPrice ?: ""
+                    // Get price from the MAIN base plan only — not from retention or promo plans
+                    val mainBasePlanId = when (details.productId) {
+                        MONTHLY_PRODUCT_ID -> MONTHLY_BASE_PLAN_ID
+                        YEARLY_PRODUCT_ID -> YEARLY_BASE_PLAN_ID
+                        else -> null
+                    }
+                    val mainOffer = details.subscriptionOfferDetails
+                        ?.firstOrNull { it.basePlanId == mainBasePlanId }
+                        ?: details.subscriptionOfferDetails?.firstOrNull()
+                    val price = mainOffer
+                        ?.pricingPhases
+                        ?.pricingPhaseList
+                        ?.firstOrNull()
+                        ?.formattedPrice ?: ""
                     when (details.productId) {
                         MONTHLY_PRODUCT_ID -> {
                             monthlyProductDetails = details
@@ -256,8 +268,13 @@ class BillingManager @Inject constructor(
         }
         val productDetails = if (isYearly) yearlyProductDetails else monthlyProductDetails
         productDetails ?: return
+        // Use promo token if provided, otherwise find the MAIN base plan's offer token
+        val mainBasePlanId = if (isYearly) YEARLY_BASE_PLAN_ID else MONTHLY_BASE_PLAN_ID
         val offerToken = promoOfferToken
-            ?: productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return
+            ?: productDetails.subscriptionOfferDetails
+                ?.firstOrNull { it.basePlanId == mainBasePlanId }?.offerToken
+            ?: productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken
+            ?: return
         val productDetailsParams =
             BillingFlowParams.ProductDetailsParams.newBuilder()
                 .setProductDetails(productDetails)
@@ -335,8 +352,11 @@ class BillingManager @Inject constructor(
                         else -> "unknown"
                     }
                     val details = if (isYearly) yearlyProductDetails else monthlyProductDetails
-                    val pricingPhase = details?.subscriptionOfferDetails
-                        ?.firstOrNull()?.pricingPhases?.pricingPhaseList?.firstOrNull()
+                    val mainPlanId = if (isYearly) YEARLY_BASE_PLAN_ID else MONTHLY_BASE_PLAN_ID
+                    val pricingPhase = (details?.subscriptionOfferDetails
+                        ?.firstOrNull { it.basePlanId == mainPlanId }
+                        ?: details?.subscriptionOfferDetails?.firstOrNull())
+                        ?.pricingPhases?.pricingPhaseList?.firstOrNull()
                     val valueMicros = pricingPhase?.priceAmountMicros ?: 0L
                     val currency = pricingPhase?.priceCurrencyCode ?: "EUR"
                     analyticsTracker.trackSubscriptionPurchased(

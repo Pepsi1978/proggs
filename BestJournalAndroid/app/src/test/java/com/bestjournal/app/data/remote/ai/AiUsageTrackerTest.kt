@@ -73,9 +73,9 @@ class AiUsageTrackerTest {
         private fun setCount(n: Int) {
             prefs
                 .edit()
-                .putInt("dashboard_daily_count", n)
+                .putInt("dashboard_daily_count_0", n)
                 .putString(
-                    "dashboard_daily_date",
+                    "dashboard_daily_date_0",
                     LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE),
                 )
                 .apply()
@@ -129,8 +129,8 @@ class AiUsageTrackerTest {
             // Mark cooldown as already served, no active cooldown timestamp
             prefs
                 .edit()
-                .putBoolean("dashboard_cooldown_until_served", true)
-                .putLong("dashboard_cooldown_until", 0L)
+                .putBoolean("dashboard_cooldown_until_0_served", true)
+                .putLong("dashboard_cooldown_until_0", 0L)
                 .apply()
             val result = access()
             assertInstanceOf(TieredAccessResult.Allowed::class.java, result)
@@ -169,9 +169,9 @@ class AiUsageTrackerTest {
         private fun setCount(n: Int) {
             prefs
                 .edit()
-                .putInt("dashboard_daily_count", n)
+                .putInt("dashboard_daily_count_0", n)
                 .putString(
-                    "dashboard_daily_date",
+                    "dashboard_daily_date_0",
                     LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE),
                 )
                 .apply()
@@ -364,10 +364,10 @@ class AiUsageTrackerTest {
             val tenMinutesMs = 10 * 60_000L
             prefs
                 .edit()
-                .putLong("dashboard_cooldown_until", System.currentTimeMillis() + tenMinutesMs)
-                .putInt("dashboard_daily_count", 50)
+                .putLong("dashboard_cooldown_until_0", System.currentTimeMillis() + tenMinutesMs)
+                .putInt("dashboard_daily_count_0", 50)
                 .putString(
-                    "dashboard_daily_date",
+                    "dashboard_daily_date_0",
                     LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE),
                 )
                 .apply()
@@ -390,10 +390,10 @@ class AiUsageTrackerTest {
             // Cooldown expired in the past
             prefs
                 .edit()
-                .putLong("dashboard_cooldown_until", System.currentTimeMillis() - 1000L)
-                .putInt("dashboard_daily_count", 5)
+                .putLong("dashboard_cooldown_until_0", System.currentTimeMillis() - 1000L)
+                .putInt("dashboard_daily_count_0", 5)
                 .putString(
-                    "dashboard_daily_date",
+                    "dashboard_daily_date_0",
                     LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE),
                 )
                 .apply()

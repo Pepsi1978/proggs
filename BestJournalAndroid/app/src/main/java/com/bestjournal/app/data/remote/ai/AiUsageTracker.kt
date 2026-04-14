@@ -18,7 +18,6 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
         private const val KEY_WEEKLY_TEXT_COUNT = "weekly_text_count"
         private const val KEY_WEEKLY_RESET_DATE = "ai_weekly_reset"
         private const val KEY_BANNER_LAST_SHOWN = "ai_banner_last_shown"
-        const val TRIAL_DAYS = 8
 
         // Dashboard daily tracking (per scenario)
         private const val KEY_DASHBOARD_DAILY_COUNT = "dashboard_daily_count"
@@ -74,7 +73,7 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
         val firstDate = LocalDate.parse(firstUse, dateFormatter)
         val daysSinceFirst = java.time.temporal.ChronoUnit.DAYS.between(firstDate, LocalDate.now())
         return when {
-            daysSinceFirst < TRIAL_DAYS -> AiPhase.TRIAL
+            daysSinceFirst < Constants.TRIAL_USAGE_DAYS -> AiPhase.TRIAL
             else -> AiPhase.FREEMIUM
         }
     }
