@@ -7,6 +7,7 @@ import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.remote.ai.AiPhase
 import com.bestjournal.app.data.remote.ai.AiRateLimiter
 import com.bestjournal.app.data.remote.ai.AiUsageTracker
+import com.bestjournal.app.data.remote.ai.TieredAccessResult
 import com.bestjournal.app.data.repository.AdviceRepository
 import com.bestjournal.app.domain.usecase.AnalyzeEntropyUseCase
 import com.bestjournal.app.domain.usecase.GenerateAdviceUseCase
@@ -207,6 +208,30 @@ constructor(
 
     fun refreshDashboard() {
         viewModelScope.launch {
+            // Check access BEFORE making the API call
+            val subState = billingManager.subscriptionState.value
+            val accessResult = aiRateLimiter.checkDashboardAccess(subState)
+
+            when (accessResult) {
+                is TieredAccessResult.HardLimitReached -> {
+                    _uiState.update {
+                        it.copy(dashboardLimitMessage = "Tageslimit erreicht. Morgen geht es weiter!")
+                    }
+                    return@launch
+                }
+                is TieredAccessResult.Cooldown -> {
+                    _uiState.update {
+                        it.copy(dashboardLimitMessage = "Kurze Pause: Noch ${accessResult.minutesLeft} Minuten bis zur n\u00e4chsten Analyse.")
+                    }
+                    return@launch
+                }
+                is TieredAccessResult.Allowed -> {
+                    // Proceed with the allowed model
+                }
+            }
+
+            val modelName = (accessResult as TieredAccessResult.Allowed).modelName
+
             manualRefreshActive = true
             analyticsTracker.trackDashboardRefreshed(_uiState.value.currentScenario)
             _uiState.value =
@@ -218,7 +243,7 @@ constructor(
                 )
             // Record attempt (daily + hourly counters) — errors are OK here
             aiRateLimiter.recordDashboardAttempt()
-            analyzeEntropyUseCase(freshAnalysis = true)
+            analyzeEntropyUseCase(freshAnalysis = true, modelName = modelName)
                 .onSuccess {
                     // Only count toward the free weekly limit on SUCCESS — errors don't count
                     aiRateLimiter.recordDashboardSuccess()

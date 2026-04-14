@@ -17,6 +17,7 @@ import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
 import com.bestjournal.app.domain.usecase.TranscribeAudioUseCase
 import com.bestjournal.app.util.AchievementStats
 import com.bestjournal.app.util.AchievementTracker
+import com.bestjournal.app.data.remote.ai.TieredAccessResult
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.DailyPromptProvider
@@ -380,12 +381,33 @@ constructor(
         val rawText = _uiState.value.rawText
         if (rawText.isBlank()) return
 
+        // Check access BEFORE making the API call
+        val subState = billingManager.subscriptionState.value
+        val accessResult = aiRateLimiter.checkTextAccess(subState)
+
+        when (accessResult) {
+            is TieredAccessResult.HardLimitReached -> {
+                _uiState.update { it.copy(showAiLimitReached = true) }
+                return
+            }
+            is TieredAccessResult.Cooldown -> {
+                _uiState.update {
+                    it.copy(errorMessage = "Kurze Pause: Noch ${accessResult.minutesLeft} Minuten bis zur n\u00e4chsten Verbesserung.")
+                }
+                return
+            }
+            is TieredAccessResult.Allowed -> {
+                // Proceed with the allowed model
+            }
+        }
+
         _uiState.value = _uiState.value.copy(recordingState = RecordingState.IMPROVING)
 
         viewModelScope.launch {
+            val modelName = (accessResult as TieredAccessResult.Allowed).modelName
             // Record attempt (daily + hourly counters) — errors are OK here
             aiRateLimiter.recordTextAttempt()
-            improveTextUseCase(rawText)
+            improveTextUseCase(rawText, modelName = modelName)
                 .onSuccess { improved ->
                     // Only count toward the free weekly limit on SUCCESS — errors don't count
                     aiRateLimiter.recordTextSuccess()
