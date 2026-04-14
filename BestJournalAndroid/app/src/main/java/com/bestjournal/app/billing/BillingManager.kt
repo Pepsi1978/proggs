@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import com.android.billingclient.api.*
 import com.bestjournal.app.util.AnalyticsTracker
+import com.bestjournal.app.util.Constants
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -212,7 +213,8 @@ class BillingManager @Inject constructor(
     fun getRetentionOfferToken(isYearly: Boolean): String? {
         val details = if (isYearly) yearlyProductDetails else monthlyProductDetails
         details ?: return null
-        val targetBasePlanId = if (isYearly) "retention-yearly-75" else "retention-monthly-75"
+        val targetBasePlanId = if (isYearly) Constants.RETENTION_OFFER_ID_YEARLY
+            else Constants.RETENTION_OFFER_ID_MONTHLY
         return details.subscriptionOfferDetails
             ?.firstOrNull { offer -> offer.basePlanId == targetBasePlanId }
             ?.offerToken
@@ -221,7 +223,8 @@ class BillingManager @Inject constructor(
     fun getRetentionPrice(isYearly: Boolean): String? {
         val details = if (isYearly) yearlyProductDetails else monthlyProductDetails
         details ?: return null
-        val targetBasePlanId = if (isYearly) "retention-yearly-75" else "retention-monthly-75"
+        val targetBasePlanId = if (isYearly) Constants.RETENTION_OFFER_ID_YEARLY
+            else Constants.RETENTION_OFFER_ID_MONTHLY
         return details.subscriptionOfferDetails
             ?.firstOrNull { offer -> offer.basePlanId == targetBasePlanId }
             ?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice
