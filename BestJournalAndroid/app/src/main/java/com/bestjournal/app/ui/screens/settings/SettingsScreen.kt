@@ -1661,33 +1661,37 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         if (uiState.isSubscribed) {
+                            val subType by viewModel.subscriptionType.collectAsState()
+                            val isLifetime = subType == com.bestjournal.app.billing.SubscriptionType.LIFETIME
                             Text(
-                                text = "Premium-Abo aktiv",
+                                text = if (isLifetime) "Lifetime-Zugang aktiv" else "Premium-Abo aktiv",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Alle Features freigeschaltet, unbegrenzte KI, PDF-Export und mehr.",
+                                text = if (isLifetime) "Einmalkauf, alle Features f\u00fcr immer freigeschaltet."
+                                    else "Alle Features freigeschaltet, unbegrenzte KI, PDF-Export und mehr.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             var showChurnDialog by remember { mutableStateOf(false) }
-                            TextButton(
-                                onClick = {
-                                    playClick()
-                                    showChurnDialog = true
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text(
-                                    "Abo verwalten",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                            if (!isLifetime) {
+                                TextButton(
+                                    onClick = {
+                                        playClick()
+                                        showChurnDialog = true
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(
+                                        "Abo verwalten",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                             if (showChurnDialog) {
-                                val subType by viewModel.subscriptionType.collectAsState()
                                 val activity = context as? android.app.Activity
                                 ChurnFlowDialog(
                                     onDismiss = { showChurnDialog = false },

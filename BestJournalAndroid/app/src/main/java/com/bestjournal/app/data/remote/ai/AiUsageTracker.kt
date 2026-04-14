@@ -53,8 +53,24 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
     fun getUsageDayCount(): Int = getUsageDaysSet().size
 
     fun getCurrentPhase(): AiPhase {
-        val firstUse = prefs.getString(KEY_FIRST_USE_DATE, "") ?: ""
-        if (firstUse.isBlank()) return AiPhase.TRIAL // Never used → still trial
+        var firstUse = prefs.getString(KEY_FIRST_USE_DATE, "") ?: ""
+
+        // Migration: existing users have usage days but no first-use date.
+        // Derive first-use date from their earliest recorded usage day.
+        if (firstUse.isBlank()) {
+            val usageDays = getUsageDaysSet()
+            if (usageDays.isNotEmpty()) {
+                val earliest = usageDays.mapNotNull {
+                    runCatching { LocalDate.parse(it, dateFormatter) }.getOrNull()
+                }.minOrNull()
+                if (earliest != null) {
+                    firstUse = earliest.format(dateFormatter)
+                    prefs.edit().putString(KEY_FIRST_USE_DATE, firstUse).apply()
+                }
+            }
+        }
+
+        if (firstUse.isBlank()) return AiPhase.TRIAL // Truly never used → still trial
         val firstDate = LocalDate.parse(firstUse, dateFormatter)
         val daysSinceFirst = java.time.temporal.ChronoUnit.DAYS.between(firstDate, LocalDate.now())
         return when {
