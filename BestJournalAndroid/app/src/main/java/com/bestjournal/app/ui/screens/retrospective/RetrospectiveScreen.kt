@@ -407,11 +407,14 @@ fun RetrospectiveScreen(
                     exit = shrinkVertically(),
                 ) {
                     Column(modifier = Modifier.padding(top = 12.dp)) {
-                        if (weekly.isEmpty()) {
+                        if (weekly.isEmpty() && lockedWeeks.isEmpty()) {
                             EmptyHint(
                                 "Noch keine Wochenrückblicke vorhanden.\nMindestens 2 Tagebucheinträge pro Woche nötig."
                             )
-                        } else {
+                        }
+
+                        // Free weekly reviews
+                        if (weekly.isNotEmpty()) {
                             val monthNames =
                                 listOf(
                                     "Januar",
@@ -454,35 +457,35 @@ fun RetrospectiveScreen(
                                     onClick = { selectedSummary = summary },
                                 )
                             }
+                        }
 
-                            // Locked week placeholders (premium-gated)
-                            if (lockedWeeks.isNotEmpty()) {
-                                lockedWeeks.forEachIndexed { index, locked ->
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    LockedWeekEntry(
-                                        periodLabel = locked.periodLabel,
-                                        isLast = index == lockedWeeks.lastIndex,
-                                        onClick = {
-                                            doHaptic(HapticFeedbackType.LongPress)
-                                            showPremiumSheet = true
-                                        },
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = "Mit Premium alle Rückblicke freischalten",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            doHaptic(HapticFeedbackType.LongPress)
-                                            showPremiumSheet = true
-                                        }
-                                        .padding(vertical = 8.dp),
+                        // Locked week placeholders (premium-gated) — shown even without free reviews
+                        if (lockedWeeks.isNotEmpty()) {
+                            lockedWeeks.forEachIndexed { index, locked ->
+                                Spacer(modifier = Modifier.height(10.dp))
+                                LockedWeekEntry(
+                                    periodLabel = locked.periodLabel,
+                                    isLast = index == lockedWeeks.lastIndex,
+                                    onClick = {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        showPremiumSheet = true
+                                    },
                                 )
                             }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Mit Premium alle Rückblicke freischalten",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        showPremiumSheet = true
+                                    }
+                                    .padding(vertical = 8.dp),
+                            )
                         }
                     }
                 }

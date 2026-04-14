@@ -266,9 +266,8 @@ constructor(
                     } else {
                         Log.d("RetroVM", "Regenerated $count reviews with new profile style")
                     }
-                    if (!premium) {
-                        _lockedWeeks.value = generateUseCase.getLockedWeekRanges()
-                    }
+                    // Recalculate locked weeks (or clear for premium)
+                    _lockedWeeks.value = if (!premium) generateUseCase.getLockedWeekRanges() else emptyList()
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e // Don't catch cancellation
                 } catch (e: Exception) {
@@ -294,9 +293,8 @@ constructor(
                 val premium = isPremium()
                 val count = generateUseCase.generateMissing(isPremium = premium)
                 Log.d("RetroVM", "Retry generated $count reviews")
-                if (!premium) {
-                    _lockedWeeks.value = generateUseCase.getLockedWeekRanges()
-                }
+                // Recalculate locked weeks (or clear for premium)
+                _lockedWeeks.value = if (!premium) generateUseCase.getLockedWeekRanges() else emptyList()
             } catch (e: Exception) {
                 Log.e("RetroVM", "Retry failed: ${e.message}", e)
                 _errorMessage.value = e.message
