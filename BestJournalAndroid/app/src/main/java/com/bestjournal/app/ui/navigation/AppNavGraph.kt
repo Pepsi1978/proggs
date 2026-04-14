@@ -11,6 +11,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -20,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -79,10 +81,10 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
             enterTransition = { fadeIn(tween(600)) },
             exitTransition = { fadeOut(tween(400)) },
         ) {
-            // Smooth entrance animation matching the splash exit
-            val enterAlpha = remember { Animatable(0f) }
+            // Dark curtain that fades away — content appears from darkness
+            val curtainAlpha = remember { Animatable(1f) }
             LaunchedEffect(Unit) {
-                enterAlpha.animateTo(1f, tween(600, easing = FastOutSlowInEasing))
+                curtainAlpha.animateTo(0f, tween(600, easing = FastOutSlowInEasing))
             }
 
             val pagerState = rememberPagerState(initialPage = initialTab) { mainPages.size }
@@ -91,11 +93,7 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                 com.bestjournal.app.ui.screens.retrospective.RetrospectiveViewModel =
                 hiltViewModel()
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = enterAlpha.value },
-            ) {
+            Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 containerColor = MaterialTheme.colorScheme.background,
                 bottomBar = {
@@ -147,6 +145,15 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                             )
                     }
                 }
+            }
+            // Black curtain ON TOP — fades from opaque to invisible
+            if (curtainAlpha.value > 0.01f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = curtainAlpha.value }
+                        .background(Color(0xFF131313)),
+                )
             }
             } // end enter-animation wrapper
         }
