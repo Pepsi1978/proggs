@@ -43,6 +43,9 @@ class BillingManager @Inject constructor(
     private var yearlyProductDetails: ProductDetails? = null
     private var lifetimeProductDetails: ProductDetails? = null
 
+    // Store active purchase token for subscription updates (retention offers)
+    private var activePurchaseToken: String? = null
+
     private val connectionListener =
         object : BillingClientStateListener {
             override fun onBillingSetupFinished(billingResult: BillingResult) {
@@ -79,6 +82,7 @@ class BillingManager @Inject constructor(
                 }
                 if (activePurchase != null) {
                     _subscriptionState.value = SubscriptionState.Subscribed
+                    activePurchaseToken = activePurchase.purchaseToken
                     _subscriptionType.value = when {
                         activePurchase.products.contains(YEARLY_PRODUCT_ID) -> SubscriptionType.YEARLY
                         activePurchase.products.contains(MONTHLY_PRODUCT_ID) -> SubscriptionType.MONTHLY
@@ -251,11 +255,25 @@ class BillingManager @Inject constructor(
                 .setProductDetails(productDetails)
                 .setOfferToken(offerToken)
                 .build()
-        val billingFlowParams =
+        val billingFlowParamsBuilder =
             BillingFlowParams.newBuilder()
                 .setProductDetailsParamsList(listOf(productDetailsParams))
-                .build()
-        billingClient?.launchBillingFlow(activity, billingFlowParams)
+
+        // If user already has an active subscription, add update params
+        // to allow offer changes (retention, plan switch) without ITEM_ALREADY_OWNED
+        val oldToken = activePurchaseToken
+        if (oldToken != null && _subscriptionState.value is SubscriptionState.Subscribed) {
+            billingFlowParamsBuilder.setSubscriptionUpdateParams(
+                BillingFlowParams.SubscriptionUpdateParams.newBuilder()
+                    .setOldPurchaseToken(oldToken)
+                    .setSubscriptionReplacementMode(
+                        BillingFlowParams.SubscriptionUpdateParams.ReplacementMode.WITHOUT_PRORATION,
+                    )
+                    .build(),
+            )
+        }
+
+        billingClient?.launchBillingFlow(activity, billingFlowParamsBuilder.build())
     }
 
     override fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Purchase>?) {
@@ -268,9 +286,20 @@ class BillingManager @Inject constructor(
                         acknowledgePurchase(purchase)
                     } else {
                         _subscriptionState.value = SubscriptionState.Subscribed
+                        updateSubscriptionType(purchase)
                     }
                 }
             }
+        }
+    }
+
+    private fun updateSubscriptionType(purchase: Purchase) {
+        activePurchaseToken = purchase.purchaseToken
+        _subscriptionType.value = when {
+            purchase.products.contains(LIFETIME_PRODUCT_ID) -> SubscriptionType.LIFETIME
+            purchase.products.contains(YEARLY_PRODUCT_ID) -> SubscriptionType.YEARLY
+            purchase.products.contains(MONTHLY_PRODUCT_ID) -> SubscriptionType.MONTHLY
+            else -> _subscriptionType.value
         }
     }
 
@@ -282,6 +311,7 @@ class BillingManager @Inject constructor(
         billingClient?.acknowledgePurchase(ackParams) { result ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                 _subscriptionState.value = SubscriptionState.Subscribed
+                updateSubscriptionType(purchase)
                 val isLifetime = purchase.products.contains(LIFETIME_PRODUCT_ID)
                 val isYearly = purchase.products.contains(YEARLY_PRODUCT_ID)
                 if (isLifetime) {
