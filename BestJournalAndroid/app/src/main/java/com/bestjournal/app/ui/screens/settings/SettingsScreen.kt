@@ -8,7 +8,12 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.bestjournal.app.util.rememberHapticAction
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
@@ -88,6 +93,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -1766,18 +1772,41 @@ fun SettingsScreen(
                                 if (idx < featureItems.lastIndex) Spacer(modifier = Modifier.height(8.dp))
                             }
                             Spacer(modifier = Modifier.height(16.dp))
+
+                            // Breathing animation on the Premium CTA
+                            val premiumTransition = rememberInfiniteTransition(label = "premiumCta")
+                            val premiumCtaScale by premiumTransition.animateFloat(
+                                initialValue = 1f,
+                                targetValue = 1.03f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(2000, easing = EaseInOutSine),
+                                    repeatMode = RepeatMode.Reverse,
+                                ),
+                                label = "premiumCtaScale",
+                            )
+
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Button(
                                     onClick = { doHaptic(HapticFeedbackType.LongPress); onNavigateToPaywall("settings_tap") },
+                                    modifier = Modifier
+                                        .height(48.dp)
+                                        .graphicsLayer {
+                                            scaleX = premiumCtaScale
+                                            scaleY = premiumCtaScale
+                                        },
+                                    shape = RoundedCornerShape(16.dp),
                                     colors =
                                         ButtonDefaults.buttonColors(
                                             containerColor = MaterialTheme.colorScheme.primary
                                         ),
                                 ) {
-                                    Text("Premium freischalten")
+                                    Text(
+                                        "Premium freischalten",
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
                                 }
                             }
                         }
@@ -2123,7 +2152,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Best Journal V0.10.38",
+                            "Best Journal V0.10.39",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

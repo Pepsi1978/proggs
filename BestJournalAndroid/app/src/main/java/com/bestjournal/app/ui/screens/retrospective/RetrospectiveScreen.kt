@@ -3,6 +3,12 @@ package com.bestjournal.app.ui.screens.retrospective
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.bestjournal.app.util.rememberHapticAction
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollState
@@ -1651,6 +1657,18 @@ private fun ReviewPremiumSheet(
         skipPartiallyExpanded = true,
     )
 
+    // Breathing animation on the CTA button
+    val infiniteTransition = rememberInfiniteTransition(label = "reviewCta")
+    val ctaScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.03f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "reviewCtaScale",
+    )
+
     androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -1696,7 +1714,13 @@ private fun ReviewPremiumSheet(
             Spacer(modifier = Modifier.height(28.dp))
             androidx.compose.material3.Button(
                 onClick = onSubscribe,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp)
+                    .graphicsLayer {
+                        scaleX = ctaScale
+                        scaleY = ctaScale
+                    },
                 shape = RoundedCornerShape(16.dp),
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -1705,6 +1729,7 @@ private fun ReviewPremiumSheet(
                 Text(
                     "Abo starten",
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
