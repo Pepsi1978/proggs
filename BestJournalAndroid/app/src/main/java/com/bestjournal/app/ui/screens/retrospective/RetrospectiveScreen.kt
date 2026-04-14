@@ -1696,7 +1696,6 @@ private fun ReviewPremiumSheet(
                 ReviewBenefitPoint("Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen")
                 ReviewBenefitPoint("Monatsrückblicke, die rote Fäden und Entwicklungen zeigen")
                 ReviewBenefitPoint("Jahresrückblicke, dein ganzes Jahr als persönliche Erzählung")
-                ReviewBenefitPoint("5 verschiedene KI-Perspektiven auf dein Leben")
             }
 
             Spacer(modifier = Modifier.height(24.dp))
