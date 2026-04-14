@@ -1707,7 +1707,7 @@ private fun ReviewPremiumSheet(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 ReviewBenefitPoint("Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen")
-                ReviewBenefitPoint("Monatsrückblicke, die rote Fäden und Entwicklungen zeigen")
+                ReviewBenefitPoint("Monatsrückblicke, die deine Fortschritte und Veränderungen sichtbar machen")
                 ReviewBenefitPoint("Jahresrückblicke, dein ganzes Jahr als persönliche Erzählung")
             }
 
