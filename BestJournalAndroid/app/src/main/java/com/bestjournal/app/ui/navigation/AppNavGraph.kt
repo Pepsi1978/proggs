@@ -1,6 +1,8 @@
 package com.bestjournal.app.ui.navigation
 
 import android.net.Uri
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -9,11 +11,16 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -72,12 +79,23 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
             enterTransition = { fadeIn(tween(600)) },
             exitTransition = { fadeOut(tween(400)) },
         ) {
+            // Smooth entrance animation matching the splash exit
+            val enterAlpha = remember { Animatable(0f) }
+            LaunchedEffect(Unit) {
+                enterAlpha.animateTo(1f, tween(600, easing = FastOutSlowInEasing))
+            }
+
             val pagerState = rememberPagerState(initialPage = initialTab) { mainPages.size }
             val coroutineScope = rememberCoroutineScope()
             val retroViewModel:
                 com.bestjournal.app.ui.screens.retrospective.RetrospectiveViewModel =
                 hiltViewModel()
 
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = enterAlpha.value },
+            ) {
             Scaffold(
                 containerColor = MaterialTheme.colorScheme.background,
                 bottomBar = {
@@ -130,6 +148,7 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                     }
                 }
             }
+            } // end enter-animation wrapper
         }
 
         composable(
