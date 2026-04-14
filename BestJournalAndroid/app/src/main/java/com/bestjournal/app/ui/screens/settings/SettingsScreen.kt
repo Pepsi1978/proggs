@@ -35,6 +35,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Dashboard
@@ -1730,7 +1731,8 @@ fun SettingsScreen(
                             val featureItems = listOf(
                                 Triple(Icons.Rounded.Star, "Unbegrenzte KI-Textverbesserung", "Jeder Eintrag wird ausdrucksst\u00e4rker"),
                                 Triple(Icons.Rounded.Dashboard, "Unbegrenzte Dashboard-Analysen", "Dein Dashboard w\u00e4chst mit dir"),
-                                Triple(Icons.Rounded.Favorite, "5 KI-Perspektiven", "Von Stressabbau bis Selbsterkenntnis"),
+                                Triple(Icons.Rounded.Favorite, "5 KI-Perspektiven", "Von Klarheit bis Selbsterkenntnis"),
+                                Triple(Icons.Rounded.AutoAwesome, "Wochen-, Monats- und Jahresr\u00fcckblicke", "Die KI erz\u00e4hlt deine Geschichte"),
                                 Triple(Icons.Rounded.Tune, "Muster-Erkennung", "Die KI findet Zusammenh\u00e4nge die dir nicht auffallen"),
                                 Triple(Icons.Rounded.PictureAsPdf, "PDF-Export mit Fotos", "Alle Eintr\u00e4ge und Bilder als Dokument"),
                                 Triple(Icons.Rounded.MusicNote, "Pr\u00e4zisere Spracherkennung", "H\u00f6here Qualit\u00e4t f\u00fcr deine Spracheintr\u00e4ge"),

@@ -86,6 +86,8 @@ private val benefits =
         "Unbegrenzte KI-Textverbesserung f\u00fcr jeden Eintrag",
         "5 intelligente Analyse-Profile f\u00fcr verschiedene Perspektiven",
         "Automatische Dashboard-Updates nach jedem Eintrag",
+        "Wochen-, Monats- und Jahresr\u00fcckblicke mit KI",
+        "Tagebucheintr\u00e4ge mit Fotos als PDF exportieren",
         "Schreibe ungest\u00f6rt, ohne Limits und ohne Werbung",
     )
 
