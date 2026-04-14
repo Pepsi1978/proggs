@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.LocalOffer
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.SentimentDissatisfied
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Warning
@@ -99,7 +100,7 @@ fun ChurnFlowDialog(
     }
 
     LaunchedEffect(currentStep) {
-        if (currentStep == 1 && !offerShownTracked) {
+        if (currentStep == 2 && !offerShownTracked) {
             analyticsTracker.trackChurnOfferShown()
             offerShownTracked = true
         }
@@ -129,18 +130,24 @@ fun ChurnFlowDialog(
                 label = "churn_step",
             ) { step ->
                 when (step) {
-                    0 -> StepReason(
+                    0 -> StepOverview(
+                        subscriptionType = subscriptionType,
+                        currentPrice = currentPrice,
+                        onCancel = onDismiss,
+                        onCancelSubscription = { currentStep = 1 },
+                    )
+                    1 -> StepReason(
                         selectedReason = selectedReason,
                         onReasonSelected = { selectedReason = it },
                         onNext = {
                             selectedReason?.let { reason ->
                                 analyticsTracker.trackChurnReasonSelected(reason)
-                                currentStep = 1
+                                currentStep = 2
                             }
                         },
-                        onCancel = onDismiss,
+                        onCancel = { currentStep = 0 },
                     )
-                    1 -> StepRetentionOffer(
+                    2 -> StepRetentionOffer(
                         selectedReason = selectedReason ?: "",
                         subscriptionType = subscriptionType,
                         currentPrice = currentPrice,
@@ -167,10 +174,10 @@ fun ChurnFlowDialog(
                             } catch (_: Exception) { }
                             onOfferAccepted()
                         },
-                        onDecline = { currentStep = 2 },
+                        onDecline = { currentStep = 3 },
                     )
-                    2 -> StepConfirm(
-                        onGoBack = { currentStep = 1 },
+                    3 -> StepConfirm(
+                        onGoBack = { currentStep = 2 },
                         onConfirmCancel = {
                             analyticsTracker.trackChurnConfirmed()
                             try {
@@ -189,7 +196,165 @@ fun ChurnFlowDialog(
     }
 }
 
-// ── Step 0: Reason Survey ───────────────────────────────────────────────
+// ── Step 0: Subscription Overview ────────────────────────────────────────
+
+@Composable
+private fun StepOverview(
+    subscriptionType: SubscriptionType,
+    currentPrice: String,
+    onCancel: () -> Unit,
+    onCancelSubscription: () -> Unit,
+) {
+    val isYearly = subscriptionType == SubscriptionType.YEARLY
+    val planName = if (isYearly) "Jahresabo" else "Monatsabo"
+    val periodLabel = if (isYearly) "pro Jahr" else "pro Monat"
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(28.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        // Premium icon
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            NeonEmerald.copy(alpha = 0.15f),
+                            NeonAmber.copy(alpha = 0.1f),
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Rounded.Star,
+                contentDescription = null,
+                tint = NeonEmerald,
+                modifier = Modifier.size(36.dp),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            "Dein Abo",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Subscription info card
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+                .padding(20.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Tarif",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    planName,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Preis",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    "$currentPrice $periodLabel",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Verl\u00e4ngerung",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    "Automatisch",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = NeonEmerald,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            "Dein Abo verl\u00e4ngert sich automatisch \u00fcber Google Play. Die K\u00fcndigung ist jederzeit m\u00f6glich.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            lineHeight = 16.sp,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Close button (primary — most prominent action)
+        Button(
+            onClick = onCancel,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            shape = RoundedCornerShape(14.dp),
+        ) {
+            Text("Fertig", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 4.dp))
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Cancel link — intentionally very subtle, small, low contrast
+        Text(
+            text = "Abo k\u00fcndigen",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+            modifier = Modifier
+                .clickable { onCancelSubscription() }
+                .padding(vertical = 4.dp),
+        )
+    }
+}
+
+// ── Step 1: Reason Survey ───────────────────────────────────────────────
 
 @Composable
 private fun StepReason(
