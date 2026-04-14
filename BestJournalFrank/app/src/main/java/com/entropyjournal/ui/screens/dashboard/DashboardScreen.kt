@@ -2031,7 +2031,7 @@ private fun TopActionDetailDialog(action: TopAction, index: Int, onDismiss: () -
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier.size(36.dp).clip(CircleShape).background(dotColor),
+                    modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(dotColor),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
