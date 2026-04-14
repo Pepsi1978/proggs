@@ -114,7 +114,7 @@ import com.entropyjournal.ui.theme.NeonAmber
 import com.entropyjournal.ui.theme.NeonEmerald
 import com.entropyjournal.ui.theme.NeonRed
 import com.entropyjournal.util.DateTimeFormatter
-import com.entropyjournal.util.EdgeTtsPlayer
+import com.entropyjournal.util.TtsManager
 import java.io.File
 import kotlinx.coroutines.delay
 
@@ -157,7 +157,7 @@ fun EntryDetailScreen(
     var isTtsLoading by remember { mutableStateOf(false) }
     var cameraFile by remember { mutableStateOf<java.io.File?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
-    val tts = remember { EdgeTtsPlayer(context) }
+    val tts = remember { TtsManager(context) }
 
     DisposableEffect(Unit) {
         onDispose {

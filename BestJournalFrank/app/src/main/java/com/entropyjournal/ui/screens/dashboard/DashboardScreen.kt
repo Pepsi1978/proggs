@@ -93,7 +93,7 @@ import com.entropyjournal.ui.theme.GoalPalette
 import com.entropyjournal.ui.theme.InsightPalette
 import com.entropyjournal.ui.theme.FeatureAccentOrange
 import com.entropyjournal.ui.theme.SummaryPalette
-import com.entropyjournal.util.EdgeTtsPlayer
+import com.entropyjournal.util.TtsManager
 import android.content.Intent
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Stop
@@ -121,7 +121,7 @@ fun DashboardScreen(viewModel: DashboardViewModel) {
     val context = LocalContext.current
     var isDashboardSpeaking by remember { mutableStateOf(false) }
     var isDashboardTtsLoading by remember { mutableStateOf(false) }
-    val dashboardTts = remember { EdgeTtsPlayer(context) }
+    val dashboardTts = remember { TtsManager(context) }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -3173,7 +3173,7 @@ private fun CustomResultCard(advice: Advice, categoryName: String = "", onClick:
 @Composable
 private fun AnalysisTtsShareRow(
     text: String,
-    tts: EdgeTtsPlayer,
+    tts: TtsManager,
     isSpeaking: Boolean,
     isTtsLoading: Boolean,
     onSpeakingChange: (Boolean) -> Unit,

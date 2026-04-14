@@ -930,6 +930,91 @@ fun SettingsScreen(
                                     ),
                             )
                         }
+
+                        // ── Stimme (ElevenLabs) ──
+                        val elevenLabsKey = uiState.elevenLabsApiKey
+                        if (elevenLabsKey.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            val voices = Constants.ELEVENLABS_VOICES.filter { it.id.isNotBlank() }
+                            if (voices.isEmpty()) {
+                                Text(
+                                    "Keine Stimmen konfiguriert",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                Text(
+                                    "Stimme",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "ElevenLabs Text-to-Speech",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                var voiceExpanded by remember { mutableStateOf(false) }
+                                val selectedVoiceId = uiState.elevenLabsVoiceId
+                                val selectedVoice = voices.find { it.id == selectedVoiceId } ?: voices.first()
+
+                                ExposedDropdownMenuBox(
+                                    expanded = voiceExpanded,
+                                    onExpandedChange = { voiceExpanded = it },
+                                ) {
+                                    TextField(
+                                        value = selectedVoice.name,
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        trailingIcon = {
+                                            Icon(Icons.Rounded.KeyboardArrowDown, "Stimme wählen")
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                                        colors = TextFieldDefaults.colors(
+                                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedIndicatorColor = Color.Transparent,
+                                        ),
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp),
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = voiceExpanded,
+                                        onDismissRequest = { voiceExpanded = false },
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                    ) {
+                                        voices.forEach { voice ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(
+                                                        voice.name,
+                                                        color = if (voice.id == selectedVoiceId)
+                                                            MaterialTheme.colorScheme.primary
+                                                        else MaterialTheme.colorScheme.onSurface,
+                                                    )
+                                                },
+                                                onClick = {
+                                                    viewModel.updateElevenLabsVoiceId(voice.id)
+                                                    voiceExpanded = false
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -1819,6 +1904,13 @@ fun SettingsScreen(
                             label = "Gemini API-Key",
                             value = uiState.geminiApiKey,
                             onValueChange = { viewModel.updateGeminiApiKey(it) },
+                            requireBiometric = uiState.biometricLock,
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        ApiKeyField(
+                            label = "ElevenLabs API-Key",
+                            value = uiState.elevenLabsApiKey,
+                            onValueChange = { viewModel.updateElevenLabsApiKey(it) },
                             requireBiometric = uiState.biometricLock,
                         )
                     }

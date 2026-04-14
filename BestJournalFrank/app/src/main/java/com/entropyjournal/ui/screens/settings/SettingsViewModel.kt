@@ -27,6 +27,8 @@ data class SettingsUiState(
     val userProfile: UserProfile? = null,
     val groqApiKey: String = "",
     val geminiApiKey: String = "",
+    val elevenLabsApiKey: String = "",
+    val elevenLabsVoiceId: String = "",
     val selectedModel: String = Constants.DEFAULT_GEMINI_MODEL,
     val textImprovementDefault: Boolean = false,
     val maxRecordingDuration: Int = 5,
@@ -145,6 +147,8 @@ constructor(
                 userProfile = signInUseCase.getProfile(),
                 groqApiKey = encryptedPrefs.getString(Constants.PREF_GROQ_API_KEY, "") ?: "",
                 geminiApiKey = encryptedPrefs.getString(Constants.PREF_GEMINI_API_KEY, "") ?: "",
+                elevenLabsApiKey = encryptedPrefs.getString(Constants.PREF_ELEVENLABS_API_KEY, "") ?: "",
+                elevenLabsVoiceId = encryptedPrefs.getString(Constants.PREF_ELEVENLABS_VOICE_ID, "") ?: "",
                 selectedModel =
                     encryptedPrefs.getString(
                         Constants.PREF_GEMINI_MODEL,
@@ -233,6 +237,16 @@ constructor(
     fun updateGeminiApiKey(key: String) {
         encryptedPrefs.edit().putString(Constants.PREF_GEMINI_API_KEY, key).apply()
         _uiState.value = _uiState.value.copy(geminiApiKey = key)
+    }
+
+    fun updateElevenLabsApiKey(key: String) {
+        encryptedPrefs.edit().putString(Constants.PREF_ELEVENLABS_API_KEY, key).apply()
+        _uiState.value = _uiState.value.copy(elevenLabsApiKey = key)
+    }
+
+    fun updateElevenLabsVoiceId(voiceId: String) {
+        encryptedPrefs.edit().putString(Constants.PREF_ELEVENLABS_VOICE_ID, voiceId).apply()
+        _uiState.value = _uiState.value.copy(elevenLabsVoiceId = voiceId)
     }
 
     fun updateTextImprovementDefault(enabled: Boolean) {

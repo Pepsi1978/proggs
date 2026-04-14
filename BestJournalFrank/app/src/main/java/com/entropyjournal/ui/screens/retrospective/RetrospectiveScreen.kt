@@ -85,7 +85,7 @@ import com.entropyjournal.data.local.entity.RetrospectiveSummaryEntity
 import com.entropyjournal.ui.components.SunMoonToggle
 import com.entropyjournal.ui.theme.FeatureAccentOrange
 import com.entropyjournal.ui.theme.LocalIsDarkTheme
-import com.entropyjournal.util.EdgeTtsPlayer
+import com.entropyjournal.util.TtsManager
 import java.util.Calendar
 
 object RetrospectiveColors {
@@ -706,7 +706,7 @@ private fun SummaryDetailDialog(
     var isTtsLoading by remember { mutableStateOf(false) }
     var showShareDialog by remember { mutableStateOf(false) }
     var fullScreenPhotoPath by remember { mutableStateOf<String?>(null) }
-    val tts = remember { EdgeTtsPlayer(context) }
+    val tts = remember { TtsManager(context) }
     val photos by viewModel.currentPhotos.collectAsState()
     val parsed = remember(summary.summaryText) { parseRetrospectiveText(summary.summaryText) }
 

@@ -58,6 +58,20 @@ object Constants {
     // Haptik
     const val PREF_HAPTIC_ENABLED = "haptic_enabled"
 
+    // ElevenLabs TTS
+    const val ELEVENLABS_BASE_URL = "https://api.elevenlabs.io/v1"
+    const val PREF_ELEVENLABS_API_KEY = "elevenlabs_api_key"
+    const val PREF_ELEVENLABS_VOICE_ID = "elevenlabs_voice_id"
+
+    data class ElevenLabsVoice(val id: String, val name: String)
+
+    // Voices — replace IDs with your picks from elevenlabs.io/voice-library
+    val ELEVENLABS_VOICES = listOf(
+        ElevenLabsVoice("", "Stimme 1 (Voice-ID eintragen)"),
+        ElevenLabsVoice("", "Stimme 2 (Voice-ID eintragen)"),
+        ElevenLabsVoice("", "Stimme 3 (Voice-ID eintragen)"),
+    )
+
     // Dashboard-Szenario
     const val PREF_DASHBOARD_SCENARIO = "dashboard_scenario"
     const val PREF_CUSTOM_PROMPT = "custom_dashboard_prompt"
