@@ -645,8 +645,12 @@ fun PaywallScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // ── Exit-intent dialog (50% promotional offer on monthly plan) ──
+            // ── Exit-intent dialog ──
+            // Shows 50% promo only if a real Google Play offer exists,
+            // otherwise offers the yearly plan as a better deal.
             if (showExitDialog) {
+                val hasPromo = viewModel.hasPromoOffer
+
                 LaunchedEffect(Unit) {
                     viewModel.analyticsTracker.trackExitIntentShown()
                 }
@@ -729,53 +733,98 @@ fun PaywallScreen(
 
                                     Spacer(modifier = Modifier.height(20.dp))
 
-                                    // ── 50% discount hero card ──
-                                    Surface(
-                                        shape = RoundedCornerShape(20.dp),
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                        shadowElevation = 8.dp,
-                                    ) {
-                                        Column(
-                                            modifier = Modifier
-                                                .padding(vertical = 20.dp, horizontal = 24.dp),
-                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                    if (hasPromo) {
+                                        // ── 50% discount hero card (only when real promo exists) ──
+                                        Surface(
+                                            shape = RoundedCornerShape(20.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            shadowElevation = 8.dp,
                                         ) {
-                                            Text(
-                                                text = "50%",
-                                                style = MaterialTheme.typography.displaySmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.primary,
-                                            )
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Text(
-                                                text = "Rabatt im ersten Monat",
-                                                style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            )
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Text(
-                                                text = "Nur $halfMonthlyPrice statt $displayMonthlyPrice",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                                            )
+                                            Column(
+                                                modifier = Modifier
+                                                    .padding(vertical = 20.dp, horizontal = 24.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                            ) {
+                                                Text(
+                                                    text = "50%",
+                                                    style = MaterialTheme.typography.displaySmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = "Rabatt im ersten Monat",
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = "Nur $halfMonthlyPrice statt $displayMonthlyPrice",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        // ── Yearly savings card (fallback when no promo exists) ──
+                                        Surface(
+                                            shape = RoundedCornerShape(20.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            shadowElevation = 8.dp,
+                                        ) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .padding(vertical = 20.dp, horizontal = 24.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                            ) {
+                                                Text(
+                                                    text = "$savingsPercent%",
+                                                    style = MaterialTheme.typography.displaySmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = "g\u00fcnstiger mit dem Jahresabo",
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = "Ab $dailyPrice pro Tag statt $displayMonthlyPrice pro Monat",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                                                )
+                                            }
                                         }
                                     }
 
                                     Spacer(modifier = Modifier.height(20.dp))
 
-                                    // ── CTA: launches monthly plan with promotional offer ──
+                                    // ── CTA: promo offer or yearly plan ──
                                     Button(
                                         onClick = {
                                             viewModel.analyticsTracker.trackExitIntentAccepted()
                                             activity?.let { act ->
-                                                if (!viewModel.launchPurchaseFlow(
-                                                        act,
-                                                        isYearly = false,
-                                                        usePromoOffer = true,
-                                                    )
-                                                ) {
-                                                    Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                                                if (hasPromo) {
+                                                    if (!viewModel.launchPurchaseFlow(
+                                                            act,
+                                                            isYearly = false,
+                                                            usePromoOffer = true,
+                                                        )
+                                                    ) {
+                                                        Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                } else {
+                                                    if (!viewModel.launchPurchaseFlow(
+                                                            act,
+                                                            isYearly = true,
+                                                        )
+                                                    ) {
+                                                        Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                                                    }
                                                 }
                                             }
                                             showExitDialog = false
@@ -790,7 +839,8 @@ fun PaywallScreen(
                                         ),
                                     ) {
                                         Text(
-                                            text = "Monatsabo mit 50% Rabatt starten",
+                                            text = if (hasPromo) "Monatsabo mit 50% Rabatt starten"
+                                                else "Jahresabo starten und $savingsPercent% sparen",
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.SemiBold,
                                             color = Color.White,

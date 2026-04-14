@@ -71,6 +71,10 @@ constructor(
         matchedGoalType = goalType
     }
 
+    /** Whether a real promotional offer exists in Google Play for the monthly plan. */
+    val hasPromoOffer: Boolean
+        get() = billingManager.getMonthlyPromoOfferToken() != null
+
     /** Returns false if product details are not loaded yet (billing unavailable). */
     fun launchPurchaseFlow(
         activity: Activity,
