@@ -594,7 +594,7 @@ fun PaywallScreen(
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
-                                text = "Einmal zahlen, f\u00fcr immer nutzen",
+                                text = "Einmal zahlen, alles f\u00fcr immer nutzen",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
