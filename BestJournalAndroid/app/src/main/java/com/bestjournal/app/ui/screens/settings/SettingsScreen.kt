@@ -1765,9 +1765,9 @@ fun SettingsScreen(
                                 if (idx < featureItems.lastIndex) Spacer(modifier = Modifier.height(8.dp))
                             }
                             Spacer(modifier = Modifier.height(16.dp))
-                            Row(
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Button(
                                     onClick = { doHaptic(HapticFeedbackType.LongPress); onNavigateToPaywall("settings_tap") },
@@ -1779,7 +1779,7 @@ fun SettingsScreen(
                                     Text("Premium freischalten")
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                TextButton(
+                                Button(
                                     onClick = {
                                         playClick()
                                         viewModel.restorePurchases()
@@ -1789,12 +1789,13 @@ fun SettingsScreen(
                                             android.widget.Toast.LENGTH_SHORT,
                                         ).show()
                                     },
-                                    modifier = Modifier.fillMaxWidth(),
+                                    colors =
+                                        ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFF81C784),
+                                            contentColor = Color.White,
+                                        ),
                                 ) {
-                                    Text(
-                                        "Kauf wiederherstellen",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                                    Text("Kauf wiederherstellen")
                                 }
                             }
                         }
@@ -1937,8 +1938,6 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
-                            // Invisible counterbalance for icon+spacer so text is visually centered
-                            Spacer(modifier = Modifier.width(28.dp))
                         }
                         if (uiState.isSubscribed) {
                             Spacer(modifier = Modifier.height(12.dp))
