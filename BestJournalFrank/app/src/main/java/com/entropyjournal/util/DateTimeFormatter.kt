@@ -59,6 +59,8 @@ object DateTimeFormatter {
      * Hierarchy: Heute > Gestern > Vorgestern > Diese Woche > Letzte Woche >
      * Vor 2/3/4 Wochen > Monatsname > Jahr — Monatsname.
      * Weeks use ISO convention: Monday = first day, Sunday = last day.
+     * Week labels only apply within the current month — once entries cross
+     * into a previous month, the month name is shown instead.
      */
     fun getSectionLabel(timestamp: Long): String {
         val now = Calendar.getInstance()
@@ -80,15 +82,19 @@ object DateTimeFormatter {
         val threeWeeksAgo = (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -21) }
         val fourWeeksAgo = (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -28) }
 
+        // Week labels only apply within the current month
+        val sameMonth = entry.get(Calendar.MONTH) == now.get(Calendar.MONTH) &&
+            entry.get(Calendar.YEAR) == now.get(Calendar.YEAR)
+
         return when {
             timestamp >= todayStart.timeInMillis -> "Heute"
             timestamp >= yesterdayStart.timeInMillis -> "Gestern"
             timestamp >= vorgesternStart.timeInMillis -> "Vorgestern"
-            timestamp >= thisWeekMonday.timeInMillis -> "Diese Woche"
-            timestamp >= lastWeekMonday.timeInMillis -> "Letzte Woche"
-            timestamp >= twoWeeksAgo.timeInMillis -> "Vor 2 Wochen"
-            timestamp >= threeWeeksAgo.timeInMillis -> "Vor 3 Wochen"
-            timestamp >= fourWeeksAgo.timeInMillis -> "Vor 4 Wochen"
+            timestamp >= thisWeekMonday.timeInMillis && sameMonth -> "Diese Woche"
+            timestamp >= lastWeekMonday.timeInMillis && sameMonth -> "Letzte Woche"
+            timestamp >= twoWeeksAgo.timeInMillis && sameMonth -> "Vor 2 Wochen"
+            timestamp >= threeWeeksAgo.timeInMillis && sameMonth -> "Vor 3 Wochen"
+            timestamp >= fourWeeksAgo.timeInMillis && sameMonth -> "Vor 4 Wochen"
             entry.get(Calendar.YEAR) == now.get(Calendar.YEAR) -> {
                 monthYearFormat.format(Date(timestamp)).replaceFirstChar { it.uppercase() }
             }
