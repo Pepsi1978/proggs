@@ -2301,7 +2301,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Best Journal V0.11.0",
+                            "Best Journal V0.11.1",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -2617,7 +2617,7 @@ private fun SettingsTtsIcon(isEnabled: Boolean) {
             modifier = Modifier.size(24.dp),
         ) {
             Icon(
-                Icons.Rounded.VolumeUp,
+                Icons.Rounded.RecordVoiceOver,
                 "Stimme an",
                 tint = if (isEnabled) activeColor else mutedGray,
                 modifier = Modifier.size(onSize),
@@ -2632,7 +2632,7 @@ private fun SettingsTtsIcon(isEnabled: Boolean) {
             modifier = Modifier.size(24.dp),
         ) {
             Icon(
-                Icons.Rounded.VolumeOff,
+                Icons.Rounded.VoiceOverOff,
                 "Stimme aus",
                 tint = if (!isEnabled) Color(0xFFEF4444) else mutedGray,
                 modifier = Modifier.size(offSize),

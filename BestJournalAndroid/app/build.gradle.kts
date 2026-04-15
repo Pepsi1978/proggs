@@ -37,8 +37,8 @@ android {
         applicationId = "com.bestjournal.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 108
-        versionName = "0.11.0"
+        versionCode = 109
+        versionName = "0.11.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -97,6 +97,7 @@ dependencies {
     implementation(libs.compose.material3.window)
     implementation(libs.compose.animation)
     implementation(libs.compose.material.icons)
+    implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.compose.google.fonts)
     debugImplementation(libs.compose.ui.tooling)
 
