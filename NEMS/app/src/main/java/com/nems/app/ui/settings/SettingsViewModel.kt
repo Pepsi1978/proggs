@@ -10,6 +10,7 @@ import com.nems.app.data.repository.AuthRepository
 import com.nems.app.domain.model.UserProfile
 import com.nems.app.domain.usecase.SyncWithDriveUseCase
 import com.nems.app.ui.theme.ThemeMode
+import com.nems.app.ui.theme.ThemeStateHolder
 import com.nems.app.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +43,7 @@ class SettingsViewModel @Inject constructor(
 
     init {
         loadProfile()
+        _uiState.update { it.copy(themeMode = ThemeStateHolder.themeMode.value) }
     }
 
     private fun loadProfile() {
@@ -170,6 +172,7 @@ class SettingsViewModel @Inject constructor(
 
     fun setThemeMode(mode: ThemeMode) {
         _uiState.update { it.copy(themeMode = mode) }
+        ThemeStateHolder.setThemeMode(mode, encryptedPrefs)
     }
 
     fun dismissSyncMessage() {
