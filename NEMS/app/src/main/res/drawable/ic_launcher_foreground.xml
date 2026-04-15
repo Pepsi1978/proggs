@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Calendar icon with pill -->
+    <group android:translateX="24" android:translateY="24">
+        <!-- Calendar body -->
+        <path
+            android:fillColor="#00F0FF"
+            android:pathData="M8,4H52C55.3,4 58,6.7 58,10V50C58,53.3 55.3,56 52,56H8C4.7,56 2,53.3 2,50V10C2,6.7 4.7,4 8,4Z"/>
+        <!-- Calendar header -->
+        <path
+            android:fillColor="#003544"
+            android:pathData="M2,10V18H58V10C58,6.7 55.3,4 52,4H8C4.7,4 2,6.7 2,10Z"/>
+        <!-- Calendar hooks -->
+        <path
+            android:fillColor="#00F0FF"
+            android:pathData="M16,0V8M44,0V8"
+            android:strokeWidth="3"
+            android:strokeColor="#00F0FF"/>
+        <!-- Pill shape -->
+        <path
+            android:fillColor="#0D0D1A"
+            android:pathData="M22,28C22,26 24,24 26,24H34C36,24 38,26 38,28V44C38,46 36,48 34,48H26C24,48 22,46 22,44Z"/>
+        <path
+            android:fillColor="#BF5AF2"
+            android:pathData="M22,36H38V44C38,46 36,48 34,48H26C24,48 22,46 22,44Z"/>
+    </group>
+</vector>
