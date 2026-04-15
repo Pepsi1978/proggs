@@ -217,15 +217,20 @@ private fun DayCell(
     isToday: Boolean,
     onClick: () -> Unit,
 ) {
-    val indicatorColor = when {
-        isFuture || completion < 0f -> Color.Transparent
-        completion >= 1.0f -> StatusGreen
+    // Dot color: fully opaque for clear visibility
+    val dotColor = when {
+        isFuture -> Color.Transparent
+        completion == 1.0f -> StatusGreen
         completion >= 0.5f -> StatusYellow
         completion > 0f -> StatusRed
-        else -> StatusGray
+        completion == 0f -> StatusGray
+        else -> Color.Transparent // -1f: no entries yet
     }
 
-    val showOutline = isFuture || completion < 0f
+    val hasData = !isFuture && completion >= 0f
+    val hasNoEntries = !isFuture && completion < 0f
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val outlineColor = MaterialTheme.colorScheme.outlineVariant
 
     Box(
         contentAlignment = Alignment.Center,
@@ -235,56 +240,59 @@ private fun DayCell(
             .clip(CircleShape)
             .clickable(onClick = onClick),
     ) {
-        // Status indicator circle
+        // Background circle: colored fill for days with data, outline for days without
         Box(
             modifier = Modifier
-                .size(32.dp)
+                .size(36.dp)
                 .clip(CircleShape)
                 .then(
-                    if (showOutline) {
-                        Modifier
-                            .background(Color.Transparent)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                    } else {
-                        Modifier.background(indicatorColor.copy(alpha = 0.25f))
+                    when {
+                        hasData -> Modifier.background(dotColor.copy(alpha = 0.18f))
+                        else -> Modifier.background(Color.Transparent)
+                    },
+                )
+                .then(
+                    when {
+                        isToday -> Modifier.border(2.dp, primaryColor, CircleShape)
+                        hasNoEntries || isFuture ->
+                            Modifier.border(1.dp, outlineColor.copy(alpha = if (isFuture) 0.4f else 1f), CircleShape)
+                        else -> Modifier
                     },
                 ),
         )
 
-        // Today highlight ring
-        if (isToday) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
+        // Day number + dot stacked vertically
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.size(36.dp),
+        ) {
+            Text(
+                text = date.dayOfMonth.toString(),
+                style = MaterialTheme.typography.bodySmall,
+                fontSize = 12.sp,
+                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                color = when {
+                    isToday -> primaryColor
+                    isFuture -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    else -> MaterialTheme.colorScheme.onBackground
+                },
+                textAlign = TextAlign.Center,
             )
-        }
 
-        // Day number text
-        Text(
-            text = date.dayOfMonth.toString(),
-            style = MaterialTheme.typography.bodySmall,
-            fontSize = 12.sp,
-            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-            color = when {
-                isToday -> MaterialTheme.colorScheme.primary
-                isFuture -> MaterialTheme.colorScheme.onSurfaceVariant
-                else -> MaterialTheme.colorScheme.onBackground
-            },
-            textAlign = TextAlign.Center,
-        )
-
-        // Small dot indicator at the bottom of the cell for non-future days with data
-        if (!isFuture && completion >= 0f) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 2.dp)
-                    .size(4.dp)
-                    .clip(CircleShape)
-                    .background(indicatorColor),
-            )
+            // Colored dot below number — only for days with data
+            if (hasData) {
+                Spacer(modifier = Modifier.height(1.dp))
+                Box(
+                    modifier = Modifier
+                        .size(5.dp)
+                        .clip(CircleShape)
+                        .background(dotColor),
+                )
+            } else {
+                // Invisible placeholder to keep day number vertically centered
+                Spacer(modifier = Modifier.height(6.dp))
+            }
         }
     }
 }

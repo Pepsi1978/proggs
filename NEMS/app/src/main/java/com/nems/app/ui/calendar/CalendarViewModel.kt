@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -33,6 +34,10 @@ class CalendarViewModel @Inject constructor(
         viewModelScope.launch {
             repository.insertSeedSections(SeedDataProvider.stackSections)
             repository.insertSeedSupplements(SeedDataProvider.supplements)
+            // Generate today's entries so the calendar shows data immediately
+            val supps = repository.getAllActiveSuplements().first()
+            val sects = repository.getAllSections().first()
+            repository.generateDailyEntries(LocalDate.now(), supps, sects)
         }
     }
 
