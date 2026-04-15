@@ -900,7 +900,7 @@ private fun formatDerivedPrice(originalPrice: String, factor: Double): String {
     val hasDecimals = (usesCommaDecimal && lastComma >= 0) || (!usesCommaDecimal && lastDot >= 0)
 
     val formatted = if (hasDecimals) {
-        val f = String.format("%.2f", newAmount)
+        val f = String.format(java.util.Locale.US, "%.2f", newAmount)
         if (usesCommaDecimal) f.replace(".", ",") else f
     } else {
         newAmount.toInt().toString()
