@@ -121,4 +121,9 @@ constructor(
             filePath?.let { File(it).delete() }
             entryPhotoDao.deleteById(photoId)
         }
+
+    suspend fun getFilePathsForEntry(entryId: Long): List<String> =
+        withContext(Dispatchers.IO) {
+            entryPhotoDao.getFilePathsForEntry(entryId)
+        }
 }

@@ -231,6 +231,12 @@ constructor(
     fun deleteEntry() {
         viewModelScope.launch {
             _uiState.value.entry?.let { entry ->
+                // Delete photo/video files from disk BEFORE the entry (CASCADE only deletes DB rows)
+                try {
+                    photoRepository.getFilePathsForEntry(entry.id).forEach { path ->
+                        java.io.File(path).delete()
+                    }
+                } catch (_: Exception) {}
                 journalRepository.deleteEntry(entry)
                 analyticsTracker.trackEntryDeleted()
                 kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
