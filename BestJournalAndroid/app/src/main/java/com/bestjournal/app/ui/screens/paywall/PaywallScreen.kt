@@ -78,19 +78,13 @@ import com.bestjournal.app.ui.components.PulsingOrb
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonEmerald
+import androidx.compose.ui.res.stringResource
+import com.bestjournal.app.R
 import com.bestjournal.app.util.Constants
 import kotlinx.coroutines.delay
 
-private val benefits =
-    listOf(
-        "Verstehe verborgene Muster in deinem Denken",
-        "Unbegrenzte KI-Textverbesserung f\u00fcr jeden Eintrag",
-        "5 intelligente Analyse-Profile f\u00fcr verschiedene Perspektiven",
-        "Automatische Dashboard-Updates nach jedem Eintrag",
-        "Wochen-, Monats- und Jahresr\u00fcckblicke mit KI",
-        "Tagebucheintr\u00e4ge mit Fotos als PDF exportieren",
-        "Spreche oder schreibe ungest\u00f6rt, ohne Werbung",
-    )
+// Benefits list is built inside the composable to support stringResource
+// See benefitsList below
 
 @Composable
 fun PaywallScreen(
@@ -101,7 +95,17 @@ fun PaywallScreen(
     val yearlyPrice by viewModel.yearlyPrice.collectAsState()
     val lifetimePrice by viewModel.lifetimePrice.collectAsState()
     val personalizedHeadline by viewModel.personalizedHeadline.collectAsState()
-    val activity = LocalContext.current as? Activity
+    val context = LocalContext.current
+    val activity = context as? Activity
+
+    val benefitsList = listOf(
+        stringResource(R.string.paywall_feature_patterns),
+        stringResource(R.string.paywall_feature_improve),
+        stringResource(R.string.paywall_feature_dashboard),
+        stringResource(R.string.paywall_feature_retro),
+        stringResource(R.string.paywall_feature_pdf),
+        stringResource(R.string.paywall_feature_noads),
+    )
 
     val pricesLoaded = monthlyPrice.isNotEmpty()
     val displayMonthlyPrice = monthlyPrice.ifEmpty { "\u2026" }
@@ -147,7 +151,7 @@ fun PaywallScreen(
     var visibleBenefits by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
         delay(300) // wait for screen transition to settle
-        for (i in benefits.indices) {
+        for (i in benefitsList.indices) {
             delay(80)
             visibleBenefits = i + 1
         }
@@ -167,9 +171,9 @@ fun PaywallScreen(
             label = "ctaBreathing",
         )
 
-    // Track trial_timeline_viewed when all benefits have animated in
-    LaunchedEffect(visibleBenefits >= benefits.size) {
-        if (visibleBenefits >= benefits.size) {
+    // Track trial_timeline_viewed when all benefitsList have animated in
+    LaunchedEffect(visibleBenefits >= benefitsList.size) {
+        if (visibleBenefits >= benefitsList.size) {
             viewModel.analyticsTracker.trackTrialTimelineViewed()
         }
     }
@@ -223,7 +227,7 @@ fun PaywallScreen(
 
                 // ── Benefits with staggered entrance ──
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    benefits.forEachIndexed { index, benefit ->
+                    benefitsList.forEachIndexed { index, benefit ->
                         AnimatedVisibility(
                             visible = index < visibleBenefits,
                             enter =
@@ -264,7 +268,7 @@ fun PaywallScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Preise werden geladen\u2026",
+                            text = stringResource(R.string.paywall_prices_loading),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -277,7 +281,7 @@ fun PaywallScreen(
                         viewModel.analyticsTracker.trackTrialCtaClicked()
                         activity?.let { act ->
                             if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
-                                Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(act, context.getString(R.string.paywall_sub_loading_toast), Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
@@ -293,7 +297,7 @@ fun PaywallScreen(
                         ),
                 ) {
                     Text(
-                        text = "Weiter",
+                        text = stringResource(R.string.action_continue),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White,
@@ -302,7 +306,7 @@ fun PaywallScreen(
 
                 // ── Trial Timeline ──
                 AnimatedVisibility(
-                    visible = visibleBenefits >= benefits.size,
+                    visible = visibleBenefits >= benefitsList.size,
                     enter = fadeIn(tween(300)),
                 ) {
                     Column(
@@ -348,12 +352,12 @@ fun PaywallScreen(
                                     }
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "Heute",
+                                        text = stringResource(R.string.paywall_today),
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Medium,
                                     )
                                     Text(
-                                        text = "Voller Zugang",
+                                        text = stringResource(R.string.paywall_full_access),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -376,12 +380,12 @@ fun PaywallScreen(
                                     }
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "Tag 7",
+                                        text = stringResource(R.string.paywall_day7),
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Medium,
                                     )
                                     Text(
-                                        text = "Erinnerung",
+                                        text = stringResource(R.string.paywall_reminder),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -406,12 +410,12 @@ fun PaywallScreen(
                                     }
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "Tag 8",
+                                        text = stringResource(R.string.paywall_day8),
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Medium,
                                     )
                                     Text(
-                                        text = "Erste Zahlung",
+                                        text = stringResource(R.string.paywall_first_payment),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -422,7 +426,7 @@ fun PaywallScreen(
                 }
 
                 Text(
-                    text = "Danach $displayYearlyPrice pro Jahr\nIn der Testphase jederzeit k\u00fcndbar",
+                    text = stringResource(R.string.paywall_yearly_note, displayYearlyPrice),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -441,7 +445,7 @@ fun PaywallScreen(
                             viewModel.analyticsTracker.trackYearlyCtaClicked()
                             activity?.let { act ->
                                 if (!viewModel.launchPurchaseFlow(act, isYearly = true)) {
-                                    Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(act, context.getString(R.string.paywall_sub_loading_toast), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         },
@@ -476,7 +480,7 @@ fun PaywallScreen(
                         shadowElevation = 4.dp,
                     ) {
                         Text(
-                            text = "Beliebteste Wahl",
+                            text = stringResource(R.string.paywall_most_popular),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
@@ -498,7 +502,7 @@ fun PaywallScreen(
                         viewModel.analyticsTracker.trackMonthlyCtaClicked()
                         activity?.let { act ->
                             if (!viewModel.launchPurchaseFlow(act, isYearly = false)) {
-                                Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(act, context.getString(R.string.paywall_sub_loading_toast), Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
@@ -508,7 +512,7 @@ fun PaywallScreen(
                     shape = RoundedCornerShape(16.dp),
                 ) {
                     Text(
-                        text = "Monatsabo, $displayMonthlyPrice pro Monat",
+                        text = stringResource(R.string.paywall_monthly_plan, displayMonthlyPrice),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -516,7 +520,7 @@ fun PaywallScreen(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "Spare $savingsPercent% gegen\u00fcber dem Monatsabo, jederzeit k\u00fcndbar",
+                    text = stringResource(R.string.paywall_yearly_savings, savingsPercent),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -555,7 +559,7 @@ fun PaywallScreen(
                             if (!viewModel.launchPurchaseFlow(act, isLifetime = true)) {
                                 Toast.makeText(
                                     act,
-                                    "Kaufvorgang wird geladen, bitte versuche es gleich nochmal.",
+                                    context.getString(R.string.paywall_purchase_loading_toast),
                                     Toast.LENGTH_SHORT,
                                 ).show()
                             }
@@ -599,13 +603,13 @@ fun PaywallScreen(
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Einmalkauf",
+                                text = stringResource(R.string.paywall_lifetime_title),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
-                                text = "Einmal zahlen, alles f\u00fcr immer nutzen",
+                                text = stringResource(R.string.paywall_lifetime_desc),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -622,7 +626,7 @@ fun PaywallScreen(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "Kein Abo, keine Verl\u00e4ngerung",
+                    text = stringResource(R.string.paywall_lifetime_note),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -641,7 +645,7 @@ fun PaywallScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Die App funktioniert auch ohne Abo,",
+                            text = stringResource(R.string.paywall_free_note),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -725,7 +729,7 @@ fun PaywallScreen(
                                     Spacer(modifier = Modifier.height(16.dp))
 
                                     Text(
-                                        text = "Warte kurz!",
+                                        text = stringResource(R.string.paywall_exit_wait),
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface,
@@ -733,7 +737,7 @@ fun PaywallScreen(
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "Wir haben ein besonderes\nAngebot f\u00fcr dich:",
+                                        text = stringResource(R.string.paywall_exit_special_offer),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         textAlign = TextAlign.Center,
@@ -760,14 +764,14 @@ fun PaywallScreen(
                                             )
                                             Spacer(modifier = Modifier.height(4.dp))
                                             Text(
-                                                text = "Rabatt f\u00fcr ${Constants.EXIT_INTENT_DISCOUNT_MONTHS} Monate",
+                                                text = stringResource(R.string.paywall_exit_discount, Constants.EXIT_INTENT_DISCOUNT_MONTHS),
                                                 style = MaterialTheme.typography.titleSmall,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                             )
                                             Spacer(modifier = Modifier.height(4.dp))
                                             Text(
-                                                text = "Nur $halfMonthlyPrice statt $displayMonthlyPrice pro Monat",
+                                                text = stringResource(R.string.paywall_exit_price_comparison, halfMonthlyPrice, displayMonthlyPrice),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                                             )
@@ -797,7 +801,7 @@ fun PaywallScreen(
                                                     // Trial extension happens after Google confirms the purchase
                                                     viewModel.onExitIntentPurchaseStarted()
                                                 } else {
-                                                    Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(act, context.getString(R.string.paywall_sub_loading_toast), Toast.LENGTH_SHORT).show()
                                                 }
                                             }
                                             showExitDialog = false
@@ -812,7 +816,7 @@ fun PaywallScreen(
                                         ),
                                     ) {
                                         Text(
-                                            text = "Monatsabo mit 50% Rabatt starten",
+                                            text = stringResource(R.string.paywall_exit_start_discount),
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.SemiBold,
                                             color = Color.White,
@@ -826,7 +830,7 @@ fun PaywallScreen(
                                         onDismiss()
                                     }) {
                                         Text(
-                                            text = "Nein danke",
+                                            text = stringResource(R.string.action_no_thanks),
                                             style = MaterialTheme.typography.labelMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -852,7 +856,7 @@ fun PaywallScreen(
             ) {
                 Icon(
                     Icons.Rounded.Close,
-                    contentDescription = "Schlie\u00dfen",
+                    contentDescription = stringResource(R.string.action_close),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

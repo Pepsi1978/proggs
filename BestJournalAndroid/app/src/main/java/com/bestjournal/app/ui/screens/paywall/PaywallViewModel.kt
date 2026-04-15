@@ -1,16 +1,19 @@
 package com.bestjournal.app.ui.screens.paywall
 
 import android.app.Activity
+import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bestjournal.app.R
 import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +28,7 @@ constructor(
     val analyticsTracker: AnalyticsTracker,
     private val prefs: SharedPreferences,
     savedStateHandle: SavedStateHandle,
+    @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     val source: String = savedStateHandle["source"] ?: "limit_reached"
@@ -44,28 +48,28 @@ constructor(
 
         val (headline, subtitle, goalType) = when {
             firstGoal.contains("Stress", ignoreCase = true) -> Triple(
-                "Finde deine innere Ruhe",
-                "Erkenne was dich belastet, bevor es dich überwältigt",
+                context.getString(R.string.paywall_headline_stress),
+                context.getString(R.string.paywall_headline_stress_sub),
                 "stress",
             )
             firstGoal.contains("Klarheit", ignoreCase = true) -> Triple(
-                "Verstehe dich selbst besser",
-                "Die KI erkennt Muster, die dir verborgen bleiben",
+                context.getString(R.string.paywall_headline_clarity),
+                context.getString(R.string.paywall_headline_clarity_sub),
                 "klarheit",
             )
             firstGoal.contains("Wachstum", ignoreCase = true) -> Triple(
-                "Entdecke das Gute in jedem Tag",
-                "Dein persönlicher Raum für Dankbarkeit und Wachstum",
+                context.getString(R.string.paywall_headline_growth),
+                context.getString(R.string.paywall_headline_growth_sub),
                 "wachstum",
             )
             firstGoal.contains("Gedanken", ignoreCase = true) -> Triple(
-                "Lass deine Gedanken fließen",
-                "Dein kreativer Begleiter ohne Grenzen",
+                context.getString(R.string.paywall_headline_thoughts),
+                context.getString(R.string.paywall_headline_thoughts_sub),
                 "gedanken",
             )
             else -> Triple(
-                "Entdecke dich selbst\nJeden Tag ein Stück mehr",
-                "Dein persönlicher KI-Begleiter ohne Grenzen",
+                context.getString(R.string.paywall_headline_default),
+                context.getString(R.string.paywall_headline_default_sub),
                 "default",
             )
         }

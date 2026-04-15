@@ -82,7 +82,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.theme.CustomPalette
 import com.bestjournal.app.ui.theme.GoalPalette
@@ -206,7 +208,7 @@ fun OnboardingScreen(
                     )
                 ) {
                     Text(
-                        "Weiter",
+                        stringResource(R.string.action_continue),
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = 0.5.sp
@@ -257,7 +259,7 @@ private fun WelcomePage() {
                     slideInVertically(tween(600, delayMillis = 300)) { -40 }
         ) {
             Text(
-                "Willkommen bei\nBest Journal",
+                stringResource(R.string.onboarding_welcome),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
                     lineHeight = 34.sp
@@ -276,7 +278,7 @@ private fun WelcomePage() {
                     slideInVertically(tween(600, delayMillis = 500)) { -30 }
         ) {
             Text(
-                "Dein pers\u00f6nliches KI-Tagebuch\nf\u00fcr Klarheit und Ver\u00e4nderung",
+                stringResource(R.string.onboarding_subtitle),
                 style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -287,9 +289,9 @@ private fun WelcomePage() {
 
         // Three benefit rows — staggered entrance
         val benefits = listOf(
-            "Sprich oder schreib, die KI versteht beides",
+            stringResource(R.string.onboarding_feature_speech),
             "5 intelligente Analyse-Profile f\u00fcr verschiedene Perspektiven",
-            "Deine Daten bleiben bei dir, verschl\u00fcsselt und sicher"
+            stringResource(R.string.onboarding_feature_secure)
         )
         benefits.forEachIndexed { idx, text ->
             AnimatedVisibility(
@@ -353,7 +355,7 @@ private fun PersonalizationPage(viewModel: OnboardingViewModel) {
                 Spacer(Modifier.height(24.dp))
 
                 Text(
-                    "Was m\u00f6chtest du mit dem\nKI-Tagebuch erreichen?",
+                    stringResource(R.string.onboarding_goals_title),
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
                         lineHeight = 34.sp
@@ -480,28 +482,28 @@ private fun HowItWorksPage() {
     val steps = listOf(
         Step(
             Icons.Rounded.Mic, NeonCyan,
-            "Sprich oder tippe deinen Eintrag",
-            "Nimm deine Gedanken als Sprachnachricht auf oder tippe sie ein, ganz wie du m\u00f6chtest."
+            stringResource(R.string.onboarding_how_step1_title),
+            stringResource(R.string.onboarding_how_step1_desc)
         ),
         Step(
             Icons.Rounded.AutoAwesome, WarmCopper,
-            "Die KI verbessert und analysiert",
-            "Dein Text wird automatisch verfeinert und aus verschiedenen Perspektiven analysiert."
+            stringResource(R.string.onboarding_how_step2_title),
+            stringResource(R.string.onboarding_how_step2_desc)
         ),
         Step(
             Icons.Rounded.PhotoCamera, NeonEmerald,
             "F\u00fcge Fotos hinzu",
-            "Halte besondere Momente fest, die KI ber\u00fccksichtigt sie in der Analyse."
+            stringResource(R.string.onboarding_how_step3_desc)
         ),
         Step(
             Icons.Rounded.Dashboard, InsightPalette.primary,
-            "Entdecke Muster und Einsichten",
-            "Das Dashboard zeigt dir Zusammenh\u00e4nge, die dir im Alltag verborgen bleiben."
+            stringResource(R.string.onboarding_how_step4_title),
+            stringResource(R.string.onboarding_how_step4_desc)
         ),
         Step(
             Icons.Rounded.CalendarMonth, GoalPalette.primary,
-            "Wochen-, Monats- und Jahresr\u00fcckblick",
-            "Automatische R\u00fcckblicke zeigen dir, wie du dich \u00fcber die Zeit entwickelst."
+            stringResource(R.string.onboarding_how_step5_title),
+            stringResource(R.string.onboarding_how_step5_desc)
         ),
     )
 
@@ -622,18 +624,18 @@ private data class ProfileInfo(
     val accentColor: Color
 )
 
-private val profiles = listOf(
-    ProfileInfo("Zusammenfassung", "Fasst Themen, Muster und Erlebnisse zusammen", Icons.Rounded.AutoStories, SummaryPalette.accent),
-    ProfileInfo("Belastung", "Erkennt Stress, Unordnung und Belastung", Icons.Rounded.Whatshot, WarmCopper),
-    ProfileInfo("Selbsterkenntnis", "Deckt verborgene Denk- und Gef\u00fchlsmuster auf", Icons.Rounded.SelfImprovement, InsightPalette.primary),
-    ProfileInfo("Pers\u00f6nliche Ziele", "Erkennt Ziele, W\u00fcnsche und Fortschritte", Icons.Rounded.RocketLaunch, GoalPalette.primary),
-    ProfileInfo("Individuelle Analyse", "Eigenen Analyse-Fokus festlegen", Icons.Rounded.Science, CustomPalette.primary)
-)
-
 @Composable
 private fun ProfilesPage() {
     val visible = remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible.value = true }
+
+    val profiles = listOf(
+        ProfileInfo(stringResource(R.string.profile_summary), stringResource(R.string.profile_summary_desc), Icons.Rounded.AutoStories, SummaryPalette.accent),
+        ProfileInfo(stringResource(R.string.profile_entropy), stringResource(R.string.profile_entropy_desc), Icons.Rounded.Whatshot, WarmCopper),
+        ProfileInfo(stringResource(R.string.profile_insight), stringResource(R.string.profile_insight_desc), Icons.Rounded.SelfImprovement, InsightPalette.primary),
+        ProfileInfo(stringResource(R.string.profile_goals), stringResource(R.string.profile_goals_desc), Icons.Rounded.RocketLaunch, GoalPalette.primary),
+        ProfileInfo(stringResource(R.string.profile_custom), stringResource(R.string.profile_custom_desc), Icons.Rounded.Science, CustomPalette.primary)
+    )
 
     Column(
         modifier = Modifier
@@ -743,13 +745,13 @@ private fun TrialPage(onStartTrial: () -> Unit, onSkip: () -> Unit) {
     LaunchedEffect(Unit) { visible.value = true }
 
     val benefits = listOf(
-        "Unbegrenzte KI-Textverbesserung, jeder Eintrag wird klarer und ausdrucksst\u00e4rker",
+        stringResource(R.string.onboarding_premium_feature_improve),
         "5 intelligente Dashboard-Profile f\u00fcr tiefe Einblicke in dein Leben",
-        "Automatische Dashboard-Updates bei jedem neuen Eintrag",
-        "Wochen-, Monats- und Jahresr\u00fcckblicke zeigen deine Entwicklung",
-        "Pers\u00f6nliche Muster erkennen, die KI findet verborgene Denk- und Gef\u00fchlsmuster",
+        stringResource(R.string.onboarding_premium_feature_dashboard),
+        stringResource(R.string.onboarding_premium_feature_retro),
+        stringResource(R.string.onboarding_premium_feature_patterns),
         "PDF-Export mit Fotos, sichere deine Eintr\u00e4ge als Dokument",
-        "Keine Werbung, ungest\u00f6rt schreiben und reflektieren",
+        stringResource(R.string.onboarding_premium_feature_noads),
     )
 
     Column(
@@ -799,7 +801,7 @@ private fun TrialPage(onStartTrial: () -> Unit, onSkip: () -> Unit) {
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    "Kostenlos und unverbindlich",
+                    stringResource(R.string.onboarding_free_trial),
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Medium
                     ),
@@ -810,7 +812,7 @@ private fun TrialPage(onStartTrial: () -> Unit, onSkip: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
 
                 Text(
-                    "Danach nutzt du Best Journal weiter,\nkostenlos mit begrenzten KI-Aufrufen pro Woche.",
+                    stringResource(R.string.onboarding_free_after_trial),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
                     textAlign = TextAlign.Center
@@ -856,7 +858,7 @@ private fun TrialPage(onStartTrial: () -> Unit, onSkip: () -> Unit) {
                     )
                 ) {
                     Text(
-                        "Kostenlos starten",
+                        stringResource(R.string.onboarding_start_free),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp
@@ -868,7 +870,7 @@ private fun TrialPage(onStartTrial: () -> Unit, onSkip: () -> Unit) {
 
                 TextButton(onClick = onSkip) {
                     Text(
-                        "Ohne Premium fortfahren",
+                        stringResource(R.string.onboarding_without_premium),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.outline
                     )
