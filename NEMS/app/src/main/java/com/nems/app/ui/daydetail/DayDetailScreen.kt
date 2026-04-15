@@ -157,7 +157,7 @@ fun DayDetailScreen(
 
                     // Sections
                     items(state.sections, key = { it.section.id }) { sectionWithEntries ->
-                        val isCollapsed = collapsedSections[sectionWithEntries.section.id] ?: false
+                        val isCollapsed = collapsedSections[sectionWithEntries.section.id] ?: true
                         SectionCard(
                             sectionWithEntries = sectionWithEntries,
                             isCollapsed = isCollapsed,
