@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -189,7 +190,7 @@ private fun CalendarGrid(
         userScrollEnabled = false,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        items(days, key = { date -> date?.toString() ?: "pad_${days.indexOf(date)}" }) { date ->
+        itemsIndexed(days, key = { index, date -> date?.toString() ?: "pad_$index" }) { _, date ->
             if (date == null) {
                 // Empty cell for leading/trailing padding
                 Box(
