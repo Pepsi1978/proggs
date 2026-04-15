@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Notifications
@@ -1006,6 +1007,44 @@ fun SettingsScreen(
                                         ?: emptySet()
                                 )
                             }
+                            var showFavDialog by remember { mutableStateOf(false) }
+                            var favDialogVoiceId by remember { mutableStateOf("") }
+                            var favDialogVoiceName by remember { mutableStateOf("") }
+
+                            if (showFavDialog) {
+                                val isFav = favDialogVoiceId in favorites
+                                androidx.compose.material3.AlertDialog(
+                                    onDismissRequest = { showFavDialog = false },
+                                    title = {
+                                        Text(favDialogVoiceName)
+                                    },
+                                    text = {
+                                        Text(
+                                            if (isFav) "Favorit entfernen?"
+                                            else "Als Favorit markieren?",
+                                        )
+                                    },
+                                    confirmButton = {
+                                        TextButton(onClick = {
+                                            val newFavs = if (isFav) favorites - favDialogVoiceId
+                                                else favorites + favDialogVoiceId
+                                            favorites = newFavs
+                                            soundsPrefs.edit()
+                                                .putString(Constants.PREF_TTS_FAVORITES, newFavs.joinToString(","))
+                                                .commit()
+                                            showFavDialog = false
+                                        }) {
+                                            Text(if (isFav) "Entfernen" else "★ Favorit setzen")
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showFavDialog = false }) {
+                                            Text("Abbrechen")
+                                        }
+                                    },
+                                )
+                            }
+
                             val dropdownColors = TextFieldDefaults.colors(
                                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -1054,57 +1093,32 @@ fun SettingsScreen(
                                 val selectedVoice = voices.find { it.id == selectedVoiceId } ?: voices.first()
                                 var voiceExpanded by remember { mutableStateOf(false) }
 
-                                ExposedDropdownMenuBox(
-                                    expanded = voiceExpanded,
-                                    onExpandedChange = {
-                                        voiceExpanded = it
-                                        if (it) viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS)
+                                TextField(
+                                    value = (if (selectedVoice.id in favorites) "\u2605 " else "") + selectedVoice.name,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    trailingIcon = { Icon(if (voiceExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null) },
+                                    modifier = Modifier.fillMaxWidth().clickable {
+                                        voiceExpanded = !voiceExpanded
+                                        viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS)
                                     },
-                                ) {
-                                    TextField(
-                                        value = selectedVoice.name,
-                                        onValueChange = {},
-                                        readOnly = true,
-                                        trailingIcon = { Icon(Icons.Rounded.KeyboardArrowDown, null) },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                                        colors = dropdownColors,
-                                        singleLine = true,
-                                        shape = RoundedCornerShape(12.dp),
-                                    )
-                                    ExposedDropdownMenu(
-                                        expanded = voiceExpanded,
-                                        onDismissRequest = { voiceExpanded = false },
-                                        containerColor = MaterialTheme.colorScheme.surface,
-                                    ) {
+                                    colors = dropdownColors,
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                )
+                                if (voiceExpanded) {
+                                    Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
                                         voices.forEach { voice ->
-                                            DropdownMenuItem(
-                                                text = {
-                                                    Text(
-                                                        voice.name,
-                                                        color = if (voice.id == selectedVoiceId)
-                                                            MaterialTheme.colorScheme.primary
-                                                        else MaterialTheme.colorScheme.onSurface,
-                                                    )
-                                                },
-                                                onClick = {
-                                                    viewModel.updateElevenLabsVoiceId(voice.id)
-                                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS)
-                                                    voiceExpanded = false
-                                                },
-                                                trailingIcon = {
-                                                    Text(
-                                                        if (voice.id in favorites) "\u2605" else "\u2606",
-                                                        color = if (voice.id in favorites) Color(0xFFFFB300) else Color(0xFF888888),
-                                                        fontSize = 20.sp,
-                                                        modifier = Modifier.clickable {
-                                                            favorites = if (voice.id in favorites) favorites - voice.id else favorites + voice.id
-                                                            soundsPrefs.edit().putString(Constants.PREF_TTS_FAVORITES, favorites.joinToString(",")).commit()
-                                                        },
-                                                    )
-                                                },
-                                            )
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.fillMaxWidth().combinedClickable(
+                                                    onLongClick = { favDialogVoiceId = voice.id; favDialogVoiceName = voice.name; showFavDialog = true },
+                                                    onClick = { viewModel.updateElevenLabsVoiceId(voice.id); viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS); voiceExpanded = false },
+                                                ).padding(horizontal = 16.dp, vertical = 12.dp),
+                                            ) {
+                                                if (voice.id in favorites) { Text("\u2605 ", color = Color(0xFFFFB300), fontSize = 14.sp) }
+                                                Text(voice.name, color = if (voice.id == selectedVoiceId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                                            }
                                         }
                                     }
                                 }
@@ -1148,57 +1162,32 @@ fun SettingsScreen(
                                 val selectedGoogleVoice = googleVoices.find { it.id == selectedGoogleVoiceId } ?: googleVoices.first()
                                 var googleVoiceExpanded by remember { mutableStateOf(false) }
 
-                                ExposedDropdownMenuBox(
-                                    expanded = googleVoiceExpanded,
-                                    onExpandedChange = {
-                                        googleVoiceExpanded = it
-                                        if (it) viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE)
+                                TextField(
+                                    value = (if (selectedGoogleVoice.id in favorites) "\u2605 " else "") + selectedGoogleVoice.name,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    trailingIcon = { Icon(if (googleVoiceExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null) },
+                                    modifier = Modifier.fillMaxWidth().clickable {
+                                        googleVoiceExpanded = !googleVoiceExpanded
+                                        viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE)
                                     },
-                                ) {
-                                    TextField(
-                                        value = selectedGoogleVoice.name,
-                                        onValueChange = {},
-                                        readOnly = true,
-                                        trailingIcon = { Icon(Icons.Rounded.KeyboardArrowDown, null) },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                                        colors = dropdownColors,
-                                        singleLine = true,
-                                        shape = RoundedCornerShape(12.dp),
-                                    )
-                                    ExposedDropdownMenu(
-                                        expanded = googleVoiceExpanded,
-                                        onDismissRequest = { googleVoiceExpanded = false },
-                                        containerColor = MaterialTheme.colorScheme.surface,
-                                    ) {
+                                    colors = dropdownColors,
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                )
+                                if (googleVoiceExpanded) {
+                                    Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
                                         googleVoices.forEach { voice ->
-                                            DropdownMenuItem(
-                                                text = {
-                                                    Text(
-                                                        voice.name,
-                                                        color = if (voice.id == selectedGoogleVoiceId)
-                                                            MaterialTheme.colorScheme.primary
-                                                        else MaterialTheme.colorScheme.onSurface,
-                                                    )
-                                                },
-                                                onClick = {
-                                                    viewModel.updateGoogleTtsVoice(voice.id)
-                                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE)
-                                                    googleVoiceExpanded = false
-                                                },
-                                                trailingIcon = {
-                                                    Text(
-                                                        if (voice.id in favorites) "\u2605" else "\u2606",
-                                                        color = if (voice.id in favorites) Color(0xFFFFB300) else Color(0xFF888888),
-                                                        fontSize = 20.sp,
-                                                        modifier = Modifier.clickable {
-                                                            favorites = if (voice.id in favorites) favorites - voice.id else favorites + voice.id
-                                                            soundsPrefs.edit().putString(Constants.PREF_TTS_FAVORITES, favorites.joinToString(",")).commit()
-                                                        },
-                                                    )
-                                                },
-                                            )
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.fillMaxWidth().combinedClickable(
+                                                    onLongClick = { favDialogVoiceId = voice.id; favDialogVoiceName = voice.name; showFavDialog = true },
+                                                    onClick = { viewModel.updateGoogleTtsVoice(voice.id); viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE); googleVoiceExpanded = false },
+                                                ).padding(horizontal = 16.dp, vertical = 12.dp),
+                                            ) {
+                                                if (voice.id in favorites) { Text("\u2605 ", color = Color(0xFFFFB300), fontSize = 14.sp) }
+                                                Text(voice.name, color = if (voice.id == selectedGoogleVoiceId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                                            }
                                         }
                                     }
                                 }
@@ -1238,57 +1227,32 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.height(6.dp))
 
                             var edgeVoiceExpanded by remember { mutableStateOf(false) }
-                            ExposedDropdownMenuBox(
-                                expanded = edgeVoiceExpanded,
-                                onExpandedChange = {
-                                    edgeVoiceExpanded = it
-                                    if (it) viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE)
+                            TextField(
+                                value = (if (selectedEdgeVoice.id in favorites) "\u2605 " else "") + selectedEdgeVoice.name,
+                                onValueChange = {},
+                                readOnly = true,
+                                trailingIcon = { Icon(if (edgeVoiceExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null) },
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    edgeVoiceExpanded = !edgeVoiceExpanded
+                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE)
                                 },
-                            ) {
-                                TextField(
-                                    value = selectedEdgeVoice.name,
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    trailingIcon = { Icon(Icons.Rounded.KeyboardArrowDown, null) },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                                    colors = dropdownColors,
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(12.dp),
-                                )
-                                ExposedDropdownMenu(
-                                    expanded = edgeVoiceExpanded,
-                                    onDismissRequest = { edgeVoiceExpanded = false },
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                ) {
+                                colors = dropdownColors,
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                            )
+                            if (edgeVoiceExpanded) {
+                                Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
                                     edgeVoices.forEach { voice ->
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    voice.name,
-                                                    color = if (voice.id == selectedEdgeVoiceId)
-                                                        MaterialTheme.colorScheme.primary
-                                                    else MaterialTheme.colorScheme.onSurface,
-                                                )
-                                            },
-                                            onClick = {
-                                                viewModel.updateEdgeTtsVoice(voice.id)
-                                                viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE)
-                                                edgeVoiceExpanded = false
-                                            },
-                                            trailingIcon = {
-                                                Text(
-                                                    if (voice.id in favorites) "\u2605" else "\u2606",
-                                                    color = if (voice.id in favorites) Color(0xFFFFB300) else Color(0xFF888888),
-                                                    fontSize = 20.sp,
-                                                    modifier = Modifier.clickable {
-                                                        favorites = if (voice.id in favorites) favorites - voice.id else favorites + voice.id
-                                                        soundsPrefs.edit().putString(Constants.PREF_TTS_FAVORITES, favorites.joinToString(",")).commit()
-                                                    },
-                                                )
-                                            },
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.fillMaxWidth().combinedClickable(
+                                                onLongClick = { favDialogVoiceId = voice.id; favDialogVoiceName = voice.name; showFavDialog = true },
+                                                onClick = { viewModel.updateEdgeTtsVoice(voice.id); viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE); edgeVoiceExpanded = false },
+                                            ).padding(horizontal = 16.dp, vertical = 12.dp),
+                                        ) {
+                                            if (voice.id in favorites) { Text("\u2605 ", color = Color(0xFFFFB300), fontSize = 14.sp) }
+                                            Text(voice.name, color = if (voice.id == selectedEdgeVoiceId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                                        }
                                     }
                                 }
                             }
