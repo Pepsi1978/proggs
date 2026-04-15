@@ -56,29 +56,43 @@ object DateTimeFormatter {
 
     /**
      * Groups timestamps into section labels for the journal timeline.
-     * Returns: "Heute", "Gestern", "Letzte Woche", "März 2026", "Februar 2026", etc.
-     * For years before current: "2025 — Februar"
+     * Hierarchy: Heute > Gestern > Vorgestern > Diese Woche > Letzte Woche >
+     * Vor 2/3/4 Wochen > Monatsname > Jahr — Monatsname.
+     * Weeks use ISO convention: Monday = first day, Sunday = last day.
      */
     fun getSectionLabel(timestamp: Long): String {
         val now = Calendar.getInstance()
         val entry = Calendar.getInstance().apply { timeInMillis = timestamp }
 
         val todayStart = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
         }
         val yesterdayStart = (todayStart.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }
-        val weekStart = (todayStart.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -6) }
+        val vorgesternStart = (todayStart.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -2) }
+
+        // Monday of current ISO week (Mon=first day, Sun=last day)
+        val dow = todayStart.get(Calendar.DAY_OF_WEEK)
+        val daysSinceMonday = if (dow == Calendar.SUNDAY) 6 else dow - Calendar.MONDAY
+        val thisWeekMonday = (todayStart.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -daysSinceMonday) }
+        val lastWeekMonday = (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -7) }
+        val twoWeeksAgo = (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -14) }
+        val threeWeeksAgo = (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -21) }
+        val fourWeeksAgo = (thisWeekMonday.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -28) }
 
         return when {
             timestamp >= todayStart.timeInMillis -> "Heute"
             timestamp >= yesterdayStart.timeInMillis -> "Gestern"
-            timestamp >= weekStart.timeInMillis -> "Letzte Woche"
+            timestamp >= vorgesternStart.timeInMillis -> "Vorgestern"
+            timestamp >= thisWeekMonday.timeInMillis -> "Diese Woche"
+            timestamp >= lastWeekMonday.timeInMillis -> "Letzte Woche"
+            timestamp >= twoWeeksAgo.timeInMillis -> "Vor 2 Wochen"
+            timestamp >= threeWeeksAgo.timeInMillis -> "Vor 3 Wochen"
+            timestamp >= fourWeeksAgo.timeInMillis -> "Vor 4 Wochen"
             entry.get(Calendar.YEAR) == now.get(Calendar.YEAR) -> {
-                // Same year: just month name + year
                 monthYearFormat.format(Date(timestamp)).replaceFirstChar { it.uppercase() }
             }
             else -> {
-                // Different year: "2025 — Februar"
                 val month = monthOnlyFormat.format(Date(timestamp)).replaceFirstChar { it.uppercase() }
                 "${entry.get(Calendar.YEAR)} \u2014 $month"
             }
