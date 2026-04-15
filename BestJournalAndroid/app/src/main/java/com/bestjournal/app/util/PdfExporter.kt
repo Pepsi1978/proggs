@@ -1,5 +1,6 @@
 package com.bestjournal.app.util
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -10,6 +11,7 @@ import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.media.ExifInterface
+import com.bestjournal.app.R
 import com.bestjournal.app.data.local.entity.EntryPhotoEntity
 import com.bestjournal.app.data.local.entity.JournalEntryEntity
 import java.io.File
@@ -103,6 +105,7 @@ object PdfExporter {
         entries: List<JournalEntryEntity>,
         outputStream: OutputStream,
         photosPerEntry: Map<Long, List<EntryPhotoEntity>> = emptyMap(),
+        context: Context,
     ): Int {
         val document = PdfDocument()
         var pageNumber = 0
@@ -110,7 +113,7 @@ object PdfExporter {
         for ((index, entry) in entries.withIndex()) {
             pageNumber++
             val photos = photosPerEntry[entry.id] ?: emptyList()
-            val pages = renderEntry(document, entry, pageNumber, entries.size, index + 1, photos)
+            val pages = renderEntry(context, document, entry, pageNumber, entries.size, index + 1, photos)
             pageNumber = pages
         }
 
@@ -125,6 +128,7 @@ object PdfExporter {
      * Returns the last page number used.
      */
     private fun renderEntry(
+        context: Context,
         document: PdfDocument,
         entry: JournalEntryEntity,
         startPageNum: Int,
@@ -133,7 +137,7 @@ object PdfExporter {
         photos: List<EntryPhotoEntity>,
     ): Int {
         val dateText = DateTimeFormatter.formatFull(entry.timestamp)
-        val titleText = entry.title ?: "Eintrag #$entryIndex"
+        val titleText = entry.title ?: context.getString(R.string.pdf_entry_fallback_title, entryIndex)
         val summaryText = entry.summary
         val bodyText = entry.displayText
 
@@ -171,7 +175,7 @@ object PdfExporter {
 
         // Entry number badge
         val entryBadge = datePaint().apply { color = COLOR_TEXT_SECONDARY }
-        canvas.drawText("Eintrag $entryIndex von $totalEntries", MARGIN_LEFT, currentY, entryBadge)
+        canvas.drawText(context.getString(R.string.pdf_entry_counter, entryIndex, totalEntries), MARGIN_LEFT, currentY, entryBadge)
         currentY += 20f
 
         // Title
@@ -196,9 +200,9 @@ object PdfExporter {
             val accentPaint = Paint().apply { color = COLOR_COPPER; strokeWidth = 3f }
             canvas.drawLine(MARGIN_LEFT, currentY, MARGIN_LEFT, currentY + boxHeight, accentPaint)
 
-            // "ZUSAMMENFASSUNG" label
+            // Summary label
             currentY += 16f
-            canvas.drawText("ZUSAMMENFASSUNG", MARGIN_LEFT + 12f, currentY, summaryLabelPaint())
+            canvas.drawText(context.getString(R.string.pdf_summary_label), MARGIN_LEFT + 12f, currentY, summaryLabelPaint())
             currentY += 14f
 
             // Summary text
@@ -223,7 +227,7 @@ object PdfExporter {
         for (line in bodyLines) {
             if (currentY + lineHeight > maxY) {
                 // Draw footer on current page
-                drawFooter(canvas, currentPage)
+                drawFooter(context, canvas, currentPage)
                 document.finishPage(page)
 
                 // Start new page
@@ -235,7 +239,7 @@ object PdfExporter {
 
                 // Continuation header
                 val contP = datePaint().apply { color = COLOR_TEXT_SECONDARY }
-                canvas.drawText("$titleText (Fortsetzung)", MARGIN_LEFT, currentY, contP)
+                canvas.drawText(context.getString(R.string.pdf_continuation, titleText), MARGIN_LEFT, currentY, contP)
                 currentY += 20f
                 canvas.drawLine(MARGIN_LEFT, currentY, PAGE_WIDTH - MARGIN_RIGHT, currentY, dividerPaint())
                 currentY += 16f
@@ -259,7 +263,7 @@ object PdfExporter {
 
                 // Check if photo fits on current page
                 if (currentY + scaledHeight > maxY) {
-                    drawFooter(canvas, currentPage)
+                    drawFooter(context, canvas, currentPage)
                     document.finishPage(page)
 
                     currentPage++
@@ -284,7 +288,7 @@ object PdfExporter {
         }
 
         // Draw footer and finish page
-        drawFooter(canvas, currentPage)
+        drawFooter(context, canvas, currentPage)
         document.finishPage(page)
 
         return currentPage
@@ -358,7 +362,7 @@ object PdfExporter {
         return inSampleSize
     }
 
-    private fun drawFooter(canvas: Canvas, pageNumber: Int) {
+    private fun drawFooter(context: Context, canvas: Canvas, pageNumber: Int) {
         val footerY = PAGE_HEIGHT - 30f
         val footerP = footerPaint()
 
@@ -369,7 +373,7 @@ object PdfExporter {
         canvas.drawText("Best Journal", MARGIN_LEFT, footerY, footerP)
 
         // Right: page number
-        val pageText = "Seite $pageNumber"
+        val pageText = context.getString(R.string.pdf_page_number, pageNumber)
         val pageWidth = footerP.measureText(pageText)
         canvas.drawText(pageText, PAGE_WIDTH - MARGIN_RIGHT - pageWidth, footerY, footerP)
     }

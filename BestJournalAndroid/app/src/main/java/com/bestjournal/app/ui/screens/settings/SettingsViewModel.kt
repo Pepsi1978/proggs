@@ -506,7 +506,7 @@ constructor(
                         }
 
                         context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                            PdfExporter.export(entries, outputStream, photosPerEntry)
+                            PdfExporter.export(entries, outputStream, photosPerEntry, context)
                         }
                     }
 

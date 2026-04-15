@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.bestjournal.app.domain.model.JournalEntry
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
@@ -51,6 +52,7 @@ fun TimelineItem(
     dotVerticalBias: Float = -1f,
     searchQuery: String = ""
 ) {
+    val context = LocalContext.current
     val highlightColor = if (LocalIsDarkTheme.current) Color(0x44FFFFFF) else Color(0xFFFFEB3B)
     val lineColor = MaterialTheme.colorScheme.outlineVariant
     val dotColor = MaterialTheme.colorScheme.primary
@@ -126,7 +128,7 @@ fun TimelineItem(
                     Spacer(modifier = Modifier.height(2.dp))
                 }
                 Text(
-                    text = "${DateTimeFormatter.formatFull(entry.timestamp)} · ${DateTimeFormatter.formatRelative(entry.timestamp)}",
+                    text = "${DateTimeFormatter.formatFull(entry.timestamp)} · ${DateTimeFormatter.formatRelative(context, entry.timestamp)}",
                     style = MaterialTheme.typography.labelMedium,
                     color = TextMuted
                 )

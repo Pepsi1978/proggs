@@ -381,7 +381,7 @@ fun JournalScreen(
                 // Group entries by time period
                 val groupedEntries =
                     remember(entries) {
-                        entries.groupBy { DTFormatter.getSectionLabel(it.timestamp) }
+                        entries.groupBy { DTFormatter.getSectionLabel(context, it.timestamp) }
                     }
 
                 // Fixed search bar (does not scroll with entries)

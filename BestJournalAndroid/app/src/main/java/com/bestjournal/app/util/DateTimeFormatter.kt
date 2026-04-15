@@ -1,5 +1,7 @@
 package com.bestjournal.app.util
 
+import android.content.Context
+import com.bestjournal.app.R
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -57,23 +59,23 @@ object DateTimeFormatter {
         return dateOnly.format(Date(timestamp))
     }
 
-    fun formatRelative(timestamp: Long): String {
+    fun formatRelative(context: Context, timestamp: Long): String {
         val now = System.currentTimeMillis()
         val diff = now - timestamp
 
         return when {
-            diff < TimeUnit.MINUTES.toMillis(1) -> "gerade eben"
+            diff < TimeUnit.MINUTES.toMillis(1) -> context.getString(R.string.datetime_just_now)
             diff < TimeUnit.HOURS.toMillis(1) -> {
                 val minutes = TimeUnit.MILLISECONDS.toMinutes(diff)
-                "vor $minutes ${if (minutes == 1L) "Minute" else "Minuten"}"
+                context.resources.getQuantityString(R.plurals.datetime_minutes_ago, minutes.toInt(), minutes.toInt())
             }
             diff < TimeUnit.DAYS.toMillis(1) -> {
                 val hours = TimeUnit.MILLISECONDS.toHours(diff)
-                "vor $hours ${if (hours == 1L) "Stunde" else "Stunden"}"
+                context.resources.getQuantityString(R.plurals.datetime_hours_ago, hours.toInt(), hours.toInt())
             }
             diff < TimeUnit.DAYS.toMillis(7) -> {
                 val days = TimeUnit.MILLISECONDS.toDays(diff)
-                "vor $days ${if (days == 1L) "Tag" else "Tagen"}"
+                context.resources.getQuantityString(R.plurals.datetime_days_ago, days.toInt(), days.toInt())
             }
             else -> formatDate(timestamp)
         }
@@ -93,7 +95,7 @@ object DateTimeFormatter {
      * Week labels only apply within the current month — once entries cross
      * into a previous month, the month name is shown instead.
      */
-    fun getSectionLabel(timestamp: Long): String {
+    fun getSectionLabel(context: Context, timestamp: Long): String {
         val now = Calendar.getInstance()
         val entry = Calendar.getInstance().apply { timeInMillis = timestamp }
 
@@ -118,14 +120,14 @@ object DateTimeFormatter {
             entry.get(Calendar.YEAR) == now.get(Calendar.YEAR)
 
         return when {
-            timestamp >= todayStart.timeInMillis -> "Heute"
-            timestamp >= yesterdayStart.timeInMillis -> "Gestern"
-            timestamp >= vorgesternStart.timeInMillis -> "Vorgestern"
-            timestamp >= thisWeekMonday.timeInMillis && sameMonth -> "Diese Woche"
-            timestamp >= lastWeekMonday.timeInMillis && sameMonth -> "Letzte Woche"
-            timestamp >= twoWeeksAgo.timeInMillis && sameMonth -> "Vor 2 Wochen"
-            timestamp >= threeWeeksAgo.timeInMillis && sameMonth -> "Vor 3 Wochen"
-            timestamp >= fourWeeksAgo.timeInMillis && sameMonth -> "Vor 4 Wochen"
+            timestamp >= todayStart.timeInMillis -> context.getString(R.string.datetime_today)
+            timestamp >= yesterdayStart.timeInMillis -> context.getString(R.string.datetime_yesterday)
+            timestamp >= vorgesternStart.timeInMillis -> context.getString(R.string.datetime_day_before_yesterday)
+            timestamp >= thisWeekMonday.timeInMillis && sameMonth -> context.getString(R.string.datetime_this_week)
+            timestamp >= lastWeekMonday.timeInMillis && sameMonth -> context.getString(R.string.datetime_last_week)
+            timestamp >= twoWeeksAgo.timeInMillis && sameMonth -> context.getString(R.string.datetime_weeks_ago, 2)
+            timestamp >= threeWeeksAgo.timeInMillis && sameMonth -> context.getString(R.string.datetime_weeks_ago, 3)
+            timestamp >= fourWeeksAgo.timeInMillis && sameMonth -> context.getString(R.string.datetime_weeks_ago, 4)
             entry.get(Calendar.YEAR) == now.get(Calendar.YEAR) -> {
                 monthYearFormat.format(Date(timestamp)).replaceFirstChar { it.uppercase() }
             }
