@@ -456,7 +456,7 @@ und technische Besonderheiten der jeweiligen Sprache.
 ## Language-Specific Rules: Bengali (bn)
 - Script: Bengali/Bangla script (বাংলা) — NOT Devanagari
 - Register: Use informal "তুমি" (tumi) form — personal and warm, not ultra-formal "আপনি" (apni)
-  and not ultra-casual "তুই" (tui)
+  and not ultra-casual "তুই" (tui). Journals are private and personal, তুমি is correct.
 - Plurals: one, other
 - Text expansion: Bengali is typically 20-35% longer than German — watch button labels closely
 - "দিনলিপি" (dinlipi) or "জার্নাল" (journal, borrowed) for "Tagebuch/Journal"
@@ -464,13 +464,25 @@ und technische Besonderheiten der jeweiligen Sprache.
 - "মেজাজ" (mejaj) for "Stimmung/Mood"
 - "স্মরণিকা" (smaranika) or "রিমাইন্ডার" (reminder, borrowed) for "Erinnerung/Reminder"
 - Numbers: Use standard Arabic numerals (0-9), NOT Bengali numerals (০১২৩৪৫৬৭৮৯)
-  unless the app explicitly targets traditionalist users
-- Bengali has two major variants: West Bengali (India) and Bangladeshi Bengali —
-  use standard/neutral Bengali that works for both
-- Technical English terms (PDF, Export, Premium, Streak) are commonly understood
-  and can stay in English with Bengali script transliteration as fallback
-- Font rendering: Ensure the app uses a font that supports Bengali conjunct characters
-  (যুক্তাক্ষর / juktakkhor) — these are ligatures that combine multiple consonants
+
+CRITICAL LLM WARNING — Hindi-Leakage:
+- LLMs frequently leak Hindi vocabulary and Devanagari-influenced structures into Bengali output.
+  Bengali and Hindi are DIFFERENT languages with different scripts. If you find yourself using
+  a word that looks like it belongs in Hindi, check if there is a native Bengali alternative.
+- Avoid Sanskrit loanwords where native Bengali equivalents exist.
+- Urban Bengali users mix English naturally: "Save করুন" (Save korun) is authentic code-mixing.
+  Keep English tech terms (App, Settings, Notification, Update, Profile) as-is.
+
+Bengali variants:
+- West Bengali (India, bn-IN): More Sanskrit loanwords, Indian date format (DD/MM/YYYY)
+- Bangladeshi Bengali (bn-BD): More Arabic-Persian loanwords, different vocabulary for some terms
+- Use standard/neutral Bengali that works for both regions.
+
+Font rendering:
+- Noto Sans Bengali is included since Android 5.0 — most devices render correctly
+- Conjunct characters (যুক্তাক্ষর / juktakkhor) are ligatures combining multiple consonants
+- WARNING: Some cheap OEM devices (Huawei, Oppo budget models) may not include Bengali fonts,
+  showing empty boxes ("tofu") instead. Consider bundling a fallback font.
 ```
 
 ### 4.19 Telugu (te) — Indien
@@ -478,22 +490,38 @@ und technische Besonderheiten der jeweiligen Sprache.
 ```
 ## Language-Specific Rules: Telugu (te)
 - Script: Telugu script (తెలుగు) — unique to Telugu, NOT shared with other languages
-- Register: Use polite-informal "నువ్వు" (nuvvu) form — warm and personal,
-  not formal "మీరు" (meeru)
+- Register: Use polite "మీరు" (miiru) form — respectful but warm.
+  Do NOT use నువ్వు (nuvvu) in app UI — it is too familiar for adults.
+  Users writing journal entries themselves will naturally use నువ్వు, but the APP
+  addressing the USER should use మీరు.
 - Plurals: one, other
 - Text expansion: Telugu is typically 15-30% longer than German
+
+CRITICAL — Agglutination:
+- Telugu is highly agglutinative. Words grow by chaining suffixes. A single wrong suffix
+  completely changes the meaning. "Save" = "సేవ్ చేయండి" (3x longer in display).
+- Avoid compound words exceeding 15 syllables — they will overflow UI buttons.
+- Always provide <!-- SHORTER: ... --> alternatives for translations exceeding 40% expansion.
+
+Vocabulary:
 - "డైరీ" (diary, borrowed) or "జర్నల్" (journal, borrowed) for "Tagebuch/Journal"
 - "ఎంట్రీ" (entry, borrowed) or "నమోదు" (namodu, native) for "Eintrag/Entry"
 - "మూడ్" (mood, borrowed) or "మనోభావం" (manobhavam, native) for "Stimmung/Mood"
 - "రిమైండర్" (reminder, borrowed) for "Erinnerung/Reminder"
-- Telugu speakers in tech contexts commonly use English loanwords —
-  for UI labels, English borrowings in Telugu script are often MORE natural
-  than pure Telugu equivalents
 - Numbers: Use standard Arabic numerals (0-9), NOT Telugu numerals (౦౧౨౩౪౫౬౭౮౯)
-- IMPORTANT: Telugu has very long words due to agglutination — similar to Turkish,
-  buttons and labels can overflow. Always provide <!-- SHORTER: ... --> alternatives
-  for translations exceeding 40% expansion
-- Andhra Pradesh and Telangana have minor vocabulary differences — use standard Telugu
+
+LLM-specific note:
+- Telugu shows the BEST improvement from few-shot prompting among all Indian languages.
+  If quality is insufficient, try adding 2-3 example translations in the prompt.
+- Gemini performs slightly better than GPT-4o for Telugu (0.726 vs 0.704 semantic similarity).
+- English loanwords in Telugu script are natural and preferred for tech UI terms
+  (Settings, Save, App, Notification) — the Hyderabad IT audience expects them.
+
+Font rendering:
+- Noto Sans Telugu is included since Android 5.1
+- Telugu has wide characters with vowel extensions above and below the baseline.
+  Set lineSpacingMultiplier to at least 1.2 in TextViews to prevent clipping.
+- Andhra Pradesh and Telangana have minor vocabulary differences — use standard Telugu.
 ```
 
 ### 4.20 Marathi (mr) — Indien
@@ -501,12 +529,25 @@ und technische Besonderheiten der jeweiligen Sprache.
 ```
 ## Language-Specific Rules: Marathi (mr)
 - Script: Devanagari (देवनागरी) — same script as Hindi, but DIFFERENT language
-- DO NOT confuse Marathi with Hindi — they share the script but have different
+
+CRITICAL — Hindi-Verwechslung (haeufigster LLM-Fehler!):
+- DO NOT confuse Marathi with Hindi. They share the Devanagari script but have different
   vocabulary, grammar, and expressions. A Hindi translation is NOT acceptable for Marathi.
-- Register: Use informal "तू" (tu) form — personal and friendly,
-  not formal "तुम्ही" (tumhi) or honorific "आपण" (aapan)
+- Marathi speakers are VERY sensitive to Hindi-leakage ("Ghaati"-Komplex).
+  A native Marathi speaker will IMMEDIATELY notice Hindi words in Marathi text.
+- Key grammatical difference: Marathi has THREE genders (masculine, feminine, NEUTER)
+  unlike Hindi's two. LLMs frequently make gender agreement errors.
+- The letter ळ (ḷa) is common in Marathi but ABSENT in Hindi. Use it correctly.
+- Marathi prefers Sanskrit and Portuguese loanwords (Goa influence),
+  Hindi prefers Arabic-Persian loanwords (Mughal influence). Do NOT mix these.
+
+Register: Use "तुम्ही" (tumhi) form — warm and respectful.
+  This is the right level for a personal journal app: not too formal (आपण),
+  not too casual (तू). For notification/reminder texts, तुम्ही is also appropriate.
 - Plurals: one, other
 - Text expansion: Marathi is typically 20-35% longer than German
+
+Vocabulary:
 - "दैनंदिनी" (dainandini) or "जर्नल" (journal, borrowed) for "Tagebuch/Journal"
 - "नोंद" (nond) for "Eintrag/Entry"
 - "मनस्थिती" (manasthiti) for "Stimmung/Mood"
@@ -515,52 +556,95 @@ und technische Besonderheiten der jeweiligen Sprache.
 - Technical terms (PDF, Export, Premium) stay in English — commonly understood
 - Marathi speakers are predominantly in Maharashtra (Mumbai, Pune) —
   urban audience is very comfortable with English tech terms
+
+Font rendering:
+- Noto Sans Devanagari covers Marathi fully. No separate font needed.
+- Marathi-specific OpenType features are less demanding than Dravidian scripts.
 ```
 
 ### 4.21 Tamil (ta) — Indien & Sri Lanka
 
 ```
 ## Language-Specific Rules: Tamil (ta)
-- Script: Tamil script (தமிழ்) — one of the oldest scripts still in use
+- Script: Tamil script (தமிழ்) — one of the oldest scripts still in use (2000+ years)
 - Register: Use polite "நீங்கள்" (neengal) form — Tamil culture values politeness
   even in informal contexts. Do NOT use ultra-casual "நீ" (nee) for a journal app.
 - Plurals: one, other
-- Text expansion: Tamil is typically 25-40% longer than German — this is SIGNIFICANT,
-  always provide <!-- SHORTER: ... --> alternatives for labels exceeding 30% expansion
+- Text expansion: Tamil is typically 25-40% longer than German — this is SIGNIFICANT.
+  Always provide <!-- SHORTER: ... --> alternatives for labels exceeding 30% expansion.
+
+CRITICAL — Cultural Identity & Language Purism:
+- Tamil speakers have the STRONGEST language purism of all Indian languages.
+  Tamil is one of the world's oldest literary languages and speakers are very proud of it.
+- BAD Tamil translations will get ACTIVELY negative reviews in the Play Store.
+- DO NOT use Sanskrit loanwords. Tamil does NOT borrow from Hindi or Sanskrit for everyday words.
+  Use Dravidian roots or classical Tamil vocabulary.
+- For personal/emotional content: ALWAYS use native Tamil words.
+  "நாட்குறிப்பு" (naatkurippu) for Journal, "மனநிலை" (mananilai) for Mood.
+- For UI tech elements: English loanwords ARE acceptable for Settings, Save, Export, App.
+  This is the mixed approach that works best — native for heart, English for tech.
+
+CRITICAL LLM WARNING — Code-Mixing (Tanglish):
+- LLMs frequently produce "Tanglish" (Tamil + English mixed) even when pure Tamil is requested.
+  While Tanglish is linguistically authentic for urban Chennai speakers, it is BAD
+  localization practice. Check each string for unnecessary English mixing.
+- Tamil has only 18 consonants (versus 35+ in Hindi/Bengali). LLMs sometimes confuse
+  consonants that look visually similar in Tamil script.
+
+Vocabulary:
 - "நாட்குறிப்பு" (naatkurippu) for "Tagebuch/Journal"
 - "உள்ளீடு" (ulleedu) or "பதிவு" (pathivu) for "Eintrag/Entry"
 - "மனநிலை" (mananilai) for "Stimmung/Mood"
 - "நினைவூட்டல்" (ninaivoottal) for "Erinnerung/Reminder"
 - Numbers: Use standard Arabic numerals (0-9), NOT Tamil numerals (௦௧௨௩௪௫௬௭௮௯)
-- IMPORTANT: Tamil has a strong cultural identity — Tamil speakers often prefer
-  pure Tamil words over English loanwords, unlike Hindi/Telugu speakers.
-  Use native Tamil terms wherever a natural equivalent exists.
+
+Font rendering:
+- Noto Sans Tamil is included since Android 5.0
+- Tamil has 247 characters (12 vowels x 18 consonants + specials) — orthogonally complex
+  but less rendering issues than Malayalam or Kannada
 - Tamil Nadu and Sri Lankan Tamil have minor differences — use standard Tamil
-- Font rendering: Tamil has unique glyph combinations — ensure the app font
-  supports Tamil conjuncts properly
 ```
 
 ### 4.22 Urdu (ur) — Pakistan & Indien
 
 ```
 ## Language-Specific Rules: Urdu (ur)
-- Script: Nastaliq Arabic script (اردو) — this is a RIGHT-TO-LEFT (RTL) language
-- CRITICAL: Urdu is grammatically almost identical to Hindi, but uses Arabic script
-  and has more Persian/Arabic loanwords. Do NOT just copy the Hindi translation
-  and change the script — vocabulary and tone differ.
-- Register: Use semi-formal "آپ" (aap) form — Urdu culture favors politeness
+- Script: Arabic script (اردو) — this is a RIGHT-TO-LEFT (RTL) language
+- Register: Use "آپ" (aap) form — Urdu culture strongly favors politeness and respect.
+  آپ is the standard for all apps addressing users.
 - Plurals: one, other
 - Text expansion: Urdu is typically 20-30% longer than German
+
+CRITICAL — Urdu vs Hindi:
+- Urdu is grammatically almost identical to Hindi (~80% shared vocabulary), but uses
+  Arabic script and prefers Arabic-Persian loanwords where Hindi uses Sanskrit.
+- Do NOT just copy the Hindi translation and change the script.
+- Use Arabic-Persian vocabulary: "kitaab" (كتاب) NOT "pustak", "waqt" (وقت) NOT "samay".
+- LLMs trained on large amounts of Hindi data frequently insert Hindi/Sanskrit vocabulary
+  into Urdu output. A native Urdu speaker will immediately notice this.
+
+Nastaliq vs Naskh script — The critical decision:
+- Nastaliq (traditional Urdu calligraphy, hanging diagonal): Culturally preferred by Urdu speakers.
+  But has known CLIPPING PROBLEMS on Android when scaled below 80%.
+- Naskh (linear, like Arabic): Works out-of-the-box on Android. Technically simpler.
+  Urdu speakers accept it for digital UI but find it "less authentic".
+- RECOMMENDATION: Use Naskh (Noto Sans Arabic) for UI. This is the pragmatic choice.
+- Noto Nastaliq Urdu is available but requires lineSpacingMultiplier of ~2.0 due to
+  the hanging character style.
+
+Vocabulary:
 - "ڈائری" (diary, borrowed) or "جریدہ" (jarida, native) for "Tagebuch/Journal"
 - "اندراج" (indiraaj) for "Eintrag/Entry"
 - "موڈ" (mood, borrowed) or "مزاج" (mizaaj, native) for "Stimmung/Mood"
 - "یاد دہانی" (yaad-dehaani) for "Erinnerung/Reminder"
-- RTL RULES (same as Arabic):
-  - Numbers, English brand names, and technical terms must remain left-to-right (LTR)
-  - Use Unicode BiDi control characters where needed for mixed-direction text
-  - App needs android:supportsRtl="true" in AndroidManifest
-  - Use start/end instead of left/right in layouts
-- Urdu is spoken in both Pakistan and India — use neutral vocabulary that works for both
+
+RTL RULES (same as Arabic):
+- Numbers, English brand names, and technical terms must remain left-to-right (LTR)
+- Use Unicode BiDi control characters where needed for mixed-direction text
+- App needs android:supportsRtl="true" in AndroidManifest
+- Use start/end instead of left/right in ALL layouts
+- Icons showing direction (back arrow, next) must be mirrored (use ldrtl qualifier)
+- Urdu is spoken in both Pakistan (ur-PK) and India (ur-IN) — use neutral vocabulary
 - Technical terms (PDF, Export, Premium) are commonly kept in English
 ```
 
@@ -568,20 +652,37 @@ und technische Besonderheiten der jeweiligen Sprache.
 
 ```
 ## Language-Specific Rules: Gujarati (gu)
-- Script: Gujarati script (ગુજરાતી) — visually similar to Devanagari but without
-  the horizontal top line (shirorekha)
-- Register: Use informal "તું" (tu) or polite-informal "તમે" (tame) form —
-  for a personal journal app, "તમે" is the safer choice (warm but respectful)
+- Script: Gujarati script (ગુજરાતી) — derived from Devanagari but WITHOUT the horizontal
+  top line (shirorekha). This makes it visually softer than Hindi/Marathi.
+- Register: Use polite-informal "તમે" (tame) form — warm but respectful.
+  This is the correct level for a personal journal app.
 - Plurals: one, other
 - Text expansion: Gujarati is typically 15-25% longer than German
+
+LLM WARNING — Script Fallback:
+- LLMs sometimes fall back to Devanagari Unicode characters when Gujarati glyphs are missing
+  in their training data. The scripts look similar but ARE different.
+  If a character has the horizontal top line (shirorekha), it is Devanagari, NOT Gujarati.
+- GPT-4o scores only 41.77% on IndicMMLU-Pro for Gujarati — one of the weaker Indian languages
+  for LLMs. Extra review is recommended.
+
+Vocabulary:
 - "ડાયરી" (diary, borrowed) or "જર્નલ" (journal, borrowed) for "Tagebuch/Journal"
 - "એન્ટ્રી" (entry, borrowed) or "નોંધ" (nondh, native) for "Eintrag/Entry"
 - "મૂડ" (mood, borrowed) or "મનોસ્થિતિ" (manosthiti, native) for "Stimmung/Mood"
 - "રિમાઇન્ડર" (reminder, borrowed) for "Erinnerung/Reminder"
 - Numbers: Use standard Arabic numerals (0-9), NOT Gujarati numerals (૦૧૨૩૪૫૬૭૮૯)
-- Gujarati speakers (primarily in Gujarat, Mumbai business community) are very
-  comfortable with English tech terms — borrowings are natural and preferred for UI
+
+Audience context:
+- Gujarati-speaking community is strongly business-oriented (trade, commerce).
+  English tech terms and anglicisms are very naturally accepted.
+- "Business", "Payment", "Settings", "Save" = keep in English.
 - Technical terms stay in English: PDF, Export, Premium, Streak
+
+Font rendering:
+- Noto Sans Gujarati was originally only in Nexus devices. Broadly available since Android 6.0.
+- WARNING: Some OEM devices (Motorola, Oppo budget models) may NOT include Gujarati fonts
+  in their AOSP build. Consider bundling a fallback font for maximum compatibility.
 ```
 
 ### 4.24 Kannada (kn) — Indien
@@ -589,42 +690,91 @@ und technische Besonderheiten der jeweiligen Sprache.
 ```
 ## Language-Specific Rules: Kannada (kn)
 - Script: Kannada script (ಕನ್ನಡ) — round, distinctive script used in Karnataka
-- Register: Use polite-informal "ನೀವು" (neevu) form — respectful but not stiff,
-  NOT ultra-casual "ನೀನು" (neenu)
+- Register: Use polite "ನೀವು" (neevu) form — respectful but not stiff.
+  Do NOT use casual "ನೀನು" (neenu) in app UI.
 - Plurals: one, other
 - Text expansion: Kannada is typically 20-35% longer than German
+
+LLM WARNING — Script Confusion with Telugu:
+- Kannada and Telugu scripts have visual similarities (both use many circular shapes).
+  LLMs occasionally mix Telugu characters into Kannada text. Verify that output uses
+  ONLY Kannada Unicode range (U+0C80-U+0CFF), not Telugu (U+0C00-U+0C7F).
+- GPT-4o scores 38.97% on IndicMMLU-Pro for Kannada — the weakest of all 4 South Indian
+  languages. Native speaker review is strongly recommended.
+
+Vocabulary:
 - "ಡೈರಿ" (diary, borrowed) or "ಜರ್ನಲ್" (journal, borrowed) for "Tagebuch/Journal"
 - "ಎಂಟ್ರಿ" (entry, borrowed) or "ನಮೂದು" (namoodu, native) for "Eintrag/Entry"
 - "ಮೂಡ್" (mood, borrowed) or "ಮನಸ್ಥಿತಿ" (manasthiti, native) for "Stimmung/Mood"
 - "ರಿಮೈಂಡರ್" (reminder, borrowed) for "Erinnerung/Reminder"
 - Numbers: Use standard Arabic numerals (0-9), NOT Kannada numerals (೦೧೨೩೪೫೬೭೮೯)
-- Kannada has complex conjunct characters — ensure app font supports them
-- Karnataka (Bangalore) is India's tech hub — audience is very English-comfortable,
-  English loanwords in Kannada script are perfectly natural for app UI
+
+Audience context:
+- Karnataka and especially Bengaluru (Bangalore) is India's tech hub.
+  The audience is VERY English-comfortable. English loanwords in Kannada script
+  are perfectly natural for app UI.
+- Older users outside Bengaluru prefer more native Kannada vocabulary.
+- Use mixed approach: English for tech (Settings, Save, App), native for personal content.
 - Technical terms stay in English: PDF, Export, Premium, Streak
+
+Font rendering:
+- Noto Sans Kannada is included since Android 5.0
+- Conjunct-ligature rendering is correct on Android 4.3+ with HarfBuzz-ng
+- WARNING: Some Android Go (budget) devices may render complex Kannada ligatures incorrectly.
+  Test on actual budget devices if targeting the Indian mass market.
 ```
 
 ### 4.25 Malayalam (ml) — Indien
 
 ```
 ## Language-Specific Rules: Malayalam (ml)
-- Script: Malayalam script (മലയാളം) — highly curved, distinctive script used in Kerala
-- Register: Use polite "നിങ്ങൾ" (ningal) form — Malayalam culture values respect,
-  do NOT use casual "നീ" (nee)
+- Script: Malayalam script (മലയാളം) — highly curved, distinctive script used in Kerala.
+  THE most complex conjunct character system of ALL Indian scripts.
+- Register: Use polite "നിങ്ങൾ" (ningal) form — Malayalam culture values respect.
+  Do NOT use casual "നീ" (nee) in app UI.
 - Plurals: one, other
-- Text expansion: Malayalam is typically 25-40% longer than German — SIGNIFICANT,
-  Malayalam words tend to be very long. Always provide <!-- SHORTER: ... --> alternatives
-  for labels exceeding 30% expansion
+- Text expansion: Malayalam is typically 25-40% longer than German — THE MOST EXTREME
+  expansion of all Indian languages. Single grammatically correct words can represent
+  an entire sentence due to agglutinative suffix chaining.
+
+CRITICAL — Orthography Decision:
+- Malayalam has TWO orthographies:
+  - Simplified (1971 reform): Fewer ligatures, easier to render. Android system font
+    (Noto Sans Malayalam) uses this. Compatible with 99% of devices. RECOMMENDED.
+  - Traditional (Thaali/Old): More ligatures, culturally valued by older users and literati.
+    Requires special fonts, may not render on all devices.
+- For a journal app: USE SIMPLIFIED ORTHOGRAPHY. It works on all devices.
+
+CRITICAL LLM WARNING — The Hardest Indian Language for LLMs:
+- Malayalam has the LEAST training data among major Indian languages combined with
+  the MOST complex morphology. LLM output quality is notably lower than Bengali/Hindi.
+- LLMs produce Malayalam text that is Unicode-correct but often ORTHOGRAPHICALLY wrong
+  (wrong ligature choices, incorrect suffix combinations).
+- Morphology errors: Malayalam has complex agglutinative suffix chains. LLMs frequently
+  cut them incorrectly, producing ungrammatical compounds.
+- NATIVE SPEAKER REVIEW IS STRONGLY RECOMMENDED for Malayalam. Do not ship without review.
+
+Vocabulary:
 - "ഡയറി" (diary, borrowed) or "ജേണൽ" (journal, borrowed) for "Tagebuch/Journal"
 - "എൻട്രി" (entry, borrowed) or "രേഖ" (rekha, native) for "Eintrag/Entry"
 - "മൂഡ്" (mood, borrowed) or "മാനസികാവസ്ഥ" (maanasikavastha, native) for "Stimmung/Mood"
 - "ഓർമ്മപ്പെടുത്തൽ" (ormmappeduttal) for "Erinnerung/Reminder"
 - Numbers: Use standard Arabic numerals (0-9), NOT Malayalam numerals (൦൧൨൩൪൫൬൭൮൯)
-- CRITICAL: Malayalam has THE most complex conjunct character system of all Indian scripts.
-  Font support is essential — many fonts fail to render Malayalam correctly.
-  Test with real Malayalam text on actual devices, not just emulator.
-- Kerala has very high literacy (96%) — audience expects grammatically perfect text
-- Technical terms (PDF, Export, Premium) stay in English — widely understood
+
+Audience context:
+- Kerala has 96% literacy rate — the HIGHEST in India. Audience expects
+  grammatically PERFECT text. Poor translations will be noticed and criticized.
+- English loanwords for tech terms are completely normal (Kerala IT sector is large).
+- Technical terms (PDF, Export, Premium, Settings) stay in English — widely understood.
+- Malayalam does NOT borrow from Hindi/Sanskrit for everyday words — use Dravidian roots.
+
+Font rendering:
+- Google acknowledged: "All non-browser apps have ligature rendering issues for Malayalam"
+  This was fixed via HarfBuzz-ng with Swathanthra Malayalam Computing collaboration.
+- Android 4.3+ renders correctly, but ligature extent depends on the font.
+- Noto Sans Malayalam renders simplified orthography correctly.
+- ALWAYS set lineSpacingMultiplier to at least 1.3 — Malayalam glyphs extend above and below.
+- Button layouts MUST use wrap_content. Fixed widths are UNUSABLE with Malayalam text.
 ```
 
 ---
@@ -651,6 +801,30 @@ und technische Besonderheiten der jeweiligen Sprache.
   auf Englisch bleiben — sie sind im App-Kontext allgemein verstanden
 - Jede indische Sprache hat eine eigene Schrift — "Hindi uebersetzen und Schrift aendern"
   funktioniert NICHT (ausser bei Urdu, das grammatisch aehnlich ist)
+
+### LLM-Qualitaet fuer indische Sprachen (Recherche-Ergebnis)
+
+LLMs sind bei indischen Sprachen **30-50% schlechter** als bei europaeischen Sprachen.
+Die drei haeufigsten Fehlerklassen:
+
+1. **Code-Mixing**: LLM mischt Hindi/Englisch in die Zielsprache (besonders bei Bengali, Marathi)
+2. **Halluzinationen bei figurativer Sprache**: Redewendungen werden woertlich uebersetzt
+3. **Falsche Wortbedeutung bei Polysemie**: Mehrdeutige Woerter erhalten die falsche Bedeutung
+
+| Sprache | LLM-Qualitaet (GPT-4o) | Haeufigster Fehler | Review-Prioritaet |
+|---------|------------------------|--------------------|--------------------|
+| **Hindi** | Gut (~50% IndicMMLU) | Englisch-Mixing | Mittel |
+| **Bengali** | Gut | Hindi-Leakage (Devanagari-Einfluss) | Mittel |
+| **Telugu** | Gut (beste Gemini-Performance) | Agglutinations-Fehler | Mittel |
+| **Marathi** | Mittel | Hindi-Verwechslung (gleiche Schrift!) | **Hoch** |
+| **Tamil** | Mittel | Tanglish Code-Mixing, Sanskrit-Einstreuung | **Hoch** |
+| **Urdu** | Mittel | Hindi/Sanskrit-Vokabeln statt Persisch/Arabisch | **Hoch** |
+| **Gujarati** | Schwach (~42% IndicMMLU) | Devanagari-Fallback statt Gujarati-Schrift | **Sehr hoch** |
+| **Kannada** | Schwach (~39% IndicMMLU) | Telugu-Zeichen-Verwechslung | **Sehr hoch** |
+| **Malayalam** | Sehr schwach | Ligatur-Fehler, Morphologie-Fehler | **Kritisch** |
+
+**Empfehlung:** Fuer Gujarati, Kannada und Malayalam UNBEDINGT Muttersprachler-Review
+einplanen. Die LLM-Qualitaet allein reicht hier nicht fuer einen professionellen Launch.
 
 ---
 
