@@ -361,7 +361,9 @@ constructor(
         val scenarioKey = "dashboard_last_updated_${_uiState.value.currentScenario}"
         val ts = encryptedPrefs.getLong(scenarioKey, 0L)
         if (ts == 0L) return null
-        val sdf = java.text.SimpleDateFormat("dd.MM. 'um' HH:mm", java.util.Locale.GERMAN)
+        val locale = java.util.Locale.getDefault()
+        val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMHHmm")
+        val sdf = java.text.SimpleDateFormat(pattern, locale)
         return "Letzte Aktualisierung am ${sdf.format(java.util.Date(ts))}"
     }
 }

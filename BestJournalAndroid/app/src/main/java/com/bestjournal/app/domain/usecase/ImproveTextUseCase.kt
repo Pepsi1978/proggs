@@ -92,6 +92,11 @@ $text
                                 slice.lastIndexOf('!'),
                                 slice.lastIndexOf('?'),
                                 slice.lastIndexOf(';'),
+                                // CJK full-width sentence-ending punctuation
+                                slice.lastIndexOf('\u3002'), // 。Chinese/Japanese period
+                                slice.lastIndexOf('\uFF01'), // ！full-width exclamation
+                                slice.lastIndexOf('\uFF1F'), // ？full-width question mark
+                                slice.lastIndexOf('\uFF1B'), // ；full-width semicolon
                             )
                         if (lastBreak > -1) end = windowStart + lastBreak + 1
                     }

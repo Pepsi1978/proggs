@@ -8,11 +8,42 @@ import java.util.concurrent.TimeUnit
 
 object DateTimeFormatter {
 
-    private val fullFormat = SimpleDateFormat("EE, d. MMMM yyyy · HH:mm 'Uhr'", Locale.GERMAN)
-    private val timeOnly = SimpleDateFormat("HH:mm", Locale.GERMAN)
-    private val dateOnly = SimpleDateFormat("d. MMMM yyyy", Locale.GERMAN)
-    private val monthYearFormat = SimpleDateFormat("MMMM yyyy", Locale.GERMAN)
-    private val monthOnlyFormat = SimpleDateFormat("MMMM", Locale.GERMAN)
+    // Locale-aware date/time formats — get() ensures they pick up runtime locale changes
+    private val fullFormat: SimpleDateFormat
+        get() {
+            val locale = DeviceLocale.locale
+            val datePattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "EEdMMMMyyyy")
+            val timePattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "HHmm")
+            return SimpleDateFormat("$datePattern · $timePattern", locale)
+        }
+
+    private val timeOnly: SimpleDateFormat
+        get() {
+            val locale = DeviceLocale.locale
+            val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "HHmm")
+            return SimpleDateFormat(pattern, locale)
+        }
+
+    private val dateOnly: SimpleDateFormat
+        get() {
+            val locale = DeviceLocale.locale
+            val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMyyyy")
+            return SimpleDateFormat(pattern, locale)
+        }
+
+    private val monthYearFormat: SimpleDateFormat
+        get() {
+            val locale = DeviceLocale.locale
+            val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMMyyyy")
+            return SimpleDateFormat(pattern, locale)
+        }
+
+    private val monthOnlyFormat: SimpleDateFormat
+        get() {
+            val locale = DeviceLocale.locale
+            val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMM")
+            return SimpleDateFormat(pattern, locale)
+        }
 
     fun formatFull(timestamp: Long): String {
         return fullFormat.format(Date(timestamp))
@@ -51,7 +82,7 @@ object DateTimeFormatter {
     fun formatDuration(seconds: Int): String {
         val minutes = seconds / 60
         val secs = seconds % 60
-        return String.format(Locale.GERMAN, "%02d:%02d", minutes, secs)
+        return String.format(Locale.ROOT, "%02d:%02d", minutes, secs)
     }
 
     /**

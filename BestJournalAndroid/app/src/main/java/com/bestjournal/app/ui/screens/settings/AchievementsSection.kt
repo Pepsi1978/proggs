@@ -284,8 +284,10 @@ private fun AchievementRow(
             if (isUnlocked && achievement.unlockedAt != null) {
                 Spacer(modifier = Modifier.height(2.dp))
                 val dateStr = remember(achievement.unlockedAt) {
-                    SimpleDateFormat("dd. MMM yyyy", Locale.GERMAN)
-                        .format(Date(achievement.unlockedAt))
+                    SimpleDateFormat(
+                        android.text.format.DateFormat.getBestDateTimePattern(Locale.getDefault(), "dMMMyyyy"),
+                        Locale.getDefault()
+                    ).format(Date(achievement.unlockedAt))
                 }
                 Text(
                     text = "Freigeschaltet am $dateStr",
