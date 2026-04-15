@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.rounded.AllInclusive
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CreditCard
@@ -102,9 +103,10 @@ fun PaywallScreen(
     val personalizedHeadline by viewModel.personalizedHeadline.collectAsState()
     val activity = LocalContext.current as? Activity
 
-    val displayMonthlyPrice = monthlyPrice.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
-    val displayYearlyPrice = yearlyPrice.ifEmpty { Constants.YEARLY_PRICE_DISPLAY }
-    val displayLifetimePrice = lifetimePrice.ifEmpty { Constants.LIFETIME_PRICE_DISPLAY }
+    val pricesLoaded = monthlyPrice.isNotEmpty()
+    val displayMonthlyPrice = monthlyPrice.ifEmpty { "\u2026" }
+    val displayYearlyPrice = yearlyPrice.ifEmpty { "\u2026" }
+    val displayLifetimePrice = lifetimePrice.ifEmpty { "\u2026" }
 
     // Use theme-aware colors so the orb matches the current color scheme (incl. Dynamic Color)
     val isDarkTheme = LocalIsDarkTheme.current
@@ -249,6 +251,27 @@ fun PaywallScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
+
+                // ── "Prices loading" hint — only visible until Google Play responds ──
+                if (!pricesLoaded) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(14.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Preise werden geladen\u2026",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
 
                 // ── Primary CTA: yearly with free trial ──
                 Button(
