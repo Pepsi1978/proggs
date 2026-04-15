@@ -26,10 +26,8 @@ class YearlyReviewReceiver : BroadcastReceiver() {
         val notification =
             NotificationCompat.Builder(context, "yearly_review")
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("Dein Jahresrückblick")
-                .setContentText(
-                    "Ein ganzes Jahr voller Erinnerungen — schau zurück auf deine Reise."
-                )
+                .setContentTitle(context.getString(R.string.notif_yearly_title))
+                .setContentText(context.getString(R.string.notif_yearly_body))
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .build()

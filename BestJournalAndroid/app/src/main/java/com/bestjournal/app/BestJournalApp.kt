@@ -38,37 +38,37 @@ class BestJournalApp : Application() {
             val dailyChannel =
                 NotificationChannel(
                         ReminderReceiver.CHANNEL_ID,
-                        "T\u00e4gliche Erinnerung",
+                        getString(R.string.notif_channel_daily_name),
                         NotificationManager.IMPORTANCE_DEFAULT,
                     )
-                    .apply { description = "Erinnert dich t\u00e4glich ans Tagebuchschreiben" }
+                    .apply { description = getString(R.string.notif_channel_daily_desc) }
             manager.createNotificationChannel(dailyChannel)
 
             val weeklyChannel =
                 NotificationChannel(
                         WeeklyReviewReceiver.CHANNEL_ID,
-                        "W\u00f6chentlicher R\u00fcckblick",
+                        getString(R.string.notif_channel_weekly_name),
                         NotificationManager.IMPORTANCE_DEFAULT,
                     )
-                    .apply { description = "Dein Wochenr\u00fcckblick jeden Sonntag um 15:00 Uhr" }
+                    .apply { description = getString(R.string.notif_channel_weekly_desc) }
             manager.createNotificationChannel(weeklyChannel)
 
             NotificationChannel(
                     "monthly_review",
-                    "Monatsrückblick",
+                    getString(R.string.notif_channel_monthly_name),
                     NotificationManager.IMPORTANCE_DEFAULT,
                 )
                 .also {
-                    it.description = "Benachrichtigung wenn dein Monatsrückblick fertig ist"
+                    it.description = getString(R.string.notif_channel_monthly_desc)
                     manager.createNotificationChannel(it)
                 }
             NotificationChannel(
                     "yearly_review",
-                    "Jahresrückblick",
+                    getString(R.string.notif_channel_yearly_name),
                     NotificationManager.IMPORTANCE_DEFAULT,
                 )
                 .also {
-                    it.description = "Benachrichtigung wenn dein Jahresrückblick fertig ist"
+                    it.description = getString(R.string.notif_channel_yearly_desc)
                     manager.createNotificationChannel(it)
                 }
         }

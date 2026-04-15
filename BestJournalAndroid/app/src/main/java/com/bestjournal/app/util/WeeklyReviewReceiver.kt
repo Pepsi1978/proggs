@@ -29,15 +29,11 @@ class WeeklyReviewReceiver : BroadcastReceiver() {
         val notification =
             NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("Dein Wochenr\u00fcckblick")
-                .setContentText(
-                    "Schau dir an was dich diese Woche bewegt hat \u2014 dein Dashboard hat neue Einsichten."
-                )
+                .setContentTitle(context.getString(R.string.notif_weekly_title))
+                .setContentText(context.getString(R.string.notif_weekly_body))
                 .setStyle(
                     NotificationCompat.BigTextStyle()
-                        .bigText(
-                            "Schau dir an was dich diese Woche bewegt hat \u2014 dein Dashboard hat neue Einsichten."
-                        )
+                        .bigText(context.getString(R.string.notif_weekly_body))
                 )
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)

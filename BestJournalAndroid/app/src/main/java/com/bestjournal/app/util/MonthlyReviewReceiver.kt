@@ -26,8 +26,8 @@ class MonthlyReviewReceiver : BroadcastReceiver() {
         val notification =
             NotificationCompat.Builder(context, "monthly_review")
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("Dein Monatsrückblick")
-                .setContentText("Ein ganzer Monat voller Erinnerungen wartet auf dich.")
+                .setContentTitle(context.getString(R.string.notif_monthly_title))
+                .setContentText(context.getString(R.string.notif_monthly_body))
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .build()

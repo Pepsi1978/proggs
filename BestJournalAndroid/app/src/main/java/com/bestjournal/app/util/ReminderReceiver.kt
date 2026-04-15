@@ -12,12 +12,12 @@ import com.bestjournal.app.R
 
 class ReminderReceiver : BroadcastReceiver() {
 
-    private val messages = listOf(
-        "Was bewegt dich heute?",
-        "Ein Moment f\u00fcr dich \u2014 halte ihn fest",
-        "Dein zuk\u00fcnftiges Ich wird dir danken",
-        "Nur ein Gedanke reicht \u2014 leg los",
-        "Was war heute dein Highlight?",
+    private fun getMessages(context: Context) = listOf(
+        context.getString(R.string.notif_reminder_body_0),
+        context.getString(R.string.notif_reminder_body_1),
+        context.getString(R.string.notif_reminder_body_2),
+        context.getString(R.string.notif_reminder_body_3),
+        context.getString(R.string.notif_reminder_body_4),
     )
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -33,11 +33,11 @@ class ReminderReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val body = messages.random()
+        val body = getMessages(context).random()
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Zeit f\u00fcr dein Tagebuch")
+            .setContentTitle(context.getString(R.string.notif_reminder_title))
             .setContentText(body)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
