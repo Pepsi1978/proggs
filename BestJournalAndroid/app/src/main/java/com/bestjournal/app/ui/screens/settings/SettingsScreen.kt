@@ -1,5 +1,8 @@
 package com.bestjournal.app.ui.screens.settings
 
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.foundation.layout.PaddingValues
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -973,12 +976,19 @@ fun SettingsScreen(
                                             .displayName(voice, localeVoices.localeCode)
                                         DropdownMenuItem(
                                             text = {
-                                                Text(
-                                                    label,
-                                                    color = if (voice.id == effectiveVoiceId)
-                                                        MaterialTheme.colorScheme.primary
-                                                    else MaterialTheme.colorScheme.onSurface,
-                                                )
+                                                val textColor = if (voice.id == effectiveVoiceId)
+                                                    MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.onSurface
+                                                if (label.startsWith("\u2605")) {
+                                                    Text(
+                                                        buildAnnotatedString {
+                                                            withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) { append("\u2605 ") }
+                                                            withStyle(SpanStyle(color = textColor)) { append(label.removePrefix("\u2605 ")) }
+                                                        },
+                                                    )
+                                                } else {
+                                                    Text(label, color = textColor)
+                                                }
                                             },
                                             onClick = {
                                                 selectedVoiceId = voice.id

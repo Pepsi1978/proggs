@@ -1,5 +1,8 @@
 package com.entropyjournal.ui.screens.settings
 
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -1271,7 +1274,18 @@ fun SettingsScreen(
                                                 onClick = { viewModel.updateEdgeTtsVoice(voice.id); viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE); edgeVoiceExpanded = false },
                                             ).padding(horizontal = 16.dp, vertical = 12.dp),
                                         ) {
-                                            Text(voice.name, color = if (voice.id == selectedEdgeVoiceId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                                            val voiceColor = if (voice.id == selectedEdgeVoiceId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                            if (voice.name.startsWith("\u2605")) {
+                                                Text(
+                                                    buildAnnotatedString {
+                                                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) { append("\u2605 ") }
+                                                        withStyle(SpanStyle(color = voiceColor)) { append(voice.name.removePrefix("\u2605 ")) }
+                                                    },
+                                                    modifier = Modifier.weight(1f),
+                                                )
+                                            } else {
+                                                Text(voice.name, color = voiceColor, modifier = Modifier.weight(1f))
+                                            }
                                             if (voice.id in favorites) { Text("\u2605", color = Color(0xFFFFB300), fontSize = 16.sp) }
                                         }
                                     }

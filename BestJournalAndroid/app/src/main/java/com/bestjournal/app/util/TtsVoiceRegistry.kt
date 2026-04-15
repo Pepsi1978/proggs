@@ -111,11 +111,11 @@ object TtsVoiceRegistry {
         }
     }
 
-    /** Format a voice for display: "Seraphina — weiblich, sehr natürlich" */
+    /** Format a voice for display: "★ Seraphina — weiblich" (premium) or "Florian — männlich" */
     fun displayName(voice: Voice, localeCode: String): String {
         val g = genderLabel(localeCode, voice.gender)
         return if (voice.tier == Tier.MULTILINGUAL) {
-            "\u2605 ${voice.name} \u2014 $g, ${qualityLabel(localeCode)}"
+            "\u2605 ${voice.name} \u2014 $g"
         } else {
             "${voice.name} \u2014 $g"
         }
