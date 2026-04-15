@@ -27,7 +27,9 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.bestjournal.app.R
 import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonMagenta
 import com.bestjournal.app.ui.theme.NeonRed
@@ -101,7 +103,7 @@ fun AnimatedMicButton(
         ) {
             Icon(
                 imageVector = if (isRecording) Icons.Rounded.Stop else Icons.Rounded.Mic,
-                contentDescription = if (isRecording) "Aufnahme stoppen" else "Aufnahme starten",
+                contentDescription = if (isRecording) stringResource(R.string.cd_mic_stop) else stringResource(R.string.cd_mic_start),
                 modifier = Modifier.size(28.dp)
             )
         }

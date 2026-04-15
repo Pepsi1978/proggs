@@ -12,7 +12,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.bestjournal.app.R
 import com.bestjournal.app.domain.model.Advice
 import com.bestjournal.app.ui.components.NeonDivider
 import com.bestjournal.app.ui.theme.CosmosDeep
@@ -61,7 +63,7 @@ fun AdviceDetailSheet(
             if (advice.connection.isNotBlank()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Verkn\u00fcpfung",
+                    text = stringResource(R.string.dashboard_connection),
                     style = MaterialTheme.typography.titleMedium,
                     color = NeonCyan
                 )

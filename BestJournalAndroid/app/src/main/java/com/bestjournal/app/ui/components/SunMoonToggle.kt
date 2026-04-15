@@ -25,7 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.bestjournal.app.R
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.util.rememberHapticAction
 
@@ -72,7 +74,7 @@ fun SunMoonToggle(
         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(28.dp)) {
             Icon(
                 imageVector = Icons.Rounded.LightMode,
-                contentDescription = "Tag",
+                contentDescription = stringResource(R.string.cd_day),
                 tint = if (!isDark) GlowingYellow else MutedGray,
                 modifier = Modifier.size(sunSize)
             )
@@ -88,7 +90,7 @@ fun SunMoonToggle(
         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(28.dp)) {
             Icon(
                 imageVector = Icons.Rounded.DarkMode,
-                contentDescription = "Nacht",
+                contentDescription = stringResource(R.string.cd_night),
                 tint = if (isDark) GlowingYellow else MutedGray,
                 modifier = Modifier.size(moonSize)
             )

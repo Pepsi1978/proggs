@@ -26,7 +26,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.bestjournal.app.R
 
 @Composable
 fun AiInfoBanner(
@@ -59,7 +61,7 @@ fun AiInfoBanner(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Dein Tagebuch wird von KI unterstützt",
+                            stringResource(R.string.ai_banner_title),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -67,7 +69,7 @@ fun AiInfoBanner(
                     IconButton(onClick = { visible = false; onDismiss() }) {
                         Icon(
                             Icons.Rounded.Close,
-                            "Schließen",
+                            stringResource(R.string.action_close),
                             tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }

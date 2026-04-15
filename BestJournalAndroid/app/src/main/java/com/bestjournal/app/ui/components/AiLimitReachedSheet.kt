@@ -21,8 +21,10 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.bestjournal.app.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,22 +54,21 @@ fun AiLimitReachedSheet(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                "Dein Wochenlimit ist erreicht",
+                stringResource(R.string.ai_limit_title),
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Ohne Abo hast du 5\u00A0Textverbesserungen und 5\u00A0Dashboard-Aktualisierungen pro Woche.\n" +
-                    "Mit dem Premium-Abo: bis zu 150 pro Tag \u2014 in voller Qualit\u00e4t.",
+                stringResource(R.string.ai_limit_body),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(24.dp))
             OutlinedButton(onClick = onSubscribeMonthly, modifier = Modifier.fillMaxWidth()) {
-                Text("Monatsabo \u2014 $monthlyPrice/Monat")
+                Text(stringResource(R.string.ai_limit_monthly, monthlyPrice))
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(
@@ -76,12 +77,12 @@ fun AiLimitReachedSheet(
                 colors =
                     ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
-                Text("Jahresabo \u2014 $yearlyPrice/Jahr (spare 37%)")
+                Text(stringResource(R.string.ai_limit_yearly, yearlyPrice))
             }
             Spacer(modifier = Modifier.height(12.dp))
             TextButton(onClick = onDismiss) {
                 Text(
-                    "Nein danke, weiter ohne KI",
+                    stringResource(R.string.ai_limit_no_thanks),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
