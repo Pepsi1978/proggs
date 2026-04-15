@@ -43,6 +43,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -259,7 +260,7 @@ private fun AchievementRow(
         // Text content
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = if (isUnlocked) achievement.title else "???",
+                text = if (isUnlocked) stringResource(achievement.titleResId) else "???",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = if (isUnlocked) FontWeight.SemiBold else FontWeight.Normal,
                 ),
@@ -271,7 +272,7 @@ private fun AchievementRow(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = if (isUnlocked) achievement.description else "Geheim",
+                text = if (isUnlocked) stringResource(achievement.descResId) else "Geheim",
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontStyle = if (!isUnlocked) FontStyle.Italic else FontStyle.Normal,
                 ),
@@ -356,7 +357,7 @@ private fun AchievementIcon(
             }
             Icon(
                 icon,
-                contentDescription = achievement.title,
+                contentDescription = stringResource(achievement.titleResId),
                 tint = LightGold.copy(alpha = shimmerAlpha),
                 modifier = Modifier.size(24.dp),
             )

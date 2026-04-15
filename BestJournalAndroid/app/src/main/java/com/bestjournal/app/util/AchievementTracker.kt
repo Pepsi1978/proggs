@@ -1,13 +1,15 @@
 package com.bestjournal.app.util
 
+import android.content.Context
 import android.content.SharedPreferences
+import com.bestjournal.app.R
 import javax.inject.Inject
 import javax.inject.Singleton
 
 data class Achievement(
     val id: String,
-    val title: String,
-    val description: String,
+    val titleResId: Int,
+    val descResId: Int,
     val iconName: String,
     val unlockedAt: Long? = null,
 )
@@ -34,62 +36,62 @@ class AchievementTracker @Inject constructor(
         val ALL_ACHIEVEMENTS = listOf(
             Achievement(
                 id = "nachtfalter",
-                title = "Nachtfalter",
-                description = "50 Einträge nach 22 Uhr geschrieben",
+                titleResId = R.string.achievement_nightowl_title,
+                descResId = R.string.achievement_nightowl_desc,
                 iconName = "Bedtime",
             ),
             Achievement(
                 id = "fruehaufsteher",
-                title = "Frühaufsteher",
-                description = "20 Einträge vor 7 Uhr geschrieben",
+                titleResId = R.string.achievement_earlybird_title,
+                descResId = R.string.achievement_earlybird_desc,
                 iconName = "WbSunny",
             ),
             Achievement(
                 id = "gestaendnis",
-                title = "Geständnis",
-                description = "Einen Eintrag mit über 1.000 Wörtern verfasst",
+                titleResId = R.string.achievement_confession_title,
+                descResId = R.string.achievement_confession_desc,
                 iconName = "AutoStories",
             ),
             Achievement(
                 id = "marathonschreiber",
-                title = "Marathonschreiber",
-                description = "100 Tagebucheinträge geschrieben",
+                titleResId = R.string.achievement_marathon_title,
+                descResId = R.string.achievement_marathon_desc,
                 iconName = "EmojiEvents",
             ),
             Achievement(
                 id = "wortkunstler",
-                title = "Wortkünstler",
-                description = "500 Tagebucheinträge geschrieben",
+                titleResId = R.string.achievement_wordartist_title,
+                descResId = R.string.achievement_wordartist_desc,
                 iconName = "Brush",
             ),
             Achievement(
                 id = "bestaendigkeit",
-                title = "Beständigkeit",
-                description = "30-Tage-Streak erreicht",
+                titleResId = R.string.achievement_consistency_title,
+                descResId = R.string.achievement_consistency_desc,
                 iconName = "Whatshot",
             ),
             Achievement(
                 id = "jahreschronist",
-                title = "Jahreschronist",
-                description = "365 Einträge geschrieben",
+                titleResId = R.string.achievement_chronicler_title,
+                descResId = R.string.achievement_chronicler_desc,
                 iconName = "CalendarMonth",
             ),
             Achievement(
                 id = "fototagebuch",
-                title = "Fototagebuch",
-                description = "50 Fotos an Einträge angehängt",
+                titleResId = R.string.achievement_photodiary_title,
+                descResId = R.string.achievement_photodiary_desc,
                 iconName = "PhotoCamera",
             ),
             Achievement(
                 id = "sprachkuenstler",
-                title = "Sprachkünstler",
-                description = "25 Spracheinträge erstellt",
+                titleResId = R.string.achievement_voiceartist_title,
+                descResId = R.string.achievement_voiceartist_desc,
                 iconName = "Mic",
             ),
             Achievement(
                 id = "reflexionsmeister",
-                title = "Reflexionsmeister",
-                description = "50 Dashboard-Analysen durchgeführt",
+                titleResId = R.string.achievement_reflectionmaster_title,
+                descResId = R.string.achievement_reflectionmaster_desc,
                 iconName = "Psychology",
             ),
         )
@@ -141,6 +143,8 @@ class AchievementTracker @Inject constructor(
 
     fun getUnlockedCount(): Int = ALL_ACHIEVEMENTS.count { isUnlocked(it.id) }
 
-    fun getTitle(id: String): String =
-        ALL_ACHIEVEMENTS.firstOrNull { it.id == id }?.title ?: id
+    fun getTitle(context: Context, id: String): String =
+        ALL_ACHIEVEMENTS.firstOrNull { it.id == id }
+            ?.let { context.getString(it.titleResId) }
+            ?: id
 }

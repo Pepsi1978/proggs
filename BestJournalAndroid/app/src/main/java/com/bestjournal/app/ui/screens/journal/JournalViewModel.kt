@@ -179,14 +179,14 @@ constructor(
             )
 
         // Load today's writing prompt
-        val todaysPrompt = DailyPromptProvider.getTodaysPrompt()
+        val todaysPrompt = DailyPromptProvider.getTodaysPrompt(context)
         val promptDismissedDate = encryptedPrefs.getString(Constants.PREF_PROMPT_DISMISSED_DATE, "")
         val todayStr = java.time.LocalDate.now().toString()
         val isPromptDismissed = promptDismissedDate == todayStr
         _uiState.value =
             _uiState.value.copy(
                 dailyPromptText = todaysPrompt.text,
-                dailyPromptCategory = todaysPrompt.category.displayName,
+                dailyPromptCategory = context.getString(todaysPrompt.category.displayNameResId),
                 dailyPromptId = todaysPrompt.id,
                 isPremiumUser =
                     billingManager.subscriptionState.value is SubscriptionState.Subscribed,
@@ -581,7 +581,7 @@ constructor(
                     )
                     val newlyUnlocked = achievementTracker.checkAchievements(stats)
                     if (newlyUnlocked.isNotEmpty()) {
-                        val title = achievementTracker.getTitle(newlyUnlocked.first())
+                        val title = achievementTracker.getTitle(context, newlyUnlocked.first())
                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                             _achievementUnlocked.value = title
                         }
