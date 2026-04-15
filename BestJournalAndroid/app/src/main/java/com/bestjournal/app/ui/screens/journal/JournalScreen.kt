@@ -89,6 +89,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.bestjournal.app.R
 import com.bestjournal.app.util.rememberHapticAction
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -218,7 +220,7 @@ fun JournalScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Tagebuch",
+                            text = stringResource(R.string.nav_journal),
                             style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
@@ -247,7 +249,7 @@ fun JournalScreen(
                                             SyncStatus.DOWNLOADING -> Icons.Filled.CloudDownload
                                             else -> Icons.Rounded.CloudDone
                                         },
-                                    contentDescription = "Sync-Status",
+                                    contentDescription = stringResource(R.string.cd_sync_status),
                                     tint =
                                         when (uiState.syncStatus) {
                                             SyncStatus.NOT_SIGNED_IN -> NeonAmber
@@ -290,13 +292,13 @@ fun JournalScreen(
                             ) {
                                 Icon(
                                     Icons.Rounded.Search,
-                                    "Suchen",
+                                    stringResource(R.string.journal_search),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp),
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    "Suche",
+                                    stringResource(R.string.journal_search_hint),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -329,7 +331,7 @@ fun JournalScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.LocalFireDepartment,
-                                contentDescription = "Tage in Folge",
+                                contentDescription = stringResource(R.string.journal_cd_streak),
                                 tint = streakColor,
                                 modifier = Modifier.size(16.dp),
                             )
@@ -364,13 +366,13 @@ fun JournalScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            "Noch keine Eintr\u00e4ge",
+                            stringResource(R.string.journal_no_entries),
                             style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.outline,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "Tippe auf das Mikrofon um zu starten",
+                            stringResource(R.string.journal_tap_mic_to_start),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.outline,
                             textAlign = TextAlign.Center,
@@ -391,7 +393,7 @@ fun JournalScreen(
                         onValueChange = { viewModel.setSearchQuery(it) },
                         placeholder = {
                             Text(
-                                "Einträge durchsuchen...",
+                                stringResource(R.string.journal_search_placeholder),
                                 color = MaterialTheme.colorScheme.outline,
                             )
                         },
@@ -415,7 +417,7 @@ fun JournalScreen(
                             IconButton(onClick = { viewModel.toggleSearch() }) {
                                 Icon(
                                     Icons.Rounded.Close,
-                                    "Suche schließen",
+                                    stringResource(R.string.journal_search_close),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -533,7 +535,7 @@ fun JournalScreen(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Edit,
-                    contentDescription = "Text eingeben",
+                    contentDescription = stringResource(R.string.journal_cd_text_input),
                     modifier = Modifier.size(28.dp),
                 )
             }
@@ -614,7 +616,7 @@ fun JournalScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                "Achievement freigeschaltet!",
+                                stringResource(R.string.journal_achievement_unlocked),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(alpha = 0.8f),
                             )
@@ -658,7 +660,7 @@ fun JournalScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                "Nicht bei Google angemeldet",
+                                stringResource(R.string.journal_drive_not_signed_in),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
@@ -672,7 +674,7 @@ fun JournalScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                "Backup aktuell, alle Eintr\u00e4ge gesichert",
+                                stringResource(R.string.journal_drive_backup_current),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
@@ -686,7 +688,7 @@ fun JournalScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                "Backup wird hochgeladen\u2026",
+                                stringResource(R.string.journal_drive_uploading),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
@@ -700,7 +702,7 @@ fun JournalScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                "Fotos/Videos werden heruntergeladen\u2026",
+                                stringResource(R.string.journal_drive_downloading),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
@@ -714,7 +716,7 @@ fun JournalScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                "Backup fehlgeschlagen!",
+                                stringResource(R.string.journal_drive_failed),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
@@ -724,7 +726,7 @@ fun JournalScreen(
                                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                             )
                             Text(
-                                "Letzte Synchronisierung: ${DTFormatter.formatFull(uiState.lastSyncTimestamp)}",
+                                stringResource(R.string.journal_drive_last_sync, DTFormatter.formatFull(uiState.lastSyncTimestamp)),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodySmall,
                             )
@@ -840,14 +842,14 @@ private fun PreviewDialog(
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     Text(
-                        if (hasPrompt) "Schreibimpuls" else "Neuer Eintrag",
+                        if (hasPrompt) stringResource(R.string.journal_new_entry_prompt) else stringResource(R.string.journal_new_entry),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (improvedText != null) {
                         Text(
-                            text = if (showingImproved) "Verbessert" else "Original",
+                            text = if (showingImproved) stringResource(R.string.label_improved) else stringResource(R.string.label_original),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -896,8 +898,7 @@ private fun PreviewDialog(
                             )
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                text =
-                                    "Lass deine Gedanken frei flie\u00dfen. Es gibt kein richtig oder falsch.",
+                                text = stringResource(R.string.journal_freeflow_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -928,13 +929,13 @@ private fun PreviewDialog(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.Edit,
-                                        contentDescription = "Schreiben",
+                                        contentDescription = stringResource(R.string.journal_write),
                                         modifier = Modifier.size(24.dp),
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    "Schreiben",
+                                    stringResource(R.string.journal_write),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -967,13 +968,13 @@ private fun PreviewDialog(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.Mic,
-                                        contentDescription = "Einsprechen",
+                                        contentDescription = stringResource(R.string.journal_speak),
                                         modifier = Modifier.size(24.dp),
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    "Einsprechen",
+                                    stringResource(R.string.journal_speak),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -987,7 +988,7 @@ private fun PreviewDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                "Deine Antwort:",
+                                stringResource(R.string.journal_your_answer),
                                 style =
                                     MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = FontWeight.Medium
@@ -1006,13 +1007,13 @@ private fun PreviewDialog(
                                 ) {
                                     Icon(
                                         Icons.Rounded.Mic,
-                                        "Einsprechen",
+                                        stringResource(R.string.journal_speak),
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(16.dp),
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        "Einsprechen",
+                                        stringResource(R.string.journal_speak),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.primary,
                                     )
@@ -1053,8 +1054,8 @@ private fun PreviewDialog(
                             ),
                         placeholder = {
                             Text(
-                                if (hasPrompt) "Schreibe hier deine Gedanken\u2026"
-                                else "Tippe hier, um den Text zu bearbeiten...",
+                                if (hasPrompt) stringResource(R.string.journal_placeholder_prompt)
+                                else stringResource(R.string.journal_placeholder_edit),
                                 color = MaterialTheme.colorScheme.outline,
                             )
                         },
@@ -1063,7 +1064,7 @@ private fun PreviewDialog(
                     if (transcriptionModel.isNotBlank()) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Transkribiert mit $transcriptionModel",
+                            text = stringResource(R.string.journal_transcribed_with, transcriptionModel),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline,
                         )
@@ -1140,7 +1141,7 @@ private fun PreviewDialog(
                                     }
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "Beeindruckend, oder?",
+                                            text = stringResource(R.string.journal_text_upsell_title),
                                             style =
                                                 MaterialTheme.typography.labelLarge.copy(
                                                     fontWeight = FontWeight.Bold
@@ -1149,8 +1150,7 @@ private fun PreviewDialog(
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text =
-                                                "Mit Premium kannst du jeden Eintrag verbessern.",
+                                            text = stringResource(R.string.journal_text_upsell_body),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -1167,7 +1167,7 @@ private fun PreviewDialog(
                                                 modifier = Modifier.clickable { onUpsellDismiss() },
                                             )
                                             Text(
-                                                text = "Premium entdecken \u2192",
+                                                text = stringResource(R.string.journal_discover_premium),
                                                 style =
                                                     MaterialTheme.typography.labelMedium.copy(
                                                         fontWeight = FontWeight.Bold
@@ -1231,7 +1231,7 @@ private fun PreviewDialog(
                                 contentColor = MaterialTheme.colorScheme.onPrimary,
                             ),
                     ) {
-                        Text(if (showingImproved) "Verbessert speichern" else "Speichern")
+                        Text(if (showingImproved) stringResource(R.string.journal_save_improved) else stringResource(R.string.journal_save))
                     }
                 }
             }
@@ -1244,7 +1244,7 @@ private fun PreviewDialog(
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     ),
             ) {
-                Text(if (displayText.isBlank()) "Abbrechen" else "Verwerfen")
+                Text(if (displayText.isBlank()) stringResource(R.string.action_cancel) else stringResource(R.string.action_discard))
             }
         },
     )
@@ -1270,28 +1270,23 @@ private fun StreakDialog(
     // Emotional headline based on streak length
     val headline =
         when {
-            currentStreak >= 365 -> "Ein ganzes Jahr!"
-            currentStreak >= 180 -> "Unglaubliche Disziplin!"
-            currentStreak >= 90 -> "Du bist unstoppbar!"
-            currentStreak >= 30 -> "Ein ganzer Monat!"
-            currentStreak >= 14 -> "Zwei Wochen stark!"
-            currentStreak >= 7 -> "Eine ganze Woche!"
-            currentStreak >= 3 -> "Du bleibst dran!"
-            else -> "Jeder Tag z\u00e4hlt!"
+            currentStreak >= 365 -> stringResource(R.string.streak_365)
+            currentStreak >= 180 -> stringResource(R.string.streak_180)
+            currentStreak >= 90 -> stringResource(R.string.streak_90)
+            currentStreak >= 30 -> stringResource(R.string.streak_30)
+            currentStreak >= 14 -> stringResource(R.string.streak_14)
+            currentStreak >= 7 -> stringResource(R.string.streak_7)
+            currentStreak >= 3 -> stringResource(R.string.streak_3)
+            else -> stringResource(R.string.streak_default)
         }
 
     val motivationText =
         when {
-            currentStreak >= 30 ->
-                "Was als kleine Gewohnheit begann, ist jetzt ein fester Teil deines Lebens. Dein Tagebuch kennt dich besser als je zuvor."
-            currentStreak >= 14 ->
-                "Zwei Wochen am St\u00fcck, das schaffen die wenigsten. Dein zuk\u00fcnftiges Ich wird dir daf\u00fcr danken."
-            currentStreak >= 7 ->
-                "Eine Woche voller Gedanken, Gef\u00fchle und Erinnerungen. Du baust gerade etwas Wertvolles auf."
-            currentStreak >= 3 ->
-                "Drei Tage in Folge sind der Anfang einer echten Gewohnheit. Bleib dran, es lohnt sich!"
-            else ->
-                "Jeder Eintrag ist ein kleines Geschenk an dein zuk\u00fcnftiges Ich. Schreib morgen wieder!"
+            currentStreak >= 30 -> stringResource(R.string.streak_desc_365)
+            currentStreak >= 14 -> stringResource(R.string.streak_desc_14)
+            currentStreak >= 7 -> stringResource(R.string.streak_desc_7)
+            currentStreak >= 3 -> stringResource(R.string.streak_desc_3)
+            else -> stringResource(R.string.streak_desc_1)
         }
 
     val isDarkTheme = !MaterialTheme.colorScheme.background.luminance().let { it > 0.5f }
@@ -1367,13 +1362,13 @@ private fun StreakDialog(
                     StatColumn(
                         icon = Icons.Rounded.LocalFireDepartment,
                         value = "$currentStreak",
-                        label = "Aktuell",
+                        label = stringResource(R.string.label_current),
                         tint = accentColor,
                     )
                     StatColumn(
                         icon = Icons.Rounded.EmojiEvents,
                         value = "$longestStreak",
-                        label = "Rekord",
+                        label = stringResource(R.string.label_record),
                         tint = NeonAmber,
                     )
                     StatColumn(

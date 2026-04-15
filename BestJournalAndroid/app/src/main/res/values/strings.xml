@@ -74,9 +74,11 @@
     <!-- Streak messages -->
     <string name="streak_365">Ein ganzes Jahr!</string>
     <string name="streak_180">Unglaubliche Disziplin!</string>
+    <string name="streak_90">Du bist unstoppbar!</string>
     <string name="streak_30">Ein ganzer Monat!</string>
     <string name="streak_14">Zwei Wochen stark!</string>
     <string name="streak_7">Eine ganze Woche!</string>
+    <string name="streak_3">Du bleibst dran!</string>
     <string name="streak_default">Jeder Tag zählt!</string>
     <string name="streak_desc_365">Was als kleine Gewohnheit begann, ist jetzt ein fester Teil deines Lebens. Dein Tagebuch kennt dich besser als je zuvor.</string>
     <string name="streak_desc_14">Zwei Wochen am Stück, das schaffen die wenigsten. Dein zukünftiges Ich wird dir dafür danken.</string>

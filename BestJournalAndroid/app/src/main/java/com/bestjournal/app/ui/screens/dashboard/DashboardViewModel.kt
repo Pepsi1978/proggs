@@ -13,7 +13,10 @@ import com.bestjournal.app.domain.usecase.AnalyzeEntropyUseCase
 import com.bestjournal.app.domain.usecase.GenerateAdviceUseCase
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
+import android.content.Context
+import com.bestjournal.app.R
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -46,6 +49,7 @@ data class DashboardUiState(
 class DashboardViewModel
 @Inject
 constructor(
+    @ApplicationContext private val context: Context,
     private val generateAdviceUseCase: GenerateAdviceUseCase,
     private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
     private val adviceRepository: AdviceRepository,
@@ -215,13 +219,13 @@ constructor(
             when (accessResult) {
                 is TieredAccessResult.HardLimitReached -> {
                     _uiState.update {
-                        it.copy(dashboardLimitMessage = "Tageslimit erreicht. Morgen geht es weiter!")
+                        it.copy(dashboardLimitMessage = context.getString(R.string.dashboard_limit_daily))
                     }
                     return@launch
                 }
                 is TieredAccessResult.Cooldown -> {
                     _uiState.update {
-                        it.copy(dashboardLimitMessage = "Kurze Pause: Noch ${accessResult.minutesLeft} Minuten bis zur n\u00e4chsten Analyse.")
+                        it.copy(dashboardLimitMessage = context.getString(R.string.dashboard_limit_cooldown, accessResult.minutesLeft))
                     }
                     return@launch
                 }
@@ -291,7 +295,7 @@ constructor(
                         _uiState.value.copy(
                             isLoading = false,
                             isScenarioSwitch = false,
-                            errorMessage = error.message ?: "Analyse fehlgeschlagen",
+                            errorMessage = error.message ?: context.getString(R.string.dashboard_analysis_failed),
                         )
                 }
         }
@@ -364,6 +368,6 @@ constructor(
         val locale = java.util.Locale.getDefault()
         val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMHHmm")
         val sdf = java.text.SimpleDateFormat(pattern, locale)
-        return "Letzte Aktualisierung am ${sdf.format(java.util.Date(ts))}"
+        return context.getString(R.string.dashboard_last_updated, sdf.format(java.util.Date(ts)))
     }
 }
