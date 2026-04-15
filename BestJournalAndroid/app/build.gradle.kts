@@ -152,6 +152,7 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
+    implementation(libs.coroutines.play.services)
 
     // Firebase AI Logic
     implementation(platform(libs.firebase.bom))

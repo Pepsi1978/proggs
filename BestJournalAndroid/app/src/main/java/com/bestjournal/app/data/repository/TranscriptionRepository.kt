@@ -9,6 +9,7 @@ import com.bestjournal.app.data.remote.groq.GroqApi
 import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.DeviceLocale
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
+import kotlinx.coroutines.tasks.await
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -36,7 +37,7 @@ class TranscriptionRepository @Inject constructor(
         if (isSubscribed || isTrialActive) {
             try {
                 val remoteConfig = FirebaseRemoteConfig.getInstance()
-                remoteConfig.fetchAndActivate()
+                remoteConfig.fetchAndActivate().await()
                 val groqKey = remoteConfig.getString(Constants.REMOTE_CONFIG_GROQ_KEY)
 
                 if (groqKey.isNotBlank()) {
