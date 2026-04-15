@@ -2179,9 +2179,12 @@ fun SettingsScreen(
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             Text(
-                                "(\u2B50 Premium)",
+                                buildAnnotatedString {
+                                    withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) { append("(") }
+                                    withStyle(SpanStyle(color = FeatureAccentOrange)) { append("\u2605 Premium") }
+                                    withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) { append(")") }
+                                },
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = FeatureAccentOrange,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth(),
                             )
