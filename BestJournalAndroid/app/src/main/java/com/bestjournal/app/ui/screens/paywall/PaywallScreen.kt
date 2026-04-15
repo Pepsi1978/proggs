@@ -121,12 +121,10 @@ fun PaywallScreen(
         formatDerivedPrice(displayMonthlyPrice, 0.5)
     }
 
-    // Calculate yearly savings vs monthly
+    // Calculate yearly savings vs monthly (currency-neutral parsing)
     val savingsPercent = remember(displayMonthlyPrice, displayYearlyPrice) {
-        val monthly = displayMonthlyPrice.replace("[^0-9,.]".toRegex(), "")
-            .replace(",", ".").toDoubleOrNull()
-        val yearly = displayYearlyPrice.replace("[^0-9,.]".toRegex(), "")
-            .replace(",", ".").toDoubleOrNull()
+        val monthly = parseLocalizedPrice(displayMonthlyPrice)
+        val yearly = parseLocalizedPrice(displayYearlyPrice)
         if (monthly != null && yearly != null && monthly > 0) {
             ((monthly * 12 - yearly) / (monthly * 12) * 100).toInt()
         } else {
@@ -863,6 +861,26 @@ fun PaywallScreen(
 }
 
 /**
+ * Parses a localized price string from Google Play into a Double.
+ * Correctly handles all decimal/thousands separator styles:
+ * "3,99" (comma decimal), "3.99" (dot decimal), "3,499.00" (thousands+dot),
+ * "1.234,56" (thousands+comma), "580" (no decimals).
+ */
+private fun parseLocalizedPrice(formattedPrice: String): Double? {
+    val numStr = formattedPrice.replace("[^0-9,.]".toRegex(), "")
+    if (numStr.isBlank()) return null
+    val lastComma = numStr.lastIndexOf(',')
+    val lastDot = numStr.lastIndexOf('.')
+    val usesCommaDecimal = lastComma > lastDot && numStr.length - lastComma <= 3
+    val normalized = if (usesCommaDecimal) {
+        numStr.replace(".", "").replace(",", ".")
+    } else {
+        numStr.replace(",", "")
+    }
+    return normalized.toDoubleOrNull()
+}
+
+/**
  * Calculates a derived price (e.g. 50% off, daily equivalent) while preserving
  * the original currency symbol and decimal format from Google Play's formattedPrice.
  * Works with all locales: "3,99 €", "$3.99", "₹329.00", "¥580", "R$ 19,90".
@@ -870,28 +888,17 @@ fun PaywallScreen(
 private fun formatDerivedPrice(originalPrice: String, factor: Double): String {
     if (originalPrice.isBlank()) return ""
 
-    // Extract numeric portion
     val numStr = originalPrice.replace("[^0-9,.]".toRegex(), "")
     if (numStr.isBlank()) return originalPrice
 
-    // Detect if comma is decimal separator (European: last separator with <=2 digits after)
+    val amount = parseLocalizedPrice(originalPrice) ?: return originalPrice
+    val newAmount = amount * factor
+
     val lastComma = numStr.lastIndexOf(',')
     val lastDot = numStr.lastIndexOf('.')
     val usesCommaDecimal = lastComma > lastDot && numStr.length - lastComma <= 3
-
-    // Normalize to parseable double
-    val normalized = if (usesCommaDecimal) {
-        numStr.replace(".", "").replace(",", ".")
-    } else {
-        numStr.replace(",", "")
-    }
-    val amount = normalized.toDoubleOrNull() ?: return originalPrice
-    val newAmount = amount * factor
-
-    // Detect if original has decimal places
     val hasDecimals = (usesCommaDecimal && lastComma >= 0) || (!usesCommaDecimal && lastDot >= 0)
 
-    // Format with same decimal style
     val formatted = if (hasDecimals) {
         val f = String.format("%.2f", newAmount)
         if (usesCommaDecimal) f.replace(".", ",") else f
@@ -899,6 +906,5 @@ private fun formatDerivedPrice(originalPrice: String, factor: Double): String {
         newAmount.toInt().toString()
     }
 
-    // Replace the numeric part in the original string, keeping currency symbol in place
     return originalPrice.replaceFirst(Regex("[0-9][0-9.,]*[0-9]|[0-9]+"), formatted)
 }
