@@ -1098,7 +1098,7 @@ fun SettingsScreen(
                                     viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS)
                                 }) {
                                     TextField(
-                                        value = (if (selectedVoice.id in favorites) "\u2605 " else "") + selectedVoice.name,
+                                        value = selectedVoice.name + (if (selectedVoice.id in favorites) " \u2605" else ""),
                                         onValueChange = {},
                                         readOnly = true,
                                         enabled = false,
@@ -1119,8 +1119,8 @@ fun SettingsScreen(
                                                     onClick = { viewModel.updateElevenLabsVoiceId(voice.id); viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS); voiceExpanded = false },
                                                 ).padding(horizontal = 16.dp, vertical = 12.dp),
                                             ) {
-                                                if (voice.id in favorites) { Text("\u2605 ", color = Color(0xFFFFB300), fontSize = 14.sp) }
-                                                Text(voice.name, color = if (voice.id == selectedVoiceId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                                                Text(voice.name, color = if (voice.id == selectedVoiceId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                                                if (voice.id in favorites) { Text("\u2605", color = Color(0xFFFFB300), fontSize = 16.sp) }
                                             }
                                         }
                                     }
@@ -1170,7 +1170,7 @@ fun SettingsScreen(
                                     viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE)
                                 }) {
                                     TextField(
-                                        value = (if (selectedGoogleVoice.id in favorites) "\u2605 " else "") + selectedGoogleVoice.name,
+                                        value = selectedGoogleVoice.name + (if (selectedGoogleVoice.id in favorites) " \u2605" else ""),
                                         onValueChange = {},
                                         readOnly = true,
                                         enabled = false,
@@ -1191,8 +1191,8 @@ fun SettingsScreen(
                                                     onClick = { viewModel.updateGoogleTtsVoice(voice.id); viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE); googleVoiceExpanded = false },
                                                 ).padding(horizontal = 16.dp, vertical = 12.dp),
                                             ) {
-                                                if (voice.id in favorites) { Text("\u2605 ", color = Color(0xFFFFB300), fontSize = 14.sp) }
-                                                Text(voice.name, color = if (voice.id == selectedGoogleVoiceId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                                                Text(voice.name, color = if (voice.id == selectedGoogleVoiceId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                                                if (voice.id in favorites) { Text("\u2605", color = Color(0xFFFFB300), fontSize = 16.sp) }
                                             }
                                         }
                                     }
@@ -1238,7 +1238,7 @@ fun SettingsScreen(
                                 viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE)
                             }) {
                                 TextField(
-                                    value = (if (selectedEdgeVoice.id in favorites) "\u2605 " else "") + selectedEdgeVoice.name,
+                                    value = selectedEdgeVoice.name + (if (selectedEdgeVoice.id in favorites) " \u2605" else ""),
                                     onValueChange = {},
                                     readOnly = true,
                                     enabled = false,
@@ -1259,8 +1259,8 @@ fun SettingsScreen(
                                                 onClick = { viewModel.updateEdgeTtsVoice(voice.id); viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE); edgeVoiceExpanded = false },
                                             ).padding(horizontal = 16.dp, vertical = 12.dp),
                                         ) {
-                                            if (voice.id in favorites) { Text("\u2605 ", color = Color(0xFFFFB300), fontSize = 14.sp) }
-                                            Text(voice.name, color = if (voice.id == selectedEdgeVoiceId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                                            Text(voice.name, color = if (voice.id == selectedEdgeVoiceId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                                            if (voice.id in favorites) { Text("\u2605", color = Color(0xFFFFB300), fontSize = 16.sp) }
                                         }
                                     }
                                 }
