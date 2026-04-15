@@ -145,8 +145,6 @@ object TtsVoiceRegistry {
             st("de-DE-KillianNeural", "Killian", M),
             st("de-DE-ConradNeural", "Conrad", M),
             st("de-DE-AmalaNeural", "Amala", F),
-            st("de-DE-ElkeNeural", "Elke", F),
-            st("de-DE-BerndNeural", "Bernd", M),
         )),
         "de-AT" to LocaleVoices("de-AT", "de-AT-IngridNeural", listOf(
             st("de-AT-IngridNeural", "Ingrid", F),
@@ -166,9 +164,6 @@ object TtsVoiceRegistry {
             st("en-US-JennyNeural", "Jenny", F),
             st("en-US-GuyNeural", "Guy", M),
             st("en-US-AriaNeural", "Aria", F),
-            st("en-US-DavisNeural", "Davis", M),
-            st("en-US-SaraNeural", "Sara", F),
-            st("en-US-JasonNeural", "Jason", M),
         )),
         "en-GB" to LocaleVoices("en-GB", "en-GB-AdaMultilingualNeural", listOf(
             ml("en-GB-AdaMultilingualNeural", "Ada", F),
@@ -181,13 +176,10 @@ object TtsVoiceRegistry {
             ml("en-AU-WilliamMultilingualNeural", "William", M),
             st("en-AU-NatashaNeural", "Natasha", F),
             st("en-AU-WilliamNeural", "William", M),
-            st("en-AU-FreyaNeural", "Freya", F),
         )),
         "en-IN" to LocaleVoices("en-IN", "en-IN-NeerjaNeural", listOf(
             st("en-IN-NeerjaNeural", "Neerja", F),
             st("en-IN-PrabhatNeural", "Prabhat", M),
-            st("en-IN-AnanyaNeural", "Ananya", F),
-            st("en-IN-ArjunNeural", "Arjun", M),
         )),
 
         // ── Spanish ──
@@ -201,8 +193,6 @@ object TtsVoiceRegistry {
         "es-MX" to LocaleVoices("es-MX", "es-MX-DaliaMultilingualNeural", listOf(
             ml("es-MX-DaliaMultilingualNeural", "Dalia", F),
             ml("es-MX-JorgeMultilingualNeural", "Jorge", M),
-            st("es-MX-BeatrizNeural", "Beatriz", F),
-            st("es-MX-CecilioNeural", "Cecilio", M),
         )),
         "es-AR" to LocaleVoices("es-AR", "es-AR-ElenaNeural", listOf(
             st("es-AR-ElenaNeural", "Elena", F),
@@ -267,8 +257,6 @@ object TtsVoiceRegistry {
             ml("ja-JP-MasaruMultilingualNeural", "Masaru", M),
             st("ja-JP-NanamiNeural", "Nanami", F),
             st("ja-JP-KeitaNeural", "Keita", M),
-            st("ja-JP-AoiNeural", "Aoi", F),
-            st("ja-JP-ShioriNeural", "Shiori", F),
         )),
 
         // ── Korean ──
@@ -276,15 +264,12 @@ object TtsVoiceRegistry {
             ml("ko-KR-HyunsuMultilingualNeural", "Hyunsu", M),
             st("ko-KR-SunHiNeural", "SunHi", F),
             st("ko-KR-InJoonNeural", "InJoon", M),
-            st("ko-KR-JiMinNeural", "JiMin", F),
         )),
 
         // ── Hindi ──
         "hi-IN" to LocaleVoices("hi-IN", "hi-IN-SwaraNeural", listOf(
             st("hi-IN-SwaraNeural", "Swara", F),
             st("hi-IN-MadhurNeural", "Madhur", M),
-            st("hi-IN-AnanyaNeural", "Ananya", F),
-            st("hi-IN-ArjunNeural", "Arjun", M),
         )),
 
         // ── Arabic ──
@@ -301,7 +286,6 @@ object TtsVoiceRegistry {
         "ru-RU" to LocaleVoices("ru-RU", "ru-RU-SvetlanaNeural", listOf(
             st("ru-RU-SvetlanaNeural", "Svetlana", F),
             st("ru-RU-DmitryNeural", "Dmitry", M),
-            st("ru-RU-DariyaNeural", "Dariya", F),
         )),
 
         // ── Turkish ──
@@ -311,8 +295,7 @@ object TtsVoiceRegistry {
         )),
 
         // ── Polish ──
-        "pl-PL" to LocaleVoices("pl-PL", "pl-PL-AgnieszkaNeural", listOf(
-            st("pl-PL-AgnieszkaNeural", "Agnieszka", F),
+        "pl-PL" to LocaleVoices("pl-PL", "pl-PL-ZofiaNeural", listOf(
             st("pl-PL-MarekNeural", "Marek", M),
             st("pl-PL-ZofiaNeural", "Zofia", F),
         )),
@@ -343,9 +326,9 @@ object TtsVoiceRegistry {
         )),
 
         // ── Finnish ──
-        "fi-FI" to LocaleVoices("fi-FI", "fi-FI-SelmaNeural", listOf(
-            st("fi-FI-SelmaNeural", "Selma", F),
+        "fi-FI" to LocaleVoices("fi-FI", "fi-FI-HarriNeural", listOf(
             st("fi-FI-HarriNeural", "Harri", M),
+            st("fi-FI-NooraNeural", "Noora", F),
         )),
 
         // ── Thai ──
