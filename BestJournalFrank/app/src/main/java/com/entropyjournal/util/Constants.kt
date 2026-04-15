@@ -62,6 +62,7 @@ object Constants {
     const val PREF_TTS_PROVIDER = "tts_provider"
     const val TTS_PROVIDER_EDGE = "edge_tts"
     const val TTS_PROVIDER_ELEVENLABS = "elevenlabs"
+    const val TTS_PROVIDER_GOOGLE = "google_cloud"
 
     // Edge TTS voices
     const val PREF_EDGE_TTS_VOICE = "edge_tts_voice"
@@ -83,6 +84,50 @@ object Constants {
             EdgeTtsVoice("de-DE-KillianNeural", "Killian \u2014 m\u00e4nnlich, warm"),
             EdgeTtsVoice("de-DE-ConradNeural", "Conrad \u2014 m\u00e4nnlich, klar"),
             EdgeTtsVoice("de-DE-AmalaNeural", "Amala \u2014 weiblich, jung"),
+        )
+
+    // Google Cloud TTS (Chirp 3 HD)
+    const val GOOGLE_TTS_BASE_URL = "https://texttospeech.googleapis.com/v1/text:synthesize"
+    const val PREF_GOOGLE_TTS_API_KEY = "google_tts_api_key"
+    const val PREF_GOOGLE_TTS_VOICE = "google_tts_voice"
+    const val DEFAULT_GOOGLE_TTS_VOICE = "de-DE-Chirp3-HD-Kore"
+
+    data class GoogleTtsVoice(val id: String, val name: String)
+
+    val GOOGLE_TTS_VOICES =
+        listOf(
+            // Female voices
+            GoogleTtsVoice("de-DE-Chirp3-HD-Achernar", "Achernar \u2014 weiblich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Aoede", "Aoede \u2014 weiblich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Autonoe", "Autonoe \u2014 weiblich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Callirrhoe", "Callirrhoe \u2014 weiblich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Despina", "Despina \u2014 weiblich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Erinome", "Erinome \u2014 weiblich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Gacrux", "Gacrux \u2014 weiblich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Kore", "Kore \u2014 weiblich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Laomedeia", "Laomedeia \u2014 weiblich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Leda", "Leda \u2014 weiblich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Pulcherrima", "Pulcherrima \u2014 weiblich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Sulafat", "Sulafat \u2014 weiblich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Vindemiatrix", "Vindemiatrix \u2014 weiblich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Zephyr", "Zephyr \u2014 weiblich"),
+            // Male voices
+            GoogleTtsVoice("de-DE-Chirp3-HD-Achird", "Achird \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Algenib", "Algenib \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Algieba", "Algieba \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Alnilam", "Alnilam \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Charon", "Charon \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Enceladus", "Enceladus \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Fenrir", "Fenrir \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Iapetus", "Iapetus \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Orus", "Orus \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Puck", "Puck \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Rasalgethi", "Rasalgethi \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Sadachbia", "Sadachbia \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Sadaltager", "Sadaltager \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Schedar", "Schedar \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Umbriel", "Umbriel \u2014 m\u00e4nnlich"),
+            GoogleTtsVoice("de-DE-Chirp3-HD-Zubenelgenubi", "Zubenelgenubi \u2014 m\u00e4nnlich"),
         )
 
     // ElevenLabs TTS

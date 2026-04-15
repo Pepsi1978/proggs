@@ -1064,6 +1064,115 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
+                        // -- Google Cloud TTS option --
+                        val googleKey = uiState.googleTtsApiKey
+                        val googleAvailable = googleKey.isNotBlank()
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (currentProvider == Constants.TTS_PROVIDER_GOOGLE)
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                    else Color.Transparent,
+                                )
+                                .clickable(enabled = googleAvailable) {
+                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE)
+                                }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = currentProvider == Constants.TTS_PROVIDER_GOOGLE,
+                                onClick = {
+                                    if (googleAvailable) {
+                                        viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE)
+                                    }
+                                },
+                                enabled = googleAvailable,
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Google Chirp 3 HD",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = if (googleAvailable) MaterialTheme.colorScheme.onSurface
+                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                )
+                                Text(
+                                    if (googleAvailable) "Sehr hohe Qualit\u00e4t \u2022 Cloud \u2022 1M Zeichen/Monat gratis"
+                                        else "API-Schl\u00fcssel erforderlich",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+
+                        // Google TTS voice picker (only when Google is selected)
+                        if (currentProvider == Constants.TTS_PROVIDER_GOOGLE && googleAvailable) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val googleVoices = Constants.GOOGLE_TTS_VOICES
+                            val selectedGoogleVoiceId = uiState.googleTtsVoice
+                            val selectedGoogleVoice = googleVoices.find { it.id == selectedGoogleVoiceId } ?: googleVoices.first()
+                            var googleVoiceExpanded by remember { mutableStateOf(false) }
+
+                            ExposedDropdownMenuBox(
+                                expanded = googleVoiceExpanded,
+                                onExpandedChange = { googleVoiceExpanded = it },
+                                modifier = Modifier.padding(start = 48.dp),
+                            ) {
+                                TextField(
+                                    value = selectedGoogleVoice.name,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    trailingIcon = {
+                                        Icon(Icons.Rounded.KeyboardArrowDown, "Stimme w\u00e4hlen")
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                    ),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = googleVoiceExpanded,
+                                    onDismissRequest = { googleVoiceExpanded = false },
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                ) {
+                                    googleVoices.forEach { voice ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    voice.name,
+                                                    color = if (voice.id == selectedGoogleVoiceId)
+                                                        MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.onSurface,
+                                                )
+                                            },
+                                            onClick = {
+                                                viewModel.updateGoogleTtsVoice(voice.id)
+                                                googleVoiceExpanded = false
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
                         // -- Edge TTS option --
                         val edgeVoices = Constants.EDGE_TTS_VOICES
                         val selectedEdgeVoiceId = uiState.edgeTtsVoice
@@ -2061,6 +2170,13 @@ fun SettingsScreen(
                             onValueChange = { viewModel.updateElevenLabsApiKey(it) },
                             requireBiometric = uiState.biometricLock,
                         )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        ApiKeyField(
+                            label = "Google Cloud TTS API-Key",
+                            value = uiState.googleTtsApiKey,
+                            onValueChange = { viewModel.updateGoogleTtsApiKey(it) },
+                            requireBiometric = uiState.biometricLock,
+                        )
                     }
                 }
 
@@ -2261,7 +2377,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal V0.6.2",
+                            "Entropy Journal V0.7.0",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

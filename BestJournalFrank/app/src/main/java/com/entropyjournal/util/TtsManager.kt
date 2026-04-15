@@ -7,12 +7,13 @@ import android.util.Log
 /**
  * Unified TTS manager: uses the user-selected TTS provider exclusively.
  * No fallback between providers — the selected one is the only one used.
- * Provider selection: ElevenLabs (cloud) or Edge TTS (cloud free).
+ * Providers: ElevenLabs (cloud), Google Cloud Chirp 3 HD (cloud), Edge TTS (cloud free).
  */
 class TtsManager(private val context: Context) {
 
     private val edgeTtsPlayer = EdgeTtsPlayer(context)
     private val elevenLabsPlayer = ElevenLabsTtsPlayer(context)
+    private val googleCloudTtsPlayer = GoogleCloudTtsPlayer(context)
 
     companion object {
         private const val TAG = "TtsManager"
@@ -50,6 +51,13 @@ class TtsManager(private val context: Context) {
         prefs?.getString(Constants.PREF_EDGE_TTS_VOICE, Constants.DEFAULT_EDGE_TTS_VOICE)
             ?: Constants.DEFAULT_EDGE_TTS_VOICE
 
+    private fun getGoogleTtsKey(): String =
+        prefs?.getString(Constants.PREF_GOOGLE_TTS_API_KEY, "") ?: ""
+
+    private fun getGoogleTtsVoice(): String =
+        prefs?.getString(Constants.PREF_GOOGLE_TTS_VOICE, Constants.DEFAULT_GOOGLE_TTS_VOICE)
+            ?: Constants.DEFAULT_GOOGLE_TTS_VOICE
+
     /**
      * Speaks text using the user-selected TTS provider.
      */
@@ -80,6 +88,27 @@ class TtsManager(private val context: Context) {
                     onComplete()
                 }
             }
+            Constants.TTS_PROVIDER_GOOGLE -> {
+                val key = getGoogleTtsKey()
+                val voice = getGoogleTtsVoice()
+                if (key.isNotBlank()) {
+                    Log.d(TAG, "Using Google Cloud TTS voice: $voice")
+                    googleCloudTtsPlayer.speak(
+                        text = text,
+                        apiKey = key,
+                        voiceName = voice,
+                        onPlaybackStart = onPlaybackStart,
+                        onComplete = onComplete,
+                        onError = { e ->
+                            Log.e(TAG, "Google Cloud TTS error: ${e.message}")
+                            onComplete()
+                        },
+                    )
+                } else {
+                    Log.w(TAG, "Google Cloud TTS selected but not configured")
+                    onComplete()
+                }
+            }
             else -> {
                 val voice = getEdgeTtsVoice()
                 Log.d(TAG, "Using Edge TTS voice: $voice")
@@ -96,10 +125,12 @@ class TtsManager(private val context: Context) {
     fun stop() {
         elevenLabsPlayer.stop()
         edgeTtsPlayer.stop()
+        googleCloudTtsPlayer.stop()
     }
 
     fun shutdown() {
         elevenLabsPlayer.shutdown()
         edgeTtsPlayer.shutdown()
+        googleCloudTtsPlayer.shutdown()
     }
 }
