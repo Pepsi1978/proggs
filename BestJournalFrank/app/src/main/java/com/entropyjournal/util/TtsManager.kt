@@ -46,6 +46,10 @@ class TtsManager(private val context: Context) {
     private fun getElevenLabsVoiceId(): String =
         prefs?.getString(Constants.PREF_ELEVENLABS_VOICE_ID, "") ?: ""
 
+    private fun getEdgeTtsVoice(): String =
+        prefs?.getString(Constants.PREF_EDGE_TTS_VOICE, Constants.DEFAULT_EDGE_TTS_VOICE)
+            ?: Constants.DEFAULT_EDGE_TTS_VOICE
+
     /**
      * Speaks text using the user-selected TTS provider.
      */
@@ -77,9 +81,11 @@ class TtsManager(private val context: Context) {
                 }
             }
             else -> {
-                Log.d(TAG, "Using Edge TTS")
+                val voice = getEdgeTtsVoice()
+                Log.d(TAG, "Using Edge TTS voice: $voice")
                 edgeTtsPlayer.speak(
                     text = text,
+                    voice = voice,
                     onPlaybackStart = onPlaybackStart,
                     onComplete = onComplete,
                 )

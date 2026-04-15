@@ -1065,6 +1065,10 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(4.dp))
 
                         // -- Edge TTS option --
+                        val edgeVoices = Constants.EDGE_TTS_VOICES
+                        val selectedEdgeVoiceId = uiState.edgeTtsVoice
+                        val selectedEdgeVoice = edgeVoices.find { it.id == selectedEdgeVoiceId } ?: edgeVoices.first()
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1092,15 +1096,71 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Katja (Edge TTS)",
+                                    "Edge TTS",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    "Standard \u2022 Cloud \u2022 Deutsch \u2022 Kostenlos",
+                                    "Cloud \u2022 Deutsch \u2022 Kostenlos \u2022 Kein Limit",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
+                            }
+                        }
+
+                        // Edge TTS voice picker (only when Edge TTS is selected)
+                        if (currentProvider == Constants.TTS_PROVIDER_EDGE) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            var edgeVoiceExpanded by remember { mutableStateOf(false) }
+
+                            ExposedDropdownMenuBox(
+                                expanded = edgeVoiceExpanded,
+                                onExpandedChange = { edgeVoiceExpanded = it },
+                                modifier = Modifier.padding(start = 48.dp),
+                            ) {
+                                TextField(
+                                    value = selectedEdgeVoice.name,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    trailingIcon = {
+                                        Icon(Icons.Rounded.KeyboardArrowDown, "Stimme w\u00e4hlen")
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                    ),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = edgeVoiceExpanded,
+                                    onDismissRequest = { edgeVoiceExpanded = false },
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                ) {
+                                    edgeVoices.forEach { voice ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    voice.name,
+                                                    color = if (voice.id == selectedEdgeVoiceId)
+                                                        MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.onSurface,
+                                                )
+                                            },
+                                            onClick = {
+                                                viewModel.updateEdgeTtsVoice(voice.id)
+                                                edgeVoiceExpanded = false
+                                            },
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -2201,7 +2261,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal V0.6.1",
+                            "Entropy Journal V0.6.2",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

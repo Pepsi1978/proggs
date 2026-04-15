@@ -30,6 +30,7 @@ data class SettingsUiState(
     val elevenLabsApiKey: String = "",
     val elevenLabsVoiceId: String = "",
     val ttsProvider: String = Constants.TTS_PROVIDER_EDGE,
+    val edgeTtsVoice: String = Constants.DEFAULT_EDGE_TTS_VOICE,
     val selectedModel: String = Constants.DEFAULT_GEMINI_MODEL,
     val textImprovementDefault: Boolean = false,
     val maxRecordingDuration: Int = 5,
@@ -151,6 +152,7 @@ constructor(
                 elevenLabsApiKey = encryptedPrefs.getString(Constants.PREF_ELEVENLABS_API_KEY, "") ?: "",
                 elevenLabsVoiceId = encryptedPrefs.getString(Constants.PREF_ELEVENLABS_VOICE_ID, "") ?: "",
                 ttsProvider = encryptedPrefs.getString(Constants.PREF_TTS_PROVIDER, Constants.TTS_PROVIDER_EDGE) ?: Constants.TTS_PROVIDER_EDGE,
+                edgeTtsVoice = encryptedPrefs.getString(Constants.PREF_EDGE_TTS_VOICE, Constants.DEFAULT_EDGE_TTS_VOICE) ?: Constants.DEFAULT_EDGE_TTS_VOICE,
                 selectedModel =
                     encryptedPrefs.getString(
                         Constants.PREF_GEMINI_MODEL,
@@ -254,6 +256,11 @@ constructor(
     fun updateTtsProvider(provider: String) {
         encryptedPrefs.edit().putString(Constants.PREF_TTS_PROVIDER, provider).apply()
         _uiState.value = _uiState.value.copy(ttsProvider = provider)
+    }
+
+    fun updateEdgeTtsVoice(voice: String) {
+        encryptedPrefs.edit().putString(Constants.PREF_EDGE_TTS_VOICE, voice).apply()
+        _uiState.value = _uiState.value.copy(edgeTtsVoice = voice)
     }
 
     fun updateTextImprovementDefault(enabled: Boolean) {
@@ -515,6 +522,7 @@ constructor(
             val elevenLabsKey = encryptedPrefs.getString(Constants.PREF_ELEVENLABS_API_KEY, "") ?: ""
             val elevenLabsVoice = encryptedPrefs.getString(Constants.PREF_ELEVENLABS_VOICE_ID, "") ?: ""
             val ttsProvider = encryptedPrefs.getString(Constants.PREF_TTS_PROVIDER, Constants.TTS_PROVIDER_EDGE) ?: Constants.TTS_PROVIDER_EDGE
+            val edgeTtsVoice = encryptedPrefs.getString(Constants.PREF_EDGE_TTS_VOICE, Constants.DEFAULT_EDGE_TTS_VOICE) ?: Constants.DEFAULT_EDGE_TTS_VOICE
             val selectedModel =
                 encryptedPrefs.getString(
                     Constants.PREF_GEMINI_MODEL,
@@ -532,6 +540,7 @@ constructor(
                 .putString(Constants.PREF_ELEVENLABS_API_KEY, elevenLabsKey)
                 .putString(Constants.PREF_ELEVENLABS_VOICE_ID, elevenLabsVoice)
                 .putString(Constants.PREF_TTS_PROVIDER, ttsProvider)
+                .putString(Constants.PREF_EDGE_TTS_VOICE, edgeTtsVoice)
                 .putString(Constants.PREF_GEMINI_MODEL, selectedModel)
                 .putBoolean(Constants.PREF_DARK_THEME, isDark)
                 .putBoolean(Constants.PREF_BIOMETRIC_LOCK, biometricLock)

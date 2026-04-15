@@ -43,7 +43,12 @@ class EdgeTtsPlayer(private val context: Context) {
         fun generateMuid(): String = UUID.randomUUID().toString().replace("-", "").uppercase()
     }
 
-    fun speak(text: String, onPlaybackStart: (() -> Unit)? = null, onComplete: () -> Unit) {
+    fun speak(
+        text: String,
+        voice: String = Constants.DEFAULT_EDGE_TTS_VOICE,
+        onPlaybackStart: (() -> Unit)? = null,
+        onComplete: () -> Unit,
+    ) {
         stop()
         onDone = onComplete
         onPlayStart = onPlaybackStart
@@ -97,7 +102,7 @@ class EdgeTtsPlayer(private val context: Context) {
                                 "Content-Type:application/ssml+xml\r\n" +
                                 "Path:ssml\r\n\r\n" +
                                 "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='de-DE'>" +
-                                "<voice name='de-DE-KatjaNeural'>$escaped</voice>" +
+                                "<voice name='$voice'>$escaped</voice>" +
                                 "</speak>"
                         webSocket.send(ssml)
                     }
