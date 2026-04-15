@@ -1,0 +1,381 @@
+package com.bestjournal.app.util
+
+import java.util.Locale
+
+/**
+ * Complete Edge TTS voice registry for international use.
+ * Auto-detects the device language and provides matching voices.
+ * Multilingual voices (best quality) are listed first per locale.
+ */
+object TtsVoiceRegistry {
+
+    enum class Gender { FEMALE, MALE }
+    enum class Tier { MULTILINGUAL, STANDARD }
+
+    data class Voice(
+        val id: String,
+        val name: String,
+        val gender: Gender,
+        val tier: Tier = Tier.STANDARD,
+    )
+
+    data class LocaleVoices(
+        val localeCode: String,
+        val defaultVoiceId: String,
+        val voices: List<Voice>,
+    )
+
+    /** Get the locale code from a voice ID: "de-DE-KatjaNeural" -> "de-DE" */
+    fun extractLocale(voiceId: String): String {
+        val parts = voiceId.split("-")
+        return if (parts.size >= 2) "${parts[0]}-${parts[1]}" else "en-US"
+    }
+
+    /** Find the best matching locale config for the device language. */
+    fun getLocaleVoices(): LocaleVoices {
+        val locale = Locale.getDefault()
+        val full = "${locale.language}-${locale.country}".uppercase()
+            .let { "${it.substring(0, 2).lowercase()}-${it.substring(3, 5).uppercase()}" }
+
+        // Try exact match first (e.g., "pt-BR")
+        ALL_LOCALES[full]?.let { return it }
+
+        // Try language-only match (e.g., "pt" -> "pt-BR")
+        val lang = locale.language.lowercase()
+        LANGUAGE_FALLBACK[lang]?.let { code -> ALL_LOCALES[code]?.let { return it } }
+
+        // Default to English US
+        return ALL_LOCALES["en-US"]!!
+    }
+
+    /** Get gender label in the voice's own language. */
+    fun genderLabel(localeCode: String, gender: Gender): String {
+        val lang = localeCode.substring(0, 2)
+        return when (lang) {
+            "de" -> if (gender == Gender.FEMALE) "weiblich" else "m\u00e4nnlich"
+            "en" -> if (gender == Gender.FEMALE) "female" else "male"
+            "es" -> if (gender == Gender.FEMALE) "femenina" else "masculino"
+            "fr" -> if (gender == Gender.FEMALE) "f\u00e9minine" else "masculin"
+            "it" -> if (gender == Gender.FEMALE) "femminile" else "maschile"
+            "pt" -> if (gender == Gender.FEMALE) "feminina" else "masculino"
+            "nl" -> if (gender == Gender.FEMALE) "vrouwelijk" else "mannelijk"
+            "pl" -> if (gender == Gender.FEMALE) "kobieta" else "m\u0119\u017cczyzna"
+            "ru" -> if (gender == Gender.FEMALE) "\u0436\u0435\u043d\u0441\u043a\u0438\u0439" else "\u043c\u0443\u0436\u0441\u043a\u043e\u0439"
+            "tr" -> if (gender == Gender.FEMALE) "kad\u0131n" else "erkek"
+            "sv" -> if (gender == Gender.FEMALE) "kvinna" else "man"
+            "nb", "no" -> if (gender == Gender.FEMALE) "kvinne" else "mann"
+            "da" -> if (gender == Gender.FEMALE) "kvinde" else "mand"
+            "fi" -> if (gender == Gender.FEMALE) "nainen" else "mies"
+            "uk" -> if (gender == Gender.FEMALE) "\u0436\u0456\u043d\u043e\u0447\u0438\u0439" else "\u0447\u043e\u043b\u043e\u0432\u0456\u0447\u0438\u0439"
+            "ja" -> if (gender == Gender.FEMALE) "\u5973\u6027" else "\u7537\u6027"
+            "ko" -> if (gender == Gender.FEMALE) "\u5973\u6027" else "\u7537\u6027"
+            "zh" -> if (gender == Gender.FEMALE) "\u5973\u6027" else "\u7537\u6027"
+            "hi" -> if (gender == Gender.FEMALE) "\u092e\u0939\u093f\u0932\u093e" else "\u092a\u0941\u0930\u0941\u0937"
+            "ar" -> if (gender == Gender.FEMALE) "\u0623\u0646\u062b\u0649" else "\u0630\u0643\u0631"
+            "th" -> if (gender == Gender.FEMALE) "\u0e2b\u0e0d\u0e34\u0e07" else "\u0e0a\u0e32\u0e22"
+            "vi" -> if (gender == Gender.FEMALE) "n\u1eef" else "nam"
+            "id", "ms" -> if (gender == Gender.FEMALE) "perempuan" else "laki-laki"
+            else -> if (gender == Gender.FEMALE) "female" else "male"
+        }
+    }
+
+    /** Get "very natural" quality label for Multilingual voices. */
+    fun qualityLabel(localeCode: String): String {
+        val lang = localeCode.substring(0, 2)
+        return when (lang) {
+            "de" -> "sehr nat\u00fcrlich"
+            "en" -> "very natural"
+            "es" -> "muy natural"
+            "fr" -> "tr\u00e8s naturelle"
+            "it" -> "molto naturale"
+            "pt" -> "muito natural"
+            "nl" -> "zeer natuurlijk"
+            "pl" -> "bardzo naturalny"
+            "ru" -> "\u043e\u0447\u0435\u043d\u044c \u0435\u0441\u0442\u0435\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0439"
+            "tr" -> "\u00e7ok do\u011fal"
+            "sv" -> "mycket naturlig"
+            "nb", "no" -> "veldig naturlig"
+            "da" -> "meget naturlig"
+            "fi" -> "hyvin luonnollinen"
+            "ja" -> "\u975e\u5e38\u306b\u81ea\u7136"
+            "ko" -> "\u8D85\u81EA\u7136"
+            "zh" -> "\u975e\u5e38\u81ea\u7136"
+            "hi" -> "\u092c\u0939\u0941\u0924 \u0938\u094d\u0935\u093e\u092d\u093e\u0935\u093f\u0915"
+            "ar" -> "\u0637\u0628\u064a\u0639\u064a \u062c\u062f\u0627\u064b"
+            "th" -> "\u0e40\u0e1b\u0e47\u0e19\u0e18\u0e23\u0e23\u0e21\u0e0a\u0e32\u0e15\u0e34\u0e21\u0e32\u0e01"
+            "vi" -> "r\u1ea5t t\u1ef1 nhi\u00ean"
+            "id", "ms" -> "sangat alami"
+            "uk" -> "\u0434\u0443\u0436\u0435 \u043f\u0440\u0438\u0440\u043e\u0434\u043d\u0438\u0439"
+            else -> "very natural"
+        }
+    }
+
+    /** Format a voice for display: "Seraphina — weiblich, sehr natürlich" */
+    fun displayName(voice: Voice, localeCode: String): String {
+        val g = genderLabel(localeCode, voice.gender)
+        return if (voice.tier == Tier.MULTILINGUAL) {
+            "${voice.name} \u2014 $g, ${qualityLabel(localeCode)}"
+        } else {
+            "${voice.name} \u2014 $g"
+        }
+    }
+
+    // Language code -> default locale when country not specified
+    private val LANGUAGE_FALLBACK = mapOf(
+        "de" to "de-DE", "en" to "en-US", "es" to "es-ES", "fr" to "fr-FR",
+        "it" to "it-IT", "pt" to "pt-BR", "nl" to "nl-NL", "pl" to "pl-PL",
+        "ru" to "ru-RU", "tr" to "tr-TR", "sv" to "sv-SE", "nb" to "nb-NO",
+        "no" to "nb-NO", "da" to "da-DK", "fi" to "fi-FI", "uk" to "uk-UA",
+        "ja" to "ja-JP", "ko" to "ko-KR", "zh" to "zh-CN", "hi" to "hi-IN",
+        "ar" to "ar-SA", "th" to "th-TH", "vi" to "vi-VN", "id" to "id-ID",
+        "ms" to "ms-MY",
+    )
+
+    private fun ml(id: String, name: String, g: Gender) = Voice(id, name, g, Tier.MULTILINGUAL)
+    private fun st(id: String, name: String, g: Gender) = Voice(id, name, g, Tier.STANDARD)
+    private val F = Gender.FEMALE
+    private val M = Gender.MALE
+
+    val ALL_LOCALES: Map<String, LocaleVoices> = mapOf(
+        // ── German ──
+        "de-DE" to LocaleVoices("de-DE", "de-DE-SeraphinaMultilingualNeural", listOf(
+            ml("de-DE-SeraphinaMultilingualNeural", "Seraphina", F),
+            ml("de-DE-FlorianMultilingualNeural", "Florian", M),
+            st("de-DE-KatjaNeural", "Katja", F),
+            st("de-DE-KillianNeural", "Killian", M),
+            st("de-DE-ConradNeural", "Conrad", M),
+            st("de-DE-AmalaNeural", "Amala", F),
+            st("de-DE-ElkeNeural", "Elke", F),
+            st("de-DE-BerndNeural", "Bernd", M),
+        )),
+        "de-AT" to LocaleVoices("de-AT", "de-AT-IngridNeural", listOf(
+            st("de-AT-IngridNeural", "Ingrid", F),
+            st("de-AT-JonasNeural", "Jonas", M),
+        )),
+        "de-CH" to LocaleVoices("de-CH", "de-CH-LeniNeural", listOf(
+            st("de-CH-LeniNeural", "Leni", F),
+            st("de-CH-JanNeural", "Jan", M),
+        )),
+
+        // ── English ──
+        "en-US" to LocaleVoices("en-US", "en-US-AvaMultilingualNeural", listOf(
+            ml("en-US-AvaMultilingualNeural", "Ava", F),
+            ml("en-US-AndrewMultilingualNeural", "Andrew", M),
+            ml("en-US-EmmaMultilingualNeural", "Emma", F),
+            ml("en-US-BrianMultilingualNeural", "Brian", M),
+            st("en-US-JennyNeural", "Jenny", F),
+            st("en-US-GuyNeural", "Guy", M),
+            st("en-US-AriaNeural", "Aria", F),
+            st("en-US-DavisNeural", "Davis", M),
+            st("en-US-SaraNeural", "Sara", F),
+            st("en-US-JasonNeural", "Jason", M),
+        )),
+        "en-GB" to LocaleVoices("en-GB", "en-GB-AdaMultilingualNeural", listOf(
+            ml("en-GB-AdaMultilingualNeural", "Ada", F),
+            ml("en-GB-OllieMultilingualNeural", "Ollie", M),
+            st("en-GB-SoniaNeural", "Sonia", F),
+            st("en-GB-RyanNeural", "Ryan", M),
+            st("en-GB-LibbyNeural", "Libby", F),
+        )),
+        "en-AU" to LocaleVoices("en-AU", "en-AU-NatashaNeural", listOf(
+            ml("en-AU-WilliamMultilingualNeural", "William", M),
+            st("en-AU-NatashaNeural", "Natasha", F),
+            st("en-AU-WilliamNeural", "William", M),
+            st("en-AU-FreyaNeural", "Freya", F),
+        )),
+        "en-IN" to LocaleVoices("en-IN", "en-IN-NeerjaNeural", listOf(
+            st("en-IN-NeerjaNeural", "Neerja", F),
+            st("en-IN-PrabhatNeural", "Prabhat", M),
+            st("en-IN-AnanyaNeural", "Ananya", F),
+            st("en-IN-ArjunNeural", "Arjun", M),
+        )),
+
+        // ── Spanish ──
+        "es-ES" to LocaleVoices("es-ES", "es-ES-ArabellaMultilingualNeural", listOf(
+            ml("es-ES-ArabellaMultilingualNeural", "Arabella", F),
+            ml("es-ES-TristanMultilingualNeural", "Tristan", M),
+            ml("es-ES-XimenaMultilingualNeural", "Ximena", F),
+            st("es-ES-ElviraNeural", "Elvira", F),
+            st("es-ES-AlvaroNeural", "Alvaro", M),
+        )),
+        "es-MX" to LocaleVoices("es-MX", "es-MX-DaliaMultilingualNeural", listOf(
+            ml("es-MX-DaliaMultilingualNeural", "Dalia", F),
+            ml("es-MX-JorgeMultilingualNeural", "Jorge", M),
+            st("es-MX-BeatrizNeural", "Beatriz", F),
+            st("es-MX-CecilioNeural", "Cecilio", M),
+        )),
+        "es-AR" to LocaleVoices("es-AR", "es-AR-ElenaNeural", listOf(
+            st("es-AR-ElenaNeural", "Elena", F),
+            st("es-AR-TomasNeural", "Tomas", M),
+        )),
+
+        // ── French ──
+        "fr-FR" to LocaleVoices("fr-FR", "fr-FR-VivienneMultilingualNeural", listOf(
+            ml("fr-FR-VivienneMultilingualNeural", "Vivienne", F),
+            ml("fr-FR-RemyMultilingualNeural", "R\u00e9my", M),
+            ml("fr-FR-LucienMultilingualNeural", "Lucien", M),
+            st("fr-FR-DeniseNeural", "Denise", F),
+            st("fr-FR-HenriNeural", "Henri", M),
+        )),
+        "fr-CA" to LocaleVoices("fr-CA", "fr-CA-SylvieNeural", listOf(
+            st("fr-CA-SylvieNeural", "Sylvie", F),
+            st("fr-CA-JeanNeural", "Jean", M),
+            st("fr-CA-AntoineNeural", "Antoine", M),
+        )),
+
+        // ── Italian ──
+        "it-IT" to LocaleVoices("it-IT", "it-IT-IsabellaMultilingualNeural", listOf(
+            ml("it-IT-IsabellaMultilingualNeural", "Isabella", F),
+            ml("it-IT-AlessioMultilingualNeural", "Alessio", M),
+            ml("it-IT-GiuseppeMultilingualNeural", "Giuseppe", M),
+            st("it-IT-ElsaNeural", "Elsa", F),
+            st("it-IT-DiegoNeural", "Diego", M),
+        )),
+
+        // ── Portuguese ──
+        "pt-BR" to LocaleVoices("pt-BR", "pt-BR-ThalitaMultilingualNeural", listOf(
+            ml("pt-BR-ThalitaMultilingualNeural", "Thalita", F),
+            ml("pt-BR-MacerioMultilingualNeural", "Mac\u00e9rio", M),
+            st("pt-BR-FranciscaNeural", "Francisca", F),
+            st("pt-BR-AntonioNeural", "Antonio", M),
+        )),
+        "pt-PT" to LocaleVoices("pt-PT", "pt-PT-RaquelNeural", listOf(
+            st("pt-PT-RaquelNeural", "Raquel", F),
+            st("pt-PT-DuarteNeural", "Duarte", M),
+        )),
+
+        // ── Chinese ──
+        "zh-CN" to LocaleVoices("zh-CN", "zh-CN-XiaoxiaoMultilingualNeural", listOf(
+            ml("zh-CN-XiaoxiaoMultilingualNeural", "Xiaoxiao", F),
+            ml("zh-CN-YunyiMultilingualNeural", "Yunyi", M),
+            ml("zh-CN-XiaochenMultilingualNeural", "Xiaochen", F),
+            ml("zh-CN-YunfanMultilingualNeural", "Yunfan", M),
+            st("zh-CN-XiaoxiaoNeural", "Xiaoxiao", F),
+            st("zh-CN-YunxiNeural", "Yunxi", M),
+        )),
+        "zh-TW" to LocaleVoices("zh-TW", "zh-TW-HsiaoChenNeural", listOf(
+            st("zh-TW-HsiaoChenNeural", "HsiaoChen", F),
+            st("zh-TW-YunJheNeural", "YunJhe", M),
+        )),
+        "zh-HK" to LocaleVoices("zh-HK", "zh-HK-HiuGaaiNeural", listOf(
+            st("zh-HK-HiuGaaiNeural", "HiuGaai", F),
+            st("zh-HK-WanLungNeural", "WanLung", M),
+        )),
+
+        // ── Japanese ──
+        "ja-JP" to LocaleVoices("ja-JP", "ja-JP-NanamiNeural", listOf(
+            ml("ja-JP-MasaruMultilingualNeural", "Masaru", M),
+            st("ja-JP-NanamiNeural", "Nanami", F),
+            st("ja-JP-KeitaNeural", "Keita", M),
+            st("ja-JP-AoiNeural", "Aoi", F),
+            st("ja-JP-ShioriNeural", "Shiori", F),
+        )),
+
+        // ── Korean ──
+        "ko-KR" to LocaleVoices("ko-KR", "ko-KR-SunHiNeural", listOf(
+            ml("ko-KR-HyunsuMultilingualNeural", "Hyunsu", M),
+            st("ko-KR-SunHiNeural", "SunHi", F),
+            st("ko-KR-InJoonNeural", "InJoon", M),
+            st("ko-KR-JiMinNeural", "JiMin", F),
+        )),
+
+        // ── Hindi ──
+        "hi-IN" to LocaleVoices("hi-IN", "hi-IN-SwaraNeural", listOf(
+            st("hi-IN-SwaraNeural", "Swara", F),
+            st("hi-IN-MadhurNeural", "Madhur", M),
+            st("hi-IN-AnanyaNeural", "Ananya", F),
+            st("hi-IN-ArjunNeural", "Arjun", M),
+        )),
+
+        // ── Arabic ──
+        "ar-SA" to LocaleVoices("ar-SA", "ar-SA-ZariyahNeural", listOf(
+            st("ar-SA-ZariyahNeural", "Zariyah", F),
+            st("ar-SA-HamedNeural", "Hamed", M),
+        )),
+        "ar-EG" to LocaleVoices("ar-EG", "ar-EG-SalmaNeural", listOf(
+            st("ar-EG-SalmaNeural", "Salma", F),
+            st("ar-EG-ShakirNeural", "Shakir", M),
+        )),
+
+        // ── Russian ──
+        "ru-RU" to LocaleVoices("ru-RU", "ru-RU-SvetlanaNeural", listOf(
+            st("ru-RU-SvetlanaNeural", "Svetlana", F),
+            st("ru-RU-DmitryNeural", "Dmitry", M),
+            st("ru-RU-DariyaNeural", "Dariya", F),
+        )),
+
+        // ── Turkish ──
+        "tr-TR" to LocaleVoices("tr-TR", "tr-TR-EmelNeural", listOf(
+            st("tr-TR-EmelNeural", "Emel", F),
+            st("tr-TR-AhmetNeural", "Ahmet", M),
+        )),
+
+        // ── Polish ──
+        "pl-PL" to LocaleVoices("pl-PL", "pl-PL-AgnieszkaNeural", listOf(
+            st("pl-PL-AgnieszkaNeural", "Agnieszka", F),
+            st("pl-PL-MarekNeural", "Marek", M),
+            st("pl-PL-ZofiaNeural", "Zofia", F),
+        )),
+
+        // ── Dutch ──
+        "nl-NL" to LocaleVoices("nl-NL", "nl-NL-FennaNeural", listOf(
+            st("nl-NL-FennaNeural", "Fenna", F),
+            st("nl-NL-MaartenNeural", "Maarten", M),
+            st("nl-NL-ColetteNeural", "Colette", F),
+        )),
+
+        // ── Swedish ──
+        "sv-SE" to LocaleVoices("sv-SE", "sv-SE-SofieNeural", listOf(
+            st("sv-SE-SofieNeural", "Sofie", F),
+            st("sv-SE-MattiasNeural", "Mattias", M),
+        )),
+
+        // ── Norwegian ──
+        "nb-NO" to LocaleVoices("nb-NO", "nb-NO-PernilleNeural", listOf(
+            st("nb-NO-PernilleNeural", "Pernille", F),
+            st("nb-NO-FinnNeural", "Finn", M),
+        )),
+
+        // ── Danish ──
+        "da-DK" to LocaleVoices("da-DK", "da-DK-ChristelNeural", listOf(
+            st("da-DK-ChristelNeural", "Christel", F),
+            st("da-DK-JeppeNeural", "Jeppe", M),
+        )),
+
+        // ── Finnish ──
+        "fi-FI" to LocaleVoices("fi-FI", "fi-FI-SelmaNeural", listOf(
+            st("fi-FI-SelmaNeural", "Selma", F),
+            st("fi-FI-HarriNeural", "Harri", M),
+        )),
+
+        // ── Thai ──
+        "th-TH" to LocaleVoices("th-TH", "th-TH-PremwadeeNeural", listOf(
+            st("th-TH-PremwadeeNeural", "Premwadee", F),
+            st("th-TH-NiwatNeural", "Niwat", M),
+        )),
+
+        // ── Vietnamese ──
+        "vi-VN" to LocaleVoices("vi-VN", "vi-VN-HoaiMyNeural", listOf(
+            st("vi-VN-HoaiMyNeural", "HoaiMy", F),
+            st("vi-VN-NamMinhNeural", "NamMinh", M),
+        )),
+
+        // ── Indonesian ──
+        "id-ID" to LocaleVoices("id-ID", "id-ID-GadisNeural", listOf(
+            st("id-ID-GadisNeural", "Gadis", F),
+            st("id-ID-ArdiNeural", "Ardi", M),
+        )),
+
+        // ── Malay ──
+        "ms-MY" to LocaleVoices("ms-MY", "ms-MY-YasminNeural", listOf(
+            st("ms-MY-YasminNeural", "Yasmin", F),
+            st("ms-MY-OsmanNeural", "Osman", M),
+        )),
+
+        // ── Ukrainian ──
+        "uk-UA" to LocaleVoices("uk-UA", "uk-UA-PolinaNeural", listOf(
+            st("uk-UA-PolinaNeural", "Polina", F),
+            st("uk-UA-OstapNeural", "Ostap", M),
+        )),
+    )
+}

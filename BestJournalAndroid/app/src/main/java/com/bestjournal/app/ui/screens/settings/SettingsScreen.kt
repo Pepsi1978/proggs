@@ -893,17 +893,26 @@ fun SettingsScreen(
                         if (ttsEnabled) {
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            val voices = Constants.EDGE_TTS_VOICES
+                            val localeVoices = remember {
+                                com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices()
+                            }
+                            val voices = localeVoices.voices
                             var selectedVoiceId by remember {
                                 mutableStateOf(
                                     soundsPrefs.getString(
                                         Constants.PREF_EDGE_TTS_VOICE,
-                                        Constants.DEFAULT_EDGE_TTS_VOICE,
-                                    ) ?: Constants.DEFAULT_EDGE_TTS_VOICE
+                                        localeVoices.defaultVoiceId,
+                                    ) ?: localeVoices.defaultVoiceId
                                 )
                             }
+                            // If saved voice doesn't match current locale, reset to default
+                            val effectiveVoiceId = if (voices.any { it.id == selectedVoiceId }) {
+                                selectedVoiceId
+                            } else {
+                                localeVoices.defaultVoiceId
+                            }
                             val selectedVoice =
-                                voices.find { it.id == selectedVoiceId } ?: voices.first()
+                                voices.find { it.id == effectiveVoiceId } ?: voices.first()
                             var voiceExpanded by remember { mutableStateOf(false) }
 
                             Text(
@@ -918,7 +927,8 @@ fun SettingsScreen(
                                 onExpandedChange = { voiceExpanded = it },
                             ) {
                                 TextField(
-                                    value = selectedVoice.name,
+                                    value = com.bestjournal.app.util.TtsVoiceRegistry
+                                        .displayName(selectedVoice, localeVoices.localeCode),
                                     onValueChange = {},
                                     readOnly = true,
                                     trailingIcon = {
@@ -952,11 +962,13 @@ fun SettingsScreen(
                                     containerColor = MaterialTheme.colorScheme.surface,
                                 ) {
                                     voices.forEach { voice ->
+                                        val label = com.bestjournal.app.util.TtsVoiceRegistry
+                                            .displayName(voice, localeVoices.localeCode)
                                         DropdownMenuItem(
                                             text = {
                                                 Text(
-                                                    voice.name,
-                                                    color = if (voice.id == selectedVoiceId)
+                                                    label,
+                                                    color = if (voice.id == effectiveVoiceId)
                                                         MaterialTheme.colorScheme.primary
                                                     else MaterialTheme.colorScheme.onSurface,
                                                 )
@@ -2301,7 +2313,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Best Journal V0.11.1",
+                            "Best Journal V0.12.0",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

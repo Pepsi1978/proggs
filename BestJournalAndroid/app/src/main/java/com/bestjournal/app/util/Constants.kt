@@ -55,28 +55,9 @@ object Constants {
     // Haptik
     const val PREF_HAPTIC_ENABLED = "haptic_enabled"
 
-    // TTS (Text-to-Speech)
+    // TTS (Text-to-Speech) — voices are in TtsVoiceRegistry.kt
     const val PREF_TTS_ENABLED = "tts_enabled"
     const val PREF_EDGE_TTS_VOICE = "edge_tts_voice"
-    const val DEFAULT_EDGE_TTS_VOICE = "de-DE-SeraphinaMultilingualNeural"
-
-    data class EdgeTtsVoice(val id: String, val name: String)
-
-    val EDGE_TTS_VOICES =
-        listOf(
-            EdgeTtsVoice(
-                "de-DE-SeraphinaMultilingualNeural",
-                "Seraphina \u2014 weiblich, sehr nat\u00fcrlich",
-            ),
-            EdgeTtsVoice(
-                "de-DE-FlorianMultilingualNeural",
-                "Florian \u2014 m\u00e4nnlich, sehr nat\u00fcrlich",
-            ),
-            EdgeTtsVoice("de-DE-KatjaNeural", "Katja \u2014 weiblich, warm"),
-            EdgeTtsVoice("de-DE-KillianNeural", "Killian \u2014 m\u00e4nnlich, warm"),
-            EdgeTtsVoice("de-DE-ConradNeural", "Conrad \u2014 m\u00e4nnlich, klar"),
-            EdgeTtsVoice("de-DE-AmalaNeural", "Amala \u2014 weiblich, jung"),
-        )
 
     // Dashboard-Szenario
     const val PREF_DASHBOARD_SCENARIO = "dashboard_scenario"

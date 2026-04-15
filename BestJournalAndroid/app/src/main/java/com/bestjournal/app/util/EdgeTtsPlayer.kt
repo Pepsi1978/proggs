@@ -45,7 +45,7 @@ class EdgeTtsPlayer(private val context: Context) {
 
     fun speak(
         text: String,
-        voice: String = Constants.DEFAULT_EDGE_TTS_VOICE,
+        voice: String = TtsVoiceRegistry.getLocaleVoices().defaultVoiceId,
         onPlaybackStart: (() -> Unit)? = null,
         onComplete: () -> Unit,
     ) {
@@ -97,11 +97,12 @@ class EdgeTtsPlayer(private val context: Context) {
                         val escaped =
                             text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
+                        val lang = TtsVoiceRegistry.extractLocale(voice)
                         val ssml =
                             "X-RequestId:$requestId\r\n" +
                                 "Content-Type:application/ssml+xml\r\n" +
                                 "Path:ssml\r\n\r\n" +
-                                "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='de-DE'>" +
+                                "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='$lang'>" +
                                 "<voice name='$voice'>$escaped</voice>" +
                                 "</speak>"
                         webSocket.send(ssml)

@@ -1111,8 +1111,8 @@ private fun SummaryDetailDialog(
                                             else summary.summaryText
                                         val voice = ttsPrefs?.getString(
                                             com.bestjournal.app.util.Constants.PREF_EDGE_TTS_VOICE,
-                                            com.bestjournal.app.util.Constants.DEFAULT_EDGE_TTS_VOICE,
-                                        ) ?: com.bestjournal.app.util.Constants.DEFAULT_EDGE_TTS_VOICE
+                                            com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices().defaultVoiceId,
+                                        ) ?: com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices().defaultVoiceId
                                         tts.speak(
                                             speakText,
                                             voice = voice,
