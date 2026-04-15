@@ -161,6 +161,18 @@ fun EntryDetailScreen(
     val context = LocalContext.current
     val doHaptic = rememberHapticAction()
     val tts = remember { EdgeTtsPlayer(context) }
+    val ttsPrefs = remember {
+        try {
+            val mk = androidx.security.crypto.MasterKeys.getOrCreate(
+                androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
+            )
+            androidx.security.crypto.EncryptedSharedPreferences.create(
+                com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME, mk, context,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+            )
+        } catch (_: Exception) { null }
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -701,17 +713,33 @@ fun EntryDetailScreen(
                                     isSpeaking = false
                                     isTtsLoading = false
                                 } else {
-                                    isTtsLoading = true
-                                    isSpeaking = true
-                                    val speakText =
-                                        if (isShowingOriginal) entry.rawText
-                                        else entry.displayText
-                                    tts.speak(
-                                        speakText,
-                                        onPlaybackStart = { isTtsLoading = false },
-                                    ) {
-                                        isSpeaking = false
-                                        isTtsLoading = false
+                                    val ttsOn = ttsPrefs?.getBoolean(
+                                        com.bestjournal.app.util.Constants.PREF_TTS_ENABLED, false
+                                    ) ?: false
+                                    if (!ttsOn) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "Stimmen in den Einstellungen einschalten",
+                                            android.widget.Toast.LENGTH_SHORT,
+                                        ).show()
+                                    } else {
+                                        isTtsLoading = true
+                                        isSpeaking = true
+                                        val speakText =
+                                            if (isShowingOriginal) entry.rawText
+                                            else entry.displayText
+                                        val voice = ttsPrefs?.getString(
+                                            com.bestjournal.app.util.Constants.PREF_EDGE_TTS_VOICE,
+                                            com.bestjournal.app.util.Constants.DEFAULT_EDGE_TTS_VOICE,
+                                        ) ?: com.bestjournal.app.util.Constants.DEFAULT_EDGE_TTS_VOICE
+                                        tts.speak(
+                                            speakText,
+                                            voice = voice,
+                                            onPlaybackStart = { isTtsLoading = false },
+                                        ) {
+                                            isSpeaking = false
+                                            isTtsLoading = false
+                                        }
                                     }
                                 }
                             },

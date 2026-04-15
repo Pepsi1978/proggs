@@ -132,6 +132,18 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
     var isDashboardSpeaking by remember { mutableStateOf(false) }
     var isDashboardTtsLoading by remember { mutableStateOf(false) }
     val dashboardTts = remember { EdgeTtsPlayer(context) }
+    val dashboardTtsPrefs = remember {
+        try {
+            val mk = androidx.security.crypto.MasterKeys.getOrCreate(
+                androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
+            )
+            androidx.security.crypto.EncryptedSharedPreferences.create(
+                com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME, mk, context,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+            )
+        } catch (_: Exception) { null }
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -674,6 +686,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         onTtsLoadingChange = { isDashboardTtsLoading = it },
                                         doHaptic = doHaptic,
                                         context = context,
+                                        ttsPrefs = dashboardTtsPrefs,
                                     )
                                 }
                             }
@@ -831,6 +844,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         onTtsLoadingChange = { isDashboardTtsLoading = it },
                                         doHaptic = doHaptic,
                                         context = context,
+                                        ttsPrefs = dashboardTtsPrefs,
                                     )
                                 }
                             }
@@ -984,6 +998,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         onTtsLoadingChange = { isDashboardTtsLoading = it },
                                         doHaptic = doHaptic,
                                         context = context,
+                                        ttsPrefs = dashboardTtsPrefs,
                                     )
                                 }
                             }
@@ -1140,6 +1155,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         onTtsLoadingChange = { isDashboardTtsLoading = it },
                                         doHaptic = doHaptic,
                                         context = context,
+                                        ttsPrefs = dashboardTtsPrefs,
                                     )
                                 }
                             }
@@ -1277,6 +1293,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         onTtsLoadingChange = { isDashboardTtsLoading = it },
                                         doHaptic = doHaptic,
                                         context = context,
+                                        ttsPrefs = dashboardTtsPrefs,
                                     )
                                 }
                             }
@@ -3538,6 +3555,7 @@ private fun AnalysisTtsShareRow(
     onTtsLoadingChange: (Boolean) -> Unit,
     doHaptic: (HapticFeedbackType) -> Unit,
     context: android.content.Context,
+    ttsPrefs: android.content.SharedPreferences? = null,
 ) {
     Spacer(modifier = Modifier.height(12.dp))
     Box(
@@ -3556,14 +3574,30 @@ private fun AnalysisTtsShareRow(
                     onSpeakingChange(false)
                     onTtsLoadingChange(false)
                 } else {
-                    onTtsLoadingChange(true)
-                    onSpeakingChange(true)
-                    tts.speak(
-                        text,
-                        onPlaybackStart = { onTtsLoadingChange(false) },
-                    ) {
-                        onSpeakingChange(false)
-                        onTtsLoadingChange(false)
+                    val ttsOn = ttsPrefs?.getBoolean(
+                        com.bestjournal.app.util.Constants.PREF_TTS_ENABLED, false
+                    ) ?: false
+                    if (!ttsOn) {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Stimmen in den Einstellungen einschalten",
+                            android.widget.Toast.LENGTH_SHORT,
+                        ).show()
+                    } else {
+                        onTtsLoadingChange(true)
+                        onSpeakingChange(true)
+                        val voice = ttsPrefs?.getString(
+                            com.bestjournal.app.util.Constants.PREF_EDGE_TTS_VOICE,
+                            com.bestjournal.app.util.Constants.DEFAULT_EDGE_TTS_VOICE,
+                        ) ?: com.bestjournal.app.util.Constants.DEFAULT_EDGE_TTS_VOICE
+                        tts.speak(
+                            text,
+                            voice = voice,
+                            onPlaybackStart = { onTtsLoadingChange(false) },
+                        ) {
+                            onSpeakingChange(false)
+                            onTtsLoadingChange(false)
+                        }
                     }
                 }
             },
