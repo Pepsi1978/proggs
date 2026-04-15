@@ -2548,17 +2548,13 @@ private fun SettingsSoundIcon(isEnabled: Boolean) {
             color = MaterialTheme.colorScheme.outlineVariant,
             modifier = Modifier.height(16.dp).width(1.dp),
         )
-        androidx.compose.foundation.layout.Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.size(24.dp),
-        ) {
-            Icon(
-                Icons.Rounded.VolumeOff,
-                "Ton aus",
-                tint = if (!isEnabled) Color(0xFFEF4444) else mutedGray,
-                modifier = Modifier.size(offSize),
-            )
-        }
+        StrikethroughIcon(
+            icon = Icons.Rounded.VolumeUp,
+            description = "Ton aus",
+            tint = if (!isEnabled) Color(0xFFEF4444) else mutedGray,
+            iconSize = offSize,
+            boxSize = 24.dp,
+        )
     }
 }
 
@@ -2597,15 +2593,36 @@ private fun SettingsHapticIcon(isEnabled: Boolean) {
             color = MaterialTheme.colorScheme.outlineVariant,
             modifier = Modifier.height(16.dp).width(1.dp),
         )
-        androidx.compose.foundation.layout.Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.size(24.dp),
-        ) {
-            Icon(
-                Icons.Rounded.MobileOff,
-                "Haptik aus",
-                tint = if (!isEnabled) Color(0xFFEF4444) else mutedGray,
-                modifier = Modifier.size(offSize),
+        StrikethroughIcon(
+            icon = Icons.Rounded.Vibration,
+            description = "Haptik aus",
+            tint = if (!isEnabled) Color(0xFFEF4444) else mutedGray,
+            iconSize = offSize,
+            boxSize = 24.dp,
+        )
+    }
+}
+
+@Composable
+private fun StrikethroughIcon(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    description: String,
+    tint: Color,
+    iconSize: androidx.compose.ui.unit.Dp,
+    boxSize: androidx.compose.ui.unit.Dp = 24.dp,
+) {
+    androidx.compose.foundation.layout.Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.size(boxSize),
+    ) {
+        Icon(icon, description, tint = tint, modifier = Modifier.size(iconSize))
+        androidx.compose.foundation.Canvas(modifier = Modifier.size(iconSize)) {
+            drawLine(
+                color = tint,
+                start = androidx.compose.ui.geometry.Offset(size.width * 0.1f, size.height * 0.9f),
+                end = androidx.compose.ui.geometry.Offset(size.width * 0.9f, size.height * 0.1f),
+                strokeWidth = size.minDimension * 0.12f,
+                cap = StrokeCap.Round,
             )
         }
     }
