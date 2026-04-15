@@ -1,6 +1,7 @@
 package com.bestjournal.app.data.local.whisper
 
 import android.content.Context
+import com.bestjournal.app.R
 import com.k2fsa.sherpa.onnx.FeatureConfig
 import com.k2fsa.sherpa.onnx.OfflineModelConfig
 import com.k2fsa.sherpa.onnx.OfflineRecognizer
@@ -58,7 +59,7 @@ class LocalWhisperTranscriber @Inject constructor(
 
             val samples = readWavSamples(audioFile)
             if (samples.isEmpty()) {
-                return@withContext Result.failure(Exception("Audio-Datei ist leer"))
+                return@withContext Result.failure(Exception(context.getString(R.string.error_whisper_audio_empty)))
             }
 
             // Whisper processes audio in 30-second windows — split at silence points
@@ -79,7 +80,7 @@ class LocalWhisperTranscriber @Inject constructor(
 
             val text = results.toString().trim()
             if (text.isBlank()) {
-                Result.failure(Exception("Kein Text erkannt"))
+                Result.failure(Exception(context.getString(R.string.error_whisper_no_text)))
             } else {
                 Result.success(text)
             }

@@ -2,6 +2,7 @@ package com.bestjournal.app.domain.usecase
 
 import android.content.Context
 import android.util.Log
+import com.bestjournal.app.R
 import com.bestjournal.app.data.local.dao.JournalEntryDao
 import com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity
 import com.bestjournal.app.data.remote.ai.FirebaseAiService
@@ -106,7 +107,7 @@ constructor(
         // If ALL attempts failed and nothing was generated, signal the error
         if (generated == 0 && lastFailureCount > 0) {
             throw Exception(
-                "Alle $lastFailureCount KI-Anfragen fehlgeschlagen. Bitte Internetverbindung prüfen."
+                context.getString(R.string.error_retro_all_failed, lastFailureCount)
             )
         }
         return generated
@@ -147,7 +148,7 @@ constructor(
                     else -> 4
                 }
             }
-            val label = "Woche $weekOfMonth (${dfLabel.format(weekStart.time)} - ${dfLabel.format(weekEnd.time)})"
+            val label = context.getString(R.string.retro_period_label_week, weekOfMonth, dfLabel.format(weekStart.time), dfLabel.format(weekEnd.time))
             locked.add(LockedWeekRange(weekStart, weekEnd, label, weekOfMonth))
         }
         return locked
@@ -295,7 +296,7 @@ ${summaryText.take(500)}"""
                     maxOutputTokens = 50,
                 )
             val title =
-                titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60) ?: "Wochenrückblick"
+                titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60) ?: context.getString(R.string.retro_fallback_week)
 
             // Use endDate to determine week number — consistent with month grouping by endDate
             val weekOfMonth =
@@ -309,7 +310,7 @@ ${summaryText.take(500)}"""
                 }
 
             val label =
-                "Woche $weekOfMonth (${dfLabel.format(task.weekStart.time)} - ${dfLabel.format(task.weekEnd.time)})"
+                context.getString(R.string.retro_period_label_week, weekOfMonth, dfLabel.format(task.weekStart.time), dfLabel.format(task.weekEnd.time))
 
             return RetrospectiveSummaryEntity(
                 type = "WEEKLY",
@@ -477,7 +478,7 @@ ${summaryText.take(500)}"""
                     maxOutputTokens = 50,
                 )
             val title =
-                titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60) ?: "Monatsrückblick"
+                titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60) ?: context.getString(R.string.retro_fallback_month)
 
             return RetrospectiveSummaryEntity(
                 type = "MONTHLY",
@@ -604,7 +605,7 @@ Rückblick:
                 maxOutputTokens = 50,
             )
         val title =
-            titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60) ?: "Jahresrückblick $year"
+            titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60) ?: context.getString(R.string.retro_fallback_year, year)
 
         retroRepo.insert(
             RetrospectiveSummaryEntity(
@@ -677,19 +678,15 @@ Rückblick:
         val prefs = cachedPrefs ?: return ""
         val scenario = prefs.getInt(com.bestjournal.app.util.Constants.PREF_DASHBOARD_SCENARIO, 0)
         return when (scenario) {
-            0 ->
-                "\n- Schreibe im Stil einer zusammenfassenden Erzählung — fasse die wichtigsten Ereignisse und Gefühle zusammen, wie ein persönlicher Chronist"
-            1 ->
-                "\n- Schreibe im Stil eines Lebensberaters — hebe hervor was gut lief, was verbessert werden kann, und gib dem Leser das Gefühl von Klarheit und Ordnung"
-            2 ->
-                "\n- Schreibe im Stil einer tiefgründigen Selbsterkenntnis-Erzählung — decke Denkmuster, wiederkehrende Gefühle und verborgene Stärken auf"
-            3 ->
-                "\n- Schreibe im Stil eines motivierenden Ziel-Begleiters — zeige Fortschritte bei persönlichen Zielen auf und ermutige weiterzumachen"
+            0 -> context.getString(R.string.profile_style_chronicler)
+            1 -> context.getString(R.string.profile_style_advisor)
+            2 -> context.getString(R.string.profile_style_insight)
+            3 -> context.getString(R.string.profile_style_coach)
             4 -> {
                 val custom =
                     prefs.getString(com.bestjournal.app.util.Constants.PREF_CUSTOM_PROMPT, "") ?: ""
                 if (custom.isNotBlank())
-                    "\n- Schreibe den Rückblick mit folgendem persönlichen Fokus des Benutzers: \"$custom\""
+                    context.getString(R.string.profile_style_custom, custom)
                 else ""
             }
             else -> ""
