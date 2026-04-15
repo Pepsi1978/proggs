@@ -474,8 +474,8 @@ fun JournalScreen(
                                     else -> TimelinePosition.MIDDLE
                                 }
                             val dotBias =
-                                if (sectionEntries.size <= 1) -1f
-                                else -1f + 2f * index / (sectionEntries.size - 1)
+                                if (sectionEntries.size <= 1) 0f
+                                else -0.8f + 1.6f * index / (sectionEntries.size - 1)
                             TimelineItem(
                                 entry = sectionEntries[index],
                                 onClick = {
