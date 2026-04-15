@@ -10,7 +10,9 @@
       "Bash(git fetch:*)",
       "Bash(git rebase:*)",
       "Bash(mv /Users/frank/.claude/skills/android-design-audit /Users/frank/.claude/skills/designer)",
-      "Bash(mkdir -p /Users/frank/.claude/skills/designer/references)"
+      "Bash(mkdir -p /Users/frank/.claude/skills/designer/references)",
+      "Bash(cp \"C:/Users/barwa/.claude/hooks/subagent-stop-summarizer.ps1\" \"C:/Users/barwa/proggs/claude-code-setup/hooks/subagent-stop-summarizer.ps1\")",
+      "Bash(cp \"C:/Users/barwa/.claude/hooks/subagent-stop-summarizer.sh\" \"C:/Users/barwa/proggs/claude-code-setup/hooks/subagent-stop-summarizer.sh\")"
     ]
   }
 }

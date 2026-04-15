@@ -348,8 +348,8 @@
       {
         "hooks": [
           {
-            "type": "prompt",
-            "prompt": "A subagent just finished. In one sentence in German, summarize what it accomplished.\n\nIf the subagent FAILED or returned an error:\n1. Write a sentinel file to the temp directory: $env:TEMP/agent-writeback-subagent-failure.json (Windows) or /tmp/agent-writeback-subagent-failure.json (macOS/Linux) with format: {\"agent\": \"subagent-failure\", \"section\": \"Offene Fehler & Probleme\", \"findings\": \"[description]\", \"timestamp\": \"[ISO date]\"}. The writeback-enforcer will merge it into MEMORY.md safely.\n2. The description in 'findings' must include: Agent name, what went wrong (symptom), root cause, affected files, and a concrete fix suggestion -- detailed enough for /self-improve to fix WITHOUT additional context.\n3. Failures from ANY source (custom agents, plugin agents, marketplace agents) MUST be logged.\n4. Do NOT write directly to MEMORY.md -- always use the sentinel file to avoid mutex conflicts.",
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/subagent-stop-summarizer.ps1\"",
             "timeout": 10
           },
           {
@@ -450,6 +450,11 @@
       ".gradle",
       "build"
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline.sh",
+    "refreshInterval": 5
   },
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true,
@@ -601,11 +606,6 @@
         "repo": "trailofbits/skills-curated"
       }
     }
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "bash ~/.claude/statusline.sh",
-    "refreshInterval": 5
   },
   "language": "de",
   "alwaysThinkingEnabled": true,
