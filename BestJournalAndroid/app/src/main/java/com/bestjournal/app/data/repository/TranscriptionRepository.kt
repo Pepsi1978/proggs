@@ -3,6 +3,8 @@ package com.bestjournal.app.data.repository
 import android.content.SharedPreferences
 import android.util.Log
 import com.bestjournal.app.data.local.whisper.LocalWhisperTranscriber
+import com.bestjournal.app.data.remote.ai.AiPhase
+import com.bestjournal.app.data.remote.ai.AiUsageTracker
 import com.bestjournal.app.data.remote.groq.GroqApi
 import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.DeviceLocale
@@ -24,19 +26,22 @@ data class TranscriptionResult(
 class TranscriptionRepository @Inject constructor(
     private val localWhisper: LocalWhisperTranscriber,
     private val groqApi: GroqApi,
-    private val encryptedPrefs: SharedPreferences
+    private val encryptedPrefs: SharedPreferences,
+    private val aiUsageTracker: AiUsageTracker
 ) {
     suspend fun transcribeAudio(audioFile: File): Result<TranscriptionResult> {
-        // Only use Groq for subscribed users — key comes from Firebase Remote Config
+        // Use Groq for subscribers AND trial users (free tier covers trial usage)
         val isSubscribed = encryptedPrefs.getBoolean("is_subscribed", false)
-        if (isSubscribed) {
+        val isTrialActive = aiUsageTracker.getCurrentPhase() == AiPhase.TRIAL
+        if (isSubscribed || isTrialActive) {
             try {
                 val remoteConfig = FirebaseRemoteConfig.getInstance()
                 remoteConfig.fetchAndActivate()
                 val groqKey = remoteConfig.getString(Constants.REMOTE_CONFIG_GROQ_KEY)
 
                 if (groqKey.isNotBlank()) {
-                    Log.d("Transcription", "Using Groq API for premium subscriber")
+                    val userType = if (isSubscribed) "premium subscriber" else "trial user"
+                    Log.d("Transcription", "Using Groq API for $userType")
                     val filePart = MultipartBody.Part.createFormData(
                         "file", audioFile.name,
                         audioFile.asRequestBody("audio/wav".toMediaType())
@@ -57,7 +62,8 @@ class TranscriptionRepository @Inject constructor(
             }
         }
 
-        // Fallback: ALWAYS works — local offline Whisper via sherpa-onnx
+        // Fallback: local offline Whisper via sherpa-onnx
+        // Used for: expired trial (freemium) users, OR when Groq API fails/rate-limited
         return localWhisper.transcribe(audioFile).map {
             TranscriptionResult(it, "Lokales Whisper-Modell")
         }
