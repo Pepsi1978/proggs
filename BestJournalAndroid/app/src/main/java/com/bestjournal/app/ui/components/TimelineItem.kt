@@ -23,6 +23,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
@@ -47,6 +48,7 @@ fun TimelineItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     position: TimelinePosition = TimelinePosition.ONLY,
+    dotVerticalBias: Float = -1f,
     searchQuery: String = ""
 ) {
     val highlightColor = if (LocalIsDarkTheme.current) Color(0x44FFFFFF) else Color(0xFFFFEB3B)
@@ -78,13 +80,17 @@ fun TimelineItem(
                         .background(lineColor)
                 )
             }
-            // Dot
+            // Dot — positioned proportionally within the section
             Box(
-                modifier = Modifier
-                    .padding(top = 6.dp)
-                    .size(10.dp)
-                    .background(dotColor, CircleShape)
-            )
+                modifier = Modifier.fillMaxHeight(),
+                contentAlignment = BiasAlignment(0f, dotVerticalBias)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .background(dotColor, CircleShape)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(8.dp))

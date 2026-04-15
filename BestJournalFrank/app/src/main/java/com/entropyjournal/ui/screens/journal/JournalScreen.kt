@@ -421,6 +421,9 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                                     index == sectionEntries.lastIndex -> TimelinePosition.LAST
                                     else -> TimelinePosition.MIDDLE
                                 }
+                            val dotBias =
+                                if (sectionEntries.size <= 1) -1f
+                                else -1f + 2f * index / (sectionEntries.size - 1)
                             TimelineItem(
                                 entry = sectionEntries[index],
                                 onClick = {
@@ -430,6 +433,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
                                     )
                                 },
                                 position = position,
+                                dotVerticalBias = dotBias,
                                 modifier = Modifier.animateItem().padding(vertical = 6.dp),
                                 searchQuery =
                                     if (uiState.isSearchActive) uiState.searchQuery else "",
