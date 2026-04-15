@@ -61,7 +61,6 @@ import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Videocam
-import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.MobileOff
 import androidx.compose.material.icons.rounded.VolumeUp
@@ -2565,7 +2564,7 @@ private fun SettingsSoundIcon(isEnabled: Boolean) {
             modifier = Modifier.size(24.dp),
         ) {
             Icon(
-                Icons.Rounded.VolumeOff,
+                Icons.Rounded.VolumeUp,
                 "Ton aus",
                 tint = if (!isEnabled) Color(0xFFEF4444) else mutedGray,
                 modifier = Modifier.size(offSize),
