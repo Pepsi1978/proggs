@@ -118,11 +118,11 @@ class DayDetailViewModel @Inject constructor(
     fun toggleDienstTag() {
         val newValue = !_isDienstTag.value
         _isDienstTag.value = newValue
-        // Re-generate entries with the new Dienst/Frei setting if needed
+        // generateDailyEntries short-circuits via count guard when entries already exist,
+        // so we skip the two costly first() calls here — entries are always present by
+        // the time the user can toggle Dienst (init block already generated them).
         viewModelScope.launch {
-            val supplements = repository.getAllActiveSuplements().first()
-            val sections = repository.getAllSections().first()
-            repository.generateDailyEntries(date, supplements, sections, newValue)
+            repository.generateDailyEntries(date, emptyList(), emptyList(), newValue)
         }
     }
 }

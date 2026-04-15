@@ -45,6 +45,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -66,6 +67,13 @@ import com.nems.app.ui.theme.SectionPreSport
 import com.nems.app.ui.theme.StatusGreen
 import com.nems.app.ui.theme.StatusYellow
 import com.nems.app.util.DateUtils
+
+// Stable shape constants — allocated once, never recreated during recomposition
+private val SectionCardShape = RoundedCornerShape(12.dp)
+private val EntryCardShape = RoundedCornerShape(8.dp)
+private val ToggleCardShape = RoundedCornerShape(12.dp)
+private val ProgressCardShape = RoundedCornerShape(12.dp)
+private val ButtonShape = RoundedCornerShape(12.dp)
 
 @Composable
 private fun sectionAccentColor(sectionId: String): Color = when (sectionId) {
@@ -157,19 +165,18 @@ fun DayDetailScreen(
 
                     // Sections
                     items(state.sections, key = { it.section.id }) { sectionWithEntries ->
-                        val isCollapsed = collapsedSections[sectionWithEntries.section.id] ?: true
+                        val sectionId = sectionWithEntries.section.id
+                        val isCollapsed = collapsedSections[sectionId] ?: true
+                        val onCollapse = remember(sectionId) { { collapsedSections[sectionId] = !isCollapsed } }
+                        val onMarkComplete = remember(sectionId) { { viewModel.toggleSectionComplete(sectionId) } }
                         SectionCard(
                             sectionWithEntries = sectionWithEntries,
                             isCollapsed = isCollapsed,
-                            onToggleCollapse = {
-                                collapsedSections[sectionWithEntries.section.id] = !isCollapsed
-                            },
+                            onToggleCollapse = onCollapse,
                             onToggleEntry = { entryId, taken ->
                                 viewModel.toggleEntry(entryId, taken)
                             },
-                            onMarkSectionComplete = {
-                                viewModel.toggleSectionComplete(sectionWithEntries.section.id)
-                            },
+                            onMarkSectionComplete = onMarkComplete,
                         )
                     }
 
@@ -183,7 +190,7 @@ fun DayDetailScreen(
                                 containerColor = StatusGreen,
                                 contentColor = Color.Black,
                             ),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = ButtonShape,
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.CheckCircle,
@@ -212,9 +219,9 @@ private fun DienstToggleCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(ToggleCardShape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, ToggleCardShape)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
@@ -257,9 +264,9 @@ private fun OverallProgressCard(progress: Float) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(ProgressCardShape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, ProgressCardShape)
             .padding(16.dp),
     ) {
         Row(
@@ -303,13 +310,14 @@ private fun SectionCard(
 ) {
     val section = sectionWithEntries.section
     val accentColor = sectionAccentColor(section.id)
+    val sectionBorder = remember(accentColor) { androidx.compose.foundation.BorderStroke(1.dp, accentColor) }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(SectionCardShape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, SectionCardShape),
     ) {
         // Section header with accent stripe
         Row(
@@ -357,7 +365,7 @@ private fun SectionCard(
                 // Progress count badge
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(EntryCardShape)
                         .background(accentColor.copy(alpha = 0.15f))
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                 ) {
@@ -393,12 +401,14 @@ private fun SectionCard(
                     .padding(bottom = 8.dp),
             ) {
                 sectionWithEntries.entries.forEach { entryWithSupplement ->
-                    SupplementEntryRow(
-                        entryWithSupplement = entryWithSupplement,
-                        onToggle = { taken ->
-                            onToggleEntry(entryWithSupplement.entry.id, taken)
-                        },
-                    )
+                    key(entryWithSupplement.entry.id) {
+                        SupplementEntryRow(
+                            entryWithSupplement = entryWithSupplement,
+                            onToggle = { taken ->
+                                onToggleEntry(entryWithSupplement.entry.id, taken)
+                            },
+                        )
+                    }
                 }
 
                 // "Mark all" button
@@ -407,11 +417,11 @@ private fun SectionCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 4.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, accentColor),
+                    border = sectionBorder,
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = accentColor,
                     ),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = EntryCardShape,
                 ) {
                     Text(
                         text = "Alle abhaken",
