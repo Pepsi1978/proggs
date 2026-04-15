@@ -5,7 +5,9 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.billing.BillingManager
+import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,6 +15,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class PaywallViewModel
@@ -75,9 +78,25 @@ constructor(
     val hasPromoOffer: Boolean
         get() = billingManager.getMonthlyPromoOfferToken() != null
 
-    /** Extend trial by bonus days when exit-intent offer is accepted. */
-    fun extendTrial() {
-        prefs.edit().putBoolean(Constants.PREF_EXIT_INTENT_TRIAL_EXTENDED, true).apply()
+    // Track whether exit-intent purchase flow was started — trial extension
+    // is only granted AFTER Google confirms the purchase, not on flow start.
+    private var exitIntentPending = false
+
+    init {
+        viewModelScope.launch {
+            billingManager.subscriptionState.collect { state ->
+                if (state is SubscriptionState.Subscribed && exitIntentPending) {
+                    exitIntentPending = false
+                    prefs.edit().putBoolean(Constants.PREF_EXIT_INTENT_TRIAL_EXTENDED, true).apply()
+                }
+            }
+        }
+    }
+
+    /** Mark that exit-intent promo purchase flow was started. Trial extension
+     *  will be applied automatically when the purchase is confirmed by Google. */
+    fun onExitIntentPurchaseStarted() {
+        exitIntentPending = true
     }
 
     /** Returns false if product details are not loaded yet or promo unavailable. */

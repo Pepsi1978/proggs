@@ -794,8 +794,8 @@ fun PaywallScreen(
                                                     usePromoOffer = true,
                                                 )
                                                 if (launched) {
-                                                    // Only extend trial when billing flow actually started
-                                                    viewModel.extendTrial()
+                                                    // Trial extension happens after Google confirms the purchase
+                                                    viewModel.onExitIntentPurchaseStarted()
                                                 } else {
                                                     Toast.makeText(act, "Abo wird geladen, bitte versuche es gleich nochmal.", Toast.LENGTH_SHORT).show()
                                                 }
