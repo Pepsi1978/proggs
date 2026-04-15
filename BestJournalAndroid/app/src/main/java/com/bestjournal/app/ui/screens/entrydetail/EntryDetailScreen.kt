@@ -113,7 +113,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.res.stringResource
 import coil3.compose.AsyncImage
+import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.components.highlightMatches
 import com.bestjournal.app.ui.theme.FeatureAccentOrange
@@ -253,12 +255,12 @@ fun EntryDetailScreen(
             }
     ) {
         TopAppBar(
-            title = { Text("Eintrag", color = MaterialTheme.colorScheme.onBackground) },
+            title = { Text(stringResource(R.string.entry_title), color = MaterialTheme.colorScheme.onBackground) },
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(
                         Icons.AutoMirrored.Rounded.ArrowBack,
-                        "Zur\u00fcck",
+                        stringResource(R.string.action_back),
                         tint = MaterialTheme.colorScheme.onBackground,
                     )
                 }
@@ -286,7 +288,7 @@ fun EntryDetailScreen(
                         if (!entry.summary.isNullOrBlank()) {
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                "Zusammenfassung",
+                                stringResource(R.string.entry_summary),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -352,7 +354,7 @@ fun EntryDetailScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "Belastung: ",
+                                stringResource(R.string.entry_stress_label),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -390,7 +392,7 @@ fun EntryDetailScreen(
                     ) {
                         Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
                             Text(
-                                "Verbessert",
+                                stringResource(R.string.label_improved),
                                 modifier = Modifier.padding(8.dp),
                                 color =
                                     if (selectedTab == 0) MaterialTheme.colorScheme.primary
@@ -399,7 +401,7 @@ fun EntryDetailScreen(
                         }
                         Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
                             Text(
-                                "Original",
+                                stringResource(R.string.label_original),
                                 modifier = Modifier.padding(8.dp),
                                 color =
                                     if (selectedTab == 1) MaterialTheme.colorScheme.primary
@@ -494,7 +496,7 @@ fun EntryDetailScreen(
                         }
                         if (uiState.isSaving) {
                             Text(
-                                "Wird gespeichert...",
+                                stringResource(R.string.entry_saving),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.outline,
                                 modifier = Modifier.padding(top = 4.dp),
@@ -534,7 +536,7 @@ fun EntryDetailScreen(
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(
-                                        "Wird verbessert\u2026",
+                                        stringResource(R.string.entry_improving),
                                         style = MaterialTheme.typography.labelLarge,
                                     )
                                 } else {
@@ -545,7 +547,7 @@ fun EntryDetailScreen(
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(
-                                        "Mit KI nachtr\u00e4glich verbessern",
+                                        stringResource(R.string.entry_improve_with_ai),
                                         style = MaterialTheme.typography.labelLarge,
                                     )
                                 }
@@ -579,7 +581,7 @@ fun EntryDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    "Fotos/Videos",
+                                    stringResource(R.string.entry_photos_videos),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -595,7 +597,7 @@ fun EntryDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Hinzuf\u00fcgen",
+                                    stringResource(R.string.entry_add),
                                     style = MaterialTheme.typography.labelMedium,
                                 )
                             }
@@ -609,7 +611,7 @@ fun EntryDetailScreen(
                                         AsyncImage(
                                             model = File(photo.filePath),
                                             contentDescription =
-                                                if (photo.isVideo) "Video" else "Foto",
+                                                if (photo.isVideo) stringResource(R.string.label_video) else stringResource(R.string.label_photo),
                                             imageLoader =
                                                 if (photo.isVideo) videoImageLoader
                                                 else coil3.ImageLoader(appContext),
@@ -625,7 +627,7 @@ fun EntryDetailScreen(
                                         if (photo.isVideo) {
                                             Icon(
                                                 Icons.Rounded.PlayCircle,
-                                                contentDescription = "Video abspielen",
+                                                contentDescription = stringResource(R.string.entry_cd_play_video),
                                                 modifier =
                                                     Modifier.size(40.dp).align(Alignment.Center),
                                                 tint = Color.White.copy(alpha = 0.9f),
@@ -643,7 +645,7 @@ fun EntryDetailScreen(
                                         ) {
                                             Icon(
                                                 Icons.Rounded.Close,
-                                                contentDescription = "Entfernen",
+                                                contentDescription = stringResource(R.string.entry_cd_remove),
                                                 modifier = Modifier.size(16.dp),
                                                 tint = Color.White,
                                             )
@@ -654,7 +656,7 @@ fun EntryDetailScreen(
                         } else {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                "Noch keine Fotos/Videos hinzugef\u00fcgt",
+                                stringResource(R.string.entry_no_photos_yet),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline,
                             )
@@ -719,7 +721,7 @@ fun EntryDetailScreen(
                                     if (!ttsOn) {
                                         android.widget.Toast.makeText(
                                             context,
-                                            "Stimmen in den Einstellungen einschalten",
+                                            context.getString(R.string.entry_tts_enable_hint),
                                             android.widget.Toast.LENGTH_SHORT,
                                         ).show()
                                     } else {
@@ -749,7 +751,7 @@ fun EntryDetailScreen(
                                 if (isSpeaking) Icons.Rounded.Stop
                                 else Icons.Rounded.VolumeUp,
                                 contentDescription =
-                                    if (isSpeaking) "Stoppen" else "Vorlesen",
+                                    if (isSpeaking) stringResource(R.string.entry_tts_stop) else stringResource(R.string.entry_tts_read),
                                 tint = FeatureAccentOrange,
                                 modifier = Modifier.size(22.dp),
                             )
@@ -763,7 +765,7 @@ fun EntryDetailScreen(
                                 val photos = uiState.photos
                                 if (!hasImprovedForShare && photos.size <= 1) {
                                     val shareText =
-                                        buildShareText(entry, useImproved = false)
+                                        buildShareText(entry, useImproved = false, context)
                                     val photoUris =
                                         if (photos.size == 1) {
                                             listOf(getPhotoUri(context, photos[0]))
@@ -779,14 +781,14 @@ fun EntryDetailScreen(
                         ) {
                             Icon(
                                 Icons.Rounded.Share,
-                                contentDescription = "Teilen",
+                                contentDescription = stringResource(R.string.action_share),
                                 tint = FeatureAccentOrange,
                                 modifier = Modifier.size(22.dp),
                             )
                         }
                     }
                     Text(
-                        text = "Aufnahmedauer: ${DateTimeFormatter.formatDuration(entry.audioDurationSeconds)}",
+                        text = stringResource(R.string.entry_recording_duration, DateTimeFormatter.formatDuration(entry.audioDurationSeconds)),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.padding(end = 34.dp),
@@ -808,7 +810,7 @@ fun EntryDetailScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Bitte warten, Text-to-Speech wird erzeugt\u2026",
+                            stringResource(R.string.entry_tts_generating),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -930,7 +932,7 @@ fun EntryDetailScreen(
                         } else {
                             AsyncImage(
                                 model = File(photos[page].filePath),
-                                contentDescription = "Foto ${page + 1}",
+                                contentDescription = stringResource(R.string.entry_cd_photo_page, page + 1),
                                 modifier =
                                     Modifier.fillMaxSize().graphicsLayer {
                                         scaleX = scale
@@ -970,7 +972,7 @@ fun EntryDetailScreen(
                 ) {
                     Icon(
                         Icons.Rounded.Close,
-                        contentDescription = "Schlie\u00dfen",
+                        contentDescription = stringResource(R.string.action_close),
                         tint = Color.White,
                     )
                 }
@@ -990,7 +992,7 @@ fun EntryDetailScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        "Foto/Video hinzuf\u00fcgen",
+                        stringResource(R.string.entry_add_photo_video),
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -1103,7 +1105,7 @@ fun EntryDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    "Kamera",
+                                    stringResource(R.string.entry_camera),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = Color.White,
                                 )
@@ -1168,7 +1170,7 @@ fun EntryDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    "Galerie",
+                                    stringResource(R.string.entry_gallery),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = Color.White,
                                 )
@@ -1195,10 +1197,10 @@ fun EntryDetailScreen(
         AlertDialog(
             onDismissRequest = { viewModel.showDeleteDialog(false) },
             containerColor = MaterialTheme.colorScheme.surface,
-            title = { Text("Eintrag l\u00f6schen?", color = MaterialTheme.colorScheme.onSurface) },
+            title = { Text(stringResource(R.string.entry_delete_title), color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Text(
-                    "Diesen Eintrag unwiderruflich l\u00f6schen?",
+                    stringResource(R.string.entry_delete_message),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             },
@@ -1215,7 +1217,7 @@ fun EntryDetailScreen(
             },
             dismissButton = {
                 OutlinedButton(onClick = { viewModel.showDeleteDialog(false) }) {
-                    Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
         )

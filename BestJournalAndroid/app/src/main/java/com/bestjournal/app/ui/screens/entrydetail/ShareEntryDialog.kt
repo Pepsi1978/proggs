@@ -31,7 +31,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.compose.ui.res.stringResource
 import coil3.compose.AsyncImage
+import com.bestjournal.app.R
 import com.bestjournal.app.data.local.entity.EntryPhotoEntity
 import com.bestjournal.app.domain.model.JournalEntry
 import com.bestjournal.app.ui.theme.NeonEmerald
@@ -51,12 +53,12 @@ fun ShareEntryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Eintrag teilen", color = MaterialTheme.colorScheme.onSurface) },
+        title = { Text(stringResource(R.string.share_title), color = MaterialTheme.colorScheme.onSurface) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (hasImproved) {
                     Text(
-                        "Welche Version teilen?",
+                        stringResource(R.string.share_which_version),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -65,20 +67,20 @@ fun ShareEntryDialog(
                         modifier = Modifier.fillMaxWidth().clickable { useImproved = false },
                     ) {
                         RadioButton(selected = !useImproved, onClick = { useImproved = false })
-                        Text("Original", color = MaterialTheme.colorScheme.onSurface)
+                        Text(stringResource(R.string.label_original), color = MaterialTheme.colorScheme.onSurface)
                     }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().clickable { useImproved = true },
                     ) {
                         RadioButton(selected = useImproved, onClick = { useImproved = true })
-                        Text("Verbesserte Version", color = MaterialTheme.colorScheme.onSurface)
+                        Text(stringResource(R.string.share_improved_version), color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
 
                 if (photos.size > 1) {
                     Text(
-                        "Fotos/Videos mitteilen:",
+                        stringResource(R.string.share_photos_videos_label),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -104,7 +106,7 @@ fun ShareEntryDialog(
                                         .padding(end = 8.dp),
                             )
                             Text(
-                                if (photo.isVideo) "Video" else "Foto",
+                                if (photo.isVideo) stringResource(R.string.label_video) else stringResource(R.string.label_photo),
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                         }
@@ -115,7 +117,7 @@ fun ShareEntryDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val text = buildShareText(entry, useImproved && hasImproved)
+                    val text = buildShareText(entry, useImproved && hasImproved, context)
                     val photoUris =
                         if (photos.size == 1) {
                             listOf(getPhotoUri(context, photos[0]))
@@ -129,19 +131,19 @@ fun ShareEntryDialog(
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = NeonEmerald),
             ) {
-                Text("Teilen")
+                Text(stringResource(R.string.action_share))
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
     )
 }
 
-fun buildShareText(entry: JournalEntry, useImproved: Boolean): String = buildString {
-    append("Tagebucheintrag von der BestJournal App")
+fun buildShareText(entry: JournalEntry, useImproved: Boolean, context: Context? = null): String = buildString {
+    append(context?.getString(R.string.share_footer) ?: "Tagebucheintrag von der BestJournal App")
     append("\n")
     append(DateTimeFormatter.formatFull(entry.timestamp))
     if (!entry.moodTag.isNullOrBlank()) append(" \u00b7 ${entry.moodTag}")
@@ -184,5 +186,5 @@ fun executeShare(context: Context, text: String, photoUris: List<Uri>) {
                     }
             }
         }
-    context.startActivity(Intent.createChooser(intent, "Eintrag teilen"))
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_title)))
 }

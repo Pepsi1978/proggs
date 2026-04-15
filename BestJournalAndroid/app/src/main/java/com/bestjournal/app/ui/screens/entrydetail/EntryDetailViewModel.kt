@@ -1,10 +1,12 @@
 package com.bestjournal.app.ui.screens.entrydetail
 
+import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bestjournal.app.R
 import com.bestjournal.app.data.local.entity.EntryPhotoEntity
 import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.data.remote.ai.AiRateLimiter
@@ -18,6 +20,7 @@ import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -40,6 +43,7 @@ data class EntryDetailUiState(
 class EntryDetailViewModel
 @Inject
 constructor(
+    @ApplicationContext private val context: Context,
     private val journalRepository: JournalRepository,
     private val photoRepository: PhotoRepository,
     private val analyticsTracker: AnalyticsTracker,
@@ -179,11 +183,11 @@ constructor(
             val accessResult = aiRateLimiter.checkTextAccess(subState)
             when (accessResult) {
                 is TieredAccessResult.HardLimitReached -> {
-                    _uiState.value = _uiState.value.copy(improveError = "Tageslimit erreicht. Morgen geht es weiter!")
+                    _uiState.value = _uiState.value.copy(improveError = context.getString(R.string.entry_improve_limit_daily))
                     return@launch
                 }
                 is TieredAccessResult.Cooldown -> {
-                    _uiState.value = _uiState.value.copy(improveError = "Kurze Pause: Noch ${accessResult.minutesLeft} Minuten.")
+                    _uiState.value = _uiState.value.copy(improveError = context.getString(R.string.entry_improve_limit_cooldown, accessResult.minutesLeft))
                     return@launch
                 }
                 is TieredAccessResult.Allowed -> { }
@@ -214,7 +218,7 @@ constructor(
                     _uiState.value =
                         _uiState.value.copy(
                             isImproving = false,
-                            improveError = error.message ?: "Textverbesserung fehlgeschlagen",
+                            improveError = error.message ?: context.getString(R.string.entry_improve_failed),
                         )
                 }
         }
