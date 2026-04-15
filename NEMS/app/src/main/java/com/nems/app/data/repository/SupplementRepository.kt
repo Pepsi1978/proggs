@@ -81,39 +81,77 @@ class SupplementRepository @Inject constructor(
         val dateStr = date.format(dateFormatter)
         if (entryDao.countEntriesForDate(dateStr) > 0) return
 
-        val dayOfYear = date.toEpochDay()
-        val entries = supplements.filter { it.isActive }.mapNotNull { supplement ->
-            if (!isSupplementDueOnDate(supplement, date, dayOfYear)) return@mapNotNull null
+        val epochDay = date.toEpochDay()
+        val activeSupplements = supplements.filter { it.isActive }
 
-            SupplementEntryEntity(
-                id = UUID.randomUUID().toString(),
-                date = dateStr,
-                supplementId = supplement.id,
-                stackSectionId = supplement.defaultStackSectionId,
-                taken = false,
-                takenTimestamp = null,
-                notes = null,
-            )
+        // Build a map of alternating pairs: supplementId -> partner supplement
+        // so we can determine which one wins for this day.
+        val alternatingPairs: Map<String, SupplementEntity> = activeSupplements
+            .filter { it.alternatesWith != null }
+            .associateBy { it.id }
+
+        // Track IDs already decided (suppressed) to avoid adding the losing half of a pair.
+        val suppressedIds = mutableSetOf<String>()
+
+        // Pre-process alternating pairs: for each pair, suppress the one that should NOT show today.
+        val processedPairs = mutableSetOf<String>() // track pair IDs to avoid double-processing
+        for (supplement in activeSupplements) {
+            val partnerId = supplement.alternatesWith ?: continue
+            if (supplement.id in processedPairs || partnerId in processedPairs) continue
+
+            val partner = alternatingPairs[partnerId] ?: continue
+
+            // The supplement with the LOWER sortOrder shows on EVEN epochDays.
+            val (evenSupplement, oddSupplement) = if (supplement.sortOrder <= partner.sortOrder) {
+                supplement to partner
+            } else {
+                partner to supplement
+            }
+
+            val isEvenDay = Math.abs(epochDay) % 2 == 0L
+            val suppressedId = if (isEvenDay) oddSupplement.id else evenSupplement.id
+            suppressedIds.add(suppressedId)
+
+            processedPairs.add(supplement.id)
+            processedPairs.add(partnerId)
         }
+
+        val entries = activeSupplements
+            .filter { it.id !in suppressedIds }
+            .mapNotNull { supplement ->
+                if (!isSupplementDueOnDate(supplement, date, epochDay)) return@mapNotNull null
+
+                SupplementEntryEntity(
+                    id = UUID.randomUUID().toString(),
+                    date = dateStr,
+                    supplementId = supplement.id,
+                    stackSectionId = supplement.defaultStackSectionId,
+                    taken = false,
+                    takenTimestamp = null,
+                    notes = null,
+                )
+            }
 
         entryDao.insertAll(entries)
     }
 
-    fun isSupplementDueOnDate(supplement: SupplementEntity, date: LocalDate, dayOfYear: Long): Boolean {
-        if (supplement.alternatesWith != null) {
-            val isEvenDay = dayOfYear % 2 == 0L
-            // For alternating pairs, one shows on even days, the other on odd days
-            // Convention: the supplement with the lower sort order shows on even days
-            return isEvenDay
-        }
+    // DECISION: alternating supplements are handled before this function is called (in generateDailyEntries),
+    // so here we only handle the non-alternation frequency check.
+    // Math.abs(epochDay) prevents wrong modulo results for negative epoch days (dates before 1970-01-01).
+    fun isSupplementDueOnDate(supplement: SupplementEntity, date: LocalDate, epochDay: Long): Boolean {
+        // Alternating logic is resolved upstream in generateDailyEntries via sortOrder.
+        // Here we just return true so the upstream suppression logic takes effect.
+        if (supplement.alternatesWith != null) return true
+
+        val absDay = Math.abs(epochDay)
         return when (supplement.frequency) {
             "taeglich" -> true
-            "alle 2 Tage" -> dayOfYear % 2 == 0L
-            "alle 3 Tage" -> dayOfYear % 3 == 0L
-            "alle 4 Tage" -> dayOfYear % 4 == 0L
-            "alle 5 Tage" -> dayOfYear % 5 == 0L
-            "alle 6 Tage" -> dayOfYear % 6 == 0L
-            "alle 7 Tage" -> dayOfYear % 7 == 0L
+            "alle 2 Tage" -> absDay % 2 == 0L
+            "alle 3 Tage" -> absDay % 3 == 0L
+            "alle 4 Tage" -> absDay % 4 == 0L
+            "alle 5 Tage" -> absDay % 5 == 0L
+            "alle 6 Tage" -> absDay % 6 == 0L
+            "alle 7 Tage" -> absDay % 7 == 0L
             else -> true
         }
     }
