@@ -1661,91 +1661,6 @@ fun SettingsScreen(
                     }
                 }
 
-                // Sicherheit
-                GlassCard {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            Icon(
-                                Icons.Rounded.Security,
-                                null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Sicherheit",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                            // Invisible counterbalance for icon+spacer so text is visually centered
-                            Spacer(modifier = Modifier.width(28.dp))
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Fingerprint,
-                                    contentDescription = null,
-                                    tint =
-                                        if (uiState.biometricLock) MaterialTheme.colorScheme.primary
-                                        else Color(0xFF666666),
-                                    modifier = Modifier.size(24.dp),
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        "Fingerabdruck",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                    Text(
-                                        "App beim Start entsperren",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                            Switch(
-                                checked = uiState.biometricLock,
-                                onCheckedChange = { enabled ->
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    val activity = context as? com.entropyjournal.MainActivity
-                                    if (activity != null) {
-                                        activity.showBiometricPrompt {
-                                            viewModel.updateBiometricLock(enabled)
-                                        }
-                                    } else {
-                                        viewModel.updateBiometricLock(enabled)
-                                    }
-                                },
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    ),
-                            )
-                        }
-                        if (uiState.biometricLock) {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                "Sperrt automatisch nach 60 Sekunden im Hintergrund",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.outline,
-                            )
-                        }
-                    }
-                }
-
                 // KI-Dashboard Profile
                 GlassCard {
                     Column {
@@ -2135,6 +2050,90 @@ fun SettingsScreen(
                                     SwitchDefaults.colors(
                                         checkedTrackColor = MaterialTheme.colorScheme.primary
                                     ),
+                            )
+                        }
+                    }
+                }
+
+                // Sicherheit
+                GlassCard {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Icon(
+                                Icons.Rounded.Security,
+                                null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Sicherheit",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(modifier = Modifier.width(28.dp))
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Fingerprint,
+                                    contentDescription = null,
+                                    tint =
+                                        if (uiState.biometricLock) MaterialTheme.colorScheme.primary
+                                        else Color(0xFF666666),
+                                    modifier = Modifier.size(24.dp),
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        "Fingerabdruck",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Text(
+                                        "App beim Start entsperren",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = uiState.biometricLock,
+                                onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    val activity = context as? com.entropyjournal.MainActivity
+                                    if (activity != null) {
+                                        activity.showBiometricPrompt {
+                                            viewModel.updateBiometricLock(enabled)
+                                        }
+                                    } else {
+                                        viewModel.updateBiometricLock(enabled)
+                                    }
+                                },
+                                colors =
+                                    SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    ),
+                            )
+                        }
+                        if (uiState.biometricLock) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                "Sperrt automatisch nach 60 Sekunden im Hintergrund",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.outline,
                             )
                         }
                     }
