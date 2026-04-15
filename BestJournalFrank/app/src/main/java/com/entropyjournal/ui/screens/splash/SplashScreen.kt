@@ -1,6 +1,7 @@
 package com.entropyjournal.ui.screens.splash
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -47,6 +48,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.entropyjournal.R
+import kotlin.math.cos
+import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -64,6 +67,15 @@ private val OnSurface = Color(0xFFE5E2E1)
 private val OnPrimaryDark = Color(0xFF512400)
 private val WarmSandVariant = Color(0xFFDDC1B2)
 
+private val ParticleColors = listOf(
+    Color(0xFFFFB689),
+    Color(0xFFDF741E),
+    Color(0xFFECC165),
+    Color(0xFFC4875A),
+)
+
+private const val PARTICLE_COUNT = 200
+
 @Composable
 fun SplashScreen(onSplashFinished: () -> Unit, viewModel: SplashViewModel) {
     // ── Exit state: when Start is pressed, fade everything out first ──
@@ -80,7 +92,7 @@ fun SplashScreen(onSplashFinished: () -> Unit, viewModel: SplashViewModel) {
 
     // ── Entrance animation states ──
     val heroAlpha = remember { Animatable(0f) }
-    val heroScale = remember { Animatable(1.06f) }
+    val heroScale = remember { Animatable(1.12f) }
     val titleAlpha = remember { Animatable(0f) }
     val titleOffsetY = remember { Animatable(24f) }
     val accentAlpha = remember { Animatable(0f) }
@@ -88,7 +100,7 @@ fun SplashScreen(onSplashFinished: () -> Unit, viewModel: SplashViewModel) {
     val btnOffsetY = remember { Animatable(50f) }
     val subAlpha = remember { Animatable(0f) }
 
-    // ── Continuous breathing glow for Start button ──
+    // ── Continuous breathing for Start button ──
     val infinite = rememberInfiniteTransition(label = "splash")
     val glowAlpha by infinite.animateFloat(
         initialValue = 0.12f,
@@ -99,16 +111,51 @@ fun SplashScreen(onSplashFinished: () -> Unit, viewModel: SplashViewModel) {
         ),
         label = "btnGlow",
     )
+    val btnBreathScale by infinite.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "btnBreathing",
+    )
+
+    // ── Floating copper dust particles (truly random positions) ──
+    val particleSpeeds = remember { FloatArray(PARTICLE_COUNT) { Random.nextFloat() * 0.0015f + 0.0008f } }
+    val particlePhases = remember { FloatArray(PARTICLE_COUNT) { Random.nextFloat() * 6.2832f } }
+    val particleRadii = remember {
+        FloatArray(PARTICLE_COUNT) { i ->
+            when {
+                i < 30 -> Random.nextFloat() * 1.5f + 0.5f  // 0.5-2.0 dp (nahe Sterne)
+                i < 60 -> Random.nextFloat() * 0.6f + 0.3f  // 0.3-0.9 dp (mittlere)
+                else -> Random.nextFloat() * 0.35f + 0.15f   // 0.15-0.5 dp (ferne Sterne)
+            }
+        }
+    }
+    val particleColorIdx = remember { IntArray(PARTICLE_COUNT) { Random.nextInt(ParticleColors.size) } }
+    val particleX = remember { FloatArray(PARTICLE_COUNT) { Random.nextFloat() } }
+    val particleY = remember { FloatArray(PARTICLE_COUNT) { Random.nextFloat() } }
+    val particleCycles = remember { IntArray(PARTICLE_COUNT) { 0 } }
+    val particleTime = remember { mutableStateOf(0f) }
+
+    LaunchedEffect(Unit) {
+        val start = System.nanoTime()
+        while (true) {
+            delay(16L)
+            particleTime.value = (System.nanoTime() - start) / 1_000_000f
+        }
+    }
 
     // ── Cinematic entrance sequence ──
     LaunchedEffect(Unit) {
         // Phase 1: Hero image — fade in + slow zoom settle (Ken Burns feel)
         launch { heroAlpha.animateTo(1f, tween(1200, easing = FastOutSlowInEasing)) }
-        launch { heroScale.animateTo(1f, tween(2500, easing = FastOutSlowInEasing)) }
+        launch { heroScale.animateTo(1f, tween(3000, easing = FastOutSlowInEasing)) }
 
         delay(600)
 
-        // Phase 2: Title slides up + fades in
+        // Phase 2: Title slides up
         launch { titleAlpha.animateTo(1f, tween(700)) }
         launch { titleOffsetY.animateTo(0f, tween(800, easing = FastOutSlowInEasing)) }
 
@@ -176,27 +223,52 @@ fun SplashScreen(onSplashFinished: () -> Unit, viewModel: SplashViewModel) {
                     alpha = heroAlpha.value
                     scaleX = heroScale.value
                     scaleY = heroScale.value
+                    clip = true
                 },
         )
 
-        // Layer 3: Gradient overlay — merges hero image seamlessly into background
+        // Layer 3: Gradient overlay — covers full screen to hide ambient glows in gap
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.65f)
-                .align(Alignment.TopCenter)
+                .fillMaxSize()
                 .background(
                     brush = Brush.verticalGradient(
                         colorStops = arrayOf(
                             0.0f to Color.Transparent,
-                            0.45f to Color.Transparent,
-                            0.7f to SplashBg.copy(alpha = 0.7f),
-                            0.88f to SplashBg.copy(alpha = 0.95f),
+                            0.29f to Color.Transparent,
+                            0.46f to SplashBg.copy(alpha = 0.7f),
+                            0.57f to SplashBg.copy(alpha = 0.95f),
+                            0.65f to SplashBg,
                             1.0f to SplashBg,
                         ),
                     ),
                 ),
         )
+
+        // Layer 3.5: Floating copper dust — cos wave ensures position change at alpha=0
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val t = particleTime.value
+            for (i in 0 until PARTICLE_COUNT) {
+                val wave = t * particleSpeeds[i] + particlePhases[i]
+                val cycle = (wave / 6.2832f).toInt()
+                // cos(k*2π)=1 → alpha=0 at cycle boundary = invisible when position changes
+                val alpha = (1f - cos(wave)) / 2f
+
+                if (cycle != particleCycles[i]) {
+                    particleCycles[i] = cycle
+                    particleX[i] = Random.nextFloat()
+                    particleY[i] = Random.nextFloat()
+                }
+
+                if (alpha > 0.02f) {
+                    drawCircle(
+                        color = ParticleColors[particleColorIdx[i]].copy(alpha = alpha * 0.35f),
+                        radius = particleRadii[i] * density,
+                        center = Offset(particleX[i] * size.width, particleY[i] * size.height),
+                    )
+                }
+            }
+        }
 
         // Layer 4: Content — title, accent line, button, subtitle
         Column(
@@ -244,6 +316,8 @@ fun SplashScreen(onSplashFinished: () -> Unit, viewModel: SplashViewModel) {
                     .graphicsLayer {
                         alpha = btnAlpha.value
                         translationY = btnOffsetY.value * density
+                        scaleX = btnBreathScale
+                        scaleY = btnBreathScale
                     },
             ) {
                 // Breathing glow behind the button (API 31+ visual; no-op on older)
