@@ -43,12 +43,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.nems.app.ui.theme.GlassBorder
-import com.nems.app.ui.theme.GlassWhite
-import com.nems.app.ui.theme.NeonCyan
-import com.nems.app.ui.theme.WarmGold
 import com.nems.app.ui.theme.StatusRed
-import com.nems.app.ui.theme.TextSecondary
 import com.nems.app.ui.theme.ThemeMode
 
 @Composable
@@ -78,13 +73,13 @@ fun SettingsScreen(
         // Google Account section
         SettingsSectionCard(
             icon = Icons.Default.AccountCircle,
-            iconTint = NeonCyan,
+            iconTint = MaterialTheme.colorScheme.primary,
             title = "Google-Konto",
         ) {
             Text(
                 text = "Synchronisiere deine Daten mit Google Drive und greife von mehreren Geraeten darauf zu.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 12.dp),
             )
             Row(
@@ -94,7 +89,7 @@ fun SettingsScreen(
                 Button(
                     onClick = onNavigateToAuth,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = NeonCyan,
+                        containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = Color(0xFF0D0D1A),
                     ),
                 ) {
@@ -109,7 +104,7 @@ fun SettingsScreen(
         // Design section
         SettingsSectionCard(
             icon = Icons.Default.Palette,
-            iconTint = WarmGold,
+            iconTint = MaterialTheme.colorScheme.tertiary,
             title = "Design",
         ) {
             Column(modifier = Modifier.selectableGroup()) {
@@ -134,7 +129,7 @@ fun SettingsScreen(
         // Data section
         SettingsSectionCard(
             icon = Icons.Default.Storage,
-            iconTint = NeonCyan,
+            iconTint = MaterialTheme.colorScheme.primary,
             title = "Daten",
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -145,10 +140,10 @@ fun SettingsScreen(
                     OutlinedButton(
                         onClick = { /* TODO: Export CSV */ },
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = NeonCyan,
+                            contentColor = MaterialTheme.colorScheme.primary,
                         ),
                         border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(NeonCyan.copy(alpha = 0.5f)),
+                            brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
                         ),
                     ) {
                         Icon(
@@ -190,7 +185,7 @@ fun SettingsScreen(
         // App info section
         SettingsSectionCard(
             icon = Icons.Default.Info,
-            iconTint = TextSecondary,
+            iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
             title = "App-Info",
         ) {
             Row(
@@ -201,7 +196,7 @@ fun SettingsScreen(
                 Text(
                     text = "Version",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = "1.0.0",
@@ -219,12 +214,12 @@ fun SettingsScreen(
                 Text(
                     text = "Paket",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = "com.nems.app",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -244,10 +239,10 @@ private fun SettingsSectionCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(GlassWhite)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .border(
                 width = 1.dp,
-                color = GlassBorder,
+                color = MaterialTheme.colorScheme.outlineVariant,
                 shape = RoundedCornerShape(16.dp),
             )
             .padding(16.dp),
@@ -297,14 +292,14 @@ private fun ThemeModeOption(
             selected = selected,
             onClick = null,
             colors = RadioButtonDefaults.colors(
-                selectedColor = NeonCyan,
-                unselectedColor = TextSecondary,
+                selectedColor = MaterialTheme.colorScheme.primary,
+                unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ),
         )
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (selected) MaterialTheme.colorScheme.onSurface else TextSecondary,
+            color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 8.dp),
         )
     }

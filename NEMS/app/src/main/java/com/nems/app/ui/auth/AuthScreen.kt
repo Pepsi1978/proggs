@@ -31,11 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.nems.app.ui.theme.GlassBorder
-import com.nems.app.ui.theme.GlassWhite
-import com.nems.app.ui.theme.NeonCyan
 import com.nems.app.ui.theme.StatusRed
-import com.nems.app.ui.theme.TextSecondary
 
 @Composable
 fun AuthScreen(
@@ -76,10 +72,10 @@ fun AuthScreen(
                 modifier = Modifier
                     .size(88.dp)
                     .clip(CircleShape)
-                    .background(GlassWhite)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .border(
                         width = 2.dp,
-                        color = NeonCyan.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                         shape = CircleShape,
                     ),
                 contentAlignment = Alignment.Center,
@@ -87,7 +83,7 @@ fun AuthScreen(
                 Icon(
                     imageVector = Icons.Default.Cloud,
                     contentDescription = null,
-                    tint = NeonCyan,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(44.dp),
                 )
             }
@@ -109,7 +105,7 @@ fun AuthScreen(
             Text(
                 text = "Synchronisiere deine Supplement-Daten sicher mit deinem Google-Konto und greife von jedem Geraet darauf zu.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
             )
@@ -160,13 +156,13 @@ fun AuthScreen(
                 shape = RoundedCornerShape(14.dp),
                 border = androidx.compose.foundation.BorderStroke(
                     width = 1.5.dp,
-                    color = NeonCyan.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
                 ),
             ) {
                 Icon(
                     imageVector = Icons.Default.Cloud,
                     contentDescription = null,
-                    tint = NeonCyan,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .size(20.dp)
                         .padding(end = 0.dp),
@@ -174,7 +170,7 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(
                     text = if (uiState is AuthUiState.Loading) "Wird angemeldet..." else "Mit Google anmelden",
-                    color = NeonCyan,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                     style = MaterialTheme.typography.bodyLarge,
                 )
@@ -191,7 +187,7 @@ fun AuthScreen(
             ) {
                 Text(
                     text = "Als Gast fortfahren",
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -201,7 +197,7 @@ fun AuthScreen(
             Text(
                 text = "Die App funktioniert auch ohne Anmeldung vollstaendig offline.",
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center,
             )
         }
@@ -218,12 +214,12 @@ private fun BenefitItem(text: String) {
             modifier = Modifier
                 .size(6.dp)
                 .clip(CircleShape)
-                .background(NeonCyan),
+                .background(MaterialTheme.colorScheme.primary),
         )
         Text(
             text = text,
             style = MaterialTheme.typography.bodySmall,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

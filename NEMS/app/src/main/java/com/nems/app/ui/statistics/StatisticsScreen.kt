@@ -38,15 +38,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nems.app.data.local.dao.DailyCompletionStat
 import com.nems.app.data.local.dao.MissedSupplement
-import com.nems.app.ui.theme.GlassBorder
-import com.nems.app.ui.theme.GlassWhite
-import com.nems.app.ui.theme.NeonCyan
 import com.nems.app.ui.theme.NeonEmerald
-import com.nems.app.ui.theme.FeatureAccent
-import com.nems.app.ui.theme.WarmGold
 import com.nems.app.ui.theme.StatusRed
 import com.nems.app.ui.theme.StatusYellow
-import com.nems.app.ui.theme.TextSecondary
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -101,14 +95,14 @@ private fun StreakCard(streak: Int) {
             .background(
                 Brush.horizontalGradient(
                     colors = listOf(
-                        FeatureAccent.copy(alpha = 0.15f),
-                        WarmGold.copy(alpha = 0.10f),
+                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
+                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.10f),
                     ),
                 ),
             )
             .border(
                 width = 1.dp,
-                color = FeatureAccent.copy(alpha = 0.4f),
+                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(20.dp),
             )
             .padding(20.dp),
@@ -121,7 +115,7 @@ private fun StreakCard(streak: Int) {
             Icon(
                 imageVector = Icons.Default.LocalFireDepartment,
                 contentDescription = null,
-                tint = FeatureAccent,
+                tint = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier.size(28.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -129,7 +123,7 @@ private fun StreakCard(streak: Int) {
                 text = "Aktuelle Serie",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = FeatureAccent,
+                color = MaterialTheme.colorScheme.tertiary,
             )
         }
 
@@ -146,7 +140,7 @@ private fun StreakCard(streak: Int) {
         Text(
             text = if (streak == 1) "Tag in Folge mit 100%" else "Tage in Folge mit 100%",
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
 
@@ -155,7 +149,7 @@ private fun StreakCard(streak: Int) {
             Text(
                 text = "Nimm heute alle Supplemente — starte deine Serie!",
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
         }
@@ -174,10 +168,10 @@ private fun WeeklyChartCard(stats: List<DailyCompletionStat>) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(GlassWhite)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .border(
                 width = 1.dp,
-                color = GlassBorder,
+                color = MaterialTheme.colorScheme.outlineVariant,
                 shape = RoundedCornerShape(16.dp),
             )
             .padding(16.dp),
@@ -186,7 +180,7 @@ private fun WeeklyChartCard(stats: List<DailyCompletionStat>) {
             text = "Letzte 7 Tage",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
-            color = NeonCyan,
+            color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = 16.dp),
         )
 
@@ -224,7 +218,7 @@ private fun WeeklyChartCard(stats: List<DailyCompletionStat>) {
             LegendItem(color = NeonEmerald, label = "100%")
             LegendItem(color = StatusYellow, label = "50-99%")
             LegendItem(color = StatusRed, label = "<50%")
-            LegendItem(color = GlassBorder, label = "Keine Daten")
+            LegendItem(color = MaterialTheme.colorScheme.outlineVariant, label = "Keine Daten")
         }
     }
 }
@@ -238,7 +232,7 @@ private fun DayBar(
     isToday: Boolean,
 ) {
     val barColor = when {
-        !hasStat -> GlassBorder
+        !hasStat -> MaterialTheme.colorScheme.outlineVariant
         completionPct >= 1.0f -> NeonEmerald
         completionPct >= 0.5f -> StatusYellow
         else -> StatusRed
@@ -279,7 +273,7 @@ private fun DayBar(
                             colors = listOf(barColor, barColor.copy(alpha = 0.6f)),
                         )
                     } else {
-                        Brush.verticalGradient(colors = listOf(GlassBorder, GlassBorder))
+                        Brush.verticalGradient(colors = listOf(MaterialTheme.colorScheme.outlineVariant, MaterialTheme.colorScheme.outlineVariant))
                     },
                 ),
         )
@@ -290,7 +284,7 @@ private fun DayBar(
         Text(
             text = dayLabel,
             style = MaterialTheme.typography.labelSmall,
-            color = if (isToday) NeonCyan else TextSecondary,
+            color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
             fontSize = 10.sp,
         )
@@ -301,7 +295,7 @@ private fun DayBar(
                 modifier = Modifier
                     .size(4.dp)
                     .clip(CircleShape)
-                    .background(NeonCyan),
+                    .background(MaterialTheme.colorScheme.primary),
             )
         }
     }
@@ -322,7 +316,7 @@ private fun LegendItem(color: Color, label: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 9.sp,
         )
     }
@@ -334,10 +328,10 @@ private fun MostMissedCard(supplements: List<MissedSupplement>) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(GlassWhite)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .border(
                 width = 1.dp,
-                color = GlassBorder,
+                color = MaterialTheme.colorScheme.outlineVariant,
                 shape = RoundedCornerShape(16.dp),
             )
             .padding(16.dp),
@@ -364,7 +358,7 @@ private fun MostMissedCard(supplements: List<MissedSupplement>) {
         Text(
             text = "Letzte 30 Tage",
             style = MaterialTheme.typography.bodySmall,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 12.dp),
         )
 
@@ -388,9 +382,9 @@ private fun MissedSupplementRow(
 ) {
     val rankColor = when (rank) {
         1 -> StatusRed
-        2 -> FeatureAccent
+        2 -> MaterialTheme.colorScheme.tertiary
         3 -> StatusYellow
-        else -> TextSecondary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     Row(
@@ -438,7 +432,7 @@ private fun MissedSupplementRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(GlassBorder),
+                .background(MaterialTheme.colorScheme.outlineVariant),
         )
     }
 }

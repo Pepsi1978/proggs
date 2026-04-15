@@ -42,15 +42,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nems.app.data.local.dao.DailyCompletionStat
-import com.nems.app.ui.theme.CardSurface
-import com.nems.app.ui.theme.GlassBorder
-import com.nems.app.ui.theme.GlassWhite
-import com.nems.app.ui.theme.NeonCyan
 import com.nems.app.ui.theme.StatusGray
 import com.nems.app.ui.theme.StatusGreen
 import com.nems.app.ui.theme.StatusRed
 import com.nems.app.ui.theme.StatusYellow
-import com.nems.app.ui.theme.TextSecondary
 import com.nems.app.util.DateUtils
 import java.time.LocalDate
 import java.time.YearMonth
@@ -68,7 +63,7 @@ fun CalendarScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { viewModel.goToToday() },
-                containerColor = NeonCyan,
+                containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.background,
             ) {
                 Icon(imageVector = Icons.Filled.Today, contentDescription = "Heute")
@@ -97,8 +92,8 @@ fun CalendarScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(GlassWhite)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
                     .padding(12.dp),
             ) {
                 Column {
@@ -135,7 +130,7 @@ private fun MonthHeader(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Vorheriger Monat",
-                tint = NeonCyan,
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
 
@@ -150,7 +145,7 @@ private fun MonthHeader(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = "Naechster Monat",
-                tint = NeonCyan,
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
     }
@@ -165,7 +160,7 @@ private fun WeekDayHeaderRow() {
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.Medium,
             )
         }
@@ -249,7 +244,7 @@ private fun DayCell(
                     if (showOutline) {
                         Modifier
                             .background(Color.Transparent)
-                            .border(1.dp, GlassBorder, CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                     } else {
                         Modifier.background(indicatorColor.copy(alpha = 0.25f))
                     },
@@ -262,7 +257,7 @@ private fun DayCell(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .border(2.dp, NeonCyan, CircleShape),
+                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
             )
         }
 
@@ -273,8 +268,8 @@ private fun DayCell(
             fontSize = 12.sp,
             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
             color = when {
-                isToday -> NeonCyan
-                isFuture -> TextSecondary
+                isToday -> MaterialTheme.colorScheme.primary
+                isFuture -> MaterialTheme.colorScheme.onSurfaceVariant
                 else -> MaterialTheme.colorScheme.onBackground
             },
             textAlign = TextAlign.Center,

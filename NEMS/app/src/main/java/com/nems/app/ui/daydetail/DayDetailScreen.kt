@@ -57,10 +57,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nems.app.ui.theme.CardSurface
-import com.nems.app.ui.theme.GlassBorder
-import com.nems.app.ui.theme.GlassWhite
-import com.nems.app.ui.theme.NeonCyan
 import com.nems.app.ui.theme.SectionEvening1
 import com.nems.app.ui.theme.SectionEvening2
 import com.nems.app.ui.theme.SectionEvening3
@@ -69,9 +65,9 @@ import com.nems.app.ui.theme.SectionMorning2
 import com.nems.app.ui.theme.SectionPreSport
 import com.nems.app.ui.theme.StatusGreen
 import com.nems.app.ui.theme.StatusYellow
-import com.nems.app.ui.theme.TextSecondary
 import com.nems.app.util.DateUtils
 
+@Composable
 private fun sectionAccentColor(sectionId: String): Color = when (sectionId) {
     "morning1" -> SectionMorning1
     "morning2" -> SectionMorning2
@@ -79,7 +75,7 @@ private fun sectionAccentColor(sectionId: String): Color = when (sectionId) {
     "evening1" -> SectionEvening1
     "evening2" -> SectionEvening2
     "evening3" -> SectionEvening3
-    else -> NeonCyan
+    else -> MaterialTheme.colorScheme.primary
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -115,7 +111,7 @@ fun DayDetailScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Zurueck",
-                            tint = NeonCyan,
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 },
@@ -133,7 +129,7 @@ fun DayDetailScreen(
                         .padding(innerPadding),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator(color = NeonCyan)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             }
 
@@ -217,8 +213,8 @@ private fun DienstToggleCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(GlassWhite)
-            .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
@@ -233,7 +229,7 @@ private fun DienstToggleCard(
             Text(
                 text = if (isDienstTag) "Sport-Protokoll aktiv" else "Normales Protokoll",
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Switch(
@@ -241,7 +237,7 @@ private fun DienstToggleCard(
             onCheckedChange = { onToggle() },
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.Black,
-                checkedTrackColor = NeonCyan,
+                checkedTrackColor = MaterialTheme.colorScheme.primary,
                 uncheckedThumbColor = MaterialTheme.colorScheme.onSurface,
                 uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
             ),
@@ -262,8 +258,8 @@ private fun OverallProgressCard(progress: Float) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(GlassWhite)
-            .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
             .padding(16.dp),
     ) {
         Row(
@@ -274,7 +270,7 @@ private fun OverallProgressCard(progress: Float) {
             Text(
                 text = "Gesamtfortschritt",
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = "$percentage%",
@@ -312,8 +308,8 @@ private fun SectionCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(CardSurface)
-            .border(1.dp, GlassBorder, RoundedCornerShape(12.dp)),
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
     ) {
         // Section header with accent stripe
         Row(
@@ -351,7 +347,7 @@ private fun SectionCard(
                     Text(
                         text = section.instruction,
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                     )
                 }
@@ -377,7 +373,7 @@ private fun SectionCard(
                 Icon(
                     imageVector = if (isCollapsed) Icons.Filled.ExpandMore else Icons.Filled.ExpandLess,
                     contentDescription = if (isCollapsed) "Aufklappen" else "Einklappen",
-                    tint = TextSecondary,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .padding(start = 4.dp)
                         .size(20.dp),
@@ -448,7 +444,7 @@ private fun SupplementEntryRow(
             onCheckedChange = onToggle,
             colors = CheckboxDefaults.colors(
                 checkedColor = StatusGreen,
-                uncheckedColor = TextSecondary,
+                uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 checkmarkColor = Color.Black,
             ),
             modifier = Modifier.size(24.dp),
@@ -461,13 +457,13 @@ private fun SupplementEntryRow(
                 text = supplement?.name ?: entry.supplementId,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (entry.taken) FontWeight.Normal else FontWeight.Medium,
-                color = if (entry.taken) TextSecondary else MaterialTheme.colorScheme.onBackground,
+                color = if (entry.taken) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onBackground,
             )
             if (supplement != null) {
                 Text(
                     text = "${supplement.dosage}  •  ${supplement.capsuleCount}x ${supplement.unit}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp,
                 )
             }
