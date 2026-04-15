@@ -906,5 +906,9 @@ private fun formatDerivedPrice(originalPrice: String, factor: Double): String {
         newAmount.toInt().toString()
     }
 
-    return originalPrice.replaceFirst(Regex("[0-9][0-9.,]*[0-9]|[0-9]+"), formatted)
+    // Also match spaces (regular, non-breaking, narrow non-breaking) used as thousands separators
+    return originalPrice.replaceFirst(
+        Regex("[0-9][0-9., \u00A0\u202F]*[0-9]|[0-9]+"),
+        formatted,
+    )
 }
