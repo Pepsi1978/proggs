@@ -1,4 +1,627 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Best Journal</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NAVIGATION & TABS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="nav_journal">Tagebuch</string>
+    <string name="nav_retrospective">Rückblick</string>
+    <string name="nav_dashboard">Dashboard</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         COMMON / SHARED
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_cancel">Abbrechen</string>
+    <string name="action_save">Speichern</string>
+    <string name="action_close">Schließen</string>
+    <string name="action_continue">Weiter</string>
+    <string name="action_understood">Verstanden</string>
+    <string name="action_retry">Nochmal versuchen</string>
+    <string name="action_later">Später</string>
+    <string name="action_share">Teilen</string>
+    <string name="action_discard">Verwerfen</string>
+    <string name="action_back">Zurück</string>
+    <string name="action_done">Fertig</string>
+    <string name="action_no_thanks">Nein danke</string>
+    <string name="label_premium">Premium</string>
+    <string name="label_original">Original</string>
+    <string name="label_improved">Verbessert</string>
+    <string name="label_photo">Foto</string>
+    <string name="label_video">Video</string>
+    <string name="label_current">Aktuell</string>
+    <string name="label_record">Rekord</string>
+    <string name="cd_sync_status">Sync-Status</string>
+    <string name="cd_day">Tag</string>
+    <string name="cd_night">Nacht</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JOURNAL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="journal_title">Tagebuch</string>
+    <string name="journal_search_placeholder">Einträge durchsuchen…</string>
+    <string name="journal_search">Suchen</string>
+    <string name="journal_search_hint">Suche</string>
+    <string name="journal_search_close">Suche schließen</string>
+    <string name="journal_no_entries">Noch keine Einträge</string>
+    <string name="journal_tap_mic_to_start">Tippe auf das Mikrofon um zu starten</string>
+    <string name="journal_cd_streak">Tage in Folge</string>
+    <string name="journal_cd_text_input">Text eingeben</string>
+    <string name="journal_achievement_unlocked">Achievement freigeschaltet!</string>
+    <string name="journal_drive_not_signed_in">Nicht bei Google angemeldet</string>
+    <string name="journal_drive_backup_current">Backup aktuell, alle Einträge gesichert</string>
+    <string name="journal_drive_uploading">Backup wird hochgeladen…</string>
+    <string name="journal_drive_downloading">Fotos/Videos werden heruntergeladen…</string>
+    <string name="journal_drive_failed">Backup fehlgeschlagen!</string>
+    <string name="journal_drive_last_sync">Letzte Synchronisierung: %1$s</string>
+    <string name="journal_new_entry_prompt">Schreibimpuls</string>
+    <string name="journal_new_entry">Neuer Eintrag</string>
+    <string name="journal_save_improved">Verbessert speichern</string>
+    <string name="journal_save">Speichern</string>
+    <string name="journal_cd_write">Schreiben</string>
+    <string name="journal_write">Schreiben</string>
+    <string name="journal_cd_speak">Einsprechen</string>
+    <string name="journal_speak">Einsprechen</string>
+    <string name="journal_your_answer">Deine Antwort:</string>
+    <string name="journal_placeholder_prompt">Schreibe hier deine Gedanken…</string>
+    <string name="journal_placeholder_edit">Tippe hier, um den Text zu bearbeiten…</string>
+    <string name="journal_freeflow_hint">Lass deine Gedanken frei fließen. Es gibt kein richtig oder falsch.</string>
+    <string name="journal_transcribed_with">Transkribiert mit %1$s</string>
+    <string name="journal_text_upsell_title">Beeindruckend, oder?</string>
+    <string name="journal_text_upsell_body">Mit Premium kannst du jeden Eintrag verbessern.</string>
+    <string name="journal_discover_premium">Premium entdecken →</string>
+
+    <!-- Streak messages -->
+    <string name="streak_365">Ein ganzes Jahr!</string>
+    <string name="streak_180">Unglaubliche Disziplin!</string>
+    <string name="streak_30">Ein ganzer Monat!</string>
+    <string name="streak_14">Zwei Wochen stark!</string>
+    <string name="streak_7">Eine ganze Woche!</string>
+    <string name="streak_default">Jeder Tag zählt!</string>
+    <string name="streak_desc_365">Was als kleine Gewohnheit begann, ist jetzt ein fester Teil deines Lebens. Dein Tagebuch kennt dich besser als je zuvor.</string>
+    <string name="streak_desc_14">Zwei Wochen am Stück, das schaffen die wenigsten. Dein zukünftiges Ich wird dir dafür danken.</string>
+    <string name="streak_desc_7">Eine Woche voller Gedanken, Gefühle und Erinnerungen. Du baust gerade etwas Wertvolles auf.</string>
+    <string name="streak_desc_3">Drei Tage in Folge sind der Anfang einer echten Gewohnheit. Bleib dran, es lohnt sich!</string>
+    <string name="streak_desc_1">Jeder Eintrag ist ein kleines Geschenk an dein zukünftiges Ich. Schreib morgen wieder!</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ENTRY DETAIL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="entry_title">Eintrag</string>
+    <string name="entry_summary">Zusammenfassung</string>
+    <string name="entry_stress_label">Belastung: </string>
+    <string name="entry_saving">Wird gespeichert…</string>
+    <string name="entry_improving">Wird verbessert…</string>
+    <string name="entry_improve_with_ai">Mit KI nachträglich verbessern</string>
+    <string name="entry_photos_videos">Fotos/Videos</string>
+    <string name="entry_add">Hinzufügen</string>
+    <string name="entry_no_photos_yet">Noch keine Fotos/Videos hinzugefügt</string>
+    <string name="entry_cd_play_video">Video abspielen</string>
+    <string name="entry_cd_remove">Entfernen</string>
+    <string name="entry_tts_enable_hint">Stimmen in den Einstellungen einschalten</string>
+    <string name="entry_tts_stop">Stoppen</string>
+    <string name="entry_tts_read">Vorlesen</string>
+    <string name="entry_cd_share">Teilen</string>
+    <string name="entry_recording_duration">Aufnahmedauer: %1$s</string>
+    <string name="entry_tts_generating">Bitte warten, Text-to-Speech wird erzeugt…</string>
+    <string name="entry_cd_photo_page">Foto %1$d</string>
+    <string name="entry_add_photo_video">Foto/Video hinzufügen</string>
+    <string name="entry_camera">Kamera</string>
+    <string name="entry_gallery">Galerie</string>
+    <string name="entry_delete_title">Eintrag löschen?</string>
+    <string name="entry_delete_message">Diesen Eintrag unwiderruflich löschen?</string>
+
+    <!-- Share dialog -->
+    <string name="share_title">Eintrag teilen</string>
+    <string name="share_which_version">Welche Version teilen?</string>
+    <string name="share_improved_version">Verbesserte Version</string>
+    <string name="share_photos_videos_label">Fotos/Videos mitteilen:</string>
+    <string name="share_footer">Tagebucheintrag von der BestJournal App</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DASHBOARD SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="dashboard_title">Dashboard</string>
+    <string name="dashboard_legend">Legende</string>
+    <string name="dashboard_refresh">Aktualisieren</string>
+    <string name="dashboard_weekly_review_waiting">Dein Wochenrückblick wartet</string>
+    <string name="dashboard_discover_premium">Premium entdecken</string>
+    <string name="dashboard_please_wait">Bitte warten</string>
+    <string name="dashboard_gemini_unavailable">Gemini ist gerade nicht erreichbar, bitte versuch es gleich nochmal.</string>
+    <string name="dashboard_no_custom_focus">Kein Analyse-Fokus eingegeben</string>
+    <string name="dashboard_custom_focus_hint">Gib in den Einstellungen unter\n\u201eIndividuelle Analyse\u201c einen Fokus ein,\noder wähle ein anderes Profil.</string>
+    <string name="dashboard_no_analysis_yet">Noch keine Analyse</string>
+    <string name="dashboard_create_entries_custom">Erstelle Tagebucheinträge,\ndann analysiert die KI deinen Fokus.</string>
+    <string name="dashboard_create_entries_default">Erstelle Tagebucheinträge,\ndann analysiert die KI deine Muster.</string>
+    <string name="dashboard_like_analysis">Gefällt dir die Analyse?</string>
+    <string name="dashboard_premium_upsell_body">Mit Premium bekommst du unbegrenzte Analysen aus 5 verschiedenen Perspektiven.</string>
+    <string name="dashboard_learn_more">Mehr erfahren</string>
+    <string name="dashboard_feature_analyses">Analysen</string>
+    <string name="dashboard_all_observations">Alle Beobachtungen</string>
+    <string name="dashboard_inner_mirror">Innerer Spiegel</string>
+    <string name="dashboard_all_insights">Alle Einsichten</string>
+    <string name="dashboard_goal_overview">Ziel-Überblick</string>
+    <string name="dashboard_all_goals">Alle Ziele</string>
+    <string name="dashboard_top_results_fallback">Wichtigste Ergebnisse</string>
+    <string name="dashboard_analysis_fallback">Analyse</string>
+    <string name="dashboard_all_results_fallback">Alle Ergebnisse</string>
+    <string name="dashboard_overall_analysis">Gesamtanalyse</string>
+    <string name="dashboard_all_recommendations">Alle Empfehlungen</string>
+    <string name="dashboard_connection">Verknüpfung</string>
+    <string name="dashboard_limit_daily">Tageslimit erreicht. Morgen geht es weiter!</string>
+    <string name="dashboard_limit_cooldown">Kurze Pause: Noch %1$d Minuten bis zur nächsten Analyse.</string>
+    <string name="dashboard_analysis_failed">Analyse fehlgeschlagen</string>
+    <string name="dashboard_last_updated">Letzte Aktualisierung am %1$s</string>
+
+    <!-- Legend labels -->
+    <string name="legend_urgent">Dringend</string>
+    <string name="legend_attention">Aufmerksamkeit</string>
+    <string name="legend_observe">Beobachten</string>
+    <string name="legend_activity_level">Aktivitätslevel</string>
+    <string name="legend_activity_desc">Der Halbkreis zeigt wie viel in diesem Bereich passiert:</string>
+    <string name="legend_activity_high">Viel Aktivität (67–100%)</string>
+    <string name="legend_activity_medium">Moderate Aktivität (34–66%)</string>
+    <string name="legend_activity_low">Wenig Aktivität (0–33%)</string>
+    <string name="legend_observation_relevance">Relevanz der Beobachtungen</string>
+    <string name="legend_relevance_high">Zentral, Kern-Themen deiner Einträge</string>
+    <string name="legend_relevance_medium">Relevant, Wiederkehrende Beobachtungen</string>
+    <string name="legend_relevance_low">Randnotiz, Einmalige Erwähnungen</string>
+    <string name="legend_reflection_depth">Reflexionstiefe</string>
+    <string name="legend_reflection_desc">Der Halbkreis zeigt die Tiefe deiner Selbstreflexion:</string>
+    <string name="legend_reflection_deep">Tiefgehend (67–100%)</string>
+    <string name="legend_reflection_aware">Bewusst (34–66%)</string>
+    <string name="legend_reflection_surface">Oberfläche (0–33%)</string>
+    <string name="legend_insight_depth">Tiefe der Einsichten</string>
+    <string name="legend_insight_deep">Tiefgehend, Verborgene Muster und Überzeugungen</string>
+    <string name="legend_insight_aware">Bewusst, Erkannte Denk- und Gefühlsmuster</string>
+    <string name="legend_insight_surface">Oberfläche, Erste Beobachtungen</string>
+    <string name="legend_progress">Fortschritt</string>
+
+    <!-- Profile names -->
+    <string name="profile_summary">Zusammenfassung</string>
+    <string name="profile_entropy">Räume dein Leben auf</string>
+    <string name="profile_insight">Selbsterkenntnis</string>
+    <string name="profile_goals">Persönliche Ziele</string>
+    <string name="profile_custom">Individuelle Analyse</string>
+    <string name="profile_summary_desc">Fasst Themen, Muster und Erlebnisse zusammen</string>
+    <string name="profile_entropy_desc">Erkennt Stress, Unordnung und Belastung</string>
+    <string name="profile_insight_desc">Deckt verborgene Denk- und Gefühlsmuster auf</string>
+    <string name="profile_goals_desc">Erkennt Ziele, Wünsche und Fortschritte</string>
+    <string name="profile_custom_desc">Eigenen Analyse-Fokus festlegen</string>
+
+    <!-- Profile long descriptions (settings) -->
+    <string name="profile_summary_long">Deine Einträge werden neutral zusammengefasst, ohne Bewertung oder Ratschläge.\n\nDu siehst auf einen Blick:\n\n• Welche Themen dich gerade beschäftigen\n• Welche Muster sich wiederholen\n• Wie sich dein Leben entwickelt\n\nPerfekt als täglicher Überblick über alles, was in deinem Leben passiert.</string>
+    <string name="profile_entropy_long">Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Einträgen.\n\nDu bekommst:\n\n• Eine Analyse deiner größten Belastungsquellen\n• 5 konkrete Maßnahmen zum Aufräumen\n• Tipps, die dir sofort helfen können\n\nIdeal wenn du das Gefühl hast, dass gerade alles zu viel wird.</string>
+    <string name="profile_insight_long">Die KI schaut tiefer als nur auf Ereignisse. Sie erkennt in deinen Einträgen:\n\n• Verborgene Denkmuster und Überzeugungen\n• Wiederkehrende Gefühle und Reaktionen\n• Persönliche Stärken, die dir nicht bewusst sind\n• Werte, die dein Handeln antreiben\n\nFür alle, die sich selbst besser verstehen und innerlich wachsen wollen.</string>
+    <string name="profile_goals_long">Die KI findet alle Ziele, Wünsche und Vorhaben in deinen Einträgen, auch beiläufig erwähnte.\n\nDu siehst:\n\n• Welche Ziele du hast (auch versteckte)\n• Wie weit du bei jedem Ziel bist\n• Was dein nächster Schritt sein könnte\n\nDein persönlicher Ziel-Tracker, der aus deinen eigenen Worten liest.</string>
+    <string name="profile_custom_prompt">Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheinträge konzentrieren?</string>
+    <string name="profile_select_hint">Wähle ein Profil aus. Tippe auf ein Profil für eine genauere Erklärung.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SETTINGS SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_account">Konto</string>
+    <string name="settings_sign_out">Abmelden</string>
+    <string name="settings_last_sync">Letzte Synchronisation: %1$s</string>
+    <string name="settings_entries_auto_loaded">Einträge werden bei der Anmeldung automatisch geladen</string>
+    <string name="settings_backup_photos">Fotos sichern</string>
+    <string name="settings_backup_videos">Videos sichern</string>
+    <string name="settings_syncing">Wird gesichert…</string>
+    <string name="settings_backup_entries">Tagebucheinträge sichern</string>
+    <string name="settings_not_signed_in">Nicht angemeldet</string>
+    <string name="settings_entries_loaded_on_sign_in">Gesicherte Einträge werden beim Anmelden geladen</string>
+    <string name="settings_sign_in_google">Mit Google anmelden</string>
+    <string name="settings_appearance">Erscheinungsbild</string>
+    <string name="settings_dark_mode">Dunkelmodus</string>
+    <string name="settings_dark_active">Aktiv</string>
+    <string name="settings_dark_off">Aus</string>
+    <string name="settings_follow_system">System folgen</string>
+    <string name="settings_automatic">Automatisch</string>
+    <string name="settings_sunrise_sunset">Sonnenauf-/untergang</string>
+    <string name="settings_sunrise_sunset_desc">Dunkel bei Nacht, hell bei Tag</string>
+    <string name="settings_app_sounds">App-Töne</string>
+    <string name="settings_sounds_on">Töne sind eingeschaltet</string>
+    <string name="settings_sounds_off">Töne sind ausgeschaltet</string>
+    <string name="settings_haptics">Haptik</string>
+    <string name="settings_haptics_on">Haptik ist eingeschaltet</string>
+    <string name="settings_haptics_off">Haptik ist ausgeschaltet</string>
+    <string name="settings_voices">Stimmen</string>
+    <string name="settings_tts_on">Vorlesen ist eingeschaltet</string>
+    <string name="settings_tts_off">Vorlesen ist ausgeschaltet</string>
+    <string name="settings_voice_select">Stimme auswählen</string>
+    <string name="settings_voice_choose">Stimme wählen</string>
+    <string name="settings_reminder_section">Erinnerung / Rückblick</string>
+    <string name="settings_daily_reminder">Tägliche Erinnerung</string>
+    <string name="settings_reminder_time">Uhrzeit: %02d:%02d Uhr</string>
+    <string name="settings_reminder_desc">Erinnert dich ans Tagebuchschreiben</string>
+    <string name="settings_weekly_review">Wöchentlicher Rückblick</string>
+    <string name="settings_weekly_review_on">Erinnerung an</string>
+    <string name="settings_weekly_review_off">Sonntags um 15:00 Uhr</string>
+    <string name="settings_monthly_review">Monatsrückblick</string>
+    <string name="settings_monthly_review_on">Erinnerung an</string>
+    <string name="settings_yearly_review">Jahresrückblick</string>
+    <string name="settings_yearly_review_on">Erinnerung an</string>
+    <string name="settings_timezone">Zeitzone: %1$s</string>
+    <string name="settings_security">Sicherheit</string>
+    <string name="settings_fingerprint">Fingerabdruck</string>
+    <string name="settings_fingerprint_desc">App beim Start entsperren</string>
+    <string name="settings_auto_lock">Sperrt automatisch nach 60 Sekunden im Hintergrund</string>
+    <string name="settings_text_improvement">Textverbesserung</string>
+    <string name="settings_text_improvement_desc">Standardmäßig aktivieren</string>
+    <string name="settings_dashboard_section">Dashboard</string>
+    <string name="settings_auto_update">Automatisch aktualisieren bei neuem Tagebucheintrag</string>
+    <string name="settings_premium_section">Premium</string>
+    <string name="settings_premium_lifetime">Lifetime-Zugang aktiv</string>
+    <string name="settings_premium_active">Premium-Abo aktiv</string>
+    <string name="settings_premium_lifetime_desc">Einmalkauf, alle Features für immer freigeschaltet.</string>
+    <string name="settings_premium_desc">Alle Features freigeschaltet, unbegrenzte KI, PDF-Export und mehr.</string>
+    <string name="settings_manage_subscription">Abo verwalten</string>
+    <string name="settings_export">Exportieren</string>
+    <string name="settings_export_pdf_desc">Exportiere alle Tagebucheinträge und Fotos als PDF-Dokument.</string>
+
+    <!-- Premium feature list (settings) -->
+    <string name="settings_premium_feature_improve">Unbegrenzte KI-Textverbesserung</string>
+    <string name="settings_premium_feature_improve_desc">Jeder Eintrag wird ausdrucksstärker</string>
+    <string name="settings_premium_feature_dashboard">Unbegrenzte Dashboard-Analysen</string>
+    <string name="settings_premium_feature_dashboard_desc">Dein Dashboard wächst mit dir</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         RETROSPECTIVE SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="retro_title">Rückblick</string>
+    <string name="retro_cd_info">Info zu Rückblicken</string>
+    <string name="retro_personal_review">Dein persönlicher Rückblick</string>
+    <string name="retro_intro_body">Manchmal vergessen wir im Alltag, wie viel wir eigentlich erlebt haben. Dein Tagebuch erinnert sich an alles, an die großen Momente und die kleinen, </string>
+    <string name="retro_intro_cta">Schau zurück und entdecke, was dich bewegt hat.</string>
+    <string name="retro_please_wait">Bitte warten</string>
+    <string name="retro_backup_loading">Backup wird geladen… Rückblicke starten danach automatisch.</string>
+    <string name="retro_profile_switching">Rückblicke werden nach Profilwechsel automatisch aktualisiert</string>
+    <string name="retro_generating">Rückblicke werden erstellt…</string>
+    <string name="retro_ai_unavailable">Die KI ist gerade nicht erreichbar, bitte versuch es später nochmal.</string>
+    <string name="retro_weekly_title">Wochenrückblick</string>
+    <string name="retro_weekly_subtitle">Die letzten 7 Tage im Überblick</string>
+    <string name="retro_weekly_empty">Noch keine Wochenrückblicke vorhanden.\nMindestens 2 Tagebucheinträge pro Woche nötig.</string>
+    <string name="retro_monthly_title">Monatsrückblick</string>
+    <string name="retro_monthly_subtitle">Dein vergangener Monat auf einen Blick</string>
+    <string name="retro_monthly_empty">Noch keine Monatsrückblicke vorhanden.\nWird aus Wochenrückblicken am Monatsende erstellt.</string>
+    <string name="retro_yearly_title">Jahresrückblick</string>
+    <string name="retro_yearly_subtitle">Ein ganzes Jahr voller Erinnerungen</string>
+    <string name="retro_yearly_empty">Noch keine Jahresrückblicke vorhanden.\nWird aus Monatsrückblicken am Jahresende erstellt.</string>
+    <string name="retro_premium_unlock">Mit Premium alle Rückblicke freischalten</string>
+    <string name="retro_at_a_glance">Auf einen Blick</string>
+    <string name="retro_cd_expand">Aufklappen</string>
+    <string name="retro_cd_collapse">Zuklappen</string>
+    <string name="retro_share_text_label">Text</string>
+
+    <!-- Fallback titles (when AI title generation fails) -->
+    <string name="retro_fallback_week">Wochenrückblick</string>
+    <string name="retro_fallback_month">Monatsrückblick</string>
+    <string name="retro_fallback_year">Jahresrückblick %1$d</string>
+    <string name="retro_period_label_week">Woche %1$d (%2$s - %3$s)</string>
+
+    <!-- Month names for retrospective grouping -->
+    <string name="month_january">Januar</string>
+    <string name="month_february">Februar</string>
+    <string name="month_march">März</string>
+    <string name="month_april">April</string>
+    <string name="month_may">Mai</string>
+    <string name="month_june">Juni</string>
+    <string name="month_july">Juli</string>
+    <string name="month_august">August</string>
+    <string name="month_september">September</string>
+    <string name="month_october">Oktober</string>
+    <string name="month_november">November</string>
+    <string name="month_december">Dezember</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ONBOARDING
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_welcome">Willkommen bei\nBest Journal</string>
+    <string name="onboarding_subtitle">Dein persönliches KI-Tagebuch\nfür Klarheit und Veränderung</string>
+    <string name="onboarding_feature_speech">Sprich oder schreib, die KI versteht beides</string>
+    <string name="onboarding_feature_secure">Deine Daten bleiben bei dir, verschlüsselt und sicher</string>
+    <string name="onboarding_goals_title">Was möchtest du mit dem\nKI-Tagebuch erreichen?</string>
+    <string name="onboarding_goal_stress">Stress abbauen</string>
+    <string name="onboarding_goal_clarity">Klarheit finden</string>
+    <string name="onboarding_goal_growth">Persönliches Wachstum</string>
+    <string name="onboarding_goal_thoughts">Meine Gedanken festhalten</string>
+    <string name="onboarding_how_step1_title">Sprich oder tippe deinen Eintrag</string>
+    <string name="onboarding_how_step1_desc">Nimm deine Gedanken als Sprachnachricht auf oder tippe sie ein, ganz wie du möchtest.</string>
+    <string name="onboarding_how_step2_title">Die KI verbessert und analysiert</string>
+    <string name="onboarding_how_step2_desc">Dein Text wird automatisch verfeinert und aus verschiedenen Perspektiven analysiert.</string>
+    <string name="onboarding_how_step3_desc">Halte besondere Momente fest, die KI berücksichtigt sie in der Analyse.</string>
+    <string name="onboarding_how_step4_title">Entdecke Muster und Einsichten</string>
+    <string name="onboarding_how_step4_desc">Das Dashboard zeigt dir Zusammenhänge, die dir im Alltag verborgen bleiben.</string>
+    <string name="onboarding_how_step5_title">Wochen-, Monats- und Jahresrückblick</string>
+    <string name="onboarding_how_step5_desc">Automatische Rückblicke zeigen dir, wie du dich über die Zeit entwickelst.</string>
+    <string name="onboarding_premium_feature_improve">Unbegrenzte KI-Textverbesserung, jeder Eintrag wird klarer und ausdrucksstärker</string>
+    <string name="onboarding_premium_feature_dashboard">Automatische Dashboard-Updates bei jedem neuen Eintrag</string>
+    <string name="onboarding_premium_feature_retro">Wochen-, Monats- und Jahresrückblicke zeigen deine Entwicklung</string>
+    <string name="onboarding_premium_feature_patterns">Persönliche Muster erkennen, die KI findet verborgene Denk- und Gefühlsmuster</string>
+    <string name="onboarding_premium_feature_noads">Keine Werbung, ungestört schreiben und reflektieren</string>
+    <string name="onboarding_free_trial">Kostenlos und unverbindlich</string>
+    <string name="onboarding_free_after_trial">Danach nutzt du Best Journal weiter,\nkostenlos mit begrenzten KI-Aufrufen pro Woche.</string>
+    <string name="onboarding_start_free">Kostenlos starten</string>
+    <string name="onboarding_without_premium">Ohne Premium fortfahren</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PAYWALL
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="paywall_prices_loading">Preise werden geladen…</string>
+    <string name="paywall_sub_loading_toast">Abo wird geladen, bitte versuche es gleich nochmal.</string>
+    <string name="paywall_purchase_loading_toast">Kaufvorgang wird geladen, bitte versuche es gleich nochmal.</string>
+    <string name="paywall_today">Heute</string>
+    <string name="paywall_full_access">Voller Zugang</string>
+    <string name="paywall_day7">Tag 7</string>
+    <string name="paywall_reminder">Erinnerung</string>
+    <string name="paywall_day8">Tag 8</string>
+    <string name="paywall_first_payment">Erste Zahlung</string>
+    <string name="paywall_yearly_note">Danach %1$s pro Jahr\nIn der Testphase jederzeit kündbar</string>
+    <string name="paywall_most_popular">Beliebteste Wahl</string>
+    <string name="paywall_monthly_plan">Monatsabo, %1$s pro Monat</string>
+    <string name="paywall_yearly_savings">Spare %1$d%% gegenüber dem Monatsabo, jederzeit kündbar</string>
+    <string name="paywall_lifetime_title">Einmalkauf</string>
+    <string name="paywall_lifetime_desc">Einmal zahlen, alles für immer nutzen</string>
+    <string name="paywall_lifetime_note">Kein Abo, keine Verlängerung</string>
+    <string name="paywall_free_note">Die App funktioniert auch ohne Abo,</string>
+    <string name="paywall_cd_close">Schließen</string>
+
+    <!-- Paywall features -->
+    <string name="paywall_feature_patterns">Verstehe verborgene Muster in deinem Denken</string>
+    <string name="paywall_feature_improve">Unbegrenzte KI-Textverbesserung für jeden Eintrag</string>
+    <string name="paywall_feature_dashboard">Automatische Dashboard-Updates nach jedem Eintrag</string>
+    <string name="paywall_feature_retro">Wochen-, Monats- und Jahresrückblicke mit KI</string>
+    <string name="paywall_feature_pdf">Tagebucheinträge mit Fotos als PDF exportieren</string>
+    <string name="paywall_feature_noads">Spreche oder schreibe ungestört, ohne Werbung</string>
+
+    <!-- Paywall personalized headlines -->
+    <string name="paywall_headline_stress">Finde deine innere Ruhe</string>
+    <string name="paywall_headline_stress_sub">Erkenne was dich belastet, bevor es dich überwältigt</string>
+    <string name="paywall_headline_clarity">Verstehe dich selbst besser</string>
+    <string name="paywall_headline_clarity_sub">Die KI erkennt Muster, die dir verborgen bleiben</string>
+    <string name="paywall_headline_growth">Entdecke das Gute in jedem Tag</string>
+    <string name="paywall_headline_growth_sub">Dein persönlicher Raum für Dankbarkeit und Wachstum</string>
+    <string name="paywall_headline_thoughts">Lass deine Gedanken fließen</string>
+    <string name="paywall_headline_thoughts_sub">Dein kreativer Begleiter ohne Grenzen</string>
+    <string name="paywall_headline_default">Entdecke dich selbst\nJeden Tag ein Stück mehr</string>
+    <string name="paywall_headline_default_sub">Dein persönlicher KI-Begleiter ohne Grenzen</string>
+
+    <!-- Exit intent offer -->
+    <string name="paywall_exit_wait">Warte kurz!</string>
+    <string name="paywall_exit_special_offer">Wir haben ein besonderes\nAngebot für dich:</string>
+    <string name="paywall_exit_discount">Rabatt für %1$d Monate</string>
+    <string name="paywall_exit_price_comparison">Nur %1$s statt %2$s pro Monat</string>
+    <string name="paywall_exit_start_discount">Monatsabo mit 50%% Rabatt starten</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CHURN FLOW DIALOG
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="churn_your_sub">Dein Abo</string>
+    <string name="churn_plan_yearly">Jahresabo</string>
+    <string name="churn_plan_monthly">Monatsabo</string>
+    <string name="churn_plan">Tarif</string>
+    <string name="churn_price">Preis</string>
+    <string name="churn_renewal">Verlängerung</string>
+    <string name="churn_automatic">Automatisch</string>
+    <string name="churn_auto_renew_note">Dein Abo verlängert sich automatisch über Google Play. Die Kündigung ist jederzeit möglich.</string>
+    <string name="churn_cancel_sub">Abo kündigen</string>
+    <string name="churn_reason_unused">Nutze es zu selten</string>
+    <string name="churn_reason_features">Nicht die Features die ich brauche</string>
+    <string name="churn_reason_other">Anderer Grund</string>
+    <string name="churn_sorry_title">Schade, dass du gehst</string>
+    <string name="churn_sorry_body">Bevor du kündigst, würdest du uns verraten warum? Das hilft uns, die App zu verbessern.</string>
+    <string name="churn_exclusive_offer">Exklusives Angebot</string>
+    <string name="churn_offer_subtitle">Nur für dich, weil du uns wichtig bist</string>
+    <string name="churn_offer_feature_ai">Unbegrenzte KI-Analysen</string>
+    <string name="churn_offer_feature_perspectives">Alle 5 Perspektiven</string>
+    <string name="churn_offer_feature_voice">Premium-Spracherkennung</string>
+    <string name="churn_offer_auto_renew">Verlängert sich automatisch, jederzeit kündbar</string>
+    <string name="churn_accept_offer">Angebot annehmen</string>
+    <string name="churn_switch_yearly">Oder zum Jahresabo wechseln und noch mehr sparen</string>
+    <string name="churn_pause_sub">Oder Abo bei Google Play pausieren</string>
+    <string name="churn_cancel_anyway">Trotzdem kündigen</string>
+    <string name="churn_are_you_sure">Bist du sicher?</string>
+    <string name="churn_stay">Doch lieber bleiben</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI LIMIT / COMPONENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="ai_limit_title">Dein Wochenlimit ist erreicht</string>
+    <string name="ai_limit_body">Ohne Abo hast du 5\u00A0Textverbesserungen und 5\u00A0Dashboard-Aktualisierungen pro Woche.\nMit dem Premium-Abo: bis zu 150 pro Tag, in voller Qualität.</string>
+    <string name="ai_limit_monthly">Monatsabo, %1$s/Monat</string>
+    <string name="ai_limit_yearly">Jahresabo, %1$s/Jahr (spare 37%%)</string>
+    <string name="ai_limit_no_thanks">Nein danke, weiter ohne KI</string>
+    <string name="ai_banner_title">Dein Tagebuch wird von KI unterstützt</string>
+    <string name="cd_mic_start">Aufnahme starten</string>
+    <string name="cd_mic_stop">Aufnahme stoppen</string>
+    <string name="entry_improve_limit_daily">Tageslimit erreicht. Morgen geht es weiter!</string>
+    <string name="entry_improve_limit_cooldown">Kurze Pause: Noch %1$d Minuten.</string>
+    <string name="entry_improve_failed">Textverbesserung fehlgeschlagen</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NOTIFICATIONS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="notif_reminder_title">Zeit für dein Tagebuch</string>
+    <string name="notif_reminder_body_0">Was bewegt dich heute?</string>
+    <string name="notif_reminder_body_1">Ein Moment für dich, halte ihn fest</string>
+    <string name="notif_reminder_body_2">Dein zukünftiges Ich wird dir danken</string>
+    <string name="notif_reminder_body_3">Nur ein Gedanke reicht, leg los</string>
+    <string name="notif_reminder_body_4">Was war heute dein Highlight?</string>
+    <string name="notif_weekly_title">Dein Wochenrückblick</string>
+    <string name="notif_weekly_body">Schau dir an was dich diese Woche bewegt hat, dein Dashboard hat neue Einsichten.</string>
+    <string name="notif_monthly_title">Dein Monatsrückblick</string>
+    <string name="notif_monthly_body">Ein ganzer Monat voller Erinnerungen wartet auf dich.</string>
+    <string name="notif_yearly_title">Dein Jahresrückblick</string>
+    <string name="notif_yearly_body">Ein ganzes Jahr voller Erinnerungen, schau zurück auf deine Reise.</string>
+
+    <!-- Notification channel names -->
+    <string name="notif_channel_daily_name">Tägliche Erinnerung</string>
+    <string name="notif_channel_daily_desc">Erinnert dich täglich ans Tagebuchschreiben</string>
+    <string name="notif_channel_weekly_name">Wöchentlicher Rückblick</string>
+    <string name="notif_channel_weekly_desc">Dein Wochenrückblick jeden Sonntag um 15:00 Uhr</string>
+    <string name="notif_channel_monthly_name">Monatsrückblick</string>
+    <string name="notif_channel_monthly_desc">Benachrichtigung wenn dein Monatsrückblick fertig ist</string>
+    <string name="notif_channel_yearly_name">Jahresrückblick</string>
+    <string name="notif_channel_yearly_desc">Benachrichtigung wenn dein Jahresrückblick fertig ist</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DATE / TIME
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="datetime_just_now">gerade eben</string>
+    <plurals name="datetime_minutes_ago">
+        <item quantity="one">vor %d Minute</item>
+        <item quantity="other">vor %d Minuten</item>
+    </plurals>
+    <plurals name="datetime_hours_ago">
+        <item quantity="one">vor %d Stunde</item>
+        <item quantity="other">vor %d Stunden</item>
+    </plurals>
+    <plurals name="datetime_days_ago">
+        <item quantity="one">vor %d Tag</item>
+        <item quantity="other">vor %d Tagen</item>
+    </plurals>
+    <string name="datetime_today">Heute</string>
+    <string name="datetime_yesterday">Gestern</string>
+    <string name="datetime_day_before_yesterday">Vorgestern</string>
+    <string name="datetime_this_week">Diese Woche</string>
+    <string name="datetime_last_week">Letzte Woche</string>
+    <string name="datetime_weeks_ago">Vor %1$d Wochen</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ACHIEVEMENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="achievement_nightowl_title">Nachtfalter</string>
+    <string name="achievement_nightowl_desc">50 Einträge nach 22 Uhr geschrieben</string>
+    <string name="achievement_earlybird_title">Frühaufsteher</string>
+    <string name="achievement_earlybird_desc">20 Einträge vor 7 Uhr geschrieben</string>
+    <string name="achievement_confession_title">Geständnis</string>
+    <string name="achievement_confession_desc">Einen Eintrag mit über 1.000 Wörtern verfasst</string>
+    <string name="achievement_marathon_title">Marathonschreiber</string>
+    <string name="achievement_marathon_desc">100 Tagebucheinträge geschrieben</string>
+    <string name="achievement_wordartist_title">Wortkünstler</string>
+    <string name="achievement_wordartist_desc">500 Tagebucheinträge geschrieben</string>
+    <string name="achievement_consistency_title">Beständigkeit</string>
+    <string name="achievement_consistency_desc">30-Tage-Streak erreicht</string>
+    <string name="achievement_chronicler_title">Jahreschronist</string>
+    <string name="achievement_chronicler_desc">365 Einträge geschrieben</string>
+    <string name="achievement_photodiary_title">Fototagebuch</string>
+    <string name="achievement_photodiary_desc">50 Fotos an Einträge angehängt</string>
+    <string name="achievement_voiceartist_title">Sprachkünstler</string>
+    <string name="achievement_voiceartist_desc">25 Spracheinträge erstellt</string>
+    <string name="achievement_reflectionmaster_title">Reflexionsmeister</string>
+    <string name="achievement_reflectionmaster_desc">50 Dashboard-Analysen durchgeführt</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DAILY PROMPTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="prompt_cat_self_reflection">Selbstreflexion</string>
+    <string name="prompt_cat_gratitude">Dankbarkeit</string>
+    <string name="prompt_cat_future">Zukunft</string>
+    <string name="prompt_cat_relationships">Beziehungen</string>
+
+    <string-array name="prompts_self_reflection">
+        <item>Was hat dich heute zum Lächeln gebracht?</item>
+        <item>Welchen Gedanken konntest du heute nicht loslassen?</item>
+        <item>Was hast du heute über dich selbst gelernt?</item>
+        <item>Welcher Moment war heute am intensivsten?</item>
+        <item>Was würdest du heute anders machen, wenn du könntest?</item>
+        <item>Welches Gefühl hat dich heute am meisten begleitet?</item>
+        <item>Was hat dich heute überrascht?</item>
+        <item>Worüber hast du heute am längsten nachgedacht?</item>
+        <item>Was hat dir heute Energie gegeben?</item>
+        <item>Was hat dir heute Energie geraubt?</item>
+        <item>Welche Gewohnheit möchtest du verändern?</item>
+        <item>Was bedeutet Erfolg für dich gerade?</item>
+        <item>Welche Angst steht dir gerade im Weg?</item>
+        <item>Was würde dein jüngeres Ich zu deinem heutigen Leben sagen?</item>
+        <item>Welchen Rat gibst du dir selbst gerade?</item>
+        <item>Was macht dich einzigartig?</item>
+    </string-array>
+
+    <string-array name="prompts_gratitude">
+        <item>Wofür bist du heute dankbar?</item>
+        <item>Welche Person hat heute deinen Tag bereichert?</item>
+        <item>Welches kleine Detail hat dich heute erfreut?</item>
+        <item>Welche Fähigkeit besitzt du, die du oft für selbstverständlich hältst?</item>
+        <item>Was ist das Beste, das dir diese Woche passiert ist?</item>
+        <item>Wem würdest du gerne danken, und wofür?</item>
+        <item>Welcher Ort gibt dir ein Gefühl von Zuhause?</item>
+        <item>Welche Erinnerung macht dich sofort glücklich?</item>
+        <item>Was an deinem Körper verdient mehr Wertschätzung?</item>
+        <item>Welches Essen hat dir heute richtig gut getan?</item>
+        <item>Welche Musik hat dich zuletzt berührt?</item>
+        <item>Was ist das Wertvollste, das du besitzt, und kein Geld kosten würde?</item>
+        <item>Welche Erfahrung aus der Vergangenheit hat dich stärker gemacht?</item>
+        <item>Was an deinem Alltag ist eigentlich ein Privileg?</item>
+        <item>Wer ist dein heimlicher Held im Alltag?</item>
+        <item>Welche Jahreszeit genießt du gerade am meisten, und warum?</item>
+    </string-array>
+
+    <string-array name="prompts_future">
+        <item>Was möchtest du in einem Jahr erreicht haben?</item>
+        <item>Wie sieht dein perfekter Tag in fünf Jahren aus?</item>
+        <item>Welches Ziel verfolgst du gerade am leidenschaftlichsten?</item>
+        <item>Was würdest du tun, wenn du wüsstest, dass du nicht scheitern kannst?</item>
+        <item>Welche neue Fähigkeit möchtest du lernen?</item>
+        <item>Wohin möchtest du als Nächstes reisen?</item>
+        <item>Was für ein Mensch möchtest du in zehn Jahren sein?</item>
+        <item>Welchen Traum hast du aufgegeben, den du wiederbeleben könntest?</item>
+        <item>Was ist der mutigste Schritt, den du gerade machen könntest?</item>
+        <item>Welches Projekt begeistert dich, das du noch nicht begonnen hast?</item>
+        <item>Was müsste passieren, damit du sagst: Jetzt bin ich zufrieden?</item>
+        <item>Welche Veränderung würdest du in der Welt gerne sehen?</item>
+        <item>Was steht auf deiner Bucket List ganz oben?</item>
+        <item>Welche schlechte Gewohnheit möchtest du bis nächsten Monat ablegen?</item>
+        <item>Wie möchtest du in Erinnerung behalten werden?</item>
+        <item>Was ist ein kleiner Schritt, den du morgen machen kannst?</item>
+    </string-array>
+
+    <string-array name="prompts_relationships">
+        <item>Wem würdest du gerne etwas sagen, was du bisher nicht gesagt hast?</item>
+        <item>Welche Beziehung in deinem Leben verdient mehr Aufmerksamkeit?</item>
+        <item>Was schätzt du an deinem besten Freund am meisten?</item>
+        <item>Wann hast du dich zuletzt wirklich verstanden gefühlt?</item>
+        <item>Was würdest du einer Person sagen, die dir wichtig ist?</item>
+        <item>Welcher Mensch hat dein Leben am stärksten geprägt?</item>
+        <item>Wie zeigst du anderen, dass du sie liebst?</item>
+        <item>Welchen Konflikt würdest du gerne lösen?</item>
+        <item>Was bedeutet Freundschaft für dich?</item>
+        <item>Wer hat dir zuletzt etwas Wichtiges beigebracht?</item>
+        <item>Welche Eigenschaft bewunderst du an anderen am meisten?</item>
+        <item>Mit wem würdest du gerne einen ganzen Tag verbringen?</item>
+        <item>Was ist das schönste Kompliment, das du je bekommen hast?</item>
+        <item>Welche Grenzen möchtest du in Beziehungen besser setzen?</item>
+        <item>Wie hat sich deine Vorstellung von Liebe im Laufe der Zeit verändert?</item>
+        <item>Wer verdient heute einen Anruf oder eine Nachricht von dir?</item>
+    </string-array>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PDF EXPORT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="pdf_entry_fallback_title">Eintrag #%1$d</string>
+    <string name="pdf_entry_counter">Eintrag %1$d von %2$d</string>
+    <string name="pdf_summary_label">ZUSAMMENFASSUNG</string>
+    <string name="pdf_continuation">%1$s (Fortsetzung)</string>
+    <string name="pdf_page_number">Seite %1$d</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ERRORS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="error_retro_all_failed">Alle %1$d KI-Anfragen fehlgeschlagen. Bitte Internetverbindung prüfen.</string>
+    <string name="error_whisper_audio_empty">Audio-Datei ist leer</string>
+    <string name="error_whisper_no_text">Kein Text erkannt</string>
+    <string name="error_sync_db_not_found">Datenbank nicht gefunden</string>
+    <string name="error_file_open_failed">Fehler: Datei konnte nicht geöffnet werden</string>
+    <string name="error_generic">Fehler: %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI PROFILE STYLE INSTRUCTIONS (for Gemini prompts)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="profile_style_chronicler">\n- Schreibe im Stil einer zusammenfassenden Erzählung, fasse die wichtigsten Ereignisse und Gefühle zusammen, wie ein persönlicher Chronist</string>
+    <string name="profile_style_advisor">\n- Schreibe im Stil eines Lebensberaters, hebe hervor was gut lief, was verbessert werden kann, und gib dem Leser das Gefühl von Klarheit und Ordnung</string>
+    <string name="profile_style_insight">\n- Schreibe im Stil einer tiefgründigen Selbsterkenntnis-Erzählung, decke Denkmuster, wiederkehrende Gefühle und verborgene Stärken auf</string>
+    <string name="profile_style_coach">\n- Schreibe im Stil eines motivierenden Ziel-Begleiters, zeige Fortschritte bei persönlichen Zielen auf und ermutige weiterzumachen</string>
+    <string name="profile_style_custom">\n- Schreibe den Rückblick mit folgendem persönlichen Fokus des Benutzers: \"%1$s\"</string>
+
 </resources>
