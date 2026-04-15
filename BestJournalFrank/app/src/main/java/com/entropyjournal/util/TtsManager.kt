@@ -5,13 +5,15 @@ import android.content.SharedPreferences
 import android.util.Log
 
 /**
- * Unified TTS manager: tries ElevenLabs first (if API key + voice configured),
- * automatically falls back to Edge TTS on any failure (quota, network, auth).
+ * Unified TTS manager: uses the user-selected TTS provider exclusively.
+ * No fallback between providers — the selected one is the only one used.
+ * Provider selection: ElevenLabs (cloud), Piper Thorsten High (offline), Edge TTS (cloud free).
  */
 class TtsManager(private val context: Context) {
 
     private val edgeTtsPlayer = EdgeTtsPlayer(context)
     private val elevenLabsPlayer = ElevenLabsTtsPlayer(context)
+    private val piperTtsPlayer = PiperTtsPlayer(context)
 
     companion object {
         private const val TAG = "TtsManager"
@@ -35,61 +37,74 @@ class TtsManager(private val context: Context) {
         }
     }
 
+    private fun getSelectedProvider(): String =
+        prefs?.getString(Constants.PREF_TTS_PROVIDER, Constants.TTS_PROVIDER_EDGE)
+            ?: Constants.TTS_PROVIDER_EDGE
+
     private fun getElevenLabsKey(): String =
         prefs?.getString(Constants.PREF_ELEVENLABS_API_KEY, "") ?: ""
 
     private fun getElevenLabsVoiceId(): String =
         prefs?.getString(Constants.PREF_ELEVENLABS_VOICE_ID, "") ?: ""
 
-    private fun isElevenLabsConfigured(): Boolean {
-        val key = getElevenLabsKey()
-        val voiceId = getElevenLabsVoiceId()
-        return key.isNotBlank() && voiceId.isNotBlank()
-    }
-
     /**
-     * Speaks text using the best available TTS engine.
-     * ElevenLabs if configured, Edge TTS as fallback.
+     * Speaks text using the user-selected TTS provider.
      */
     fun speak(
         text: String,
         onPlaybackStart: (() -> Unit)? = null,
         onComplete: () -> Unit,
     ) {
-        if (isElevenLabsConfigured()) {
-            Log.d(TAG, "Using ElevenLabs TTS")
-            elevenLabsPlayer.speak(
-                text = text,
-                apiKey = getElevenLabsKey(),
-                voiceId = getElevenLabsVoiceId(),
-                onPlaybackStart = onPlaybackStart,
-                onComplete = onComplete,
-                onError = { e ->
-                    Log.w(TAG, "ElevenLabs failed, falling back to Edge TTS: ${e.message}")
-                    edgeTtsPlayer.speak(
+        when (getSelectedProvider()) {
+            Constants.TTS_PROVIDER_ELEVENLABS -> {
+                val key = getElevenLabsKey()
+                val voiceId = getElevenLabsVoiceId()
+                if (key.isNotBlank() && voiceId.isNotBlank()) {
+                    Log.d(TAG, "Using ElevenLabs TTS")
+                    elevenLabsPlayer.speak(
                         text = text,
+                        apiKey = key,
+                        voiceId = voiceId,
                         onPlaybackStart = onPlaybackStart,
                         onComplete = onComplete,
+                        onError = { e ->
+                            Log.e(TAG, "ElevenLabs TTS error: ${e.message}")
+                            onComplete()
+                        },
                     )
-                },
-            )
-        } else {
-            Log.d(TAG, "Using Edge TTS (ElevenLabs not configured)")
-            edgeTtsPlayer.speak(
-                text = text,
-                onPlaybackStart = onPlaybackStart,
-                onComplete = onComplete,
-            )
+                } else {
+                    Log.w(TAG, "ElevenLabs selected but not configured")
+                    onComplete()
+                }
+            }
+            Constants.TTS_PROVIDER_PIPER -> {
+                Log.d(TAG, "Using Piper TTS (offline)")
+                piperTtsPlayer.speak(
+                    text = text,
+                    onPlaybackStart = onPlaybackStart,
+                    onComplete = onComplete,
+                )
+            }
+            else -> {
+                Log.d(TAG, "Using Edge TTS")
+                edgeTtsPlayer.speak(
+                    text = text,
+                    onPlaybackStart = onPlaybackStart,
+                    onComplete = onComplete,
+                )
+            }
         }
     }
 
     fun stop() {
         elevenLabsPlayer.stop()
         edgeTtsPlayer.stop()
+        piperTtsPlayer.stop()
     }
 
     fun shutdown() {
         elevenLabsPlayer.shutdown()
         edgeTtsPlayer.shutdown()
+        piperTtsPlayer.shutdown()
     }
 }

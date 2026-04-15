@@ -29,6 +29,7 @@ data class SettingsUiState(
     val geminiApiKey: String = "",
     val elevenLabsApiKey: String = "",
     val elevenLabsVoiceId: String = "",
+    val ttsProvider: String = Constants.TTS_PROVIDER_EDGE,
     val selectedModel: String = Constants.DEFAULT_GEMINI_MODEL,
     val textImprovementDefault: Boolean = false,
     val maxRecordingDuration: Int = 5,
@@ -149,6 +150,7 @@ constructor(
                 geminiApiKey = encryptedPrefs.getString(Constants.PREF_GEMINI_API_KEY, "") ?: "",
                 elevenLabsApiKey = encryptedPrefs.getString(Constants.PREF_ELEVENLABS_API_KEY, "") ?: "",
                 elevenLabsVoiceId = encryptedPrefs.getString(Constants.PREF_ELEVENLABS_VOICE_ID, "") ?: "",
+                ttsProvider = encryptedPrefs.getString(Constants.PREF_TTS_PROVIDER, Constants.TTS_PROVIDER_EDGE) ?: Constants.TTS_PROVIDER_EDGE,
                 selectedModel =
                     encryptedPrefs.getString(
                         Constants.PREF_GEMINI_MODEL,
@@ -247,6 +249,11 @@ constructor(
     fun updateElevenLabsVoiceId(voiceId: String) {
         encryptedPrefs.edit().putString(Constants.PREF_ELEVENLABS_VOICE_ID, voiceId).apply()
         _uiState.value = _uiState.value.copy(elevenLabsVoiceId = voiceId)
+    }
+
+    fun updateTtsProvider(provider: String) {
+        encryptedPrefs.edit().putString(Constants.PREF_TTS_PROVIDER, provider).apply()
+        _uiState.value = _uiState.value.copy(ttsProvider = provider)
     }
 
     fun updateTextImprovementDefault(enabled: Boolean) {
@@ -505,6 +512,9 @@ constructor(
             // Save device-specific settings BEFORE clearing everything
             val groqKey = encryptedPrefs.getString(Constants.PREF_GROQ_API_KEY, "") ?: ""
             val geminiKey = encryptedPrefs.getString(Constants.PREF_GEMINI_API_KEY, "") ?: ""
+            val elevenLabsKey = encryptedPrefs.getString(Constants.PREF_ELEVENLABS_API_KEY, "") ?: ""
+            val elevenLabsVoice = encryptedPrefs.getString(Constants.PREF_ELEVENLABS_VOICE_ID, "") ?: ""
+            val ttsProvider = encryptedPrefs.getString(Constants.PREF_TTS_PROVIDER, Constants.TTS_PROVIDER_EDGE) ?: Constants.TTS_PROVIDER_EDGE
             val selectedModel =
                 encryptedPrefs.getString(
                     Constants.PREF_GEMINI_MODEL,
@@ -519,6 +529,9 @@ constructor(
                 .clear()
                 .putString(Constants.PREF_GROQ_API_KEY, groqKey)
                 .putString(Constants.PREF_GEMINI_API_KEY, geminiKey)
+                .putString(Constants.PREF_ELEVENLABS_API_KEY, elevenLabsKey)
+                .putString(Constants.PREF_ELEVENLABS_VOICE_ID, elevenLabsVoice)
+                .putString(Constants.PREF_TTS_PROVIDER, ttsProvider)
                 .putString(Constants.PREF_GEMINI_MODEL, selectedModel)
                 .putBoolean(Constants.PREF_DARK_THEME, isDark)
                 .putBoolean(Constants.PREF_BIOMETRIC_LOCK, biometricLock)

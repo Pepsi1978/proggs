@@ -931,36 +931,81 @@ fun SettingsScreen(
                             )
                         }
 
-                        // ── Stimme (ElevenLabs) ──
+                        // ── Stimme (TTS Provider) ──
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            "Stimme",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Vorlesefunktion f\u00fcr Eintr\u00e4ge und Analysen",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        val currentProvider = uiState.ttsProvider
+
+                        // -- ElevenLabs option --
                         val elevenLabsKey = uiState.elevenLabsApiKey
-                        if (elevenLabsKey.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                        val elevenLabsAvailable = elevenLabsKey.isNotBlank()
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (currentProvider == Constants.TTS_PROVIDER_ELEVENLABS)
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                    else Color.Transparent,
+                                )
+                                .clickable(enabled = elevenLabsAvailable) {
+                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS)
+                                }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = currentProvider == Constants.TTS_PROVIDER_ELEVENLABS,
+                                onClick = {
+                                    if (elevenLabsAvailable) {
+                                        viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS)
+                                    }
+                                },
+                                enabled = elevenLabsAvailable,
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = MaterialTheme.colorScheme.primary,
+                                ),
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            val voices = Constants.ELEVENLABS_VOICES.filter { it.id.isNotBlank() }
-                            if (voices.isEmpty()) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Keine Stimmen konfiguriert",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            } else {
-                                Text(
-                                    "Stimme",
+                                    "ElevenLabs",
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
+                                    color = if (elevenLabsAvailable) MaterialTheme.colorScheme.onSurface
+                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    "ElevenLabs Text-to-Speech",
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    if (elevenLabsAvailable) "Beste Qualit\u00e4t \u2022 Cloud \u2022 20 Stimmen"
+                                        else "API-Schl\u00fcssel erforderlich",
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
 
+                        // ElevenLabs voice picker (only when ElevenLabs is selected)
+                        if (currentProvider == Constants.TTS_PROVIDER_ELEVENLABS && elevenLabsAvailable) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val voices = Constants.ELEVENLABS_VOICES.filter { it.id.isNotBlank() }
+                            if (voices.isNotEmpty()) {
                                 var voiceExpanded by remember { mutableStateOf(false) }
                                 val selectedVoiceId = uiState.elevenLabsVoiceId
                                 val selectedVoice = voices.find { it.id == selectedVoiceId } ?: voices.first()
@@ -968,13 +1013,14 @@ fun SettingsScreen(
                                 ExposedDropdownMenuBox(
                                     expanded = voiceExpanded,
                                     onExpandedChange = { voiceExpanded = it },
+                                    modifier = Modifier.padding(start = 48.dp),
                                 ) {
                                     TextField(
                                         value = selectedVoice.name,
                                         onValueChange = {},
                                         readOnly = true,
                                         trailingIcon = {
-                                            Icon(Icons.Rounded.KeyboardArrowDown, "Stimme wählen")
+                                            Icon(Icons.Rounded.KeyboardArrowDown, "Stimme w\u00e4hlen")
                                         },
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -1013,6 +1059,90 @@ fun SettingsScreen(
                                         }
                                     }
                                 }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // -- Piper Thorsten High option --
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (currentProvider == Constants.TTS_PROVIDER_PIPER)
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                    else Color.Transparent,
+                                )
+                                .clickable {
+                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_PIPER)
+                                }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = currentProvider == Constants.TTS_PROVIDER_PIPER,
+                                onClick = {
+                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_PIPER)
+                                },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Thorsten High (Offline)",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    "Gute Qualit\u00e4t \u2022 Offline \u2022 Deutsch \u2022 Kostenlos",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // -- Edge TTS option --
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (currentProvider == Constants.TTS_PROVIDER_EDGE)
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                    else Color.Transparent,
+                                )
+                                .clickable {
+                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE)
+                                }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = currentProvider == Constants.TTS_PROVIDER_EDGE,
+                                onClick = {
+                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE)
+                                },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Katja (Edge TTS)",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    "Standard \u2022 Cloud \u2022 Deutsch \u2022 Kostenlos",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
@@ -2113,7 +2243,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal V0.5.15",
+                            "Entropy Journal V0.6.0",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

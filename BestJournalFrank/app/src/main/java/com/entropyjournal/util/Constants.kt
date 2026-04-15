@@ -58,6 +58,18 @@ object Constants {
     // Haptik
     const val PREF_HAPTIC_ENABLED = "haptic_enabled"
 
+    // TTS Provider selection
+    const val PREF_TTS_PROVIDER = "tts_provider"
+    const val TTS_PROVIDER_EDGE = "edge_tts"
+    const val TTS_PROVIDER_PIPER = "piper"
+    const val TTS_PROVIDER_ELEVENLABS = "elevenlabs"
+
+    // Piper Offline TTS
+    const val PIPER_MODEL_DIR = "tts/vits-piper-de_DE-thorsten-high"
+    const val PIPER_MODEL_FILE = "de_DE-thorsten-high.onnx"
+    const val PIPER_TOKENS_FILE = "tokens.txt"
+    const val PIPER_DATA_DIR = "espeak-ng-data"
+
     // ElevenLabs TTS
     const val ELEVENLABS_BASE_URL = "https://api.elevenlabs.io/v1"
     const val PREF_ELEVENLABS_API_KEY = "elevenlabs_api_key"
