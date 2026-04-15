@@ -685,12 +685,21 @@ fun EntryDetailScreen(
                                     val speakText =
                                         if (isShowingOriginal) entry.rawText
                                         else entry.displayText
-                                    tts.speak(
+                                    val started = tts.speak(
                                         speakText,
                                         onPlaybackStart = { isTtsLoading = false },
                                     ) {
                                         isSpeaking = false
                                         isTtsLoading = false
+                                    }
+                                    if (!started) {
+                                        isSpeaking = false
+                                        isTtsLoading = false
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "Stimmen in den Einstellungen einschalten",
+                                            android.widget.Toast.LENGTH_SHORT,
+                                        ).show()
                                     }
                                 }
                             },

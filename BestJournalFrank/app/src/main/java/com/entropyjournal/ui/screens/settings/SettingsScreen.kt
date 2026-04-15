@@ -931,108 +931,119 @@ fun SettingsScreen(
                             )
                         }
 
-                        // ── Stimme (TTS Provider) ──
+                        // ── Stimmen (TTS) ──
                         Spacer(modifier = Modifier.height(16.dp))
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
                         )
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        Text(
-                            "Stimme",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "Vorlesefunktion f\u00fcr Eintr\u00e4ge und Analysen",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        val currentProvider = uiState.ttsProvider
-
-                        // -- ElevenLabs option --
-                        val elevenLabsKey = uiState.elevenLabsApiKey
-                        val elevenLabsAvailable = elevenLabsKey.isNotBlank()
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    if (currentProvider == Constants.TTS_PROVIDER_ELEVENLABS)
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                    else Color.Transparent,
-                                )
-                                .clickable(enabled = elevenLabsAvailable) {
-                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS)
-                                }
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = currentProvider == Constants.TTS_PROVIDER_ELEVENLABS,
-                                onClick = {
-                                    if (elevenLabsAvailable) {
-                                        viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS)
-                                    }
-                                },
-                                enabled = elevenLabsAvailable,
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = MaterialTheme.colorScheme.primary,
-                                ),
+                        var ttsEnabled by remember {
+                            mutableStateOf(
+                                soundsPrefs.getBoolean(Constants.PREF_TTS_ENABLED, false)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "ElevenLabs",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = if (elevenLabsAvailable) MaterialTheme.colorScheme.onSurface
-                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                )
-                                Text(
-                                    if (elevenLabsAvailable) "Beste Qualit\u00e4t \u2022 Cloud \u2022 20 Stimmen"
-                                        else "API-Schl\u00fcssel erforderlich",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
                         }
 
-                        // ElevenLabs voice picker (only when ElevenLabs is selected)
-                        if (currentProvider == Constants.TTS_PROVIDER_ELEVENLABS && elevenLabsAvailable) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            val voices = Constants.ELEVENLABS_VOICES.filter { it.id.isNotBlank() }
-                            if (voices.isNotEmpty()) {
-                                var voiceExpanded by remember { mutableStateOf(false) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Icon(
+                                    if (ttsEnabled) Icons.Rounded.VolumeUp
+                                    else Icons.Rounded.VolumeOff,
+                                    "Stimmen",
+                                    tint = if (ttsEnabled) MaterialTheme.colorScheme.primary
+                                        else Color(0xFF666666),
+                                    modifier = Modifier.size(22.dp),
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        "Stimmen",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Text(
+                                        if (ttsEnabled) "Vorlesen ist eingeschaltet"
+                                        else "Vorlesen ist ausgeschaltet",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = ttsEnabled,
+                                onCheckedChange = { enabled ->
+                                    ttsEnabled = enabled
+                                    soundsPrefs
+                                        .edit()
+                                        .putBoolean(Constants.PREF_TTS_ENABLED, enabled)
+                                        .commit()
+                                },
+                                colors =
+                                    SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    ),
+                            )
+                        }
+
+                        if (ttsEnabled) {
+                            val currentProvider = uiState.ttsProvider
+                            val dropdownColors = TextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                unfocusedIndicatorColor = Color.Transparent,
+                            )
+
+                            // ── ElevenLabs ──
+                            Spacer(modifier = Modifier.height(16.dp))
+                            val elevenLabsKey = uiState.elevenLabsApiKey
+                            val elevenLabsAvailable = elevenLabsKey.isNotBlank()
+
+                            Text(
+                                "ElevenLabs",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = if (currentProvider == Constants.TTS_PROVIDER_ELEVENLABS)
+                                    MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                if (elevenLabsAvailable) "Beste Qualit\u00e4t \u2022 Cloud \u2022 20 Stimmen"
+                                else "API-Schl\u00fcssel erforderlich",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            if (elevenLabsAvailable) {
+                                val voices = Constants.ELEVENLABS_VOICES.filter { it.id.isNotBlank() }
                                 val selectedVoiceId = uiState.elevenLabsVoiceId
                                 val selectedVoice = voices.find { it.id == selectedVoiceId } ?: voices.first()
+                                var voiceExpanded by remember { mutableStateOf(false) }
 
                                 ExposedDropdownMenuBox(
                                     expanded = voiceExpanded,
-                                    onExpandedChange = { voiceExpanded = it },
-                                    modifier = Modifier.padding(start = 48.dp),
+                                    onExpandedChange = {
+                                        voiceExpanded = it
+                                        if (it) viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS)
+                                    },
                                 ) {
                                     TextField(
                                         value = selectedVoice.name,
                                         onValueChange = {},
                                         readOnly = true,
-                                        trailingIcon = {
-                                            Icon(Icons.Rounded.KeyboardArrowDown, "Stimme w\u00e4hlen")
-                                        },
+                                        trailingIcon = { Icon(Icons.Rounded.KeyboardArrowDown, null) },
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                                        colors = TextFieldDefaults.colors(
-                                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                                            unfocusedIndicatorColor = Color.Transparent,
-                                        ),
+                                        colors = dropdownColors,
                                         singleLine = true,
                                         shape = RoundedCornerShape(12.dp),
                                     )
@@ -1053,6 +1064,7 @@ fun SettingsScreen(
                                                 },
                                                 onClick = {
                                                     viewModel.updateElevenLabsVoiceId(voice.id)
+                                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS)
                                                     voiceExpanded = false
                                                 },
                                             )
@@ -1060,191 +1072,114 @@ fun SettingsScreen(
                                     }
                                 }
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                            // ── Google Chirp 3 HD ──
+                            Spacer(modifier = Modifier.height(16.dp))
+                            val googleKey = uiState.googleTtsApiKey
+                            val googleAvailable = googleKey.isNotBlank()
 
-                        // -- Google Cloud TTS option --
-                        val googleKey = uiState.googleTtsApiKey
-                        val googleAvailable = googleKey.isNotBlank()
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    if (currentProvider == Constants.TTS_PROVIDER_GOOGLE)
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                    else Color.Transparent,
-                                )
-                                .clickable(enabled = googleAvailable) {
-                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE)
-                                }
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = currentProvider == Constants.TTS_PROVIDER_GOOGLE,
-                                onClick = {
-                                    if (googleAvailable) {
-                                        viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE)
-                                    }
-                                },
-                                enabled = googleAvailable,
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = MaterialTheme.colorScheme.primary,
-                                ),
+                            Text(
+                                "Google Chirp 3 HD",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = if (currentProvider == Constants.TTS_PROVIDER_GOOGLE)
+                                    MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "Google Chirp 3 HD",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = if (googleAvailable) MaterialTheme.colorScheme.onSurface
-                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                )
-                                Text(
-                                    if (googleAvailable) "Sehr hohe Qualit\u00e4t \u2022 Cloud \u2022 1M Zeichen/Monat gratis"
-                                        else "API-Schl\u00fcssel erforderlich",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
+                            Text(
+                                if (googleAvailable) "Sehr hohe Qualit\u00e4t \u2022 1M Zeichen/Monat gratis"
+                                else "API-Schl\u00fcssel erforderlich",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            if (googleAvailable) {
+                                val googleVoices = Constants.GOOGLE_TTS_VOICES
+                                val selectedGoogleVoiceId = uiState.googleTtsVoice
+                                val selectedGoogleVoice = googleVoices.find { it.id == selectedGoogleVoiceId } ?: googleVoices.first()
+                                var googleVoiceExpanded by remember { mutableStateOf(false) }
 
-                        // Google TTS voice picker (only when Google is selected)
-                        if (currentProvider == Constants.TTS_PROVIDER_GOOGLE && googleAvailable) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            val googleVoices = Constants.GOOGLE_TTS_VOICES
-                            val selectedGoogleVoiceId = uiState.googleTtsVoice
-                            val selectedGoogleVoice = googleVoices.find { it.id == selectedGoogleVoiceId } ?: googleVoices.first()
-                            var googleVoiceExpanded by remember { mutableStateOf(false) }
-
-                            ExposedDropdownMenuBox(
-                                expanded = googleVoiceExpanded,
-                                onExpandedChange = { googleVoiceExpanded = it },
-                                modifier = Modifier.padding(start = 48.dp),
-                            ) {
-                                TextField(
-                                    value = selectedGoogleVoice.name,
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    trailingIcon = {
-                                        Icon(Icons.Rounded.KeyboardArrowDown, "Stimme w\u00e4hlen")
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                                    colors = TextFieldDefaults.colors(
-                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                                        unfocusedIndicatorColor = Color.Transparent,
-                                    ),
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(12.dp),
-                                )
-                                ExposedDropdownMenu(
+                                ExposedDropdownMenuBox(
                                     expanded = googleVoiceExpanded,
-                                    onDismissRequest = { googleVoiceExpanded = false },
-                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    onExpandedChange = {
+                                        googleVoiceExpanded = it
+                                        if (it) viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE)
+                                    },
                                 ) {
-                                    googleVoices.forEach { voice ->
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    voice.name,
-                                                    color = if (voice.id == selectedGoogleVoiceId)
-                                                        MaterialTheme.colorScheme.primary
-                                                    else MaterialTheme.colorScheme.onSurface,
-                                                )
-                                            },
-                                            onClick = {
-                                                viewModel.updateGoogleTtsVoice(voice.id)
-                                                googleVoiceExpanded = false
-                                            },
-                                        )
+                                    TextField(
+                                        value = selectedGoogleVoice.name,
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        trailingIcon = { Icon(Icons.Rounded.KeyboardArrowDown, null) },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                                        colors = dropdownColors,
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp),
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = googleVoiceExpanded,
+                                        onDismissRequest = { googleVoiceExpanded = false },
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                    ) {
+                                        googleVoices.forEach { voice ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(
+                                                        voice.name,
+                                                        color = if (voice.id == selectedGoogleVoiceId)
+                                                            MaterialTheme.colorScheme.primary
+                                                        else MaterialTheme.colorScheme.onSurface,
+                                                    )
+                                                },
+                                                onClick = {
+                                                    viewModel.updateGoogleTtsVoice(voice.id)
+                                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE)
+                                                    googleVoiceExpanded = false
+                                                },
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                            // ── Edge TTS ──
+                            Spacer(modifier = Modifier.height(16.dp))
+                            val edgeVoices = Constants.EDGE_TTS_VOICES
+                            val selectedEdgeVoiceId = uiState.edgeTtsVoice
+                            val selectedEdgeVoice = edgeVoices.find { it.id == selectedEdgeVoiceId } ?: edgeVoices.first()
 
-                        // -- Edge TTS option --
-                        val edgeVoices = Constants.EDGE_TTS_VOICES
-                        val selectedEdgeVoiceId = uiState.edgeTtsVoice
-                        val selectedEdgeVoice = edgeVoices.find { it.id == selectedEdgeVoiceId } ?: edgeVoices.first()
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    if (currentProvider == Constants.TTS_PROVIDER_EDGE)
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                    else Color.Transparent,
-                                )
-                                .clickable {
-                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE)
-                                }
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = currentProvider == Constants.TTS_PROVIDER_EDGE,
-                                onClick = {
-                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE)
-                                },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = MaterialTheme.colorScheme.primary,
-                                ),
+                            Text(
+                                "Edge TTS",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = if (currentProvider == Constants.TTS_PROVIDER_EDGE)
+                                    MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "Edge TTS",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    "Cloud \u2022 Deutsch \u2022 Kostenlos \u2022 Kein Limit",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
+                            Text(
+                                "Kostenlos \u2022 Kein Limit \u2022 Deutsch",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
 
-                        // Edge TTS voice picker (only when Edge TTS is selected)
-                        if (currentProvider == Constants.TTS_PROVIDER_EDGE) {
-                            Spacer(modifier = Modifier.height(8.dp))
                             var edgeVoiceExpanded by remember { mutableStateOf(false) }
-
                             ExposedDropdownMenuBox(
                                 expanded = edgeVoiceExpanded,
-                                onExpandedChange = { edgeVoiceExpanded = it },
-                                modifier = Modifier.padding(start = 48.dp),
+                                onExpandedChange = {
+                                    edgeVoiceExpanded = it
+                                    if (it) viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE)
+                                },
                             ) {
                                 TextField(
                                     value = selectedEdgeVoice.name,
                                     onValueChange = {},
                                     readOnly = true,
-                                    trailingIcon = {
-                                        Icon(Icons.Rounded.KeyboardArrowDown, "Stimme w\u00e4hlen")
-                                    },
+                                    trailingIcon = { Icon(Icons.Rounded.KeyboardArrowDown, null) },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                                    colors = TextFieldDefaults.colors(
-                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                                        unfocusedIndicatorColor = Color.Transparent,
-                                    ),
+                                    colors = dropdownColors,
                                     singleLine = true,
                                     shape = RoundedCornerShape(12.dp),
                                 )
@@ -1265,6 +1200,7 @@ fun SettingsScreen(
                                             },
                                             onClick = {
                                                 viewModel.updateEdgeTtsVoice(voice.id)
+                                                viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE)
                                                 edgeVoiceExpanded = false
                                             },
                                         )
@@ -2377,7 +2313,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal V0.7.0",
+                            "Entropy Journal V0.8.0",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

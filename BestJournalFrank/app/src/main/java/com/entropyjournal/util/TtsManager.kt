@@ -58,14 +58,26 @@ class TtsManager(private val context: Context) {
         prefs?.getString(Constants.PREF_GOOGLE_TTS_VOICE, Constants.DEFAULT_GOOGLE_TTS_VOICE)
             ?: Constants.DEFAULT_GOOGLE_TTS_VOICE
 
+    private fun isTtsEnabled(): Boolean =
+        prefs?.getBoolean(Constants.PREF_TTS_ENABLED, false) ?: false
+
     /**
      * Speaks text using the user-selected TTS provider.
+     * Returns false if TTS is disabled (caller should show toast).
      */
     fun speak(
         text: String,
         onPlaybackStart: (() -> Unit)? = null,
         onComplete: () -> Unit,
-    ) {
+    ): Boolean {
+        if (!isTtsEnabled()) {
+            onComplete()
+            return false
+        }
+        if (text.isBlank()) {
+            onComplete()
+            return true
+        }
         when (getSelectedProvider()) {
             Constants.TTS_PROVIDER_ELEVENLABS -> {
                 val key = getElevenLabsKey()
@@ -120,6 +132,7 @@ class TtsManager(private val context: Context) {
                 )
             }
         }
+        return true
     }
 
     fun stop() {

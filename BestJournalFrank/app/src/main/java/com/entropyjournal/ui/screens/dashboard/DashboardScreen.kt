@@ -3200,12 +3200,21 @@ private fun AnalysisTtsShareRow(
                 } else {
                     onTtsLoadingChange(true)
                     onSpeakingChange(true)
-                    tts.speak(
+                    val started = tts.speak(
                         text,
                         onPlaybackStart = { onTtsLoadingChange(false) },
                     ) {
                         onSpeakingChange(false)
                         onTtsLoadingChange(false)
+                    }
+                    if (!started) {
+                        onSpeakingChange(false)
+                        onTtsLoadingChange(false)
+                        android.widget.Toast.makeText(
+                            context,
+                            "Stimmen in den Einstellungen einschalten",
+                            android.widget.Toast.LENGTH_SHORT,
+                        ).show()
                     }
                 }
             },
