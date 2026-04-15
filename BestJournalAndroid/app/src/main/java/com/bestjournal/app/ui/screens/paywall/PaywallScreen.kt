@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.bestjournal.app.ui.components.PulsingOrb
+import com.bestjournal.app.ui.components.ShimmerLoadingEffect
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonEmerald
@@ -102,6 +103,7 @@ fun PaywallScreen(
     val personalizedHeadline by viewModel.personalizedHeadline.collectAsState()
     val activity = LocalContext.current as? Activity
 
+    val pricesLoaded = monthlyPrice.isNotEmpty()
     val displayMonthlyPrice = monthlyPrice.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
     val displayYearlyPrice = yearlyPrice.ifEmpty { Constants.YEARLY_PRICE_DISPLAY }
     val displayLifetimePrice = lifetimePrice.ifEmpty { Constants.LIFETIME_PRICE_DISPLAY }
@@ -249,6 +251,29 @@ fun PaywallScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
+
+                // ── Loading state: prices not yet returned from Google Play ──
+                if (!pricesLoaded) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        ShimmerLoadingEffect(height = 56.dp, cornerRadius = 16.dp)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        ShimmerLoadingEffect(height = 48.dp, cornerRadius = 16.dp)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        ShimmerLoadingEffect(height = 48.dp, cornerRadius = 16.dp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Preise werden geladen\u2026",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                // ── All price-related sections (hidden until Google Play returns prices) ──
+                if (pricesLoaded) {
 
                 // ── Primary CTA: yearly with free trial ──
                 Button(
@@ -633,6 +658,7 @@ fun PaywallScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
+                } // end if (pricesLoaded)
             }
 
             // ── Exit-intent dialog ──
