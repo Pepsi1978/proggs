@@ -754,7 +754,7 @@ private fun PreviewDialog(
     onUpsellDismiss: () -> Unit = {},
 ) {
     val showingImproved = isUsingImproved && improvedText != null
-    val displayText = if (showingImproved) improvedText!! else rawText
+    val displayText = if (showingImproved) improvedText ?: rawText else rawText
     val hasPrompt = activePrompt.isNotBlank()
     var showSuccess by remember { mutableStateOf(false) }
     val doHaptic = rememberHapticAction()

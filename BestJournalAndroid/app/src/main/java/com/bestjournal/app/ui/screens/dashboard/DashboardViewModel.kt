@@ -230,7 +230,7 @@ constructor(
                 }
             }
 
-            val modelName = (accessResult as TieredAccessResult.Allowed).modelName
+            val modelName = (accessResult as? TieredAccessResult.Allowed)?.modelName ?: return@launch
 
             manualRefreshActive = true
             analyticsTracker.trackDashboardRefreshed(_uiState.value.currentScenario)

@@ -364,7 +364,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = uiState.dashboardLimitMessage!!,
+                                    text = uiState.dashboardLimitMessage ?: "",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,

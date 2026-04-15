@@ -71,12 +71,12 @@ fun parseRetrospectiveText(text: String): ParsedRetrospective {
         val headingMatch = Regex("""^\[(.+?)]$""").find(cleaned)
         if (headingMatch != null) {
             // Save previous section
-            if (currentHeading != null) {
+            currentHeading?.let { heading ->
                 sections.add(
                     RetrospectiveSection(
-                        heading = currentHeading!!,
+                        heading = heading,
                         body = currentBody.toString().trim(),
-                        icon = iconForHeading(currentHeading!!),
+                        icon = iconForHeading(heading),
                     )
                 )
             }
@@ -94,14 +94,16 @@ fun parseRetrospectiveText(text: String): ParsedRetrospective {
     }
 
     // Save last section
-    if (currentHeading != null && currentBody.isNotEmpty()) {
-        sections.add(
-            RetrospectiveSection(
-                heading = currentHeading!!,
-                body = currentBody.toString().trim(),
-                icon = iconForHeading(currentHeading!!),
+    if (currentBody.isNotEmpty()) {
+        currentHeading?.let { heading ->
+            sections.add(
+                RetrospectiveSection(
+                    heading = heading,
+                    body = currentBody.toString().trim(),
+                    icon = iconForHeading(heading),
+                )
             )
-        )
+        }
     }
 
     return ParsedRetrospective(bulletPoints = bulletPoints, sections = sections, rawText = text)

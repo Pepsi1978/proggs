@@ -92,13 +92,15 @@ class AudioRecorderHelper @Inject constructor() {
             outputStream.close()
             try { recorder.stop() } catch (_: Exception) {}
             recorder.release()
+
+            // Write WAV header inside finally so it runs even on coroutine cancellation
+            val totalDataSize = totalSamplesWritten * 2
+            if (totalDataSize > 0) {
+                try { writeWavHeader(outputFile, totalDataSize) } catch (_: Exception) {}
+            }
+
+            _amplitude.value = 0f
         }
-
-        // Update WAV header with correct file size
-        val totalDataSize = totalSamplesWritten * 2
-        writeWavHeader(outputFile, totalDataSize)
-
-        _amplitude.value = 0f
     }
 
     fun stopRecording() {

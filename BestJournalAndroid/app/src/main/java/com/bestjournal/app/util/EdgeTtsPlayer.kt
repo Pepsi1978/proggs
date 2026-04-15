@@ -159,7 +159,7 @@ class EdgeTtsPlayer(private val context: Context) {
     fun stop() {
         webSocket?.cancel()
         webSocket = null
-        mediaPlayer?.stop()
+        try { mediaPlayer?.stop() } catch (_: IllegalStateException) {}
         mediaPlayer?.release()
         mediaPlayer = null
     }

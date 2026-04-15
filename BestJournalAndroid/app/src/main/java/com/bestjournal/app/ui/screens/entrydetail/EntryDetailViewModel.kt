@@ -188,7 +188,7 @@ constructor(
                 }
                 is TieredAccessResult.Allowed -> { }
             }
-            val modelName = (accessResult as TieredAccessResult.Allowed).modelName
+            val modelName = (accessResult as? TieredAccessResult.Allowed)?.modelName ?: return@launch
 
             _uiState.value = _uiState.value.copy(isImproving = true, improveError = null)
             aiRateLimiter.recordTextAttempt()

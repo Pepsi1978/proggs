@@ -402,7 +402,7 @@ constructor(
                 }
             }
 
-            val modelName = (accessResult as TieredAccessResult.Allowed).modelName
+            val modelName = (accessResult as? TieredAccessResult.Allowed)?.modelName ?: return@launch
             _uiState.value = _uiState.value.copy(recordingState = RecordingState.IMPROVING)
 
             // Record attempt (daily + hourly counters) — errors are OK here

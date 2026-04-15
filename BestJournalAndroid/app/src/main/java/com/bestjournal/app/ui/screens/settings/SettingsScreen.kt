@@ -244,7 +244,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         if (uiState.userProfile != null) {
-                            val profile = uiState.userProfile!!
+                            val profile = uiState.userProfile ?: return@Column
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,

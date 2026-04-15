@@ -149,7 +149,7 @@ fun buildShareText(entry: JournalEntry, useImproved: Boolean): String = buildStr
         "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
     )
     if (!entry.title.isNullOrBlank()) append("\n\n\u2728 ${entry.title}")
-    val bodyText = if (useImproved) entry.improvedText!! else entry.displayText
+    val bodyText = if (useImproved) entry.improvedText ?: entry.displayText else entry.displayText
     append("\n\n$bodyText")
 }
 
