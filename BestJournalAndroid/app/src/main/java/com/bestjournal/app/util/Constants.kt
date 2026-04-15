@@ -140,9 +140,8 @@ object Constants {
     const val SPAM_HOURLY_AI_LIMIT = 30
     const val SPAM_HOURLY_AI_LIMIT_PREMIUM = 50
 
-    // Subscription pricing (display only — actual prices set in Google Play Console)
-    const val MONTHLY_PRICE_DISPLAY = "3,99\u00A0\u20AC"
-    const val YEARLY_PRICE_DISPLAY = "29,99\u00A0\u20AC"
-    const val YEARLY_MONTHLY_EQUIVALENT = "2,50\u00A0\u20AC"
-    const val LIFETIME_PRICE_DISPLAY = "79,99\u00A0\u20AC"
+    // Subscription pricing — neutral fallbacks while Google Play loads the real localized prices
+    const val MONTHLY_PRICE_DISPLAY = "..."
+    const val YEARLY_PRICE_DISPLAY = "..."
+    const val LIFETIME_PRICE_DISPLAY = "..."
 }
