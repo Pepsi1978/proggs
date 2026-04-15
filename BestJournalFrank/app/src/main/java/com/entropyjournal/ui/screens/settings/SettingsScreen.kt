@@ -1052,6 +1052,10 @@ fun SettingsScreen(
                                 unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                                 focusedIndicatorColor = MaterialTheme.colorScheme.primary,
                                 unfocusedIndicatorColor = Color.Transparent,
+                                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledIndicatorColor = Color.Transparent,
                             )
                             val activeAlpha = 1f
                             val inactiveAlpha = 0.4f
