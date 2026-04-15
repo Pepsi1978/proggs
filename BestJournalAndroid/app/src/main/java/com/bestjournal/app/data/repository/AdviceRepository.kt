@@ -812,7 +812,10 @@ AUSGABEFORMAT — STRENGE REGELN:
         val lang = DeviceLocale.promptLanguage
         if (lang.equals("German", ignoreCase = true)) return prompt
         return prompt
-            .replace("Schreibe auf Deutsch.", "Schreibe auf $lang. Alle JSON-Werte in $lang.")
+            .replace(
+                "Schreibe auf Deutsch.",
+                "Schreibe auf $lang. Alle JSON-Textwerte (titel, beschreibung, zusammenfassung, erklaerung, bezug, verknuepfung, name) in $lang. Enum-Werte MÜSSEN unverändert bleiben: prioritaet muss \"hoch\", \"mittel\" oder \"niedrig\" sein, icon und farbe bleiben wie vorgegeben.",
+            )
             .replace("- Deutsch. Einfach, klar.", "- $lang. Einfach, klar.")
     }
 
@@ -1035,9 +1038,9 @@ private fun AdviceBlockEntity.toDomain(): AdviceBlock {
                     title = obj.getString("titel"),
                     description = obj.getString("beschreibung"),
                     priority =
-                        when (obj.optString("prioritaet", "mittel")) {
-                            "hoch" -> AdvicePriority.HIGH
-                            "niedrig" -> AdvicePriority.LOW
+                        when (obj.optString("prioritaet", "mittel").lowercase()) {
+                            "hoch", "high" -> AdvicePriority.HIGH
+                            "niedrig", "low" -> AdvicePriority.LOW
                             else -> AdvicePriority.MEDIUM
                         },
                     connection = obj.optString("verknuepfung", ""),

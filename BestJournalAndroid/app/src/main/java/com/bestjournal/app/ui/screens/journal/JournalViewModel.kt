@@ -548,7 +548,7 @@ constructor(
                 // Check achievements after entry save
                 try {
                     val totalEntries = journalRepository.getEntryCount()
-                    val wordCount = displayText.split("\\s+".toRegex()).size
+                    val wordCount = countWords(displayText)
                     val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
                     val nightCount = encryptedPrefs.getInt("stat_night_entries", 0)
                     val morningCount = encryptedPrefs.getInt("stat_morning_entries", 0)
@@ -738,6 +738,28 @@ constructor(
 
     fun retrySyncNow() {
         triggerSync()
+    }
+
+    /**
+     * Count words using BreakIterator — works for all languages including CJK
+     * (Chinese, Japanese, Korean) where words are not separated by spaces.
+     */
+    private fun countWords(text: String): Int {
+        if (text.isBlank()) return 0
+        val iterator = java.text.BreakIterator.getWordInstance(java.util.Locale.getDefault())
+        iterator.setText(text)
+        var count = 0
+        var start = iterator.first()
+        var end = iterator.next()
+        while (end != java.text.BreakIterator.DONE) {
+            val word = text.substring(start, end).trim()
+            if (word.isNotEmpty() && word.any { it.isLetterOrDigit() }) {
+                count++
+            }
+            start = end
+            end = iterator.next()
+        }
+        return count
     }
 
     private fun triggerDebouncedAnalysis() {

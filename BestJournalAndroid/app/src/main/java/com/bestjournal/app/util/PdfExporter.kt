@@ -377,6 +377,8 @@ object PdfExporter {
     /**
      * Wraps text into lines that fit within the given width.
      * Handles newlines in the original text and word-wrapping for long lines.
+     * Uses Paint.breakText() for correct wrapping of ALL scripts including CJK
+     * (Chinese, Japanese, Korean) where words are not separated by spaces.
      */
     private fun wrapText(text: String, paint: Paint, maxWidth: Float): List<String> {
         val result = mutableListOf<String>()
@@ -388,22 +390,27 @@ object PdfExporter {
                 continue
             }
 
-            val words = paragraph.split(' ')
-            var currentLine = StringBuilder()
-
-            for (word in words) {
-                val testLine = if (currentLine.isEmpty()) word else "$currentLine $word"
-                val testWidth = paint.measureText(testLine)
-
-                if (testWidth > maxWidth && currentLine.isNotEmpty()) {
-                    result.add(currentLine.toString())
-                    currentLine = StringBuilder(word)
-                } else {
-                    currentLine = StringBuilder(testLine)
+            var offset = 0
+            while (offset < paragraph.length) {
+                val measured = paint.breakText(
+                    paragraph, offset, paragraph.length, true, maxWidth, null
+                )
+                if (measured == 0) {
+                    offset++
+                    continue
                 }
-            }
-            if (currentLine.isNotEmpty()) {
-                result.add(currentLine.toString())
+                var end = offset + measured
+                // If we didn't consume the whole paragraph, try to break at a word boundary
+                if (end < paragraph.length && paragraph[end] != ' ') {
+                    val lastSpace = paragraph.lastIndexOf(' ', end - 1)
+                    if (lastSpace > offset) {
+                        end = lastSpace
+                    }
+                }
+                result.add(paragraph.substring(offset, end).trim())
+                offset = end
+                // Skip the space at the break point
+                if (offset < paragraph.length && paragraph[offset] == ' ') offset++
             }
         }
 

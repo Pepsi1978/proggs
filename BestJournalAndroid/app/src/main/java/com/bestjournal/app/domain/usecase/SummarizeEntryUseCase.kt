@@ -62,7 +62,8 @@ $text
 
                 val lines = resultText.lines()
                 val title =
-                    lines.firstOrNull { it.startsWith("TITEL:") }?.removePrefix("TITEL:")?.trim()
+                    lines.firstOrNull { it.startsWith("TITEL:") || it.startsWith("TITLE:") }
+                        ?.let { it.removePrefix("TITEL:").removePrefix("TITLE:").trim() }
                 val summaryLines = lines.filter { it.trimStart().startsWith("•") }
                 val summary = summaryLines.joinToString("\n").trim().ifBlank { null }
 
