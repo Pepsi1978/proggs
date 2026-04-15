@@ -86,6 +86,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -104,7 +106,7 @@ import com.entropyjournal.util.Constants
 import com.entropyjournal.util.DateTimeFormatter
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
@@ -995,6 +997,67 @@ fun SettingsScreen(
 
                         if (ttsEnabled) {
                             val currentProvider = uiState.ttsProvider
+
+                            // Favorites system
+                            var favorites by remember {
+                                mutableStateOf(
+                                    soundsPrefs.getString(Constants.PREF_TTS_FAVORITES, "")
+                                        ?.split(",")?.filter { it.isNotBlank() }?.toSet()
+                                        ?: emptySet()
+                                )
+                            }
+                            var showFavDialog by remember { mutableStateOf(false) }
+                            var favDialogVoiceId by remember { mutableStateOf("") }
+                            var favDialogVoiceName by remember { mutableStateOf("") }
+
+                            if (showFavDialog) {
+                                val isFav = favDialogVoiceId in favorites
+                                androidx.compose.material3.AlertDialog(
+                                    onDismissRequest = { showFavDialog = false },
+                                    title = { Text(favDialogVoiceName) },
+                                    text = {
+                                        Text(
+                                            if (isFav) "Favorit entfernen?"
+                                            else "Als Favorit markieren?",
+                                        )
+                                    },
+                                    confirmButton = {
+                                        TextButton(onClick = {
+                                            val newFavs = if (isFav) {
+                                                favorites - favDialogVoiceId
+                                            } else {
+                                                favorites + favDialogVoiceId
+                                            }
+                                            favorites = newFavs
+                                            soundsPrefs.edit()
+                                                .putString(
+                                                    Constants.PREF_TTS_FAVORITES,
+                                                    newFavs.joinToString(","),
+                                                )
+                                                .commit()
+                                            showFavDialog = false
+                                        }) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    if (isFav) "\u2606" else "\u2605",
+                                                    color = Color(0xFFFFB300),
+                                                    fontSize = 20.sp,
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    if (isFav) "Entfernen" else "Favorit setzen",
+                                                )
+                                            }
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showFavDialog = false }) {
+                                            Text("Abbrechen")
+                                        }
+                                    },
+                                )
+                            }
+
                             val dropdownColors = TextFieldDefaults.colors(
                                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -1082,6 +1145,18 @@ fun SettingsScreen(
                                                     viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS)
                                                     voiceExpanded = false
                                                 },
+                                                modifier = Modifier.combinedClickable(
+                                                    onLongClick = {
+                                                        favDialogVoiceId = voice.id
+                                                        favDialogVoiceName = voice.name
+                                                        showFavDialog = true
+                                                    },
+                                                    onClick = {
+                                                        viewModel.updateElevenLabsVoiceId(voice.id)
+                                                        viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS)
+                                                        voiceExpanded = false
+                                                    },
+                                                ),
                                             )
                                         }
                                     }
@@ -1153,18 +1228,41 @@ fun SettingsScreen(
                                         googleVoices.forEach { voice ->
                                             DropdownMenuItem(
                                                 text = {
-                                                    Text(
-                                                        voice.name,
-                                                        color = if (voice.id == selectedGoogleVoiceId)
-                                                            MaterialTheme.colorScheme.primary
-                                                        else MaterialTheme.colorScheme.onSurface,
-                                                    )
+                                                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                                        if (voice.id in favorites) {
+                                                            Text(
+                                                                "\u2605",
+                                                                color = Color(0xFFFFB300),
+                                                                fontSize = 14.sp,
+                                                            )
+                                                            Spacer(modifier = Modifier.width(4.dp))
+                                                        }
+                                                        Text(
+                                                            voice.name,
+                                                            color = if (voice.id == selectedGoogleVoiceId)
+                                                                MaterialTheme.colorScheme.primary
+                                                            else MaterialTheme.colorScheme.onSurface,
+                                                            modifier = Modifier.weight(1f),
+                                                        )
+                                                    }
                                                 },
                                                 onClick = {
                                                     viewModel.updateGoogleTtsVoice(voice.id)
                                                     viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE)
                                                     googleVoiceExpanded = false
                                                 },
+                                                modifier = Modifier.combinedClickable(
+                                                    onLongClick = {
+                                                        favDialogVoiceId = voice.id
+                                                        favDialogVoiceName = voice.name
+                                                        showFavDialog = true
+                                                    },
+                                                    onClick = {
+                                                        viewModel.updateGoogleTtsVoice(voice.id)
+                                                        viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE)
+                                                        googleVoiceExpanded = false
+                                                    },
+                                                ),
                                             )
                                         }
                                     }
@@ -1232,18 +1330,41 @@ fun SettingsScreen(
                                     edgeVoices.forEach { voice ->
                                         DropdownMenuItem(
                                             text = {
-                                                Text(
-                                                    voice.name,
-                                                    color = if (voice.id == selectedEdgeVoiceId)
-                                                        MaterialTheme.colorScheme.primary
-                                                    else MaterialTheme.colorScheme.onSurface,
-                                                )
+                                                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                                    if (voice.id in favorites) {
+                                                        Text(
+                                                            "\u2605",
+                                                            color = Color(0xFFFFB300),
+                                                            fontSize = 14.sp,
+                                                        )
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                    }
+                                                    Text(
+                                                        voice.name,
+                                                        color = if (voice.id == selectedEdgeVoiceId)
+                                                            MaterialTheme.colorScheme.primary
+                                                        else MaterialTheme.colorScheme.onSurface,
+                                                        modifier = Modifier.weight(1f),
+                                                    )
+                                                }
                                             },
                                             onClick = {
                                                 viewModel.updateEdgeTtsVoice(voice.id)
                                                 viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE)
                                                 edgeVoiceExpanded = false
                                             },
+                                            modifier = Modifier.combinedClickable(
+                                                onLongClick = {
+                                                    favDialogVoiceId = voice.id
+                                                    favDialogVoiceName = voice.name
+                                                    showFavDialog = true
+                                                },
+                                                onClick = {
+                                                    viewModel.updateEdgeTtsVoice(voice.id)
+                                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE)
+                                                    edgeVoiceExpanded = false
+                                                },
+                                            ),
                                         )
                                     }
                                 }

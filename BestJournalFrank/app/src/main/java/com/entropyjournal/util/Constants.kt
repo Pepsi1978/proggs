@@ -60,6 +60,7 @@ object Constants {
 
     // TTS (Text-to-Speech)
     const val PREF_TTS_ENABLED = "tts_enabled"
+    const val PREF_TTS_FAVORITES = "tts_favorite_voices"
     const val PREF_TTS_PROVIDER = "tts_provider"
     const val TTS_PROVIDER_EDGE = "edge_tts"
     const val TTS_PROVIDER_ELEVENLABS = "elevenlabs"
