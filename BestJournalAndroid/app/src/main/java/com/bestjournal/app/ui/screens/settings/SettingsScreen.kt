@@ -77,6 +77,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -905,11 +906,17 @@ fun SettingsScreen(
                                     ) ?: localeVoices.defaultVoiceId
                                 )
                             }
-                            // If saved voice doesn't match current locale, reset to default
+                            // If saved voice doesn't match current locale, reset to default and persist
                             val effectiveVoiceId = if (voices.any { it.id == selectedVoiceId }) {
                                 selectedVoiceId
                             } else {
-                                localeVoices.defaultVoiceId
+                                val fallback = localeVoices.defaultVoiceId
+                                selectedVoiceId = fallback
+                                soundsPrefs
+                                    .edit()
+                                    .putString(Constants.PREF_EDGE_TTS_VOICE, fallback)
+                                    .commit()
+                                fallback
                             }
                             val selectedVoice =
                                 voices.find { it.id == effectiveVoiceId } ?: voices.first()
@@ -2635,9 +2642,9 @@ private fun SettingsTtsIcon(isEnabled: Boolean) {
                 modifier = Modifier.size(onSize),
             )
         }
-        Divider(
+        VerticalDivider(
             color = MaterialTheme.colorScheme.outlineVariant,
-            modifier = Modifier.height(16.dp).width(1.dp),
+            modifier = Modifier.height(16.dp),
         )
         androidx.compose.foundation.layout.Box(
             contentAlignment = Alignment.Center,

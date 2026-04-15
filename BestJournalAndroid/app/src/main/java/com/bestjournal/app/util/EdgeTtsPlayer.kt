@@ -19,9 +19,13 @@ class EdgeTtsPlayer(private val context: Context) {
 
     private var mediaPlayer: MediaPlayer? = null
     private var webSocket: WebSocket? = null
+    private var currentOutputStream: java.io.FileOutputStream? = null
     private var onDone: (() -> Unit)? = null
     private var onPlayStart: (() -> Unit)? = null
-    private val client = OkHttpClient()
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
 
     private companion object {
         const val TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
@@ -80,7 +84,9 @@ class EdgeTtsPlayer(private val context: Context) {
                 .build()
 
         val audioFile = File(context.cacheDir, "tts_audio.mp3")
+        try { currentOutputStream?.close() } catch (_: Exception) {}
         val outputStream = FileOutputStream(audioFile)
+        currentOutputStream = outputStream
 
         webSocket =
             client.newWebSocket(
@@ -165,6 +171,8 @@ class EdgeTtsPlayer(private val context: Context) {
     fun stop() {
         webSocket?.cancel()
         webSocket = null
+        try { currentOutputStream?.close() } catch (_: Exception) {}
+        currentOutputStream = null
         try { mediaPlayer?.stop() } catch (_: IllegalStateException) {}
         mediaPlayer?.release()
         mediaPlayer = null

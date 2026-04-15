@@ -34,14 +34,15 @@ object TtsVoiceRegistry {
     /** Find the best matching locale config for the device language. */
     fun getLocaleVoices(): LocaleVoices {
         val locale = Locale.getDefault()
-        val full = "${locale.language}-${locale.country}".uppercase()
-            .let { "${it.substring(0, 2).lowercase()}-${it.substring(3, 5).uppercase()}" }
+        val lang = locale.language.lowercase()
+        val country = locale.country.uppercase()
 
         // Try exact match first (e.g., "pt-BR")
-        ALL_LOCALES[full]?.let { return it }
+        if (country.isNotEmpty()) {
+            ALL_LOCALES["$lang-$country"]?.let { return it }
+        }
 
         // Try language-only match (e.g., "pt" -> "pt-BR")
-        val lang = locale.language.lowercase()
         LANGUAGE_FALLBACK[lang]?.let { code -> ALL_LOCALES[code]?.let { return it } }
 
         // Default to English US
@@ -172,7 +173,7 @@ object TtsVoiceRegistry {
             st("en-GB-RyanNeural", "Ryan", M),
             st("en-GB-LibbyNeural", "Libby", F),
         )),
-        "en-AU" to LocaleVoices("en-AU", "en-AU-NatashaNeural", listOf(
+        "en-AU" to LocaleVoices("en-AU", "en-AU-WilliamMultilingualNeural", listOf(
             ml("en-AU-WilliamMultilingualNeural", "William", M),
             st("en-AU-NatashaNeural", "Natasha", F),
             st("en-AU-WilliamNeural", "William", M),
