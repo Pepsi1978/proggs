@@ -9,6 +9,7 @@ import com.bestjournal.app.domain.model.AdvicePriority
 import com.bestjournal.app.domain.model.DerivationEntry
 import com.bestjournal.app.domain.model.TopAction
 import com.bestjournal.app.util.Constants
+import com.bestjournal.app.util.DeviceLocale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -787,7 +788,7 @@ AUSGABEFORMAT — STRENGE REGELN:
 
     private fun getActiveSystemPrompt(): String {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-        return when (scenario) {
+        val base = when (scenario) {
             0 -> summaryAnalysisSystemPrompt
             2 -> selfInsightAnalysisSystemPrompt
             3 -> goalsAnalysisSystemPrompt
@@ -798,6 +799,21 @@ AUSGABEFORMAT — STRENGE REGELN:
             }
             else -> entropyAnalysisSystemPrompt
         }
+        return localizePromptLanguage(base)
+    }
+
+    /**
+     * Replace hardcoded German language instructions with the device language.
+     * For German devices this is a no-op (early return, zero overhead).
+     * JSON keys (ratschlaege, titel, beschreibung etc.) remain unchanged —
+     * only the VALUES are written in the device language.
+     */
+    private fun localizePromptLanguage(prompt: String): String {
+        val lang = DeviceLocale.promptLanguage
+        if (lang.equals("German", ignoreCase = true)) return prompt
+        return prompt
+            .replace("Schreibe auf Deutsch.", "Schreibe auf $lang. Alle JSON-Werte in $lang.")
+            .replace("- Deutsch. Einfach, klar.", "- $lang. Einfach, klar.")
     }
 
     private fun getActiveUserPromptPrefix(freshAnalysis: Boolean): String {

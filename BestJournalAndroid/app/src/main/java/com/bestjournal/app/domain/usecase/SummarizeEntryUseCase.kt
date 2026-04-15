@@ -3,6 +3,7 @@ package com.bestjournal.app.domain.usecase
 import android.util.Log
 import com.bestjournal.app.data.remote.ai.FirebaseAiService
 import com.bestjournal.app.data.repository.JournalRepository
+import com.bestjournal.app.util.DeviceLocale
 import javax.inject.Inject
 import kotlinx.coroutines.delay
 
@@ -28,7 +29,8 @@ REGELN:
 - Überschrift: Maximal 4 Wörter, fängt den Kern des Eintrags ein
 - Stichpunkte: Kurz und prägnant, nur Kernaussagen
 - Keine langen Gedankenstriche (—). Nutze Kommas oder Punkte.
-- Sprache: Deutsch
+- Sprache: ${DeviceLocale.promptLanguage}
+- Verwende IMMER den Marker "TITEL:" gefolgt vom Titel, unabhängig von der Antwortsprache
 - Gib NUR das Format oben zurück, nichts anderes
 
 TEXT:

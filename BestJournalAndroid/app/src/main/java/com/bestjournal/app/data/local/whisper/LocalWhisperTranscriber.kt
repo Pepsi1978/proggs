@@ -6,6 +6,7 @@ import com.k2fsa.sherpa.onnx.OfflineModelConfig
 import com.k2fsa.sherpa.onnx.OfflineRecognizer
 import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OfflineWhisperModelConfig
+import com.bestjournal.app.util.DeviceLocale
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,14 +19,18 @@ class LocalWhisperTranscriber @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private var recognizer: OfflineRecognizer? = null
+    private var recognizerLanguage: String? = null
 
     private fun getOrCreateRecognizer(): OfflineRecognizer {
-        recognizer?.let { return it }
+        val lang = DeviceLocale.languageCode
+        // Recreate recognizer if device language changed at runtime
+        if (recognizer != null && recognizerLanguage == lang) return recognizer!!
+        recognizer = null
 
         val whisperConfig = OfflineWhisperModelConfig(
             encoder = "whisper/base-encoder.int8.onnx",
             decoder = "whisper/base-decoder.int8.onnx",
-            language = "de",
+            language = lang,
             task = "transcribe"
         )
 
@@ -43,6 +48,7 @@ class LocalWhisperTranscriber @Inject constructor(
 
         val rec = OfflineRecognizer(context.assets, config)
         recognizer = rec
+        recognizerLanguage = lang
         return rec
     }
 

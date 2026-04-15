@@ -1,6 +1,7 @@
 package com.bestjournal.app.domain.usecase
 
 import com.bestjournal.app.data.remote.ai.FirebaseAiService
+import com.bestjournal.app.util.DeviceLocale
 import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -13,16 +14,17 @@ class ImproveTextUseCase @Inject constructor(private val firebaseAiService: Fire
         private const val CHUNK_MAX_CHARS = 3500
     }
 
-    private fun buildPrompt(text: String): String =
-        """
-Du bist ein deutscher Textredakteur für diktierte Spracheingaben.
+    private fun buildPrompt(text: String): String {
+        val lang = DeviceLocale.promptLanguage
+        return """
+Du bist ein erfahrener Textredakteur für diktierte Spracheingaben.
 
 AUFGABE:
 Du erhältst einen diktierten Text (Speech-to-Text). Deine Aufgabe ist es, die **Intention** des Sprechers zu erkennen und den Text so umzuformulieren, dass diese Intention **klar, präzise und sprachlich hochwertig** zum Ausdruck kommt.
 
 VORGEHEN (in dieser Reihenfolge):
 1) Erkenne die Absicht: Was will der Sprecher mitteilen, fragen, anweisen oder ausdrücken?
-2) Entferne Diktat-Artefakte: Fülllaute ("äh", "ähm", "öhm"), Stotterer, Wortwiederholungen, sinnlose Fragmente.
+2) Entferne Diktat-Artefakte: Fülllaute, Stotterer, Wortwiederholungen, sinnlose Fragmente.
 3) Formuliere Sätze so um, dass die erkannte Intention **klar und gut lesbar** wird.
    - Sätze dürfen umstrukturiert werden.
    - Wortwahl darf verbessert werden.
@@ -34,7 +36,7 @@ GRENZEN (strikt):
 - Keine Vermutungen über nicht Gesagtes.
 - Die Intention des Originals muss vollständig erhalten bleiben.
 - Keine langen Gedankenstriche (—). Nutze Kommas oder kurze Sätze.
-- Sprache: Deutsch.
+- Sprache: $lang. Antworte ausschließlich in $lang.
 
 REGEL:
 Gib AUSSCHLIESSLICH den überarbeiteten Text zurück.
@@ -44,6 +46,7 @@ TEXT:
 $text
     """
             .trim()
+    }
 
     private suspend fun rewriteChunk(text: String, modelName: String): String {
         val result =

@@ -4,7 +4,6 @@ object Constants {
     // Groq API (for premium transcription via Firebase Remote Config)
     const val GROQ_BASE_URL = "https://api.groq.com/openai/v1/"
     const val GROQ_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo"
-    const val GROQ_LANGUAGE = "de"
     const val REMOTE_CONFIG_GROQ_KEY = "groq_api_key"
 
     // Audio recording

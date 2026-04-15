@@ -5,6 +5,7 @@ import android.util.Log
 import com.bestjournal.app.data.local.whisper.LocalWhisperTranscriber
 import com.bestjournal.app.data.remote.groq.GroqApi
 import com.bestjournal.app.util.Constants
+import com.bestjournal.app.util.DeviceLocale
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -44,7 +45,7 @@ class TranscriptionRepository @Inject constructor(
                         authorization = "Bearer $groqKey",
                         file = filePart,
                         model = Constants.GROQ_TRANSCRIPTION_MODEL.toRequestBody("text/plain".toMediaType()),
-                        language = Constants.GROQ_LANGUAGE.toRequestBody("text/plain".toMediaType()),
+                        language = DeviceLocale.languageCode.toRequestBody("text/plain".toMediaType()),
                         responseFormat = "json".toRequestBody("text/plain".toMediaType())
                     )
                     if (response.text.isNotBlank()) {

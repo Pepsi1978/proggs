@@ -7,7 +7,9 @@ import com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity
 import com.bestjournal.app.data.remote.ai.FirebaseAiService
 import com.bestjournal.app.data.repository.RetrospectiveRepository
 import com.bestjournal.app.util.Constants
+import com.bestjournal.app.util.DeviceLocale
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.text.DateFormatSymbols
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -28,28 +30,24 @@ constructor(
     private val aiService: FirebaseAiService,
     @ApplicationContext private val context: Context,
 ) {
-    // ThreadLocal to ensure thread-safe date formatting during parallel generation
+    // Thread-safe: get() creates a new instance per call, using the current device locale
     private val dfLabel: SimpleDateFormat
-        get() = SimpleDateFormat("dd.MM.", Locale.GERMANY)
+        get() {
+            val locale = DeviceLocale.locale
+            val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMd")
+            return SimpleDateFormat(pattern, locale)
+        }
 
     private val dfFull: SimpleDateFormat
-        get() = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
+        get() {
+            val locale = DeviceLocale.locale
+            val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "yyyyMMMd")
+            return SimpleDateFormat(pattern, locale)
+        }
 
-    private val monthNames =
-        listOf(
-            "Januar",
-            "Februar",
-            "März",
-            "April",
-            "Mai",
-            "Juni",
-            "Juli",
-            "August",
-            "September",
-            "Oktober",
-            "November",
-            "Dezember",
-        )
+    // Localized month names from device locale (e.g., "January" for en, "1月" for ja)
+    private val monthNames: Array<String>
+        get() = DateFormatSymbols(DeviceLocale.locale).months
 
     companion object {
         /** Max concurrent AI API calls to avoid rate limiting */
@@ -236,6 +234,7 @@ constructor(
         profileStyle: String,
     ): RetrospectiveSummaryEntity? {
         try {
+            val lang = DeviceLocale.promptLanguage
             val prompt =
                 """Du bist ein Erzähler, der aus Tagebucheinträgen einen natürlichen, gut lesbaren Wochenrückblick schreibt.
 
@@ -250,7 +249,7 @@ FORMAT (bitte genau einhalten):
 6. Die Abschnitte chronologisch vom Wochenanfang bis Wochenende ordnen
 
 REGELN:
-- Schreibe in der Du-Form, als würde das Tagebuch selbst zurückblicken
+- Schreibe in der Du-Form (bzw. dem sprachlichen Äquivalent einer persönlichen Anrede)
 - Keine Anrede, keine Grußformel — direkt in die Erzählung
 - Fließender Stil mit guten Übergängen innerhalb der Abschnitte
 - Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)
@@ -260,7 +259,7 @@ REGELN:
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 200 Wörter
 - Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
-- Sprache: Deutsch$profileStyle
+- Sprache: $lang. Schreibe die gesamte Antwort in $lang.$profileStyle
 
 EINTRÄGE DER WOCHE:
 ${task.entriesText}"""
@@ -282,7 +281,7 @@ ${task.entriesText}"""
             val summaryText = result.getOrThrow().trim().replace("—", ", ")
 
             val titlePrompt =
-                """Basierend auf diesem Wochenrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter).
+                """Basierend auf diesem Wochenrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter) in $lang.
 Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).
 
 Rückblick:
@@ -416,6 +415,7 @@ ${summaryText.take(500)}"""
         profileStyle: String,
     ): RetrospectiveSummaryEntity? {
         try {
+            val lang = DeviceLocale.promptLanguage
             val prompt =
                 """Du bist ein Erzähler, der aus Wochenrückblicken einen natürlichen, gut lesbaren Monatsrückblick schreibt.
 
@@ -430,7 +430,7 @@ FORMAT (bitte genau einhalten):
 6. Die Abschnitte chronologisch vom Monatsanfang bis Monatsende ordnen
 
 REGELN:
-- Schreibe in der Du-Form, als würde das Tagebuch selbst auf den Monat zurückblicken
+- Schreibe in der Du-Form (bzw. dem sprachlichen Äquivalent einer persönlichen Anrede)
 - Keine Anrede, keine Grußformel — direkt in die Erzählung
 - Fließender Stil mit guten Übergängen innerhalb der Abschnitte
 - Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)
@@ -441,7 +441,7 @@ REGELN:
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 300 Wörter
 - Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
-- Sprache: Deutsch$profileStyle
+- Sprache: $lang. Schreibe die gesamte Antwort in $lang.$profileStyle
 
 WOCHENRÜCKBLICKE:
 ${'$'}{task.weeksText}"""
@@ -463,7 +463,7 @@ ${'$'}{task.weeksText}"""
             val summaryText = result.getOrThrow().trim().replace("—", ", ")
 
             val titlePrompt =
-                """Basierend auf diesem Monatsrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter).
+                """Basierend auf diesem Monatsrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter) in $lang.
 Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).
 
 Rückblick:
@@ -542,6 +542,7 @@ ${summaryText.take(500)}"""
             }
 
         val profileStyle = getProfileStyleInstruction()
+        val lang = DeviceLocale.promptLanguage
         val prompt =
             """Du bist ein Erzähler, der aus Monatsrückblicken einen natürlichen, gut lesbaren Jahresrückblick schreibt.
 
@@ -556,7 +557,7 @@ FORMAT (bitte genau einhalten):
 6. Die Abschnitte chronologisch vom Jahresanfang bis Jahresende ordnen
 
 REGELN:
-- Schreibe in der Du-Form, als würde das Tagebuch selbst auf das Jahr zurückblicken
+- Schreibe in der Du-Form (bzw. dem sprachlichen Äquivalent einer persönlichen Anrede)
 - Keine Anrede, keine Grußformel — direkt in die Erzählung
 - Fließender Stil mit guten Übergängen innerhalb der Abschnitte
 - Die Überschriften sollen kurz und thematisch passend sein (2-5 Wörter)
@@ -568,13 +569,13 @@ REGELN:
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 400 Wörter
 - Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
-- Sprache: Deutsch$profileStyle
+- Sprache: $lang. Schreibe die gesamte Antwort in $lang.$profileStyle
 
 MONATSRÜCKBLICKE:
 $monthsText"""
 
         val titlePrompt =
-            """Basierend auf diesem Jahresrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter).
+            """Basierend auf diesem Jahresrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter) in $lang.
 Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).
 
 Rückblick:
