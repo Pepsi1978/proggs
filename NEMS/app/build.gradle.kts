@@ -39,6 +39,15 @@ android {
         }
     }
 
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/DEPENDENCIES"
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/*.kotlin_module"
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -92,10 +101,13 @@ dependencies {
     implementation(libs.credentials.play)
     implementation(libs.google.id)
 
-    // Firebase (uncomment after adding google-services.json)
-    // implementation(platform(libs.firebase.bom))
-    // implementation(libs.firebase.auth)
-    // implementation(libs.firebase.firestore)
+    // Security (EncryptedSharedPreferences)
+    implementation(libs.security.crypto)
+
+    // Google Drive
+    implementation(libs.google.api.client.android)
+    implementation(libs.google.drive.api)
+    implementation(libs.play.services.auth)
 
     // Coroutines
     implementation(libs.coroutines.core)

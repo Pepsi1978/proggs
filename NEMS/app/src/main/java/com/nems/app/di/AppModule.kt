@@ -3,6 +3,7 @@ package com.nems.app.di
 import android.content.Context
 import androidx.room.Room
 import com.nems.app.data.local.NmsDatabase
+import com.nems.app.util.Constants
 import com.nems.app.data.local.dao.StackSectionDao
 import com.nems.app.data.local.dao.SupplementDao
 import com.nems.app.data.local.dao.SupplementEntryDao
@@ -21,7 +22,7 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NmsDatabase =
-        Room.databaseBuilder(context, NmsDatabase::class.java, "nems_database")
+        Room.databaseBuilder(context, NmsDatabase::class.java, Constants.DATABASE_NAME)
             .fallbackToDestructiveMigration()
             .build()
 
