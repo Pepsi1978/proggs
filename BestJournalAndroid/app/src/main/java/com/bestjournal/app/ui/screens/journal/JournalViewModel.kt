@@ -465,6 +465,8 @@ constructor(
     }
 
     fun saveEntry() {
+        // Guard against double-save (e.g. rapid taps before resetState runs)
+        if (_uiState.value.recordingState == RecordingState.SAVING) return
         android.util.Log.d(
             "SaveEntry",
             "saveEntry called, rawText=${_uiState.value.rawText.take(30)}",

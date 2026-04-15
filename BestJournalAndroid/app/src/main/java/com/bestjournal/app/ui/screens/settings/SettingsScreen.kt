@@ -62,12 +62,20 @@ import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.MobileOff
 import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.MicOff
+import androidx.compose.material.icons.rounded.RecordVoiceOver
+import androidx.compose.material.icons.rounded.VoiceOverOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -829,6 +837,145 @@ fun SettingsScreen(
                                         checkedTrackColor = MaterialTheme.colorScheme.primary
                                     ),
                             )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // ── Stimmen (TTS) ──
+                        var ttsEnabled by remember {
+                            mutableStateOf(
+                                soundsPrefs.getBoolean(Constants.PREF_TTS_ENABLED, false)
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                SettingsTtsIcon(isEnabled = ttsEnabled)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        "Stimmen",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Text(
+                                        if (ttsEnabled) "Vorlesen ist eingeschaltet"
+                                        else "Vorlesen ist ausgeschaltet",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = ttsEnabled,
+                                onCheckedChange = { enabled ->
+                                    ttsEnabled = enabled
+                                    soundsPrefs
+                                        .edit()
+                                        .putBoolean(Constants.PREF_TTS_ENABLED, enabled)
+                                        .commit()
+                                },
+                                colors =
+                                    SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    ),
+                            )
+                        }
+
+                        // Voice picker (only when TTS is enabled)
+                        if (ttsEnabled) {
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            val voices = Constants.EDGE_TTS_VOICES
+                            var selectedVoiceId by remember {
+                                mutableStateOf(
+                                    soundsPrefs.getString(
+                                        Constants.PREF_EDGE_TTS_VOICE,
+                                        Constants.DEFAULT_EDGE_TTS_VOICE,
+                                    ) ?: Constants.DEFAULT_EDGE_TTS_VOICE
+                                )
+                            }
+                            val selectedVoice =
+                                voices.find { it.id == selectedVoiceId } ?: voices.first()
+                            var voiceExpanded by remember { mutableStateOf(false) }
+
+                            Text(
+                                "Stimme ausw\u00e4hlen",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            ExposedDropdownMenuBox(
+                                expanded = voiceExpanded,
+                                onExpandedChange = { voiceExpanded = it },
+                            ) {
+                                TextField(
+                                    value = selectedVoice.name,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    trailingIcon = {
+                                        Icon(
+                                            Icons.Rounded.KeyboardArrowDown,
+                                            "Stimme w\u00e4hlen",
+                                        )
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor =
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                        unfocusedContainerColor =
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                        focusedTextColor =
+                                            MaterialTheme.colorScheme.onSurface,
+                                        unfocusedTextColor =
+                                            MaterialTheme.colorScheme.onSurface,
+                                        focusedIndicatorColor =
+                                            MaterialTheme.colorScheme.primary,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                    ),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = voiceExpanded,
+                                    onDismissRequest = { voiceExpanded = false },
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                ) {
+                                    voices.forEach { voice ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    voice.name,
+                                                    color = if (voice.id == selectedVoiceId)
+                                                        MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.onSurface,
+                                                )
+                                            },
+                                            onClick = {
+                                                selectedVoiceId = voice.id
+                                                soundsPrefs
+                                                    .edit()
+                                                    .putString(
+                                                        Constants.PREF_EDGE_TTS_VOICE,
+                                                        voice.id,
+                                                    )
+                                                    .commit()
+                                                voiceExpanded = false
+                                            },
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -2154,7 +2301,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Best Journal V0.10.39",
+                            "Best Journal V0.11.0",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -2438,6 +2585,55 @@ private fun SettingsHapticIcon(isEnabled: Boolean) {
             Icon(
                 Icons.Rounded.MobileOff,
                 "Haptik aus",
+                tint = if (!isEnabled) Color(0xFFEF4444) else mutedGray,
+                modifier = Modifier.size(offSize),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsTtsIcon(isEnabled: Boolean) {
+    val activeColor = MaterialTheme.colorScheme.primary
+    val mutedGray = Color(0xFF666666)
+    val onSize by
+        animateDpAsState(
+            targetValue = if (isEnabled) 22.dp else 14.dp,
+            animationSpec = tween(300),
+            label = "ttsOnSize",
+        )
+    val offSize by
+        animateDpAsState(
+            targetValue = if (!isEnabled) 22.dp else 14.dp,
+            animationSpec = tween(300),
+            label = "ttsOffSize",
+        )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        androidx.compose.foundation.layout.Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(24.dp),
+        ) {
+            Icon(
+                Icons.Rounded.VolumeUp,
+                "Stimme an",
+                tint = if (isEnabled) activeColor else mutedGray,
+                modifier = Modifier.size(onSize),
+            )
+        }
+        Divider(
+            color = MaterialTheme.colorScheme.outlineVariant,
+            modifier = Modifier.height(16.dp).width(1.dp),
+        )
+        androidx.compose.foundation.layout.Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(24.dp),
+        ) {
+            Icon(
+                Icons.Rounded.VolumeOff,
+                "Stimme aus",
                 tint = if (!isEnabled) Color(0xFFEF4444) else mutedGray,
                 modifier = Modifier.size(offSize),
             )
