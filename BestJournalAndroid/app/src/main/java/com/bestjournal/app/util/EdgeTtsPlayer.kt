@@ -54,6 +54,13 @@ class EdgeTtsPlayer(private val context: Context) {
         onComplete: () -> Unit,
     ) {
         stop()
+
+        // Guard: empty text would hang the WebSocket (no audio returned)
+        if (text.isBlank()) {
+            onComplete()
+            return
+        }
+
         onDone = onComplete
         onPlayStart = onPlaybackStart
 

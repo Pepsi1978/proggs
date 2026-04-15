@@ -50,6 +50,12 @@ class EdgeTtsPlayer(private val context: Context) {
         onComplete: () -> Unit,
     ) {
         stop()
+
+        if (text.isBlank()) {
+            onComplete()
+            return
+        }
+
         onDone = onComplete
         onPlayStart = onPlaybackStart
 

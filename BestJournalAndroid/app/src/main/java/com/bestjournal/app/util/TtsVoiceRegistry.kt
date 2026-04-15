@@ -176,7 +176,6 @@ object TtsVoiceRegistry {
         "en-AU" to LocaleVoices("en-AU", "en-AU-WilliamMultilingualNeural", listOf(
             ml("en-AU-WilliamMultilingualNeural", "William", M),
             st("en-AU-NatashaNeural", "Natasha", F),
-            st("en-AU-WilliamNeural", "William", M),
         )),
         "en-IN" to LocaleVoices("en-IN", "en-IN-NeerjaNeural", listOf(
             st("en-IN-NeerjaNeural", "Neerja", F),
@@ -241,7 +240,7 @@ object TtsVoiceRegistry {
             ml("zh-CN-YunyiMultilingualNeural", "Yunyi", M),
             ml("zh-CN-XiaochenMultilingualNeural", "Xiaochen", F),
             ml("zh-CN-YunfanMultilingualNeural", "Yunfan", M),
-            st("zh-CN-XiaoxiaoNeural", "Xiaoxiao", F),
+            st("zh-CN-XiaoxiaoNeural", "Xiaoxiao Classic", F),
             st("zh-CN-YunxiNeural", "Yunxi", M),
         )),
         "zh-TW" to LocaleVoices("zh-TW", "zh-TW-HsiaoChenNeural", listOf(
