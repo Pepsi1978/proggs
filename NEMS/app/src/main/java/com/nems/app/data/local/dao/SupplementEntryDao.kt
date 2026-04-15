@@ -38,8 +38,20 @@ interface SupplementEntryDao {
     @Query("UPDATE supplement_entries SET taken = 1, takenTimestamp = :timestamp WHERE date = :date AND stackSectionId = :sectionId")
     suspend fun markSectionComplete(date: String, sectionId: String, timestamp: String)
 
+    @Query("UPDATE supplement_entries SET taken = 0, takenTimestamp = NULL WHERE date = :date AND stackSectionId = :sectionId")
+    suspend fun markSectionIncomplete(date: String, sectionId: String)
+
+    @Query("SELECT COUNT(*) FROM supplement_entries WHERE date = :date AND stackSectionId = :sectionId AND taken = 0")
+    suspend fun countUntakenInSection(date: String, sectionId: String): Int
+
     @Query("UPDATE supplement_entries SET taken = 1, takenTimestamp = :timestamp WHERE date = :date")
     suspend fun markDayComplete(date: String, timestamp: String)
+
+    @Query("UPDATE supplement_entries SET taken = 0, takenTimestamp = NULL WHERE date = :date")
+    suspend fun markDayIncomplete(date: String)
+
+    @Query("SELECT COUNT(*) FROM supplement_entries WHERE date = :date AND taken = 0")
+    suspend fun countUntakenForDate(date: String): Int
 
     @Query("""
         SELECT date, COUNT(*) as total, SUM(CASE WHEN taken = 1 THEN 1 ELSE 0 END) as takenCount

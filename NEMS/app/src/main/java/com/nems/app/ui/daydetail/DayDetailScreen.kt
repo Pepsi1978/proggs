@@ -168,7 +168,7 @@ fun DayDetailScreen(
                                 viewModel.toggleEntry(entryId, taken)
                             },
                             onMarkSectionComplete = {
-                                viewModel.markSectionComplete(sectionWithEntries.section.id)
+                                viewModel.toggleSectionComplete(sectionWithEntries.section.id)
                             },
                         )
                     }
@@ -177,7 +177,7 @@ fun DayDetailScreen(
                     item {
                         Spacer(modifier = Modifier.height(4.dp))
                         Button(
-                            onClick = { viewModel.markDayComplete() },
+                            onClick = { viewModel.toggleDayComplete() },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = StatusGreen,

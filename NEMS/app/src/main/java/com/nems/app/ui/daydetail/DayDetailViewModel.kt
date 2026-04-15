@@ -103,15 +103,15 @@ class DayDetailViewModel @Inject constructor(
         }
     }
 
-    fun markSectionComplete(sectionId: String) {
+    fun toggleSectionComplete(sectionId: String) {
         viewModelScope.launch {
-            repository.markSectionComplete(date, sectionId)
+            repository.toggleSectionComplete(date, sectionId)
         }
     }
 
-    fun markDayComplete() {
+    fun toggleDayComplete() {
         viewModelScope.launch {
-            repository.markDayComplete(date)
+            repository.toggleDayComplete(date)
         }
     }
 

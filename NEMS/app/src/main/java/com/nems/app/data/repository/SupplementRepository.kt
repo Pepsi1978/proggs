@@ -49,19 +49,24 @@ class SupplementRepository @Inject constructor(
         entryDao.updateTakenStatus(entryId, taken, timestamp)
     }
 
-    suspend fun markSectionComplete(date: LocalDate, sectionId: String) {
-        entryDao.markSectionComplete(
-            date.format(dateFormatter),
-            sectionId,
-            LocalDateTime.now().format(dateTimeFormatter),
-        )
+    suspend fun toggleSectionComplete(date: LocalDate, sectionId: String) {
+        val dateStr = date.format(dateFormatter)
+        val untaken = entryDao.countUntakenInSection(dateStr, sectionId)
+        if (untaken > 0) {
+            entryDao.markSectionComplete(dateStr, sectionId, LocalDateTime.now().format(dateTimeFormatter))
+        } else {
+            entryDao.markSectionIncomplete(dateStr, sectionId)
+        }
     }
 
-    suspend fun markDayComplete(date: LocalDate) {
-        entryDao.markDayComplete(
-            date.format(dateFormatter),
-            LocalDateTime.now().format(dateTimeFormatter),
-        )
+    suspend fun toggleDayComplete(date: LocalDate) {
+        val dateStr = date.format(dateFormatter)
+        val untaken = entryDao.countUntakenForDate(dateStr)
+        if (untaken > 0) {
+            entryDao.markDayComplete(dateStr, LocalDateTime.now().format(dateTimeFormatter))
+        } else {
+            entryDao.markDayIncomplete(dateStr)
+        }
     }
 
     suspend fun generateEntriesForDate(date: LocalDate) {
