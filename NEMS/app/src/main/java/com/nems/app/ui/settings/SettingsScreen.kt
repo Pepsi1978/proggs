@@ -46,7 +46,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.nems.app.ui.theme.GlassBorder
 import com.nems.app.ui.theme.GlassWhite
 import com.nems.app.ui.theme.NeonCyan
-import com.nems.app.ui.theme.NeonPurple
+import com.nems.app.ui.theme.WarmGold
 import com.nems.app.ui.theme.StatusRed
 import com.nems.app.ui.theme.TextSecondary
 import com.nems.app.ui.theme.ThemeMode
@@ -109,7 +109,7 @@ fun SettingsScreen(
         // Design section
         SettingsSectionCard(
             icon = Icons.Default.Palette,
-            iconTint = NeonPurple,
+            iconTint = WarmGold,
             title = "Design",
         ) {
             Column(modifier = Modifier.selectableGroup()) {

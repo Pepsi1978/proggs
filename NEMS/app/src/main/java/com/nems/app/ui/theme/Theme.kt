@@ -9,58 +9,75 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val NeonCosmosDarkScheme = darkColorScheme(
-    primary = NeonCyan,
-    onPrimary = CosmosBackground,
-    primaryContainer = Color(0xFF003544),
-    onPrimaryContainer = Color(0xFFB0F0FF),
-    secondary = NeonPurple,
-    onSecondary = CosmosBackground,
-    secondaryContainer = Color(0xFF3D2060),
-    onSecondaryContainer = Color(0xFFE8D0FF),
-    tertiary = NeonGreen,
-    onTertiary = CosmosBackground,
-    tertiaryContainer = Color(0xFF0A3A1A),
-    onTertiaryContainer = Color(0xFFA0F0B0),
-    background = CosmosBackground,
-    onBackground = TextPrimary,
-    surface = CosmosSurface,
-    onSurface = TextPrimary,
-    surfaceVariant = CosmosSurfaceVariant,
-    onSurfaceVariant = TextSecondary,
-    outline = GlassBorder,
-    outlineVariant = Color(0xFF1F1F35),
-    error = StatusRed,
+val LocalIsDarkTheme = staticCompositionLocalOf { true }
+
+private val WarmDarkScheme = darkColorScheme(
+    primary = WarmCopper,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFF3D2800),
+    onPrimaryContainer = Color(0xFFFFDDB3),
+    secondary = WarmSand,
+    onSecondary = CosmosBlack,
+    secondaryContainer = Color(0xFF2A2A2A),
+    onSecondaryContainer = WarmSand,
+    tertiary = WarmGold,
+    onTertiary = CosmosBlack,
+    tertiaryContainer = Color(0xFF2A2200),
+    onTertiaryContainer = Color(0xFFFFE08A),
+    error = NeonRed,
     onError = Color.White,
-    errorContainer = Color(0xFF3D0A0A),
-    onErrorContainer = Color(0xFFFFB0A0),
+    errorContainer = Color(0xFF3B1010),
+    onErrorContainer = NeonRed,
+    background = CosmosBlack,
+    onBackground = TextPrimary,
+    surface = CosmosBlack,
+    onSurface = TextPrimary,
+    surfaceVariant = CosmosDeep,
+    onSurfaceVariant = TextSecondary,
+    outline = TextMuted,
+    outlineVariant = Color(0xFF2A2A2A),
+    inverseSurface = TextPrimary,
+    inverseOnSurface = CosmosBlack,
+    surfaceTint = WarmCopper,
 )
 
-private val NeonCosmosLightScheme = lightColorScheme(
-    primary = Color(0xFF006878),
+private val NmsLightScheme = lightColorScheme(
+    primary = Color(0xFF00796B),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFB0F0FF),
-    onPrimaryContainer = Color(0xFF001F26),
-    secondary = Color(0xFF7B3FAF),
+    primaryContainer = Color(0xFFA7D8D0),
+    onPrimaryContainer = Color(0xFF00363D),
+    secondary = Color(0xFF5E35B1),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFE8D0FF),
-    onSecondaryContainer = Color(0xFF2A0050),
-    tertiary = Color(0xFF1A7A2E),
+    secondaryContainer = Color(0xFFEDE7F6),
+    onSecondaryContainer = Color(0xFF311B92),
+    tertiary = Color(0xFFC2185B),
     onTertiary = Color.White,
-    background = Color(0xFFF8F8FC),
-    onBackground = Color(0xFF1A1A2E),
-    surface = Color.White,
-    onSurface = Color(0xFF1A1A2E),
-    surfaceVariant = Color(0xFFE8E8F0),
-    onSurfaceVariant = Color(0xFF48485A),
-    outline = Color(0xFFB0B0C0),
+    tertiaryContainer = Color(0xFFF8BBD0),
+    onTertiaryContainer = Color(0xFF880E4F),
+    error = Color(0xFFD32F2F),
+    onError = Color.White,
+    errorContainer = Color(0xFFFFCDD2),
+    onErrorContainer = Color(0xFFB71C1C),
+    background = LightBackground,
+    onBackground = LightTextPrimary,
+    surface = LightSurface,
+    onSurface = LightTextPrimary,
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightTextSecondary,
+    outline = LightTextMuted,
+    outlineVariant = Color(0xFFD8D8E0),
+    inverseSurface = LightTextPrimary,
+    inverseOnSurface = LightBackground,
+    surfaceTint = Color(0xFF00796B),
 )
 
 enum class ThemeMode { DARK, LIGHT, SYSTEM }
@@ -68,6 +85,7 @@ enum class ThemeMode { DARK, LIGHT, SYSTEM }
 @Composable
 fun NmsTheme(
     themeMode: ThemeMode = ThemeMode.DARK,
+    dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val darkTheme = when (themeMode) {
@@ -76,7 +94,15 @@ fun NmsTheme(
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
 
-    val colorScheme = if (darkTheme) NeonCosmosDarkScheme else NeonCosmosLightScheme
+    val context = LocalContext.current
+    val colorScheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            if (darkTheme) dynamicDarkColorScheme(context)
+            else dynamicLightColorScheme(context)
+        }
+        darkTheme -> WarmDarkScheme
+        else -> NmsLightScheme
+    }
 
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -91,10 +117,12 @@ fun NmsTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = NmsTypography,
-        shapes = NmsShapes,
-        content = content,
-    )
+    CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = NmsTypography,
+            shapes = NmsShapes,
+            content = content,
+        )
+    }
 }

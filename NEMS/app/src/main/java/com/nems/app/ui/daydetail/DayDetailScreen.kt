@@ -57,7 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nems.app.ui.theme.CosmosCard
+import com.nems.app.ui.theme.CardSurface
 import com.nems.app.ui.theme.GlassBorder
 import com.nems.app.ui.theme.GlassWhite
 import com.nems.app.ui.theme.NeonCyan
@@ -312,7 +312,7 @@ private fun SectionCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(CosmosCard)
+            .background(CardSurface)
             .border(1.dp, GlassBorder, RoundedCornerShape(12.dp)),
     ) {
         // Section header with accent stripe

@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nems.app.data.local.dao.DailyCompletionStat
-import com.nems.app.ui.theme.CosmosCard
+import com.nems.app.ui.theme.CardSurface
 import com.nems.app.ui.theme.GlassBorder
 import com.nems.app.ui.theme.GlassWhite
 import com.nems.app.ui.theme.NeonCyan

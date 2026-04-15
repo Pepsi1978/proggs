@@ -41,9 +41,9 @@ import com.nems.app.data.local.dao.MissedSupplement
 import com.nems.app.ui.theme.GlassBorder
 import com.nems.app.ui.theme.GlassWhite
 import com.nems.app.ui.theme.NeonCyan
-import com.nems.app.ui.theme.NeonGreen
-import com.nems.app.ui.theme.NeonOrange
-import com.nems.app.ui.theme.NeonPurple
+import com.nems.app.ui.theme.NeonEmerald
+import com.nems.app.ui.theme.FeatureAccent
+import com.nems.app.ui.theme.WarmGold
 import com.nems.app.ui.theme.StatusRed
 import com.nems.app.ui.theme.StatusYellow
 import com.nems.app.ui.theme.TextSecondary
@@ -101,14 +101,14 @@ private fun StreakCard(streak: Int) {
             .background(
                 Brush.horizontalGradient(
                     colors = listOf(
-                        NeonOrange.copy(alpha = 0.15f),
-                        NeonPurple.copy(alpha = 0.10f),
+                        FeatureAccent.copy(alpha = 0.15f),
+                        WarmGold.copy(alpha = 0.10f),
                     ),
                 ),
             )
             .border(
                 width = 1.dp,
-                color = NeonOrange.copy(alpha = 0.4f),
+                color = FeatureAccent.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(20.dp),
             )
             .padding(20.dp),
@@ -121,7 +121,7 @@ private fun StreakCard(streak: Int) {
             Icon(
                 imageVector = Icons.Default.LocalFireDepartment,
                 contentDescription = null,
-                tint = NeonOrange,
+                tint = FeatureAccent,
                 modifier = Modifier.size(28.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -129,7 +129,7 @@ private fun StreakCard(streak: Int) {
                 text = "Aktuelle Serie",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = NeonOrange,
+                color = FeatureAccent,
             )
         }
 
@@ -221,7 +221,7 @@ private fun WeeklyChartCard(stats: List<DailyCompletionStat>) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            LegendItem(color = NeonGreen, label = "100%")
+            LegendItem(color = NeonEmerald, label = "100%")
             LegendItem(color = StatusYellow, label = "50-99%")
             LegendItem(color = StatusRed, label = "<50%")
             LegendItem(color = GlassBorder, label = "Keine Daten")
@@ -239,7 +239,7 @@ private fun DayBar(
 ) {
     val barColor = when {
         !hasStat -> GlassBorder
-        completionPct >= 1.0f -> NeonGreen
+        completionPct >= 1.0f -> NeonEmerald
         completionPct >= 0.5f -> StatusYellow
         else -> StatusRed
     }
@@ -388,7 +388,7 @@ private fun MissedSupplementRow(
 ) {
     val rankColor = when (rank) {
         1 -> StatusRed
-        2 -> NeonOrange
+        2 -> FeatureAccent
         3 -> StatusYellow
         else -> TextSecondary
     }
