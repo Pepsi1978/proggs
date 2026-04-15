@@ -1064,48 +1064,6 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // -- Piper Thorsten High option --
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    if (currentProvider == Constants.TTS_PROVIDER_PIPER)
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                    else Color.Transparent,
-                                )
-                                .clickable {
-                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_PIPER)
-                                }
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = currentProvider == Constants.TTS_PROVIDER_PIPER,
-                                onClick = {
-                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_PIPER)
-                                },
-                                colors = RadioButtonDefaults.colors(
-                                    selectedColor = MaterialTheme.colorScheme.primary,
-                                ),
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "Thorsten High (Offline)",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    "Gute Qualit\u00e4t \u2022 Offline \u2022 Deutsch \u2022 Kostenlos",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
                         // -- Edge TTS option --
                         Row(
                             modifier = Modifier
@@ -2243,7 +2201,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Entropy Journal V0.6.0",
+                            "Entropy Journal V0.6.1",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,

@@ -7,13 +7,12 @@ import android.util.Log
 /**
  * Unified TTS manager: uses the user-selected TTS provider exclusively.
  * No fallback between providers — the selected one is the only one used.
- * Provider selection: ElevenLabs (cloud), Piper Thorsten High (offline), Edge TTS (cloud free).
+ * Provider selection: ElevenLabs (cloud) or Edge TTS (cloud free).
  */
 class TtsManager(private val context: Context) {
 
     private val edgeTtsPlayer = EdgeTtsPlayer(context)
     private val elevenLabsPlayer = ElevenLabsTtsPlayer(context)
-    private val piperTtsPlayer = PiperTtsPlayer(context)
 
     companion object {
         private const val TAG = "TtsManager"
@@ -77,14 +76,6 @@ class TtsManager(private val context: Context) {
                     onComplete()
                 }
             }
-            Constants.TTS_PROVIDER_PIPER -> {
-                Log.d(TAG, "Using Piper TTS (offline)")
-                piperTtsPlayer.speak(
-                    text = text,
-                    onPlaybackStart = onPlaybackStart,
-                    onComplete = onComplete,
-                )
-            }
             else -> {
                 Log.d(TAG, "Using Edge TTS")
                 edgeTtsPlayer.speak(
@@ -99,12 +90,10 @@ class TtsManager(private val context: Context) {
     fun stop() {
         elevenLabsPlayer.stop()
         edgeTtsPlayer.stop()
-        piperTtsPlayer.stop()
     }
 
     fun shutdown() {
         elevenLabsPlayer.shutdown()
         edgeTtsPlayer.shutdown()
-        piperTtsPlayer.shutdown()
     }
 }
