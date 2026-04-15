@@ -450,6 +450,208 @@ und technische Besonderheiten der jeweiligen Sprache.
 - "Щоденник" for "Tagebuch/Journal", "Запис" for "Eintrag/Entry"
 ```
 
+### 4.18 Bengali (bn) — Indien & Bangladesch
+
+```
+## Language-Specific Rules: Bengali (bn)
+- Script: Bengali/Bangla script (বাংলা) — NOT Devanagari
+- Register: Use informal "তুমি" (tumi) form — personal and warm, not ultra-formal "আপনি" (apni)
+  and not ultra-casual "তুই" (tui)
+- Plurals: one, other
+- Text expansion: Bengali is typically 20-35% longer than German — watch button labels closely
+- "দিনলিপি" (dinlipi) or "জার্নাল" (journal, borrowed) for "Tagebuch/Journal"
+- "এন্ট্রি" (entry, borrowed) or "লেখা" (lekha, native) for "Eintrag/Entry"
+- "মেজাজ" (mejaj) for "Stimmung/Mood"
+- "স্মরণিকা" (smaranika) or "রিমাইন্ডার" (reminder, borrowed) for "Erinnerung/Reminder"
+- Numbers: Use standard Arabic numerals (0-9), NOT Bengali numerals (০১২৩৪৫৬৭৮৯)
+  unless the app explicitly targets traditionalist users
+- Bengali has two major variants: West Bengali (India) and Bangladeshi Bengali —
+  use standard/neutral Bengali that works for both
+- Technical English terms (PDF, Export, Premium, Streak) are commonly understood
+  and can stay in English with Bengali script transliteration as fallback
+- Font rendering: Ensure the app uses a font that supports Bengali conjunct characters
+  (যুক্তাক্ষর / juktakkhor) — these are ligatures that combine multiple consonants
+```
+
+### 4.19 Telugu (te) — Indien
+
+```
+## Language-Specific Rules: Telugu (te)
+- Script: Telugu script (తెలుగు) — unique to Telugu, NOT shared with other languages
+- Register: Use polite-informal "నువ్వు" (nuvvu) form — warm and personal,
+  not formal "మీరు" (meeru)
+- Plurals: one, other
+- Text expansion: Telugu is typically 15-30% longer than German
+- "డైరీ" (diary, borrowed) or "జర్నల్" (journal, borrowed) for "Tagebuch/Journal"
+- "ఎంట్రీ" (entry, borrowed) or "నమోదు" (namodu, native) for "Eintrag/Entry"
+- "మూడ్" (mood, borrowed) or "మనోభావం" (manobhavam, native) for "Stimmung/Mood"
+- "రిమైండర్" (reminder, borrowed) for "Erinnerung/Reminder"
+- Telugu speakers in tech contexts commonly use English loanwords —
+  for UI labels, English borrowings in Telugu script are often MORE natural
+  than pure Telugu equivalents
+- Numbers: Use standard Arabic numerals (0-9), NOT Telugu numerals (౦౧౨౩౪౫౬౭౮౯)
+- IMPORTANT: Telugu has very long words due to agglutination — similar to Turkish,
+  buttons and labels can overflow. Always provide <!-- SHORTER: ... --> alternatives
+  for translations exceeding 40% expansion
+- Andhra Pradesh and Telangana have minor vocabulary differences — use standard Telugu
+```
+
+### 4.20 Marathi (mr) — Indien
+
+```
+## Language-Specific Rules: Marathi (mr)
+- Script: Devanagari (देवनागरी) — same script as Hindi, but DIFFERENT language
+- DO NOT confuse Marathi with Hindi — they share the script but have different
+  vocabulary, grammar, and expressions. A Hindi translation is NOT acceptable for Marathi.
+- Register: Use informal "तू" (tu) form — personal and friendly,
+  not formal "तुम्ही" (tumhi) or honorific "आपण" (aapan)
+- Plurals: one, other
+- Text expansion: Marathi is typically 20-35% longer than German
+- "दैनंदिनी" (dainandini) or "जर्नल" (journal, borrowed) for "Tagebuch/Journal"
+- "नोंद" (nond) for "Eintrag/Entry"
+- "मनस्थिती" (manasthiti) for "Stimmung/Mood"
+- "स्मरणपत्र" (smaranpatra) or "रिमाइंडर" (reminder, borrowed) for "Erinnerung/Reminder"
+- Numbers: Use standard Arabic numerals (0-9), NOT Devanagari numerals
+- Technical terms (PDF, Export, Premium) stay in English — commonly understood
+- Marathi speakers are predominantly in Maharashtra (Mumbai, Pune) —
+  urban audience is very comfortable with English tech terms
+```
+
+### 4.21 Tamil (ta) — Indien & Sri Lanka
+
+```
+## Language-Specific Rules: Tamil (ta)
+- Script: Tamil script (தமிழ்) — one of the oldest scripts still in use
+- Register: Use polite "நீங்கள்" (neengal) form — Tamil culture values politeness
+  even in informal contexts. Do NOT use ultra-casual "நீ" (nee) for a journal app.
+- Plurals: one, other
+- Text expansion: Tamil is typically 25-40% longer than German — this is SIGNIFICANT,
+  always provide <!-- SHORTER: ... --> alternatives for labels exceeding 30% expansion
+- "நாட்குறிப்பு" (naatkurippu) for "Tagebuch/Journal"
+- "உள்ளீடு" (ulleedu) or "பதிவு" (pathivu) for "Eintrag/Entry"
+- "மனநிலை" (mananilai) for "Stimmung/Mood"
+- "நினைவூட்டல்" (ninaivoottal) for "Erinnerung/Reminder"
+- Numbers: Use standard Arabic numerals (0-9), NOT Tamil numerals (௦௧௨௩௪௫௬௭௮௯)
+- IMPORTANT: Tamil has a strong cultural identity — Tamil speakers often prefer
+  pure Tamil words over English loanwords, unlike Hindi/Telugu speakers.
+  Use native Tamil terms wherever a natural equivalent exists.
+- Tamil Nadu and Sri Lankan Tamil have minor differences — use standard Tamil
+- Font rendering: Tamil has unique glyph combinations — ensure the app font
+  supports Tamil conjuncts properly
+```
+
+### 4.22 Urdu (ur) — Pakistan & Indien
+
+```
+## Language-Specific Rules: Urdu (ur)
+- Script: Nastaliq Arabic script (اردو) — this is a RIGHT-TO-LEFT (RTL) language
+- CRITICAL: Urdu is grammatically almost identical to Hindi, but uses Arabic script
+  and has more Persian/Arabic loanwords. Do NOT just copy the Hindi translation
+  and change the script — vocabulary and tone differ.
+- Register: Use semi-formal "آپ" (aap) form — Urdu culture favors politeness
+- Plurals: one, other
+- Text expansion: Urdu is typically 20-30% longer than German
+- "ڈائری" (diary, borrowed) or "جریدہ" (jarida, native) for "Tagebuch/Journal"
+- "اندراج" (indiraaj) for "Eintrag/Entry"
+- "موڈ" (mood, borrowed) or "مزاج" (mizaaj, native) for "Stimmung/Mood"
+- "یاد دہانی" (yaad-dehaani) for "Erinnerung/Reminder"
+- RTL RULES (same as Arabic):
+  - Numbers, English brand names, and technical terms must remain left-to-right (LTR)
+  - Use Unicode BiDi control characters where needed for mixed-direction text
+  - App needs android:supportsRtl="true" in AndroidManifest
+  - Use start/end instead of left/right in layouts
+- Urdu is spoken in both Pakistan and India — use neutral vocabulary that works for both
+- Technical terms (PDF, Export, Premium) are commonly kept in English
+```
+
+### 4.23 Gujarati (gu) — Indien
+
+```
+## Language-Specific Rules: Gujarati (gu)
+- Script: Gujarati script (ગુજરાતી) — visually similar to Devanagari but without
+  the horizontal top line (shirorekha)
+- Register: Use informal "તું" (tu) or polite-informal "તમે" (tame) form —
+  for a personal journal app, "તમે" is the safer choice (warm but respectful)
+- Plurals: one, other
+- Text expansion: Gujarati is typically 15-25% longer than German
+- "ડાયરી" (diary, borrowed) or "જર્નલ" (journal, borrowed) for "Tagebuch/Journal"
+- "એન્ટ્રી" (entry, borrowed) or "નોંધ" (nondh, native) for "Eintrag/Entry"
+- "મૂડ" (mood, borrowed) or "મનોસ્થિતિ" (manosthiti, native) for "Stimmung/Mood"
+- "રિમાઇન્ડર" (reminder, borrowed) for "Erinnerung/Reminder"
+- Numbers: Use standard Arabic numerals (0-9), NOT Gujarati numerals (૦૧૨૩૪૫૬૭૮૯)
+- Gujarati speakers (primarily in Gujarat, Mumbai business community) are very
+  comfortable with English tech terms — borrowings are natural and preferred for UI
+- Technical terms stay in English: PDF, Export, Premium, Streak
+```
+
+### 4.24 Kannada (kn) — Indien
+
+```
+## Language-Specific Rules: Kannada (kn)
+- Script: Kannada script (ಕನ್ನಡ) — round, distinctive script used in Karnataka
+- Register: Use polite-informal "ನೀವು" (neevu) form — respectful but not stiff,
+  NOT ultra-casual "ನೀನು" (neenu)
+- Plurals: one, other
+- Text expansion: Kannada is typically 20-35% longer than German
+- "ಡೈರಿ" (diary, borrowed) or "ಜರ್ನಲ್" (journal, borrowed) for "Tagebuch/Journal"
+- "ಎಂಟ್ರಿ" (entry, borrowed) or "ನಮೂದು" (namoodu, native) for "Eintrag/Entry"
+- "ಮೂಡ್" (mood, borrowed) or "ಮನಸ್ಥಿತಿ" (manasthiti, native) for "Stimmung/Mood"
+- "ರಿಮೈಂಡರ್" (reminder, borrowed) for "Erinnerung/Reminder"
+- Numbers: Use standard Arabic numerals (0-9), NOT Kannada numerals (೦೧೨೩೪೫೬೭೮೯)
+- Kannada has complex conjunct characters — ensure app font supports them
+- Karnataka (Bangalore) is India's tech hub — audience is very English-comfortable,
+  English loanwords in Kannada script are perfectly natural for app UI
+- Technical terms stay in English: PDF, Export, Premium, Streak
+```
+
+### 4.25 Malayalam (ml) — Indien
+
+```
+## Language-Specific Rules: Malayalam (ml)
+- Script: Malayalam script (മലയാളം) — highly curved, distinctive script used in Kerala
+- Register: Use polite "നിങ്ങൾ" (ningal) form — Malayalam culture values respect,
+  do NOT use casual "നീ" (nee)
+- Plurals: one, other
+- Text expansion: Malayalam is typically 25-40% longer than German — SIGNIFICANT,
+  Malayalam words tend to be very long. Always provide <!-- SHORTER: ... --> alternatives
+  for labels exceeding 30% expansion
+- "ഡയറി" (diary, borrowed) or "ജേണൽ" (journal, borrowed) for "Tagebuch/Journal"
+- "എൻട്രി" (entry, borrowed) or "രേഖ" (rekha, native) for "Eintrag/Entry"
+- "മൂഡ്" (mood, borrowed) or "മാനസികാവസ്ഥ" (maanasikavastha, native) for "Stimmung/Mood"
+- "ഓർമ്മപ്പെടുത്തൽ" (ormmappeduttal) for "Erinnerung/Reminder"
+- Numbers: Use standard Arabic numerals (0-9), NOT Malayalam numerals (൦൧൨൩൪൫൬൭൮൯)
+- CRITICAL: Malayalam has THE most complex conjunct character system of all Indian scripts.
+  Font support is essential — many fonts fail to render Malayalam correctly.
+  Test with real Malayalam text on actual devices, not just emulator.
+- Kerala has very high literacy (96%) — audience expects grammatically perfect text
+- Technical terms (PDF, Export, Premium) stay in English — widely understood
+```
+
+---
+
+### Zusammenfassung: Indische Sprachen auf einen Blick
+
+| Sprache | Locale | Schrift | Sprecher | RTL? | Plurale | Besonderheit |
+|---------|--------|---------|----------|------|---------|-------------|
+| **Hindi** | hi | Devanagari | 600 Mio. | Nein | one, other | Groesste indische Sprache, aber nur ~40% Indiens |
+| **Bengali** | bn | Bengalisch | 270 Mio. | Nein | one, other | Indien + Bangladesch, komplexe Ligaturen |
+| **Telugu** | te | Telugu | 96 Mio. | Nein | one, other | Agglutination (lange Woerter), English-Borrowings beliebt |
+| **Marathi** | mr | Devanagari | 95 Mio. | Nein | one, other | Gleiche Schrift wie Hindi, ANDERE Sprache! |
+| **Tamil** | ta | Tamil | 85 Mio. | Nein | one, other | Bevorzugt reine Tamil-Woerter, starke kulturelle Identitaet |
+| **Urdu** | ur | Arabisch (Nastaliq) | 70 Mio. | **JA (RTL!)** | one, other | Grammatisch ~Hindi, aber arabische Schrift, braucht RTL-Support |
+| **Gujarati** | gu | Gujarati | 60 Mio. | Nein | one, other | Aehnlich Devanagari ohne Oberlinie, English-Borrowings natuerlich |
+| **Kannada** | kn | Kannada | 50 Mio. | Nein | one, other | Bangalore = Tech-Hub, sehr English-komfortabel |
+| **Malayalam** | ml | Malayalam | 38 Mio. | Nein | one, other | Komplexeste Ligaturen aller indischen Schriften, lange Woerter |
+
+**Wichtig fuer den indischen Markt:**
+- Hindi + Bengali + Telugu + Marathi + Tamil decken ~80% der indischen Bevoelkerung ab
+- Urdu erfordert RTL-Support (wie Arabisch) — als separates Projekt mit Arabisch zusammen planen
+- Fast alle indischen Sprachen verwenden arabische Ziffern (0-9) im digitalen Kontext
+- Technische Begriffe (PDF, Premium, Export, Streak) koennen in ALLEN indischen Sprachen
+  auf Englisch bleiben — sie sind im App-Kontext allgemein verstanden
+- Jede indische Sprache hat eine eigene Schrift — "Hindi uebersetzen und Schrift aendern"
+  funktioniert NICHT (ausser bei Urdu, das grammatisch aehnlich ist)
+
 ---
 
 ## 5. Haeufige Fehler und Fallstricke
@@ -496,6 +698,7 @@ mehr als einen Platzhalter enthaelt.
 | Sprache | Benoetigte Quantities |
 |---------|----------------------|
 | Englisch, Deutsch, Niederlaendisch, Tuerkisch | one, other |
+| Hindi, Bengali, Telugu, Marathi, Tamil, Urdu, Gujarati, Kannada, Malayalam | one, other |
 | Franzoesisch, Italienisch, Portugiesisch | one, many, other |
 | Russisch, Ukrainisch, Polnisch, Tschechisch | one, few, many, other |
 | **Arabisch** | **zero, one, two, few, many, other (ALLE 6!)** |
@@ -510,6 +713,14 @@ mehr als einen Platzhalter enthaelt.
 | Portugiesisch | +15-25% | Buttons koennen ueberlaufen |
 | Polnisch | +20-30% | Erheblich, Agglutination |
 | Hindi | +20-40% | Devanagari braucht mehr Platz |
+| Bengali | +20-35% | Komplexe Ligaturen, laengere Woerter |
+| Telugu | +15-30% | Agglutination, lange Woerter moeglich |
+| Marathi | +20-35% | Aehnlich wie Hindi, Devanagari-Schrift |
+| Tamil | +25-40% | Sehr lange Woerter, SHORTER-Alternativen Pflicht |
+| Urdu | +20-30% | RTL-Schrift (wie Arabisch), braucht RTL-Support |
+| Gujarati | +15-25% | Moderate Expansion |
+| Kannada | +20-35% | Komplexe Konjunkte, laengere Woerter |
+| Malayalam | +25-40% | Laengste Woerter aller indischen Sprachen, SHORTER-Pflicht |
 | Arabisch | +20-30% | Plus RTL-Layout noetig |
 | Tuerkisch | +20-50% | Agglutination, lange Woerter |
 | Russisch | +15-25% | Kyrillisch etwas breiter |
@@ -710,24 +921,46 @@ Translation ([TARGET LANGUAGE]):
 | **5** | Japanisch | ja | 125 Mio. | Hoechste Zahlungsbereitschaft fuer Apps |
 | **6** | Koreanisch | ko | 80 Mio. | Sehr hohe Zahlungsbereitschaft |
 | **7** | Chinesisch (vereinf.) | zh-rCN | 1.1 Mrd. | Groesster Markt (Play Store eingeschraenkt) |
-| **8** | Hindi | hi | 600 Mio. | Am schnellsten wachsender Smartphone-Markt |
-| **9** | Arabisch | ar | 400 Mio. | 22 Laender, RTL-Support noetig |
-| **10** | Tuerkisch | tr | 85 Mio. | Starker Android-Anteil |
-| 11 | Russisch | ru | 250 Mio. | Grosser Markt, eigene App-Stores |
-| 12 | Indonesisch | id | 270 Mio. | Riesiger Android-Markt, einfache Sprache |
-| 13 | Italienisch | it | 67 Mio. | Europa, zahlungskraeftig |
-| 14 | Niederlaendisch | nl | 25 Mio. | Europa, zahlungskraeftig |
-| 15 | Polnisch | pl | 45 Mio. | Starker Android-Markt in Europa |
-| 16 | Thai | th | 70 Mio. | Wachsender suedostasiatischer Markt |
-| 17 | Ukrainisch | uk | 45 Mio. | Eigene Sprache, nicht Russisch verwenden |
+| **8** | Hindi | hi | 600 Mio. | Groesste indische Sprache, schnellstwachsender Smartphone-Markt |
+| **9** | Bengali | bn | 270 Mio. | Zweitgroesste indische Sprache, Indien + Bangladesch |
+| **10** | Arabisch | ar | 400 Mio. | 22 Laender, RTL-Support noetig |
+| **11** | Tuerkisch | tr | 85 Mio. | Starker Android-Anteil |
+| 12 | Telugu | te | 96 Mio. | Drittgroesste indische Sprache, Andhra Pradesh + Telangana |
+| 13 | Marathi | mr | 95 Mio. | Maharashtra (Mumbai, Pune), zahlungskraeftiger Markt |
+| 14 | Tamil | ta | 85 Mio. | Tamil Nadu + Sri Lanka, starke kulturelle Identitaet |
+| 15 | Russisch | ru | 250 Mio. | Grosser Markt, eigene App-Stores |
+| 16 | Indonesisch | id | 270 Mio. | Riesiger Android-Markt, einfache Sprache |
+| 17 | Urdu | ur | 70 Mio. | Pakistan + Indien, braucht RTL-Support (wie Arabisch) |
+| 18 | Gujarati | gu | 60 Mio. | Gujarat, starke Business-Community |
+| 19 | Kannada | kn | 50 Mio. | Karnataka (Bangalore = Indiens Tech-Hub) |
+| 20 | Malayalam | ml | 38 Mio. | Kerala, hoechste Alphabetisierungsrate Indiens (96%) |
+| 21 | Italienisch | it | 67 Mio. | Europa, zahlungskraeftig |
+| 22 | Niederlaendisch | nl | 25 Mio. | Europa, zahlungskraeftig |
+| 23 | Polnisch | pl | 45 Mio. | Starker Android-Markt in Europa |
+| 24 | Thai | th | 70 Mio. | Wachsender suedostasiatischer Markt |
+| 25 | Ukrainisch | uk | 45 Mio. | Eigene Sprache, nicht Russisch verwenden |
 
 ### Schnellstart-Empfehlung
 
-Fuer den ersten Launch reichen **Prioritaet 1-6** (Englisch, Spanisch, Portugiesisch,
-Franzoesisch, Japanisch, Koreanisch). Das deckt die zahlungskraeftigsten Maerkte ab.
+Fuer den ersten Launch reichen **Prioritaet 1-7** (Englisch, Spanisch, Portugiesisch,
+Franzoesisch, Japanisch, Koreanisch, Chinesisch). Das deckt die zahlungskraeftigsten Maerkte ab.
 
-Arabisch (Prioritaet 9) erfordert als einzige Sprache technische App-Aenderungen
-(RTL-Support), daher als separates Projekt planen.
+### Indien-Strategie (Prioritaet 8-9, 12-14, 17-20)
+
+Indien hat 1,4 Milliarden Menschen aber KEINE einheitliche Sprache. Die optimale Reihenfolge:
+
+| Phase | Sprachen | Abdeckung Indien |
+|-------|----------|-----------------|
+| **Phase 1** | Hindi + Bengali | ~55% der indischen Bevoelkerung |
+| **Phase 2** | + Telugu + Marathi + Tamil | ~80% der indischen Bevoelkerung |
+| **Phase 3** | + Urdu + Gujarati + Kannada + Malayalam | ~95% der indischen Bevoelkerung |
+
+**Wichtig:** Urdu (Phase 3) erfordert RTL-Support — zusammen mit Arabisch planen.
+
+### RTL-Sprachen (separates Projekt)
+
+Arabisch (Prioritaet 10) und Urdu (Prioritaet 17) erfordern technische App-Aenderungen
+(RTL-Support: Layout-Spiegelung, BiDi-Text), daher als separates Projekt planen.
 
 ---
 
