@@ -86,6 +86,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -1002,16 +1003,30 @@ fun SettingsScreen(
                                 focusedIndicatorColor = MaterialTheme.colorScheme.primary,
                                 unfocusedIndicatorColor = Color.Transparent,
                             )
+                            val activeAlpha = 1f
+                            val inactiveAlpha = 0.4f
 
                             // ── ElevenLabs ──
+                            val isElevenLabsActive = currentProvider == Constants.TTS_PROVIDER_ELEVENLABS
                             Spacer(modifier = Modifier.height(16.dp))
                             val elevenLabsKey = uiState.elevenLabsApiKey
                             val elevenLabsAvailable = elevenLabsKey.isNotBlank()
 
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        if (isElevenLabsActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                                        else Color.Transparent,
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                                    .alpha(if (isElevenLabsActive) activeAlpha else inactiveAlpha),
+                            ) {
                             Text(
-                                "ElevenLabs",
+                                if (isElevenLabsActive) "\u25C9 ElevenLabs" else "\u25CB ElevenLabs",
                                 style = MaterialTheme.typography.titleSmall,
-                                color = if (currentProvider == Constants.TTS_PROVIDER_ELEVENLABS)
+                                color = if (isElevenLabsActive)
                                     MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -1072,16 +1087,29 @@ fun SettingsScreen(
                                     }
                                 }
                             }
+                            } // end ElevenLabs Column
 
                             // ── Google Chirp 3 HD ──
-                            Spacer(modifier = Modifier.height(16.dp))
+                            val isGoogleActive = currentProvider == Constants.TTS_PROVIDER_GOOGLE
+                            Spacer(modifier = Modifier.height(8.dp))
                             val googleKey = uiState.googleTtsApiKey
                             val googleAvailable = googleKey.isNotBlank()
 
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        if (isGoogleActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                                        else Color.Transparent,
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                                    .alpha(if (isGoogleActive) activeAlpha else inactiveAlpha),
+                            ) {
                             Text(
-                                "Google Chirp 3 HD",
+                                if (isGoogleActive) "\u25C9 Google Chirp 3 HD" else "\u25CB Google Chirp 3 HD",
                                 style = MaterialTheme.typography.titleSmall,
-                                color = if (currentProvider == Constants.TTS_PROVIDER_GOOGLE)
+                                color = if (isGoogleActive)
                                     MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -1142,17 +1170,30 @@ fun SettingsScreen(
                                     }
                                 }
                             }
+                            } // end Google Column
 
                             // ── Edge TTS ──
-                            Spacer(modifier = Modifier.height(16.dp))
+                            val isEdgeActive = currentProvider == Constants.TTS_PROVIDER_EDGE
+                            Spacer(modifier = Modifier.height(8.dp))
                             val edgeVoices = Constants.EDGE_TTS_VOICES
                             val selectedEdgeVoiceId = uiState.edgeTtsVoice
                             val selectedEdgeVoice = edgeVoices.find { it.id == selectedEdgeVoiceId } ?: edgeVoices.first()
 
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        if (isEdgeActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                                        else Color.Transparent,
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                                    .alpha(if (isEdgeActive) activeAlpha else inactiveAlpha),
+                            ) {
                             Text(
-                                "Edge TTS",
+                                if (isEdgeActive) "\u25C9 Edge TTS" else "\u25CB Edge TTS",
                                 style = MaterialTheme.typography.titleSmall,
-                                color = if (currentProvider == Constants.TTS_PROVIDER_EDGE)
+                                color = if (isEdgeActive)
                                     MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -1207,6 +1248,7 @@ fun SettingsScreen(
                                     }
                                 }
                             }
+                            } // end Edge Column
                         }
                     }
                 }

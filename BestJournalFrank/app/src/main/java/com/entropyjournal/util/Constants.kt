@@ -75,11 +75,11 @@ object Constants {
         listOf(
             EdgeTtsVoice(
                 "de-DE-SeraphinaMultilingualNeural",
-                "Seraphina \u2014 weiblich, sehr nat\u00fcrlich (2024)",
+                "\u2605 Seraphina \u2014 weiblich, sehr nat\u00fcrlich",
             ),
             EdgeTtsVoice(
                 "de-DE-FlorianMultilingualNeural",
-                "Florian \u2014 m\u00e4nnlich, sehr nat\u00fcrlich (2024)",
+                "\u2605 Florian \u2014 m\u00e4nnlich, sehr nat\u00fcrlich",
             ),
             EdgeTtsVoice("de-DE-KatjaNeural", "Katja \u2014 weiblich, warm"),
             EdgeTtsVoice("de-DE-KillianNeural", "Killian \u2014 m\u00e4nnlich, warm"),

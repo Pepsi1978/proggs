@@ -115,7 +115,7 @@ object TtsVoiceRegistry {
     fun displayName(voice: Voice, localeCode: String): String {
         val g = genderLabel(localeCode, voice.gender)
         return if (voice.tier == Tier.MULTILINGUAL) {
-            "${voice.name} \u2014 $g, ${qualityLabel(localeCode)}"
+            "\u2605 ${voice.name} \u2014 $g, ${qualityLabel(localeCode)}"
         } else {
             "${voice.name} \u2014 $g"
         }
