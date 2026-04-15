@@ -2,6 +2,8 @@ package com.nems.app.ui.navigation
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -55,13 +57,15 @@ val bottomNavItems = listOf(
     BottomNavItem(Screen.Settings, "Einstellungen", Icons.Default.Settings),
 )
 
+private val bottomNavRoutes = bottomNavItems.map { it.screen.route }.toSet()
+
 @Composable
 fun NmsApp() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    val showBottomBar = currentDestination?.route in bottomNavItems.map { it.screen.route }
+    val showBottomBar = currentDestination?.route in bottomNavRoutes
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -133,7 +137,13 @@ fun NmsNavHost(
             slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300))
         },
     ) {
-        composable(Screen.Calendar.route) {
+        composable(
+            Screen.Calendar.route,
+            enterTransition = { fadeIn(tween(150)) },
+            exitTransition = { fadeOut(tween(150)) },
+            popEnterTransition = { fadeIn(tween(150)) },
+            popExitTransition = { fadeOut(tween(150)) },
+        ) {
             CalendarScreen(
                 onDayClick = { date ->
                     navController.navigate(Screen.DayDetail.createRoute(date))
@@ -150,10 +160,22 @@ fun NmsNavHost(
                 onNavigateBack = { navController.popBackStack() },
             )
         }
-        composable(Screen.Statistics.route) {
+        composable(
+            Screen.Statistics.route,
+            enterTransition = { fadeIn(tween(150)) },
+            exitTransition = { fadeOut(tween(150)) },
+            popEnterTransition = { fadeIn(tween(150)) },
+            popExitTransition = { fadeOut(tween(150)) },
+        ) {
             StatisticsScreen()
         }
-        composable(Screen.Settings.route) {
+        composable(
+            Screen.Settings.route,
+            enterTransition = { fadeIn(tween(150)) },
+            exitTransition = { fadeOut(tween(150)) },
+            popEnterTransition = { fadeIn(tween(150)) },
+            popExitTransition = { fadeOut(tween(150)) },
+        ) {
             SettingsScreen(
                 onNavigateToAuth = {
                     navController.navigate(Screen.Auth.route)

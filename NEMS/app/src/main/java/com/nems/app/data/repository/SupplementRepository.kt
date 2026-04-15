@@ -69,14 +69,6 @@ class SupplementRepository @Inject constructor(
         }
     }
 
-    suspend fun generateEntriesForDate(date: LocalDate) {
-        val dateStr = date.format(dateFormatter)
-        if (entryDao.countEntriesForDate(dateStr) > 0) return
-
-        val sections = stackSectionDao.getAll() // This is Flow, need suspend version
-        // We need a non-flow version for this. Let's use a direct query approach.
-    }
-
     suspend fun generateDailyEntries(
         date: LocalDate,
         supplements: List<SupplementEntity>,
