@@ -12,12 +12,16 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
     private val repository: SupplementRepository,
@@ -26,9 +30,14 @@ class CalendarViewModel @Inject constructor(
     private val _currentMonth = MutableStateFlow(YearMonth.now())
     val currentMonth: StateFlow<YearMonth> = _currentMonth.asStateFlow()
 
-    val completionStats: StateFlow<List<DailyCompletionStat>> = repository
-        .getDailyCompletionStats()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val completionStats: StateFlow<Map<String, DailyCompletionStat>> = _currentMonth
+        .flatMapLatest { month ->
+            val start = month.atDay(1)
+            val end = month.atEndOfMonth()
+            repository.getCompletionStatsForRange(start, end)
+        }
+        .map { stats -> stats.associateBy { it.date } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     init {
         viewModelScope.launch {
@@ -49,9 +58,8 @@ class CalendarViewModel @Inject constructor(
         _currentMonth.value = YearMonth.now()
     }
 
-    fun getCompletionForDate(date: LocalDate, stats: List<DailyCompletionStat>): Float {
-        val dateStr = date.format(DateUtils.isoDateFormatter)
-        val stat = stats.find { it.date == dateStr } ?: return -1f
+    fun getCompletionForDate(date: LocalDate, statsMap: Map<String, DailyCompletionStat>): Float {
+        val stat = statsMap[date.format(DateUtils.isoDateFormatter)] ?: return -1f
         return if (stat.total == 0) -1f else stat.takenCount.toFloat() / stat.total
     }
 }

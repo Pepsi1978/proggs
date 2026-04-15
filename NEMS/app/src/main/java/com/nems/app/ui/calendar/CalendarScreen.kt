@@ -31,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +50,8 @@ import com.nems.app.ui.theme.StatusYellow
 import com.nems.app.util.DateUtils
 import java.time.LocalDate
 import java.time.YearMonth
+
+private val CalendarCardShape = RoundedCornerShape(20.dp)
 
 @Composable
 fun CalendarScreen(
@@ -103,11 +106,14 @@ fun CalendarScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Calendar day grid
+                    val getCompletion = remember<(LocalDate, Map<String, DailyCompletionStat>) -> Float> {
+                        viewModel::getCompletionForDate
+                    }
                     CalendarGrid(
                         currentMonth = currentMonth,
                         completionStats = completionStats,
                         onDayClick = onDayClick,
-                        getCompletion = viewModel::getCompletionForDate,
+                        getCompletion = getCompletion,
                     )
                 }
             }
@@ -153,8 +159,9 @@ private fun MonthHeader(
 
 @Composable
 private fun WeekDayHeaderRow() {
+    val weekDays = remember { DateUtils.weekDayHeaders() }
     Row(modifier = Modifier.fillMaxWidth()) {
-        DateUtils.weekDayHeaders().forEach { dayHeader ->
+        weekDays.forEach { dayHeader ->
             Text(
                 text = dayHeader,
                 modifier = Modifier.weight(1f),
@@ -170,19 +177,19 @@ private fun WeekDayHeaderRow() {
 @Composable
 private fun CalendarGrid(
     currentMonth: YearMonth,
-    completionStats: List<DailyCompletionStat>,
+    completionStats: Map<String, DailyCompletionStat>,
     onDayClick: (String) -> Unit,
-    getCompletion: (LocalDate, List<DailyCompletionStat>) -> Float,
+    getCompletion: (LocalDate, Map<String, DailyCompletionStat>) -> Float,
 ) {
-    val days = DateUtils.getMonthDays(currentMonth)
-    val today = LocalDate.now()
+    val days = remember(currentMonth) { DateUtils.getMonthDays(currentMonth) }
+    val today = remember { LocalDate.now() }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(7),
         userScrollEnabled = false,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        items(days) { date ->
+        items(days, key = { date -> date?.toString() ?: "pad_${days.indexOf(date)}" }) { date ->
             if (date == null) {
                 // Empty cell for leading/trailing padding
                 Box(
