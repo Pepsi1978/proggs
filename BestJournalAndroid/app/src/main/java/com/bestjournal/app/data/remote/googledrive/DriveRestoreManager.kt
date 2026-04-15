@@ -217,7 +217,10 @@ constructor(
                                                 )
                                                 kotlinx.coroutines.delay(1000)
                                             } else {
-                                                throw e
+                                                android.util.Log.e(
+                                                    "DriveRestore",
+                                                    "Download failed ($localName): ${e.message}",
+                                                )
                                             }
                                         }
                                     }
