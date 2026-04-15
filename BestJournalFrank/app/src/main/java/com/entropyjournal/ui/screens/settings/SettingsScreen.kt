@@ -1093,19 +1093,22 @@ fun SettingsScreen(
                                 val selectedVoice = voices.find { it.id == selectedVoiceId } ?: voices.first()
                                 var voiceExpanded by remember { mutableStateOf(false) }
 
-                                TextField(
-                                    value = (if (selectedVoice.id in favorites) "\u2605 " else "") + selectedVoice.name,
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    trailingIcon = { Icon(if (voiceExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null) },
-                                    modifier = Modifier.fillMaxWidth().clickable {
-                                        voiceExpanded = !voiceExpanded
-                                        viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS)
-                                    },
-                                    colors = dropdownColors,
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(12.dp),
-                                )
+                                Box(modifier = Modifier.fillMaxWidth().clickable {
+                                    voiceExpanded = !voiceExpanded
+                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_ELEVENLABS)
+                                }) {
+                                    TextField(
+                                        value = (if (selectedVoice.id in favorites) "\u2605 " else "") + selectedVoice.name,
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        enabled = false,
+                                        trailingIcon = { Icon(if (voiceExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = dropdownColors,
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp),
+                                    )
+                                }
                                 if (voiceExpanded) {
                                     Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
                                         voices.forEach { voice ->
@@ -1162,19 +1165,22 @@ fun SettingsScreen(
                                 val selectedGoogleVoice = googleVoices.find { it.id == selectedGoogleVoiceId } ?: googleVoices.first()
                                 var googleVoiceExpanded by remember { mutableStateOf(false) }
 
-                                TextField(
-                                    value = (if (selectedGoogleVoice.id in favorites) "\u2605 " else "") + selectedGoogleVoice.name,
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    trailingIcon = { Icon(if (googleVoiceExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null) },
-                                    modifier = Modifier.fillMaxWidth().clickable {
-                                        googleVoiceExpanded = !googleVoiceExpanded
-                                        viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE)
-                                    },
-                                    colors = dropdownColors,
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(12.dp),
-                                )
+                                Box(modifier = Modifier.fillMaxWidth().clickable {
+                                    googleVoiceExpanded = !googleVoiceExpanded
+                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_GOOGLE)
+                                }) {
+                                    TextField(
+                                        value = (if (selectedGoogleVoice.id in favorites) "\u2605 " else "") + selectedGoogleVoice.name,
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        enabled = false,
+                                        trailingIcon = { Icon(if (googleVoiceExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = dropdownColors,
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp),
+                                    )
+                                }
                                 if (googleVoiceExpanded) {
                                     Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
                                         googleVoices.forEach { voice ->
@@ -1227,19 +1233,22 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.height(6.dp))
 
                             var edgeVoiceExpanded by remember { mutableStateOf(false) }
-                            TextField(
-                                value = (if (selectedEdgeVoice.id in favorites) "\u2605 " else "") + selectedEdgeVoice.name,
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = { Icon(if (edgeVoiceExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null) },
-                                modifier = Modifier.fillMaxWidth().clickable {
-                                    edgeVoiceExpanded = !edgeVoiceExpanded
-                                    viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE)
-                                },
-                                colors = dropdownColors,
-                                singleLine = true,
-                                shape = RoundedCornerShape(12.dp),
-                            )
+                            Box(modifier = Modifier.fillMaxWidth().clickable {
+                                edgeVoiceExpanded = !edgeVoiceExpanded
+                                viewModel.updateTtsProvider(Constants.TTS_PROVIDER_EDGE)
+                            }) {
+                                TextField(
+                                    value = (if (selectedEdgeVoice.id in favorites) "\u2605 " else "") + selectedEdgeVoice.name,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    enabled = false,
+                                    trailingIcon = { Icon(if (edgeVoiceExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = dropdownColors,
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                )
+                            }
                             if (edgeVoiceExpanded) {
                                 Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
                                     edgeVoices.forEach { voice ->
