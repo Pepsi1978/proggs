@@ -36,14 +36,20 @@ constructor(
             val roomDb = database.openHelper.writableDatabase
             val cursor = roomDb.query("PRAGMA wal_checkpoint(TRUNCATE)")
             if (cursor.moveToFirst()) {
-                Log.d(
-                    "SyncDebug",
-                    "WAL checkpoint: busy=${cursor.getInt(0)}, log=${cursor.getInt(1)}, checkpointed=${cursor.getInt(2)}",
-                )
+                val busy = cursor.getInt(0)
+                val logFrames = cursor.getInt(1)
+                val checkpointed = cursor.getInt(2)
+                Log.d("SyncDebug", "WAL checkpoint: busy=$busy, log=$logFrames, checkpointed=$checkpointed")
+                if (busy != 0) {
+                    cursor.close()
+                    Log.e("SyncDebug", "WAL checkpoint busy — aborting backup to prevent data loss")
+                    return Result.failure(Exception("WAL checkpoint busy"))
+                }
             }
             cursor.close()
         } catch (e: Exception) {
-            Log.w("SyncDebug", "WAL checkpoint failed: ${e.message}")
+            Log.e("SyncDebug", "WAL checkpoint failed — aborting backup: ${e.message}")
+            return Result.failure(Exception("WAL checkpoint failed: ${e.message}"))
         }
 
         val entryCount =
@@ -318,6 +324,68 @@ constructor(
 
     suspend fun hasBackup(): Boolean {
         return driveRestoreManager.hasBackup()
+    }
+
+    suspend fun mergeFromDrive(): Int {
+        val lastLocalSync = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L)
+        val driveModifiedTime = driveRestoreManager.getBackupModifiedTime()
+        if (driveModifiedTime == null || driveModifiedTime <= lastLocalSync + 60_000) {
+            Log.d("SyncDebug", "Auto-merge: Drive not newer or unavailable")
+            return 0
+        }
+        Log.d("SyncDebug", "Auto-merge: Drive backup is newer — checking for new entries")
+        val tempFile = File(context.cacheDir, "drive_merge_temp.db")
+        try {
+            val result = driveRestoreManager.restore(tempFile)
+            if (result.isFailure) { tempFile.delete(); return 0 }
+            val remoteDb = android.database.sqlite.SQLiteDatabase.openDatabase(
+                tempFile.path, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
+            )
+            val localTimestamps = mutableSetOf<Long>()
+            val localDb = database.openHelper.readableDatabase
+            val tsCursor = localDb.query("SELECT timestamp FROM journal_entries")
+            while (tsCursor.moveToNext()) { localTimestamps.add(tsCursor.getLong(0)) }
+            tsCursor.close()
+            val remoteCursor = remoteDb.rawQuery(
+                "SELECT timestamp, rawText, improvedText, isImproved, displayText, " +
+                    "audioDurationSeconds, moodTag, entropyScore, adviceCategoryTags, " +
+                    "summary, title, isSynced FROM journal_entries",
+                null,
+            )
+            val writableDb = database.openHelper.writableDatabase
+            var imported = 0
+            while (remoteCursor.moveToNext()) {
+                val ts = remoteCursor.getLong(0)
+                if (ts !in localTimestamps) {
+                    val values = android.content.ContentValues().apply {
+                        put("timestamp", ts)
+                        put("rawText", remoteCursor.getString(1))
+                        if (!remoteCursor.isNull(2)) put("improvedText", remoteCursor.getString(2))
+                        put("isImproved", remoteCursor.getInt(3))
+                        put("displayText", remoteCursor.getString(4))
+                        put("audioDurationSeconds", remoteCursor.getInt(5))
+                        if (!remoteCursor.isNull(6)) put("moodTag", remoteCursor.getString(6))
+                        if (!remoteCursor.isNull(7)) put("entropyScore", remoteCursor.getFloat(7))
+                        if (!remoteCursor.isNull(8)) put("adviceCategoryTags", remoteCursor.getString(8))
+                        if (!remoteCursor.isNull(9)) put("summary", remoteCursor.getString(9))
+                        if (!remoteCursor.isNull(10)) put("title", remoteCursor.getString(10))
+                        put("isSynced", remoteCursor.getInt(11))
+                    }
+                    writableDb.insert("journal_entries", android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE, values)
+                    imported++
+                }
+            }
+            remoteCursor.close(); remoteDb.close(); tempFile.delete()
+            if (imported > 0) {
+                writableDb.execSQL("UPDATE journal_entries SET isSynced = isSynced WHERE 1=0")
+                Log.d("SyncDebug", "Auto-merged $imported entries from Drive")
+            }
+            encryptedPrefs.edit().putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis()).apply()
+            return imported
+        } catch (e: Exception) {
+            Log.e("SyncDebug", "Auto-merge failed: ${e.message}", e)
+            tempFile.delete(); return 0
+        }
     }
 
     private fun zipPhotos(

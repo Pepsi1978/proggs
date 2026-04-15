@@ -160,23 +160,21 @@ constructor(
                     _uiState.value.copy(isSubscribed = state is SubscriptionState.Subscribed)
             }
         }
-        // Download missing photos in background after app restart (post-restore)
         if (signInUseCase.getProfile() != null) {
             viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
-                    val count = syncUseCase.downloadMissingPhotos()
-                    if (count > 0) {
-                        android.util.Log.d("SettingsVM", "Background photo download: $count files")
-                    }
+                    val merged = syncUseCase.mergeFromDrive()
+                    if (merged > 0) android.util.Log.d("SettingsVM", "Auto-merged $merged entries")
                 } catch (e: Exception) {
-                    android.util.Log.e(
-                        "SettingsVM",
-                        "Background photo download failed: ${e.message}",
-                    )
+                    android.util.Log.e("SettingsVM", "Auto-merge failed: ${e.message}")
+                }
+                try {
+                    val count = syncUseCase.downloadMissingPhotos()
+                    if (count > 0) android.util.Log.d("SettingsVM", "Photo download: $count files")
+                } catch (e: Exception) {
+                    android.util.Log.e("SettingsVM", "Photo download failed: ${e.message}")
                 } finally {
-                    // Always clear restore-pending flag — even if no photos to download
                     encryptedPrefs.edit().putBoolean(Constants.PREF_RESTORE_PENDING, false).apply()
-                    android.util.Log.d("SettingsVM", "Cleared PREF_RESTORE_PENDING")
                 }
             }
         }

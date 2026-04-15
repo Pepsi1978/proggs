@@ -515,13 +515,26 @@ constructor(
 
     private fun triggerSync() {
         syncDebounceJob?.cancel()
-        syncDebounceJob = viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.UPLOADING)
-            syncWithDriveUseCase
-                .backup()
-                .onSuccess { _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED) }
-                .onFailure { _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.ERROR) }
-        }
+        syncDebounceJob =
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.UPLOADING)
+                syncWithDriveUseCase
+                    .backup()
+                    .onSuccess {
+                        _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
+                        encryptedPrefs
+                            .edit()
+                            .putLong(
+                                Constants.PREF_LAST_SYNC_TIMESTAMP,
+                                System.currentTimeMillis(),
+                            )
+                            .apply()
+                    }
+                    .onFailure {
+                        android.util.Log.e("SyncDebug", "Backup failed: ${it.message}", it)
+                        _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.ERROR)
+                    }
+            }
     }
 
     private fun triggerDebouncedAnalysis() {

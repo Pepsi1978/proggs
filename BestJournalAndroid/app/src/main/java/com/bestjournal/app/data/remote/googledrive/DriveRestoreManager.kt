@@ -93,6 +93,20 @@ constructor(
             }
         }
 
+    suspend fun getBackupModifiedTime(): Long? =
+        withContext(Dispatchers.IO) {
+            try {
+                val driveService = getDriveService() ?: return@withContext null
+                val files =
+                    driveService.files().list()
+                        .setSpaces("appDataFolder")
+                        .setQ("name = '${Constants.DRIVE_BACKUP_FILENAME}'")
+                        .setFields("files(id, modifiedTime)")
+                        .execute()
+                files.files?.firstOrNull()?.modifiedTime?.value
+            } catch (e: Exception) { null }
+        }
+
     suspend fun restore(targetFile: File): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
