@@ -7,7 +7,7 @@ object Constants {
     const val REMOTE_CONFIG_GROQ_KEY = "groq_api_key"
 
     // Audio recording
-    const val MAX_RECORDING_DURATION_MINUTES = 15
+    const val MAX_RECORDING_DURATION_MINUTES = 10
     const val AUDIO_SAMPLE_RATE = 16000
     const val AUDIO_CHANNELS = 1
 
