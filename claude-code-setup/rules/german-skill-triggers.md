@@ -121,7 +121,28 @@ auf den Skill der aehnlich klingt.
 | "was sagt die Doku?", "offizielle Dokumentation" | context7 MCP (`resolve-library-id` → `query-docs`) | Laedt aktuelle Dokumentation fuer beliebige Bibliothek |
 | "Doku schreiben", "README aktualisieren" | `docs:update-docs` | Multi-Agent-Workflow der docs/, READMEs, JSDoc, API-Doku aktualisiert |
 
-## 10. UI, Design & Medien
+## 10. Uebersetzung & Lokalisierung (i18n)
+
+| Deutsche Phrase | Skill | Was der Skill WIRKLICH tut |
+|----------------|-------|---------------------------|
+| "uebersetze die Strings", "Strings uebersetzen", "Uebersetzung starten" | `uebersetzung` | Uebersetzt Android strings.xml in alle 26 Sprachen aus `uebersetzung-global.md`. Arbeitet Sprache fuer Sprache sequentiell, mit Verifikation nach jeder Sprache und Commit nach jedem Abschluss. |
+| "starte den Uebersetzungsskill fuer [App]", "uebersetze fuer [App]" | `uebersetzung` | Gleich — erkennt die App am Namen, findet strings.xml automatisch |
+| "nur die neuen Strings uebersetzen", "neue Strings uebersetzen" | `uebersetzung` | Erkennt per `git diff` welche Strings NEU sind und uebersetzt nur diese in alle 26 Sprachen |
+| "alle Strings uebersetzen", "komplette Uebersetzung" | `uebersetzung` | Uebersetzt die GESAMTE strings.xml komplett neu in alle 26 Sprachen |
+| "uebersetze auf Franzoesisch", "nur [Sprache] uebersetzen" | `uebersetzung` | Uebersetzt nur in die genannte Sprache (nicht alle 26), mit Verifikation |
+| "mach die App mehrsprachig", "Lokalisierung", "i18n", "internationalisieren" | `uebersetzung` | Gleich — erkennt dass Uebersetzung gemeint ist |
+
+**NICHT verwechseln**: "Uebersetzungs-Prompts erstellen" (manuelle Prompt-Arbeit an uebersetzung-global.md) ist KEIN Skill-Trigger — das ist direkte Datei-Bearbeitung. Der Skill `uebersetzung` NUTZT die fertigen Prompts aus der Datei, er ERSTELLT sie nicht.
+
+**Whisper-Korrekturen fuer Uebersetzung:**
+| Whisper hoert | Gemeint ist |
+|---------------|------------|
+| "Uebersetzung" / "Uebersetzungs-Skill" | `uebersetzung` Skill |
+| "Translation" / "Translate" | `uebersetzung` Skill |
+| "i18n" / "I18N" / "Eins-acht-Enn" | `uebersetzung` Skill |
+| "Lokalisierung" / "Localization" | `uebersetzung` Skill |
+
+## 11. UI, Design & Medien
 
 | Deutsche Phrase | Skill | Was der Skill WIRKLICH tut |
 |----------------|-------|---------------------------|
@@ -132,7 +153,7 @@ auf den Skill der aehnlich klingt.
 | "finde einen Sound", "Sound-Effekt" | `sound-search` | Durchsucht Freesound.org (CC0), spielt Vorschau mit `afplay`, konvertiert zu OGG fuer Android |
 | "Bild generieren", "Bild erstellen" | `everything-claude-code:fal-ai-media` | Text-to-Image via fal.ai (Nano Banana), auch Video und Audio |
 
-## 11. Sprach-spezifische Skills
+## 12. Sprach-spezifische Skills
 
 | Deutsche Phrase | Skill | Was der Skill WIRKLICH tut |
 |----------------|-------|---------------------------|
@@ -145,7 +166,7 @@ auf den Skill der aehnlich klingt.
 | "Build-Fehler Kotlin/Gradle" | `everything-claude-code:kotlin-build` | Fixt Kotlin/Gradle Build-Fehler mit minimalen Aenderungen |
 | "Build-Fehler TypeScript" | `everything-claude-code:build-error-resolver` Agent | Fixt Build/Type-Errors, fokussiert auf gruenes Build |
 
-## 12. Skill-Erstellung & System-Erweiterung
+## 13. Skill-Erstellung & System-Erweiterung
 
 | Deutsche Phrase | Skill | Was der Skill WIRKLICH tut |
 |----------------|-------|---------------------------|
@@ -156,7 +177,7 @@ auf den Skill der aehnlich klingt.
 | "Hook fixen", "Hook reparieren" (grundlegender Rewrite) | `hook-forge` | Nur bei grundlegendem Rewrite, nicht bei kleinen Edits |
 | "CLAUDE.md verbessern", "Regeln prüfen" | `claude-md-management:claude-md-improver` | Auditiert und verbessert CLAUDE.md-Dateien |
 
-## 13. Qualitaet & Verifikation (automatische Trigger!)
+## 14. Qualitaet & Verifikation (automatische Trigger!)
 
 | Situation (kein expliziter Befehl noetig) | Skill | Warum automatisch |
 |------------------------------------------|-------|-------------------|
@@ -168,7 +189,7 @@ auf den Skill der aehnlich klingt.
 
 ---
 
-## 14. Cross-Platform & Cross-CLI Sync (Universal Mirror Bridge)
+## 15. Cross-Platform & Cross-CLI Sync (Universal Mirror Bridge)
 
 **Zwei Agenten die zusammen eine universelle "Spiegelung" zwischen allen Plattformen
 und CLIs ermoeglichen. Der `export` Agent schreibt, der `import` Agent liest und baut ein.**
@@ -196,7 +217,7 @@ gestartet und der Agent-Prompt wird manuell im `prompt`-Parameter uebergeben. NI
 
 ---
 
-## 16. NotebookLM CLI (Google NotebookLM Automatisierung)
+## 17. NotebookLM CLI (Google NotebookLM Automatisierung)
 
 **KEIN MCP-Server — direkte CLI-Aufrufe per Bash (spart Token).**
 Vollstaendige Regel: `~/.claude/rules/notebooklm-cli.md`
@@ -224,7 +245,7 @@ Vollstaendige Regel: `~/.claude/rules/notebooklm-cli.md`
 **PFLICHT**: Pre-Flight-Check (Auth + aktives Notebook) vor dem ersten Befehl jeder Session.
 **ACHTUNG**: Login ist interaktiv — Benutzer muss `! notebooklm login` selbst ausfuehren.
 
-## 18. CLI Dev-Tools (Tier 1+2+3 — installiert 2026-04-04)
+## 19. CLI Dev-Tools (Tier 1+2+3 — installiert 2026-04-04)
 
 Installierte CLI-Tools (alle im PATH via `~/bin/`): `bat` (cat+Highlighting), `fd` (schnelles find),
 `fzf` (Fuzzy-Finder), `delta` (Git-Diff, laeuft automatisch als Pager), `tokei` (Code-Statistiken),
@@ -267,7 +288,7 @@ Bei fehlendem Tool: `pwsh ~/.claude/hooks/path-verify.ps1 -Fix` repariert automa
 | "Trivy" / "Triffy" / "Trivi" | **trivy** CLI (Security-Scanner) |
 | "Glow" / "Gloh" | **glow** CLI (Markdown-Renderer) |
 
-## 15. Metacognitive Analyse & Hyperagent
+## 16. Metacognitive Analyse & Hyperagent
 
 | Deutsche Phrase | Agent/Hook | Was er WIRKLICH tut |
 |----------------|-----------|---------------------|
