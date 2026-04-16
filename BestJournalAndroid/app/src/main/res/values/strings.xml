@@ -30,6 +30,14 @@
     <string name="action_go_google_play">Zu Google Play</string>
     <string name="journal_drive_backup_dialog">Google Drive Backup</string>
     <string name="journal_improve_text">✨ Text verbessern</string>
+    <string name="journal_later">Später</string>
+    <!-- Paywall missed strings -->
+    <string name="paywall_from_per_day">Ab %1$s pro Tag</string>
+    <string name="paywall_instead_per_month">statt %1$s pro Monat</string>
+    <string name="paywall_or">oder</string>
+    <string name="paywall_with_limited">mit eingeschränkten Limits.</string>
+    <!-- Churn missed string -->
+    <string name="churn_instead_of">statt </string>
     <string name="label_premium">Premium</string>
     <string name="label_original">Original</string>
     <string name="label_improved">Verbessert</string>

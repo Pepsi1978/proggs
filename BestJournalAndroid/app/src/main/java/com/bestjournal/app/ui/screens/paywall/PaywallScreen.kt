@@ -457,13 +457,13 @@ fun PaywallScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "Ab $dailyPrice pro Tag",
+                                text = stringResource(R.string.paywall_from_per_day, dailyPrice),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.primary,
                             )
                             Text(
-                                text = "statt $displayMonthlyPrice pro Monat",
+                                text = stringResource(R.string.paywall_instead_per_month, displayMonthlyPrice),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -538,7 +538,7 @@ fun PaywallScreen(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
                     )
                     Text(
-                        text = "oder",
+                        text = stringResource(R.string.paywall_or),
                         modifier = Modifier.padding(horizontal = 16.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
@@ -651,7 +651,7 @@ fun PaywallScreen(
                         )
                     }
                     Text(
-                        text = "mit eingeschr\u00e4nkten Limits.",
+                        text = stringResource(R.string.paywall_with_limited),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

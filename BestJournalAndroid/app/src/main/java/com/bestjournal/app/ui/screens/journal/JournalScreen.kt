@@ -1161,7 +1161,7 @@ private fun PreviewDialog(
                                             verticalAlignment = Alignment.CenterVertically,
                                         ) {
                                             Text(
-                                                text = "Sp\u00e4ter",
+                                                text = stringResource(R.string.journal_later),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.outline,
                                                 modifier = Modifier.clickable { onUpsellDismiss() },

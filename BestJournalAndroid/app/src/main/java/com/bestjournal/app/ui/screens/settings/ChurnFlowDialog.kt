@@ -655,7 +655,7 @@ private fun StepRetentionOffer(
                     // Old price (strikethrough)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "statt ",
+                            text = stringResource(R.string.churn_instead_of),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
