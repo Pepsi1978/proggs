@@ -268,6 +268,7 @@
     <string name="profile_entropy_long">Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Einträgen.\n\nDu bekommst:\n\n• Eine Analyse deiner größten Belastungsquellen\n• 5 konkrete Maßnahmen zum Aufräumen\n• Tipps, die dir sofort helfen können\n\nIdeal wenn du das Gefühl hast, dass gerade alles zu viel wird.</string>
     <string name="profile_insight_long">Die KI schaut tiefer als nur auf Ereignisse. Sie erkennt in deinen Einträgen:\n\n• Verborgene Denkmuster und Überzeugungen\n• Wiederkehrende Gefühle und Reaktionen\n• Persönliche Stärken, die dir nicht bewusst sind\n• Werte, die dein Handeln antreiben\n\nFür alle, die sich selbst besser verstehen und innerlich wachsen wollen.</string>
     <string name="profile_goals_long">Die KI findet alle Ziele, Wünsche und Vorhaben in deinen Einträgen, auch beiläufig erwähnte.\n\nDu siehst:\n\n• Welche Ziele du hast (auch versteckte)\n• Wie weit du bei jedem Ziel bist\n• Was dein nächster Schritt sein könnte\n\nDein persönlicher Ziel-Tracker, der aus deinen eigenen Worten liest.</string>
+    <string name="profile_custom_long">Du bestimmst selbst, worauf die KI achten soll.\n\nSchreibe deinen eigenen Analyse-Fokus, zum Beispiel:\n\n• „Finde alle Erwähnungen von Sport"\n• „Analysiere meine Stimmungsschwankungen"\n• „Zeige mir, wann ich am produktivsten bin"\n\nVolle Kontrolle für alle, die genau wissen, was sie suchen.</string>
     <string name="profile_custom_prompt">Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheinträge konzentrieren?</string>
     <string name="profile_select_hint">Wähle ein Profil aus. Tippe auf ein Profil für eine genauere Erklärung.</string>
 
@@ -339,6 +340,67 @@
     <string name="settings_premium_feature_improve_desc">Jeder Eintrag wird ausdrucksstärker</string>
     <string name="settings_premium_feature_dashboard">Unbegrenzte Dashboard-Analysen</string>
     <string name="settings_premium_feature_dashboard_desc">Dein Dashboard wächst mit dir</string>
+    <string name="settings_premium_feature_5_perspectives">5 KI-Perspektiven</string>
+    <string name="settings_premium_feature_5_perspectives_desc">Von Klarheit bis Selbsterkenntnis</string>
+    <string name="settings_premium_feature_reviews">Wochen-, Monats- und Jahresrückblicke</string>
+    <string name="settings_premium_feature_reviews_desc">Die KI erzählt deine Geschichte</string>
+    <string name="settings_premium_feature_patterns">Muster-Erkennung</string>
+    <string name="settings_premium_feature_patterns_desc">Die KI findet Zusammenhänge die dir nicht auffallen</string>
+    <string name="settings_premium_feature_pdf">PDF-Export mit Fotos</string>
+    <string name="settings_premium_feature_pdf_desc">Alle Tagebucheinträge mit Bilder als Dokument</string>
+    <string name="settings_unlock_premium">Premium freischalten</string>
+    <!-- Export dialog -->
+    <string name="settings_export_what">Was soll exportiert werden?</string>
+    <string name="settings_export_entries">Tagebucheinträge</string>
+    <string name="settings_export_photos">Fotos</string>
+    <string name="settings_export_action">Exportieren</string>
+    <string name="settings_exporting">Wird exportiert…</string>
+    <string name="settings_export_entries_photos_pdf">Tagebucheinträge und Fotos als PDF exportieren</string>
+    <string name="settings_export_data">Daten exportieren</string>
+    <string name="settings_export_entries_photos_pdf_full">Tagebucheinträge mit Fotos als PDF exportieren</string>
+    <!-- Feedback -->
+    <string name="settings_feedback">Feedback</string>
+    <string name="settings_feedback_desc">Anregungen, Wünsche, Verbesserungsvorschläge, Bugs melden 🐞</string>
+    <string name="settings_feedback_send">Feedback senden</string>
+    <string name="settings_feedback_sent">Senden erfolgreich</string>
+    <string name="settings_feedback_dialog_title">Feedback senden</string>
+    <string name="settings_feedback_dialog_desc">Deine Nachricht an die Entwickler — wir lesen alles und antworten persönlich!</string>
+    <string name="settings_feedback_placeholder">Schreib uns dein Feedback…</string>
+    <string name="settings_feedback_sending">Wird gesendet…</string>
+    <string name="settings_feedback_sign_in_first">Bitte zuerst mit Google anmelden</string>
+    <string name="settings_feedback_allow_gmail">Bitte Gmail-Zugriff erlauben und erneut versuchen.</string>
+    <string name="action_send">Senden</string>
+    <!-- About -->
+    <string name="settings_about">Über die App</string>
+    <string name="settings_about_version">Best Journal V0.12.1</string>
+    <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
+    <!-- Sign-out dialog -->
+    <string name="settings_sign_out_confirm">Abmelden?</string>
+    <string name="settings_sign_out_body">Möchtest du dich wirklich abmelden?</string>
+    <!-- Toggle labels -->
+    <string name="toggle_light">Hell</string>
+    <string name="toggle_dark">Dunkel</string>
+    <string name="toggle_sound_on">Ton an</string>
+    <string name="toggle_sound_off">Ton aus</string>
+    <string name="toggle_haptic_on">Haptik an</string>
+    <string name="toggle_haptic_off">Haptik aus</string>
+    <string name="toggle_voice_on">Stimme an</string>
+    <string name="toggle_voice_off">Stimme aus</string>
+    <string name="toggle_sun">Sonne</string>
+    <string name="toggle_moon">Mond</string>
+    <!-- Day names -->
+    <string name="day_monday">Montag</string>
+    <string name="day_tuesday">Dienstag</string>
+    <string name="day_wednesday">Mittwoch</string>
+    <string name="day_thursday">Donnerstag</string>
+    <string name="day_friday">Freitag</string>
+    <string name="day_saturday">Samstag</string>
+    <string name="day_sunday">Sonntag</string>
+    <!-- Review schedule dialog -->
+    <string name="settings_reminder_when">Wann möchtest du erinnert werden?</string>
+    <string name="settings_review_when">Wann soll dein Rückblick kommen?</string>
+    <string name="settings_review_weekday">Wochentag</string>
+    <string name="settings_review_time">Uhrzeit</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          RETROSPECTIVE SCREEN

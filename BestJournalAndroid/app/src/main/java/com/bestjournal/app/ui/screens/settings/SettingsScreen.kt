@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.res.stringResource
+import com.bestjournal.app.R
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.bestjournal.app.util.rememberHapticAction
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -214,7 +216,7 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
-                    "Einstellungen",
+                    stringResource(R.string.settings_title),
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
@@ -245,7 +247,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Konto",
+                                stringResource(R.string.settings_account),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -284,19 +286,19 @@ fun SettingsScreen(
                                     colors =
                                         ButtonDefaults.outlinedButtonColors(contentColor = NeonRed),
                                 ) {
-                                    Text("Abmelden")
+                                    Text(stringResource(R.string.settings_sign_out))
                                 }
                             }
                             Spacer(modifier = Modifier.height(12.dp))
                             uiState.lastSyncTimestamp?.let { ts ->
                                 Text(
-                                    "Letzte Synchronisation: ${DateTimeFormatter.formatFull(ts)}",
+                                    stringResource(R.string.settings_last_sync, DateTimeFormatter.formatFull(ts)),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.outline,
                                 )
                             }
                             Text(
-                                "Einträge werden bei der Anmeldung automatisch geladen",
+                                stringResource(R.string.settings_entries_auto_loaded),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.outline,
                             )
@@ -315,7 +317,7 @@ fun SettingsScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        "Fotos sichern",
+                                        stringResource(R.string.settings_backup_photos),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
@@ -342,7 +344,7 @@ fun SettingsScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        "Videos sichern",
+                                        stringResource(R.string.settings_backup_videos),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
@@ -370,8 +372,8 @@ fun SettingsScreen(
                                         ),
                                 ) {
                                     Text(
-                                        if (uiState.isSyncing) "Wird gesichert..."
-                                        else "Tagebucheinträge sichern"
+                                        if (uiState.isSyncing) stringResource(R.string.settings_syncing)
+                                        else stringResource(R.string.settings_backup_entries)
                                     )
                                 }
                             }
@@ -392,12 +394,12 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        "Nicht angemeldet",
+                                        stringResource(R.string.settings_not_signed_in),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        "Gesicherte Einträge werden beim Anmelden geladen",
+                                        stringResource(R.string.settings_entries_loaded_on_sign_in),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -416,7 +418,7 @@ fun SettingsScreen(
                                             contentColor = MaterialTheme.colorScheme.onPrimary,
                                         ),
                                 ) {
-                                    Text("Mit Google anmelden")
+                                    Text(stringResource(R.string.settings_sign_in_google))
                                 }
                             }
                         }
@@ -439,7 +441,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Erscheinungsbild",
+                                stringResource(R.string.settings_appearance),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -462,12 +464,12 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        "Dunkelmodus",
+                                        stringResource(R.string.settings_dark_mode),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        if (uiState.isDarkTheme) "Aktiv" else "Aus",
+                                        if (uiState.isDarkTheme) stringResource(R.string.settings_dark_active) else stringResource(R.string.settings_dark_off),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -502,12 +504,12 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        "System folgen",
+                                        stringResource(R.string.settings_follow_system),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        "Automatisch",
+                                        stringResource(R.string.settings_automatic),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -565,12 +567,12 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        "Sonnenauf-/untergang",
+                                        stringResource(R.string.settings_sunrise_sunset),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        "Dunkel bei Nacht, hell bei Tag",
+                                        stringResource(R.string.settings_sunrise_sunset_desc),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -690,13 +692,13 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        "App-Töne",
+                                        stringResource(R.string.settings_app_sounds),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        if (soundsEnabled) "Töne sind eingeschaltet"
-                                        else "Töne sind ausgeschaltet",
+                                        if (soundsEnabled) stringResource(R.string.settings_sounds_on)
+                                        else stringResource(R.string.settings_sounds_off),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -810,13 +812,13 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        "Haptik",
+                                        stringResource(R.string.settings_haptics),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        if (hapticEnabled) "Haptik ist eingeschaltet"
-                                        else "Haptik ist ausgeschaltet",
+                                        if (hapticEnabled) stringResource(R.string.settings_haptics_on)
+                                        else stringResource(R.string.settings_haptics_off),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -863,13 +865,13 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        "Stimmen",
+                                        stringResource(R.string.settings_voices),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        if (ttsEnabled) "Vorlesen ist eingeschaltet"
-                                        else "Vorlesen ist ausgeschaltet",
+                                        if (ttsEnabled) stringResource(R.string.settings_tts_on)
+                                        else stringResource(R.string.settings_tts_off),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -924,7 +926,7 @@ fun SettingsScreen(
                             var voiceExpanded by remember { mutableStateOf(false) }
 
                             Text(
-                                "Stimme ausw\u00e4hlen",
+                                stringResource(R.string.settings_voice_select),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -942,7 +944,7 @@ fun SettingsScreen(
                                     trailingIcon = {
                                         Icon(
                                             Icons.Rounded.KeyboardArrowDown,
-                                            "Stimme w\u00e4hlen",
+                                            stringResource(R.string.settings_voice_choose),
                                         )
                                     },
                                     modifier = Modifier
@@ -1034,7 +1036,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Erinnerung / R\u00fcckblick",
+                                stringResource(R.string.settings_reminder_section),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -1050,20 +1052,20 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Tägliche Erinnerung",
+                                    stringResource(R.string.settings_daily_reminder),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 if (uiState.reminderEnabled) {
                                     Text(
-                                        "Uhrzeit: %02d:%02d Uhr"
+                                        stringResource(R.string.settings_reminder_time)
                                             .format(uiState.reminderHour, uiState.reminderMinute),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary,
                                     )
                                 } else {
                                     Text(
-                                        "Erinnert dich ans Tagebuchschreiben",
+                                        stringResource(R.string.settings_reminder_desc),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -1137,13 +1139,13 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Wöchentlicher Rückblick",
+                                    stringResource(R.string.settings_weekly_review),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    if (uiState.weeklyReviewEnabled) "Erinnerung an"
-                                    else "Sonntags um 15:00 Uhr",
+                                    if (uiState.weeklyReviewEnabled) stringResource(R.string.settings_weekly_review_on)
+                                    else stringResource(R.string.settings_weekly_review_off),
                                     style = MaterialTheme.typography.bodySmall,
                                     color =
                                         if (uiState.weeklyReviewEnabled)
@@ -1201,12 +1203,12 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Monatsrückblick",
+                                    stringResource(R.string.settings_monthly_review),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    if (uiState.monthlyReviewEnabled) "Erinnerung an"
+                                    if (uiState.monthlyReviewEnabled) stringResource(R.string.settings_monthly_review_on)
                                     else "Am letzten Tag des Monats um 15:00 Uhr",
                                     style = MaterialTheme.typography.bodySmall,
                                     color =
@@ -1265,12 +1267,12 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Jahresrückblick",
+                                    stringResource(R.string.settings_yearly_review),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    if (uiState.yearlyReviewEnabled) "Erinnerung an"
+                                    if (uiState.yearlyReviewEnabled) stringResource(R.string.settings_yearly_review_on)
                                     else "Am letzten Tag des Jahres um 15:00 Uhr",
                                     style = MaterialTheme.typography.bodySmall,
                                     color =
@@ -1332,7 +1334,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "Zeitzone: $currentTimezone",
+                            stringResource(R.string.settings_timezone, currentTimezone),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -1355,7 +1357,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Sicherheit",
+                                stringResource(R.string.settings_security),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -1383,12 +1385,12 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        "Fingerabdruck",
+                                        stringResource(R.string.settings_fingerprint),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        "App beim Start entsperren",
+                                        stringResource(R.string.settings_fingerprint_desc),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -1416,7 +1418,7 @@ fun SettingsScreen(
                         if (uiState.biometricLock) {
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                "Sperrt automatisch nach 60 Sekunden im Hintergrund",
+                                stringResource(R.string.settings_auto_lock),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.outline,
                             )
@@ -1449,7 +1451,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Wähle ein Profil aus. Tippe auf ein Profil für eine genauere Erklärung.",
+                            stringResource(R.string.profile_select_hint),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -1459,11 +1461,11 @@ fun SettingsScreen(
 
                         val scenarioNames =
                             listOf(
-                                "Zusammenfassung",
-                                "Räume dein Leben auf",
-                                "Selbsterkenntnis",
-                                "Persönliche Ziele",
-                                "Individuelle Analyse",
+                                stringResource(R.string.profile_summary),
+                                stringResource(R.string.profile_entropy),
+                                stringResource(R.string.profile_insight),
+                                stringResource(R.string.profile_goals),
+                                stringResource(R.string.profile_custom),
                             )
                         val scenarioPrefs = remember {
                             val masterKey =
@@ -1541,31 +1543,31 @@ fun SettingsScreen(
                                     when (index) {
                                         0 ->
                                             Text(
-                                                "Fasst Themen, Muster und Erlebnisse zusammen",
+                                                stringResource(R.string.profile_summary_desc),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         1 ->
                                             Text(
-                                                "Erkennt Stress, Unordnung und Belastung",
+                                                stringResource(R.string.profile_entropy_desc),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         2 ->
                                             Text(
-                                                "Deckt verborgene Denk- und Gefühlsmuster auf",
+                                                stringResource(R.string.profile_insight_desc),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         3 ->
                                             Text(
-                                                "Erkennt Ziele, Wünsche und Fortschritte",
+                                                stringResource(R.string.profile_goals_desc),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                         4 ->
                                             Text(
-                                                "Eigenen Analyse-Fokus festlegen",
+                                                stringResource(R.string.profile_custom_desc),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
@@ -1586,16 +1588,11 @@ fun SettingsScreen(
                                 }
                             val infoText =
                                 when (showScenarioInfoIndex) {
-                                    0 ->
-                                        "Deine Einträge werden neutral zusammengefasst, ohne Bewertung oder Ratschläge.\n\nDu siehst auf einen Blick:\n\n\u2022 Welche Themen dich gerade beschäftigen\n\u2022 Welche Muster sich wiederholen\n\u2022 Wie sich dein Leben entwickelt\n\nPerfekt als täglicher Überblick über alles, was in deinem Leben passiert."
-                                    1 ->
-                                        "Die KI sucht gezielt nach Stress, Belastung und Unordnung in deinen Einträgen.\n\nDu bekommst:\n\n\u2022 Eine Analyse deiner größten Belastungsquellen\n\u2022 5 konkrete Maßnahmen zum Aufräumen\n\u2022 Tipps, die dir sofort helfen können\n\nIdeal wenn du das Gefühl hast, dass gerade alles zu viel wird."
-                                    2 ->
-                                        "Die KI schaut tiefer als nur auf Ereignisse. Sie erkennt in deinen Einträgen:\n\n\u2022 Verborgene Denkmuster und Überzeugungen\n\u2022 Wiederkehrende Gefühle und Reaktionen\n\u2022 Persönliche Stärken, die dir nicht bewusst sind\n\u2022 Werte, die dein Handeln antreiben\n\nFür alle, die sich selbst besser verstehen und innerlich wachsen wollen."
-                                    3 ->
-                                        "Die KI findet alle Ziele, Wünsche und Vorhaben in deinen Einträgen, auch beiläufig erwähnte.\n\nDu siehst:\n\n\u2022 Welche Ziele du hast (auch versteckte)\n\u2022 Wie weit du bei jedem Ziel bist\n\u2022 Was dein nächster Schritt sein könnte\n\nDein persönlicher Ziel-Tracker, der aus deinen eigenen Worten liest."
-                                    else ->
-                                        "Du bestimmst selbst, worauf die KI achten soll.\n\nSchreibe deinen eigenen Analyse-Fokus, zum Beispiel:\n\n\u2022 „Finde alle Erwähnungen von Sport“\n\u2022 „Analysiere meine Stimmungsschwankungen“\n\u2022 „Zeige mir, wann ich am produktivsten bin“\n\nVolle Kontrolle für alle, die genau wissen, was sie suchen."
+                                    0 -> stringResource(R.string.profile_summary_long)
+                                    1 -> stringResource(R.string.profile_entropy_long)
+                                    2 -> stringResource(R.string.profile_insight_long)
+                                    3 -> stringResource(R.string.profile_goals_long)
+                                    else -> stringResource(R.string.profile_custom_long)
                                 }
                             AlertDialog(
                                 onDismissRequest = { showScenarioInfoIndex = -1 },
@@ -1627,7 +1624,7 @@ fun SettingsScreen(
                                 confirmButton = {
                                     TextButton(onClick = { showScenarioInfoIndex = -1 }) {
                                         Text(
-                                            "Verstanden",
+                                            stringResource(R.string.action_understood),
                                             color = MaterialTheme.colorScheme.primary,
                                         )
                                     }
@@ -1643,7 +1640,7 @@ fun SettingsScreen(
                                         onProfileChanged()
                                     }) {
                                         Text(
-                                            "Abbrechen",
+                                            stringResource(R.string.action_cancel),
                                             color = MaterialTheme.colorScheme.outline,
                                         )
                                     }
@@ -1660,14 +1657,14 @@ fun SettingsScreen(
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 title = {
                                     Text(
-                                        "Individuelle Analyse",
+                                        stringResource(R.string.profile_custom),
                                         style = MaterialTheme.typography.titleLarge,
                                     )
                                 },
                                 text = {
                                     Column {
                                         Text(
-                                            "Was ist dir besonders wichtig? Worauf soll sich die KI bei der Analyse deiner Tagebucheinträge konzentrieren?",
+                                            stringResource(R.string.profile_custom_prompt),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -1716,13 +1713,13 @@ fun SettingsScreen(
                                             showCustomPromptDialog = false
                                         }
                                     ) {
-                                        Text("Speichern", color = MaterialTheme.colorScheme.primary)
+                                        Text(stringResource(R.string.action_save), color = MaterialTheme.colorScheme.primary)
                                     }
                                 },
                                 dismissButton = {
                                     TextButton(onClick = { showCustomPromptDialog = false }) {
                                         Text(
-                                            "Abbrechen",
+                                            stringResource(R.string.action_cancel),
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
@@ -1763,12 +1760,12 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Textverbesserung",
+                                    stringResource(R.string.settings_text_improvement),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    "Standardmäßig aktivieren",
+                                    stringResource(R.string.settings_text_improvement_desc),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1793,12 +1790,12 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Dashboard",
+                                    stringResource(R.string.settings_dashboard_section),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    "Automatisch aktualisieren bei neuem Tagebucheintrag",
+                                    stringResource(R.string.settings_auto_update),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1834,7 +1831,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Premium",
+                                stringResource(R.string.settings_premium_section),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = FeatureAccentOrange,
                             )
@@ -1846,14 +1843,14 @@ fun SettingsScreen(
                             val subType by viewModel.subscriptionType.collectAsState()
                             val isLifetime = subType == com.bestjournal.app.billing.SubscriptionType.LIFETIME
                             Text(
-                                text = if (isLifetime) "Lifetime-Zugang aktiv" else "Premium-Abo aktiv",
+                                text = if (isLifetime) stringResource(R.string.settings_premium_lifetime) else stringResource(R.string.settings_premium_active),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = if (isLifetime) "Einmalkauf, alle Features f\u00fcr immer freigeschaltet."
-                                    else "Alle Features freigeschaltet, unbegrenzte KI, PDF-Export und mehr.",
+                                text = if (isLifetime) stringResource(R.string.settings_premium_lifetime_desc)
+                                    else stringResource(R.string.settings_premium_desc),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -1868,7 +1865,7 @@ fun SettingsScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                 ) {
                                     Text(
-                                        "Abo verwalten",
+                                        stringResource(R.string.settings_manage_subscription),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
@@ -1903,12 +1900,12 @@ fun SettingsScreen(
                                 }
                             }
                             val featureItems = listOf(
-                                Triple(Icons.Rounded.Star, "Unbegrenzte KI-Textverbesserung", "Jeder Eintrag wird ausdrucksst\u00e4rker"),
-                                Triple(Icons.Rounded.Dashboard, "Unbegrenzte Dashboard-Analysen", "Dein Dashboard w\u00e4chst mit dir"),
-                                Triple(Icons.Rounded.Favorite, "5 KI-Perspektiven", "Von Klarheit bis Selbsterkenntnis"),
-                                Triple(Icons.Rounded.AutoAwesome, "Wochen-, Monats- und Jahresr\u00fcckblicke", "Die KI erz\u00e4hlt deine Geschichte"),
-                                Triple(Icons.Rounded.Tune, "Muster-Erkennung", "Die KI findet Zusammenh\u00e4nge die dir nicht auffallen"),
-                                Triple(Icons.Rounded.PictureAsPdf, "PDF-Export mit Fotos", "Alle Tagebucheintr\u00e4ge mit Bilder als Dokument"),
+                                Triple(Icons.Rounded.Star, stringResource(R.string.settings_premium_feature_improve), stringResource(R.string.settings_premium_feature_improve_desc)),
+                                Triple(Icons.Rounded.Dashboard, stringResource(R.string.settings_premium_feature_dashboard), stringResource(R.string.settings_premium_feature_dashboard_desc)),
+                                Triple(Icons.Rounded.Favorite, stringResource(R.string.settings_premium_feature_5_perspectives), stringResource(R.string.settings_premium_feature_5_perspectives_desc)),
+                                Triple(Icons.Rounded.AutoAwesome, stringResource(R.string.settings_premium_feature_reviews), stringResource(R.string.settings_premium_feature_reviews_desc)),
+                                Triple(Icons.Rounded.Tune, stringResource(R.string.settings_premium_feature_patterns), stringResource(R.string.settings_premium_feature_patterns_desc)),
+                                Triple(Icons.Rounded.PictureAsPdf, stringResource(R.string.settings_premium_feature_pdf), stringResource(R.string.settings_premium_feature_pdf_desc)),
                                 Triple(Icons.Rounded.MusicNote, "Pr\u00e4zisere Spracherkennung", "H\u00f6here Qualit\u00e4t f\u00fcr deine Spracheintr\u00e4ge"),
                             )
                             featureItems.forEachIndexed { idx, (icon, title, subtitle) ->
@@ -1980,7 +1977,7 @@ fun SettingsScreen(
                                         ),
                                 ) {
                                     Text(
-                                        "Premium freischalten",
+                                        stringResource(R.string.settings_unlock_premium),
                                         fontWeight = FontWeight.SemiBold,
                                     )
                                 }
@@ -2016,7 +2013,7 @@ fun SettingsScreen(
                         text = {
                             Column {
                                 Text(
-                                    "Was soll exportiert werden?",
+                                    stringResource(R.string.settings_export_what),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -2039,7 +2036,7 @@ fun SettingsScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        "Tagebucheinträge",
+                                        stringResource(R.string.settings_export_entries),
                                         style = MaterialTheme.typography.bodyLarge,
                                     )
                                 }
@@ -2063,7 +2060,7 @@ fun SettingsScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        "Fotos",
+                                        stringResource(R.string.settings_export_photos),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = if (exportIncludeEntries)
                                             MaterialTheme.colorScheme.onSurface
@@ -2090,12 +2087,12 @@ fun SettingsScreen(
                                     modifier = Modifier.size(18.dp),
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Exportieren")
+                                Text(stringResource(R.string.settings_export_action))
                             }
                         },
                         dismissButton = {
                             TextButton(onClick = { showExportDialog = false }) {
-                                Text("Abbrechen")
+                                Text(stringResource(R.string.action_cancel))
                             }
                         },
                     )
@@ -2121,7 +2118,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Daten exportieren",
+                                stringResource(R.string.settings_export_data),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -2129,7 +2126,7 @@ fun SettingsScreen(
                         if (uiState.isSubscribed) {
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                "Exportiere alle Tagebucheinträge und Fotos als PDF-Dokument.",
+                                stringResource(R.string.settings_export_pdf_desc),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
@@ -2156,7 +2153,7 @@ fun SettingsScreen(
                                         strokeWidth = 2.dp,
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Wird exportiert…")
+                                    Text(stringResource(R.string.settings_exporting))
                                 } else {
                                     Icon(
                                         Icons.Rounded.PictureAsPdf,
@@ -2164,13 +2161,13 @@ fun SettingsScreen(
                                         modifier = Modifier.size(18.dp),
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Tagebucheinträge und Fotos als PDF exportieren")
+                                    Text(stringResource(R.string.settings_export_entries_photos_pdf))
                                 }
                             }
                         } else {
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                "Tagebucheintr\u00e4ge mit Fotos als PDF exportieren",
+                                stringResource(R.string.settings_export_entries_photos_pdf_full),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.Center,
@@ -2220,7 +2217,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Feedback",
+                                stringResource(R.string.settings_feedback),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -2229,7 +2226,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Anregungen, Wünsche, Verbesserungsvorschläge, Bugs melden \uD83D\uDC1E",
+                            stringResource(R.string.settings_feedback_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -2252,13 +2249,13 @@ fun SettingsScreen(
                             ) {
                                 Icon(Icons.Rounded.Feedback, null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Feedback senden")
+                                Text(stringResource(R.string.settings_feedback_send))
                             }
                         }
                         if (feedbackSent) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "Senden erfolgreich",
+                                stringResource(R.string.settings_feedback_sent),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.fillMaxWidth(),
@@ -2322,7 +2319,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Über die App",
+                                stringResource(R.string.settings_about),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -2331,13 +2328,13 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            "Best Journal V0.12.1",
+                            stringResource(R.string.settings_about_version),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
                         Text(
-                            "Dein persönliches KI-Tagebuch",
+                            stringResource(R.string.settings_about_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.outline,
                             textAlign = TextAlign.Center,
@@ -2359,10 +2356,10 @@ fun SettingsScreen(
                 AlertDialog(
                     onDismissRequest = { viewModel.showLogoutDialog(false) },
                     containerColor = MaterialTheme.colorScheme.surface,
-                    title = { Text("Abmelden?", color = MaterialTheme.colorScheme.onSurface) },
+                    title = { Text(stringResource(R.string.settings_sign_out_confirm), color = MaterialTheme.colorScheme.onSurface) },
                     text = {
                         Text(
-                            "Möchtest du dich wirklich abmelden?",
+                            stringResource(R.string.settings_sign_out_body),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     },
@@ -2371,12 +2368,12 @@ fun SettingsScreen(
                             onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.signOut(context) },
                             colors = ButtonDefaults.buttonColors(containerColor = NeonRed),
                         ) {
-                            Text("Abmelden")
+                            Text(stringResource(R.string.settings_sign_out))
                         }
                     },
                     dismissButton = {
                         OutlinedButton(onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.showLogoutDialog(false) }) {
-                            Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
                 )
@@ -2488,7 +2485,7 @@ private fun SettingsPhoneIcon(isDark: Boolean) {
         ) {
             Icon(
                 Icons.Rounded.PhoneAndroid,
-                "Hell",
+                stringResource(R.string.toggle_light),
                 tint = if (!isDark) glowYellow else mutedGray,
                 modifier = Modifier.size(lightPhoneSize),
             )
@@ -2510,7 +2507,7 @@ private fun SettingsPhoneIcon(isDark: Boolean) {
         ) {
             Icon(
                 Icons.Rounded.PhoneAndroid,
-                "Dunkel",
+                stringResource(R.string.toggle_dark),
                 tint = if (isDark) glowYellow else mutedGray,
                 modifier = Modifier.size(darkPhoneSize),
             )
@@ -2550,7 +2547,7 @@ private fun SettingsSoundIcon(isEnabled: Boolean) {
         ) {
             Icon(
                 Icons.Rounded.VolumeUp,
-                "Ton an",
+                stringResource(R.string.toggle_sound_on),
                 tint = if (isEnabled) activeColor else mutedGray,
                 modifier = Modifier.size(onSize),
             )
@@ -2565,7 +2562,7 @@ private fun SettingsSoundIcon(isEnabled: Boolean) {
         ) {
             Icon(
                 Icons.Rounded.VolumeUp,
-                "Ton aus",
+                stringResource(R.string.toggle_sound_off),
                 tint = if (!isEnabled) Color(0xFFEF4444) else mutedGray,
                 modifier = Modifier.size(offSize),
             )
@@ -2599,7 +2596,7 @@ private fun SettingsHapticIcon(isEnabled: Boolean) {
         ) {
             Icon(
                 Icons.Rounded.Vibration,
-                "Haptik an",
+                stringResource(R.string.toggle_haptic_on),
                 tint = if (isEnabled) activeColor else mutedGray,
                 modifier = Modifier.size(onSize),
             )
@@ -2614,7 +2611,7 @@ private fun SettingsHapticIcon(isEnabled: Boolean) {
         ) {
             Icon(
                 Icons.Rounded.Vibration,
-                "Haptik aus",
+                stringResource(R.string.toggle_haptic_off),
                 tint = if (!isEnabled) Color(0xFFEF4444) else mutedGray,
                 modifier = Modifier.size(offSize),
             )
@@ -2649,7 +2646,7 @@ private fun SettingsTtsIcon(isEnabled: Boolean) {
         ) {
             Icon(
                 Icons.Rounded.RecordVoiceOver,
-                "Stimme an",
+                stringResource(R.string.toggle_voice_on),
                 tint = if (isEnabled) activeColor else mutedGray,
                 modifier = Modifier.size(onSize),
             )
@@ -2664,7 +2661,7 @@ private fun SettingsTtsIcon(isEnabled: Boolean) {
         ) {
             Icon(
                 Icons.Rounded.RecordVoiceOver,
-                "Stimme aus",
+                stringResource(R.string.toggle_voice_off),
                 tint = if (!isEnabled) Color(0xFFEF4444) else mutedGray,
                 modifier = Modifier.size(offSize),
             )
@@ -2699,7 +2696,7 @@ private fun SettingsSunMoonIcon(isDark: Boolean) {
         ) {
             Icon(
                 Icons.Rounded.LightMode,
-                "Sonne",
+                stringResource(R.string.toggle_sun),
                 tint = if (!isDark) glowYellow else mutedGray,
                 modifier = Modifier.size(sunSize),
             )
@@ -2714,7 +2711,7 @@ private fun SettingsSunMoonIcon(isDark: Boolean) {
         ) {
             Icon(
                 Icons.Rounded.DarkMode,
-                "Mond",
+                stringResource(R.string.toggle_moon),
                 tint = if (isDark) glowYellow else mutedGray,
                 modifier = Modifier.size(moonSize),
             )
@@ -2747,7 +2744,7 @@ private fun FeedbackDialog(
         },
         title = {
             Text(
-                "Feedback senden",
+                stringResource(R.string.settings_feedback_dialog_title),
                 style = MaterialTheme.typography.titleLarge,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
@@ -2756,7 +2753,7 @@ private fun FeedbackDialog(
         text = {
             Column {
                 Text(
-                    "Deine Nachricht an die Entwickler — wir lesen alles und antworten persönlich!",
+                    stringResource(R.string.settings_feedback_dialog_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 20.sp,
@@ -2772,7 +2769,7 @@ private fun FeedbackDialog(
                         ),
                     placeholder = {
                         Text(
-                            "Schreib uns dein Feedback...",
+                            stringResource(R.string.settings_feedback_placeholder),
                             color = MaterialTheme.colorScheme.outline,
                         )
                     },
@@ -2789,7 +2786,7 @@ private fun FeedbackDialog(
                 if (isSending) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "Wird gesendet...",
+                        stringResource(R.string.settings_feedback_sending),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.outline,
                     )
@@ -2805,7 +2802,7 @@ private fun FeedbackDialog(
                 onClick = {
                     if (feedbackText.isNotBlank() && !isSending) {
                         if (userEmail == null) {
-                            errorMessage = "Bitte zuerst mit Google anmelden"
+                            errorMessage = context.getString(R.string.settings_feedback_sign_in_first)
                             return@Button
                         }
                         isSending = true
@@ -2831,7 +2828,7 @@ private fun FeedbackDialog(
                                 try {
                                     context.startActivity(e.consentIntent)
                                 } catch (_: Exception) {}
-                                errorMessage = "Bitte Gmail-Zugriff erlauben und erneut versuchen."
+                                errorMessage = context.getString(R.string.settings_feedback_allow_gmail)
                             }
                         }
                     }
@@ -2843,12 +2840,12 @@ private fun FeedbackDialog(
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                     ),
             ) {
-                Text("Senden")
+                Text(stringResource(R.string.action_send))
             }
         },
         dismissButton = {
             OutlinedButton(onClick = { if (!isSending) onDismiss() }) {
-                Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
     )
@@ -2886,7 +2883,7 @@ private fun ReminderTimePickerDialog(
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    "Wann möchtest du erinnert werden?",
+                    stringResource(R.string.settings_reminder_when),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
@@ -2904,12 +2901,12 @@ private fun ReminderTimePickerDialog(
                 colors =
                     ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
-                Text("Speichern")
+                Text(stringResource(R.string.action_save))
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
     )
@@ -2917,16 +2914,17 @@ private fun ReminderTimePickerDialog(
 
 // ── Weekly Review Picker Dialog ─────────────────────────────────────────────
 
+@Composable
 private fun weekDayName(calendarDay: Int): String =
     when (calendarDay) {
-        java.util.Calendar.MONDAY -> "Montag"
-        java.util.Calendar.TUESDAY -> "Dienstag"
-        java.util.Calendar.WEDNESDAY -> "Mittwoch"
-        java.util.Calendar.THURSDAY -> "Donnerstag"
-        java.util.Calendar.FRIDAY -> "Freitag"
-        java.util.Calendar.SATURDAY -> "Samstag"
-        java.util.Calendar.SUNDAY -> "Sonntag"
-        else -> "Sonntag"
+        java.util.Calendar.MONDAY -> stringResource(R.string.day_monday)
+        java.util.Calendar.TUESDAY -> stringResource(R.string.day_tuesday)
+        java.util.Calendar.WEDNESDAY -> stringResource(R.string.day_wednesday)
+        java.util.Calendar.THURSDAY -> stringResource(R.string.day_thursday)
+        java.util.Calendar.FRIDAY -> stringResource(R.string.day_friday)
+        java.util.Calendar.SATURDAY -> stringResource(R.string.day_saturday)
+        java.util.Calendar.SUNDAY -> stringResource(R.string.day_sunday)
+        else -> stringResource(R.string.day_sunday)
     }
 
 // Map UI index (0=Monday) to Calendar constant
@@ -2979,7 +2977,7 @@ private fun WeeklyReviewPickerDialog(
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    "Wann soll dein Rückblick kommen?",
+                    stringResource(R.string.settings_review_when),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
@@ -2992,7 +2990,7 @@ private fun WeeklyReviewPickerDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    "Wochentag",
+                    stringResource(R.string.settings_review_weekday),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -3025,7 +3023,7 @@ private fun WeeklyReviewPickerDialog(
                 }
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
-                    "Uhrzeit",
+                    stringResource(R.string.settings_review_time),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -3045,12 +3043,12 @@ private fun WeeklyReviewPickerDialog(
                 colors =
                     ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
-                Text("Speichern")
+                Text(stringResource(R.string.action_save))
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
     )
