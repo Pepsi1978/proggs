@@ -99,6 +99,8 @@ import com.bestjournal.app.ui.components.SunMoonToggle
 import com.bestjournal.app.ui.theme.FeatureAccentOrange
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.util.EdgeTtsPlayer
+import androidx.compose.ui.res.stringResource
+import com.bestjournal.app.R
 import java.util.Calendar
 
 object RetrospectiveColors {
@@ -235,7 +237,7 @@ fun RetrospectiveScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Rückblick",
+                            text = stringResource(R.string.retro_title),
                             style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
@@ -248,7 +250,7 @@ fun RetrospectiveScreen(
                     }) {
                         Icon(
                             imageVector = Icons.Rounded.Info,
-                            contentDescription = "Info zu Rückblicken",
+                            contentDescription = stringResource(R.string.retro_cd_info),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -284,7 +286,7 @@ fun RetrospectiveScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = "Dein persönlicher Rückblick",
+                            text = stringResource(R.string.retro_personal_review),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -294,10 +296,7 @@ fun RetrospectiveScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text =
-                                "Manchmal vergessen wir im Alltag, wie viel wir eigentlich erlebt haben. " +
-                                    "Dein Tagebuch erinnert sich an alles, an die großen Momente und die kleinen, " +
-                                    "stillen Augenblicke, die dein Leben ausmachen.",
+                            text = stringResource(R.string.retro_intro_body),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                             textAlign = TextAlign.Center,
@@ -307,7 +306,7 @@ fun RetrospectiveScreen(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         Text(
-                            text = "Schau zurück und entdecke, was dich bewegt hat.",
+                            text = stringResource(R.string.retro_intro_cta),
                             style = MaterialTheme.typography.bodyMedium,
                             fontStyle = FontStyle.Italic,
                             color = RetrospectiveColors.monthDividerColor,
@@ -328,7 +327,7 @@ fun RetrospectiveScreen(
                             modifier = Modifier.padding(horizontal = 16.dp),
                         ) {
                             Text(
-                                "Bitte warten",
+                                stringResource(R.string.retro_please_wait),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.titleMedium,
                                 textAlign = TextAlign.Center,
@@ -337,10 +336,10 @@ fun RetrospectiveScreen(
                             Text(
                                 when {
                                     isWaitingForRestore ->
-                                        "Backup wird geladen\u2026 Rückblicke starten danach automatisch."
+                                        stringResource(R.string.retro_backup_loading)
                                     isProfileSwitch ->
-                                        "Rückblicke werden nach Profilwechsel automatisch aktualisiert"
-                                    else -> "Rückblicke werden erstellt\u2026"
+                                        stringResource(R.string.retro_profile_switching)
+                                    else -> stringResource(R.string.retro_generating)
                                 },
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyMedium,
@@ -365,8 +364,7 @@ fun RetrospectiveScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Text(
-                                text =
-                                    "Die KI ist gerade nicht erreichbar \u2014 bitte versuch es später nochmal.",
+                                text = stringResource(R.string.retro_ai_unavailable),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 textAlign = TextAlign.Center,
@@ -379,13 +377,13 @@ fun RetrospectiveScreen(
                                         containerColor = RetrospectiveColors.monthDividerColor
                                     ),
                             ) {
-                                Text("Nochmal versuchen")
+                                Text(stringResource(R.string.action_retry))
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                             androidx.compose.material3.TextButton(
                                 onClick = { viewModel.clearError() }
                             ) {
-                                Text("Später", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.action_later), color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -395,8 +393,8 @@ fun RetrospectiveScreen(
 
                 // Wochenrückblick button + expandable entries
                 CategoryButton(
-                    title = "Wochenrückblick",
-                    subtitle = "Die letzten 7 Tage im Überblick",
+                    title = stringResource(R.string.retro_weekly_title),
+                    subtitle = stringResource(R.string.retro_weekly_subtitle),
                     icon = Icons.Rounded.CalendarToday,
                     expanded = weeklyExpanded,
                     onClick = { weeklyExpanded = !weeklyExpanded },
@@ -409,7 +407,7 @@ fun RetrospectiveScreen(
                     Column(modifier = Modifier.padding(top = 12.dp)) {
                         if (weekly.isEmpty() && lockedWeeks.isEmpty()) {
                             EmptyHint(
-                                "Noch keine Wochenrückblicke vorhanden.\nMindestens 2 Tagebucheinträge pro Woche nötig."
+                                stringResource(R.string.retro_weekly_empty)
                             )
                         }
 
@@ -417,18 +415,18 @@ fun RetrospectiveScreen(
                         if (weekly.isNotEmpty()) {
                             val monthNames =
                                 listOf(
-                                    "Januar",
-                                    "Februar",
-                                    "März",
-                                    "April",
-                                    "Mai",
-                                    "Juni",
-                                    "Juli",
-                                    "August",
-                                    "September",
-                                    "Oktober",
-                                    "November",
-                                    "Dezember",
+                                    stringResource(R.string.month_january),
+                                    stringResource(R.string.month_february),
+                                    stringResource(R.string.month_march),
+                                    stringResource(R.string.month_april),
+                                    stringResource(R.string.month_may),
+                                    stringResource(R.string.month_june),
+                                    stringResource(R.string.month_july),
+                                    stringResource(R.string.month_august),
+                                    stringResource(R.string.month_september),
+                                    stringResource(R.string.month_october),
+                                    stringResource(R.string.month_november),
+                                    stringResource(R.string.month_december),
                                 )
                             weekly.forEachIndexed { index, summary ->
                                 if (index > 0) {
@@ -474,7 +472,7 @@ fun RetrospectiveScreen(
                             }
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "Mit Premium alle Rückblicke freischalten",
+                                text = stringResource(R.string.retro_premium_unlock),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                                 textAlign = TextAlign.Center,
@@ -494,8 +492,8 @@ fun RetrospectiveScreen(
 
                 // Monatsrückblick button + expandable entries
                 CategoryButton(
-                    title = "Monatsrückblick",
-                    subtitle = "Dein vergangener Monat auf einen Blick",
+                    title = stringResource(R.string.retro_monthly_title),
+                    subtitle = stringResource(R.string.retro_monthly_subtitle),
                     icon = Icons.Rounded.DateRange,
                     expanded = if (isPremium) monthlyExpanded else false,
                     premiumBadge = !isPremium,
@@ -516,7 +514,7 @@ fun RetrospectiveScreen(
                     Column(modifier = Modifier.padding(top = 12.dp)) {
                         if (monthly.isEmpty()) {
                             EmptyHint(
-                                "Noch keine Monatsrückblicke vorhanden.\nWird aus Wochenrückblicken am Monatsende erstellt."
+                                stringResource(R.string.retro_monthly_empty)
                             )
                         } else {
                             monthly.forEachIndexed { index, summary ->
@@ -548,8 +546,8 @@ fun RetrospectiveScreen(
 
                 // Jahresrückblick button + expandable entries
                 CategoryButton(
-                    title = "Jahresrückblick",
-                    subtitle = "Ein ganzes Jahr voller Erinnerungen",
+                    title = stringResource(R.string.retro_yearly_title),
+                    subtitle = stringResource(R.string.retro_yearly_subtitle),
                     icon = Icons.Rounded.CalendarMonth,
                     expanded = if (isPremium) yearlyExpanded else false,
                     premiumBadge = !isPremium,
@@ -570,7 +568,7 @@ fun RetrospectiveScreen(
                     Column(modifier = Modifier.padding(top = 12.dp)) {
                         if (yearly.isEmpty()) {
                             EmptyHint(
-                                "Noch keine Jahresrückblicke vorhanden.\nWird aus Monatsrückblicken am Jahresende erstellt."
+                                stringResource(R.string.retro_yearly_empty)
                             )
                         } else {
                             yearly.forEachIndexed { index, summary ->
@@ -678,13 +676,13 @@ private fun CategoryButton(
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(
                             imageVector = Icons.Rounded.Star,
-                            contentDescription = "Premium",
+                            contentDescription = stringResource(R.string.label_premium),
                             modifier = Modifier.size(18.dp),
                             tint = FeatureAccentOrange,
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Premium",
+                            text = stringResource(R.string.label_premium),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = FeatureAccentOrange,
@@ -704,7 +702,7 @@ private fun CategoryButton(
             Icon(
                 imageVector = if (expanded) Icons.Rounded.ExpandLess
                     else Icons.Rounded.ExpandMore,
-                contentDescription = if (expanded) "Zuklappen" else "Aufklappen",
+                contentDescription = if (expanded) stringResource(R.string.retro_cd_collapse) else stringResource(R.string.retro_cd_expand),
                 tint =
                     if (isDark) Color.White.copy(alpha = 0.7f)
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
@@ -899,7 +897,7 @@ private fun SummaryDetailDialog(
                     IconButton(onClick = onDismiss, modifier = Modifier.align(Alignment.TopEnd)) {
                         Icon(
                             Icons.Rounded.Close,
-                            contentDescription = "Schließen",
+                            contentDescription = stringResource(R.string.action_close),
                             tint = detailTextColor.copy(alpha = 0.8f),
                         )
                     }
@@ -934,7 +932,7 @@ private fun SummaryDetailDialog(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    "Auf einen Blick",
+                                    stringResource(R.string.retro_at_a_glance),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = RetrospectiveColors.monthDividerColor,
                                     fontWeight = FontWeight.Bold,
@@ -1034,7 +1032,7 @@ private fun SummaryDetailDialog(
                     if (photos.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(20.dp))
                         Text(
-                            "Fotos & Videos",
+                            stringResource(R.string.retro_photos_videos),
                             style = MaterialTheme.typography.titleSmall,
                             color = RetrospectiveColors.monthDividerColor,
                             fontWeight = FontWeight.Bold,
@@ -1049,7 +1047,7 @@ private fun SummaryDetailDialog(
                                 Box {
                                     AsyncImage(
                                         model = photo.filePath,
-                                        contentDescription = if (photo.isVideo) "Video" else "Foto",
+                                        contentDescription = if (photo.isVideo) stringResource(R.string.retro_cd_video) else stringResource(R.string.retro_cd_photo),
                                         contentScale = ContentScale.Crop,
                                         modifier =
                                             Modifier.size(120.dp)
@@ -1059,7 +1057,7 @@ private fun SummaryDetailDialog(
                                     if (photo.isVideo) {
                                         Icon(
                                             Icons.Rounded.PlayCircle,
-                                            contentDescription = "Video abspielen",
+                                            contentDescription = stringResource(R.string.retro_play_video),
                                             modifier = Modifier.size(40.dp).align(Alignment.Center),
                                             tint = Color.White.copy(alpha = 0.9f),
                                         )
@@ -1097,7 +1095,7 @@ private fun SummaryDetailDialog(
                                     if (!ttsOn) {
                                         android.widget.Toast.makeText(
                                             context,
-                                            "Stimmen in den Einstellungen einschalten",
+                                            context.getString(R.string.retro_enable_voices),
                                             android.widget.Toast.LENGTH_SHORT,
                                         ).show()
                                     } else {
@@ -1128,7 +1126,7 @@ private fun SummaryDetailDialog(
                         ) {
                             Icon(
                                 if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
-                                contentDescription = if (isSpeaking) "Stoppen" else "Vorlesen",
+                                contentDescription = if (isSpeaking) stringResource(R.string.retro_tts_stop) else stringResource(R.string.retro_tts_read),
                                 tint = FeatureAccentOrange,
                                 modifier = Modifier.size(24.dp),
                             )
@@ -1139,7 +1137,7 @@ private fun SummaryDetailDialog(
                         ) {
                             Icon(
                                 Icons.Rounded.Share,
-                                contentDescription = "Teilen",
+                                contentDescription = stringResource(R.string.retro_cd_share),
                                 tint = FeatureAccentOrange,
                                 modifier = Modifier.size(24.dp),
                             )
@@ -1160,7 +1158,7 @@ private fun SummaryDetailDialog(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "Bitte warten, Text-to-Speech wird erzeugt\u2026",
+                                stringResource(R.string.retro_tts_wait),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -1178,7 +1176,7 @@ private fun SummaryDetailDialog(
 
         AlertDialog(
             onDismissRequest = { showShareDialog = false },
-            title = { Text("Rückblick teilen", color = MaterialTheme.colorScheme.onSurface) },
+            title = { Text(stringResource(R.string.retro_share_title), color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     // Text checkbox
@@ -1191,14 +1189,14 @@ private fun SummaryDetailDialog(
                             onCheckedChange = { shareText = it },
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Rückblick-Text", color = MaterialTheme.colorScheme.onSurface)
+                        Text(stringResource(R.string.retro_share_text_content), color = MaterialTheme.colorScheme.onSurface)
                     }
 
                     // Photo/Video checkboxes
                     if (photos.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Fotos & Videos:",
+                            stringResource(R.string.retro_photos_videos_colon),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -1224,7 +1222,7 @@ private fun SummaryDetailDialog(
                                             .padding(end = 8.dp),
                                 )
                                 Text(
-                                    if (photo.isVideo) "Video" else "Foto",
+                                    if (photo.isVideo) stringResource(R.string.retro_cd_video) else stringResource(R.string.retro_cd_photo),
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
@@ -1235,7 +1233,7 @@ private fun SummaryDetailDialog(
             confirmButton = {
                 androidx.compose.material3.Button(
                     onClick = {
-                        val textContent = if (shareText) buildShareText(summary, parsed) else null
+                        val textContent = if (shareText) buildShareText(context, summary, parsed) else null
                         val photoUris =
                             photos
                                 .filterIndexed { i, _ ->
@@ -1274,7 +1272,7 @@ private fun SummaryDetailDialog(
 
                         if (intent != null) {
                             context.startActivity(
-                                android.content.Intent.createChooser(intent, "Rückblick teilen")
+                                android.content.Intent.createChooser(intent, context.getString(R.string.retro_share_title))
                             )
                         }
                         showShareDialog = false
@@ -1284,12 +1282,12 @@ private fun SummaryDetailDialog(
                             containerColor = if (LocalIsDarkTheme.current) Color(0xFF2C4A6E) else Color(0xFF1976D2)
                         ),
                 ) {
-                    Text("Teilen")
+                    Text(stringResource(R.string.action_share))
                 }
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { showShareDialog = false }) {
-                    Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
         )
@@ -1406,7 +1404,7 @@ private fun SummaryDetailDialog(
                         } else {
                             AsyncImage(
                                 model = java.io.File(photos[page].filePath),
-                                contentDescription = "Foto ${page + 1}",
+                                contentDescription = stringResource(R.string.retro_photo_n, page + 1),
                                 modifier =
                                     Modifier.fillMaxSize().graphicsLayer {
                                         scaleX = scale
@@ -1441,7 +1439,7 @@ private fun SummaryDetailDialog(
                             .padding(16.dp)
                             .background(Color.Black.copy(alpha = 0.5f), CircleShape),
                 ) {
-                    Icon(Icons.Rounded.Close, "Schließen", tint = Color.White)
+                    Icon(Icons.Rounded.Close, stringResource(R.string.action_close), tint = Color.White)
                 }
             }
         }
@@ -1449,10 +1447,11 @@ private fun SummaryDetailDialog(
 }
 
 private fun buildShareText(
+    context: android.content.Context,
     summary: com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity,
     parsed: ParsedRetrospective,
 ): String = buildString {
-    append("Rückblick von der BestJournal App")
+    append(context.getString(R.string.retro_share_header))
     append("\n")
     append(summary.periodLabel)
     append(" \u2014 ")
@@ -1461,7 +1460,7 @@ private fun buildShareText(
         "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
     )
     if (parsed.bulletPoints.isNotEmpty()) {
-        append("\n\nAuf einen Blick:")
+        append("\n\n${context.getString(R.string.retro_at_a_glance_colon)}")
         parsed.bulletPoints.forEach { append("\n\u2022 $it") }
     }
     if (parsed.sections.isNotEmpty()) {
@@ -1501,7 +1500,7 @@ private fun LockedWeekEntry(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Lock,
-                    contentDescription = "Gesperrt",
+                    contentDescription = stringResource(R.string.retro_cd_locked),
                     modifier = Modifier.size(9.dp),
                     tint = if (isDark) Color.White.copy(alpha = 0.5f)
                         else Color.Black.copy(alpha = 0.4f),
@@ -1547,14 +1546,14 @@ private fun LockedWeekEntry(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Premium freischalten",
+                        text = stringResource(R.string.retro_unlock_premium_short),
                         style = MaterialTheme.typography.bodySmall,
                         color = FeatureAccentOrange.copy(alpha = 0.8f),
                     )
                 }
                 Icon(
                     imageVector = Icons.Rounded.Lock,
-                    contentDescription = "Premium erforderlich",
+                    contentDescription = stringResource(R.string.retro_cd_premium_required),
                     modifier = Modifier.size(20.dp),
                     tint = FeatureAccentOrange.copy(alpha = 0.6f),
                 )
@@ -1571,7 +1570,7 @@ private fun ReviewBenefitsDialog(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         confirmButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text("Verstanden")
+                Text(stringResource(R.string.action_understood))
             }
         },
         icon = {
@@ -1584,7 +1583,7 @@ private fun ReviewBenefitsDialog(onDismiss: () -> Unit) {
         },
         title = {
             Text(
-                text = "Deine KI-Rückblicke",
+                text = stringResource(R.string.retro_your_ai_reviews),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
             )
@@ -1592,29 +1591,29 @@ private fun ReviewBenefitsDialog(onDismiss: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 BenefitSection(
-                    title = "Wochenrückblick",
+                    title = stringResource(R.string.retro_weekly_title),
                     points = listOf(
-                        "Die KI fasst deine Woche zu einer persönlichen Erzählung zusammen",
-                        "Emotionale Muster und Highlights werden sichtbar",
-                        "Jeden Sonntag automatisch erstellt, wenn du mindestens 2 Einträge hast",
-                        "Die ersten 2 Wochen sind kostenlos",
+                        stringResource(R.string.retro_weekly_p1),
+                        stringResource(R.string.retro_weekly_p2),
+                        stringResource(R.string.retro_weekly_p3),
+                        stringResource(R.string.retro_weekly_p4),
                     ),
                 )
                 BenefitSection(
-                    title = "Monatsrückblick",
+                    title = stringResource(R.string.retro_monthly_title),
                     points = listOf(
-                        "Verbindet deine Wochenrückblicke zu einer Monatserzählung",
-                        "Rote Fäden und Entwicklungen über den Monat werden sichtbar",
-                        "Zeigt Veränderungen die dir im Alltag nicht auffallen",
+                        stringResource(R.string.retro_monthly_p1),
+                        stringResource(R.string.retro_monthly_p2),
+                        stringResource(R.string.retro_monthly_p3),
                     ),
                     isPremium = true,
                 )
                 BenefitSection(
-                    title = "Jahresrückblick",
+                    title = stringResource(R.string.retro_yearly_title),
                     points = listOf(
-                        "Dein ganzes Jahr auf einen Blick",
-                        "Die KI erkennt die großen Themen deines Jahres",
-                        "Persönliche Entwicklung wird sichtbar und greifbar",
+                        stringResource(R.string.retro_yearly_p1),
+                        stringResource(R.string.retro_yearly_p2),
+                        stringResource(R.string.retro_yearly_p3),
                     ),
                     isPremium = true,
                 )
@@ -1641,13 +1640,13 @@ private fun BenefitSection(
                 Spacer(modifier = Modifier.width(6.dp))
                 Icon(
                     imageVector = Icons.Rounded.Star,
-                    contentDescription = "Premium",
+                    contentDescription = stringResource(R.string.label_premium),
                     modifier = Modifier.size(14.dp),
                     tint = FeatureAccentOrange,
                 )
                 Spacer(modifier = Modifier.width(2.dp))
                 Text(
-                    text = "Premium",
+                    text = stringResource(R.string.label_premium),
                     style = MaterialTheme.typography.labelSmall,
                     color = FeatureAccentOrange,
                 )
@@ -1714,7 +1713,7 @@ private fun ReviewPremiumSheet(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                "Deine persönlichen Rückblicke",
+                stringResource(R.string.retro_your_reviews),
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -1722,7 +1721,7 @@ private fun ReviewPremiumSheet(
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                "Mit Premium erstellt die KI automatisch Rückblicke aus deinen Tagebucheinträgen:",
+                stringResource(R.string.retro_premium_reviews_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1734,9 +1733,9 @@ private fun ReviewPremiumSheet(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                ReviewBenefitPoint("Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen")
-                ReviewBenefitPoint("Monatsrückblicke, die deine Fortschritte und Veränderungen sichtbar machen")
-                ReviewBenefitPoint("Jahresrückblicke, dein ganzes Jahr als persönliche Erzählung")
+                ReviewBenefitPoint(stringResource(R.string.retro_benefit_weekly))
+                ReviewBenefitPoint(stringResource(R.string.retro_benefit_monthly))
+                ReviewBenefitPoint(stringResource(R.string.retro_benefit_yearly))
             }
 
             Spacer(modifier = Modifier.height(28.dp))
@@ -1755,7 +1754,7 @@ private fun ReviewPremiumSheet(
                 ),
             ) {
                 Text(
-                    "Abo starten",
+                    stringResource(R.string.retro_start_sub),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -1763,7 +1762,7 @@ private fun ReviewPremiumSheet(
             Spacer(modifier = Modifier.height(12.dp))
             androidx.compose.material3.TextButton(onClick = onDismiss) {
                 Text(
-                    "Später entscheiden",
+                    stringResource(R.string.retro_decide_later),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

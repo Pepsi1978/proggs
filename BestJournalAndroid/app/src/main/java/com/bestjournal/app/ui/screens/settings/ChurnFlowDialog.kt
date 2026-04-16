@@ -77,6 +77,8 @@ import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
+import androidx.compose.ui.res.stringResource
+import com.bestjournal.app.R
 
 @Composable
 fun ChurnFlowDialog(
@@ -206,8 +208,8 @@ private fun StepOverview(
     onCancelSubscription: () -> Unit,
 ) {
     val isYearly = subscriptionType == SubscriptionType.YEARLY
-    val planName = if (isYearly) "Jahresabo" else "Monatsabo"
-    val periodLabel = if (isYearly) "pro Jahr" else "pro Monat"
+    val planName = if (isYearly) stringResource(R.string.churn_plan_yearly) else stringResource(R.string.churn_plan_monthly)
+    val periodLabel = if (isYearly) stringResource(R.string.churn_per_year) else stringResource(R.string.churn_per_month)
 
     Column(
         modifier = Modifier
@@ -242,7 +244,7 @@ private fun StepOverview(
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            "Dein Abo",
+            stringResource(R.string.churn_your_sub),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
@@ -264,7 +266,7 @@ private fun StepOverview(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Tarif",
+                    stringResource(R.string.churn_plan),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -285,7 +287,7 @@ private fun StepOverview(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Preis",
+                    stringResource(R.string.churn_price),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -306,12 +308,12 @@ private fun StepOverview(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Verl\u00e4ngerung",
+                    stringResource(R.string.churn_renewal),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    "Automatisch",
+                    stringResource(R.string.churn_automatic),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = NeonEmerald,
                 )
@@ -321,7 +323,7 @@ private fun StepOverview(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            "Dein Abo verl\u00e4ngert sich automatisch \u00fcber Google Play. Die K\u00fcndigung ist jederzeit m\u00f6glich.",
+            stringResource(R.string.churn_auto_renew_note),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -337,14 +339,14 @@ private fun StepOverview(
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             shape = RoundedCornerShape(14.dp),
         ) {
-            Text("Fertig", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 4.dp))
+            Text(stringResource(R.string.action_done), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 4.dp))
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
         // Cancel link — intentionally very subtle, small, low contrast
         Text(
-            text = "Abo k\u00fcndigen",
+            text = stringResource(R.string.churn_cancel_sub),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
             modifier = Modifier
@@ -364,10 +366,10 @@ private fun StepReason(
     onCancel: () -> Unit,
 ) {
     val reasons = listOf(
-        "Zu teuer",
-        "Nutze es zu selten",
-        "Nicht die Features die ich brauche",
-        "Anderer Grund",
+        stringResource(R.string.churn_reason_too_expensive),
+        stringResource(R.string.churn_reason_unused),
+        stringResource(R.string.churn_reason_features),
+        stringResource(R.string.churn_reason_other),
     )
 
     Column(
@@ -397,7 +399,7 @@ private fun StepReason(
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            "Schade, dass du gehst",
+            stringResource(R.string.churn_sorry_title),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
@@ -406,7 +408,7 @@ private fun StepReason(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            "Bevor du k\u00fcndigst, w\u00fcrdest du uns verraten warum? Das hilft uns, die App zu verbessern.",
+            stringResource(R.string.churn_sorry_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -461,13 +463,13 @@ private fun StepReason(
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             shape = RoundedCornerShape(14.dp),
         ) {
-            Text("Weiter", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 4.dp))
+            Text(stringResource(R.string.action_continue), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 4.dp))
         }
 
         Spacer(modifier = Modifier.height(6.dp))
 
         TextButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
-            Text("Abbrechen", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -492,7 +494,7 @@ private fun StepRetentionOffer(
     }
 
     val isYearly = subscriptionType == SubscriptionType.YEARLY
-    val periodLabel = if (isYearly) "pro Jahr" else "pro Monat"
+    val periodLabel = if (isYearly) stringResource(R.string.churn_per_year) else stringResource(R.string.churn_per_month)
 
     // Breathing animation on the CTA button
     val infiniteTransition = rememberInfiniteTransition(label = "retention")
@@ -563,7 +565,7 @@ private fun StepRetentionOffer(
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            "Exklusives Angebot",
+            stringResource(R.string.churn_exclusive_offer),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
@@ -572,7 +574,7 @@ private fun StepRetentionOffer(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            "Nur f\u00fcr dich, weil du uns wichtig bist",
+            stringResource(R.string.churn_offer_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -681,9 +683,9 @@ private fun StepRetentionOffer(
 
                     // Benefits reminder
                     val keepBenefits = listOf(
-                        "Unbegrenzte KI-Analysen",
-                        "Alle 5 Perspektiven",
-                        "Premium-Spracherkennung",
+                        stringResource(R.string.churn_offer_feature_ai),
+                        stringResource(R.string.churn_offer_feature_perspectives),
+                        stringResource(R.string.churn_offer_feature_voice),
                     )
                     keepBenefits.forEach { benefit ->
                         Row(
@@ -710,7 +712,7 @@ private fun StepRetentionOffer(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Verl\u00e4ngert sich automatisch, jederzeit k\u00fcndbar",
+                        text = stringResource(R.string.churn_offer_auto_renew),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center,
@@ -738,7 +740,7 @@ private fun StepRetentionOffer(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                "Angebot annehmen",
+                stringResource(R.string.churn_accept_offer),
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                 color = Color.White,
             )
@@ -749,7 +751,7 @@ private fun StepRetentionOffer(
             Spacer(modifier = Modifier.height(8.dp))
             TextButton(onClick = onSwitchToYearly, modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    "Oder zum Jahresabo wechseln und noch mehr sparen",
+                    stringResource(R.string.churn_switch_yearly),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center,
@@ -758,11 +760,11 @@ private fun StepRetentionOffer(
         }
 
         // ── Secondary: Pause (for "too seldom" reason) ──
-        if (selectedReason == "Nutze es zu selten") {
+        if (selectedReason == stringResource(R.string.churn_reason_unused)) {
             Spacer(modifier = Modifier.height(8.dp))
             TextButton(onClick = onPauseSubscription, modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    "Oder Abo bei Google Play pausieren",
+                    stringResource(R.string.churn_pause_sub),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center,
@@ -774,7 +776,7 @@ private fun StepRetentionOffer(
 
         TextButton(onClick = onDecline, modifier = Modifier.fillMaxWidth()) {
             Text(
-                "Trotzdem k\u00fcndigen",
+                stringResource(R.string.churn_cancel_anyway),
                 color = MaterialTheme.colorScheme.outline,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -813,7 +815,7 @@ private fun StepConfirm(
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            "Bist du sicher?",
+            stringResource(R.string.churn_are_you_sure),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
@@ -839,7 +841,7 @@ private fun StepConfirm(
         ) {
             Icon(Icons.Rounded.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Doch lieber bleiben", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 4.dp))
+            Text(stringResource(R.string.churn_stay), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 4.dp))
         }
 
         Spacer(modifier = Modifier.height(6.dp))

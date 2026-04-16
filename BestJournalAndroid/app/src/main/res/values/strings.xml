@@ -178,6 +178,78 @@
     <string name="legend_insight_aware">Bewusst, Erkannte Denk- und Gefühlsmuster</string>
     <string name="legend_insight_surface">Oberfläche, Erste Beobachtungen</string>
     <string name="legend_progress">Fortschritt</string>
+    <!-- Legend: Goal progress -->
+    <string name="legend_goal_progress_desc">Der Halbkreis zeigt den Fortschritt deiner Ziele:</string>
+    <string name="legend_blocked_range">Blockiert (0–33%)</string>
+    <string name="legend_in_progress_range">In Arbeit (34–66%)</string>
+    <string name="legend_progress_range">Fortschritt (67–100%)</string>
+    <string name="legend_goal_status">Zielstatus</string>
+    <string name="legend_blocked_desc">Blockiert — Ziele mit Hindernissen</string>
+    <string name="legend_open_desc">Offen — Ziele noch ohne Fortschritt</string>
+    <string name="legend_progress_success_desc">Fortschritt — Ziele mit sichtbarem Erfolg</string>
+    <!-- Legend: Custom analysis -->
+    <string name="legend_analysis_value">Analysewert</string>
+    <string name="legend_analysis_relevance_desc">Der Halbkreis zeigt die Relevanz für deinen Fokus:</string>
+    <string name="legend_high_focus">Hoch (67–100%) — Kern deines Fokus</string>
+    <string name="legend_medium_focus">Mittel (34–66%) — Verbindung erkannt</string>
+    <string name="legend_low_focus">Niedrig (0–33%) — Am Rand</string>
+    <string name="legend_result_relevance">Relevanz der Ergebnisse</string>
+    <string name="legend_important_desc">Wichtig — Direkt relevant für deinen Fokus</string>
+    <string name="legend_relevant_desc">Relevant — Verbindung zu deinem Fokus</string>
+    <string name="legend_note_desc">Notiz — Randbemerkung</string>
+    <!-- Legend: Burden/Stress -->
+    <string name="legend_burden_scale">Belastungs-Skala</string>
+    <string name="legend_burden_desc">Der Halbkreis zeigt wie stark dich dieses Thema belastet:</string>
+    <string name="legend_high_burden">Hoch (67–100%) — Sofort handeln</string>
+    <string name="legend_medium_burden">Mittel (34–66%) — Aufmerksamkeit nötig</string>
+    <string name="legend_low_burden">Niedrig (0–33%) — Guter Zustand</string>
+    <string name="legend_priority_title">Priorität der Ratschläge</string>
+    <string name="legend_priority_high">Rot = Dringend — Sofort handeln</string>
+    <string name="legend_priority_medium">Orange = Mittel — Bald angehen</string>
+    <string name="legend_priority_low">Blau = Niedrig — Beobachten</string>
+    <!-- Legend: Categories -->
+    <string name="legend_categories">Kategorien</string>
+    <string name="legend_categories_desc">Kategorien werden dynamisch erstellt — die KI erkennt Themen in deinen Einträgen und erstellt passende Kategorien. Neue Themen führen automatisch zu neuen Symbolen.</string>
+    <!-- CategoryDetailDialog levels -->
+    <string name="level_low">Niedrig</string>
+    <string name="level_medium">Mittel</string>
+    <string name="level_high">Hoch</string>
+    <string name="urgency_high">Dringend — Sofort handeln</string>
+    <string name="urgency_medium">Aufmerksamkeit nötig</string>
+    <string name="urgency_low">Guter Zustand — Beobachten</string>
+    <!-- Dashboard: Derivation dialog -->
+    <string name="dashboard_derived_from">Hergeleitet aus:</string>
+    <string name="dashboard_update_for_derivation">Aktualisiere das Dashboard für eine detaillierte Herleitung.</string>
+    <!-- Dashboard: Summary section -->
+    <string name="dashboard_top_5_actions">Top 5 Massnahmen</string>
+    <string name="dashboard_core_insights">Kernerkenntnisse</string>
+    <string name="dashboard_summary_subtitle">Die wichtigsten Punkte aus deinen Einträgen</string>
+    <string name="summary_central">Zentral</string>
+    <string name="summary_relevant">Relevant</string>
+    <string name="summary_side_note">Randnotiz</string>
+    <!-- Dashboard: Insight section -->
+    <string name="dashboard_deepest_insights">Tiefste Erkenntnisse</string>
+    <string name="dashboard_insight_subtitle">Was deine Einträge über dich verraten</string>
+    <string name="insight_deep_label">Tiefgehend</string>
+    <string name="insight_aware_label">Bewusst</string>
+    <string name="insight_surface_label">Oberfläche</string>
+    <!-- Dashboard: Goal section -->
+    <string name="dashboard_goal_steps">Die wichtigsten Schritte für deine Ziele</string>
+    <string name="goal_blocked_label">Blockiert</string>
+    <string name="goal_open_label">Offen</string>
+    <string name="goal_progress_label">Fortschritt</string>
+    <!-- Dashboard: Custom analysis section -->
+    <string name="dashboard_custom_subtitle">Basierend auf deiner individuellen Analyse</string>
+    <string name="custom_important_label">Wichtig</string>
+    <string name="custom_relevant_label">Relevant</string>
+    <string name="custom_note_label">Notiz</string>
+    <!-- Dashboard: TTS and sharing -->
+    <string name="dashboard_enable_voices">Stimmen in den Einstellungen einschalten</string>
+    <string name="dashboard_tts_stop">Stoppen</string>
+    <string name="dashboard_tts_read">Vorlesen</string>
+    <string name="dashboard_share_analysis">Analyse teilen</string>
+    <string name="dashboard_share">Teilen</string>
+    <string name="dashboard_tts_wait">Bitte warten, Text-to-Speech wird erzeugt…</string>
 
     <!-- Profile names -->
     <string name="profile_summary">Zusammenfassung</string>
@@ -301,6 +373,46 @@
     <string name="retro_fallback_month">Monatsrückblick</string>
     <string name="retro_fallback_year">Jahresrückblick %1$d</string>
     <string name="retro_period_label_week">Woche %1$d (%2$s - %3$s)</string>
+    <!-- Retro: Photos, TTS, Sharing -->
+    <string name="retro_photos_videos">Fotos &amp; Videos</string>
+    <string name="retro_photos_videos_colon">Fotos &amp; Videos:</string>
+    <string name="retro_cd_video">Video</string>
+    <string name="retro_cd_photo">Foto</string>
+    <string name="retro_play_video">Video abspielen</string>
+    <string name="retro_enable_voices">Stimmen in den Einstellungen einschalten</string>
+    <string name="retro_tts_stop">Stoppen</string>
+    <string name="retro_tts_read">Vorlesen</string>
+    <string name="retro_tts_wait">Bitte warten, Text-to-Speech wird erzeugt…</string>
+    <string name="retro_cd_share">Teilen</string>
+    <string name="retro_share_title">Rückblick teilen</string>
+    <string name="retro_share_text_content">Rückblick-Text</string>
+    <string name="retro_photo_n">Foto %1$d</string>
+    <string name="retro_share_header">Rückblick von der BestJournal App</string>
+    <string name="retro_at_a_glance_colon">Auf einen Blick:</string>
+    <!-- Retro: Locked/Premium -->
+    <string name="retro_cd_locked">Gesperrt</string>
+    <string name="retro_unlock_premium_short">Premium freischalten</string>
+    <string name="retro_cd_premium_required">Premium erforderlich</string>
+    <!-- Retro: Benefits info dialog -->
+    <string name="retro_your_ai_reviews">Deine KI-Rückblicke</string>
+    <string name="retro_weekly_p1">Die KI fasst deine Woche zu einer persönlichen Erzählung zusammen</string>
+    <string name="retro_weekly_p2">Emotionale Muster und Highlights werden sichtbar</string>
+    <string name="retro_weekly_p3">Jeden Sonntag automatisch erstellt, wenn du mindestens 2 Einträge hast</string>
+    <string name="retro_weekly_p4">Die ersten 2 Wochen sind kostenlos</string>
+    <string name="retro_monthly_p1">Verbindet deine Wochenrückblicke zu einer Monatserzählung</string>
+    <string name="retro_monthly_p2">Rote Fäden und Entwicklungen über den Monat werden sichtbar</string>
+    <string name="retro_monthly_p3">Zeigt Veränderungen die dir im Alltag nicht auffallen</string>
+    <string name="retro_yearly_p1">Dein ganzes Jahr auf einen Blick</string>
+    <string name="retro_yearly_p2">Die KI erkennt die großen Themen deines Jahres</string>
+    <string name="retro_yearly_p3">Persönliche Entwicklung wird sichtbar und greifbar</string>
+    <!-- Retro: Premium upsell sheet -->
+    <string name="retro_your_reviews">Deine persönlichen Rückblicke</string>
+    <string name="retro_premium_reviews_desc">Mit Premium erstellt die KI automatisch Rückblicke aus deinen Tagebucheinträgen:</string>
+    <string name="retro_benefit_weekly">Unbegrenzte Wochenrückblicke, nicht nur die ersten 2 Wochen</string>
+    <string name="retro_benefit_monthly">Monatsrückblicke, die deine Fortschritte und Veränderungen sichtbar machen</string>
+    <string name="retro_benefit_yearly">Jahresrückblicke, dein ganzes Jahr als persönliche Erzählung</string>
+    <string name="retro_start_sub">Abo starten</string>
+    <string name="retro_decide_later">Später entscheiden</string>
 
     <!-- Month names for retrospective grouping -->
     <string name="month_january">Januar</string>
@@ -408,7 +520,10 @@
     <string name="churn_automatic">Automatisch</string>
     <string name="churn_auto_renew_note">Dein Abo verlängert sich automatisch über Google Play. Die Kündigung ist jederzeit möglich.</string>
     <string name="churn_cancel_sub">Abo kündigen</string>
+    <string name="churn_reason_too_expensive">Zu teuer</string>
     <string name="churn_reason_unused">Nutze es zu selten</string>
+    <string name="churn_per_year">pro Jahr</string>
+    <string name="churn_per_month">pro Monat</string>
     <string name="churn_reason_features">Nicht die Features die ich brauche</string>
     <string name="churn_reason_other">Anderer Grund</string>
     <string name="churn_sorry_title">Schade, dass du gehst</string>

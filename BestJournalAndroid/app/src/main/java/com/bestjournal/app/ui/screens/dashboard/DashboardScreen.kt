@@ -113,6 +113,8 @@ import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.bestjournal.app.R
 
 @Composable
 fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String) -> Unit = {}) {
@@ -173,7 +175,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                         modifier = Modifier.weight(1f),
                     ) {
                         Text(
-                            "Dashboard",
+                            stringResource(R.string.dashboard_title),
                             style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
@@ -184,7 +186,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                         IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); showLegendDialog = true }) {
                             Icon(
                                 Icons.Rounded.Info,
-                                "Legende",
+                                stringResource(R.string.dashboard_legend),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -196,7 +198,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                         IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.refreshDashboard() }) {
                             Icon(
                                 Icons.Rounded.Refresh,
-                                "Aktualisieren",
+                                stringResource(R.string.dashboard_refresh),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         }
@@ -255,7 +257,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 }
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
-                                    text = "Dein Wochenr\u00fcckblick wartet",
+                                    text = stringResource(R.string.dashboard_weekly_review_waiting),
                                     style =
                                         MaterialTheme.typography.titleMedium.copy(
                                             fontWeight = FontWeight.Bold
@@ -293,7 +295,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        "Premium entdecken",
+                                        stringResource(R.string.dashboard_discover_premium),
                                         style =
                                             MaterialTheme.typography.labelLarge.copy(
                                                 fontWeight = FontWeight.Bold
@@ -303,7 +305,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 TextButton(onClick = { viewModel.dismissWeeklyReviewBanner() }) {
                                     Text(
-                                        "Sp\u00e4ter",
+                                        stringResource(R.string.action_later),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.outline,
                                     )
@@ -325,7 +327,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             ) {
                                 Text(
-                                    "Bitte warten",
+                                    stringResource(R.string.dashboard_please_wait),
                                     color = MaterialTheme.colorScheme.onSurface,
                                     style = MaterialTheme.typography.titleMedium,
                                     textAlign = TextAlign.Center,
@@ -383,7 +385,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 TextButton(onClick = { viewModel.dismissLimitMessage() }) {
-                                    Text("Verstanden", color = MaterialTheme.colorScheme.primary)
+                                    Text(stringResource(R.string.action_understood), color = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         }
@@ -418,8 +420,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text =
-                                        "Gemini ist gerade nicht erreichbar \u2014 bitte versuch es gleich nochmal.",
+                                    text = stringResource(R.string.dashboard_gemini_unavailable),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -435,12 +436,12 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                             containerColor = MaterialTheme.colorScheme.primary
                                         ),
                                 ) {
-                                    Text("Nochmal versuchen")
+                                    Text(stringResource(R.string.action_retry))
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
                                 TextButton(onClick = { viewModel.clearError() }) {
                                     Text(
-                                        "Sp\u00e4ter",
+                                        stringResource(R.string.action_later),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
@@ -460,26 +461,26 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     val customPrompt = viewModel.getCustomPrompt()
                                     if (customPrompt.isBlank()) {
                                         Text(
-                                            "Kein Analyse-Fokus eingegeben",
+                                            stringResource(R.string.dashboard_no_custom_focus),
                                             style = MaterialTheme.typography.titleLarge,
                                             color = MaterialTheme.colorScheme.outline,
                                         )
                                         Spacer(modifier = Modifier.height(8.dp))
                                         Text(
-                                            "Gib in den Einstellungen unter\n\u201eIndividuelle Analyse\u201c einen Fokus ein,\noder w\u00e4hle ein anderes Profil.",
+                                            stringResource(R.string.dashboard_custom_focus_hint),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.outline,
                                             textAlign = TextAlign.Center,
                                         )
                                     } else {
                                         Text(
-                                            "Noch keine Analyse",
+                                            stringResource(R.string.dashboard_no_analysis_yet),
                                             style = MaterialTheme.typography.titleLarge,
                                             color = MaterialTheme.colorScheme.outline,
                                         )
                                         Spacer(modifier = Modifier.height(8.dp))
                                         Text(
-                                            "Erstelle Tagebucheintr\u00e4ge,\ndann analysiert die KI deinen Fokus.",
+                                            stringResource(R.string.dashboard_create_entries_custom),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.outline,
                                             textAlign = TextAlign.Center,
@@ -487,13 +488,13 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     }
                                 } else {
                                     Text(
-                                        "Noch keine Analyse",
+                                        stringResource(R.string.dashboard_no_analysis_yet),
                                         style = MaterialTheme.typography.titleLarge,
                                         color = MaterialTheme.colorScheme.outline,
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        "Erstelle Tagebucheintr\u00e4ge,\ndann analysiert die KI deine Muster.",
+                                        stringResource(R.string.dashboard_create_entries_default),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.outline,
                                         textAlign = TextAlign.Center,
@@ -543,7 +544,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     }
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "Gef\u00e4llt dir die Analyse?",
+                                            text = stringResource(R.string.dashboard_like_analysis),
                                             style =
                                                 MaterialTheme.typography.titleSmall.copy(
                                                     fontWeight = FontWeight.Bold
@@ -552,8 +553,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         )
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            text =
-                                                "Mit Premium bekommst du unbegrenzte Analysen aus 5 verschiedenen Perspektiven.",
+                                            text = stringResource(R.string.dashboard_premium_upsell_body),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -594,7 +594,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                                     ),
                                             ) {
                                                 Text(
-                                                    "Mehr erfahren",
+                                                    stringResource(R.string.dashboard_learn_more),
                                                     style =
                                                         MaterialTheme.typography.labelMedium.copy(
                                                             fontWeight = FontWeight.Bold
@@ -618,7 +618,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                             FreeLimitIndicator(
                                 usedCount = dashboardUsed,
                                 maxCount = dashboardMax,
-                                featureLabel = "Analysen",
+                                featureLabel = stringResource(R.string.dashboard_feature_analyses),
                                 onUpgradeClick = {
                                     viewModel.onFreeLimitUpgradeClicked()
                                     onNavigateToPaywall("free_limit")
@@ -754,7 +754,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    "Alle Beobachtungen",
+                                    stringResource(R.string.dashboard_all_observations),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = SummaryPalette.secondary,
@@ -822,7 +822,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         }
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            "Innerer Spiegel",
+                                            stringResource(R.string.dashboard_inner_mirror),
                                             style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold,
                                             color = InsightPalette.primary,
@@ -909,7 +909,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    "Alle Einsichten",
+                                    stringResource(R.string.dashboard_all_insights),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = InsightPalette.primary,
@@ -976,7 +976,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         }
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            "Ziel-\u00dcberblick",
+                                            stringResource(R.string.dashboard_goal_overview),
                                             style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold,
                                             color = GoalPalette.primary,
@@ -1063,7 +1063,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    "Alle Ziele",
+                                    stringResource(R.string.dashboard_all_goals),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = GoalPalette.primary,
@@ -1098,11 +1098,12 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                         }
                     } else if (uiState.currentScenario == 4) {
                         // ═══════ INDIVIDUELLE ANALYSE DASHBOARD ═══════
-                        val customTop5 =
-                            uiState.customHeaderTop5.ifBlank { "Wichtigste Ergebnisse" }
-                        val customAnalyse = uiState.customHeaderAnalyse.ifBlank { "Analyse" }
-                        val customErgebnisse =
-                            uiState.customHeaderErgebnisse.ifBlank { "Alle Ergebnisse" }
+                        val fallbackTop5 = context.getString(R.string.dashboard_top_results_fallback)
+                        val fallbackAnalyse = context.getString(R.string.dashboard_analysis_fallback)
+                        val fallbackErgebnisse = context.getString(R.string.dashboard_all_results_fallback)
+                        val customTop5 = uiState.customHeaderTop5.ifBlank { fallbackTop5 }
+                        val customAnalyse = uiState.customHeaderAnalyse.ifBlank { fallbackAnalyse }
+                        val customErgebnisse = uiState.customHeaderErgebnisse.ifBlank { fallbackErgebnisse }
 
                         val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
                         if (topActions.isNotEmpty()) {
@@ -1268,7 +1269,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                             GlassCard(glowIntensity = 0.2f) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     Text(
-                                        "Gesamtanalyse",
+                                        stringResource(R.string.dashboard_overall_analysis),
                                         style =
                                             MaterialTheme.typography.titleLarge.copy(
                                                 fontWeight = FontWeight.Bold,
@@ -1344,7 +1345,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                             NeonDivider()
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                "Alle Empfehlungen",
+                                stringResource(R.string.dashboard_all_recommendations),
                                 style =
                                     MaterialTheme.typography.titleLarge.copy(
                                         fontWeight = FontWeight.Bold,
@@ -1405,9 +1406,9 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
 @Composable
 private fun PriorityLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        LegendDot(color = NeonRed, label = "Dringend")
-        LegendDot(color = NeonAmber, label = "Aufmerksamkeit")
-        LegendDot(color = NeonCyan, label = "Beobachten")
+        LegendDot(color = NeonRed, label = stringResource(R.string.legend_urgent))
+        LegendDot(color = NeonAmber, label = stringResource(R.string.legend_attention))
+        LegendDot(color = NeonCyan, label = stringResource(R.string.legend_observe))
     }
 }
 
@@ -1428,11 +1429,11 @@ private fun LegendDot(color: androidx.compose.ui.graphics.Color, label: String) 
 private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
     val title =
         when (scenario) {
-            0 -> "Zusammenfassung"
-            2 -> "Selbsterkenntnis"
-            3 -> "Pers\u00f6nliche Ziele"
-            4 -> "Individuelle Analyse"
-            else -> "R\u00e4ume dein Leben auf"
+            0 -> stringResource(R.string.profile_summary)
+            2 -> stringResource(R.string.profile_insight)
+            3 -> stringResource(R.string.profile_goals)
+            4 -> stringResource(R.string.profile_custom)
+            else -> stringResource(R.string.profile_entropy)
         }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1447,29 +1448,29 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                     0 -> {
                         // ── Zusammenfassung ──
                         Text(
-                            "Aktivit\u00e4tslevel",
+                            stringResource(R.string.legend_activity_level),
                             style = MaterialTheme.typography.titleMedium,
                             color = SummaryPalette.primary,
                         )
                         Text(
-                            "Der Halbkreis zeigt wie viel in diesem Bereich passiert:",
+                            stringResource(R.string.legend_activity_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            LegendDot(color = NeonRed, label = "Viel Aktivit\u00e4t (67\u2013100%)")
+                            LegendDot(color = NeonRed, label = stringResource(R.string.legend_activity_high))
                             LegendDot(
                                 color = NeonAmber,
-                                label = "Moderate Aktivit\u00e4t (34\u201366%)",
+                                label = stringResource(R.string.legend_activity_medium),
                             )
                             LegendDot(
                                 color = NeonEmerald,
-                                label = "Wenig Aktivit\u00e4t (0\u201333%)",
+                                label = stringResource(R.string.legend_activity_low),
                             )
                         }
                         NeonDivider()
                         Text(
-                            "Relevanz der Beobachtungen",
+                            stringResource(R.string.legend_observation_relevance),
                             style = MaterialTheme.typography.titleMedium,
                             color = SummaryPalette.primary,
                         )
@@ -1491,7 +1492,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Zentral \u2014 Kern-Themen deiner Eintr\u00e4ge",
+                                    stringResource(R.string.legend_relevance_high),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1513,7 +1514,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Relevant \u2014 Wiederkehrende Beobachtungen",
+                                    stringResource(R.string.legend_relevance_medium),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1535,7 +1536,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Randnotiz \u2014 Einmalige Erw\u00e4hnungen",
+                                    stringResource(R.string.legend_relevance_low),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1545,23 +1546,23 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                     2 -> {
                         // ── Selbsterkenntnis ──
                         Text(
-                            "Reflexionstiefe",
+                            stringResource(R.string.legend_reflection_depth),
                             style = MaterialTheme.typography.titleMedium,
                             color = InsightPalette.primary,
                         )
                         Text(
-                            "Der Halbkreis zeigt die Tiefe deiner Selbstreflexion:",
+                            stringResource(R.string.legend_reflection_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            LegendDot(color = InsightPalette.primary, label = "Tiefgehend (67\u2013100%)")
-                            LegendDot(color = InsightPalette.muted, label = "Bewusst (34\u201366%)")
-                            LegendDot(color = InsightPalette.accent, label = "Oberfl\u00e4che (0\u201333%)")
+                            LegendDot(color = InsightPalette.primary, label = stringResource(R.string.legend_reflection_deep))
+                            LegendDot(color = InsightPalette.muted, label = stringResource(R.string.legend_reflection_aware))
+                            LegendDot(color = InsightPalette.accent, label = stringResource(R.string.legend_reflection_surface))
                         }
                         NeonDivider()
                         Text(
-                            "Tiefe der Einsichten",
+                            stringResource(R.string.legend_insight_depth),
                             style = MaterialTheme.typography.titleMedium,
                             color = InsightPalette.primary,
                         )
@@ -1583,7 +1584,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Tiefgehend \u2014 Verborgene Muster und \u00dcberzeugungen",
+                                    stringResource(R.string.legend_insight_deep),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1605,7 +1606,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Bewusst \u2014 Erkannte Denk- und Gef\u00fchlsmuster",
+                                    stringResource(R.string.legend_insight_aware),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1627,7 +1628,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Oberfl\u00e4che \u2014 Erste Beobachtungen",
+                                    stringResource(R.string.legend_insight_surface),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1637,23 +1638,23 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                     3 -> {
                         // ── Persönliche Ziele ──
                         Text(
-                            "Fortschritt",
+                            stringResource(R.string.legend_progress),
                             style = MaterialTheme.typography.titleMedium,
                             color = GoalPalette.primary,
                         )
                         Text(
-                            "Der Halbkreis zeigt den Fortschritt deiner Ziele:",
+                            stringResource(R.string.legend_goal_progress_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            LegendDot(color = GoalPalette.muted, label = "Blockiert (0\u201333%)")
-                            LegendDot(color = GoalPalette.accent, label = "In Arbeit (34\u201366%)")
-                            LegendDot(color = GoalPalette.primary, label = "Fortschritt (67\u2013100%)")
+                            LegendDot(color = GoalPalette.muted, label = stringResource(R.string.legend_blocked_range))
+                            LegendDot(color = GoalPalette.accent, label = stringResource(R.string.legend_in_progress_range))
+                            LegendDot(color = GoalPalette.primary, label = stringResource(R.string.legend_progress_range))
                         }
                         NeonDivider()
                         Text(
-                            "Zielstatus",
+                            stringResource(R.string.legend_goal_status),
                             style = MaterialTheme.typography.titleMedium,
                             color = GoalPalette.primary,
                         )
@@ -1675,7 +1676,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Blockiert \u2014 Ziele mit Hindernissen",
+                                    stringResource(R.string.legend_blocked_desc),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1697,7 +1698,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Offen \u2014 Ziele noch ohne Fortschritt",
+                                    stringResource(R.string.legend_open_desc),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1719,7 +1720,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Fortschritt \u2014 Ziele mit sichtbarem Erfolg",
+                                    stringResource(R.string.legend_progress_success_desc),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1729,32 +1730,32 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                     4 -> {
                         // ── Individuelle Analyse ──
                         Text(
-                            "Analysewert",
+                            stringResource(R.string.legend_analysis_value),
                             style = MaterialTheme.typography.titleMedium,
                             color = CustomPalette.primary,
                         )
                         Text(
-                            "Der Halbkreis zeigt die Relevanz f\u00fcr deinen Fokus:",
+                            stringResource(R.string.legend_analysis_relevance_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             LegendDot(
                                 color = CustomPalette.primary,
-                                label = "Hoch (67\u2013100%) \u2014 Kern deines Fokus",
+                                label = stringResource(R.string.legend_high_focus),
                             )
                             LegendDot(
                                 color = CustomPalette.secondary,
-                                label = "Mittel (34\u201366%) \u2014 Verbindung erkannt",
+                                label = stringResource(R.string.legend_medium_focus),
                             )
                             LegendDot(
                                 color = CustomPalette.accent,
-                                label = "Niedrig (0\u201333%) \u2014 Am Rand",
+                                label = stringResource(R.string.legend_low_focus),
                             )
                         }
                         NeonDivider()
                         Text(
-                            "Relevanz der Ergebnisse",
+                            stringResource(R.string.legend_result_relevance),
                             style = MaterialTheme.typography.titleMedium,
                             color = CustomPalette.primary,
                         )
@@ -1776,7 +1777,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Wichtig \u2014 Direkt relevant f\u00fcr deinen Fokus",
+                                    stringResource(R.string.legend_important_desc),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1798,7 +1799,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Relevant \u2014 Verbindung zu deinem Fokus",
+                                    stringResource(R.string.legend_relevant_desc),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1820,7 +1821,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Notiz \u2014 Randbemerkung",
+                                    stringResource(R.string.legend_note_desc),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1830,32 +1831,32 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                     else -> {
                         // ── Räume dein Leben auf (Belastung) ──
                         Text(
-                            "Belastungs-Skala",
+                            stringResource(R.string.legend_burden_scale),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Text(
-                            "Der Halbkreis zeigt wie stark dich dieses Thema belastet:",
+                            stringResource(R.string.legend_burden_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             LegendDot(
                                 color = NeonRed,
-                                label = "Hoch (67\u2013100%) \u2014 Sofort handeln",
+                                label = stringResource(R.string.legend_high_burden),
                             )
                             LegendDot(
                                 color = NeonAmber,
-                                label = "Mittel (34\u201366%) \u2014 Aufmerksamkeit n\u00f6tig",
+                                label = stringResource(R.string.legend_medium_burden),
                             )
                             LegendDot(
                                 color = NeonEmerald,
-                                label = "Niedrig (0\u201333%) \u2014 Guter Zustand",
+                                label = stringResource(R.string.legend_low_burden),
                             )
                         }
                         NeonDivider()
                         Text(
-                            "Priorit\u00e4t der Ratschl\u00e4ge",
+                            stringResource(R.string.legend_priority_title),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -1877,7 +1878,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Rot = Dringend \u2014 Sofort handeln",
+                                    stringResource(R.string.legend_priority_high),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1899,7 +1900,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Orange = Mittel \u2014 Bald angehen",
+                                    stringResource(R.string.legend_priority_medium),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1921,7 +1922,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Blau = Niedrig \u2014 Beobachten",
+                                    stringResource(R.string.legend_priority_low),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -1931,12 +1932,12 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                 }
                 NeonDivider()
                 Text(
-                    "Kategorien",
+                    stringResource(R.string.legend_categories),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    "Kategorien werden dynamisch erstellt \u2014 die KI erkennt Themen in deinen Eintr\u00e4gen und erstellt passende Kategorien. Neue Themen f\u00fchren automatisch zu neuen Symbolen.",
+                    stringResource(R.string.legend_categories_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1944,7 +1945,7 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Verstanden", color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.action_understood), color = MaterialTheme.colorScheme.primary)
             }
         },
     )
@@ -1957,9 +1958,9 @@ private fun CategoryDetailDialog(
 ) {
     val levelLabel =
         when {
-            block.entropyLevel < 0.33f -> "Niedrig"
-            block.entropyLevel < 0.66f -> "Mittel"
-            else -> "Hoch"
+            block.entropyLevel < 0.33f -> stringResource(R.string.level_low)
+            block.entropyLevel < 0.66f -> stringResource(R.string.level_medium)
+            else -> stringResource(R.string.level_high)
         }
     val levelColor =
         when {
@@ -1969,9 +1970,9 @@ private fun CategoryDetailDialog(
         }
     val urgency =
         when {
-            block.entropyLevel >= 0.67f -> "Dringend \u2014 Sofort handeln"
-            block.entropyLevel >= 0.34f -> "Aufmerksamkeit n\u00f6tig"
-            else -> "Guter Zustand \u2014 Beobachten"
+            block.entropyLevel >= 0.67f -> stringResource(R.string.urgency_high)
+            block.entropyLevel >= 0.34f -> stringResource(R.string.urgency_medium)
+            else -> stringResource(R.string.urgency_low)
         }
 
     val sortedAdvices =
@@ -2038,7 +2039,7 @@ private fun CategoryDetailDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Alle Empfehlungen",
+                    stringResource(R.string.dashboard_all_recommendations),
                     style =
                         MaterialTheme.typography.titleMedium.copy(
                             textDecoration = TextDecoration.Underline
@@ -2104,7 +2105,7 @@ private fun CategoryDetailDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Schlie\u00dfen", color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.action_close), color = MaterialTheme.colorScheme.primary)
             }
         },
     )
@@ -2149,7 +2150,7 @@ private fun AdviceDerivationDialog(advice: Advice, categoryName: String, onDismi
                 if (advice.derivation.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "Hergeleitet aus:",
+                        stringResource(R.string.dashboard_derived_from),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -2195,7 +2196,7 @@ private fun AdviceDerivationDialog(advice: Advice, categoryName: String, onDismi
                 } else {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        "Aktualisiere das Dashboard f\u00fcr eine detaillierte Herleitung.",
+                        stringResource(R.string.dashboard_update_for_derivation),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.outline,
                     )
@@ -2213,7 +2214,7 @@ private fun AdviceDerivationDialog(advice: Advice, categoryName: String, onDismi
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Schlie\u00dfen", color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.action_close), color = MaterialTheme.colorScheme.primary)
             }
         },
     )
@@ -2226,7 +2227,7 @@ private fun TopActionsBlock(actions: List<TopAction>) {
     GlassCard(glowColor = NeonAmber, glowIntensity = 0.3f) {
         Column {
             Text(
-                "Top 5 Massnahmen",
+                stringResource(R.string.dashboard_top_5_actions),
                 style =
                     MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
@@ -2354,7 +2355,7 @@ private fun TopActionDetailDialog(action: TopAction, index: Int, onDismiss: () -
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Schlie\u00dfen", color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.action_close), color = MaterialTheme.colorScheme.primary)
             }
         },
     )
@@ -2469,7 +2470,7 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    "Kernerkenntnisse",
+                    stringResource(R.string.dashboard_core_insights),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = SummaryPalette.secondary,
@@ -2478,7 +2479,7 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "Die wichtigsten Punkte aus deinen Eintr\u00e4gen",
+                stringResource(R.string.dashboard_summary_subtitle),
                 style = MaterialTheme.typography.labelMedium,
                 color = SummaryPalette.muted,
                 modifier = Modifier.fillMaxWidth(),
@@ -2614,7 +2615,7 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = SummaryPalette.primary) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close), color = SummaryPalette.primary) }
         },
     )
 }
@@ -2622,11 +2623,11 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
 @Composable
 private fun SummaryRelevanceLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        SummaryLegendItem(icon = Icons.Rounded.Star, label = "Zentral", color = SummaryPalette.secondary)
-        SummaryLegendItem(icon = Icons.Rounded.PushPin, label = "Relevant", color = SummaryPalette.primary)
+        SummaryLegendItem(icon = Icons.Rounded.Star, label = stringResource(R.string.summary_central), color = SummaryPalette.secondary)
+        SummaryLegendItem(icon = Icons.Rounded.PushPin, label = stringResource(R.string.summary_relevant), color = SummaryPalette.primary)
         SummaryLegendItem(
             icon = Icons.Rounded.BookmarkBorder,
-            label = "Randnotiz",
+            label = stringResource(R.string.summary_side_note),
             color = SummaryPalette.accent,
         )
     }
@@ -2757,7 +2758,7 @@ private fun InsightKeyBlock(actions: List<TopAction>) {
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    "Tiefste Erkenntnisse",
+                    stringResource(R.string.dashboard_deepest_insights),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = InsightPalette.primary,
@@ -2766,7 +2767,7 @@ private fun InsightKeyBlock(actions: List<TopAction>) {
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "Was deine Eintr\u00e4ge \u00fcber dich verraten",
+                stringResource(R.string.dashboard_insight_subtitle),
                 style = MaterialTheme.typography.labelMedium,
                 color = InsightPalette.muted,
                 modifier = Modifier.fillMaxWidth(),
@@ -2897,7 +2898,7 @@ private fun InsightDetailDialog(action: TopAction, index: Int, onDismiss: () -> 
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = InsightPalette.primary) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close), color = InsightPalette.primary) }
         },
     )
 }
@@ -2907,15 +2908,15 @@ private fun InsightDepthLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
         InsightLegendItem(
             icon = Icons.Rounded.Visibility,
-            label = "Tiefgehend",
+            label = stringResource(R.string.insight_deep_label),
             color = InsightPalette.primary,
         )
         InsightLegendItem(
             icon = Icons.Rounded.FavoriteBorder,
-            label = "Bewusst",
+            label = stringResource(R.string.insight_aware_label),
             color = InsightPalette.muted,
         )
-        InsightLegendItem(icon = Icons.Rounded.Eco, label = "Oberfläche", color = InsightPalette.accent)
+        InsightLegendItem(icon = Icons.Rounded.Eco, label = stringResource(R.string.insight_surface_label), color = InsightPalette.accent)
     }
 }
 
@@ -3049,7 +3050,7 @@ private fun GoalNextStepsBlock(actions: List<TopAction>) {
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "Die wichtigsten Schritte f\u00fcr deine Ziele",
+                stringResource(R.string.dashboard_goal_steps),
                 style = MaterialTheme.typography.labelMedium,
                 color = GoalPalette.accent,
                 modifier = Modifier.fillMaxWidth(),
@@ -3171,7 +3172,7 @@ private fun GoalStepDetailDialog(action: TopAction, index: Int, onDismiss: () ->
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = GoalPalette.primary) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close), color = GoalPalette.primary) }
         },
     )
 }
@@ -3179,9 +3180,9 @@ private fun GoalStepDetailDialog(action: TopAction, index: Int, onDismiss: () ->
 @Composable
 private fun GoalStatusLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        GoalLegendItem(icon = Icons.Rounded.Block, label = "Blockiert", color = GoalPalette.muted)
-        GoalLegendItem(icon = Icons.Rounded.LockOpen, label = "Offen", color = GoalPalette.accent)
-        GoalLegendItem(icon = Icons.Rounded.CheckCircle, label = "Fortschritt", color = GoalPalette.primary)
+        GoalLegendItem(icon = Icons.Rounded.Block, label = stringResource(R.string.goal_blocked_label), color = GoalPalette.muted)
+        GoalLegendItem(icon = Icons.Rounded.LockOpen, label = stringResource(R.string.goal_open_label), color = GoalPalette.accent)
+        GoalLegendItem(icon = Icons.Rounded.CheckCircle, label = stringResource(R.string.goal_progress_label), color = GoalPalette.primary)
     }
 }
 
@@ -3314,7 +3315,7 @@ private fun CustomInsightsBlock(actions: List<TopAction>, title: String = "Wicht
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "Basierend auf deiner individuellen Analyse",
+                stringResource(R.string.dashboard_custom_subtitle),
                 style = MaterialTheme.typography.labelMedium,
                 color = CustomPalette.muted,
                 modifier = Modifier.fillMaxWidth(),
@@ -3436,7 +3437,7 @@ private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> U
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Schlie\u00dfen", color = CustomPalette.primary) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close), color = CustomPalette.primary) }
         },
     )
 }
@@ -3444,13 +3445,13 @@ private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> U
 @Composable
 private fun CustomRelevanceLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        CustomLegendItem(icon = Icons.Rounded.Whatshot, label = "Wichtig", color = CustomPalette.primary)
+        CustomLegendItem(icon = Icons.Rounded.Whatshot, label = stringResource(R.string.custom_important_label), color = CustomPalette.primary)
         CustomLegendItem(
             icon = Icons.Rounded.TipsAndUpdates,
-            label = "Relevant",
+            label = stringResource(R.string.custom_relevant_label),
             color = CustomPalette.secondary,
         )
-        CustomLegendItem(icon = Icons.Rounded.EditNote, label = "Notiz", color = CustomPalette.accent)
+        CustomLegendItem(icon = Icons.Rounded.EditNote, label = stringResource(R.string.custom_note_label), color = CustomPalette.accent)
     }
 }
 
@@ -3580,7 +3581,7 @@ private fun AnalysisTtsShareRow(
                     if (!ttsOn) {
                         android.widget.Toast.makeText(
                             context,
-                            "Stimmen in den Einstellungen einschalten",
+                            context.getString(R.string.dashboard_enable_voices),
                             android.widget.Toast.LENGTH_SHORT,
                         ).show()
                     } else {
@@ -3605,7 +3606,7 @@ private fun AnalysisTtsShareRow(
         ) {
             Icon(
                 if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
-                contentDescription = if (isSpeaking) "Stoppen" else "Vorlesen",
+                contentDescription = if (isSpeaking) stringResource(R.string.dashboard_tts_stop) else stringResource(R.string.dashboard_tts_read),
                 tint = FeatureAccentOrange,
                 modifier = Modifier.size(24.dp),
             )
@@ -3618,13 +3619,13 @@ private fun AnalysisTtsShareRow(
                         type = "text/plain"
                         putExtra(Intent.EXTRA_TEXT, text)
                     }
-                context.startActivity(Intent.createChooser(shareIntent, "Analyse teilen"))
+                context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.dashboard_share_analysis)))
             },
             modifier = Modifier.size(40.dp),
         ) {
             Icon(
                 Icons.Rounded.Share,
-                contentDescription = "Teilen",
+                contentDescription = stringResource(R.string.dashboard_share),
                 tint = FeatureAccentOrange,
                 modifier = Modifier.size(24.dp),
             )
@@ -3643,7 +3644,7 @@ private fun AnalysisTtsShareRow(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                "Bitte warten, Text-to-Speech wird erzeugt…",
+                stringResource(R.string.dashboard_tts_wait),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
