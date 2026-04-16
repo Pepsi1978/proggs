@@ -186,6 +186,7 @@
     <string name="dashboard_all_results_fallback">All Results</string>
     <string name="dashboard_overall_analysis">Overall Analysis</string>
     <string name="dashboard_summary_overview_title">Overview</string>
+    <string name="dashboard_goals_next_steps_title">Next Steps</string>
     <string name="dashboard_all_recommendations">All Recommendations</string>
     <string name="dashboard_connection">Connection</string>
     <string name="dashboard_limit_daily">Daily limit reached. Try again tomorrow!</string>
@@ -441,7 +442,7 @@
     <string name="achievements_unlocked_at">Unlocked on %1$s</string>
     <!-- About -->
     <string name="settings_about">About the app</string>
-    <string name="settings_about_version">Best Journal V0.12.5</string>
+    <string name="settings_about_version">Best Journal V0.12.6</string>
     <string name="settings_about_desc">Your personal AI journal</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Sign out?</string>

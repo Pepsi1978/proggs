@@ -3040,7 +3040,7 @@ private fun GoalNextStepsBlock(actions: List<TopAction>) {
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    "N\u00e4chste Schritte",
+                    stringResource(R.string.dashboard_goals_next_steps_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = GoalPalette.primary,
