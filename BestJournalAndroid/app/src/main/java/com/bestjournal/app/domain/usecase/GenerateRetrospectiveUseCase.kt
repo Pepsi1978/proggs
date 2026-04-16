@@ -260,7 +260,9 @@ REGELN:
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 200 Wörter
 - Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
-- Sprache: $lang. Schreibe die gesamte Antwort in $lang.$profileStyle
+$profileStyle
+
+RESPONSE LANGUAGE: Respond entirely in $lang. The narrative and all headings must be in $lang, no other language.
 
 EINTRÄGE DER WOCHE:
 ${task.entriesText}"""
@@ -442,7 +444,9 @@ REGELN:
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 300 Wörter
 - Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
-- Sprache: $lang. Schreibe die gesamte Antwort in $lang.$profileStyle
+$profileStyle
+
+RESPONSE LANGUAGE: Respond entirely in $lang. The narrative and all headings must be in $lang, no other language.
 
 WOCHENRÜCKBLICKE:
 ${'$'}{task.weeksText}"""
@@ -570,7 +574,9 @@ REGELN:
 - Schreibe warm und persönlich, aber nicht übertrieben
 - Mindestens 400 Wörter
 - Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
-- Sprache: $lang. Schreibe die gesamte Antwort in $lang.$profileStyle
+$profileStyle
+
+RESPONSE LANGUAGE: Respond entirely in $lang. The narrative and all headings must be in $lang, no other language.
 
 MONATSRÜCKBLICKE:
 $monthsText"""

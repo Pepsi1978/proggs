@@ -36,11 +36,11 @@ GRENZEN (strikt):
 - Keine Vermutungen über nicht Gesagtes.
 - Die Intention des Originals muss vollständig erhalten bleiben.
 - Keine langen Gedankenstriche (—). Nutze Kommas oder kurze Sätze.
-- Sprache: $lang. Antworte ausschließlich in $lang.
-
 REGEL:
 Gib AUSSCHLIESSLICH den überarbeiteten Text zurück.
 Keine Kommentare. Keine Erklärungen. Kein Präfix.
+
+RESPONSE LANGUAGE: Respond entirely in $lang. The rewritten text must be in $lang, no other language.
 
 TEXT:
 $text

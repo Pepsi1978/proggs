@@ -452,7 +452,7 @@
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.12.3</string>
+    <string name="settings_about_version">Best Journal V0.12.4</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Abmelden?</string>
@@ -517,6 +517,45 @@
     <!-- AI prompt language instruction — automatically uses device language -->
     <string name="ai_prompt_language_style">Einfach, klar. Keine Fremdwörter.</string>
     <string name="ai_prompt_language_override"></string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JSON-KEYS für die KI-Antwort (Dashboard).
+         Diese Keys werden pro Gerätesprache lokalisiert, damit die KI
+         einen sprachlich konsistenten Prompt sieht und ebenso antwortet.
+         Der Übersetzer-Skill übersetzt diese Keys in alle 26 Sprachen.
+         ════════════════════════════════════════════════════════════════════ -->
+    <!-- Top-level JSON keys -->
+    <string name="json_key_overall_analysis">gesamtanalyse</string>
+    <string name="json_key_top_actions">top_massnahmen</string>
+    <string name="json_key_categories">kategorien</string>
+    <string name="json_key_heading_top5">ueberschrift_top5</string>
+    <string name="json_key_heading_analysis">ueberschrift_analyse</string>
+    <string name="json_key_heading_results">ueberschrift_ergebnisse</string>
+    <string name="json_key_progress">fortschritte</string>
+    <string name="json_key_overall_entropy">gesamt_entropie</string>
+    <string name="json_key_trend">trend</string>
+    <!-- Category-level JSON keys -->
+    <string name="json_key_category_name">name</string>
+    <string name="json_key_category_icon">icon</string>
+    <string name="json_key_category_color">farbe</string>
+    <string name="json_key_category_entropy_level">entropie_level</string>
+    <string name="json_key_category_summary">zusammenfassung</string>
+    <string name="json_key_category_advices">ratschlaege</string>
+    <!-- Item-level JSON keys (advice, action, progress) -->
+    <string name="json_key_item_title">titel</string>
+    <string name="json_key_item_description">beschreibung</string>
+    <string name="json_key_item_explanation">erklaerung</string>
+    <string name="json_key_item_reference">bezug</string>
+    <string name="json_key_item_priority">prioritaet</string>
+    <string name="json_key_item_connection">verknuepfung</string>
+    <string name="json_key_item_derivation">herleitung</string>
+    <!-- Derivation-level JSON keys -->
+    <string name="json_key_derivation_date">datum</string>
+    <string name="json_key_derivation_summary">zusammenfassung</string>
+    <!-- Enum values (priorities) -->
+    <string name="json_value_priority_high">hoch</string>
+    <string name="json_value_priority_medium">mittel</string>
+    <string name="json_value_priority_low">niedrig</string>
     <string name="ai_prompt_fresh_summary">FRISCHE ZUSAMMENFASSUNG — Erstelle eine komplett neue, eigenständige Analyse.</string>
     <string name="ai_prompt_fresh_insight">FRISCHE SELBSTERKENNTNIS-ANALYSE — Erstelle eine komplett neue, eigenständige Analyse.</string>
     <string name="ai_prompt_fresh_goals">FRISCHE ZIEL-ANALYSE — Erstelle eine komplett neue, eigenständige Analyse.</string>

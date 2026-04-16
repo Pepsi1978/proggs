@@ -29,9 +29,10 @@ REGELN:
 - Überschrift: Maximal 4 Wörter, fängt den Kern des Eintrags ein
 - Stichpunkte: Kurz und prägnant, nur Kernaussagen
 - Keine langen Gedankenstriche (—). Nutze Kommas oder Punkte.
-- Sprache: ${DeviceLocale.promptLanguage}
 - Verwende IMMER den Marker "TITEL:" gefolgt vom Titel, unabhängig von der Antwortsprache
 - Gib NUR das Format oben zurück, nichts anderes
+
+RESPONSE LANGUAGE: Respond entirely in ${DeviceLocale.promptLanguage}. The title and bullet points must be in ${DeviceLocale.promptLanguage}, no other language.
 
 TEXT:
 $text

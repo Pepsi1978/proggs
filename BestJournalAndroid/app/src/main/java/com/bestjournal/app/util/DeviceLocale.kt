@@ -16,7 +16,7 @@ object DeviceLocale {
      * Falls back to "German" if the locale returns an empty name.
      */
     val promptLanguage: String
-        get() = Locale.getDefault().getDisplayLanguage(Locale.ENGLISH).ifBlank { "German" }
+        get() = Locale.getDefault().getDisplayLanguage(Locale.ENGLISH).ifBlank { "English" }
 
     /**
      * ISO 639-1 language code for speech recognition APIs (e.g., "de", "ja", "en").

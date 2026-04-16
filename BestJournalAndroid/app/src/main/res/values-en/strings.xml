@@ -440,7 +440,7 @@
     <string name="achievements_unlocked_at">Unlocked on %1$s</string>
     <!-- About -->
     <string name="settings_about">About the app</string>
-    <string name="settings_about_version">Best Journal V0.12.3</string>
+    <string name="settings_about_version">Best Journal V0.12.4</string>
     <string name="settings_about_desc">Your personal AI journal</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Sign out?</string>
@@ -499,7 +499,36 @@
     <string name="churn_discount_badge"><xliff:g id="percent" example="50">%1$d</xliff:g>%% SAVE</string>
     <!-- AI prompt language instruction — English version -->
     <string name="ai_prompt_language_style">Simple, clear. No jargon.</string>
-    <string name="ai_prompt_language_override">CRITICAL: ALL JSON text values (titel, beschreibung, zusammenfassung, erklaerung, bezug, verknuepfung, name, gesamtanalyse) MUST be written in English. Category names MUST be in English (e.g. "Sleep" not "Schlaf"). Only enum values stay German: prioritaet="hoch"/"mittel"/"niedrig", trend="steigend"/"fallend"/"stabil"/"unbekannt".</string>
+    <string name="ai_prompt_language_override"></string>
+
+    <!-- JSON keys for AI dashboard response — localized per device language. -->
+    <string name="json_key_overall_analysis">overall_analysis</string>
+    <string name="json_key_top_actions">top_actions</string>
+    <string name="json_key_categories">categories</string>
+    <string name="json_key_heading_top5">heading_top5</string>
+    <string name="json_key_heading_analysis">heading_analysis</string>
+    <string name="json_key_heading_results">heading_results</string>
+    <string name="json_key_progress">progress</string>
+    <string name="json_key_overall_entropy">overall_entropy</string>
+    <string name="json_key_trend">trend</string>
+    <string name="json_key_category_name">name</string>
+    <string name="json_key_category_icon">icon</string>
+    <string name="json_key_category_color">color</string>
+    <string name="json_key_category_entropy_level">entropy_level</string>
+    <string name="json_key_category_summary">summary</string>
+    <string name="json_key_category_advices">advices</string>
+    <string name="json_key_item_title">title</string>
+    <string name="json_key_item_description">description</string>
+    <string name="json_key_item_explanation">explanation</string>
+    <string name="json_key_item_reference">reference</string>
+    <string name="json_key_item_priority">priority</string>
+    <string name="json_key_item_connection">connection</string>
+    <string name="json_key_item_derivation">derivation</string>
+    <string name="json_key_derivation_date">date</string>
+    <string name="json_key_derivation_summary">summary</string>
+    <string name="json_value_priority_high">high</string>
+    <string name="json_value_priority_medium">medium</string>
+    <string name="json_value_priority_low">low</string>
     <string name="ai_prompt_fresh_summary">FRESH SUMMARY — Create a completely new, independent analysis.</string>
     <string name="ai_prompt_fresh_insight">FRESH SELF-DISCOVERY ANALYSIS — Create a completely new, independent analysis.</string>
     <string name="ai_prompt_fresh_goals">FRESH GOAL ANALYSIS — Create a completely new, independent analysis.</string>
