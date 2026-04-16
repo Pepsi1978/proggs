@@ -457,6 +457,87 @@ buildAnnotatedString {
 
 ---
 
+### Kategorie 9: Unicode-Escape-Sequenzen fuer Umlaute (PFLICHT-Kapitel)
+
+> **Entstanden durch Vorfall 2026-04-16:** Das Wort `"Überblick"` war als
+> `"\u00dcberblick"` hardcoded in DashboardScreen.kt. Der Skill hat es nicht
+> gefunden, weil die Standard-Grep-Muster nach echten Umlauten wie `Ü` suchen —
+> die Escape-Form `\u00dc` rutscht durch als harmloser ASCII-Text. Ergebnis:
+> Der Benutzer sah "Überblick" in der englischen App, obwohl UI und KI-Antwort
+> komplett englisch waren.
+
+**Problem:** Kotlin-Compiler und Android akzeptieren Unicode-Escapes als
+aequivalent zu echten Zeichen. Entwickler schreiben manchmal aus Copy-Paste-
+Fehlern oder Legacy-Gruenden `"\u00dcberblick"` statt `"Überblick"`. Beide
+sind zur Laufzeit identisch, aber Grep nach `Ü` findet die Escape-Form nicht.
+
+**Die 7 deutschen Umlaut-Escape-Sequenzen:**
+
+| Zeichen | Unicode-Escape | HTML-Entity | Beispiel-Wort im Code |
+|---------|---------------|-------------|----------------------|
+| Ü | `\u00dc` | `&Uuml;` | `"\u00dcberblick"` = "Überblick" |
+| ü | `\u00fc` | `&uuml;` | `"M\u00fcll"` = "Müll" |
+| Ö | `\u00d6` | `&Ouml;` | `"\u00d6ffentlich"` = "Öffentlich" |
+| ö | `\u00f6` | `&ouml;` | `"h\u00f6ren"` = "hören" |
+| Ä | `\u00c4` | `&Auml;` | `"\u00c4nderung"` = "Änderung" |
+| ä | `\u00e4` | `&auml;` | `"w\u00e4hlen"` = "wählen" |
+| ß | `\u00df` | `&szlig;` | `"gr\u00fc\u00dfen"` = "grüßen" |
+
+**PFLICHT-Grep-Muster fuer JEDEN Durchlauf:**
+
+```
+Pattern: \\u00(dc|fc|d6|f6|c4|e4|df)
+Path:    app/src/main/java/
+Glob:    *.kt
+Output:  content (Zeilen mit Kontext)
+```
+
+Alle Treffer sind **potenzielle** hardcodierte Strings. Pruefen ob sie
+UI-Text sind (sichtbar fuer Benutzer) oder technisch (Regex, Konstante).
+
+**Breiterer Scan fuer alle Unicode-Escapes (niedrige Prioritaet):**
+
+```
+Pattern: \\u[0-9a-fA-F]{4}
+```
+
+Findet auch `\u0020` (Leerzeichen), `\u00a0` (non-breaking space) etc.
+Die meisten davon sind technisch, aber manche koennten UI-Text sein
+(z.B. `\u2013` = "–" en-dash, das oft statt `-` in UI verwendet wird).
+
+**Wie Treffer dem Benutzer zeigen:**
+
+Format: `Datei:Zeile: "ESCAPE_FORM" (= "DECODIERTE_FORM")`
+
+Beispiel:
+```
+DashboardScreen.kt:666: "\u00dcberblick" (= "Überblick")
+```
+
+Damit der Benutzer sofort versteht was hinter dem Escape steckt, ohne
+selbst dekodieren zu muessen.
+
+**Ausnahmen (NICHT extrahieren, obwohl sie den Pattern matchen):**
+
+| Kontext | Grund |
+|---------|-------|
+| `Regex("\\u[0-9]+")` als Pattern | Technisch, dekodiert zur Laufzeit andere Strings |
+| `"\uFFFD"` (Replacement Character) | Technisch, steht fuer ungueltige Zeichen |
+| `"\u0020"` (Leerzeichen), `"\u00a0"` (NBSP) | Formatierung, keine UI-Worte |
+| Kommentare wie `// \u00dc = U-Umlaut` | Informativ, nicht ausgefuehrt |
+| JavaScript-Escape `\x{00dc}` | Nur relevant wenn JS-Code eingebettet |
+| Test-Dateien | `src/test/`, `src/androidTest/` |
+
+**Bonus: HTML-Entities (seltener, aber pruefen bei Apps mit HTML-Rendering):**
+
+```
+Pattern: &(Uuml|uuml|Ouml|ouml|Auml|auml|szlig);
+```
+
+Diese kommen in `AnnotatedString`, HTML-Preview-Screens und WebView-Code vor.
+
+---
+
 ## 5. Android Lint als automatischer Detektor
 
 ### Relevante Lint-Checks
@@ -1404,9 +1485,10 @@ android {
 |---|-----------|
 | 1 | Lint `HardcodedText` meldet 0 Treffer in XML? |
 | 2 | Grep-Muster 1-9 auf `.kt`-Dateien angewendet? |
-| 3 | Alle Screens im Screen-Inventar abgehakt? |
-| 4 | ViewModels auf benutzersichtbare Strings geprueft? |
-| 5 | Content Descriptions fuer alle Icons/Bilder vorhanden? |
+| 3 | **PFLICHT:** Unicode-Escape-Scan (Kategorie 9) durchgefuehrt mit Pattern `\\u00(dc\|fc\|d6\|f6\|c4\|e4\|df)`? |
+| 4 | Alle Screens im Screen-Inventar abgehakt? |
+| 5 | ViewModels auf benutzersichtbare Strings geprueft? |
+| 6 | Content Descriptions fuer alle Icons/Bilder vorhanden? |
 
 ### Nach dem Erstellen (Teil B)
 
