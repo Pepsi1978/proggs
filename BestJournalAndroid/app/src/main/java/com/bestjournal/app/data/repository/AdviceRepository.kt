@@ -413,70 +413,22 @@ constructor(
         """
             .trimIndent()
 
-    private val goalsAnalysisSystemPrompt =
-        """
-        Du bist ein aufmerksamer, motivierender Ziel-Analyst und Fortschritts-Tracker.
-
-        DEINE AUFGABE:
-        Analysiere die Tagebucheintr${"\u00e4"}ge eines Nutzers. Erkenne alle Ziele, W${"\u00fc"}nsche,
-        Vorhaben und Pl${"\u00e4"}ne — auch wenn sie nur beil${"\u00e4"}ufig erw${"\u00e4"}hnt werden. Verfolge
-        den Fortschritt ${"\u00fc"}ber mehrere Eintr${"\u00e4"}ge hinweg. Erstelle daraus ein strukturiertes
-        Ziele-Dashboard im JSON-Format.
-
-        DEFINITION — WAS IST EIN ZIEL:
-        Alles, was der Nutzer erreichen, ver${"\u00e4"}ndern, anfangen, beenden, verbessern
-        oder aufbauen m${"\u00f6"}chte. Auch indirekte Hinweise z${"\u00e4"}hlen:
-        - Direkt: "Ich will abnehmen", "Ich muss den Zahnarzt anrufen"
-        - Indirekt: "W${"\u00e4"}re sch${"\u00f6"}n, mal wieder laufen zu gehen" = Ziel Fitness
-        - Klagen: "Mein Schlaf ist so schlecht" = implizites Ziel Schlafverbesserung
-        - Tr${"\u00e4"}ume: "Irgendwann m${"\u00f6"}chte ich nach Schweden" = Langfrist-Ziel Reise
-
-        OBERSTE REGEL — KEIN EINTRAG DARF FEHLEN:
-        Du erh${"\u00e4"}ltst nummerierte Eintr${"\u00e4"}ge (z.B. "EINTRAG 1 von 5").
-        Du MUSST JEDEN EINZELNEN Eintrag lesen, analysieren und einbeziehen.
-
-        UMGANG MIT WENIGEN EINTR${"\u00c4"}GEN:
-        - Bei 1–2 Eintr${"\u00e4"}gen: Erkenne Einzelziele, bewerte Fortschritt als "unbekannt".
-        - Ab 3 Eintr${"\u00e4"}gen: Verfolge aktiv den Fortschritt und erkenne Muster.
-
-        SPRACHREGELN:
-        - Deutsch. Einfach, klar. Keine Fremdw${"\u00f6"}rter.
-        - Motivierend und ehrlich, feiere Fortschritt, besch${"\u00f6"}nige nichts.
-        - Keine langen Gedankenstriche (—). Nutze Kommas oder Punkte.
-
-        MENGEN-REGEL, JEDES ZIEL Z${"\u00c4"}HLT:
-        Erkenne ALLE Ziele — auch kleine. Fasse NICHT zusammen.
-
-        JSON-AUSGABE-SCHEMA:
-        {
-          "gesamtanalyse": "...",
-          "top_massnahmen": [...],
-          "kategorien": [...]
-        }
-
-        1) "gesamtanalyse" (15–25 S${"\u00e4"}tze): Alle Ziele benennen, Fortschritt erkennen.
-
-        2) "top_massnahmen" (genau 5): N${"\u00e4"}chste Schritte.
-           { "titel": "...", "beschreibung": "13–21 W${"\u00f6"}rter", "erklaerung": "5–8 S${"\u00e4"}tze" }
-
-        3) "kategorien": Ziel-Bereiche.
-           {
-             "name": "max 12 Zeichen", "icon": "material_icon", "farbe": "#HEX",
-             "entropie_level": 0.0, "zusammenfassung": "3–5 S${"\u00e4"}tze",
-             "ratschlaege": [{
-               "titel": "...",
-               "beschreibung": "13–21 W${"\u00f6"}rter. Status: [offen/in Arbeit/blockiert/erreicht]. N${"\u00e4"}chster Schritt: [...].",
-               "prioritaet": "hoch|mittel|niedrig",
-               "verknuepfung": "...", "herleitung": [{"datum":"...","zusammenfassung":"..."}]
-             }]
-           }
-           Bereiche: Fitness, Gesundheit, Arbeit, Karriere, Finanzen, Beziehungen,
-           Projekte, Lernen, Schlaf, Psyche, Reise, Ordnung, Kreativit${"\u00e4"}t
-           Priorit${"\u00e4"}t: hoch=blockiert, mittel=offen, niedrig=in Arbeit/erreicht
-
-        AUSGABEFORMAT: NUR JSON. Keine Backticks. Beginne mit {.
-        """
-            .trimIndent()
+    /** Goals analysis prompt — fully localized via string resources. */
+    private fun buildGoalsAnalysisSystemPrompt(): String {
+        val langOverride = context.getString(R.string.ai_prompt_language_override)
+        val langStyle = context.getString(R.string.ai_prompt_language_style)
+        val prompt =
+            listOf(
+                    context.getString(R.string.ai_prompt_goals_intro),
+                    context.getString(R.string.ai_prompt_goals_definition),
+                    context.getString(R.string.ai_prompt_goals_entry_rules),
+                    context.getString(R.string.ai_prompt_goals_rules, langStyle),
+                    context.getString(R.string.ai_prompt_goals_schema),
+                    context.getString(R.string.ai_prompt_goals_output),
+                )
+                .joinToString("\n\n")
+        return if (langOverride.isNotBlank()) "$langOverride\n\n$prompt" else prompt
+    }
 
     private val selfInsightAnalysisSystemPrompt =
         """
@@ -790,18 +742,19 @@ AUSGABEFORMAT — STRENGE REGELN:
 
     private fun getActiveSystemPrompt(): String {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-        val base = when (scenario) {
-            0 -> summaryAnalysisSystemPrompt
-            2 -> selfInsightAnalysisSystemPrompt
-            3 -> goalsAnalysisSystemPrompt
+        return when (scenario) {
+            // Goals prompt is fully localized via string resources
+            3 -> buildGoalsAnalysisSystemPrompt()
+            // Other prompts still use legacy localizePromptLanguage()
+            0 -> localizePromptLanguage(summaryAnalysisSystemPrompt)
+            2 -> localizePromptLanguage(selfInsightAnalysisSystemPrompt)
             4 -> {
                 val custom = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
-                if (custom.isNotBlank()) buildCustomAnalysisPrompt(custom)
-                else entropyAnalysisSystemPrompt
+                if (custom.isNotBlank()) localizePromptLanguage(buildCustomAnalysisPrompt(custom))
+                else localizePromptLanguage(entropyAnalysisSystemPrompt)
             }
-            else -> entropyAnalysisSystemPrompt
+            else -> localizePromptLanguage(entropyAnalysisSystemPrompt)
         }
-        return localizePromptLanguage(base)
     }
 
     /**
