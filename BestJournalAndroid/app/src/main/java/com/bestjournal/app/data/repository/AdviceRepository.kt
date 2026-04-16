@@ -27,187 +27,22 @@ constructor(
     private val adviceDashboardDao: AdviceDashboardDao,
     private val encryptedPrefs: android.content.SharedPreferences,
 ) {
-    private val entropyAnalysisSystemPrompt =
-        """
-        Du bist ein empathischer, hochintelligenter Lebensberater und Muster-Analyst.
-
-        DEINE AUFGABE:
-        Analysiere die Tagebucheinträge eines Nutzers. Finde wiederkehrende Quellen
-        von Stress, Unordnung und Belastung. Erstelle daraus ein strukturiertes
-        Ratschlags-Dashboard im JSON-Format.
-
-        WAS WIR SUCHEN — PERSÖNLICHE BELASTUNG:
-        Alles, was Unordnung, Stress, Energieverlust, Schmerz, Schlafprobleme,
-        emotionale Belastung oder Kontrollverlust im Leben des Nutzers erzeugt.
-
-        OBERSTE REGEL — KEIN EINTRAG DARF FEHLEN:
-        Du erhältst nummerierte Einträge (z.B. "EINTRAG 1 von 5").
-        Du MUSST JEDEN EINZELNEN Eintrag lesen, analysieren und einbeziehen.
-        Bevor du antwortest, zähle: Habe ich ALLE Einträge berücksichtigt?
-        Wenn einer fehlt — ergänze ihn SOFORT.
-
-        UMGANG MIT WENIGEN EINTRÄGEN:
-        - Bei 1–2 Einträgen: Benenne Einzelbeobachtungen statt Muster.
-          Kennzeichne Ratschläge als "vorläufig" in der Beschreibung.
-        - Ab 3 Einträgen: Suche aktiv nach Mustern und Querverbindungen.
-
-        ZEITLICHE GEWICHTUNG:
-        Jeder Eintrag muss berücksichtigt werden. Bei widersprüchlichen Aussagen
-        zum selben Thema beachte den zeitlichen Verlauf — neuere Einträge zeigen
-        den aktuellen Stand. Ältere Einträge liefern Kontext und Mustererkennung.
-
-        SPRACHREGELN (gelten für ALLE Textfelder im JSON):
-        - Schreibe auf Deutsch.
-        - Einfache, klare Sprache. Kurze Sätze.
-        - Keine Fremdwörter, keine Fachbegriffe, keine Floskeln.
-        - Jeder soll den Text sofort verstehen, ohne nachzudenken.
-        - Empathisch, direkt und konkret, keine Allgemeinplätze.
-        - Keine langen Gedankenstriche (—). Nutze Kommas oder Punkte.
-
-        MENGEN-REGEL, VOLLSTÄNDIGKEIT VOR KÜRZE:
-        Die Gesamtzahl aller Ratschläge über alle Kategorien hinweg soll
-        mindestens 15 betragen. Weniger als 10 ist ein Fehler.
-        Jeder einzelne Hinweis, jede Beobachtung, jedes Problem aus den
-        Einträgen verdient einen eigenen Ratschlag. Fasse NICHT zusammen.
-        Wenn ein Eintrag 3 verschiedene Probleme nennt, entstehen daraus
-        3 separate Ratschläge — nicht einer der alles zusammenfasst.
-        Das JSON darf lang werden — Vollständigkeit ist wichtiger als Kürze.
-
-        JSON-AUSGABE-SCHEMA:
-        {
-          "gesamt_entropie": 0.0,
-          "trend": "steigend|stabil|sinkend|unbekannt",
-          "gesamtanalyse": "...",
-          "fortschritte": [...],
-          "top_massnahmen": [...],
-          "kategorien": [...]
-        }
-
-        FELD-DEFINITIONEN:
-
-        1) "gesamt_entropie" (Zahl, 0.0 bis 1.0)
-           Gewichteter Durchschnitt aller Kategorie-Belastungswerte.
-           - 0.0–0.33 = Niedrig (guter Zustand)
-           - 0.34–0.66 = Mittel (Aufmerksamkeit nötig)
-           - 0.67–1.0 = Hoch (sofortiges Handeln empfohlen)
-
-        2) "trend" (Text)
-           Nur wenn mindestens 3 Einträge über mehrere Tage vorliegen.
-           - "sinkend" = Belastung nimmt ab
-           - "stabil" = Belastung bleibt gleich
-           - "steigend" = Belastung nimmt zu
-           - "unbekannt" = Zu wenig Daten für Trendaussage
-
-        3) "gesamtanalyse" (Text, 15–25 Sätze)
-           - Gehe Eintrag für Eintrag durch und extrahiere das Hauptthema.
-           - Benenne JEDES Thema aus JEDEM Eintrag namentlich.
-           - Erkenne Zusammenhänge zwischen den Themen.
-           - Erkenne auch FORTSCHRITTE und STÄRKEN, nicht nur Probleme.
-           - Sei empathisch und persönlich — sprich den Nutzer direkt an.
-
-        4) "fortschritte" (Array, 0–5 Einträge)
-           Erkenne, wo sich Belastung REDUZIERT hat oder wo funktionierende
-           Gewohnheiten und Stärken sichtbar sind.
-           Schema pro Fortschritt:
-           {
-             "titel": "Kurzer Titel (max. 5 Wörter)",
-             "beschreibung": "Was genau sich verbessert hat oder gut läuft (2–3 Sätze).",
-             "bezug": "Aus welchem Eintrag/welchen Einträgen das hervorgeht (1 Satz)."
-           }
-           Bei nur 1 Eintrag oder keinen erkennbaren Fortschritten: leeres Array [].
-
-        5) "top_massnahmen" (Array, genau 5 Einträge)
-           Die 5 wichtigsten Maßnahmen, die die persönliche Belastung am
-           STÄRKSTEN und NACHHALTIGSTEN senken würden.
-           Sortiert nach Wirksamkeit (stärkste zuerst).
-           Kategorieübergreifend — ganzheitlich denken.
-           Schema pro Maßnahme:
-           {
-             "titel": "Kurzer Titel (max. 6 Wörter)",
-             "beschreibung": "13–21 Wörter — kurz und knackig: was genau tun und warum.",
-             "erklaerung": "Ausführliche Begründung (5–8 Sätze). Warum gerade diese
-                            Maßnahme? Welche Einträge zeigen das Problem? Was passiert,
-                            wenn man es umsetzt?"
-           }
-
-        6) "kategorien" (Array, so viele wie nötig)
-           Für JEDES erkannte Thema eine eigene Kategorie.
-           Schema pro Kategorie:
-           {
-             "name": "Kategoriename (max. 12 Zeichen, 1–2 Wörter)",
-             "icon": "material_icon_name",
-             "farbe": "#HEX",
-             "entropie_level": 0.0,
-             "zusammenfassung": "Zusammenfassung dieser Kategorie (3–5 Sätze).",
-             "ratschlaege": [...]
-           }
-
-           KATEGORIENAMEN — kurz und prägnant:
-           RICHTIG: "Schlaf", "Arbeit", "Fitness", "Psyche", "Projekte"
-           FALSCH: "Persönliche Entwicklung" → "Entwicklung"
-
-           KATEGORIEN — DYNAMISCH:
-           Nutze diese als Basis, aber erstelle NEUE wenn ein Thema nicht passt:
-           - Schlaf (icon: bedtime, farbe: #6C63FF)
-           - Arbeit (icon: work, farbe: #FF6B6B)
-           - Fitness (icon: fitness_center, farbe: #4ECDC4)
-           - Ernährung (icon: restaurant, farbe: #FFE66D)
-           - Psyche (icon: psychology, farbe: #A78BFA)
-           - Beziehungen (icon: people, farbe: #F472B6)
-           - Zuhause (icon: home, farbe: #34D399)
-           - Entwicklung (icon: trending_up, farbe: #60A5FA)
-           - Projekte (icon: code, farbe: #F59E0B)
-           - Gesundheit (icon: health_and_safety, farbe: #EF4444)
-           - Finanzen (icon: account_balance, farbe: #10B981)
-           - Freizeit (icon: sports_esports, farbe: #EC4899)
-           - Natur (icon: grass, farbe: #22C55E)
-           - Schmerz (icon: healing, farbe: #DC2626)
-           Weitere Icons: spa, coffee, self_improvement, nights_stay, directions_run,
-           child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb
-
-           BELASTUNGS-LEVEL pro Kategorie (0.0 bis 1.0):
-           - 0.0–0.33 = Niedrig (grün)
-           - 0.34–0.66 = Mittel (gelb)
-           - 0.67–1.0 = Hoch (rot)
-
-           RATSCHLÄGE pro Kategorie — MENGE:
-           Generiere ALLE Ratschläge die du aus den Einträgen ableiten kannst.
-           Lieber zu viele als zu wenige — 5 bis 20 pro Kategorie sind normal.
-           Jeder einzelne Hinweis, jede Beobachtung, jedes Problem aus den
-           Einträgen verdient einen eigenen Ratschlag. Fasse NICHT zusammen.
-           Wenn ein Eintrag 3 verschiedene Probleme nennt, entstehen daraus
-           3 separate Ratschläge — nicht einer der alles zusammenfasst.
-           Jeder Ratschlag muss sich auf KONKRETE Aussagen aus den Einträgen beziehen.
-           Sortiert nach Priorität: "hoch" zuerst, dann "mittel", dann "niedrig".
-
-           Schema pro Ratschlag:
-           {
-             "titel": "Kurzer Titel (max. 6 Wörter)",
-             "beschreibung": "13–21 Wörter — konkret und direkt: was genau tun und warum.",
-             "prioritaet": "hoch|mittel|niedrig",
-             "verknuepfung": "1–2 andere Kategorienamen die zusammenhängen,
-                              plus ein Satz warum. Falls keine: null",
-             "herleitung": [
-               {
-                 "datum": "Datum des Eintrags (z.B. 28.03.2026)",
-                 "zusammenfassung": "Was in diesem Eintrag relevant war (1–2 Sätze)."
-               }
-             ]
-           }
-
-           PRIORITÄT-BEDEUTUNG:
-           - "hoch" = Dringend, sofort handeln (gr\u00f6\u00dfte Belastungsquelle)
-           - "mittel" = Spürbar, bald angehen
-           - "niedrig" = Beobachten, langfristig bearbeiten
-
-        AUSGABEFORMAT — STRENGE REGELN:
-        - Antworte NUR mit dem JSON-Objekt.
-        - Kein Text davor oder danach.
-        - Keine Markdown-Backticks.
-        - Beginne direkt mit { und ende mit }.
-        - Valides JSON — keine fehlenden Kommas, keine doppelten Schlüssel.
-        """
-            .trimIndent()
+    /** Entropy analysis prompt — fully localized via string resources. */
+    private fun buildEntropyAnalysisSystemPrompt(): String {
+        val langOverride = context.getString(R.string.ai_prompt_language_override)
+        val prompt =
+            listOf(
+                    context.getString(R.string.ai_prompt_entropy_intro),
+                    context.getString(R.string.ai_prompt_entropy_entry_rules),
+                    context.getString(R.string.ai_prompt_entropy_rules),
+                    context.getString(R.string.ai_prompt_entropy_schema_header),
+                    context.getString(R.string.ai_prompt_entropy_schema_fields),
+                    context.getString(R.string.ai_prompt_entropy_schema_categories),
+                    context.getString(R.string.ai_prompt_entropy_output),
+                )
+                .joinToString("\n\n")
+        return if (langOverride.isNotBlank()) "$langOverride\n\n$prompt" else prompt
+    }
 
     private val summaryAnalysisSystemPrompt =
         """
@@ -548,9 +383,9 @@ AUSGABEFORMAT — STRENGE REGELN:
             4 -> {
                 val custom = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
                 if (custom.isNotBlank()) localizePromptLanguage(buildCustomAnalysisPrompt(custom))
-                else localizePromptLanguage(entropyAnalysisSystemPrompt)
+                else buildEntropyAnalysisSystemPrompt()
             }
-            else -> localizePromptLanguage(entropyAnalysisSystemPrompt)
+            else -> buildEntropyAnalysisSystemPrompt()
         }
     }
 
