@@ -1374,7 +1374,7 @@ private fun StreakDialog(
                     StatColumn(
                         icon = Icons.Rounded.Edit,
                         value = "$totalEntries",
-                        label = "Eintr\u00e4ge",
+                        label = stringResource(R.string.journal_entries_label),
                         tint = NeonEmerald,
                     )
                 }
@@ -1397,7 +1397,7 @@ private fun StreakDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            "Streak-Schutz: Erh\u00e4ltlich mit Premium",
+                            stringResource(R.string.journal_streak_premium),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -1414,7 +1414,7 @@ private fun StreakDialog(
                         contentColor = if (isDarkTheme) Color.Black else Color.White,
                     ),
             ) {
-                Text("Weiter so!")
+                Text(stringResource(R.string.journal_keep_going))
             }
         },
     )
@@ -1494,7 +1494,7 @@ private fun WritingPromptBanner(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            "Schreibimpuls des Tages",
+                            stringResource(R.string.journal_daily_prompt),
                             style =
                                 MaterialTheme.typography.labelLarge.copy(
                                     fontWeight = FontWeight.Bold
@@ -1511,7 +1511,7 @@ private fun WritingPromptBanner(
                 IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
                     Icon(
                         Icons.Rounded.Close,
-                        "Schlie\u00dfen",
+                        stringResource(R.string.action_close),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp),
                     )
@@ -1541,7 +1541,7 @@ private fun WritingPromptBanner(
                 ) {
                     Icon(Icons.Rounded.Edit, null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Dar\u00fcber schreiben", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.journal_write_about), style = MaterialTheme.typography.labelLarge)
                 }
             }
         }

@@ -2,6 +2,7 @@ package com.bestjournal.app.ui.screens.journal
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.bestjournal.app.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.billing.BillingManager
@@ -321,7 +322,7 @@ constructor(
                 _uiState.value =
                     _uiState.value.copy(
                         recordingState = RecordingState.IDLE,
-                        errorMessage = "Aufnahme fehlgeschlagen: ${e.message}",
+                        errorMessage = context.getString(R.string.journal_recording_error, e.message ?: ""),
                     )
             }
         }
@@ -370,7 +371,7 @@ constructor(
                     _uiState.value =
                         _uiState.value.copy(
                             recordingState = RecordingState.IDLE,
-                            errorMessage = "Transkription fehlgeschlagen: ${error.message}",
+                            errorMessage = context.getString(R.string.journal_transcription_error, error.message ?: ""),
                         )
                     audioFile.delete()
                 }
@@ -393,7 +394,7 @@ constructor(
                 }
                 is TieredAccessResult.Cooldown -> {
                     _uiState.update {
-                        it.copy(errorMessage = "Kurze Pause: Noch ${accessResult.minutesLeft} Minuten bis zur n\u00e4chsten Verbesserung.")
+                        it.copy(errorMessage = context.getString(R.string.journal_rate_limit, accessResult.minutesLeft))
                     }
                     return@launch
                 }
@@ -444,7 +445,7 @@ constructor(
                     _uiState.update {
                         it.copy(
                             recordingState = RecordingState.PREVIEW,
-                            errorMessage = "Textverbesserung fehlgeschlagen: ${error.message}",
+                            errorMessage = context.getString(R.string.journal_improve_error, error.message ?: ""),
                         )
                     }
                 }
@@ -602,7 +603,7 @@ constructor(
                     _uiState.value =
                         _uiState.value.copy(
                             recordingState = RecordingState.PREVIEW,
-                            errorMessage = "Speichern fehlgeschlagen: ${e.message}",
+                            errorMessage = context.getString(R.string.journal_save_error, e.message ?: ""),
                         )
                 }
             }

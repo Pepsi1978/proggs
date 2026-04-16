@@ -1,5 +1,7 @@
 package com.bestjournal.app.ui.screens.journal
 
+import androidx.compose.ui.res.stringResource
+import com.bestjournal.app.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,7 +71,7 @@ fun RecordingOverlay(
             Spacer(modifier = Modifier.height(4.dp))
         }
         Text(
-            text = "Erneut tippen zum Stoppen",
+            text = stringResource(R.string.recording_tap_stop),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
