@@ -91,6 +91,25 @@ Android strings.xml entries from German to [TARGET_LANGUAGE] ([LOCALE_CODE]).
 - Keep emojis exactly as-is
 - No cultural references specific to one country
 
+### 7. Numbered placeholders (MANDATORY for RTL languages):
+- ALWAYS use numbered placeholders: %1$s, %2$d — NEVER unnamed %s, %d
+- Reason: Arabic, Urdu, and Hebrew translators may reorder arguments.
+  Unnamed %s + %s will crash the app if reordered.
+- Even for non-RTL languages: numbered placeholders are best practice.
+
+### 8. Encoding:
+- Output MUST be UTF-8 WITHOUT BOM (Byte Order Mark)
+- A BOM (EF BB BF bytes) breaks Android's AAPT build tool
+- Escape apostrophes as \' in unquoted strings, or wrap entire string in double quotes
+- Use XML entities: &amp; &lt; &gt; — raw < or & breaks XML parsing
+
+### 9. Arrow characters and directional symbols:
+- NEVER use literal arrow characters (← → ↑ ↓) in translatable strings
+- These are Unicode "neutral" characters — they do NOT mirror in RTL layouts
+- An arrow pointing right (→) still points right in Arabic — confusing the user
+- Use drawable resources with android:autoMirrored="true" instead
+- Use ellipsis character \u2026 (…) instead of three dots (...)
+
 ## Output Format
 - Return ONLY translated XML, ready for values-[LOCALE_CODE]/strings.xml
 - Preserve EXACT XML structure (same order, same nesting)
@@ -433,6 +452,13 @@ Jeder Block wird vom Skill als `[LANGUAGE_SPECIFIC_RULES]` in den Universal-Prom
   Verify MSA consistency across all strings.
 - BiDi text: Embedded English terms and numbers maintain LTR direction automatically,
   but verify mixed-direction strings render correctly.
+- RTL string safety:
+  - NEVER use arrow characters (← → ↑ ↓) — they do NOT mirror in RTL layouts
+  - Use numbered placeholders (%1$s, %2$d) — Arabic may reorder arguments
+  - Brand name at START of Arabic string: add \u200F (RTL Mark) before it
+  - Brand name at END: add \u200E (LTR Mark) after it or use BidiFormatter in code
+  - Parentheses in strings render correctly but test with embedded LTR content
+  - Use \u2026 (…) for ellipsis, not three dots (...)
 ```
 
 ---
@@ -612,6 +638,11 @@ Jeder Block wird vom Skill als `[LANGUAGE_SPECIFIC_RULES]` in den Universal-Prom
 - Do NOT just copy Hindi translation and change script — they are different languages.
 - English tech terms (PDF, Premium, Export) stay in English — commonly understood.
 - Neutral vocabulary for both Pakistan (ur-PK) and India (ur-IN).
+- RTL string safety (same rules as Arabic):
+  - NEVER use arrow characters (← → ↑ ↓) — they do NOT mirror in RTL layouts
+  - Use numbered placeholders (%1$s, %2$d) — Urdu may reorder arguments
+  - Brand name at START of Urdu string: add \u200F (RTL Mark) before it
+  - Use \u2026 (…) for ellipsis, not three dots (...)
 ```
 
 ---
