@@ -1209,7 +1209,7 @@ fun SettingsScreen(
                                 )
                                 Text(
                                     if (uiState.monthlyReviewEnabled) stringResource(R.string.settings_monthly_review_on)
-                                    else "Am letzten Tag des Monats um 15:00 Uhr",
+                                    else stringResource(R.string.settings_monthly_review_off),
                                     style = MaterialTheme.typography.bodySmall,
                                     color =
                                         if (uiState.monthlyReviewEnabled)
@@ -1273,7 +1273,7 @@ fun SettingsScreen(
                                 )
                                 Text(
                                     if (uiState.yearlyReviewEnabled) stringResource(R.string.settings_yearly_review_on)
-                                    else "Am letzten Tag des Jahres um 15:00 Uhr",
+                                    else stringResource(R.string.settings_yearly_review_off),
                                     style = MaterialTheme.typography.bodySmall,
                                     color =
                                         if (uiState.yearlyReviewEnabled)

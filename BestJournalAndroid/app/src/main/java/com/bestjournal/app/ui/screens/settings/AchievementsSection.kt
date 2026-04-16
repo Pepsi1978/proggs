@@ -273,7 +273,7 @@ private fun AchievementRow(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = if (isUnlocked) stringResource(achievement.descResId) else "Geheim",
+                text = if (isUnlocked) stringResource(achievement.descResId) else stringResource(R.string.achievement_secret),
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontStyle = if (!isUnlocked) FontStyle.Italic else FontStyle.Normal,
                 ),

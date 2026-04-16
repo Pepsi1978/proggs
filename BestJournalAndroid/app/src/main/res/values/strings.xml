@@ -452,6 +452,10 @@
     <string name="settings_review_when">Wann soll dein Rückblick kommen?</string>
     <string name="settings_review_weekday">Wochentag</string>
     <string name="settings_review_time">Uhrzeit</string>
+    <string name="settings_monthly_review_off">Am letzten Tag des Monats um 15:00 Uhr</string>
+    <string name="settings_yearly_review_off">Am letzten Tag des Jahres um 15:00 Uhr</string>
+    <string name="achievement_secret">Geheim</string>
+    <string name="paywall_exit_bonus_days">+ %1$d Tage extra Testzeit</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          RETROSPECTIVE SCREEN

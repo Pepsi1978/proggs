@@ -777,7 +777,7 @@ fun PaywallScreen(
                                             )
                                             Spacer(modifier = Modifier.height(8.dp))
                                             Text(
-                                                text = "+ ${Constants.EXIT_INTENT_TRIAL_BONUS_DAYS} Tage extra Testzeit",
+                                                text = stringResource(R.string.paywall_exit_bonus_days, Constants.EXIT_INTENT_TRIAL_BONUS_DAYS),
                                                 style = MaterialTheme.typography.labelMedium,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = NeonEmerald,
