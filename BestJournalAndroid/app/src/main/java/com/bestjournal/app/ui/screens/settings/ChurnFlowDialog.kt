@@ -824,7 +824,7 @@ private fun StepConfirm(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            "Du wirst zu Google Play weitergeleitet, um dein Abo zu verwalten. Deine Tagebucheintr\u00e4ge bleiben nat\u00fcrlich erhalten.",
+            stringResource(R.string.churn_google_play_redirect),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

@@ -1676,7 +1676,7 @@ fun SettingsScreen(
                                             placeholder = {
                                                 val isDark = LocalIsDarkTheme.current
                                                 Text(
-                                                    "z.B. Fokussiere dich auf meine Schlafqualität und Stresslevel. Zeige mir Muster in meiner Ernährung. Analysiere, wie sich meine Stimmung über die Woche verändert. Finde heraus, wann ich am produktivsten bin und was mich blockiert.\n\nJe gründlicher du beschreibst was dein Fokus ist, desto besser werden die Ergebnisse.",
+                                                    stringResource(R.string.settings_custom_prompt_placeholder),
                                                     color =
                                                         MaterialTheme.colorScheme.onSurfaceVariant
                                                             .copy(

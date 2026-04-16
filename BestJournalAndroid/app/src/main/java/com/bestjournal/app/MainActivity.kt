@@ -2,6 +2,7 @@ package com.bestjournal.app
 
 import android.content.SharedPreferences
 import android.os.Bundle
+import com.bestjournal.app.R
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
@@ -274,7 +275,7 @@ class MainActivity : FragmentActivity() {
         val promptInfo =
             BiometricPrompt.PromptInfo.Builder()
                 .setTitle("Best Journal")
-                .setSubtitle("Entsperre dein Tagebuch")
+                .setSubtitle(getString(R.string.biometric_subtitle))
                 .setAllowedAuthenticators(
                     BiometricManager.Authenticators.BIOMETRIC_STRONG or
                         BiometricManager.Authenticators.BIOMETRIC_WEAK or

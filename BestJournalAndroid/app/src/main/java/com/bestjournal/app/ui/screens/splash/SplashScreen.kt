@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import com.bestjournal.app.R
 import kotlin.math.cos
 import kotlin.random.Random
@@ -373,7 +374,7 @@ fun SplashScreen(
 
             // Subtle brand subtitle
             Text(
-                "DEIN INTELLIGENTES TAGEBUCH",
+                stringResource(R.string.splash_subtitle),
                 style = MaterialTheme.typography.labelSmall.copy(
                     letterSpacing = 3.sp,
                     fontWeight = FontWeight.Normal,

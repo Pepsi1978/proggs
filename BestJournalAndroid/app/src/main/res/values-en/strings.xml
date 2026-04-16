@@ -356,6 +356,10 @@
     <string name="settings_auto_lock">Locks automatically after 60 seconds in the background</string>
     <string name="settings_ai_profiles_title">AI Dashboard Profiles:</string>
     <string name="settings_ai_automations">AI Automations</string>
+    <string name="settings_custom_prompt_placeholder">e.g. Focus on my sleep quality and stress levels. Show me patterns in my diet. Analyze how my mood changes throughout the week. Find out when I\'m most productive and what\'s holding me back.\n\nThe more thoroughly you describe your focus, the better the results.</string>
+    <string name="churn_google_play_redirect">You\'ll be redirected to Google Play to manage your subscription. Your journal entries will of course remain safe.</string>
+    <string name="splash_subtitle">YOUR SMART JOURNAL</string>
+    <string name="biometric_subtitle">Unlock your journal</string>
     <string name="settings_text_improvement">Text improvement</string>
     <string name="settings_text_improvement_desc">Enable by default</string>
     <string name="settings_dashboard_section">Dashboard</string>

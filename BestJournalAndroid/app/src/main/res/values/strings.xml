@@ -356,6 +356,10 @@
     <string name="settings_auto_lock">Sperrt automatisch nach 60 Sekunden im Hintergrund</string>
     <string name="settings_ai_profiles_title">KI-Dashboard Profile:</string>
     <string name="settings_ai_automations">KI-Automatisierungen</string>
+    <string name="settings_custom_prompt_placeholder">z.B. Fokussiere dich auf meine Schlafqualität und Stresslevel. Zeige mir Muster in meiner Ernährung. Analysiere, wie sich meine Stimmung über die Woche verändert. Finde heraus, wann ich am produktivsten bin und was mich blockiert.\n\nJe gründlicher du beschreibst was dein Fokus ist, desto besser werden die Ergebnisse.</string>
+    <string name="churn_google_play_redirect">Du wirst zu Google Play weitergeleitet, um dein Abo zu verwalten. Deine Tagebucheinträge bleiben natürlich erhalten.</string>
+    <string name="splash_subtitle">DEIN INTELLIGENTES TAGEBUCH</string>
+    <string name="biometric_subtitle">Entsperre dein Tagebuch</string>
     <string name="settings_text_improvement">Textverbesserung</string>
     <string name="settings_text_improvement_desc">Standardmäßig aktivieren</string>
     <string name="settings_dashboard_section">Dashboard</string>
