@@ -44,6 +44,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import com.bestjournal.app.R
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -140,12 +141,12 @@ fun AchievementsSection(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "Achievements",
+                        stringResource(R.string.achievements_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
-                        "$unlockedCount von $totalCount freigeschaltet",
+                        stringResource(R.string.achievements_counter, unlockedCount, totalCount),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -291,7 +292,7 @@ private fun AchievementRow(
                     ).format(Date(achievement.unlockedAt))
                 }
                 Text(
-                    text = "Freigeschaltet am $dateStr",
+                    text = stringResource(R.string.achievements_unlocked_at, dateStr),
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                     color = BrightGold.copy(alpha = 0.7f),
                 )

@@ -1,5 +1,6 @@
 package com.bestjournal.app.ui.navigation
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Analytics
@@ -24,15 +25,15 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import com.bestjournal.app.util.rememberHapticAction
 
-sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
+sealed class BottomNavItem(val route: String, @androidx.annotation.StringRes val titleRes: Int, val icon: ImageVector) {
     data object Retrospective :
-        BottomNavItem("retrospective", "Rückblick", Icons.Rounded.AutoAwesome)
+        BottomNavItem("retrospective", com.bestjournal.app.R.string.nav_retrospective, Icons.Rounded.AutoAwesome)
 
-    data object Dashboard : BottomNavItem("dashboard", "Dashboard", Icons.Rounded.Analytics)
+    data object Dashboard : BottomNavItem("dashboard", com.bestjournal.app.R.string.nav_dashboard, Icons.Rounded.Analytics)
 
-    data object Journal : BottomNavItem("journal", "Tagebuch", Icons.Rounded.Book)
+    data object Journal : BottomNavItem("journal", com.bestjournal.app.R.string.nav_journal, Icons.Rounded.Book)
 
-    data object Settings : BottomNavItem("settings", "Einstellungen", Icons.Rounded.Settings)
+    data object Settings : BottomNavItem("settings", com.bestjournal.app.R.string.nav_settings, Icons.Rounded.Settings)
 }
 
 @Composable
@@ -87,7 +88,7 @@ fun BottomNavBar(currentRoute: String?, onItemClick: (BottomNavItem) -> Unit) {
                 icon = {
                     Icon(
                         imageVector = item.icon,
-                        contentDescription = item.title,
+                        contentDescription = stringResource(item.titleRes),
                         tint =
                             if (isSelected) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.outline,
@@ -95,7 +96,7 @@ fun BottomNavBar(currentRoute: String?, onItemClick: (BottomNavItem) -> Unit) {
                 },
                 label = {
                     Text(
-                        text = item.title,
+                        text = stringResource(item.titleRes),
                         color =
                             if (isSelected) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.outline,

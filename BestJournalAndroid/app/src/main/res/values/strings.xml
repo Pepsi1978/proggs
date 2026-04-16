@@ -8,6 +8,7 @@
     <string name="nav_journal">Tagebuch</string>
     <string name="nav_retrospective">Rückblick</string>
     <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_settings">Einstellungen</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          COMMON / SHARED
@@ -390,6 +391,10 @@
     <string name="drive_consent_needed">Drive-Zugriff muss erlaubt werden</string>
     <string name="drive_not_signed_in">Nicht angemeldet</string>
     <string name="drive_no_backup">Kein Backup gefunden</string>
+    <!-- Achievements -->
+    <string name="achievements_title">Achievements</string>
+    <string name="achievements_counter">%1$d von %2$d freigeschaltet</string>
+    <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
     <string name="settings_about_version">Best Journal V0.12.1</string>
