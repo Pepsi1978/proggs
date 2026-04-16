@@ -192,6 +192,8 @@
     <string name="dashboard_analysis_fallback">Analyse</string>
     <string name="dashboard_all_results_fallback">Alle Ergebnisse</string>
     <string name="dashboard_overall_analysis">Gesamtanalyse</string>
+    <!-- Title of the overview card in the Summary dashboard (scenario 0). -->
+    <string name="dashboard_summary_overview_title">Überblick</string>
     <string name="dashboard_all_recommendations">Alle Empfehlungen</string>
     <string name="dashboard_connection">Verknüpfung</string>
     <string name="dashboard_limit_daily">Tageslimit erreicht. Morgen geht es weiter!</string>
@@ -452,7 +454,7 @@
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.12.4</string>
+    <string name="settings_about_version">Best Journal V0.12.5</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Abmelden?</string>
@@ -517,6 +519,9 @@
     <!-- AI prompt language instruction — automatically uses device language -->
     <string name="ai_prompt_language_style">Einfach, klar. Keine Fremdwörter.</string>
     <string name="ai_prompt_language_override"></string>
+    <!-- Final response-language instruction appended to every AI prompt.
+         Kept in the device language so the model's last signal matches the UI language. -->
+    <string name="ai_prompt_response_language">ANTWORTSPRACHE: Antworte vollständig auf Deutsch. Alle Texte und Überschriften müssen auf Deutsch sein, keine andere Sprache.</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          JSON-KEYS für die KI-Antwort (Dashboard).

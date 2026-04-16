@@ -262,7 +262,7 @@ REGELN:
 - Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
 $profileStyle
 
-RESPONSE LANGUAGE: Respond entirely in $lang. The narrative and all headings must be in $lang, no other language.
+${context.getString(R.string.ai_prompt_response_language)}
 
 EINTRÄGE DER WOCHE:
 ${task.entriesText}"""
@@ -446,7 +446,7 @@ REGELN:
 - Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
 $profileStyle
 
-RESPONSE LANGUAGE: Respond entirely in $lang. The narrative and all headings must be in $lang, no other language.
+${context.getString(R.string.ai_prompt_response_language)}
 
 WOCHENRÜCKBLICKE:
 ${'$'}{task.weeksText}"""
@@ -576,7 +576,7 @@ REGELN:
 - Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
 $profileStyle
 
-RESPONSE LANGUAGE: Respond entirely in $lang. The narrative and all headings must be in $lang, no other language.
+${context.getString(R.string.ai_prompt_response_language)}
 
 MONATSRÜCKBLICKE:
 $monthsText"""

@@ -1,9 +1,12 @@
 package com.bestjournal.app.domain.usecase
 
+import android.content.Context
 import android.util.Log
+import com.bestjournal.app.R
 import com.bestjournal.app.data.remote.ai.FirebaseAiService
 import com.bestjournal.app.data.repository.JournalRepository
 import com.bestjournal.app.util.DeviceLocale
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.delay
 
@@ -12,6 +15,7 @@ class SummarizeEntryUseCase
 constructor(
     private val firebaseAiService: FirebaseAiService,
     private val journalRepository: JournalRepository,
+    @ApplicationContext private val context: Context,
 ) {
     private fun buildPrompt(text: String): String =
         """
@@ -32,7 +36,7 @@ REGELN:
 - Verwende IMMER den Marker "TITEL:" gefolgt vom Titel, unabhängig von der Antwortsprache
 - Gib NUR das Format oben zurück, nichts anderes
 
-RESPONSE LANGUAGE: Respond entirely in ${DeviceLocale.promptLanguage}. The title and bullet points must be in ${DeviceLocale.promptLanguage}, no other language.
+${context.getString(R.string.ai_prompt_response_language)}
 
 TEXT:
 $text

@@ -1,12 +1,18 @@
 package com.bestjournal.app.domain.usecase
 
+import android.content.Context
+import com.bestjournal.app.R
 import com.bestjournal.app.data.remote.ai.FirebaseAiService
 import com.bestjournal.app.util.DeviceLocale
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
-class ImproveTextUseCase @Inject constructor(private val firebaseAiService: FirebaseAiService) {
+class ImproveTextUseCase @Inject constructor(
+    private val firebaseAiService: FirebaseAiService,
+    @ApplicationContext private val context: Context,
+) {
     companion object {
         private const val TEMPERATURE = 0.4f
         private const val MAX_OUTPUT_TOKENS = 8192
@@ -40,7 +46,7 @@ REGEL:
 Gib AUSSCHLIESSLICH den überarbeiteten Text zurück.
 Keine Kommentare. Keine Erklärungen. Kein Präfix.
 
-RESPONSE LANGUAGE: Respond entirely in $lang. The rewritten text must be in $lang, no other language.
+${context.getString(R.string.ai_prompt_response_language)}
 
 TEXT:
 $text

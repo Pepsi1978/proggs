@@ -67,11 +67,14 @@ constructor(
         return result
     }
 
-    /** Appends a final response-language instruction so Gemini answers in the device locale. */
+    /**
+     * Appends the response-language instruction so Gemini answers in the device locale.
+     * The instruction is pulled from strings.xml (per locale), so for a Japanese user
+     * the final instruction is in Japanese, for a Russian user in Russian, etc.
+     */
     private fun appendResponseLanguageInstruction(prompt: String): String {
-        val lang = DeviceLocale.promptLanguage
-        return "$prompt\n\nRESPONSE LANGUAGE: Respond entirely in $lang. " +
-            "All JSON text values must be in $lang."
+        val instruction = context.getString(R.string.ai_prompt_response_language)
+        return "$prompt\n\n$instruction"
     }
 
     private fun finalizePrompt(prompt: String): String =

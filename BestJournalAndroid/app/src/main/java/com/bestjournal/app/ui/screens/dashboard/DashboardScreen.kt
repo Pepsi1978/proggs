@@ -663,7 +663,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         }
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            "\u00dcberblick",
+                                            stringResource(R.string.dashboard_summary_overview_title),
                                             style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold,
                                             color = SummaryPalette.primary,
