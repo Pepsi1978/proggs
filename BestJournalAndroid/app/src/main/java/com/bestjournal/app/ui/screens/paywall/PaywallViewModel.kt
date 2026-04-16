@@ -46,32 +46,25 @@ constructor(
         val goalsRaw = prefs.getString(Constants.PREF_ONBOARDING_GOALS, "") ?: ""
         val firstGoal = goalsRaw.split(",").firstOrNull()?.trim() ?: ""
 
-        val (headline, subtitle, goalType) = when {
-            firstGoal.contains("Stress", ignoreCase = true) -> Triple(
-                context.getString(R.string.paywall_headline_stress),
-                context.getString(R.string.paywall_headline_stress_sub),
-                "stress",
-            )
-            firstGoal.contains("Klarheit", ignoreCase = true) -> Triple(
-                context.getString(R.string.paywall_headline_clarity),
-                context.getString(R.string.paywall_headline_clarity_sub),
-                "klarheit",
-            )
-            firstGoal.contains("Wachstum", ignoreCase = true) -> Triple(
-                context.getString(R.string.paywall_headline_growth),
-                context.getString(R.string.paywall_headline_growth_sub),
-                "wachstum",
-            )
-            firstGoal.contains("Gedanken", ignoreCase = true) -> Triple(
-                context.getString(R.string.paywall_headline_thoughts),
-                context.getString(R.string.paywall_headline_thoughts_sub),
-                "gedanken",
-            )
-            else -> Triple(
-                context.getString(R.string.paywall_headline_default),
-                context.getString(R.string.paywall_headline_default_sub),
-                "default",
-            )
+        // Match new language-neutral keys first, then fallback for legacy German strings
+        val goalType = when {
+            firstGoal == "stress" || firstGoal.contains("Stress", ignoreCase = true) -> "stress"
+            firstGoal == "clarity" || firstGoal.contains("Klarheit", ignoreCase = true) -> "clarity"
+            firstGoal == "growth" || firstGoal.contains("Wachstum", ignoreCase = true) -> "growth"
+            firstGoal == "thoughts" || firstGoal.contains("Gedanken", ignoreCase = true) -> "thoughts"
+            else -> "default"
+        }
+        val (headline, subtitle) = when (goalType) {
+            "stress" -> context.getString(R.string.paywall_headline_stress) to
+                context.getString(R.string.paywall_headline_stress_sub)
+            "clarity" -> context.getString(R.string.paywall_headline_clarity) to
+                context.getString(R.string.paywall_headline_clarity_sub)
+            "growth" -> context.getString(R.string.paywall_headline_growth) to
+                context.getString(R.string.paywall_headline_growth_sub)
+            "thoughts" -> context.getString(R.string.paywall_headline_thoughts) to
+                context.getString(R.string.paywall_headline_thoughts_sub)
+            else -> context.getString(R.string.paywall_headline_default) to
+                context.getString(R.string.paywall_headline_default_sub)
         }
 
         personalizedHeadline = MutableStateFlow(headline to subtitle).asStateFlow()

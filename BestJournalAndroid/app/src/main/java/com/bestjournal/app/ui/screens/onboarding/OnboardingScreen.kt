@@ -317,10 +317,10 @@ private fun PersonalizationPage(viewModel: OnboardingViewModel) {
     val selectedGoals by viewModel.selectedGoals.collectAsState()
 
     val goals = listOf(
-        "Stress abbauen",
-        "Klarheit finden",
-        "Pers\u00f6nliches Wachstum",
-        "Meine Gedanken festhalten"
+        "stress" to stringResource(R.string.onboarding_goal_stress),
+        "clarity" to stringResource(R.string.onboarding_goal_clarity),
+        "growth" to stringResource(R.string.onboarding_goal_growth),
+        "thoughts" to stringResource(R.string.onboarding_goal_thoughts),
     )
 
     Column(
@@ -377,16 +377,16 @@ private fun PersonalizationPage(viewModel: OnboardingViewModel) {
         Spacer(Modifier.height(32.dp))
 
         // Goal chips — staggered from below
-        goals.forEachIndexed { idx, goal ->
+        goals.forEachIndexed { idx, (key, label) ->
             AnimatedVisibility(
                 visible = visible.value,
                 enter = fadeIn(tween(500, delayMillis = 300 + idx * 120)) +
                         slideInVertically(tween(500, delayMillis = 300 + idx * 120)) { 60 }
             ) {
                 GoalChip(
-                    text = goal,
-                    selected = goal in selectedGoals,
-                    onClick = { viewModel.toggleGoal(goal) }
+                    text = label,
+                    selected = key in selectedGoals,
+                    onClick = { viewModel.toggleGoal(key) }
                 )
             }
             if (idx < goals.lastIndex) Spacer(Modifier.height(12.dp))
