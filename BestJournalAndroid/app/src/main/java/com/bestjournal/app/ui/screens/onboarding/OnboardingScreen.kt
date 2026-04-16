@@ -290,7 +290,7 @@ private fun WelcomePage() {
         // Three benefit rows — staggered entrance
         val benefits = listOf(
             stringResource(R.string.onboarding_feature_speech),
-            "5 intelligente Analyse-Profile f\u00fcr verschiedene Perspektiven",
+            stringResource(R.string.onboarding_feature_profiles),
             stringResource(R.string.onboarding_feature_secure)
         )
         benefits.forEachIndexed { idx, text ->
@@ -367,7 +367,7 @@ private fun PersonalizationPage(viewModel: OnboardingViewModel) {
                 Spacer(Modifier.height(8.dp))
 
                 Text(
-                    "W\u00e4hle ein oder mehrere Ziele",
+                    stringResource(R.string.onboarding_goals_select),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -492,7 +492,7 @@ private fun HowItWorksPage() {
         ),
         Step(
             Icons.Rounded.PhotoCamera, NeonEmerald,
-            "F\u00fcge Fotos hinzu",
+            stringResource(R.string.onboarding_how_step3_title),
             stringResource(R.string.onboarding_how_step3_desc)
         ),
         Step(
@@ -520,7 +520,7 @@ private fun HowItWorksPage() {
             enter = fadeIn(tween(600)) + slideInVertically(tween(600)) { -40 }
         ) {
             Text(
-                "So einfach geht es",
+                stringResource(R.string.onboarding_how_title),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold
                 ),
@@ -650,7 +650,7 @@ private fun ProfilesPage() {
             enter = fadeIn(tween(600)) + slideInVertically(tween(600)) { -40 }
         ) {
             Text(
-                "5 Perspektiven auf\ndein Leben",
+                stringResource(R.string.onboarding_perspectives_title),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
                     lineHeight = 34.sp
@@ -746,11 +746,11 @@ private fun TrialPage(onStartTrial: () -> Unit, onSkip: () -> Unit) {
 
     val benefits = listOf(
         stringResource(R.string.onboarding_premium_feature_improve),
-        "5 intelligente Dashboard-Profile f\u00fcr tiefe Einblicke in dein Leben",
+        stringResource(R.string.onboarding_premium_profiles),
         stringResource(R.string.onboarding_premium_feature_dashboard),
         stringResource(R.string.onboarding_premium_feature_retro),
         stringResource(R.string.onboarding_premium_feature_patterns),
-        "PDF-Export mit Fotos, sichere deine Eintr\u00e4ge als Dokument",
+        stringResource(R.string.onboarding_premium_feature_pdf),
         stringResource(R.string.onboarding_premium_feature_noads),
     )
 
@@ -793,7 +793,7 @@ private fun TrialPage(onStartTrial: () -> Unit, onSkip: () -> Unit) {
                 Spacer(Modifier.height(20.dp))
 
                 Text(
-                    "8 Tage Premium testen",
+                    stringResource(R.string.onboarding_try_premium),
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold
                     ),

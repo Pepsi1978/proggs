@@ -520,6 +520,14 @@
     <string name="onboarding_free_after_trial">Danach nutzt du Best Journal weiter,\nkostenlos mit begrenzten KI-Aufrufen pro Woche.</string>
     <string name="onboarding_start_free">Kostenlos starten</string>
     <string name="onboarding_without_premium">Ohne Premium fortfahren</string>
+    <string name="onboarding_feature_profiles">5 intelligente Analyse-Profile für verschiedene Perspektiven</string>
+    <string name="onboarding_goals_select">Wähle ein oder mehrere Ziele</string>
+    <string name="onboarding_how_step3_title">Füge Fotos hinzu</string>
+    <string name="onboarding_how_title">So einfach geht es</string>
+    <string name="onboarding_perspectives_title">5 Perspektiven auf\ndein Leben</string>
+    <string name="onboarding_premium_feature_pdf">PDF-Export mit Fotos, sichere deine Einträge als Dokument</string>
+    <string name="onboarding_premium_profiles">5 intelligente Dashboard-Profile für tiefe Einblicke in dein Leben</string>
+    <string name="onboarding_try_premium">8 Tage Premium testen</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
