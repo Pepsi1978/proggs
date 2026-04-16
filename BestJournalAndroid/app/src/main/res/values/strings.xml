@@ -25,6 +25,10 @@
     <string name="action_back">Zurück</string>
     <string name="action_done">Fertig</string>
     <string name="action_no_thanks">Nein danke</string>
+    <string name="action_delete">Löschen</string>
+    <string name="action_ok">OK</string>
+    <string name="action_go_google_play">Zu Google Play</string>
+    <string name="journal_drive_backup_dialog">Google Drive Backup</string>
     <string name="label_premium">Premium</string>
     <string name="label_original">Original</string>
     <string name="label_improved">Verbessert</string>

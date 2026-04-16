@@ -1212,7 +1212,7 @@ fun EntryDetailScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = NeonRed),
                 ) {
-                    Text("L\u00f6schen")
+                    Text(stringResource(R.string.action_delete))
                 }
             },
             dismissButton = {

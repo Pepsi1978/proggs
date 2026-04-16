@@ -647,7 +647,7 @@ fun JournalScreen(
                 onDismissRequest = { showSyncLegend = false },
                 containerColor = MaterialTheme.colorScheme.surface,
                 title = {
-                    Text("Google Drive Backup", color = MaterialTheme.colorScheme.onSurface)
+                    Text(stringResource(R.string.journal_drive_backup_dialog), color = MaterialTheme.colorScheme.onSurface)
                 },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -734,7 +734,7 @@ fun JournalScreen(
                     }
                 },
                 confirmButton = {
-                    OutlinedButton(onClick = { showSyncLegend = false }) { Text("OK") }
+                    OutlinedButton(onClick = { showSyncLegend = false }) { Text(stringResource(R.string.action_ok)) }
                 },
             )
         }

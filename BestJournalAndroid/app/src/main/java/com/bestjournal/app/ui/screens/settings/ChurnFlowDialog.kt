@@ -847,7 +847,7 @@ private fun StepConfirm(
         Spacer(modifier = Modifier.height(6.dp))
 
         TextButton(onClick = onConfirmCancel, modifier = Modifier.fillMaxWidth()) {
-            Text("Zu Google Play", color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.action_go_google_play), color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
