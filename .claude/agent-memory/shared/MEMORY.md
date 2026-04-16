@@ -104,6 +104,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-15 22:22 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-04-15 22:25 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 - **[2026-04-15 22:30] subagent-failure**: ENDLOSSCHLEIFE Stop-Hook: Der SubagentStop/Stop-Hook in ~/.claude/hooks/ feuert bei JEDER Assistenten-Antwort (50+ mal) auch wenn KEIN Subagent abgeschlossen hat. Symptom: Hook-Feedback erscheint als User-Message nach jeder Assistant-Response, Text lautet A subagent just finished. Root Cause: Hook prueft nicht ob tatsaechlich ein Subagent-Completion-Event vorliegt (kein gueltiges subagent_id im Input). Stattdessen feuert er auf jeden Stop-Event. Betroffene Datei: ~/.claude/hooks/ (SubagentStop oder Stop Hook, vermutlich subagent-stop.ps1 oder stop-hook.ps1). Konkreter Fix: Am Anfang des Hooks pruefen ob der Input-Parameter subagent_id nicht leer ist. Falls leer oder nicht vorhanden: sofort exit 0 ohne weitere Verarbeitung. PowerShell-Beispiel: $input = $env:CLAUDE_TOOL_INPUT | ConvertFrom-Json; if (-not $input.subagent_id) { exit 0 }. Alternativ: Hook nur fuer SubagentStop-Event registrieren (nicht fuer Stop-Event) falls er beide Events abfaengt.
+### 2026-04-16 10:35 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ---
 
 ## Systemzustand (aktuell)
