@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+    tools:locale="de">
     <string name="app_name">Best Journal</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
@@ -461,6 +463,17 @@
     <string name="settings_yearly_review_off">Am letzten Tag des Jahres um 15:00 Uhr</string>
     <string name="achievement_secret">Geheim</string>
     <string name="paywall_exit_bonus_days">+ %1$d Tage extra Testzeit</string>
+    <!-- Splash screen start button -->
+    <string name="splash_start">Start</string>
+    <!-- FreeLimitIndicator: remaining uses counter -->
+    <!-- %1$d = number of remaining AI uses this week -->
+    <string name="limit_remaining"><xliff:g id="count" example="3">%1$d</xliff:g> verbleibend</string>
+    <!-- FreeLimitIndicator: usage counter (X of Y used) -->
+    <!-- %1$d = used count, %2$d = max count -->
+    <string name="limit_used_of_max"><xliff:g id="used" example="3">%1$d</xliff:g> von <xliff:g id="max" example="5">%2$d</xliff:g> genutzt</string>
+    <!-- ChurnFlowDialog: retention discount badge -->
+    <!-- %1$d = discount percentage -->
+    <string name="churn_discount_badge"><xliff:g id="percent" example="50">%1$d</xliff:g>%% SPAREN</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          RETROSPECTIVE SCREEN

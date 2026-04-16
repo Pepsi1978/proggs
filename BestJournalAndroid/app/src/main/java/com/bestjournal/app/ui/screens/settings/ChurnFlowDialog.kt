@@ -623,7 +623,7 @@ private fun StepRetentionOffer(
                         shadowElevation = 4.dp,
                     ) {
                         Text(
-                            text = "${Constants.RETENTION_DISCOUNT_PERCENT}% SPAREN",
+                            text = stringResource(R.string.churn_discount_badge, Constants.RETENTION_DISCOUNT_PERCENT),
                             style = MaterialTheme.typography.labelLarge.copy(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp,

@@ -359,7 +359,7 @@ fun SplashScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            "Start",
+                            stringResource(R.string.splash_start),
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.8.sp,

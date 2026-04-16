@@ -154,7 +154,7 @@ fun FreeLimitIndicator(
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = "$remaining verbleibend",
+                            text = stringResource(R.string.limit_remaining, remaining),
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.SemiBold,
                             ),
@@ -219,7 +219,7 @@ fun FreeLimitIndicator(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "$usedCount von $maxCount genutzt",
+                            text = stringResource(R.string.limit_used_of_max, usedCount, maxCount),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         )
