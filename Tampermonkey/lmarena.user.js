@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Arena V.1.4.3
 // @namespace    https://arena.ai/
-// @version      1.4.3
+// @version      1.4.4
 // @description  Speech-to-Text + Gemini-Korrektur (DE) ohne stilles Fallback. Zeigt Output-Preview. Send-Button-Fix via React-Nudge.
 // @match        https://arena.ai/*
 // @match        https://web.arena.ai/*
@@ -99,7 +99,7 @@
 		autoGeminiCorrection: true,
 
 		// Groq Whisper Speech-to-Text
-		whisperModel: "whisper-large-v3",
+		whisperModel: "whisper-large-v3-turbo",
 		whisperLang: "de",
 	};
 

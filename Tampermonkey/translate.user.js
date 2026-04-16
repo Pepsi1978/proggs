@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Translate V.1.5.6
 // @namespace    https://translate.google.com/
-// @version      1.5.6
+// @version      1.5.7
 // @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/translate.user.js
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/translate.user.js
 // @description  Speech-to-Text (DE) auf Google Translate. Mic-Button unten rechts. Kein stilles Fallback. Mit Output-Preview. API-Key wird in Tampermonkey gespeichert.
@@ -78,7 +78,7 @@
 		previewChars: 140,
 
 		// Groq Whisper Speech-to-Text
-		whisperModel: "whisper-large-v3",
+		whisperModel: "whisper-large-v3-turbo",
 		whisperLang: "de",
 	};
 

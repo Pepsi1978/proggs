@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gemini V.1.5.6
 // @namespace    https://gemini.google.com/
-// @version      1.5.6
+// @version      1.5.7
 // @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/gemini.user.js
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/gemini.user.js
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf Gemini Web. Mic-Button fest unten rechts. Auto-Restart bei Speech-Ende (auch bei Pausen). Schreibt ins zuletzt fokussierte Eingabefeld. Mit Output-Preview.
@@ -132,7 +132,7 @@ Speichere nur diese Punkte als dauerhafte Erinnerungen, exakt als einfache Sätz
 		autoGeminiCorrection: true,
 
 		// Groq Whisper Speech-to-Text
-		whisperModel: "whisper-large-v3",
+		whisperModel: "whisper-large-v3-turbo",
 		whisperLang: "de",
 	};
 

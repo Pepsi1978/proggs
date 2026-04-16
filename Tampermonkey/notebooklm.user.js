@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Notebook LM V.1.5.6
 // @namespace    https://www.notebooklm.google.com/
-// @version      1.5.6
+// @version      1.5.7
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf Google Search. Mic-Button fest unten links. Kein stilles Fallback. Mit Output-Preview.
 // @match        https://notebooklm.google.com/*
 // @run-at       document-idle
@@ -91,7 +91,7 @@
 		autoGeminiCorrection: true,
 
 		// Groq Whisper Speech-to-Text
-		whisperModel: "whisper-large-v3",
+		whisperModel: "whisper-large-v3-turbo",
 		whisperLang: "de",
 	};
 

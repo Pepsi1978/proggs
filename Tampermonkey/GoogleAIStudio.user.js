@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AI Studio V.1.6.5
 // @namespace    https://aistudio.google.com/prompts/new_chat
-// @version      1.6.5
+// @version      1.6.6
 // @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/GoogleAIStudio.user.js
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/GoogleAIStudio.user.js
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf ChatGPT. Mic-Button unten links. Zwei Prompt-Builder Buttons (Frank + für jedermann) über dem Mic. Kein stilles Fallback. Mit Output-Preview.
@@ -99,7 +99,7 @@
 		autoGeminiCorrection: true,
 
 		// Groq Whisper Speech-to-Text
-		whisperModel: "whisper-large-v3",
+		whisperModel: "whisper-large-v3-turbo",
 		whisperLang: "de",
 	};
 

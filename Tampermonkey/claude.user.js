@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Claude V.1.4.9
 // @namespace    https://claude.ai/
-// @version      1.4.9
+// @version      1.4.10
 // @description  Speech-to-Text + Gemini-„Diktat-Bereinigung“ (DE) auf Claude: entfernt Kauderwelsch/Doubletten + setzt Satzbau/Zeichensetzung. Dazu 2 Prompt-Builder Buttons. ProseMirror-kompatible Textübernahme + UI-Reinject (Buttons verschwinden nicht mehr). Debounced Observer (verhindert Lade-Freeze). Fix: strengere Prompt-Feld-Erkennung (kein Seitentext mehr).
 // @match        https://claude.ai/*
 // @match        https://www.claude.ai/*
@@ -129,7 +129,7 @@
 		autoGeminiCorrection: true,
 
 		// Groq Whisper Speech-to-Text
-		whisperModel: "whisper-large-v3",
+		whisperModel: "whisper-large-v3-turbo",
 		whisperLang: "de",
 	};
 

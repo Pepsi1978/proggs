@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Grok V.1.4.6
 // @namespace    https://grok.com/
-// @version      1.4.6
+// @version      1.4.7
 // @description  Speech-to-Text + Gemini-Korrektur (DE) + Prompt-Builder. Mic/Buttons unten rechts. Mit Output-Preview.
 // @match        https://grok.com/*
 // @run-at       document-idle
@@ -85,7 +85,7 @@
 		autoGeminiCorrection: true,
 
 		// Groq Whisper Speech-to-Text
-		whisperModel: "whisper-large-v3",
+		whisperModel: "whisper-large-v3-turbo",
 		whisperLang: "de",
 	};
 

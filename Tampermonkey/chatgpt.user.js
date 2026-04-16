@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT V.1.5.6
 // @namespace    https://chatgpt.com/
-// @version      1.5.6
+// @version      1.5.7
 // @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/chatgpt.user.js
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/chatgpt.user.js
 // @description  Speech-to-Text + Gemini-Diktat-Bereinigung (DE) auf ChatGPT. Mic-Button unten rechts. Zwei Prompt-Builder Buttons (Frank + für jedermann) über dem Mic. Memory-Button links neben dem Mic. v1.4.3: Live-Vorschau Debounce, parallele Chunk-Korrektur, MutationObserver-Throttle, Gemini-Modell per Menü änderbar, API-Key-Status beim Start.
@@ -363,7 +363,7 @@ Speichere nur diese Punkte als dauerhafte Erinnerungen, exakt als einfache Sätz
 		autoGeminiCorrection: initialAutoGeminiCorrection,
 
 		// Groq Whisper Speech-to-Text
-		whisperModel: "whisper-large-v3",
+		whisperModel: "whisper-large-v3-turbo",
 		whisperLang: "de",
 	};
 
