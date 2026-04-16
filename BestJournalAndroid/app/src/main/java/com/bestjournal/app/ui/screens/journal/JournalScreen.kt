@@ -1085,8 +1085,8 @@ private fun PreviewDialog(
                     ) {
                         Text(
                             text =
-                                if (showingImproved) "\u21A9 Original anzeigen"
-                                else "\u2728 Verbesserte Version anzeigen"
+                                if (showingImproved) stringResource(R.string.journal_show_original)
+                                else stringResource(R.string.journal_show_improved)
                         )
                     }
 
@@ -1206,7 +1206,7 @@ private fun PreviewDialog(
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
                         ShimmerLoadingEffect(height = 60.dp, cornerRadius = 12.dp)
                         Text(
-                            "KI verbessert Text \u2014 bitte warten",
+                            stringResource(R.string.journal_ai_improving),
                             color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.titleSmall,
                             textAlign = TextAlign.Center,

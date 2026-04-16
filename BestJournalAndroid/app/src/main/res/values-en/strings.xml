@@ -30,6 +30,9 @@
     <string name="action_go_google_play">Go to Google Play</string>
     <string name="journal_drive_backup_dialog">Google Drive Backup</string>
     <string name="journal_improve_text">✨ Improve text</string>
+    <string name="journal_show_original">↩ Show original</string>
+    <string name="journal_show_improved">✨ Show improved version</string>
+    <string name="journal_ai_improving">AI is improving your text — please wait</string>
     <string name="journal_later">Later</string>
     <!-- Paywall strings -->
     <string name="paywall_from_per_day">From %1$s per day</string>
@@ -179,6 +182,10 @@
     <string name="dashboard_limit_cooldown">Short break: %1$d minutes until your next analysis.</string>
     <string name="dashboard_analysis_failed">Analysis failed</string>
     <string name="dashboard_last_updated">Last updated on %1$s</string>
+    <string name="dashboard_loading_profile_switch">AI dashboard updates automatically after each profile switch</string>
+    <string name="dashboard_loading_delete_update">AI dashboard updates automatically after each deleted entry</string>
+    <string name="dashboard_loading_auto_update">AI dashboard updates automatically after each new journal entry</string>
+    <string name="dashboard_loading_default">AI dashboard is updating</string>
 
     <!-- Legend labels -->
     <string name="legend_urgent">Urgent</string>
@@ -347,6 +354,8 @@
     <string name="settings_fingerprint">Fingerprint</string>
     <string name="settings_fingerprint_desc">Unlock app on start</string>
     <string name="settings_auto_lock">Locks automatically after 60 seconds in the background</string>
+    <string name="settings_ai_profiles_title">AI Dashboard Profiles:</string>
+    <string name="settings_ai_automations">AI Automations</string>
     <string name="settings_text_improvement">Text improvement</string>
     <string name="settings_text_improvement_desc">Enable by default</string>
     <string name="settings_dashboard_section">Dashboard</string>
@@ -658,6 +667,7 @@
     <string name="ai_limit_yearly">Yearly, %1$s/year (save 37%%)</string>
     <string name="ai_limit_no_thanks">No thanks, continue without AI</string>
     <string name="ai_banner_title">Your journal is powered by AI</string>
+    <string name="ai_banner_body">• Dictated texts are automatically improved\n• Summaries for every entry\n• Smart life advice from your patterns\n• All included in your free trial</string>
     <string name="cd_mic_start">Start recording</string>
     <string name="cd_mic_stop">Stop recording</string>
     <string name="entry_improve_limit_daily">Daily limit reached. Try again tomorrow!</string>

@@ -335,12 +335,12 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     if (uiState.isScenarioSwitch)
-                                        "KI-Dashboard wird nach jedem Profilwechsel automatisch aktualisiert"
+                                        stringResource(R.string.dashboard_loading_profile_switch)
                                     else if (uiState.isDeleteUpdate)
-                                        "KI-Dashboard wird nach jedem gelöschten Tagebucheintrag automatisch aktualisiert"
+                                        stringResource(R.string.dashboard_loading_delete_update)
                                     else if (uiState.isAutoUpdate)
-                                        "KI-Dashboard wird nach jedem neuen Tagebucheintrag automatisch aktualisiert"
-                                    else "KI-Dashboard wird aktualisiert",
+                                        stringResource(R.string.dashboard_loading_auto_update)
+                                    else stringResource(R.string.dashboard_loading_default),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = MaterialTheme.typography.bodyMedium,
                                     textAlign = TextAlign.Center,

@@ -1442,7 +1442,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "KI-Dashboard Profile:",
+                                stringResource(R.string.settings_ai_profiles_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -1745,7 +1745,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "KI-Automatisierungen",
+                                stringResource(R.string.settings_ai_automations),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )

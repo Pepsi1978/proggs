@@ -76,10 +76,7 @@ fun AiInfoBanner(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "\u2022 Diktierte Texte werden automatisch verbessert\n" +
-                    "\u2022 Zusammenfassungen f\u00fcr jeden Eintrag\n" +
-                    "\u2022 Intelligente Lebensratschl\u00e4ge aus deinen Mustern\n" +
-                    "\u2022 Alles in deiner kostenlosen Testphase enthalten",
+                    stringResource(R.string.ai_banner_body),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )

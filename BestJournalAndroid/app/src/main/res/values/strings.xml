@@ -30,6 +30,9 @@
     <string name="action_go_google_play">Zu Google Play</string>
     <string name="journal_drive_backup_dialog">Google Drive Backup</string>
     <string name="journal_improve_text">✨ Text verbessern</string>
+    <string name="journal_show_original">↩ Original anzeigen</string>
+    <string name="journal_show_improved">✨ Verbesserte Version anzeigen</string>
+    <string name="journal_ai_improving">KI verbessert Text — bitte warten</string>
     <string name="journal_later">Später</string>
     <!-- Paywall missed strings -->
     <string name="paywall_from_per_day">Ab %1$s pro Tag</string>
@@ -179,6 +182,10 @@
     <string name="dashboard_limit_cooldown">Kurze Pause: Noch %1$d Minuten bis zur nächsten Analyse.</string>
     <string name="dashboard_analysis_failed">Analyse fehlgeschlagen</string>
     <string name="dashboard_last_updated">Letzte Aktualisierung am %1$s</string>
+    <string name="dashboard_loading_profile_switch">KI-Dashboard wird nach jedem Profilwechsel automatisch aktualisiert</string>
+    <string name="dashboard_loading_delete_update">KI-Dashboard wird nach jedem gelöschten Tagebucheintrag automatisch aktualisiert</string>
+    <string name="dashboard_loading_auto_update">KI-Dashboard wird nach jedem neuen Tagebucheintrag automatisch aktualisiert</string>
+    <string name="dashboard_loading_default">KI-Dashboard wird aktualisiert</string>
 
     <!-- Legend labels -->
     <string name="legend_urgent">Dringend</string>
@@ -347,6 +354,8 @@
     <string name="settings_fingerprint">Fingerabdruck</string>
     <string name="settings_fingerprint_desc">App beim Start entsperren</string>
     <string name="settings_auto_lock">Sperrt automatisch nach 60 Sekunden im Hintergrund</string>
+    <string name="settings_ai_profiles_title">KI-Dashboard Profile:</string>
+    <string name="settings_ai_automations">KI-Automatisierungen</string>
     <string name="settings_text_improvement">Textverbesserung</string>
     <string name="settings_text_improvement_desc">Standardmäßig aktivieren</string>
     <string name="settings_dashboard_section">Dashboard</string>
@@ -658,6 +667,7 @@
     <string name="ai_limit_yearly">Jahresabo, %1$s/Jahr (spare 37%%)</string>
     <string name="ai_limit_no_thanks">Nein danke, weiter ohne KI</string>
     <string name="ai_banner_title">Dein Tagebuch wird von KI unterstützt</string>
+    <string name="ai_banner_body">• Diktierte Texte werden automatisch verbessert\n• Zusammenfassungen für jeden Eintrag\n• Intelligente Lebensratschläge aus deinen Mustern\n• Alles in deiner kostenlosen Testphase enthalten</string>
     <string name="cd_mic_start">Aufnahme starten</string>
     <string name="cd_mic_stop">Aufnahme stoppen</string>
     <string name="entry_improve_limit_daily">Tageslimit erreicht. Morgen geht es weiter!</string>
