@@ -278,6 +278,7 @@ constructor(
                             .edit()
                             .putBoolean(Constants.PREF_DASHBOARD_UPDATE_IS_DELETE, true)
                             .putBoolean(Constants.PREF_DASHBOARD_UPDATING, true)
+                            .putLong("dashboard_update_started_at", System.currentTimeMillis())
                             .apply()
                         try {
                             aiRateLimiter.recordDashboardAttempt()

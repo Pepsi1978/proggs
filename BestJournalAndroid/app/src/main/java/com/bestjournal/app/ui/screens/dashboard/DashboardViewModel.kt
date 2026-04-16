@@ -132,9 +132,22 @@ constructor(
         }
         // Continuously poll the auto-update flag so the loading indicator
         // appears even if the user navigates to the dashboard mid-update.
+        // Safety: reset stuck flag if update has been "running" for >2 minutes
+        val updateStartKey = "dashboard_update_started_at"
         viewModelScope.launch {
             while (true) {
                 val updating = encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
+                if (updating) {
+                    val startedAt = encryptedPrefs.getLong(updateStartKey, System.currentTimeMillis())
+                    if (System.currentTimeMillis() - startedAt > 120_000L) {
+                        encryptedPrefs.edit()
+                            .putBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
+                            .remove(updateStartKey)
+                            .apply()
+                        _uiState.update { it.copy(isLoading = false, isAutoUpdate = false) }
+                        continue
+                    }
+                }
                 if (updating != _uiState.value.isLoading && !manualRefreshActive) {
                     if (!updating && _uiState.value.isAutoUpdate) {
                         // Auto-update just completed — check upsell banner
