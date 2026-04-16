@@ -334,6 +334,7 @@
     <string name="settings_automatic">Automatisch</string>
     <string name="settings_sunrise_sunset">Sonnenauf-/untergang</string>
     <string name="settings_sunrise_sunset_desc">Dunkel bei Nacht, hell bei Tag</string>
+    <string name="settings_sounds_haptics_section">Töne / Haptik</string>
     <string name="settings_app_sounds">App-Töne</string>
     <string name="settings_sounds_on">Töne sind eingeschaltet</string>
     <string name="settings_sounds_off">Töne sind ausgeschaltet</string>
@@ -393,6 +394,8 @@
     <string name="settings_premium_feature_patterns_desc">Die KI findet Zusammenhänge die dir nicht auffallen</string>
     <string name="settings_premium_feature_pdf">PDF-Export mit Fotos</string>
     <string name="settings_premium_feature_pdf_desc">Alle Tagebucheinträge mit Bilder als Dokument</string>
+    <string name="settings_premium_feature_voice">Präzisere Spracherkennung</string>
+    <string name="settings_premium_feature_voice_desc">Höhere Qualität für deine Spracheinträge</string>
     <string name="settings_unlock_premium">Premium freischalten</string>
     <!-- Export dialog -->
     <string name="settings_export_what">Was soll exportiert werden?</string>

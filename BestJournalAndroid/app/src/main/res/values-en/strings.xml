@@ -332,6 +332,7 @@
     <string name="settings_automatic">Automatic</string>
     <string name="settings_sunrise_sunset">Sunrise/Sunset</string>
     <string name="settings_sunrise_sunset_desc">Dark at night, light during the day</string>
+    <string name="settings_sounds_haptics_section">Sounds / Haptics</string>
     <string name="settings_app_sounds">App sounds</string>
     <string name="settings_sounds_on">Sounds are on</string>
     <string name="settings_sounds_off">Sounds are off</string>
@@ -391,6 +392,8 @@
     <string name="settings_premium_feature_patterns_desc">The AI finds connections you don\'t notice</string>
     <string name="settings_premium_feature_pdf">PDF export with photos</string>
     <string name="settings_premium_feature_pdf_desc">All journal entries with photos as a document</string>
+    <string name="settings_premium_feature_voice">More precise voice recognition</string>
+    <string name="settings_premium_feature_voice_desc">Higher quality for your voice entries</string>
     <string name="settings_unlock_premium">Unlock Premium</string>
     <!-- Export dialog -->
     <string name="settings_export_what">What should be exported?</string>

@@ -647,7 +647,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "T\u00f6ne / Haptik",
+                                stringResource(R.string.settings_sounds_haptics_section),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -885,6 +885,9 @@ fun SettingsScreen(
                                         .edit()
                                         .putBoolean(Constants.PREF_TTS_ENABLED, enabled)
                                         .commit()
+                                    if (enabled) {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                    }
                                 },
                                 colors =
                                     SwitchDefaults.colors(
@@ -1906,7 +1909,7 @@ fun SettingsScreen(
                                 Triple(Icons.Rounded.AutoAwesome, stringResource(R.string.settings_premium_feature_reviews), stringResource(R.string.settings_premium_feature_reviews_desc)),
                                 Triple(Icons.Rounded.Tune, stringResource(R.string.settings_premium_feature_patterns), stringResource(R.string.settings_premium_feature_patterns_desc)),
                                 Triple(Icons.Rounded.PictureAsPdf, stringResource(R.string.settings_premium_feature_pdf), stringResource(R.string.settings_premium_feature_pdf_desc)),
-                                Triple(Icons.Rounded.MusicNote, "Pr\u00e4zisere Spracherkennung", "H\u00f6here Qualit\u00e4t f\u00fcr deine Spracheintr\u00e4ge"),
+                                Triple(Icons.Rounded.MusicNote, stringResource(R.string.settings_premium_feature_voice), stringResource(R.string.settings_premium_feature_voice_desc)),
                             )
                             featureItems.forEachIndexed { idx, (icon, title, subtitle) ->
                                 Row(
