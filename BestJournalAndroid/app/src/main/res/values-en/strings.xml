@@ -88,6 +88,11 @@
     <string name="journal_text_upsell_body">With Premium you can improve every entry.</string>
     <string name="journal_discover_premium">Discover Premium →</string>
     <string name="journal_entries_label">Entries</string>
+    <string name="journal_entry_count">%1$d entries</string>
+    <string name="journal_streak_days">%1$d days</string>
+    <string name="journal_streak_days_in_row">%1$d days in a row</string>
+    <string name="journal_streak_next_goal">Next goal: %1$d days</string>
+    <string name="journal_streak_remaining">%1$d to go</string>
     <string name="journal_streak_premium">Streak protection: Available with Premium</string>
     <string name="journal_keep_going">Keep it up!</string>
     <string name="journal_daily_prompt">Daily writing prompt</string>

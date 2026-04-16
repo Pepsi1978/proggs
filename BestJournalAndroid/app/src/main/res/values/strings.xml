@@ -88,6 +88,11 @@
     <string name="journal_text_upsell_body">Mit Premium kannst du jeden Eintrag verbessern.</string>
     <string name="journal_discover_premium">Premium entdecken →</string>
     <string name="journal_entries_label">Einträge</string>
+    <string name="journal_entry_count">%1$d Einträge</string>
+    <string name="journal_streak_days">%1$d Tage</string>
+    <string name="journal_streak_days_in_row">%1$d Tage in Folge</string>
+    <string name="journal_streak_next_goal">Nächstes Ziel: %1$d Tage</string>
+    <string name="journal_streak_remaining">noch %1$d</string>
     <string name="journal_streak_premium">Streak-Schutz: Erhältlich mit Premium</string>
     <string name="journal_keep_going">Weiter so!</string>
     <string name="journal_daily_prompt">Schreibimpuls des Tages</string>

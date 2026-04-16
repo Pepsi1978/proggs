@@ -311,7 +311,7 @@ fun JournalScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
-                        text = "${allEntries.size} Einträge",
+                        text = stringResource(R.string.journal_entry_count, allEntries.size),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -337,7 +337,7 @@ fun JournalScreen(
                             )
                             Spacer(modifier = Modifier.width(3.dp))
                             Text(
-                                text = "${uiState.currentStreak} Tage",
+                                text = stringResource(R.string.journal_streak_days, uiState.currentStreak),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = streakColor,
                             )
@@ -1302,7 +1302,7 @@ private fun StreakDialog(
         title = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    "$currentStreak Tage in Folge",
+                    stringResource(R.string.journal_streak_days_in_row, currentStreak),
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.headlineSmall,
                     textAlign = TextAlign.Center,
@@ -1334,12 +1334,12 @@ private fun StreakDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            "N\u00e4chstes Ziel: $nextMilestone Tage",
+                            stringResource(R.string.journal_streak_next_goal, nextMilestone),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            "noch $daysToNext",
+                            stringResource(R.string.journal_streak_remaining, daysToNext),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.outline,
                         )
