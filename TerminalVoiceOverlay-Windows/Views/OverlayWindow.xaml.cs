@@ -40,6 +40,8 @@ namespace TerminalVoiceOverlay.Views
         private static readonly SolidColorBrush BtnUltrathinkOn  = Brush("#B8860B");
         private static readonly SolidColorBrush StarGold         = Brush("#FFD700");
         private static readonly SolidColorBrush StarMuted        = Brush("#8B7355");
+        // i18n prompt toggle
+        private static readonly SolidColorBrush BtnI18nOn        = Brush("#26A69A");
 
         // Pulse colours for main mic
         private static readonly SolidColorBrush BtnRecordingBright = Brush("#FF6666");
@@ -58,7 +60,11 @@ namespace TerminalVoiceOverlay.Views
         private bool autoEnterEnabled       = true;  // macOS default (was false in Windows)
         private bool hasPastedText          = false;
         private bool ultrathinkEnabled      = false;
+        private bool i18nPromptEnabled      = false;
         private string? lastRawTranscript   = null;
+
+        // i18n prompt prefix (verbatim, persistent toggle)
+        private const string I18nPromptPrefix = "BestJournalAndroid i18n-Pflicht: Alle UI-Texte, die durch die folgende \u00c4nderung neu entstehen oder sich \u00e4ndern, M\u00dcSSEN als String-Ressourcen in app/src/main/res/values/strings.xml angelegt werden. Kein einziger hardcoded deutscher (oder englischer) Text darf direkt im Kotlin/Compose-Code stehen. Stattdessen: stringResource(R.string.mein_key) verwenden. Die String-Keys sollen sprechende englische Namen haben (z.B. settings_export_title, dialog_confirm_delete). Die Werte in strings.xml sind auf Deutsch (das ist die Basissprache). Hier kommt die \u00c4nderung: ";
 
         // ── Right-click drag state ──
         private bool _isDragging;
@@ -121,6 +127,7 @@ namespace TerminalVoiceOverlay.Views
             CopyButton.Background  = BtnCopy;        // light blue
             PasteButton.Background = BtnPaste;       // purple
             UltrathinkButton.Background = ToggleOff;  // dark (ultrathink starts disabled)
+            I18nButton.Background = ToggleOff;            // dark (i18n starts disabled)
 
             // ── Hover animations ──
             AttachHover(XButton);
@@ -132,6 +139,7 @@ namespace TerminalVoiceOverlay.Views
             AttachHover(EnterButton);
             AttachHover(CopyButton);
             AttachHover(PasteButton);
+            AttachHover(I18nButton);
 
             // ── Terminal watcher ──
             _terminalWatcher.TerminalActivated   += OnTerminalActivated;
@@ -328,6 +336,10 @@ namespace TerminalVoiceOverlay.Views
                     {
                         finalText = transcript;
                     }
+
+                    // Prepend i18n prompt if enabled (persistent toggle)
+                    if (i18nPromptEnabled && !hasPastedText)
+                        finalText = I18nPromptPrefix + finalText;
 
                     // Prepend ultrathink prefix if enabled
                     if (ultrathinkEnabled && !hasPastedText)
@@ -571,6 +583,14 @@ namespace TerminalVoiceOverlay.Views
             }
 
             Console.WriteLine($"Ultrathink {(ultrathinkEnabled ? "ON (one-shot)" : "OFF")}");
+        }
+
+        /// <summary>ü button — toggle i18n prompt prefix (persistent, stays on until manually turned off).</summary>
+        private void BtnI18n_Click(object sender, RoutedEventArgs e)
+        {
+            i18nPromptEnabled = !i18nPromptEnabled;
+            I18nButton.Background = i18nPromptEnabled ? BtnI18nOn : ToggleOff;
+            Console.WriteLine($"i18n prompt {(i18nPromptEnabled ? "ON" : "OFF")}");
         }
 
         /// <summary>Reset ultrathink after one-shot use (auto-disable after text insertion).</summary>
