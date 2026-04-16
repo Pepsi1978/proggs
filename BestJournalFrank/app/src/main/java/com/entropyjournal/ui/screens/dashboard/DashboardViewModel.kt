@@ -1,14 +1,17 @@
 package com.entropyjournal.ui.screens.dashboard
 
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.entropyjournal.data.local.dao.JournalEntryDao
 import com.entropyjournal.data.repository.AdviceRepository
 import com.entropyjournal.domain.usecase.AnalyzeEntropyUseCase
 import com.entropyjournal.domain.usecase.GenerateAdviceUseCase
 import com.entropyjournal.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,6 +39,7 @@ constructor(
     private val generateAdviceUseCase: GenerateAdviceUseCase,
     private val analyzeEntropyUseCase: AnalyzeEntropyUseCase,
     private val adviceRepository: AdviceRepository,
+    private val journalEntryDao: JournalEntryDao,
     private val encryptedPrefs: SharedPreferences,
 ) : ViewModel() {
 
@@ -105,6 +109,40 @@ constructor(
                 }
                 kotlinx.coroutines.delay(500)
             }
+        }
+
+        // Auto-generate dashboard on first load after Google restore.
+        // Mirrors RetrospectiveViewModel's pattern: wait for restore to finish,
+        // then if the dashboard is empty but journal entries exist, regenerate
+        // the dashboard from those entries using the active profile prompt.
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                awaitRestoreComplete()
+                val blockCount = adviceRepository.getBlockCount()
+                val entryCount = journalEntryDao.getEntryCount()
+                if (blockCount == 0 && entryCount > 0) {
+                    Log.d(
+                        "DashboardVM",
+                        "Dashboard empty after restore, generating from $entryCount entries",
+                    )
+                    refreshDashboard()
+                }
+            } catch (e: Exception) {
+                Log.e("DashboardVM", "Auto-generate after restore failed: ${e.message}", e)
+            }
+        }
+    }
+
+    /** Waits for the Google Drive restore flag to clear (max 10 minutes). */
+    private suspend fun awaitRestoreComplete() {
+        val maxWaitMs = 10L * 60 * 1000
+        val start = System.currentTimeMillis()
+        while (System.currentTimeMillis() - start < maxWaitMs) {
+            val restorePending =
+                encryptedPrefs.getBoolean(Constants.PREF_RESTORE_PENDING, false)
+            if (!restorePending) break
+            Log.d("DashboardVM", "Restore in progress, waiting...")
+            kotlinx.coroutines.delay(3000)
         }
     }
 

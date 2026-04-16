@@ -176,6 +176,9 @@ constructor(
         adviceDashboardDao.deleteAll()
     }
 
+    /** Number of advice blocks currently in the dashboard database. */
+    suspend fun getBlockCount(): Int = adviceDashboardDao.getBlockCount()
+
     fun getAllAdviceBlocks(): Flow<List<AdviceBlock>> {
         return adviceDashboardDao.getAll().map { entities -> entities.map { it.toDomain() } }
     }
