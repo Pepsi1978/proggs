@@ -321,6 +321,30 @@ constructor(
     }
 }
 
+/**
+ * Parses the "verknuepfung" (connection) field from an advice JSON object.
+ *
+ * The AI sometimes returns 0, "0", "null", or a numeric value when there is no
+ * meaningful cross-category link (seen e.g. with the Summary profile). Using
+ * optString() turned those into visible strings like "Verbindung: 0" in the UI.
+ * This helper treats any of the following as "no connection":
+ * - missing key, JSON null, null Kotlin value
+ * - numeric values (0, 0.0, etc.)
+ * - empty / whitespace-only strings
+ * - the literal strings "null" or "0"
+ * - any string that parses cleanly as a number
+ */
+private fun parseConnection(obj: JSONObject): String {
+    if (!obj.has("verknuepfung") || obj.isNull("verknuepfung")) return ""
+    val raw = obj.opt("verknuepfung") ?: return ""
+    if (raw is Number) return ""
+    val str = raw.toString().trim()
+    if (str.isEmpty()) return ""
+    if (str.equals("null", ignoreCase = true)) return ""
+    if (str.toDoubleOrNull() != null) return ""
+    return str
+}
+
 private fun AdviceBlockEntity.toDomain(): AdviceBlock {
     val advices =
         try {
@@ -352,7 +376,7 @@ private fun AdviceBlockEntity.toDomain(): AdviceBlock {
                             "niedrig", "low" -> AdvicePriority.LOW
                             else -> AdvicePriority.MEDIUM
                         },
-                    connection = obj.optString("verknuepfung", ""),
+                    connection = parseConnection(obj),
                     derivation = derivation,
                 )
             }

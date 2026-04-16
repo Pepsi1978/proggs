@@ -2204,7 +2204,7 @@ private fun AdviceDerivationDialog(advice: Advice, categoryName: String, onDismi
                 if (advice.connection.isNotBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        "\u2197 Verbindung: ${advice.connection}",
+                        "\u2197 ${stringResource(R.string.dashboard_connection)}: ${advice.connection}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                     )
