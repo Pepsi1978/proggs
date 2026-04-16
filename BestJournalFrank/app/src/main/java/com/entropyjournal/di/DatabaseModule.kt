@@ -2,6 +2,7 @@ package com.entropyjournal.di
 
 import android.content.Context
 import com.entropyjournal.data.local.AppDatabase
+import com.entropyjournal.data.local.DashboardDatabase
 import com.entropyjournal.data.local.RetrospectiveDatabase
 import com.entropyjournal.data.local.dao.AdviceDashboardDao
 import com.entropyjournal.data.local.dao.EntryPhotoDao
@@ -31,12 +32,18 @@ object DatabaseModule {
     }
 
     @Provides
+    @Singleton
+    fun provideDashboardDatabase(@ApplicationContext context: Context): DashboardDatabase {
+        return DashboardDatabase.getDatabase(context)
+    }
+
+    @Provides
     fun provideJournalEntryDao(database: AppDatabase): JournalEntryDao {
         return database.journalEntryDao()
     }
 
     @Provides
-    fun provideAdviceDashboardDao(database: AppDatabase): AdviceDashboardDao {
+    fun provideAdviceDashboardDao(database: DashboardDatabase): AdviceDashboardDao {
         return database.adviceDashboardDao()
     }
 

@@ -571,6 +571,9 @@ constructor(
             context.deleteDatabase("retrospective_db")
             context.getDatabasePath("retrospective_db-wal")?.delete()
             context.getDatabasePath("retrospective_db-shm")?.delete()
+            context.deleteDatabase("dashboard_db")
+            context.getDatabasePath("dashboard_db-wal")?.delete()
+            context.getDatabasePath("dashboard_db-shm")?.delete()
             java.io.File(context.filesDir, ".retro_cleaned_v3").delete()
         } catch (_: Exception) {}
 

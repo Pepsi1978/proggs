@@ -6,23 +6,19 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.entropyjournal.data.local.dao.AdviceDashboardDao
 import com.entropyjournal.data.local.dao.EntryPhotoDao
 import com.entropyjournal.data.local.dao.JournalEntryDao
-import com.entropyjournal.data.local.entity.AdviceBlockEntity
 import com.entropyjournal.data.local.entity.EntryPhotoEntity
 import com.entropyjournal.data.local.entity.JournalEntryEntity
 
 @Database(
-    entities = [JournalEntryEntity::class, AdviceBlockEntity::class, EntryPhotoEntity::class],
-    version = 8,
+    entities = [JournalEntryEntity::class, EntryPhotoEntity::class],
+    version = 9,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun journalEntryDao(): JournalEntryDao
-
-    abstract fun adviceDashboardDao(): AdviceDashboardDao
 
     abstract fun entryPhotoDao(): EntryPhotoDao
 
@@ -106,6 +102,15 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
 
+        private val MIGRATION_8_9 =
+            object : Migration(8, 9) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // Advice blocks moved to separate database (dashboard_db)
+                    // so Google Auto Backup only backs up journal entries, not dashboard.
+                    db.execSQL("DROP TABLE IF EXISTS advice_blocks")
+                }
+            }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE
                 ?: synchronized(this) {
@@ -123,6 +128,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 MIGRATION_5_6,
                                 MIGRATION_6_7,
                                 MIGRATION_7_8,
+                                MIGRATION_8_9,
                             )
                             .build()
                     INSTANCE = instance

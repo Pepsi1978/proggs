@@ -216,6 +216,11 @@ constructor(
         context.deleteDatabase("retrospective_db")
         Log.d("SyncDebug", "Cleared retrospective_db for fresh generation after restore")
 
+        // Clear dashboard blocks — they belong to the old data and will be regenerated
+        // from journal entries using the current profile prompt
+        context.deleteDatabase("dashboard_db")
+        Log.d("SyncDebug", "Cleared dashboard_db for fresh generation after restore")
+
         // Photos are downloaded AFTER app restart via downloadMissingPhotos()
         return Result.success(Unit)
     }
