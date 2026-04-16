@@ -994,6 +994,7 @@ fun SettingsScreen(
                             Switch(
                                 checked = ttsEnabled,
                                 onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
                                     ttsEnabled = enabled
                                     soundsPrefs
                                         .edit()

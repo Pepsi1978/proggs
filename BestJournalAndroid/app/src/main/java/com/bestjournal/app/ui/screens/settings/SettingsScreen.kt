@@ -880,14 +880,12 @@ fun SettingsScreen(
                             Switch(
                                 checked = ttsEnabled,
                                 onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
                                     ttsEnabled = enabled
                                     soundsPrefs
                                         .edit()
                                         .putBoolean(Constants.PREF_TTS_ENABLED, enabled)
                                         .commit()
-                                    if (enabled) {
-                                        doHaptic(HapticFeedbackType.LongPress)
-                                    }
                                 },
                                 colors =
                                     SwitchDefaults.colors(
