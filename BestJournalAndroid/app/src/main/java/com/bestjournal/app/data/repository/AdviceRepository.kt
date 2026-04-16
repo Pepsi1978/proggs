@@ -96,93 +96,20 @@ constructor(
         return if (langOverride.isNotBlank()) "$langOverride\n\n$prompt" else prompt
     }
 
-    private fun buildCustomAnalysisPrompt(userFocus: String): String =
-        """
-Du bist ein intelligenter, aufmerksamer Tagebuch-Analyst.
-
-BENUTZER-FOKUS (DAS ist deine Aufgabe):
-$userFocus
-
-Analysiere die Tagebucheintr${"\u00e4"}ge des Nutzers mit GENAU diesem Fokus.
-Finde alles, was mit dem Fokus zusammenh${"\u00e4"}ngt. Erstelle daraus ein
-strukturiertes Dashboard im JSON-Format.
-
-WICHTIG — DYNAMISCHE ${"\u00dc"}BERSCHRIFTEN:
-Du MUSST drei passende ${"\u00dc"}berschriften f${"\u00fc"}r das Dashboard erfinden,
-die GENAU zum Benutzer-Fokus passen. KEINE generischen Titel wie
-"Wichtigste Ergebnisse" oder "Analyse". Stattdessen kreative,
-spezifische ${"\u00dc"}berschriften die den Fokus widerspiegeln.
-Beispiele:
-- Fokus "Angeln": "Die gr${"\u00f6"}${"\u00df"}ten F${"\u00e4"}nge", "Dein Angel-${"\u00dc"}berblick", "Alle Fangberichte"
-- Fokus "Schlafqualit${"\u00e4"}t": "Deine Schlafmuster", "Schlaf-Analyse", "Alle Schlafbeobachtungen"
-- Fokus "zu viel machen": "Die gr${"\u00f6"}${"\u00df"}ten Zeitfresser", "Dein Belastungs-${"\u00dc"}berblick", "Alle Belastungspunkte"
-
-OBERSTE REGEL — KEIN EINTRAG DARF FEHLEN:
-Du erh${"\u00e4"}ltst nummerierte Eintr${"\u00e4"}ge. Du MUSST JEDEN EINZELNEN lesen und einbeziehen.
-
-SPRACHREGELN:
-- Deutsch. Einfach, klar. Keine Fremdw${"\u00f6"}rter.
-- Empathisch und direkt.
-- Keine langen Gedankenstriche (—). Nutze Kommas oder Punkte.
-
-MENGEN-REGEL:
-Mindestens 10 Erkenntnisse insgesamt. Jeder Aspekt verdient eine eigene Erkenntnis.
-
-JSON-AUSGABE-SCHEMA:
-{
-  "ueberschrift_top5": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r die Top 5 (passend zum Fokus, max 3 W${"\u00f6"}rter)",
-  "ueberschrift_analyse": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r die ${"\u00dc"}bersicht (passend zum Fokus, max 3 W${"\u00f6"}rter)",
-  "ueberschrift_ergebnisse": "Kreative ${"\u00dc"}berschrift f${"\u00fc"}r alle Ergebnisse (passend zum Fokus, max 3 W${"\u00f6"}rter)",
-  "gesamt_entropie": 0.0,
-  "trend": "steigend|stabil|sinkend|unbekannt",
-  "gesamtanalyse": "...",
-  "fortschritte": [...],
-  "top_massnahmen": [...],
-  "kategorien": [...]
-}
-
-1) "ueberschrift_top5/analyse/ergebnisse": PFLICHT. Kreativ, spezifisch, max 3 W${"\u00f6"}rter.
-   MUSS zum Benutzer-Fokus passen. KEINE generischen Titel.
-
-2) "gesamt_entropie" (0.0 bis 1.0): Wie stark ist der Fokus-Bereich in den Eintr${"\u00e4"}gen vertreten?
-
-3) "trend": Nur bei 3+ Eintr${"\u00e4"}gen. Ver${"\u00e4"}ndert sich der Fokus-Bereich?
-
-4) "gesamtanalyse" (15–25 S${"\u00e4"}tze): Was sagen die Eintr${"\u00e4"}ge zum Fokus-Bereich?
-   Benenne JEDES relevante Detail aus JEDEM Eintrag.
-
-5) "fortschritte" (0–5): Muster oder Entwicklungen im Fokus-Bereich.
-   { "titel": "max 5 W${"\u00f6"}rter", "beschreibung": "2–3 S${"\u00e4"}tze", "bezug": "1 Satz" }
-
-6) "top_massnahmen" (genau 5): Die wichtigsten Erkenntnisse zum Fokus-Bereich.
-   {
-     "titel": "max 6 W${"\u00f6"}rter",
-     "beschreibung": "13–21 W${"\u00f6"}rter — kompakt auf den Punkt.",
-     "erklaerung": "5–8 S${"\u00e4"}tze ausf${"\u00fc"}hrlich."
-   }
-
-7) "kategorien": Themengruppen die zum Fokus passen (dynamisch erstellen).
-   {
-     "name": "max 12 Zeichen", "icon": "material_icon_name", "farbe": "#HEX",
-     "entropie_level": 0.0,
-     "zusammenfassung": "3–5 S${"\u00e4"}tze",
-     "ratschlaege": [{
-       "titel": "max 6 W${"\u00f6"}rter",
-       "beschreibung": "13–21 W${"\u00f6"}rter",
-       "prioritaet": "hoch|mittel|niedrig",
-       "verknuepfung": "Verbindung zu anderem Thema oder null",
-       "herleitung": [{"datum":"...","zusammenfassung":"1–2 S${"\u00e4"}tze"}]
-     }]
-   }
-
-WORTANZAHL-REGEL: "beschreibung" in top_massnahmen und ratschlaege IMMER 13–21 W${"\u00f6"}rter.
-
-AUSGABEFORMAT — STRENGE REGELN:
-- Antworte NUR mit dem JSON-Objekt.
-- Kein Text davor oder danach. Keine Backticks.
-- Beginne direkt mit { und ende mit }.
-    """
-            .trimIndent()
+    /** Custom analysis prompt — fully localized via string resources. */
+    private fun buildCustomAnalysisPrompt(userFocus: String): String {
+        val langOverride = context.getString(R.string.ai_prompt_language_override)
+        val prompt =
+            listOf(
+                    context.getString(R.string.ai_prompt_custom_intro, userFocus),
+                    context.getString(R.string.ai_prompt_custom_headings),
+                    context.getString(R.string.ai_prompt_custom_rules),
+                    context.getString(R.string.ai_prompt_custom_schema),
+                    context.getString(R.string.ai_prompt_custom_output),
+                )
+                .joinToString("\n\n")
+        return if (langOverride.isNotBlank()) "$langOverride\n\n$prompt" else prompt
+    }
 
     private fun getActiveSystemPrompt(): String {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
@@ -195,31 +122,14 @@ AUSGABEFORMAT — STRENGE REGELN:
             0 -> buildSummaryAnalysisSystemPrompt()
             4 -> {
                 val custom = encryptedPrefs.getString(Constants.PREF_CUSTOM_PROMPT, "") ?: ""
-                if (custom.isNotBlank()) localizePromptLanguage(buildCustomAnalysisPrompt(custom))
+                if (custom.isNotBlank()) buildCustomAnalysisPrompt(custom)
                 else buildEntropyAnalysisSystemPrompt()
             }
             else -> buildEntropyAnalysisSystemPrompt()
         }
     }
 
-    /**
-     * Replace hardcoded German language instructions with the device language.
-     * For German devices this is a no-op (early return, zero overhead).
-     * JSON keys (ratschlaege, titel, beschreibung etc.) remain unchanged —
-     * only the VALUES are written in the device language.
-     */
-    private fun localizePromptLanguage(prompt: String): String {
-        val writeInLang = context.getString(R.string.ai_prompt_write_language)
-        val langStyle = context.getString(R.string.ai_prompt_language_style)
-        val langOverride = context.getString(R.string.ai_prompt_language_override)
-        var result = prompt
-            .replace("Schreibe auf Deutsch.", writeInLang)
-            .replace("- Deutsch. Einfach, klar.", "- $langStyle")
-        if (langOverride.isNotBlank()) {
-            result = langOverride + "\n\n" + result
-        }
-        return result
-    }
+
 
     private fun getActiveUserPromptPrefix(freshAnalysis: Boolean): String {
         if (!freshAnalysis) return ""
