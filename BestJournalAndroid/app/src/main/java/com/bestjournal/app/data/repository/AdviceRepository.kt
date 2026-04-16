@@ -9,6 +9,7 @@ import com.bestjournal.app.domain.model.AdvicePriority
 import com.bestjournal.app.domain.model.DerivationEntry
 import com.bestjournal.app.domain.model.TopAction
 import com.bestjournal.app.util.Constants
+import com.bestjournal.app.R
 import com.bestjournal.app.util.DeviceLocale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,6 +22,7 @@ import org.json.JSONObject
 class AdviceRepository
 @Inject
 constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val firebaseAiService: FirebaseAiService,
     private val adviceDashboardDao: AdviceDashboardDao,
     private val encryptedPrefs: android.content.SharedPreferences,
@@ -809,45 +811,41 @@ AUSGABEFORMAT — STRENGE REGELN:
      * only the VALUES are written in the device language.
      */
     private fun localizePromptLanguage(prompt: String): String {
-        val lang = DeviceLocale.promptLanguage
-        if (lang.equals("German", ignoreCase = true)) return prompt
-        return prompt
-            .replace(
-                "Schreibe auf Deutsch.",
-                "Schreibe auf $lang. Alle JSON-Textwerte (titel, beschreibung, zusammenfassung, erklaerung, bezug, verknuepfung, name) in $lang. Enum-Werte MÜSSEN unverändert bleiben: prioritaet muss \"hoch\", \"mittel\" oder \"niedrig\" sein, icon und farbe bleiben wie vorgegeben.",
-            )
-            .replace("- Deutsch. Einfach, klar.", "- $lang. Einfach, klar.")
+        val writeInLang = context.getString(R.string.ai_prompt_write_language)
+        val langStyle = context.getString(R.string.ai_prompt_language_style)
+        val langOverride = context.getString(R.string.ai_prompt_language_override)
+        var result = prompt
+            .replace("Schreibe auf Deutsch.", writeInLang)
+            .replace("- Deutsch. Einfach, klar.", "- $langStyle")
+        if (langOverride.isNotBlank()) {
+            result = langOverride + "\n\n" + result
+        }
+        return result
     }
 
     private fun getActiveUserPromptPrefix(freshAnalysis: Boolean): String {
+        if (!freshAnalysis) return ""
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-        return if (scenario == 0 && freshAnalysis) {
-            "=== FRISCHE ZUSAMMENFASSUNG — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse. ==="
-        } else if (scenario == 2 && freshAnalysis) {
-            "=== FRISCHE SELBSTERKENNTNIS-ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse. ==="
-        } else if (scenario == 3 && freshAnalysis) {
-            "=== FRISCHE ZIEL-ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse. ==="
-        } else if (scenario == 4 && freshAnalysis) {
-            "=== FRISCHE INDIVIDUELLE ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse basierend auf dem Benutzer-Fokus. ==="
-        } else if (freshAnalysis) {
-            "=== FRISCHE ANALYSE — Erstelle eine komplett neue, eigenst${"\u00e4"}ndige Analyse. ==="
-        } else ""
+        val text = when (scenario) {
+            0 -> context.getString(R.string.ai_prompt_fresh_summary)
+            2 -> context.getString(R.string.ai_prompt_fresh_insight)
+            3 -> context.getString(R.string.ai_prompt_fresh_goals)
+            4 -> context.getString(R.string.ai_prompt_fresh_custom)
+            else -> context.getString(R.string.ai_prompt_fresh_default)
+        }
+        return "=== $text ==="
     }
 
     private fun getActiveUserPromptSuffix(entryCount: Int): String {
         val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
-        return when (scenario) {
-            0 ->
-                "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss in der Zusammenfassung und in mindestens einem Thema erscheinen. ==="
-            2 ->
-                "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss auf Denkmuster, Gef${"\u00fc"}hle, ${"\u00dc"}berzeugungen und pers${"\u00f6"}nliche St${"\u00e4"}rken durchsucht werden. ==="
-            3 ->
-                "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss auf Ziele durchsucht werden. ==="
-            4 ->
-                "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss auf den Benutzer-Fokus hin durchsucht werden. ==="
-            else ->
-                "=== PFLICHT-CHECK: Du hast $entryCount Eintr${"\u00e4"}ge erhalten. Jeder muss in der Analyse erscheinen. ==="
+        val text = when (scenario) {
+            0 -> context.getString(R.string.ai_prompt_check_summary, entryCount)
+            2 -> context.getString(R.string.ai_prompt_check_insight, entryCount)
+            3 -> context.getString(R.string.ai_prompt_check_goals, entryCount)
+            4 -> context.getString(R.string.ai_prompt_check_custom, entryCount)
+            else -> context.getString(R.string.ai_prompt_check_default, entryCount)
         }
+        return "=== $text ==="
     }
 
     // Undo support: store previous state in memory

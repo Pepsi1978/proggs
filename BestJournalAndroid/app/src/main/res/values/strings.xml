@@ -477,6 +477,20 @@
     <!-- ChurnFlowDialog: retention discount badge -->
     <!-- %1$d = discount percentage -->
     <string name="churn_discount_badge"><xliff:g id="percent" example="50">%1$d</xliff:g>%% SPAREN</string>
+    <!-- AI prompt language instruction — automatically uses device language -->
+    <string name="ai_prompt_write_language">Schreibe auf Deutsch.</string>
+    <string name="ai_prompt_language_style">Deutsch. Einfach, klar. Keine Fremdwörter.</string>
+    <string name="ai_prompt_language_override"></string>
+    <string name="ai_prompt_fresh_summary">FRISCHE ZUSAMMENFASSUNG — Erstelle eine komplett neue, eigenständige Analyse.</string>
+    <string name="ai_prompt_fresh_insight">FRISCHE SELBSTERKENNTNIS-ANALYSE — Erstelle eine komplett neue, eigenständige Analyse.</string>
+    <string name="ai_prompt_fresh_goals">FRISCHE ZIEL-ANALYSE — Erstelle eine komplett neue, eigenständige Analyse.</string>
+    <string name="ai_prompt_fresh_custom">FRISCHE INDIVIDUELLE ANALYSE — Erstelle eine komplett neue, eigenständige Analyse basierend auf dem Benutzer-Fokus.</string>
+    <string name="ai_prompt_fresh_default">FRISCHE ANALYSE — Erstelle eine komplett neue, eigenständige Analyse.</string>
+    <string name="ai_prompt_check_summary">PFLICHT-CHECK: Du hast %1$d Einträge erhalten. Jeder muss in der Zusammenfassung und in mindestens einem Thema erscheinen.</string>
+    <string name="ai_prompt_check_insight">PFLICHT-CHECK: Du hast %1$d Einträge erhalten. Jeder muss auf Denkmuster, Gefühle, Überzeugungen und persönliche Stärken durchsucht werden.</string>
+    <string name="ai_prompt_check_goals">PFLICHT-CHECK: Du hast %1$d Einträge erhalten. Jeder muss auf Ziele durchsucht werden.</string>
+    <string name="ai_prompt_check_custom">PFLICHT-CHECK: Du hast %1$d Einträge erhalten. Jeder muss auf den Benutzer-Fokus hin durchsucht werden.</string>
+    <string name="ai_prompt_check_default">PFLICHT-CHECK: Du hast %1$d Einträge erhalten. Jeder muss in der Analyse erscheinen.</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          RETROSPECTIVE SCREEN

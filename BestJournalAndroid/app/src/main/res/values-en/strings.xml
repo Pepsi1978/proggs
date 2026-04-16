@@ -472,6 +472,20 @@
     <string name="limit_used_of_max"><xliff:g id="used" example="3">%1$d</xliff:g> of <xliff:g id="max" example="5">%2$d</xliff:g> used</string>
     <!-- ChurnFlowDialog: retention discount badge -->
     <string name="churn_discount_badge"><xliff:g id="percent" example="50">%1$d</xliff:g>%% SAVE</string>
+    <!-- AI prompt language instruction — English version -->
+    <string name="ai_prompt_write_language">Write in English.</string>
+    <string name="ai_prompt_language_style">English. Simple, clear. No jargon.</string>
+    <string name="ai_prompt_language_override">CRITICAL: ALL JSON text values (titel, beschreibung, zusammenfassung, erklaerung, bezug, verknuepfung, name, gesamtanalyse) MUST be written in English. Category names MUST be in English (e.g. "Sleep" not "Schlaf"). Only enum values stay German: prioritaet="hoch"/"mittel"/"niedrig", trend="steigend"/"fallend"/"stabil"/"unbekannt".</string>
+    <string name="ai_prompt_fresh_summary">FRESH SUMMARY — Create a completely new, independent analysis.</string>
+    <string name="ai_prompt_fresh_insight">FRESH SELF-DISCOVERY ANALYSIS — Create a completely new, independent analysis.</string>
+    <string name="ai_prompt_fresh_goals">FRESH GOAL ANALYSIS — Create a completely new, independent analysis.</string>
+    <string name="ai_prompt_fresh_custom">FRESH CUSTOM ANALYSIS — Create a completely new, independent analysis based on the user focus.</string>
+    <string name="ai_prompt_fresh_default">FRESH ANALYSIS — Create a completely new, independent analysis.</string>
+    <string name="ai_prompt_check_summary">MANDATORY CHECK: You received %1$d entries. Each must appear in the summary and in at least one topic.</string>
+    <string name="ai_prompt_check_insight">MANDATORY CHECK: You received %1$d entries. Each must be searched for thought patterns, feelings, beliefs, and personal strengths.</string>
+    <string name="ai_prompt_check_goals">MANDATORY CHECK: You received %1$d entries. Each must be searched for goals.</string>
+    <string name="ai_prompt_check_custom">MANDATORY CHECK: You received %1$d entries. Each must be searched according to the user focus.</string>
+    <string name="ai_prompt_check_default">MANDATORY CHECK: You received %1$d entries. Each must appear in the analysis.</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          RETROSPECTIVE SCREEN
