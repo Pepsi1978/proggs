@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_name">Best Journal</string>
+    <string name="app_name" translatable="false">Best Journal</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          NAVIGATION & TABS
@@ -26,6 +26,7 @@
     <string name="action_done">Done</string>
     <string name="action_no_thanks">No thanks</string>
     <string name="action_delete">Delete</string>
+    <string name="action_undo">Undo</string>
     <string name="action_ok">OK</string>
     <string name="action_go_google_play">Go to Google Play</string>
     <string name="journal_drive_backup_dialog">Google Drive Backup</string>
@@ -84,6 +85,8 @@
     <string name="journal_placeholder_edit">Tap here to edit the text…</string>
     <string name="journal_freeflow_hint">Let your thoughts flow freely. There\'s no right or wrong.</string>
     <string name="journal_transcribed_with">Transcribed with %1$s</string>
+    <string name="transcription_model_local">Local Whisper model</string>
+    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
     <string name="journal_text_upsell_title">Impressive, right?</string>
     <string name="journal_text_upsell_body">With Premium you can improve every entry.</string>
     <string name="journal_discover_premium">Discover Premium →</string>
@@ -160,6 +163,7 @@
     <string name="dashboard_legend">Legend</string>
     <string name="dashboard_refresh">Refresh</string>
     <string name="dashboard_weekly_review_waiting">Your weekly review is ready</string>
+    <string name="dashboard_weekly_review_upsell_body">You had a busy week. With Premium you see the full analysis — spot patterns, discover insights, and understand what really moves you.</string>
     <string name="dashboard_discover_premium">Discover Premium</string>
     <string name="dashboard_please_wait">Please wait</string>
     <string name="dashboard_gemini_unavailable">The AI is currently unavailable, please try again shortly.</string>
@@ -320,6 +324,8 @@
     <string name="settings_backup_photos">Back up photos</string>
     <string name="settings_backup_videos">Back up videos</string>
     <string name="settings_syncing">Backing up…</string>
+    <string name="settings_sync_success">Backed up successfully</string>
+    <string name="settings_signin_failed">Sign-in failed: <xliff:g id="error_reason" example="Network error">%1$s</xliff:g></string>
     <string name="settings_backup_entries">Back up journal entries</string>
     <string name="settings_not_signed_in">Not signed in</string>
     <string name="settings_entries_loaded_on_sign_in">Saved entries are loaded on sign-in</string>
@@ -366,6 +372,8 @@
     <string name="churn_google_play_redirect">You\'ll be redirected to Google Play to manage your subscription. Your journal entries will of course remain safe.</string>
     <string name="splash_subtitle">YOUR SMART JOURNAL</string>
     <string name="biometric_subtitle">Unlock your journal</string>
+    <string name="biometric_prompt_subtitle">Authenticate to unlock</string>
+    <string name="biometric_unlock_button">Unlock</string>
     <string name="settings_text_improvement">Text improvement</string>
     <string name="settings_text_improvement_desc">Enable by default</string>
     <string name="settings_dashboard_section">Dashboard</string>
@@ -401,6 +409,7 @@
     <string name="settings_export_photos">Photos</string>
     <string name="settings_export_action">Export</string>
     <string name="settings_exporting">Exporting…</string>
+    <string name="settings_export_no_entries">No entries yet</string>
     <string name="settings_export_entries_photos_pdf">Export journal entries and photos as PDF</string>
     <string name="settings_export_data">Export data</string>
     <string name="settings_export_entries_photos_pdf_full">Export journal entries with photos as PDF</string>
@@ -455,6 +464,22 @@
     <string name="day_friday">Friday</string>
     <string name="day_saturday">Saturday</string>
     <string name="day_sunday">Sunday</string>
+    <string name="day_abbrev_mon">Mon</string>
+    <string name="day_abbrev_tue">Tue</string>
+    <string name="day_abbrev_wed">Wed</string>
+    <string name="day_abbrev_thu">Thu</string>
+    <string name="day_abbrev_fri">Fri</string>
+    <string name="day_abbrev_sat">Sat</string>
+    <string name="day_abbrev_sun">Sun</string>
+    <string-array name="weekday_abbreviations">
+        <item>@string/day_abbrev_mon</item>
+        <item>@string/day_abbrev_tue</item>
+        <item>@string/day_abbrev_wed</item>
+        <item>@string/day_abbrev_thu</item>
+        <item>@string/day_abbrev_fri</item>
+        <item>@string/day_abbrev_sat</item>
+        <item>@string/day_abbrev_sun</item>
+    </string-array>
     <!-- Review schedule dialog -->
     <string name="settings_reminder_when">When would you like to be reminded?</string>
     <string name="settings_review_when">When should your review arrive?</string>
@@ -796,6 +821,10 @@
     <plurals name="datetime_days_ago">
         <item quantity="one">%1$d day ago</item>
         <item quantity="other">%1$d days ago</item>
+    </plurals>
+    <plurals name="settings_export_success">
+        <item quantity="one">%1$d entry exported</item>
+        <item quantity="other">%1$d entries exported</item>
     </plurals>
     <string name="datetime_today">Today</string>
     <string name="datetime_yesterday">Yesterday</string>

@@ -747,7 +747,7 @@ private fun StepRetentionOffer(
         }
 
         // ── Secondary: Switch to yearly (only for monthly subscribers) ──
-        if (subscriptionType == SubscriptionType.MONTHLY && selectedReason == "Zu teuer") {
+        if (subscriptionType == SubscriptionType.MONTHLY && selectedReason == stringResource(R.string.churn_reason_too_expensive)) {
             Spacer(modifier = Modifier.height(8.dp))
             TextButton(onClick = onSwitchToYearly, modifier = Modifier.fillMaxWidth()) {
                 Text(

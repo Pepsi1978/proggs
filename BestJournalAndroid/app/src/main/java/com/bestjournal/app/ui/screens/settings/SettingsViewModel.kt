@@ -1,11 +1,13 @@
 package com.bestjournal.app.ui.screens.settings
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bestjournal.app.R
 import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.local.dao.EntryPhotoDao
@@ -19,6 +21,7 @@ import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.DailyReminderManager
 import com.bestjournal.app.util.PdfExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -62,6 +65,7 @@ data class SettingsUiState(
 class SettingsViewModel
 @Inject
 constructor(
+    @ApplicationContext private val context: Context,
     private val signInUseCase: SignInWithGoogleUseCase,
     private val syncUseCase: SyncWithDriveUseCase,
     private val encryptedPrefs: SharedPreferences,
@@ -293,7 +297,7 @@ constructor(
                     _uiState.value =
                         _uiState.value.copy(
                             isSyncing = false,
-                            syncMessage = "Erfolgreich gesichert",
+                            syncMessage = context.getString(R.string.settings_sync_success),
                             lastSyncTimestamp = System.currentTimeMillis(),
                         )
                     // Auto-dismiss message after 3 seconds
@@ -311,7 +315,7 @@ constructor(
                         _uiState.value =
                             _uiState.value.copy(
                                 isSyncing = false,
-                                syncMessage = "Fehler: ${error.message}",
+                                syncMessage = context.getString(R.string.error_generic, error.message ?: ""),
                             )
                     }
                 }
@@ -345,7 +349,7 @@ constructor(
                         _uiState.value =
                             _uiState.value.copy(
                                 isSyncing = false,
-                                syncMessage = "Fehler: ${error.message}",
+                                syncMessage = context.getString(R.string.error_generic, error.message ?: ""),
                             )
                     }
                 }
@@ -399,7 +403,7 @@ constructor(
                 .onFailure { error ->
                     _uiState.value =
                         _uiState.value.copy(
-                            syncMessage = "Anmeldung fehlgeschlagen: ${error.message}"
+                            syncMessage = context.getString(R.string.settings_signin_failed, error.message ?: "")
                         )
                 }
         }
@@ -486,7 +490,7 @@ constructor(
                     _uiState.value =
                         _uiState.value.copy(
                             isExporting = false,
-                            exportMessage = "Keine Eintr\u00e4ge vorhanden",
+                            exportMessage = context.getString(R.string.settings_export_no_entries),
                         )
                     delay(3000)
                     _uiState.value = _uiState.value.copy(exportMessage = null)
@@ -515,13 +519,17 @@ constructor(
                     _uiState.value =
                         _uiState.value.copy(
                             isExporting = false,
-                            exportMessage = "$count Eintr\u00e4ge exportiert",
+                            exportMessage = context.resources.getQuantityString(
+                                R.plurals.settings_export_success,
+                                count,
+                                count,
+                            ),
                         )
                 } else {
                     _uiState.value =
                         _uiState.value.copy(
                             isExporting = false,
-                            exportMessage = "Fehler: Datei konnte nicht ge\u00f6ffnet werden",
+                            exportMessage = context.getString(R.string.error_file_open_failed),
                         )
                 }
 
@@ -529,7 +537,10 @@ constructor(
                 _uiState.value = _uiState.value.copy(exportMessage = null)
             } catch (e: Exception) {
                 _uiState.value =
-                    _uiState.value.copy(isExporting = false, exportMessage = "Fehler: ${e.message}")
+                    _uiState.value.copy(
+                        isExporting = false,
+                        exportMessage = context.getString(R.string.error_generic, e.message ?: ""),
+                    )
                 delay(4000)
                 _uiState.value = _uiState.value.copy(exportMessage = null)
             }

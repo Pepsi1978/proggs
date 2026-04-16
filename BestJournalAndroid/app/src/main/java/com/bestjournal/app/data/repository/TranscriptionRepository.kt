@@ -1,6 +1,8 @@
 package com.bestjournal.app.data.repository
 
+import android.content.Context
 import android.util.Log
+import com.bestjournal.app.R
 import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.local.whisper.LocalWhisperTranscriber
@@ -10,6 +12,7 @@ import com.bestjournal.app.data.remote.groq.GroqApi
 import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.DeviceLocale
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.tasks.await
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -26,6 +29,7 @@ data class TranscriptionResult(
 
 @Singleton
 class TranscriptionRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val localWhisper: LocalWhisperTranscriber,
     private val groqApi: GroqApi,
     private val billingManager: BillingManager,
@@ -60,7 +64,9 @@ class TranscriptionRepository @Inject constructor(
                         responseFormat = "json".toRequestBody("text/plain".toMediaType())
                     )
                     if (response.text.isNotBlank()) {
-                        return Result.success(TranscriptionResult(response.text, "Groq Whisper Large V3 Turbo"))
+                        return Result.success(
+                            TranscriptionResult(response.text, context.getString(R.string.transcription_model_groq))
+                        )
                     }
                 }
             } catch (e: Exception) {
@@ -71,7 +77,7 @@ class TranscriptionRepository @Inject constructor(
         // Fallback: local offline Whisper via sherpa-onnx
         // Used for: expired trial (freemium) users, OR when Groq API fails/rate-limited
         return localWhisper.transcribe(audioFile).map {
-            TranscriptionResult(it, "Lokales Whisper-Modell")
+            TranscriptionResult(it, context.getString(R.string.transcription_model_local))
         }
     }
 }

@@ -59,7 +59,7 @@ data class JournalUiState(
     val downloadCurrent: Int = 0,
     val downloadTotal: Int = 0,
     val showAiLimitReached: Boolean = false,
-    val transcriptionModel: String = "Lokales Whisper-Modell",
+    val transcriptionModel: String = "",
     val currentStreak: Int = 0,
     val longestStreak: Int = 0,
     val showTextUpsellBanner: Boolean = false,

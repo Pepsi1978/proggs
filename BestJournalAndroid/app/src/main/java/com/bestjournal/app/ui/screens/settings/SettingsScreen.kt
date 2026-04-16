@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import com.bestjournal.app.R
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -2940,8 +2941,6 @@ private val weekDays =
         java.util.Calendar.SUNDAY,
     )
 
-private val weekDayLabels = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WeeklyReviewPickerDialog(
@@ -2951,6 +2950,7 @@ private fun WeeklyReviewPickerDialog(
     onConfirm: (Int, Int, Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val weekDayLabels = stringArrayResource(R.array.weekday_abbreviations)
     var selectedDayIndex by remember {
         mutableIntStateOf(weekDays.indexOf(initialDay).coerceAtLeast(0))
     }

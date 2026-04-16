@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -174,19 +175,19 @@ class MainActivity : FragmentActivity() {
                     ) {
                         Icon(
                             Icons.Rounded.Fingerprint,
-                            "Entsperren",
+                            contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(72.dp),
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            "Best Journal",
+                            stringResource(R.string.app_name),
                             style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "Zum Entsperren authentifizieren",
+                            stringResource(R.string.biometric_prompt_subtitle),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -194,7 +195,7 @@ class MainActivity : FragmentActivity() {
                         OutlinedButton(
                             onClick = { showBiometricPrompt { isUnlocked.value = true } }
                         ) {
-                            Text("Entsperren")
+                            Text(stringResource(R.string.biometric_unlock_button))
                         }
                     }
                 }

@@ -267,7 +267,7 @@ fun EntryDetailScreen(
             },
             actions = {
                 IconButton(onClick = { viewModel.showDeleteDialog(true) }) {
-                    Icon(Icons.Rounded.Delete, "L\u00f6schen", tint = NeonRed)
+                    Icon(Icons.Rounded.Delete, stringResource(R.string.action_delete), tint = NeonRed)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),

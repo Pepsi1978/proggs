@@ -2,7 +2,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
     tools:locale="de">
-    <string name="app_name">Best Journal</string>
+    <!-- App brand name — do not translate -->
+    <string name="app_name" translatable="false">Best Journal</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          NAVIGATION & TABS
@@ -28,6 +29,8 @@
     <string name="action_done">Fertig</string>
     <string name="action_no_thanks">Nein danke</string>
     <string name="action_delete">Löschen</string>
+    <!-- Accessibility label for the undo icon button on the dashboard. -->
+    <string name="action_undo">Rückgängig</string>
     <string name="action_ok">OK</string>
     <string name="action_go_google_play">Zu Google Play</string>
     <string name="journal_drive_backup_dialog">Google Drive Backup</string>
@@ -86,6 +89,10 @@
     <string name="journal_placeholder_edit">Tippe hier, um den Text zu bearbeiten…</string>
     <string name="journal_freeflow_hint">Lass deine Gedanken frei fließen. Es gibt kein richtig oder falsch.</string>
     <string name="journal_transcribed_with">Transkribiert mit %1$s</string>
+    <!-- Default label for the transcription model (local Whisper, runs on-device). -->
+    <string name="transcription_model_local">Lokales Whisper-Modell</string>
+    <!-- Brand name of the Groq transcription model — do not translate. -->
+    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
     <string name="journal_text_upsell_title">Beeindruckend, oder?</string>
     <string name="journal_text_upsell_body">Mit Premium kannst du jeden Eintrag verbessern.</string>
     <string name="journal_discover_premium">Premium entdecken →</string>
@@ -162,6 +169,8 @@
     <string name="dashboard_legend">Legende</string>
     <string name="dashboard_refresh">Aktualisieren</string>
     <string name="dashboard_weekly_review_waiting">Dein Wochenrückblick wartet</string>
+    <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
+    <string name="dashboard_weekly_review_upsell_body">Du hattest eine bewegte Woche. Mit Premium siehst du die volle Analyse — erkenne Muster, entdecke Einsichten und verstehe, was dich wirklich bewegt.</string>
     <string name="dashboard_discover_premium">Premium entdecken</string>
     <string name="dashboard_please_wait">Bitte warten</string>
     <string name="dashboard_gemini_unavailable">Gemini ist gerade nicht erreichbar, bitte versuch es gleich nochmal.</string>
@@ -322,6 +331,10 @@
     <string name="settings_backup_photos">Fotos sichern</string>
     <string name="settings_backup_videos">Videos sichern</string>
     <string name="settings_syncing">Wird gesichert…</string>
+    <!-- Shown briefly as a confirmation after a successful cloud backup. -->
+    <string name="settings_sync_success">Erfolgreich gesichert</string>
+    <!-- Error shown when Google sign-in fails. %1$s = error message from Google (e.g., "Network error"). -->
+    <string name="settings_signin_failed">Anmeldung fehlgeschlagen: <xliff:g id="error_reason" example="Network error">%1$s</xliff:g></string>
     <string name="settings_backup_entries">Tagebucheinträge sichern</string>
     <string name="settings_not_signed_in">Nicht angemeldet</string>
     <string name="settings_entries_loaded_on_sign_in">Gesicherte Einträge werden beim Anmelden geladen</string>
@@ -368,6 +381,10 @@
     <string name="churn_google_play_redirect">Du wirst zu Google Play weitergeleitet, um dein Abo zu verwalten. Deine Tagebucheinträge bleiben natürlich erhalten.</string>
     <string name="splash_subtitle">DEIN INTELLIGENTES TAGEBUCH</string>
     <string name="biometric_subtitle">Entsperre dein Tagebuch</string>
+    <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
+    <string name="biometric_prompt_subtitle">Zum Entsperren authentifizieren</string>
+    <!-- Button in the biometric lock screen to trigger the fingerprint prompt. Keep short. -->
+    <string name="biometric_unlock_button">Entsperren</string>
     <string name="settings_text_improvement">Textverbesserung</string>
     <string name="settings_text_improvement_desc">Standardmäßig aktivieren</string>
     <string name="settings_dashboard_section">Dashboard</string>
@@ -403,6 +420,8 @@
     <string name="settings_export_photos">Fotos</string>
     <string name="settings_export_action">Exportieren</string>
     <string name="settings_exporting">Wird exportiert…</string>
+    <!-- Export error shown when the user has no journal entries yet. -->
+    <string name="settings_export_no_entries">Keine Einträge vorhanden</string>
     <string name="settings_export_entries_photos_pdf">Tagebucheinträge und Fotos als PDF exportieren</string>
     <string name="settings_export_data">Daten exportieren</string>
     <string name="settings_export_entries_photos_pdf_full">Tagebucheinträge mit Fotos als PDF exportieren</string>
@@ -457,6 +476,24 @@
     <string name="day_friday">Freitag</string>
     <string name="day_saturday">Samstag</string>
     <string name="day_sunday">Sonntag</string>
+    <!-- Short weekday labels (2 chars) for compact weekday picker. Monday to Sunday. -->
+    <string name="day_abbrev_mon">Mo</string>
+    <string name="day_abbrev_tue">Di</string>
+    <string name="day_abbrev_wed">Mi</string>
+    <string name="day_abbrev_thu">Do</string>
+    <string name="day_abbrev_fri">Fr</string>
+    <string name="day_abbrev_sat">Sa</string>
+    <string name="day_abbrev_sun">So</string>
+    <!-- Array of short weekday labels for LazyRow / weekday pickers. Order: Mon-Sun. -->
+    <string-array name="weekday_abbreviations">
+        <item>@string/day_abbrev_mon</item>
+        <item>@string/day_abbrev_tue</item>
+        <item>@string/day_abbrev_wed</item>
+        <item>@string/day_abbrev_thu</item>
+        <item>@string/day_abbrev_fri</item>
+        <item>@string/day_abbrev_sat</item>
+        <item>@string/day_abbrev_sun</item>
+    </string-array>
     <!-- Review schedule dialog -->
     <string name="settings_reminder_when">Wann möchtest du erinnert werden?</string>
     <string name="settings_review_when">Wann soll dein Rückblick kommen?</string>
@@ -801,6 +838,12 @@
     <plurals name="datetime_days_ago">
         <item quantity="one">vor %1$d Tag</item>
         <item quantity="other">vor %1$d Tagen</item>
+    </plurals>
+    <!-- Confirmation after PDF export. %1$d = number of entries included in the PDF.
+         Use with pluralStringResource(R.plurals.settings_export_success, count, count). -->
+    <plurals name="settings_export_success">
+        <item quantity="one">%1$d Eintrag exportiert</item>
+        <item quantity="other">%1$d Einträge exportiert</item>
     </plurals>
     <string name="datetime_today">Heute</string>
     <string name="datetime_yesterday">Gestern</string>

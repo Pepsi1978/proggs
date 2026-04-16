@@ -192,7 +192,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                         }
                         if (uiState.canUndo) {
                             IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.undoDashboard() }) {
-                                Icon(Icons.Rounded.Undo, "R\u00fcckg\u00e4ngig", tint = NeonAmber)
+                                Icon(Icons.Rounded.Undo, stringResource(R.string.action_undo), tint = NeonAmber)
                             }
                         }
                         IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.refreshDashboard() }) {
@@ -267,8 +267,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text =
-                                        "Du hattest eine bewegte Woche. Mit Premium siehst du die volle Analyse \u2014 erkenne Muster, entdecke Einsichten und verstehe, was dich wirklich bewegt.",
+                                    text = stringResource(R.string.dashboard_weekly_review_upsell_body),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -569,7 +568,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                                 }
                                             ) {
                                                 Text(
-                                                    "Sp\u00e4ter",
+                                                    stringResource(R.string.action_later),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = MaterialTheme.colorScheme.outline,
                                                 )
@@ -3281,7 +3280,10 @@ private fun GoalCard(advice: Advice, categoryName: String = "", onClick: () -> U
 // ═══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun CustomInsightsBlock(actions: List<TopAction>, title: String = "Wichtigste Ergebnisse") {
+private fun CustomInsightsBlock(
+    actions: List<TopAction>,
+    title: String = stringResource(R.string.dashboard_top_results_fallback),
+) {
     var selectedAction by remember { mutableStateOf<Pair<Int, TopAction>?>(null) }
 
     GlassCard(glowColor = CustomPalette.primary, glowIntensity = 0.25f) {
