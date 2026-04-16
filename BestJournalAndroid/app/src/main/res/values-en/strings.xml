@@ -1,0 +1,852 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Best Journal</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NAVIGATION & TABS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="nav_journal">Journal</string>
+    <string name="nav_retrospective">Review</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         COMMON / SHARED
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_close">Close</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_understood">Got it</string>
+    <string name="action_retry">Try again</string>
+    <string name="action_later">Later</string>
+    <string name="action_share">Share</string>
+    <string name="action_discard">Discard</string>
+    <string name="action_back">Back</string>
+    <string name="action_done">Done</string>
+    <string name="action_no_thanks">No thanks</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_ok">OK</string>
+    <string name="action_go_google_play">Go to Google Play</string>
+    <string name="journal_drive_backup_dialog">Google Drive Backup</string>
+    <string name="journal_improve_text">✨ Improve text</string>
+    <string name="journal_later">Later</string>
+    <!-- Paywall strings -->
+    <string name="paywall_from_per_day">From %1$s per day</string>
+    <string name="paywall_instead_per_month">instead of %1$s per month</string>
+    <string name="paywall_or">or</string>
+    <string name="paywall_with_limited">with limited access.</string>
+    <!-- Churn string -->
+    <string name="churn_instead_of">instead of </string>
+    <string name="label_premium">Premium</string>
+    <string name="label_original">Original</string>
+    <string name="label_improved">Improved</string>
+    <string name="label_photo">Photo</string>
+    <string name="label_video">Video</string>
+    <string name="label_current">Current</string>
+    <string name="label_record">Record</string>
+    <string name="cd_sync_status">Sync status</string>
+    <string name="cd_day">Day</string>
+    <string name="cd_night">Night</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JOURNAL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="journal_title">Journal</string>
+    <string name="journal_search_placeholder">Search entries…</string>
+    <string name="journal_search">Search</string>
+    <string name="journal_search_hint">Search</string>
+    <string name="journal_search_close">Close search</string>
+    <string name="journal_no_entries">No entries yet</string>
+    <string name="journal_tap_mic_to_start">Tap the microphone to get started</string>
+    <string name="journal_cd_streak">Day streak</string>
+    <string name="journal_cd_text_input">Enter text</string>
+    <string name="journal_achievement_unlocked">Achievement unlocked!</string>
+    <string name="journal_drive_not_signed_in">Not signed in to Google</string>
+    <string name="journal_drive_backup_current">Backup up to date, all entries saved</string>
+    <string name="journal_drive_uploading">Uploading backup…</string>
+    <string name="journal_drive_downloading">Downloading photos/videos…</string>
+    <string name="journal_drive_failed">Backup failed!</string>
+    <string name="journal_drive_last_sync">Last sync: %1$s</string>
+    <string name="journal_new_entry_prompt">Writing prompt</string>
+    <string name="journal_new_entry">New entry</string>
+    <string name="journal_save_improved">Save improved</string>
+    <string name="journal_save">Save</string>
+    <string name="journal_cd_write">Write</string>
+    <string name="journal_write">Write</string>
+    <string name="journal_cd_speak">Speak</string>
+    <string name="journal_speak">Speak</string>
+    <string name="journal_your_answer">Your answer:</string>
+    <string name="journal_placeholder_prompt">Write your thoughts here…</string>
+    <string name="journal_placeholder_edit">Tap here to edit the text…</string>
+    <string name="journal_freeflow_hint">Let your thoughts flow freely. There\'s no right or wrong.</string>
+    <string name="journal_transcribed_with">Transcribed with %1$s</string>
+    <string name="journal_text_upsell_title">Impressive, right?</string>
+    <string name="journal_text_upsell_body">With Premium you can improve every entry.</string>
+    <string name="journal_discover_premium">Discover Premium →</string>
+    <string name="journal_entries_label">Entries</string>
+    <string name="journal_streak_premium">Streak protection: Available with Premium</string>
+    <string name="journal_keep_going">Keep it up!</string>
+    <string name="journal_daily_prompt">Daily writing prompt</string>
+    <string name="journal_write_about">Write about this</string>
+    <string name="journal_recording_error">Recording failed: %1$s</string>
+    <string name="journal_transcription_error">Transcription failed: %1$s</string>
+    <string name="journal_rate_limit">Short break: %1$d minutes until your next improvement.</string>
+    <string name="journal_improve_error">Text improvement failed: %1$s</string>
+    <string name="journal_save_error">Save failed: %1$s</string>
+    <string name="recording_tap_stop">Tap again to stop</string>
+
+    <!-- Streak messages -->
+    <string name="streak_365">A whole year!</string>
+    <string name="streak_180">Incredible dedication!</string>
+    <string name="streak_90">You\'re unstoppable!</string>
+    <string name="streak_30">A whole month!</string>
+    <string name="streak_14">Two weeks strong!</string>
+    <string name="streak_7">A whole week!</string>
+    <string name="streak_3">You\'re on a roll!</string>
+    <string name="streak_default">Every day counts!</string>
+    <string name="streak_desc_365">What started as a small habit is now a part of your life. Your journal knows you better than ever.</string>
+    <string name="streak_desc_14">Two weeks in a row — most people never get this far. Your future self will thank you.</string>
+    <string name="streak_desc_7">A week full of thoughts, feelings, and memories. You\'re building something valuable.</string>
+    <string name="streak_desc_3">Three days in a row — the beginning of a real habit. Keep going, it\'s worth it!</string>
+    <string name="streak_desc_1">Every entry is a little gift to your future self. Write again tomorrow!</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ENTRY DETAIL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="entry_title">Entry</string>
+    <string name="entry_summary">Summary</string>
+    <string name="entry_stress_label">Stress: </string>
+    <string name="entry_saving">Saving…</string>
+    <string name="entry_improving">Improving…</string>
+    <string name="entry_improve_with_ai">Improve with AI</string>
+    <string name="entry_photos_videos">Photos/Videos</string>
+    <string name="entry_add">Add</string>
+    <string name="entry_no_photos_yet">No photos/videos added yet</string>
+    <string name="entry_cd_play_video">Play video</string>
+    <string name="entry_cd_remove">Remove</string>
+    <string name="entry_tts_enable_hint">Enable voices in settings</string>
+    <string name="entry_tts_stop">Stop</string>
+    <string name="entry_tts_read">Read aloud</string>
+    <string name="entry_cd_share">Share</string>
+    <string name="entry_recording_duration">Recording duration: %1$s</string>
+    <string name="entry_tts_generating">Please wait, generating text-to-speech…</string>
+    <string name="entry_cd_photo_page">Photo %1$d</string>
+    <string name="entry_add_photo_video">Add photo/video</string>
+    <string name="entry_camera">Camera</string>
+    <string name="entry_gallery">Gallery</string>
+    <string name="entry_delete_title">Delete entry?</string>
+    <string name="entry_delete_message">Permanently delete this entry?</string>
+
+    <!-- Share dialog -->
+    <string name="share_title">Share entry</string>
+    <string name="share_which_version">Which version to share?</string>
+    <string name="share_improved_version">Improved version</string>
+    <string name="share_photos_videos_label">Include photos/videos:</string>
+    <string name="share_footer">Journal entry from the Best Journal app</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DASHBOARD SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="dashboard_title">Dashboard</string>
+    <string name="dashboard_legend">Legend</string>
+    <string name="dashboard_refresh">Refresh</string>
+    <string name="dashboard_weekly_review_waiting">Your weekly review is ready</string>
+    <string name="dashboard_discover_premium">Discover Premium</string>
+    <string name="dashboard_please_wait">Please wait</string>
+    <string name="dashboard_gemini_unavailable">The AI is currently unavailable, please try again shortly.</string>
+    <string name="dashboard_no_custom_focus">No analysis focus set</string>
+    <string name="dashboard_custom_focus_hint">Go to Settings under\n\u201cCustom Analysis\u201d to enter a focus,\nor choose a different profile.</string>
+    <string name="dashboard_no_analysis_yet">No analysis yet</string>
+    <string name="dashboard_create_entries_custom">Create journal entries,\nthen the AI will analyze your focus.</string>
+    <string name="dashboard_create_entries_default">Create journal entries,\nthen the AI will analyze your patterns.</string>
+    <string name="dashboard_like_analysis">Like the analysis?</string>
+    <string name="dashboard_premium_upsell_body">With Premium you get unlimited analyses from 5 different perspectives.</string>
+    <string name="dashboard_learn_more">Learn more</string>
+    <string name="dashboard_feature_analyses">Analyses</string>
+    <string name="dashboard_all_observations">All Observations</string>
+    <string name="dashboard_inner_mirror">Inner Mirror</string>
+    <string name="dashboard_all_insights">All Insights</string>
+    <string name="dashboard_goal_overview">Goal Overview</string>
+    <string name="dashboard_all_goals">All Goals</string>
+    <string name="dashboard_top_results_fallback">Key Findings</string>
+    <string name="dashboard_analysis_fallback">Analysis</string>
+    <string name="dashboard_all_results_fallback">All Results</string>
+    <string name="dashboard_overall_analysis">Overall Analysis</string>
+    <string name="dashboard_all_recommendations">All Recommendations</string>
+    <string name="dashboard_connection">Connection</string>
+    <string name="dashboard_limit_daily">Daily limit reached. Try again tomorrow!</string>
+    <string name="dashboard_limit_cooldown">Short break: %1$d minutes until your next analysis.</string>
+    <string name="dashboard_analysis_failed">Analysis failed</string>
+    <string name="dashboard_last_updated">Last updated on %1$s</string>
+
+    <!-- Legend labels -->
+    <string name="legend_urgent">Urgent</string>
+    <string name="legend_attention">Attention</string>
+    <string name="legend_observe">Monitor</string>
+    <string name="legend_activity_level">Activity Level</string>
+    <string name="legend_activity_desc">The semicircle shows how much is happening in this area:</string>
+    <string name="legend_activity_high">High activity (67–100%)</string>
+    <string name="legend_activity_medium">Moderate activity (34–66%)</string>
+    <string name="legend_activity_low">Low activity (0–33%)</string>
+    <string name="legend_observation_relevance">Observation Relevance</string>
+    <string name="legend_relevance_high">Central — Core themes from your entries</string>
+    <string name="legend_relevance_medium">Relevant — Recurring observations</string>
+    <string name="legend_relevance_low">Side note — One-time mentions</string>
+    <string name="legend_reflection_depth">Reflection Depth</string>
+    <string name="legend_reflection_desc">The semicircle shows the depth of your self-reflection:</string>
+    <string name="legend_reflection_deep">Deep (67–100%)</string>
+    <string name="legend_reflection_aware">Aware (34–66%)</string>
+    <string name="legend_reflection_surface">Surface (0–33%)</string>
+    <string name="legend_insight_depth">Insight Depth</string>
+    <string name="legend_insight_deep">Deep — Hidden patterns and beliefs</string>
+    <string name="legend_insight_aware">Aware — Recognized thought and feeling patterns</string>
+    <string name="legend_insight_surface">Surface — Initial observations</string>
+    <string name="legend_progress">Progress</string>
+    <!-- Legend: Goal progress -->
+    <string name="legend_goal_progress_desc">The semicircle shows your goal progress:</string>
+    <string name="legend_blocked_range">Blocked (0–33%)</string>
+    <string name="legend_in_progress_range">In Progress (34–66%)</string>
+    <string name="legend_progress_range">Progress (67–100%)</string>
+    <string name="legend_goal_status">Goal Status</string>
+    <string name="legend_blocked_desc">Blocked — Goals with obstacles</string>
+    <string name="legend_open_desc">Open — Goals with no progress yet</string>
+    <string name="legend_progress_success_desc">Progress — Goals with visible success</string>
+    <!-- Legend: Custom analysis -->
+    <string name="legend_analysis_value">Analysis Score</string>
+    <string name="legend_analysis_relevance_desc">The semicircle shows the relevance to your focus:</string>
+    <string name="legend_high_focus">High (67–100%) — Core of your focus</string>
+    <string name="legend_medium_focus">Medium (34–66%) — Connection found</string>
+    <string name="legend_low_focus">Low (0–33%) — Peripheral</string>
+    <string name="legend_result_relevance">Result Relevance</string>
+    <string name="legend_important_desc">Important — Directly relevant to your focus</string>
+    <string name="legend_relevant_desc">Relevant — Connected to your focus</string>
+    <string name="legend_note_desc">Note — Side remark</string>
+    <!-- Legend: Burden/Stress -->
+    <string name="legend_burden_scale">Stress Scale</string>
+    <string name="legend_burden_desc">The semicircle shows how much this topic is weighing on you:</string>
+    <string name="legend_high_burden">High (67–100%) — Take action now</string>
+    <string name="legend_medium_burden">Medium (34–66%) — Needs attention</string>
+    <string name="legend_low_burden">Low (0–33%) — Good shape</string>
+    <string name="legend_priority_title">Advice Priority</string>
+    <string name="legend_priority_high">Red = Urgent — Take action now</string>
+    <string name="legend_priority_medium">Orange = Medium — Address soon</string>
+    <string name="legend_priority_low">Blue = Low — Monitor</string>
+    <!-- Legend: Categories -->
+    <string name="legend_categories">Categories</string>
+    <string name="legend_categories_desc">Categories are created dynamically — the AI recognizes themes in your entries and creates matching categories. New topics automatically lead to new icons.</string>
+    <!-- CategoryDetailDialog levels -->
+    <string name="level_low">Low</string>
+    <string name="level_medium">Medium</string>
+    <string name="level_high">High</string>
+    <string name="urgency_high">Urgent — Take action now</string>
+    <string name="urgency_medium">Needs attention</string>
+    <string name="urgency_low">Good shape — Monitor</string>
+    <!-- Dashboard: Derivation dialog -->
+    <string name="dashboard_derived_from">Derived from:</string>
+    <string name="dashboard_update_for_derivation">Refresh the dashboard for a detailed derivation.</string>
+    <!-- Dashboard: Summary section -->
+    <string name="dashboard_top_5_actions">Top 5 Actions</string>
+    <string name="dashboard_core_insights">Core Insights</string>
+    <string name="dashboard_summary_subtitle">The key takeaways from your entries</string>
+    <string name="summary_central">Central</string>
+    <string name="summary_relevant">Relevant</string>
+    <string name="summary_side_note">Side note</string>
+    <!-- Dashboard: Insight section -->
+    <string name="dashboard_deepest_insights">Deepest Insights</string>
+    <string name="dashboard_insight_subtitle">What your entries reveal about you</string>
+    <string name="insight_deep_label">Deep</string>
+    <string name="insight_aware_label">Aware</string>
+    <string name="insight_surface_label">Surface</string>
+    <!-- Dashboard: Goal section -->
+    <string name="dashboard_goal_steps">The key steps for your goals</string>
+    <string name="goal_blocked_label">Blocked</string>
+    <string name="goal_open_label">Open</string>
+    <string name="goal_progress_label">Progress</string>
+    <!-- Dashboard: Custom analysis section -->
+    <string name="dashboard_custom_subtitle">Based on your custom analysis</string>
+    <string name="custom_important_label">Important</string>
+    <string name="custom_relevant_label">Relevant</string>
+    <string name="custom_note_label">Note</string>
+    <!-- Dashboard: TTS and sharing -->
+    <string name="dashboard_enable_voices">Enable voices in settings</string>
+    <string name="dashboard_tts_stop">Stop</string>
+    <string name="dashboard_tts_read">Read aloud</string>
+    <string name="dashboard_share_analysis">Share analysis</string>
+    <string name="dashboard_share">Share</string>
+    <string name="dashboard_tts_wait">Please wait, generating text-to-speech…</string>
+
+    <!-- Profile names -->
+    <string name="profile_summary">Summary</string>
+    <string name="profile_entropy">Declutter Your Life</string>
+    <string name="profile_insight">Self-Discovery</string>
+    <string name="profile_goals">Personal Goals</string>
+    <string name="profile_custom">Custom Analysis</string>
+    <string name="profile_summary_desc">Summarizes themes, patterns, and experiences</string>
+    <string name="profile_entropy_desc">Identifies stress, clutter, and burden</string>
+    <string name="profile_insight_desc">Uncovers hidden thought and feeling patterns</string>
+    <string name="profile_goals_desc">Identifies goals, wishes, and progress</string>
+    <string name="profile_custom_desc">Set your own analysis focus</string>
+
+    <!-- Profile long descriptions (settings) -->
+    <string name="profile_summary_long">Your entries are summarized neutrally, without judgment or advice.\n\nAt a glance you\'ll see:\n\n• What topics are on your mind\n• Which patterns keep repeating\n• How your life is evolving\n\nPerfect as a daily overview of everything happening in your life.</string>
+    <string name="profile_entropy_long">The AI specifically looks for stress, burden, and clutter in your entries.\n\nYou\'ll get:\n\n• An analysis of your biggest stressors\n• 5 concrete steps to declutter\n• Tips that can help you right away\n\nIdeal when you feel like everything is just too much.</string>
+    <string name="profile_insight_long">The AI looks deeper than just events. It recognizes in your entries:\n\n• Hidden thought patterns and beliefs\n• Recurring feelings and reactions\n• Personal strengths you\'re not aware of\n• Values that drive your actions\n\nFor anyone who wants to understand themselves better and grow from within.</string>
+    <string name="profile_goals_long">The AI finds all goals, wishes, and plans in your entries — even casually mentioned ones.\n\nYou\'ll see:\n\n• What goals you have (including hidden ones)\n• How far along you are with each goal\n• What your next step could be\n\nYour personal goal tracker that reads between the lines.</string>
+    <string name="profile_custom_long">You decide what the AI should focus on.\n\nWrite your own analysis focus, for example:\n\n• "Find all mentions of exercise"\n• "Analyze my mood swings"\n• "Show me when I\'m most productive"\n\nFull control for anyone who knows exactly what they\'re looking for.</string>
+    <string name="profile_custom_prompt">What matters most to you? What should the AI focus on when analyzing your journal entries?</string>
+    <string name="profile_select_hint">Choose a profile. Tap a profile for a detailed explanation.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SETTINGS SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_account">Account</string>
+    <string name="settings_sign_out">Sign out</string>
+    <string name="settings_last_sync">Last sync: %1$s</string>
+    <string name="settings_entries_auto_loaded">Entries are loaded automatically on sign-in</string>
+    <string name="settings_backup_photos">Back up photos</string>
+    <string name="settings_backup_videos">Back up videos</string>
+    <string name="settings_syncing">Backing up…</string>
+    <string name="settings_backup_entries">Back up journal entries</string>
+    <string name="settings_not_signed_in">Not signed in</string>
+    <string name="settings_entries_loaded_on_sign_in">Saved entries are loaded on sign-in</string>
+    <string name="settings_sign_in_google">Sign in with Google</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_dark_mode">Dark mode</string>
+    <string name="settings_dark_active">Active</string>
+    <string name="settings_dark_off">Off</string>
+    <string name="settings_follow_system">Follow system</string>
+    <string name="settings_automatic">Automatic</string>
+    <string name="settings_sunrise_sunset">Sunrise/Sunset</string>
+    <string name="settings_sunrise_sunset_desc">Dark at night, light during the day</string>
+    <string name="settings_app_sounds">App sounds</string>
+    <string name="settings_sounds_on">Sounds are on</string>
+    <string name="settings_sounds_off">Sounds are off</string>
+    <string name="settings_haptics">Haptics</string>
+    <string name="settings_haptics_on">Haptics are on</string>
+    <string name="settings_haptics_off">Haptics are off</string>
+    <string name="settings_voices">Voices</string>
+    <string name="settings_tts_on">Read aloud is on</string>
+    <string name="settings_tts_off">Read aloud is off</string>
+    <string name="settings_voice_select">Select voice</string>
+    <string name="settings_voice_choose">Choose voice</string>
+    <string name="settings_reminder_section">Reminders / Reviews</string>
+    <string name="settings_daily_reminder">Daily reminder</string>
+    <string name="settings_reminder_time">Time: %02d:%02d</string>
+    <string name="settings_reminder_desc">Reminds you to write in your journal</string>
+    <string name="settings_weekly_review">Weekly review</string>
+    <string name="settings_weekly_review_on">Reminder on</string>
+    <string name="settings_weekly_review_off">Sundays at 3:00 PM</string>
+    <string name="settings_monthly_review">Monthly review</string>
+    <string name="settings_monthly_review_on">Reminder on</string>
+    <string name="settings_yearly_review">Yearly review</string>
+    <string name="settings_yearly_review_on">Reminder on</string>
+    <string name="settings_timezone">Timezone: %1$s</string>
+    <string name="settings_security">Security</string>
+    <string name="settings_fingerprint">Fingerprint</string>
+    <string name="settings_fingerprint_desc">Unlock app on start</string>
+    <string name="settings_auto_lock">Locks automatically after 60 seconds in the background</string>
+    <string name="settings_text_improvement">Text improvement</string>
+    <string name="settings_text_improvement_desc">Enable by default</string>
+    <string name="settings_dashboard_section">Dashboard</string>
+    <string name="settings_auto_update">Auto-update on new journal entry</string>
+    <string name="settings_premium_section">Premium</string>
+    <string name="settings_premium_lifetime">Lifetime access active</string>
+    <string name="settings_premium_active">Premium subscription active</string>
+    <string name="settings_premium_lifetime_desc">One-time purchase, all features unlocked forever.</string>
+    <string name="settings_premium_desc">All features unlocked, unlimited AI, PDF export, and more.</string>
+    <string name="settings_manage_subscription">Manage subscription</string>
+    <string name="settings_export">Export</string>
+    <string name="settings_export_pdf_desc">Export all journal entries and photos as a PDF document.</string>
+
+    <!-- Premium feature list (settings) -->
+    <string name="settings_premium_feature_improve">Unlimited AI text improvement</string>
+    <string name="settings_premium_feature_improve_desc">Every entry becomes more expressive</string>
+    <string name="settings_premium_feature_dashboard">Unlimited dashboard analyses</string>
+    <string name="settings_premium_feature_dashboard_desc">Your dashboard grows with you</string>
+    <string name="settings_premium_feature_5_perspectives">5 AI perspectives</string>
+    <string name="settings_premium_feature_5_perspectives_desc">From clarity to self-discovery</string>
+    <string name="settings_premium_feature_reviews">Weekly, monthly, and yearly reviews</string>
+    <string name="settings_premium_feature_reviews_desc">The AI tells your story</string>
+    <string name="settings_premium_feature_patterns">Pattern recognition</string>
+    <string name="settings_premium_feature_patterns_desc">The AI finds connections you don\'t notice</string>
+    <string name="settings_premium_feature_pdf">PDF export with photos</string>
+    <string name="settings_premium_feature_pdf_desc">All journal entries with photos as a document</string>
+    <string name="settings_unlock_premium">Unlock Premium</string>
+    <!-- Export dialog -->
+    <string name="settings_export_what">What should be exported?</string>
+    <string name="settings_export_entries">Journal entries</string>
+    <string name="settings_export_photos">Photos</string>
+    <string name="settings_export_action">Export</string>
+    <string name="settings_exporting">Exporting…</string>
+    <string name="settings_export_entries_photos_pdf">Export journal entries and photos as PDF</string>
+    <string name="settings_export_data">Export data</string>
+    <string name="settings_export_entries_photos_pdf_full">Export journal entries with photos as PDF</string>
+    <!-- Feedback -->
+    <string name="settings_feedback">Feedback</string>
+    <string name="settings_feedback_desc">Suggestions, ideas, feature requests, report bugs 🐞</string>
+    <string name="settings_feedback_send">Send feedback</string>
+    <string name="settings_feedback_sent">Sent successfully</string>
+    <string name="settings_feedback_dialog_title">Send feedback</string>
+    <string name="settings_feedback_dialog_desc">Your message to the developers — we read everything and reply personally!</string>
+    <string name="settings_feedback_placeholder">Write us your feedback…</string>
+    <string name="settings_feedback_sending">Sending…</string>
+    <string name="settings_feedback_sign_in_first">Please sign in with Google first</string>
+    <string name="settings_feedback_allow_gmail">Please allow Gmail access and try again.</string>
+    <string name="settings_feedback_token_error">Token error: %1$s</string>
+    <string name="settings_feedback_unknown_error">Unknown error</string>
+    <string name="settings_feedback_confirm_subject">Your feedback to Best Journal</string>
+    <string name="settings_feedback_confirm_body">This message has been sent to the developer.\nThey will get back to you.\n\n--- Your message ---\n%1$s\n\nBest regards,\nDEV.FRANK</string>
+    <string name="settings_feedback_from">Feedback from: %1$s</string>
+    <string name="action_send">Send</string>
+    <!-- Drive errors -->
+    <string name="drive_consent_needed">Drive access must be granted</string>
+    <string name="drive_not_signed_in">Not signed in</string>
+    <string name="drive_no_backup">No backup found</string>
+    <!-- Achievements -->
+    <string name="achievements_title">Achievements</string>
+    <string name="achievements_counter">%1$d of %2$d unlocked</string>
+    <string name="achievements_unlocked_at">Unlocked on %1$s</string>
+    <!-- About -->
+    <string name="settings_about">About the app</string>
+    <string name="settings_about_version">Best Journal V0.12.1</string>
+    <string name="settings_about_desc">Your personal AI journal</string>
+    <!-- Sign-out dialog -->
+    <string name="settings_sign_out_confirm">Sign out?</string>
+    <string name="settings_sign_out_body">Are you sure you want to sign out?</string>
+    <!-- Toggle labels -->
+    <string name="toggle_light">Light</string>
+    <string name="toggle_dark">Dark</string>
+    <string name="toggle_sound_on">Sound on</string>
+    <string name="toggle_sound_off">Sound off</string>
+    <string name="toggle_haptic_on">Haptic on</string>
+    <string name="toggle_haptic_off">Haptic off</string>
+    <string name="toggle_voice_on">Voice on</string>
+    <string name="toggle_voice_off">Voice off</string>
+    <string name="toggle_sun">Sun</string>
+    <string name="toggle_moon">Moon</string>
+    <!-- Day names -->
+    <string name="day_monday">Monday</string>
+    <string name="day_tuesday">Tuesday</string>
+    <string name="day_wednesday">Wednesday</string>
+    <string name="day_thursday">Thursday</string>
+    <string name="day_friday">Friday</string>
+    <string name="day_saturday">Saturday</string>
+    <string name="day_sunday">Sunday</string>
+    <!-- Review schedule dialog -->
+    <string name="settings_reminder_when">When would you like to be reminded?</string>
+    <string name="settings_review_when">When should your review arrive?</string>
+    <string name="settings_review_weekday">Day of the week</string>
+    <string name="settings_review_time">Time</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         RETROSPECTIVE SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="retro_title">Review</string>
+    <string name="retro_cd_info">About reviews</string>
+    <string name="retro_personal_review">Your personal review</string>
+    <string name="retro_intro_body">Sometimes we forget in everyday life how much we\'ve actually experienced. Your journal remembers everything — the big moments and the small, quiet ones that make up your life.</string>
+    <string name="retro_intro_cta">Look back and discover what moved you.</string>
+    <string name="retro_please_wait">Please wait</string>
+    <string name="retro_backup_loading">Loading backup… Reviews will start automatically after.</string>
+    <string name="retro_profile_switching">Reviews are automatically updated after a profile switch</string>
+    <string name="retro_generating">Creating reviews…</string>
+    <string name="retro_ai_unavailable">The AI is currently unavailable, please try again later.</string>
+    <string name="retro_weekly_title">Weekly Review</string>
+    <string name="retro_weekly_subtitle">The last 7 days at a glance</string>
+    <string name="retro_weekly_empty">No weekly reviews yet.\nAt least 2 journal entries per week needed.</string>
+    <string name="retro_monthly_title">Monthly Review</string>
+    <string name="retro_monthly_subtitle">Your past month at a glance</string>
+    <string name="retro_monthly_empty">No monthly reviews yet.\nCreated from weekly reviews at the end of the month.</string>
+    <string name="retro_yearly_title">Yearly Review</string>
+    <string name="retro_yearly_subtitle">A whole year of memories</string>
+    <string name="retro_yearly_empty">No yearly reviews yet.\nCreated from monthly reviews at the end of the year.</string>
+    <string name="retro_premium_unlock">Unlock all reviews with Premium</string>
+    <string name="retro_at_a_glance">At a Glance</string>
+    <string name="retro_cd_expand">Expand</string>
+    <string name="retro_cd_collapse">Collapse</string>
+    <string name="retro_share_text_label">Text</string>
+
+    <!-- Fallback titles (when AI title generation fails) -->
+    <string name="retro_fallback_week">Weekly Review</string>
+    <string name="retro_fallback_month">Monthly Review</string>
+    <string name="retro_fallback_year">Yearly Review %1$d</string>
+    <string name="retro_period_label_week">Week %1$d (%2$s - %3$s)</string>
+    <!-- Retro: Photos, TTS, Sharing -->
+    <string name="retro_photos_videos">Photos &amp; Videos</string>
+    <string name="retro_photos_videos_colon">Photos &amp; Videos:</string>
+    <string name="retro_cd_video">Video</string>
+    <string name="retro_cd_photo">Photo</string>
+    <string name="retro_play_video">Play video</string>
+    <string name="retro_enable_voices">Enable voices in settings</string>
+    <string name="retro_tts_stop">Stop</string>
+    <string name="retro_tts_read">Read aloud</string>
+    <string name="retro_tts_wait">Please wait, generating text-to-speech…</string>
+    <string name="retro_cd_share">Share</string>
+    <string name="retro_share_title">Share review</string>
+    <string name="retro_share_text_content">Review text</string>
+    <string name="retro_photo_n">Photo %1$d</string>
+    <string name="retro_share_header">Review from the Best Journal app</string>
+    <string name="retro_at_a_glance_colon">At a Glance:</string>
+    <!-- Retro: Locked/Premium -->
+    <string name="retro_cd_locked">Locked</string>
+    <string name="retro_unlock_premium_short">Unlock Premium</string>
+    <string name="retro_cd_premium_required">Premium required</string>
+    <!-- Retro: Benefits info dialog -->
+    <string name="retro_your_ai_reviews">Your AI Reviews</string>
+    <string name="retro_weekly_p1">The AI turns your week into a personal story</string>
+    <string name="retro_weekly_p2">Emotional patterns and highlights become visible</string>
+    <string name="retro_weekly_p3">Automatically created every Sunday when you have at least 2 entries</string>
+    <string name="retro_weekly_p4">The first 2 weeks are free</string>
+    <string name="retro_monthly_p1">Connects your weekly reviews into a monthly story</string>
+    <string name="retro_monthly_p2">Common threads and developments over the month become visible</string>
+    <string name="retro_monthly_p3">Shows changes you don\'t notice in everyday life</string>
+    <string name="retro_yearly_p1">Your whole year at a glance</string>
+    <string name="retro_yearly_p2">The AI recognizes the major themes of your year</string>
+    <string name="retro_yearly_p3">Personal growth becomes visible and tangible</string>
+    <!-- Retro: Premium upsell sheet -->
+    <string name="retro_your_reviews">Your personal reviews</string>
+    <string name="retro_premium_reviews_desc">With Premium, the AI automatically creates reviews from your journal entries:</string>
+    <string name="retro_benefit_weekly">Unlimited weekly reviews, not just the first 2 weeks</string>
+    <string name="retro_benefit_monthly">Monthly reviews that make your progress and changes visible</string>
+    <string name="retro_benefit_yearly">Yearly reviews — your whole year as a personal story</string>
+    <string name="retro_start_sub">Start subscription</string>
+    <string name="retro_decide_later">Decide later</string>
+
+    <!-- Month names for retrospective grouping -->
+    <string name="month_january">January</string>
+    <string name="month_february">February</string>
+    <string name="month_march">March</string>
+    <string name="month_april">April</string>
+    <string name="month_may">May</string>
+    <string name="month_june">June</string>
+    <string name="month_july">July</string>
+    <string name="month_august">August</string>
+    <string name="month_september">September</string>
+    <string name="month_october">October</string>
+    <string name="month_november">November</string>
+    <string name="month_december">December</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ONBOARDING
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_welcome">Welcome to\nBest Journal</string>
+    <string name="onboarding_subtitle">Your personal AI journal\nfor clarity and change</string>
+    <string name="onboarding_feature_speech">Speak or write — the AI understands both</string>
+    <string name="onboarding_feature_secure">Your data stays with you, encrypted and secure</string>
+    <string name="onboarding_goals_title">What do you want to achieve\nwith the AI journal?</string>
+    <string name="onboarding_goal_stress">Reduce stress</string>
+    <string name="onboarding_goal_clarity">Find clarity</string>
+    <string name="onboarding_goal_growth">Personal growth</string>
+    <string name="onboarding_goal_thoughts">Capture my thoughts</string>
+    <string name="onboarding_how_step1_title">Speak or type your entry</string>
+    <string name="onboarding_how_step1_desc">Record your thoughts as a voice message or type them in — whatever you prefer.</string>
+    <string name="onboarding_how_step2_title">The AI improves and analyzes</string>
+    <string name="onboarding_how_step2_desc">Your text is automatically refined and analyzed from different perspectives.</string>
+    <string name="onboarding_how_step3_desc">Capture special moments — the AI includes them in the analysis.</string>
+    <string name="onboarding_how_step4_title">Discover patterns and insights</string>
+    <string name="onboarding_how_step4_desc">The dashboard shows you connections that stay hidden in everyday life.</string>
+    <string name="onboarding_how_step5_title">Weekly, monthly, and yearly reviews</string>
+    <string name="onboarding_how_step5_desc">Automatic reviews show you how you evolve over time.</string>
+    <string name="onboarding_premium_feature_improve">Unlimited AI text improvement — every entry becomes clearer and more expressive</string>
+    <string name="onboarding_premium_feature_dashboard">Automatic dashboard updates with every new entry</string>
+    <string name="onboarding_premium_feature_retro">Weekly, monthly, and yearly reviews show your growth</string>
+    <string name="onboarding_premium_feature_patterns">Recognize personal patterns — the AI finds hidden thought and feeling patterns</string>
+    <string name="onboarding_premium_feature_noads">No ads — write and reflect without distractions</string>
+    <string name="onboarding_free_trial">Free and no obligation</string>
+    <string name="onboarding_free_after_trial">After that you continue using Best Journal\nfor free with limited AI calls per week.</string>
+    <string name="onboarding_start_free">Start for free</string>
+    <string name="onboarding_without_premium">Continue without Premium</string>
+    <string name="onboarding_feature_profiles">5 smart analysis profiles for different perspectives</string>
+    <string name="onboarding_goals_select">Choose one or more goals</string>
+    <string name="onboarding_how_step3_title">Add photos</string>
+    <string name="onboarding_how_title">This is how it works</string>
+    <string name="onboarding_perspectives_title">5 Perspectives on\nyour life</string>
+    <string name="onboarding_premium_feature_pdf">PDF export with photos — save your entries as a document</string>
+    <string name="onboarding_premium_profiles">5 smart dashboard profiles for deep insights into your life</string>
+    <string name="onboarding_try_premium">Try Premium for 8 days</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PAYWALL
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="paywall_prices_loading">Loading prices…</string>
+    <string name="paywall_sub_loading_toast">Loading subscription, please try again shortly.</string>
+    <string name="paywall_purchase_loading_toast">Loading purchase, please try again shortly.</string>
+    <string name="paywall_today">Today</string>
+    <string name="paywall_full_access">Full access</string>
+    <string name="paywall_day7">Day 7</string>
+    <string name="paywall_reminder">Reminder</string>
+    <string name="paywall_day8">Day 8</string>
+    <string name="paywall_first_payment">First payment</string>
+    <string name="paywall_yearly_note">Then %1$s per year\nCancel anytime during the trial</string>
+    <string name="paywall_most_popular">Most popular</string>
+    <string name="paywall_monthly_plan">Monthly, %1$s per month</string>
+    <string name="paywall_yearly_savings">Save %1$d%% compared to monthly, cancel anytime</string>
+    <string name="paywall_lifetime_title">One-time purchase</string>
+    <string name="paywall_lifetime_desc">Pay once, use everything forever</string>
+    <string name="paywall_lifetime_note">No subscription, no renewal</string>
+    <string name="paywall_free_note">The app also works without a subscription,</string>
+    <string name="paywall_cd_close">Close</string>
+
+    <!-- Paywall features -->
+    <string name="paywall_feature_patterns">Understand hidden patterns in your thinking</string>
+    <string name="paywall_feature_improve">Unlimited AI text improvement for every entry</string>
+    <string name="paywall_feature_dashboard">Automatic dashboard updates after every entry</string>
+    <string name="paywall_feature_retro">Weekly, monthly, and yearly AI reviews</string>
+    <string name="paywall_feature_pdf">Export journal entries with photos as PDF</string>
+    <string name="paywall_feature_noads">Speak or write without distractions, ad-free</string>
+
+    <!-- Paywall personalized headlines -->
+    <string name="paywall_headline_stress">Find your inner peace</string>
+    <string name="paywall_headline_stress_sub">Recognize what\'s weighing you down before it overwhelms you</string>
+    <string name="paywall_headline_clarity">Understand yourself better</string>
+    <string name="paywall_headline_clarity_sub">The AI recognizes patterns that stay hidden from you</string>
+    <string name="paywall_headline_growth">Discover the good in every day</string>
+    <string name="paywall_headline_growth_sub">Your personal space for gratitude and growth</string>
+    <string name="paywall_headline_thoughts">Let your thoughts flow</string>
+    <string name="paywall_headline_thoughts_sub">Your creative companion without limits</string>
+    <string name="paywall_headline_default">Discover yourself\nA little more every day</string>
+    <string name="paywall_headline_default_sub">Your personal AI companion without limits</string>
+
+    <!-- Exit intent offer -->
+    <string name="paywall_exit_wait">Wait a moment!</string>
+    <string name="paywall_exit_special_offer">We have a special\noffer for you:</string>
+    <string name="paywall_exit_discount">Discount for %1$d months</string>
+    <string name="paywall_exit_price_comparison">Only %1$s instead of %2$s per month</string>
+    <string name="paywall_exit_start_discount">Start monthly with 50%% discount</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CHURN FLOW DIALOG
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="churn_your_sub">Your Subscription</string>
+    <string name="churn_plan_yearly">Yearly plan</string>
+    <string name="churn_plan_monthly">Monthly plan</string>
+    <string name="churn_plan">Plan</string>
+    <string name="churn_price">Price</string>
+    <string name="churn_renewal">Renewal</string>
+    <string name="churn_automatic">Automatic</string>
+    <string name="churn_auto_renew_note">Your subscription renews automatically via Google Play. You can cancel at any time.</string>
+    <string name="churn_cancel_sub">Cancel subscription</string>
+    <string name="churn_reason_too_expensive">Too expensive</string>
+    <string name="churn_reason_unused">Don\'t use it enough</string>
+    <string name="churn_per_year">per year</string>
+    <string name="churn_per_month">per month</string>
+    <string name="churn_reason_features">Not the features I need</string>
+    <string name="churn_reason_other">Other reason</string>
+    <string name="churn_sorry_title">Sorry to see you go</string>
+    <string name="churn_sorry_body">Before you cancel, would you tell us why? This helps us improve the app.</string>
+    <string name="churn_exclusive_offer">Exclusive offer</string>
+    <string name="churn_offer_subtitle">Just for you, because you matter to us</string>
+    <string name="churn_offer_feature_ai">Unlimited AI analyses</string>
+    <string name="churn_offer_feature_perspectives">All 5 perspectives</string>
+    <string name="churn_offer_feature_voice">Premium voice recognition</string>
+    <string name="churn_offer_auto_renew">Renews automatically, cancel anytime</string>
+    <string name="churn_accept_offer">Accept offer</string>
+    <string name="churn_switch_yearly">Or switch to yearly and save even more</string>
+    <string name="churn_pause_sub">Or pause your subscription on Google Play</string>
+    <string name="churn_cancel_anyway">Cancel anyway</string>
+    <string name="churn_are_you_sure">Are you sure?</string>
+    <string name="churn_stay">I\'d rather stay</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI LIMIT / COMPONENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="ai_limit_title">You\'ve reached your weekly limit</string>
+    <string name="ai_limit_body">Without a subscription you have 5\u00A0text improvements and 5\u00A0dashboard updates per week.\nWith Premium: up to 150 per day, in full quality.</string>
+    <string name="ai_limit_monthly">Monthly, %1$s/month</string>
+    <string name="ai_limit_yearly">Yearly, %1$s/year (save 37%%)</string>
+    <string name="ai_limit_no_thanks">No thanks, continue without AI</string>
+    <string name="ai_banner_title">Your journal is powered by AI</string>
+    <string name="cd_mic_start">Start recording</string>
+    <string name="cd_mic_stop">Stop recording</string>
+    <string name="entry_improve_limit_daily">Daily limit reached. Try again tomorrow!</string>
+    <string name="entry_improve_limit_cooldown">Short break: %1$d minutes left.</string>
+    <string name="entry_improve_failed">Text improvement failed</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NOTIFICATIONS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="notif_reminder_title">Time for your journal</string>
+    <string name="notif_reminder_body_0">What\'s on your mind today?</string>
+    <string name="notif_reminder_body_1">A moment for yourself — capture it</string>
+    <string name="notif_reminder_body_2">Your future self will thank you</string>
+    <string name="notif_reminder_body_3">Just one thought is enough — go for it</string>
+    <string name="notif_reminder_body_4">What was today\'s highlight?</string>
+    <string name="notif_weekly_title">Your Weekly Review</string>
+    <string name="notif_weekly_body">See what moved you this week — your dashboard has new insights.</string>
+    <string name="notif_monthly_title">Your Monthly Review</string>
+    <string name="notif_monthly_body">A whole month of memories is waiting for you.</string>
+    <string name="notif_yearly_title">Your Yearly Review</string>
+    <string name="notif_yearly_body">A whole year of memories — look back on your journey.</string>
+
+    <!-- Notification channel names -->
+    <string name="notif_channel_daily_name">Daily Reminder</string>
+    <string name="notif_channel_daily_desc">Daily reminder to write in your journal</string>
+    <string name="notif_channel_weekly_name">Weekly Review</string>
+    <string name="notif_channel_weekly_desc">Your weekly review every Sunday at 3:00 PM</string>
+    <string name="notif_channel_monthly_name">Monthly Review</string>
+    <string name="notif_channel_monthly_desc">Notification when your monthly review is ready</string>
+    <string name="notif_channel_yearly_name">Yearly Review</string>
+    <string name="notif_channel_yearly_desc">Notification when your yearly review is ready</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DATE / TIME
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="datetime_just_now">just now</string>
+    <plurals name="datetime_minutes_ago">
+        <item quantity="one">%1$d minute ago</item>
+        <item quantity="other">%1$d minutes ago</item>
+    </plurals>
+    <plurals name="datetime_hours_ago">
+        <item quantity="one">%1$d hour ago</item>
+        <item quantity="other">%1$d hours ago</item>
+    </plurals>
+    <plurals name="datetime_days_ago">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
+    <string name="datetime_today">Today</string>
+    <string name="datetime_yesterday">Yesterday</string>
+    <string name="datetime_day_before_yesterday">Day before yesterday</string>
+    <string name="datetime_this_week">This week</string>
+    <string name="datetime_last_week">Last week</string>
+    <string name="datetime_weeks_ago">%1$d weeks ago</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ACHIEVEMENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="achievement_nightowl_title">Night Owl</string>
+    <string name="achievement_nightowl_desc">Wrote 50 entries after 10 PM</string>
+    <string name="achievement_earlybird_title">Early Bird</string>
+    <string name="achievement_earlybird_desc">Wrote 20 entries before 7 AM</string>
+    <string name="achievement_confession_title">Confession</string>
+    <string name="achievement_confession_desc">Wrote an entry with over 1,000 words</string>
+    <string name="achievement_marathon_title">Marathon Writer</string>
+    <string name="achievement_marathon_desc">Wrote 100 journal entries</string>
+    <string name="achievement_wordartist_title">Word Artist</string>
+    <string name="achievement_wordartist_desc">Wrote 500 journal entries</string>
+    <string name="achievement_consistency_title">Consistency</string>
+    <string name="achievement_consistency_desc">Reached a 30-day streak</string>
+    <string name="achievement_chronicler_title">Year Chronicler</string>
+    <string name="achievement_chronicler_desc">Wrote 365 entries</string>
+    <string name="achievement_photodiary_title">Photo Diary</string>
+    <string name="achievement_photodiary_desc">Attached 50 photos to entries</string>
+    <string name="achievement_voiceartist_title">Voice Artist</string>
+    <string name="achievement_voiceartist_desc">Created 25 voice entries</string>
+    <string name="achievement_reflectionmaster_title">Reflection Master</string>
+    <string name="achievement_reflectionmaster_desc">Ran 50 dashboard analyses</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DAILY PROMPTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="prompt_cat_self_reflection">Self-Reflection</string>
+    <string name="prompt_cat_gratitude">Gratitude</string>
+    <string name="prompt_cat_future">Future</string>
+    <string name="prompt_cat_relationships">Relationships</string>
+
+    <string-array name="prompts_self_reflection">
+        <item>What made you smile today?</item>
+        <item>What thought couldn\'t you let go of today?</item>
+        <item>What did you learn about yourself today?</item>
+        <item>What was the most intense moment of your day?</item>
+        <item>What would you do differently today if you could?</item>
+        <item>What feeling stayed with you most today?</item>
+        <item>What surprised you today?</item>
+        <item>What did you think about the longest today?</item>
+        <item>What gave you energy today?</item>
+        <item>What drained your energy today?</item>
+        <item>What habit would you like to change?</item>
+        <item>What does success mean to you right now?</item>
+        <item>What fear is holding you back right now?</item>
+        <item>What would your younger self say about your life today?</item>
+        <item>What advice would you give yourself right now?</item>
+        <item>What makes you unique?</item>
+    </string-array>
+
+    <string-array name="prompts_gratitude">
+        <item>What are you grateful for today?</item>
+        <item>Who made your day better today?</item>
+        <item>What small detail brought you joy today?</item>
+        <item>What skill do you have that you often take for granted?</item>
+        <item>What\'s the best thing that happened to you this week?</item>
+        <item>Who would you like to thank, and for what?</item>
+        <item>What place feels like home to you?</item>
+        <item>What memory instantly makes you happy?</item>
+        <item>What about your body deserves more appreciation?</item>
+        <item>What food really hit the spot today?</item>
+        <item>What music touched you recently?</item>
+        <item>What\'s the most valuable thing you own that money can\'t buy?</item>
+        <item>What past experience made you stronger?</item>
+        <item>What about your daily life is actually a privilege?</item>
+        <item>Who\'s your unsung everyday hero?</item>
+        <item>What season are you enjoying the most right now, and why?</item>
+    </string-array>
+
+    <string-array name="prompts_future">
+        <item>What do you want to have achieved in a year?</item>
+        <item>What does your perfect day look like in five years?</item>
+        <item>What goal are you pursuing most passionately right now?</item>
+        <item>What would you do if you knew you couldn\'t fail?</item>
+        <item>What new skill would you like to learn?</item>
+        <item>Where do you want to travel next?</item>
+        <item>What kind of person do you want to be in ten years?</item>
+        <item>What dream did you give up that you could revive?</item>
+        <item>What\'s the bravest step you could take right now?</item>
+        <item>What project excites you that you haven\'t started yet?</item>
+        <item>What would need to happen for you to say: I\'m content now?</item>
+        <item>What change would you like to see in the world?</item>
+        <item>What\'s at the very top of your bucket list?</item>
+        <item>What bad habit would you like to drop by next month?</item>
+        <item>How do you want to be remembered?</item>
+        <item>What\'s one small step you can take tomorrow?</item>
+    </string-array>
+
+    <string-array name="prompts_relationships">
+        <item>Who would you like to say something to that you haven\'t said yet?</item>
+        <item>What relationship in your life deserves more attention?</item>
+        <item>What do you appreciate most about your best friend?</item>
+        <item>When did you last feel truly understood?</item>
+        <item>What would you say to someone who matters to you?</item>
+        <item>Who has shaped your life the most?</item>
+        <item>How do you show others that you love them?</item>
+        <item>What conflict would you like to resolve?</item>
+        <item>What does friendship mean to you?</item>
+        <item>Who taught you something important recently?</item>
+        <item>What quality do you admire most in others?</item>
+        <item>Who would you like to spend an entire day with?</item>
+        <item>What\'s the nicest compliment you\'ve ever received?</item>
+        <item>What boundaries would you like to set better in relationships?</item>
+        <item>How has your idea of love changed over time?</item>
+        <item>Who deserves a call or message from you today?</item>
+    </string-array>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PDF EXPORT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="pdf_entry_fallback_title">Entry #%1$d</string>
+    <string name="pdf_entry_counter">Entry %1$d of %2$d</string>
+    <string name="pdf_summary_label">SUMMARY</string>
+    <string name="pdf_continuation">%1$s (continued)</string>
+    <string name="pdf_page_number">Page %1$d</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ERRORS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="error_retro_all_failed">All %1$d AI requests failed. Please check your internet connection.</string>
+    <string name="error_whisper_audio_empty">Audio file is empty</string>
+    <string name="error_whisper_no_text">No text recognized</string>
+    <string name="error_sync_db_not_found">Database not found</string>
+    <string name="error_file_open_failed">Error: Could not open file</string>
+    <string name="error_generic">Error: %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI PROFILE STYLE INSTRUCTIONS (for Gemini prompts)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="profile_style_chronicler">\n- Write in the style of a summarizing narrative, capturing the key events and feelings like a personal chronicler</string>
+    <string name="profile_style_advisor">\n- Write in the style of a life advisor, highlighting what went well, what can be improved, and giving the reader a sense of clarity and order</string>
+    <string name="profile_style_insight">\n- Write in the style of a deep self-discovery narrative, uncovering thought patterns, recurring feelings, and hidden strengths</string>
+    <string name="profile_style_coach">\n- Write in the style of a motivating goal companion, showing progress on personal goals and encouraging to keep going</string>
+    <string name="profile_style_custom">\n- Write the review with the following personal focus from the user: \"%1$s\"</string>
+
+</resources>
