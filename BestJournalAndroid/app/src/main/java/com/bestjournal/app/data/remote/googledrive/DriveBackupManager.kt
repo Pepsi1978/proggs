@@ -28,7 +28,7 @@ import kotlinx.coroutines.withContext
 private const val RESUMABLE_THRESHOLD = 5L * 1024 * 1024 // 5 MB
 
 class NeedConsentException(val consentIntent: Intent) :
-    Exception("Drive-Zugriff muss erlaubt werden")
+    Exception("Drive consent needed")
 
 @Singleton
 class DriveBackupManager
@@ -54,7 +54,7 @@ constructor(
         withContext(Dispatchers.IO) {
             val accountEmail =
                 encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null)
-                    ?: throw IllegalStateException("Nicht angemeldet")
+                    ?: throw IllegalStateException("Not signed in")
 
             val account = Account(accountEmail, "com.google")
             val scope = "oauth2:${DriveScopes.DRIVE_APPDATA}"

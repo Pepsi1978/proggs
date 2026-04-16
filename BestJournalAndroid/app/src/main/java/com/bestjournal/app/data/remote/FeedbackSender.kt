@@ -7,10 +7,11 @@ import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.UserRecoverableAuthException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.bestjournal.app.R
 import java.net.HttpURLConnection
 import java.net.URL
 
-class FeedbackNeedConsentException(val consentIntent: Intent) : Exception("Gmail-Zugriff muss erlaubt werden")
+class FeedbackNeedConsentException(val consentIntent: Intent) : Exception("Gmail consent needed")
 
 object FeedbackSender {
 
@@ -37,7 +38,7 @@ object FeedbackSender {
         } catch (e: UserRecoverableAuthException) {
             throw FeedbackNeedConsentException(e.intent ?: Intent())
         } catch (e: Exception) {
-            return@withContext "Token-Fehler: ${e.message}"
+            return@withContext context.getString(R.string.settings_feedback_token_error, e.message ?: "")
         }
 
         try {
@@ -46,7 +47,7 @@ object FeedbackSender {
                 from = accountEmail,
                 to = DEV_EMAIL,
                 subject = subject,
-                body = "Feedback von: $accountEmail\n\n$feedbackText"
+                body = context.getString(R.string.settings_feedback_from, accountEmail) + "\n\n" + feedbackText
             )
             sendViaGmailApi(token, devMessage)
 
@@ -54,16 +55,14 @@ object FeedbackSender {
             val userMessage = buildRawEmail(
                 from = accountEmail,
                 to = accountEmail,
-                subject = "Dein Feedback an Best Journal",
-                body = "Diese Nachricht haben Sie an den Entwickler geschickt.\nEr wird sich bei Ihnen melden.\n\n" +
-                        "--- Ihre Nachricht ---\n$feedbackText\n\n" +
-                        "Mit freundlichen Gr\u00fc\u00dfen\nDEV.FRANK"
+                subject = context.getString(R.string.settings_feedback_confirm_subject),
+                body = context.getString(R.string.settings_feedback_confirm_body, feedbackText)
             )
             sendViaGmailApi(token, userMessage)
 
             null // success
         } catch (e: Exception) {
-            e.message ?: "Unbekannter Fehler"
+            e.message ?: context.getString(R.string.settings_feedback_unknown_error)
         }
     }
 

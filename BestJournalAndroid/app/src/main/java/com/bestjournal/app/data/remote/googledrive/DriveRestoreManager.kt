@@ -113,7 +113,7 @@ constructor(
                 val driveService =
                     getDriveService()
                         ?: return@withContext Result.failure(
-                            IllegalStateException("Nicht angemeldet")
+                            IllegalStateException("Not signed in")
                         )
 
                 val files =
@@ -127,7 +127,7 @@ constructor(
 
                 val backupFile =
                     files.files?.firstOrNull()
-                        ?: return@withContext Result.failure(Exception("Kein Backup gefunden"))
+                        ?: return@withContext Result.failure(Exception("No backup found"))
 
                 FileOutputStream(targetFile).use { outputStream ->
                     driveService.files().get(backupFile.id).executeMediaAndDownloadTo(outputStream)

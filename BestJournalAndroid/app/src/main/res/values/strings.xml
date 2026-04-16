@@ -380,7 +380,16 @@
     <string name="settings_feedback_sending">Wird gesendet…</string>
     <string name="settings_feedback_sign_in_first">Bitte zuerst mit Google anmelden</string>
     <string name="settings_feedback_allow_gmail">Bitte Gmail-Zugriff erlauben und erneut versuchen.</string>
+    <string name="settings_feedback_token_error">Token-Fehler: %1$s</string>
+    <string name="settings_feedback_unknown_error">Unbekannter Fehler</string>
+    <string name="settings_feedback_confirm_subject">Dein Feedback an Best Journal</string>
+    <string name="settings_feedback_confirm_body">Diese Nachricht haben Sie an den Entwickler geschickt.\nEr wird sich bei Ihnen melden.\n\n--- Ihre Nachricht ---\n%1$s\n\nMit freundlichen Grüßen\nDEV.FRANK</string>
+    <string name="settings_feedback_from">Feedback von: %1$s</string>
     <string name="action_send">Senden</string>
+    <!-- Drive errors -->
+    <string name="drive_consent_needed">Drive-Zugriff muss erlaubt werden</string>
+    <string name="drive_not_signed_in">Nicht angemeldet</string>
+    <string name="drive_no_backup">Kein Backup gefunden</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
     <string name="settings_about_version">Best Journal V0.12.1</string>
@@ -668,16 +677,16 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="datetime_just_now">gerade eben</string>
     <plurals name="datetime_minutes_ago">
-        <item quantity="one">vor %d Minute</item>
-        <item quantity="other">vor %d Minuten</item>
+        <item quantity="one">vor %1$d Minute</item>
+        <item quantity="other">vor %1$d Minuten</item>
     </plurals>
     <plurals name="datetime_hours_ago">
-        <item quantity="one">vor %d Stunde</item>
-        <item quantity="other">vor %d Stunden</item>
+        <item quantity="one">vor %1$d Stunde</item>
+        <item quantity="other">vor %1$d Stunden</item>
     </plurals>
     <plurals name="datetime_days_ago">
-        <item quantity="one">vor %d Tag</item>
-        <item quantity="other">vor %d Tagen</item>
+        <item quantity="one">vor %1$d Tag</item>
+        <item quantity="other">vor %1$d Tagen</item>
     </plurals>
     <string name="datetime_today">Heute</string>
     <string name="datetime_yesterday">Gestern</string>
