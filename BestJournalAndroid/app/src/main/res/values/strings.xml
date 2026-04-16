@@ -29,6 +29,7 @@
     <string name="action_ok">OK</string>
     <string name="action_go_google_play">Zu Google Play</string>
     <string name="journal_drive_backup_dialog">Google Drive Backup</string>
+    <string name="journal_improve_text">✨ Text verbessern</string>
     <string name="label_premium">Premium</string>
     <string name="label_original">Original</string>
     <string name="label_improved">Verbessert</string>

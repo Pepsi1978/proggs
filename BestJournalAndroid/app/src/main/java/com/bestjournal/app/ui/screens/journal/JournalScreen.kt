@@ -1198,7 +1198,7 @@ private fun PreviewDialog(
                                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                             ),
                     ) {
-                        Text("\u2728 Text verbessern")
+                        Text(stringResource(R.string.journal_improve_text))
                     }
                 }
 
