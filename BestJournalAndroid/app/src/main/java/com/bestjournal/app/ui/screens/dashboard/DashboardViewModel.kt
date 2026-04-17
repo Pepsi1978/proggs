@@ -142,7 +142,7 @@ constructor(
         val updateStartKey = "dashboard_update_started_at"
         if (encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)) {
             val startedAt = encryptedPrefs.getLong(updateStartKey, 0L)
-            if (startedAt == 0L || System.currentTimeMillis() - startedAt > 120_000L) {
+            if (startedAt == 0L || System.currentTimeMillis() - startedAt > 240_000L) {
                 encryptedPrefs
                     .edit()
                     .putBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
@@ -155,7 +155,7 @@ constructor(
                 val updating = encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
                 if (updating) {
                     val startedAt = encryptedPrefs.getLong(updateStartKey, 0L)
-                    if (startedAt == 0L || System.currentTimeMillis() - startedAt > 120_000L) {
+                    if (startedAt == 0L || System.currentTimeMillis() - startedAt > 240_000L) {
                         encryptedPrefs
                             .edit()
                             .putBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
