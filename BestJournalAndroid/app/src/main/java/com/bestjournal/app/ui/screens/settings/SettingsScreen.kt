@@ -465,7 +465,9 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.weight(1f),
                             ) {
-                                SettingsSunMoonIcon(isDark = uiState.isDarkTheme)
+                                SettingsSunMoonIcon(
+                                    isDark = com.bestjournal.app.ui.theme.LocalIsDarkTheme.current
+                                )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
@@ -507,7 +509,9 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.weight(1f),
                             ) {
-                                SettingsPhoneIcon(isDark = uiState.isDarkTheme)
+                                SettingsPhoneIcon(
+                                    isDark = com.bestjournal.app.ui.theme.LocalIsDarkTheme.current
+                                )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
@@ -570,7 +574,9 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.weight(1f),
                             ) {
-                                SettingsSunMoonIcon(isDark = uiState.isDarkTheme)
+                                SettingsSunMoonIcon(
+                                    isDark = com.bestjournal.app.ui.theme.LocalIsDarkTheme.current
+                                )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
