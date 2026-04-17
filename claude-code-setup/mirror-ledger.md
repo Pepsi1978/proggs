@@ -2932,7 +2932,7 @@ Dokumentation der Forschungs-Hub Integration abgeschlossen. Fokus auf Trae, SICA
 <!-- TARGETS: macos/claude-code,codex,gemini -->
 <!-- TYPE: agent,hook,rule,settings -->
 <!-- AFFECTS: agents/hyperagent.md, hooks/hyperagent-stop.{ps1,sh}, hooks/session-scorer.{ps1,sh}, rules/metacognitive-monitoring.md, settings.json -->
-<!-- APPLIED: macos/claude-code=PENDING windows/claude-code=2026-03-31 codex=PENDING gemini=PENDING -->
+<!-- APPLIED: macos/claude-code=2026-04-17T07:14:00Z windows/claude-code=2026-03-31 codex=PENDING gemini=PENDING -->
 
 ### Was wurde geaendert?
 

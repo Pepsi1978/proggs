@@ -105,6 +105,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-15 22:25 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 - **[2026-04-15 22:30] subagent-failure**: ENDLOSSCHLEIFE Stop-Hook: Der SubagentStop/Stop-Hook in ~/.claude/hooks/ feuert bei JEDER Assistenten-Antwort (50+ mal) auch wenn KEIN Subagent abgeschlossen hat. Symptom: Hook-Feedback erscheint als User-Message nach jeder Assistant-Response, Text lautet A subagent just finished. Root Cause: Hook prueft nicht ob tatsaechlich ein Subagent-Completion-Event vorliegt (kein gueltiges subagent_id im Input). Stattdessen feuert er auf jeden Stop-Event. Betroffene Datei: ~/.claude/hooks/ (SubagentStop oder Stop Hook, vermutlich subagent-stop.ps1 oder stop-hook.ps1). Konkreter Fix: Am Anfang des Hooks pruefen ob der Input-Parameter subagent_id nicht leer ist. Falls leer oder nicht vorhanden: sofort exit 0 ohne weitere Verarbeitung. PowerShell-Beispiel: $input = $env:CLAUDE_TOOL_INPUT | ConvertFrom-Json; if (-not $input.subagent_id) { exit 0 }. Alternativ: Hook nur fuer SubagentStop-Event registrieren (nicht fuer Stop-Event) falls er beide Events abfaengt.
 ### 2026-04-16 10:35 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-17 07:06 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
 ---
 
 ## Systemzustand (aktuell)
@@ -133,7 +134,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Cross-Platform:** 82 Commits von macOS synchronisiert (12.04). Massive Feature-Arbeit: Retrospektiven, Fotos, TTS, Share-Dialog, Nav-Redesign, Cloud-Backup-Redesign.
 - **Neue Features seit 07.04 (macOS):** Retrospective-Screen, EntryPhoto, EdgeTtsPlayer, ShareEntryDialog, DriveRestoreManager, SyncProgressHolder, MonthlyReviewReceiver, YearlyReviewReceiver. DB Schema v4→v8.
 - **Speicherplatz (macOS):** 16 GB frei (42%) — bereinigt, stabil
-- **Pending Admin Updates (19):** biome,oven-sh/bun/bun,deno,fzf,go,harfbuzz,htop,libomp,libpng,node,ollama,openssl@3,python@3.13,python@3.14,simdjson,sqlite,steipete/tap/summarize,uv,codex,
+- **Pending Admin Updates (20):** biome,oven-sh/bun/bun,deno,fzf,gh,giflib,go,harfbuzz,htop,libngtcp2,libomp,libpng,node,ollama,openssl@3,python@3.13,python@3.14,simdjson,sqlite,steipete/tap/summarize,
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -354,6 +355,8 @@ _Noch keine Eintraege._
 - **[2026-04-12] self-observation-checker**: [WARNING] Session 4fcdf1e4 (77 Turns) zeigte keine Selbstbeobachtung
 - **[2026-04-12] intelligence-checker**: [WARNING] Session 4fcdf1e4 (77 Turns) hatte keinen Intelligenz-Vorschlag
 - **[2026-04-12] self-observation-checker**: [WARNING] Session 4fcdf1e4 (77 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-17] intelligence-checker**: [WARNING] Session bd3225d3 (10 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-17] intelligence-checker**: [WARNING] Session bd3225d3 (10 Turns) hatte keinen Intelligenz-Vorschlag
 ---
 
 ## Regeln & Konventionen
