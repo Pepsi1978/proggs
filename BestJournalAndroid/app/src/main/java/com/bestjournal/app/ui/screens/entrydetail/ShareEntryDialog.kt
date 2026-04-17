@@ -29,9 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import androidx.compose.ui.res.stringResource
 import coil3.compose.AsyncImage
 import com.bestjournal.app.R
 import com.bestjournal.app.data.local.entity.EntryPhotoEntity
@@ -53,7 +53,9 @@ fun ShareEntryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.share_title), color = MaterialTheme.colorScheme.onSurface) },
+        title = {
+            Text(stringResource(R.string.share_title), color = MaterialTheme.colorScheme.onSurface)
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (hasImproved) {
@@ -67,14 +69,20 @@ fun ShareEntryDialog(
                         modifier = Modifier.fillMaxWidth().clickable { useImproved = false },
                     ) {
                         RadioButton(selected = !useImproved, onClick = { useImproved = false })
-                        Text(stringResource(R.string.label_original), color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            stringResource(R.string.label_original),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().clickable { useImproved = true },
                     ) {
                         RadioButton(selected = useImproved, onClick = { useImproved = true })
-                        Text(stringResource(R.string.share_improved_version), color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            stringResource(R.string.share_improved_version),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
                 }
 
@@ -106,7 +114,8 @@ fun ShareEntryDialog(
                                         .padding(end = 8.dp),
                             )
                             Text(
-                                if (photo.isVideo) stringResource(R.string.label_video) else stringResource(R.string.label_photo),
+                                if (photo.isVideo) stringResource(R.string.label_video)
+                                else stringResource(R.string.label_photo),
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                         }
@@ -136,24 +145,29 @@ fun ShareEntryDialog(
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.action_cancel),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
     )
 }
 
-fun buildShareText(entry: JournalEntry, useImproved: Boolean, context: Context? = null): String = buildString {
-    append(context?.getString(R.string.share_footer) ?: "Tagebucheintrag von der BestJournal App")
-    append("\n")
-    append(DateTimeFormatter.formatFull(entry.timestamp))
-    if (!entry.moodTag.isNullOrBlank()) append(" \u00b7 ${entry.moodTag}")
-    append(
-        "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
-    )
-    if (!entry.title.isNullOrBlank()) append("\n\n\u2728 ${entry.title}")
-    val bodyText = if (useImproved) entry.improvedText ?: entry.displayText else entry.displayText
-    append("\n\n$bodyText")
-}
+fun buildShareText(entry: JournalEntry, useImproved: Boolean, context: Context): String =
+    buildString {
+        append(context.getString(R.string.share_footer))
+        append("\n")
+        append(DateTimeFormatter.formatFull(entry.timestamp))
+        if (!entry.moodTag.isNullOrBlank()) append(" \u00b7 ${entry.moodTag}")
+        append(
+            "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+        )
+        if (!entry.title.isNullOrBlank()) append("\n\n\u2728 ${entry.title}")
+        val bodyText =
+            if (useImproved) entry.improvedText ?: entry.displayText else entry.displayText
+        append("\n\n$bodyText")
+    }
 
 fun getPhotoUri(context: Context, photo: EntryPhotoEntity): Uri =
     FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", File(photo.filePath))

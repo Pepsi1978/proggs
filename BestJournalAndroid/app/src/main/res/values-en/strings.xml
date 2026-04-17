@@ -406,6 +406,7 @@
     <string name="settings_premium_feature_voice_desc">Higher quality for your voice entries</string>
     <string name="settings_unlock_premium">Unlock Premium</string>
     <!-- Export dialog -->
+    <string name="settings_export_dialog_title">PDF Export</string>
     <string name="settings_export_what">What should be exported?</string>
     <string name="settings_export_entries">Journal entries</string>
     <string name="settings_export_photos">Photos</string>

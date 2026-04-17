@@ -419,6 +419,8 @@
     <string name="settings_premium_feature_voice_desc">Höhere Qualität für deine Spracheinträge</string>
     <string name="settings_unlock_premium">Premium freischalten</string>
     <!-- Export dialog -->
+    <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
+    <string name="settings_export_dialog_title">PDF-Export</string>
     <string name="settings_export_what">Was soll exportiert werden?</string>
     <string name="settings_export_entries">Tagebucheinträge</string>
     <string name="settings_export_photos">Fotos</string>

@@ -1,17 +1,5 @@
 package com.bestjournal.app.ui.screens.settings
 
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
-import androidx.compose.foundation.layout.PaddingValues
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import androidx.compose.ui.res.stringArrayResource
-import androidx.compose.ui.res.stringResource
-import com.bestjournal.app.R
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import com.bestjournal.app.util.rememberHapticAction
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.EaseInOutSine
@@ -22,7 +10,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,14 +22,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.DateRange
@@ -52,6 +38,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Notifications
@@ -60,30 +47,25 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PictureAsPdf
+import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Vibration
-import androidx.compose.material.icons.rounded.MobileOff
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.VolumeUp
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.Mic
-import androidx.compose.material.icons.rounded.MicOff
-import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -96,6 +78,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimeInput
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -107,25 +90,33 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.GlassCard
-import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.FeatureAccentOrange
+import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.NeonRed
-import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.DateTimeFormatter
+import com.bestjournal.app.util.rememberHapticAction
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -283,7 +274,10 @@ fun SettingsScreen(
                                     }
                                 }
                                 OutlinedButton(
-                                    onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.showLogoutDialog(true) },
+                                    onClick = {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        viewModel.showLogoutDialog(true)
+                                    },
                                     colors =
                                         ButtonDefaults.outlinedButtonColors(contentColor = NeonRed),
                                 ) {
@@ -293,7 +287,10 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             uiState.lastSyncTimestamp?.let { ts ->
                                 Text(
-                                    stringResource(R.string.settings_last_sync, DateTimeFormatter.formatFull(ts)),
+                                    stringResource(
+                                        R.string.settings_last_sync,
+                                        DateTimeFormatter.formatFull(ts),
+                                    ),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.outline,
                                 )
@@ -326,9 +323,9 @@ fun SettingsScreen(
                                 Switch(
                                     checked = uiState.backupPhotos,
                                     onCheckedChange = {
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    viewModel.setBackupPhotos(it)
-                                },
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        viewModel.setBackupPhotos(it)
+                                    },
                                 )
                             }
                             Row(
@@ -353,9 +350,9 @@ fun SettingsScreen(
                                 Switch(
                                     checked = uiState.backupVideos,
                                     onCheckedChange = {
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    viewModel.setBackupVideos(it)
-                                },
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        viewModel.setBackupVideos(it)
+                                    },
                                 )
                             }
                             Spacer(modifier = Modifier.height(12.dp))
@@ -364,7 +361,10 @@ fun SettingsScreen(
                                 horizontalArrangement = Arrangement.Center,
                             ) {
                                 Button(
-                                    onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.syncNow() },
+                                    onClick = {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        viewModel.syncNow()
+                                    },
                                     enabled = !uiState.isSyncing,
                                     colors =
                                         ButtonDefaults.buttonColors(
@@ -373,7 +373,8 @@ fun SettingsScreen(
                                         ),
                                 ) {
                                     Text(
-                                        if (uiState.isSyncing) stringResource(R.string.settings_syncing)
+                                        if (uiState.isSyncing)
+                                            stringResource(R.string.settings_syncing)
                                         else stringResource(R.string.settings_backup_entries)
                                     )
                                 }
@@ -412,7 +413,10 @@ fun SettingsScreen(
                                 horizontalArrangement = Arrangement.Center,
                             ) {
                                 Button(
-                                    onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.signIn(context) },
+                                    onClick = {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        viewModel.signIn(context)
+                                    },
                                     colors =
                                         ButtonDefaults.buttonColors(
                                             containerColor = MaterialTheme.colorScheme.primary,
@@ -470,7 +474,9 @@ fun SettingsScreen(
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        if (uiState.isDarkTheme) stringResource(R.string.settings_dark_active) else stringResource(R.string.settings_dark_off),
+                                        if (uiState.isDarkTheme)
+                                            stringResource(R.string.settings_dark_active)
+                                        else stringResource(R.string.settings_dark_off),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -698,7 +704,8 @@ fun SettingsScreen(
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        if (soundsEnabled) stringResource(R.string.settings_sounds_on)
+                                        if (soundsEnabled)
+                                            stringResource(R.string.settings_sounds_on)
                                         else stringResource(R.string.settings_sounds_off),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -818,7 +825,8 @@ fun SettingsScreen(
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        if (hapticEnabled) stringResource(R.string.settings_haptics_on)
+                                        if (hapticEnabled)
+                                            stringResource(R.string.settings_haptics_on)
                                         else stringResource(R.string.settings_haptics_off),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -911,18 +919,20 @@ fun SettingsScreen(
                                     ) ?: localeVoices.defaultVoiceId
                                 )
                             }
-                            // If saved voice doesn't match current locale, reset to default and persist
-                            val effectiveVoiceId = if (voices.any { it.id == selectedVoiceId }) {
-                                selectedVoiceId
-                            } else {
-                                val fallback = localeVoices.defaultVoiceId
-                                selectedVoiceId = fallback
-                                soundsPrefs
-                                    .edit()
-                                    .putString(Constants.PREF_EDGE_TTS_VOICE, fallback)
-                                    .commit()
-                                fallback
-                            }
+                            // If saved voice doesn't match current locale, reset to default and
+                            // persist
+                            val effectiveVoiceId =
+                                if (voices.any { it.id == selectedVoiceId }) {
+                                    selectedVoiceId
+                                } else {
+                                    val fallback = localeVoices.defaultVoiceId
+                                    selectedVoiceId = fallback
+                                    soundsPrefs
+                                        .edit()
+                                        .putString(Constants.PREF_EDGE_TTS_VOICE, fallback)
+                                        .commit()
+                                    fallback
+                                }
                             val selectedVoice =
                                 voices.find { it.id == effectiveVoiceId } ?: voices.first()
                             var voiceExpanded by remember { mutableStateOf(false) }
@@ -939,8 +949,11 @@ fun SettingsScreen(
                                 onExpandedChange = { voiceExpanded = it },
                             ) {
                                 TextField(
-                                    value = com.bestjournal.app.util.TtsVoiceRegistry
-                                        .displayName(selectedVoice, localeVoices.localeCode),
+                                    value =
+                                        com.bestjournal.app.util.TtsVoiceRegistry.displayName(
+                                            selectedVoice,
+                                            localeVoices.localeCode,
+                                        ),
                                     onValueChange = {},
                                     readOnly = true,
                                     trailingIcon = {
@@ -949,22 +962,22 @@ fun SettingsScreen(
                                             stringResource(R.string.settings_voice_choose),
                                         )
                                     },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                                    colors = TextFieldDefaults.colors(
-                                        focusedContainerColor =
-                                            MaterialTheme.colorScheme.surfaceVariant,
-                                        unfocusedContainerColor =
-                                            MaterialTheme.colorScheme.surfaceVariant,
-                                        focusedTextColor =
-                                            MaterialTheme.colorScheme.onSurface,
-                                        unfocusedTextColor =
-                                            MaterialTheme.colorScheme.onSurface,
-                                        focusedIndicatorColor =
-                                            MaterialTheme.colorScheme.primary,
-                                        unfocusedIndicatorColor = Color.Transparent,
-                                    ),
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                                    colors =
+                                        TextFieldDefaults.colors(
+                                            focusedContainerColor =
+                                                MaterialTheme.colorScheme.surfaceVariant,
+                                            unfocusedContainerColor =
+                                                MaterialTheme.colorScheme.surfaceVariant,
+                                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                            unfocusedTextColor =
+                                                MaterialTheme.colorScheme.onSurface,
+                                            focusedIndicatorColor =
+                                                MaterialTheme.colorScheme.primary,
+                                            unfocusedIndicatorColor = Color.Transparent,
+                                        ),
                                     singleLine = true,
                                     shape = RoundedCornerShape(12.dp),
                                 )
@@ -974,19 +987,37 @@ fun SettingsScreen(
                                     containerColor = MaterialTheme.colorScheme.surface,
                                 ) {
                                     voices.forEach { voice ->
-                                        val label = com.bestjournal.app.util.TtsVoiceRegistry
-                                            .displayName(voice, localeVoices.localeCode)
+                                        val label =
+                                            com.bestjournal.app.util.TtsVoiceRegistry.displayName(
+                                                voice,
+                                                localeVoices.localeCode,
+                                            )
                                         DropdownMenuItem(
                                             text = {
-                                                val textColor = if (voice.id == effectiveVoiceId)
-                                                    MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.onSurface
+                                                val textColor =
+                                                    if (voice.id == effectiveVoiceId)
+                                                        MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.onSurface
                                                 if (label.startsWith("\u2605")) {
                                                     Text(
                                                         buildAnnotatedString {
-                                                            withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) { append("\u2605 ") }
-                                                            withStyle(SpanStyle(color = textColor)) { append(label.removePrefix("\u2605 ")) }
-                                                        },
+                                                            withStyle(
+                                                                SpanStyle(
+                                                                    color =
+                                                                        MaterialTheme.colorScheme
+                                                                            .onSurface
+                                                                )
+                                                            ) {
+                                                                append("\u2605 ")
+                                                            }
+                                                            withStyle(
+                                                                SpanStyle(color = textColor)
+                                                            ) {
+                                                                append(
+                                                                    label.removePrefix("\u2605 ")
+                                                                )
+                                                            }
+                                                        }
                                                     )
                                                 } else {
                                                     Text(label, color = textColor)
@@ -1146,7 +1177,8 @@ fun SettingsScreen(
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    if (uiState.weeklyReviewEnabled) stringResource(R.string.settings_weekly_review_on)
+                                    if (uiState.weeklyReviewEnabled)
+                                        stringResource(R.string.settings_weekly_review_on)
                                     else stringResource(R.string.settings_weekly_review_off),
                                     style = MaterialTheme.typography.bodySmall,
                                     color =
@@ -1210,7 +1242,8 @@ fun SettingsScreen(
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    if (uiState.monthlyReviewEnabled) stringResource(R.string.settings_monthly_review_on)
+                                    if (uiState.monthlyReviewEnabled)
+                                        stringResource(R.string.settings_monthly_review_on)
                                     else stringResource(R.string.settings_monthly_review_off),
                                     style = MaterialTheme.typography.bodySmall,
                                     color =
@@ -1274,7 +1307,8 @@ fun SettingsScreen(
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    if (uiState.yearlyReviewEnabled) stringResource(R.string.settings_yearly_review_on)
+                                    if (uiState.yearlyReviewEnabled)
+                                        stringResource(R.string.settings_yearly_review_on)
                                     else stringResource(R.string.settings_yearly_review_off),
                                     style = MaterialTheme.typography.bodySmall,
                                     color =
@@ -1632,15 +1666,20 @@ fun SettingsScreen(
                                     }
                                 },
                                 dismissButton = {
-                                    TextButton(onClick = {
-                                        showScenarioInfoIndex = -1
-                                        currentScenario = previousScenario
-                                        scenarioPrefs
-                                            .edit()
-                                            .putInt(Constants.PREF_DASHBOARD_SCENARIO, previousScenario)
-                                            .apply()
-                                        onProfileChanged()
-                                    }) {
+                                    TextButton(
+                                        onClick = {
+                                            showScenarioInfoIndex = -1
+                                            currentScenario = previousScenario
+                                            scenarioPrefs
+                                                .edit()
+                                                .putInt(
+                                                    Constants.PREF_DASHBOARD_SCENARIO,
+                                                    previousScenario,
+                                                )
+                                                .apply()
+                                            onProfileChanged()
+                                        }
+                                    ) {
                                         Text(
                                             stringResource(R.string.action_cancel),
                                             color = MaterialTheme.colorScheme.outline,
@@ -1678,7 +1717,9 @@ fun SettingsScreen(
                                             placeholder = {
                                                 val isDark = LocalIsDarkTheme.current
                                                 Text(
-                                                    stringResource(R.string.settings_custom_prompt_placeholder),
+                                                    stringResource(
+                                                        R.string.settings_custom_prompt_placeholder
+                                                    ),
                                                     color =
                                                         MaterialTheme.colorScheme.onSurfaceVariant
                                                             .copy(
@@ -1715,7 +1756,10 @@ fun SettingsScreen(
                                             showCustomPromptDialog = false
                                         }
                                     ) {
-                                        Text(stringResource(R.string.action_save), color = MaterialTheme.colorScheme.primary)
+                                        Text(
+                                            stringResource(R.string.action_save),
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
                                     }
                                 },
                                 dismissButton = {
@@ -1843,15 +1887,21 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         if (uiState.isSubscribed) {
                             val subType by viewModel.subscriptionType.collectAsState()
-                            val isLifetime = subType == com.bestjournal.app.billing.SubscriptionType.LIFETIME
+                            val isLifetime =
+                                subType == com.bestjournal.app.billing.SubscriptionType.LIFETIME
                             Text(
-                                text = if (isLifetime) stringResource(R.string.settings_premium_lifetime) else stringResource(R.string.settings_premium_active),
+                                text =
+                                    if (isLifetime)
+                                        stringResource(R.string.settings_premium_lifetime)
+                                    else stringResource(R.string.settings_premium_active),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = if (isLifetime) stringResource(R.string.settings_premium_lifetime_desc)
+                                text =
+                                    if (isLifetime)
+                                        stringResource(R.string.settings_premium_lifetime_desc)
                                     else stringResource(R.string.settings_premium_desc),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1901,25 +1951,70 @@ fun SettingsScreen(
                                     viewModel.analyticsTracker.trackPremiumBenefitsViewed()
                                 }
                             }
-                            val featureItems = listOf(
-                                Triple(Icons.Rounded.Star, stringResource(R.string.settings_premium_feature_improve), stringResource(R.string.settings_premium_feature_improve_desc)),
-                                Triple(Icons.Rounded.Dashboard, stringResource(R.string.settings_premium_feature_dashboard), stringResource(R.string.settings_premium_feature_dashboard_desc)),
-                                Triple(Icons.Rounded.Favorite, stringResource(R.string.settings_premium_feature_5_perspectives), stringResource(R.string.settings_premium_feature_5_perspectives_desc)),
-                                Triple(Icons.Rounded.AutoAwesome, stringResource(R.string.settings_premium_feature_reviews), stringResource(R.string.settings_premium_feature_reviews_desc)),
-                                Triple(Icons.Rounded.Tune, stringResource(R.string.settings_premium_feature_patterns), stringResource(R.string.settings_premium_feature_patterns_desc)),
-                                Triple(Icons.Rounded.PictureAsPdf, stringResource(R.string.settings_premium_feature_pdf), stringResource(R.string.settings_premium_feature_pdf_desc)),
-                                Triple(Icons.Rounded.MusicNote, stringResource(R.string.settings_premium_feature_voice), stringResource(R.string.settings_premium_feature_voice_desc)),
-                            )
+                            val featureItems =
+                                listOf(
+                                    Triple(
+                                        Icons.Rounded.Star,
+                                        stringResource(R.string.settings_premium_feature_improve),
+                                        stringResource(
+                                            R.string.settings_premium_feature_improve_desc
+                                        ),
+                                    ),
+                                    Triple(
+                                        Icons.Rounded.Dashboard,
+                                        stringResource(R.string.settings_premium_feature_dashboard),
+                                        stringResource(
+                                            R.string.settings_premium_feature_dashboard_desc
+                                        ),
+                                    ),
+                                    Triple(
+                                        Icons.Rounded.Favorite,
+                                        stringResource(
+                                            R.string.settings_premium_feature_5_perspectives
+                                        ),
+                                        stringResource(
+                                            R.string.settings_premium_feature_5_perspectives_desc
+                                        ),
+                                    ),
+                                    Triple(
+                                        Icons.Rounded.AutoAwesome,
+                                        stringResource(R.string.settings_premium_feature_reviews),
+                                        stringResource(
+                                            R.string.settings_premium_feature_reviews_desc
+                                        ),
+                                    ),
+                                    Triple(
+                                        Icons.Rounded.Tune,
+                                        stringResource(R.string.settings_premium_feature_patterns),
+                                        stringResource(
+                                            R.string.settings_premium_feature_patterns_desc
+                                        ),
+                                    ),
+                                    Triple(
+                                        Icons.Rounded.PictureAsPdf,
+                                        stringResource(R.string.settings_premium_feature_pdf),
+                                        stringResource(R.string.settings_premium_feature_pdf_desc),
+                                    ),
+                                    Triple(
+                                        Icons.Rounded.MusicNote,
+                                        stringResource(R.string.settings_premium_feature_voice),
+                                        stringResource(R.string.settings_premium_feature_voice_desc),
+                                    ),
+                                )
                             featureItems.forEachIndexed { idx, (icon, title, subtitle) ->
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                        modifier =
+                                            Modifier.size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    MaterialTheme.colorScheme.primary.copy(
+                                                        alpha = 0.12f
+                                                    )
+                                                ),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Icon(
@@ -1944,31 +2039,36 @@ fun SettingsScreen(
                                         )
                                     }
                                 }
-                                if (idx < featureItems.lastIndex) Spacer(modifier = Modifier.height(8.dp))
+                                if (idx < featureItems.lastIndex)
+                                    Spacer(modifier = Modifier.height(8.dp))
                             }
                             Spacer(modifier = Modifier.height(16.dp))
 
                             // Breathing animation on the Premium CTA
                             val premiumTransition = rememberInfiniteTransition(label = "premiumCta")
-                            val premiumCtaScale by premiumTransition.animateFloat(
-                                initialValue = 1f,
-                                targetValue = 1.03f,
-                                animationSpec = infiniteRepeatable(
-                                    animation = tween(2000, easing = EaseInOutSine),
-                                    repeatMode = RepeatMode.Reverse,
-                                ),
-                                label = "premiumCtaScale",
-                            )
+                            val premiumCtaScale by
+                                premiumTransition.animateFloat(
+                                    initialValue = 1f,
+                                    targetValue = 1.03f,
+                                    animationSpec =
+                                        infiniteRepeatable(
+                                            animation = tween(2000, easing = EaseInOutSine),
+                                            repeatMode = RepeatMode.Reverse,
+                                        ),
+                                    label = "premiumCtaScale",
+                                )
 
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Button(
-                                    onClick = { doHaptic(HapticFeedbackType.LongPress); onNavigateToPaywall("settings_tap") },
-                                    modifier = Modifier
-                                        .height(48.dp)
-                                        .graphicsLayer {
+                                    onClick = {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        onNavigateToPaywall("settings_tap")
+                                    },
+                                    modifier =
+                                        Modifier.height(48.dp).graphicsLayer {
                                             scaleX = premiumCtaScale
                                             scaleY = premiumCtaScale
                                         },
@@ -1998,7 +2098,11 @@ fun SettingsScreen(
                         ActivityResultContracts.CreateDocument("application/pdf")
                     ) { uri ->
                         if (uri != null) {
-                            viewModel.exportToPdf(context, uri, includePhotos = exportIncludePhotos && exportIncludeEntries)
+                            viewModel.exportToPdf(
+                                context,
+                                uri,
+                                includePhotos = exportIncludePhotos && exportIncludeEntries,
+                            )
                         }
                     }
 
@@ -2008,7 +2112,7 @@ fun SettingsScreen(
                         onDismissRequest = { showExportDialog = false },
                         title = {
                             Text(
-                                "PDF-Export",
+                                stringResource(R.string.settings_export_dialog_title),
                                 style = MaterialTheme.typography.titleLarge,
                             )
                         },
@@ -2023,10 +2127,10 @@ fun SettingsScreen(
 
                                 // Checkbox: Tagebucheinträge
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { /* entries always included */ }
-                                        .padding(vertical = 4.dp),
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                            .clickable { /* entries always included */ }
+                                            .padding(vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Checkbox(
@@ -2045,12 +2149,13 @@ fun SettingsScreen(
 
                                 // Checkbox: Fotos
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            if (exportIncludeEntries) exportIncludePhotos = !exportIncludePhotos
-                                        }
-                                        .padding(vertical = 4.dp),
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                            .clickable {
+                                                if (exportIncludeEntries)
+                                                    exportIncludePhotos = !exportIncludePhotos
+                                            }
+                                            .padding(vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Checkbox(
@@ -2064,10 +2169,13 @@ fun SettingsScreen(
                                     Text(
                                         stringResource(R.string.settings_export_photos),
                                         style = MaterialTheme.typography.bodyLarge,
-                                        color = if (exportIncludeEntries)
-                                            MaterialTheme.colorScheme.onSurface
-                                        else
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                        color =
+                                            if (exportIncludeEntries)
+                                                MaterialTheme.colorScheme.onSurface
+                                            else
+                                                MaterialTheme.colorScheme.onSurface.copy(
+                                                    alpha = 0.4f
+                                                ),
                                     )
                                 }
                             }
@@ -2078,7 +2186,9 @@ fun SettingsScreen(
                                     showExportDialog = false
                                     playClick()
                                     viewModel.analyticsTracker.trackExportInitiated()
-                                    val timestamp = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault()).format(Date())
+                                    val timestamp =
+                                        SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault())
+                                            .format(Date())
                                     pdfLauncher.launch("BestJournal_Export_$timestamp.pdf")
                                 },
                                 enabled = exportIncludeEntries,
@@ -2100,12 +2210,18 @@ fun SettingsScreen(
                     )
                 }
 
-                GlassCard(modifier = Modifier.fillMaxWidth().then(
-                    if (!uiState.isSubscribed) Modifier.clickable {
-                        doHaptic(HapticFeedbackType.LongPress)
-                        onNavigateToPaywall("pdf_export")
-                    } else Modifier
-                )) {
+                GlassCard(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .then(
+                                if (!uiState.isSubscribed)
+                                    Modifier.clickable {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        onNavigateToPaywall("pdf_export")
+                                    }
+                                else Modifier
+                            )
+                ) {
                     Column {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -2163,7 +2279,9 @@ fun SettingsScreen(
                                         modifier = Modifier.size(18.dp),
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(stringResource(R.string.settings_export_entries_photos_pdf))
+                                    Text(
+                                        stringResource(R.string.settings_export_entries_photos_pdf)
+                                    )
                                 }
                             }
                         } else {
@@ -2175,11 +2293,22 @@ fun SettingsScreen(
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth(),
                             )
+                            val premiumLabel = stringResource(R.string.label_premium)
                             Text(
                                 buildAnnotatedString {
-                                    withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) { append("(") }
-                                    withStyle(SpanStyle(color = FeatureAccentOrange)) { append("\u2605 Premium") }
-                                    withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) { append(")") }
+                                    withStyle(
+                                        SpanStyle(color = MaterialTheme.colorScheme.onSurface)
+                                    ) {
+                                        append("(")
+                                    }
+                                    withStyle(SpanStyle(color = FeatureAccentOrange)) {
+                                        append("\u2605 $premiumLabel")
+                                    }
+                                    withStyle(
+                                        SpanStyle(color = MaterialTheme.colorScheme.onSurface)
+                                    ) {
+                                        append(")")
+                                    }
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
@@ -2303,16 +2432,10 @@ fun SettingsScreen(
 
                 // 9. Ueber die App
                 GlassCard(
-                    modifier = Modifier
-                        .wrapContentWidth()
-                        .align(Alignment.CenterHorizontally),
+                    modifier = Modifier.wrapContentWidth().align(Alignment.CenterHorizontally)
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Rounded.Info,
                                 null,
@@ -2358,7 +2481,12 @@ fun SettingsScreen(
                 AlertDialog(
                     onDismissRequest = { viewModel.showLogoutDialog(false) },
                     containerColor = MaterialTheme.colorScheme.surface,
-                    title = { Text(stringResource(R.string.settings_sign_out_confirm), color = MaterialTheme.colorScheme.onSurface) },
+                    title = {
+                        Text(
+                            stringResource(R.string.settings_sign_out_confirm),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    },
                     text = {
                         Text(
                             stringResource(R.string.settings_sign_out_body),
@@ -2367,15 +2495,26 @@ fun SettingsScreen(
                     },
                     confirmButton = {
                         Button(
-                            onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.signOut(context) },
+                            onClick = {
+                                doHaptic(HapticFeedbackType.LongPress)
+                                viewModel.signOut(context)
+                            },
                             colors = ButtonDefaults.buttonColors(containerColor = NeonRed),
                         ) {
                             Text(stringResource(R.string.settings_sign_out))
                         }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.showLogoutDialog(false) }) {
-                            Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        OutlinedButton(
+                            onClick = {
+                                doHaptic(HapticFeedbackType.LongPress)
+                                viewModel.showLogoutDialog(false)
+                            }
+                        ) {
+                            Text(
+                                stringResource(R.string.action_cancel),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     },
                 )
@@ -2621,7 +2760,6 @@ private fun SettingsHapticIcon(isEnabled: Boolean) {
     }
 }
 
-
 @Composable
 private fun SettingsTtsIcon(isEnabled: Boolean) {
     val activeColor = MaterialTheme.colorScheme.primary
@@ -2804,7 +2942,8 @@ private fun FeedbackDialog(
                 onClick = {
                     if (feedbackText.isNotBlank() && !isSending) {
                         if (userEmail == null) {
-                            errorMessage = context.getString(R.string.settings_feedback_sign_in_first)
+                            errorMessage =
+                                context.getString(R.string.settings_feedback_sign_in_first)
                             return@Button
                         }
                         isSending = true
@@ -2830,7 +2969,8 @@ private fun FeedbackDialog(
                                 try {
                                     context.startActivity(e.consentIntent)
                                 } catch (_: Exception) {}
-                                errorMessage = context.getString(R.string.settings_feedback_allow_gmail)
+                                errorMessage =
+                                    context.getString(R.string.settings_feedback_allow_gmail)
                             }
                         }
                     }
@@ -2847,7 +2987,10 @@ private fun FeedbackDialog(
         },
         dismissButton = {
             OutlinedButton(onClick = { if (!isSending) onDismiss() }) {
-                Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.action_cancel),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
     )
@@ -2908,7 +3051,10 @@ private fun ReminderTimePickerDialog(
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.action_cancel),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
     )
@@ -3049,7 +3195,10 @@ private fun WeeklyReviewPickerDialog(
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.action_cancel),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
     )
@@ -3058,4 +3207,3 @@ private fun WeeklyReviewPickerDialog(
 // ── Churn / Retention Dialog ────────────────────────────────────────────────
 // ChurnFlowDialog is now in its own file: ChurnFlowDialog.kt
 // Old ChurnRetentionDialog removed — replaced by 3-step ChurnFlowDialog
-

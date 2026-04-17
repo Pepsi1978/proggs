@@ -18,8 +18,8 @@ import java.io.File
 import java.io.OutputStream
 
 /**
- * Generates a PDF document from journal entries using android.graphics.pdf.PdfDocument.
- * Each entry gets its own page(s) with date, title, summary, full text, and optional photos.
+ * Generates a PDF document from journal entries using android.graphics.pdf.PdfDocument. Each entry
+ * gets its own page(s) with date, title, summary, full text, and optional photos.
  */
 object PdfExporter {
 
@@ -48,58 +48,67 @@ object PdfExporter {
     private val COLOR_HEADER_BG = Color.parseColor("#F8F8FC")
 
     // Paints
-    private fun brandPaint() = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = COLOR_COPPER
-        textSize = 22f
-        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-    }
+    private fun brandPaint() =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = COLOR_COPPER
+            textSize = 22f
+            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+        }
 
-    private fun titlePaint() = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = COLOR_TEXT
-        textSize = 18f
-        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-    }
+    private fun titlePaint() =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = COLOR_TEXT
+            textSize = 18f
+            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+        }
 
-    private fun datePaint() = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = COLOR_COPPER
-        textSize = 12f
-        typeface = Typeface.create("sans-serif", Typeface.NORMAL)
-    }
+    private fun datePaint() =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = COLOR_COPPER
+            textSize = 12f
+            typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+        }
 
-    private fun summaryLabelPaint() = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = COLOR_COPPER
-        textSize = 11f
-        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-        letterSpacing = 0.08f
-    }
+    private fun summaryLabelPaint() =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = COLOR_COPPER
+            textSize = 11f
+            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+            letterSpacing = 0.08f
+        }
 
-    private fun summaryPaint() = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = COLOR_TEXT_SECONDARY
-        textSize = 12f
-        typeface = Typeface.create("sans-serif", Typeface.ITALIC)
-    }
+    private fun summaryPaint() =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = COLOR_TEXT_SECONDARY
+            textSize = 12f
+            typeface = Typeface.create("sans-serif", Typeface.ITALIC)
+        }
 
-    private fun bodyPaint() = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = COLOR_TEXT
-        textSize = 12f
-        typeface = Typeface.create("sans-serif", Typeface.NORMAL)
-    }
+    private fun bodyPaint() =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = COLOR_TEXT
+            textSize = 12f
+            typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+        }
 
-    private fun footerPaint() = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = COLOR_TEXT_SECONDARY
-        textSize = 9f
-        typeface = Typeface.create("sans-serif", Typeface.NORMAL)
-    }
+    private fun footerPaint() =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = COLOR_TEXT_SECONDARY
+            textSize = 9f
+            typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+        }
 
-    private fun dividerPaint() = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = COLOR_DIVIDER
-        strokeWidth = 1f
-    }
+    private fun dividerPaint() =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = COLOR_DIVIDER
+            strokeWidth = 1f
+        }
 
     /**
      * Generate a PDF from the given entries and write it to the output stream.
-     * @param photosPerEntry map of entryId to list of photos (only non-video). Pass empty map to skip photos.
-     * Returns the number of entries successfully written.
+     *
+     * @param photosPerEntry map of entryId to list of photos (only non-video). Pass empty map to
+     *   skip photos. Returns the number of entries successfully written.
      */
     fun export(
         entries: List<JournalEntryEntity>,
@@ -113,7 +122,8 @@ object PdfExporter {
         for ((index, entry) in entries.withIndex()) {
             pageNumber++
             val photos = photosPerEntry[entry.id] ?: emptyList()
-            val pages = renderEntry(context, document, entry, pageNumber, entries.size, index + 1, photos)
+            val pages =
+                renderEntry(context, document, entry, pageNumber, entries.size, index + 1, photos)
             pageNumber = pages
         }
 
@@ -123,9 +133,8 @@ object PdfExporter {
     }
 
     /**
-     * Renders a single entry, potentially across multiple pages if text is long.
-     * Photos are rendered below the text, each scaled to page width.
-     * Returns the last page number used.
+     * Renders a single entry, potentially across multiple pages if text is long. Photos are
+     * rendered below the text, each scaled to page width. Returns the last page number used.
      */
     private fun renderEntry(
         context: Context,
@@ -137,7 +146,8 @@ object PdfExporter {
         photos: List<EntryPhotoEntity>,
     ): Int {
         val dateText = DateTimeFormatter.formatFull(entry.timestamp)
-        val titleText = entry.title ?: context.getString(R.string.pdf_entry_fallback_title, entryIndex)
+        val titleText =
+            entry.title ?: context.getString(R.string.pdf_entry_fallback_title, entryIndex)
         val summaryText = entry.summary
         val bodyText = entry.displayText
 
@@ -161,7 +171,7 @@ object PdfExporter {
 
         // Brand name
         val brand = brandPaint()
-        canvas.drawText("Best Journal", MARGIN_LEFT, currentY + 20f, brand)
+        canvas.drawText(context.getString(R.string.app_name), MARGIN_LEFT, currentY + 20f, brand)
 
         // Date on the right side
         val dateP = datePaint()
@@ -175,7 +185,12 @@ object PdfExporter {
 
         // Entry number badge
         val entryBadge = datePaint().apply { color = COLOR_TEXT_SECONDARY }
-        canvas.drawText(context.getString(R.string.pdf_entry_counter, entryIndex, totalEntries), MARGIN_LEFT, currentY, entryBadge)
+        canvas.drawText(
+            context.getString(R.string.pdf_entry_counter, entryIndex, totalEntries),
+            MARGIN_LEFT,
+            currentY,
+            entryBadge,
+        )
         currentY += 20f
 
         // Title
@@ -194,15 +209,30 @@ object PdfExporter {
             val summaryLines = wrapText(summaryText, summaryPaint(), CONTENT_WIDTH - 24f)
             val boxHeight = 12f + summaryLines.size * 16f + 12f + 16f
             val boxPaint = Paint().apply { color = COLOR_SUMMARY_BG }
-            canvas.drawRect(MARGIN_LEFT, currentY, PAGE_WIDTH - MARGIN_RIGHT, currentY + boxHeight, boxPaint)
+            canvas.drawRect(
+                MARGIN_LEFT,
+                currentY,
+                PAGE_WIDTH - MARGIN_RIGHT,
+                currentY + boxHeight,
+                boxPaint,
+            )
 
             // Left accent bar
-            val accentPaint = Paint().apply { color = COLOR_COPPER; strokeWidth = 3f }
+            val accentPaint =
+                Paint().apply {
+                    color = COLOR_COPPER
+                    strokeWidth = 3f
+                }
             canvas.drawLine(MARGIN_LEFT, currentY, MARGIN_LEFT, currentY + boxHeight, accentPaint)
 
             // Summary label
             currentY += 16f
-            canvas.drawText(context.getString(R.string.pdf_summary_label), MARGIN_LEFT + 12f, currentY, summaryLabelPaint())
+            canvas.drawText(
+                context.getString(R.string.pdf_summary_label),
+                MARGIN_LEFT + 12f,
+                currentY,
+                summaryLabelPaint(),
+            )
             currentY += 14f
 
             // Summary text
@@ -232,16 +262,28 @@ object PdfExporter {
 
                 // Start new page
                 currentPage++
-                pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, currentPage).create()
+                pageInfo =
+                    PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, currentPage).create()
                 page = document.startPage(pageInfo)
                 canvas = page.canvas
                 currentY = MARGIN_TOP
 
                 // Continuation header
                 val contP = datePaint().apply { color = COLOR_TEXT_SECONDARY }
-                canvas.drawText(context.getString(R.string.pdf_continuation, titleText), MARGIN_LEFT, currentY, contP)
+                canvas.drawText(
+                    context.getString(R.string.pdf_continuation, titleText),
+                    MARGIN_LEFT,
+                    currentY,
+                    contP,
+                )
                 currentY += 20f
-                canvas.drawLine(MARGIN_LEFT, currentY, PAGE_WIDTH - MARGIN_RIGHT, currentY, dividerPaint())
+                canvas.drawLine(
+                    MARGIN_LEFT,
+                    currentY,
+                    PAGE_WIDTH - MARGIN_RIGHT,
+                    currentY,
+                    dividerPaint(),
+                )
                 currentY += 16f
             }
 
@@ -259,7 +301,8 @@ object PdfExporter {
 
             for (photo in photos) {
                 val bitmap = loadAndScaleBitmap(photo.filePath) ?: continue
-                val scaledHeight = (bitmap.height.toFloat() / bitmap.width.toFloat()) * CONTENT_WIDTH
+                val scaledHeight =
+                    (bitmap.height.toFloat() / bitmap.width.toFloat()) * CONTENT_WIDTH
 
                 // Check if photo fits on current page
                 if (currentY + scaledHeight > maxY) {
@@ -267,19 +310,21 @@ object PdfExporter {
                     document.finishPage(page)
 
                     currentPage++
-                    pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, currentPage).create()
+                    pageInfo =
+                        PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, currentPage).create()
                     page = document.startPage(pageInfo)
                     canvas = page.canvas
                     currentY = MARGIN_TOP
                 }
 
                 // Draw the photo scaled to content width
-                val destRect = Rect(
-                    MARGIN_LEFT.toInt(),
-                    currentY.toInt(),
-                    (MARGIN_LEFT + CONTENT_WIDTH).toInt(),
-                    (currentY + scaledHeight).toInt(),
-                )
+                val destRect =
+                    Rect(
+                        MARGIN_LEFT.toInt(),
+                        currentY.toInt(),
+                        (MARGIN_LEFT + CONTENT_WIDTH).toInt(),
+                        (currentY + scaledHeight).toInt(),
+                    )
                 canvas.drawBitmap(bitmap, null, destRect, Paint(Paint.FILTER_BITMAP_FLAG))
                 bitmap.recycle()
 
@@ -295,8 +340,8 @@ object PdfExporter {
     }
 
     /**
-     * Load a bitmap from file, apply EXIF rotation, and scale it down to fit page width.
-     * Returns null if the file doesn't exist or can't be decoded.
+     * Load a bitmap from file, apply EXIF rotation, and scale it down to fit page width. Returns
+     * null if the file doesn't exist or can't be decoded.
      */
     private fun loadAndScaleBitmap(filePath: String): Bitmap? {
         val file = File(filePath)
@@ -309,39 +354,47 @@ object PdfExporter {
 
         // Calculate sample size to avoid loading huge images into memory
         val targetWidth = CONTENT_WIDTH.toInt() * 2 // 2x for quality
-        options.inSampleSize = calculateInSampleSize(options.outWidth, options.outHeight, targetWidth)
+        options.inSampleSize =
+            calculateInSampleSize(options.outWidth, options.outHeight, targetWidth)
         options.inJustDecodeBounds = false
 
-        val rawBitmap = try {
-            BitmapFactory.decodeFile(filePath, options)
-        } catch (_: OutOfMemoryError) {
-            options.inSampleSize *= 2
+        val rawBitmap =
             try {
                 BitmapFactory.decodeFile(filePath, options)
             } catch (_: OutOfMemoryError) {
-                null
-            }
-        } ?: return null
+                options.inSampleSize *= 2
+                try {
+                    BitmapFactory.decodeFile(filePath, options)
+                } catch (_: OutOfMemoryError) {
+                    null
+                }
+            } ?: return null
 
         return applyExifRotation(rawBitmap, filePath)
     }
 
     /**
-     * Read EXIF orientation from photo and rotate bitmap accordingly.
-     * Phone cameras store portrait photos as landscape with an EXIF rotation tag.
+     * Read EXIF orientation from photo and rotate bitmap accordingly. Phone cameras store portrait
+     * photos as landscape with an EXIF rotation tag.
      */
     private fun applyExifRotation(bitmap: Bitmap, filePath: String): Bitmap {
-        val rotation = try {
-            val exif = ExifInterface(filePath)
-            when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
-                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-                else -> 0f
+        val rotation =
+            try {
+                val exif = ExifInterface(filePath)
+                when (
+                    exif.getAttributeInt(
+                        ExifInterface.TAG_ORIENTATION,
+                        ExifInterface.ORIENTATION_NORMAL,
+                    )
+                ) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                    else -> 0f
+                }
+            } catch (_: Exception) {
+                0f
             }
-        } catch (_: Exception) {
-            0f
-        }
 
         if (rotation == 0f) return bitmap
 
@@ -367,10 +420,16 @@ object PdfExporter {
         val footerP = footerPaint()
 
         // Divider
-        canvas.drawLine(MARGIN_LEFT, footerY - 10f, PAGE_WIDTH - MARGIN_RIGHT, footerY - 10f, dividerPaint())
+        canvas.drawLine(
+            MARGIN_LEFT,
+            footerY - 10f,
+            PAGE_WIDTH - MARGIN_RIGHT,
+            footerY - 10f,
+            dividerPaint(),
+        )
 
         // Left: app name
-        canvas.drawText("Best Journal", MARGIN_LEFT, footerY, footerP)
+        canvas.drawText(context.getString(R.string.app_name), MARGIN_LEFT, footerY, footerP)
 
         // Right: page number
         val pageText = context.getString(R.string.pdf_page_number, pageNumber)
@@ -379,10 +438,9 @@ object PdfExporter {
     }
 
     /**
-     * Wraps text into lines that fit within the given width.
-     * Handles newlines in the original text and word-wrapping for long lines.
-     * Uses Paint.breakText() for correct wrapping of ALL scripts including CJK
-     * (Chinese, Japanese, Korean) where words are not separated by spaces.
+     * Wraps text into lines that fit within the given width. Handles newlines in the original text
+     * and word-wrapping for long lines. Uses Paint.breakText() for correct wrapping of ALL scripts
+     * including CJK (Chinese, Japanese, Korean) where words are not separated by spaces.
      */
     private fun wrapText(text: String, paint: Paint, maxWidth: Float): List<String> {
         val result = mutableListOf<String>()
@@ -396,9 +454,8 @@ object PdfExporter {
 
             var offset = 0
             while (offset < paragraph.length) {
-                val measured = paint.breakText(
-                    paragraph, offset, paragraph.length, true, maxWidth, null
-                )
+                val measured =
+                    paint.breakText(paragraph, offset, paragraph.length, true, maxWidth, null)
                 if (measured == 0) {
                     offset++
                     continue
