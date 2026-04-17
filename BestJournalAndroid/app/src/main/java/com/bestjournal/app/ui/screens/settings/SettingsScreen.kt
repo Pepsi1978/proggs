@@ -1541,6 +1541,7 @@ fun SettingsScreen(
                                                 .putInt(Constants.PREF_DASHBOARD_SCENARIO, index)
                                                 .putBoolean(Constants.PREF_RETRO_NEEDS_REGEN, true)
                                                 .apply()
+                                            viewModel.notifyProfileChanged()
                                             showScenarioInfoIndex = index
                                             if (index == 4) showCustomPromptDialog = true
                                             onProfileChanged()
@@ -1680,6 +1681,7 @@ fun SettingsScreen(
                                                 )
                                                 .putBoolean(Constants.PREF_RETRO_NEEDS_REGEN, true)
                                                 .apply()
+                                            viewModel.notifyProfileChanged()
                                             onProfileChanged()
                                         }
                                     ) {

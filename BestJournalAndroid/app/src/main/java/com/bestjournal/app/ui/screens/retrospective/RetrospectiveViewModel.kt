@@ -27,6 +27,7 @@ constructor(
     private val generateUseCase: GenerateRetrospectiveUseCase,
     private val entryPhotoDao: EntryPhotoDao,
     val billingManager: BillingManager,
+    private val profileChangeBus: com.bestjournal.app.util.ProfileChangeBus,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
 ) : ViewModel() {
 
@@ -257,6 +258,18 @@ constructor(
                 _errorMessage.value = e.message
             } finally {
                 _isGenerating.value = false
+            }
+        }
+
+        // React to profile-change events from SettingsScreen
+        viewModelScope.launch {
+            var previousVersion = profileChangeBus.version.value
+            profileChangeBus.version.collect { newVersion ->
+                if (newVersion > previousVersion) {
+                    previousVersion = newVersion
+                    Log.d("RetroVM", "Profile change bus fired (v=$newVersion) — regenerating")
+                    regenerateAll()
+                }
             }
         }
 

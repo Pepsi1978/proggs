@@ -74,7 +74,13 @@ constructor(
     private val journalEntryDao: JournalEntryDao,
     private val entryPhotoDao: EntryPhotoDao,
     val analyticsTracker: AnalyticsTracker,
+    private val profileChangeBus: com.bestjournal.app.util.ProfileChangeBus,
 ) : ViewModel() {
+
+    /** Call this whenever the user switches the dashboard scenario / profile. */
+    fun notifyProfileChanged() {
+        profileChangeBus.notifyProfileChanged()
+    }
 
     fun launchSubscription(activity: Activity, isYearly: Boolean) {
         billingManager.launchPurchaseFlow(activity, isYearly)
@@ -90,30 +96,38 @@ constructor(
         return when (billingManager.subscriptionType.value) {
             com.bestjournal.app.billing.SubscriptionType.YEARLY ->
                 billingManager.yearlyPrice.value.ifEmpty { Constants.YEARLY_PRICE_DISPLAY }
-            else ->
-                billingManager.monthlyPrice.value.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
+            else -> billingManager.monthlyPrice.value.ifEmpty { Constants.MONTHLY_PRICE_DISPLAY }
         }
     }
 
     fun getRetentionPrice(): String? {
-        val isYearly = billingManager.subscriptionType.value == com.bestjournal.app.billing.SubscriptionType.YEARLY
+        val isYearly =
+            billingManager.subscriptionType.value ==
+                com.bestjournal.app.billing.SubscriptionType.YEARLY
         return billingManager.getRetentionPrice(isYearly)
     }
 
     fun launchRetentionOffer(activity: Activity) {
-        val isYearly = billingManager.subscriptionType.value == com.bestjournal.app.billing.SubscriptionType.YEARLY
+        val isYearly =
+            billingManager.subscriptionType.value ==
+                com.bestjournal.app.billing.SubscriptionType.YEARLY
         val offerToken = billingManager.getRetentionOfferToken(isYearly)
         if (offerToken != null) {
-            billingManager.launchPurchaseFlow(activity, isYearly = isYearly, promoOfferToken = offerToken)
+            billingManager.launchPurchaseFlow(
+                activity,
+                isYearly = isYearly,
+                promoOfferToken = offerToken,
+            )
         } else {
             // Fallback: open Google Play subscription management
             try {
-                val intent = android.content.Intent(
-                    android.content.Intent.ACTION_VIEW,
-                    android.net.Uri.parse("https://play.google.com/store/account/subscriptions"),
-                )
+                val intent =
+                    android.content.Intent(
+                        android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse("https://play.google.com/store/account/subscriptions"),
+                    )
                 activity.startActivity(intent)
-            } catch (_: Exception) { }
+            } catch (_: Exception) {}
         }
     }
 
@@ -315,7 +329,8 @@ constructor(
                         _uiState.value =
                             _uiState.value.copy(
                                 isSyncing = false,
-                                syncMessage = context.getString(R.string.error_generic, error.message ?: ""),
+                                syncMessage =
+                                    context.getString(R.string.error_generic, error.message ?: ""),
                             )
                     }
                 }
@@ -349,7 +364,8 @@ constructor(
                         _uiState.value =
                             _uiState.value.copy(
                                 isSyncing = false,
-                                syncMessage = context.getString(R.string.error_generic, error.message ?: ""),
+                                syncMessage =
+                                    context.getString(R.string.error_generic, error.message ?: ""),
                             )
                     }
                 }
@@ -403,7 +419,11 @@ constructor(
                 .onFailure { error ->
                     _uiState.value =
                         _uiState.value.copy(
-                            syncMessage = context.getString(R.string.settings_signin_failed, error.message ?: "")
+                            syncMessage =
+                                context.getString(
+                                    R.string.settings_signin_failed,
+                                    error.message ?: "",
+                                )
                         )
                 }
         }
@@ -501,13 +521,14 @@ constructor(
                 val count =
                     withContext(Dispatchers.IO) {
                         // Build photo map if requested
-                        val photosPerEntry = if (includePhotos) {
-                            entries.associate { entry ->
-                                entry.id to entryPhotoDao.getPhotoOnlyForEntryOnce(entry.id)
+                        val photosPerEntry =
+                            if (includePhotos) {
+                                entries.associate { entry ->
+                                    entry.id to entryPhotoDao.getPhotoOnlyForEntryOnce(entry.id)
+                                }
+                            } else {
+                                emptyMap()
                             }
-                        } else {
-                            emptyMap()
-                        }
 
                         context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                             PdfExporter.export(entries, outputStream, photosPerEntry, context)
@@ -519,11 +540,12 @@ constructor(
                     _uiState.value =
                         _uiState.value.copy(
                             isExporting = false,
-                            exportMessage = context.resources.getQuantityString(
-                                R.plurals.settings_export_success,
-                                count,
-                                count,
-                            ),
+                            exportMessage =
+                                context.resources.getQuantityString(
+                                    R.plurals.settings_export_success,
+                                    count,
+                                    count,
+                                ),
                         )
                 } else {
                     _uiState.value =
