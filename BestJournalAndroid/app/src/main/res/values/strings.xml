@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.12.18</string>
+    <string name="settings_about_version">Best Journal V0.12.19</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Abmelden?</string>
@@ -575,6 +575,42 @@
     <string name="ai_prompt_check_goals">PFLICHT-CHECK: Du hast %1$d Einträge erhalten. Jeder muss auf Ziele durchsucht werden.</string>
     <string name="ai_prompt_check_custom">PFLICHT-CHECK: Du hast %1$d Einträge erhalten. Jeder muss auf den Benutzer-Fokus hin durchsucht werden.</string>
     <string name="ai_prompt_check_default">PFLICHT-CHECK: Du hast %1$d Einträge erhalten. Jeder muss in der Analyse erscheinen.</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Retrospective Prompts (Weekly / Monthly / Yearly Rückblicke)
+         Same modular style as dashboard prompts above. Built by
+         GenerateRetrospectiveUseCase.buildWeeklyPrompt / buildMonthlyPrompt / buildYearlyPrompt.
+         ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Weekly retrospective prompt blocks -->
+    <string name="ai_retro_week_intro">Du bist ein Erzähler, der aus Tagebucheinträgen einen natürlichen, gut lesbaren Wochenrückblick schreibt.</string>
+    <string name="ai_retro_week_task">AUFGABE: Fasse die folgenden Tagebucheinträge zu einem strukturierten Wochenrückblick zusammen.</string>
+    <string name="ai_retro_week_format">FORMAT (bitte genau einhalten):\n1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (3-5 Punkte), jeweils mit \"• \" am Anfang\n2. Dann eine Leerzeile\n3. Dann der Fließtext, aufgeteilt in 2-4 thematische Abschnitte\n4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Neue Begegnungen] oder [Kleine Siege])\n5. Nach der Überschrift folgt der erzählende Text des Abschnitts\n6. Die Abschnitte chronologisch vom Wochenanfang bis Wochenende ordnen</string>
+    <string name="ai_retro_week_rules">REGELN:\n- Schreibe in der Du-Form (bzw. dem sprachlichen Äquivalent einer persönlichen Anrede)\n- Keine Anrede, keine Grußformel — direkt in die Erzählung\n- Fließender Stil mit guten Übergängen innerhalb der Abschnitte\n- Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)\n- Erwähne konkrete Ereignisse, Gefühle und Erkenntnisse\n- Alltägliches nur erwähnen, wenn es bedeutsam war\n- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht. Erkenntnisse aus schwierigen Momenten gehören dazu\n- Schreibe warm und persönlich, aber nicht übertrieben\n- Mindestens 200 Wörter\n- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.</string>
+    <!-- Section header that introduces the journal entries block. -->
+    <string name="ai_retro_week_entries_header">EINTRÄGE DER WOCHE:</string>
+    <!-- Title-generation prompt after a weekly review is ready. %1$s = target language (e.g. "Deutsch"), %2$s = preview of the generated review. -->
+    <string name="ai_retro_week_title_prompt">Basierend auf diesem Wochenrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter) in <xliff:g id="lang" example="Deutsch">%1$s</xliff:g>.\nNur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).\n\nRückblick:\n<xliff:g id="summary_preview" example="Die Woche begann…">%2$s</xliff:g></string>
+
+    <!-- Monthly retrospective prompt blocks -->
+    <string name="ai_retro_month_intro">Du bist ein Erzähler, der aus Wochenrückblicken einen natürlichen, gut lesbaren Monatsrückblick schreibt.</string>
+    <!-- %1$s = month name (e.g. "April"), %2$d = year. -->
+    <string name="ai_retro_month_task">AUFGABE: Fasse die folgenden Wochenrückblicke zu einem strukturierten Monatsrückblick für <xliff:g id="month" example="April">%1$s</xliff:g> <xliff:g id="year" example="2026">%2$d</xliff:g> zusammen.</string>
+    <string name="ai_retro_month_format">FORMAT (bitte genau einhalten):\n1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (4-6 Punkte), jeweils mit \"• \" am Anfang\n2. Dann eine Leerzeile\n3. Dann der Fließtext, aufgeteilt in 3-5 thematische Abschnitte\n4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Aufbruch und Neustart] oder [Stille Erkenntnisse])\n5. Nach der Überschrift folgt der erzählende Text des Abschnitts\n6. Die Abschnitte chronologisch vom Monatsanfang bis Monatsende ordnen</string>
+    <string name="ai_retro_month_rules">REGELN:\n- Schreibe in der Du-Form (bzw. dem sprachlichen Äquivalent einer persönlichen Anrede)\n- Keine Anrede, keine Grußformel — direkt in die Erzählung\n- Fließender Stil mit guten Übergängen innerhalb der Abschnitte\n- Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)\n- Ziehe Verbindungen zwischen den Wochen — zeige Entwicklungen und rote Fäden\n- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verbinde sie thematisch\n- Alltägliches nur erwähnen, wenn es bedeutsam war\n- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht\n- Schreibe warm und persönlich, aber nicht übertrieben\n- Mindestens 300 Wörter\n- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.</string>
+    <string name="ai_retro_month_entries_header">WOCHENRÜCKBLICKE:</string>
+    <!-- %1$s = target language, %2$s = preview of the generated review. -->
+    <string name="ai_retro_month_title_prompt">Basierend auf diesem Monatsrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter) in <xliff:g id="lang" example="Deutsch">%1$s</xliff:g>.\nNur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).\n\nRückblick:\n<xliff:g id="summary_preview" example="April brachte…">%2$s</xliff:g></string>
+
+    <!-- Yearly retrospective prompt blocks -->
+    <string name="ai_retro_year_intro">Du bist ein Erzähler, der aus Monatsrückblicken einen natürlichen, gut lesbaren Jahresrückblick schreibt.</string>
+    <!-- %1$d = year. -->
+    <string name="ai_retro_year_task">AUFGABE: Fasse die folgenden Monatsrückblicke zu einem strukturierten Jahresrückblick für <xliff:g id="year" example="2026">%1$d</xliff:g> zusammen.</string>
+    <string name="ai_retro_year_format">FORMAT (bitte genau einhalten):\n1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (5-8 Punkte), jeweils mit \"• \" am Anfang\n2. Dann eine Leerzeile\n3. Dann der Fließtext, aufgeteilt in 4-6 thematische Abschnitte\n4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Der Frühling des Aufbruchs] oder [Ruhe finden])\n5. Nach der Überschrift folgt der erzählende Text des Abschnitts\n6. Die Abschnitte chronologisch vom Jahresanfang bis Jahresende ordnen</string>
+    <string name="ai_retro_year_rules">REGELN:\n- Schreibe in der Du-Form (bzw. dem sprachlichen Äquivalent einer persönlichen Anrede)\n- Keine Anrede, keine Grußformel — direkt in die Erzählung\n- Fließender Stil mit guten Übergängen innerhalb der Abschnitte\n- Die Überschriften sollen kurz und thematisch passend sein (2-5 Wörter)\n- Ziehe Verbindungen zwischen den Monaten — zeige Entwicklungen über das Jahr\n- Erkenne die großen Themen des Jahres und ordne Ereignisse in diese Linien ein\n- Alltägliches nur erwähnen, wenn es bedeutsam war\n- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht\n- Schließe mit einem Gedanken der nach vorne blickt\n- Schreibe warm und persönlich, aber nicht übertrieben\n- Mindestens 400 Wörter\n- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.</string>
+    <string name="ai_retro_year_entries_header">MONATSRÜCKBLICKE:</string>
+    <!-- %1$s = target language, %2$s = preview of the generated review. -->
+    <string name="ai_retro_year_title_prompt">Basierend auf diesem Jahresrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter) in <xliff:g id="lang" example="Deutsch">%1$s</xliff:g>.\nNur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).\n\nRückblick:\n<xliff:g id="summary_preview" example="Das Jahr begann…">%2$s</xliff:g></string>
 
     <!-- Goals Analysis System Prompt (Profile: Persönliche Ziele) -->
     <string name="ai_prompt_goals_intro">Du bist ein aufmerksamer, motivierender Ziel-Analyst und Fortschritts-Tracker.\n\nDEINE AUFGABE:\nAnalysiere die Tagebucheinträge eines Nutzers. Erkenne alle Ziele, Wünsche, Vorhaben und Pläne — auch wenn sie nur beiläufig erwähnt werden. Verfolge den Fortschritt über mehrere Einträge hinweg. Erstelle daraus ein strukturiertes Ziele-Dashboard im JSON-Format.</string>

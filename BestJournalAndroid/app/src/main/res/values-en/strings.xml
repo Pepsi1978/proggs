@@ -443,7 +443,7 @@
     <string name="achievements_unlocked_at">Unlocked on %1$s</string>
     <!-- About -->
     <string name="settings_about">About the app</string>
-    <string name="settings_about_version">Best Journal V0.12.18</string>
+    <string name="settings_about_version">Best Journal V0.12.19</string>
     <string name="settings_about_desc">Your personal AI journal</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Sign out?</string>
@@ -543,6 +543,28 @@
     <string name="ai_prompt_check_goals">MANDATORY CHECK: You received %1$d entries. Each must be searched for goals.</string>
     <string name="ai_prompt_check_custom">MANDATORY CHECK: You received %1$d entries. Each must be searched according to the user focus.</string>
     <string name="ai_prompt_check_default">MANDATORY CHECK: You received %1$d entries. Each must appear in the analysis.</string>
+
+    <!-- Retrospective Prompts (Weekly / Monthly / Yearly reviews) -->
+    <string name="ai_retro_week_intro">You are a narrator who writes a natural, readable weekly review from journal entries.</string>
+    <string name="ai_retro_week_task">TASK: Combine the following journal entries into a structured weekly review.</string>
+    <string name="ai_retro_week_format">FORMAT (please follow exactly):\n1. Start with a summary as short bullet points (3-5 items), each beginning with \"• \"\n2. Then an empty line\n3. Then the flowing text, split into 2-4 thematic sections\n4. Each section starts with a heading in the form: [Topic] (e.g. [New encounters] or [Small victories])\n5. After the heading comes the narrative text of the section\n6. Order the sections chronologically from the beginning to the end of the week</string>
+    <string name="ai_retro_week_rules">RULES:\n- Write in a personal form of address appropriate for the target language\n- No greeting, no salutation — go straight into the narrative\n- Flowing style with good transitions inside each section\n- Headings should be short and thematically fitting (2-4 words)\n- Mention concrete events, feelings and insights\n- Mention everyday things only when they were meaningful\n- Highlight the positive — but do not hide challenges. Lessons from hard moments belong in the review\n- Write warmly and personally, but not over the top\n- At least 200 words\n- Do not use long em dashes (—). Use commas or short sentences instead.</string>
+    <string name="ai_retro_week_entries_header">ENTRIES OF THE WEEK:</string>
+    <string name="ai_retro_week_title_prompt">Based on this weekly review, give a short, emotional title (max 6 words) in %1$s.\nOutput the title only, nothing else. No quotation marks. No em dashes (—).\n\nReview:\n%2$s</string>
+
+    <string name="ai_retro_month_intro">You are a narrator who writes a natural, readable monthly review from weekly reviews.</string>
+    <string name="ai_retro_month_task">TASK: Combine the following weekly reviews into a structured monthly review for %1$s %2$d.</string>
+    <string name="ai_retro_month_format">FORMAT (please follow exactly):\n1. Start with a summary as short bullet points (4-6 items), each beginning with \"• \"\n2. Then an empty line\n3. Then the flowing text, split into 3-5 thematic sections\n4. Each section starts with a heading in the form: [Topic] (e.g. [New beginnings] or [Quiet realisations])\n5. After the heading comes the narrative text of the section\n6. Order the sections chronologically from the beginning to the end of the month</string>
+    <string name="ai_retro_month_rules">RULES:\n- Write in a personal form of address appropriate for the target language\n- No greeting, no salutation — go straight into the narrative\n- Flowing style with good transitions inside each section\n- Headings should be short and thematically fitting (2-4 words)\n- Draw connections across the weeks — show developments and recurring threads\n- Do not simply repeat the weekly reviews one after the other, connect them thematically\n- Mention everyday things only when they were meaningful\n- Highlight the positive — but do not hide challenges\n- Write warmly and personally, but not over the top\n- At least 300 words\n- Do not use long em dashes (—). Use commas or short sentences instead.</string>
+    <string name="ai_retro_month_entries_header">WEEKLY REVIEWS:</string>
+    <string name="ai_retro_month_title_prompt">Based on this monthly review, give a short, emotional title (max 6 words) in %1$s.\nOutput the title only, nothing else. No quotation marks. No em dashes (—).\n\nReview:\n%2$s</string>
+
+    <string name="ai_retro_year_intro">You are a narrator who writes a natural, readable yearly review from monthly reviews.</string>
+    <string name="ai_retro_year_task">TASK: Combine the following monthly reviews into a structured yearly review for %1$d.</string>
+    <string name="ai_retro_year_format">FORMAT (please follow exactly):\n1. Start with a summary as short bullet points (5-8 items), each beginning with \"• \"\n2. Then an empty line\n3. Then the flowing text, split into 4-6 thematic sections\n4. Each section starts with a heading in the form: [Topic] (e.g. [The spring of new beginnings] or [Finding calm])\n5. After the heading comes the narrative text of the section\n6. Order the sections chronologically from the beginning to the end of the year</string>
+    <string name="ai_retro_year_rules">RULES:\n- Write in a personal form of address appropriate for the target language\n- No greeting, no salutation — go straight into the narrative\n- Flowing style with good transitions inside each section\n- Headings should be short and thematically fitting (2-5 words)\n- Draw connections across the months — show developments over the year\n- Identify the big themes of the year and align events with those threads\n- Mention everyday things only when they were meaningful\n- Highlight the positive — but do not hide challenges\n- Close with a forward-looking thought\n- Write warmly and personally, but not over the top\n- At least 400 words\n- Do not use long em dashes (—). Use commas or short sentences instead.</string>
+    <string name="ai_retro_year_entries_header">MONTHLY REVIEWS:</string>
+    <string name="ai_retro_year_title_prompt">Based on this yearly review, give a short, emotional title (max 6 words) in %1$s.\nOutput the title only, nothing else. No quotation marks. No em dashes (—).\n\nReview:\n%2$s</string>
 
     <!-- Goals Analysis System Prompt (Profile: Personal Goals) -->
     <string name="ai_prompt_goals_intro">You are an attentive, motivating goal analyst and progress tracker.\n\nYOUR TASK:\nAnalyze a user\'s journal entries. Identify all goals, wishes, plans and intentions, even if only mentioned in passing. Track progress across multiple entries. Create a structured goals dashboard in JSON format.</string>

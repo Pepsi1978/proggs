@@ -242,35 +242,18 @@ constructor(
         try {
             val lang = DeviceLocale.promptLanguage
             val prompt =
-                """Du bist ein Erzähler, der aus Tagebucheinträgen einen natürlichen, gut lesbaren Wochenrückblick schreibt.
-
-AUFGABE: Fasse die folgenden Tagebucheinträge zu einem strukturierten Wochenrückblick zusammen.
-
-FORMAT (bitte genau einhalten):
-1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (3-5 Punkte), jeweils mit "• " am Anfang
-2. Dann eine Leerzeile
-3. Dann der Fließtext, aufgeteilt in 2-4 thematische Abschnitte
-4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Neue Begegnungen] oder [Kleine Siege])
-5. Nach der Überschrift folgt der erzählende Text des Abschnitts
-6. Die Abschnitte chronologisch vom Wochenanfang bis Wochenende ordnen
-
-REGELN:
-- Schreibe in der Du-Form (bzw. dem sprachlichen Äquivalent einer persönlichen Anrede)
-- Keine Anrede, keine Grußformel — direkt in die Erzählung
-- Fließender Stil mit guten Übergängen innerhalb der Abschnitte
-- Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)
-- Erwähne konkrete Ereignisse, Gefühle und Erkenntnisse
-- Alltägliches nur erwähnen, wenn es bedeutsam war
-- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht. Erkenntnisse aus schwierigen Momenten gehören dazu
-- Schreibe warm und persönlich, aber nicht übertrieben
-- Mindestens 200 Wörter
-- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
-$profileStyle
-
-${context.getString(R.string.ai_prompt_response_language)}
-
-EINTRÄGE DER WOCHE:
-${task.entriesText}"""
+                listOf(
+                        context.getString(R.string.ai_retro_week_intro),
+                        context.getString(R.string.ai_retro_week_task),
+                        context.getString(R.string.ai_retro_week_format),
+                        context.getString(R.string.ai_retro_week_rules),
+                        profileStyle,
+                        context.getString(R.string.ai_retro_week_entries_header) +
+                            "\n" +
+                            task.entriesText,
+                    )
+                    .filter { it.isNotBlank() }
+                    .joinToString("\n\n")
 
             val result =
                 aiService.generateContent(
@@ -289,11 +272,7 @@ ${task.entriesText}"""
             val summaryText = result.getOrThrow().trim().replace("—", ", ")
 
             val titlePrompt =
-                """Basierend auf diesem Wochenrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter) in $lang.
-Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).
-
-Rückblick:
-${summaryText.take(500)}"""
+                context.getString(R.string.ai_retro_week_title_prompt, lang, summaryText.take(500))
 
             val titleResult =
                 aiService.generateContent(
@@ -431,36 +410,18 @@ ${summaryText.take(500)}"""
         try {
             val lang = DeviceLocale.promptLanguage
             val prompt =
-                """Du bist ein Erzähler, der aus Wochenrückblicken einen natürlichen, gut lesbaren Monatsrückblick schreibt.
-
-AUFGABE: Fasse die folgenden Wochenrückblicke zu einem strukturierten Monatsrückblick für ${'$'}{task.monthName} ${'$'}{task.year} zusammen.
-
-FORMAT (bitte genau einhalten):
-1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (4-6 Punkte), jeweils mit "• " am Anfang
-2. Dann eine Leerzeile
-3. Dann der Fließtext, aufgeteilt in 3-5 thematische Abschnitte
-4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Aufbruch und Neustart] oder [Stille Erkenntnisse])
-5. Nach der Überschrift folgt der erzählende Text des Abschnitts
-6. Die Abschnitte chronologisch vom Monatsanfang bis Monatsende ordnen
-
-REGELN:
-- Schreibe in der Du-Form (bzw. dem sprachlichen Äquivalent einer persönlichen Anrede)
-- Keine Anrede, keine Grußformel — direkt in die Erzählung
-- Fließender Stil mit guten Übergängen innerhalb der Abschnitte
-- Die Überschriften sollen kurz und thematisch passend sein (2-4 Wörter)
-- Ziehe Verbindungen zwischen den Wochen — zeige Entwicklungen und rote Fäden
-- Wiederhole nicht einfach die Rückblicke nacheinander, sondern verbinde sie thematisch
-- Alltägliches nur erwähnen, wenn es bedeutsam war
-- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht
-- Schreibe warm und persönlich, aber nicht übertrieben
-- Mindestens 300 Wörter
-- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
-$profileStyle
-
-${context.getString(R.string.ai_prompt_response_language)}
-
-WOCHENRÜCKBLICKE:
-${'$'}{task.weeksText}"""
+                listOf(
+                        context.getString(R.string.ai_retro_month_intro),
+                        context.getString(R.string.ai_retro_month_task, task.monthName, task.year),
+                        context.getString(R.string.ai_retro_month_format),
+                        context.getString(R.string.ai_retro_month_rules),
+                        profileStyle,
+                        context.getString(R.string.ai_retro_month_entries_header) +
+                            "\n" +
+                            task.weeksText,
+                    )
+                    .filter { it.isNotBlank() }
+                    .joinToString("\n\n")
 
             val result =
                 aiService.generateContent(
@@ -479,11 +440,7 @@ ${'$'}{task.weeksText}"""
             val summaryText = result.getOrThrow().trim().replace("—", ", ")
 
             val titlePrompt =
-                """Basierend auf diesem Monatsrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter) in $lang.
-Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).
-
-Rückblick:
-${summaryText.take(500)}"""
+                context.getString(R.string.ai_retro_month_title_prompt, lang, summaryText.take(500))
 
             val titleResult =
                 aiService.generateContent(
@@ -561,44 +518,16 @@ ${summaryText.take(500)}"""
         val profileStyle = getProfileStyleInstruction()
         val lang = DeviceLocale.promptLanguage
         val prompt =
-            """Du bist ein Erzähler, der aus Monatsrückblicken einen natürlichen, gut lesbaren Jahresrückblick schreibt.
-
-AUFGABE: Fasse die folgenden Monatsrückblicke zu einem strukturierten Jahresrückblick für $year zusammen.
-
-FORMAT (bitte genau einhalten):
-1. Beginne mit einer Zusammenfassung als kurze Stichpunkte (5-8 Punkte), jeweils mit "• " am Anfang
-2. Dann eine Leerzeile
-3. Dann der Fließtext, aufgeteilt in 4-6 thematische Abschnitte
-4. Jeder Abschnitt beginnt mit einer Überschrift in der Form: [Thema] (z.B. [Der Frühling des Aufbruchs] oder [Ruhe finden])
-5. Nach der Überschrift folgt der erzählende Text des Abschnitts
-6. Die Abschnitte chronologisch vom Jahresanfang bis Jahresende ordnen
-
-REGELN:
-- Schreibe in der Du-Form (bzw. dem sprachlichen Äquivalent einer persönlichen Anrede)
-- Keine Anrede, keine Grußformel — direkt in die Erzählung
-- Fließender Stil mit guten Übergängen innerhalb der Abschnitte
-- Die Überschriften sollen kurz und thematisch passend sein (2-5 Wörter)
-- Ziehe Verbindungen zwischen den Monaten — zeige Entwicklungen über das Jahr
-- Erkenne die großen Themen des Jahres und ordne Ereignisse in diese Linien ein
-- Alltägliches nur erwähnen, wenn es bedeutsam war
-- Hebe Positives besonders hervor — aber verschweige Herausforderungen nicht
-- Schließe mit einem Gedanken der nach vorne blickt
-- Schreibe warm und persönlich, aber nicht übertrieben
-- Mindestens 400 Wörter
-- Verwende keine langen Gedankenstriche (—). Nutze stattdessen Kommas oder kurze Sätze.
-$profileStyle
-
-${context.getString(R.string.ai_prompt_response_language)}
-
-MONATSRÜCKBLICKE:
-$monthsText"""
-
-        val titlePrompt =
-            """Basierend auf diesem Jahresrückblick, gib einen kurzen, emotionalen Titel (max 6 Wörter) in $lang.
-Nur den Titel ausgeben, nichts anderes. Keine Anführungszeichen. Keine Gedankenstriche (—).
-
-Rückblick:
-"""
+            listOf(
+                    context.getString(R.string.ai_retro_year_intro),
+                    context.getString(R.string.ai_retro_year_task, year),
+                    context.getString(R.string.ai_retro_year_format),
+                    context.getString(R.string.ai_retro_year_rules),
+                    profileStyle,
+                    context.getString(R.string.ai_retro_year_entries_header) + "\n" + monthsText,
+                )
+                .filter { it.isNotBlank() }
+                .joinToString("\n\n")
 
         val result =
             aiService.generateContent(
@@ -615,9 +544,11 @@ Rückblick:
         }
 
         val summaryText = result.getOrThrow().trim().replace("—", ", ")
+        val titlePrompt =
+            context.getString(R.string.ai_retro_year_title_prompt, lang, summaryText.take(500))
         val titleResult =
             aiService.generateContent(
-                prompt = titlePrompt + summaryText.take(500),
+                prompt = titlePrompt,
                 modelName = FirebaseAiService.MODEL_FLASH_LITE,
                 temperature = 0.6f,
                 maxOutputTokens = 50,
