@@ -72,9 +72,11 @@ object Constants {
     const val FREE_REVIEW_PERIOD_DAYS = 14 // Weekly reviews free for 14 days after first entry
     const val FREE_WEEKLY_DASHBOARD_LIMIT = 5
     const val FREE_WEEKLY_TEXT_LIMIT = 5
-    const val MAX_ENTRIES_FREE_ANALYSIS = 20
-    const val MAX_ENTRIES_SUBSCRIBED_ANALYSIS = 40
-    const val MAX_ENTRIES_TRIAL_ANALYSIS = 20
+    // Unlimited entries: Gemini 2.5/3.x models support 1M token context.
+    // M-4 cost-limit removed per user request — every tier gets full analysis.
+    const val MAX_ENTRIES_FREE_ANALYSIS = Int.MAX_VALUE
+    const val MAX_ENTRIES_SUBSCRIBED_ANALYSIS = Int.MAX_VALUE
+    const val MAX_ENTRIES_TRIAL_ANALYSIS = Int.MAX_VALUE
 
     // Trial daily limits (4-tier: Premium→Lite→Cooldown→Hard)
     const val TRIAL_PREMIUM_LIMIT = 20 // 1-20: Flash 2.5

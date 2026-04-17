@@ -21,7 +21,7 @@ class FirebaseAiService @Inject constructor() {
     private data class ModelCacheKey(
         val modelName: String,
         val temperature: Float,
-        val maxOutputTokens: Int,
+        val maxOutputTokens: Int?,
         val systemPrompt: String?,
     )
 
@@ -30,7 +30,7 @@ class FirebaseAiService @Inject constructor() {
     private fun createModel(
         modelName: String = MODEL_FLASH_LITE,
         temperature: Float = 0.4f,
-        maxOutputTokens: Int = 8192,
+        maxOutputTokens: Int? = null,
         systemPrompt: String? = null,
     ): GenerativeModel {
         val key = ModelCacheKey(modelName, temperature, maxOutputTokens, systemPrompt)
@@ -41,7 +41,7 @@ class FirebaseAiService @Inject constructor() {
                     generationConfig =
                         generationConfig {
                             this.temperature = temperature
-                            this.maxOutputTokens = maxOutputTokens
+                            if (maxOutputTokens != null) this.maxOutputTokens = maxOutputTokens
                         },
                     systemInstruction = systemPrompt?.let { content { text(it) } },
                 )
@@ -52,7 +52,7 @@ class FirebaseAiService @Inject constructor() {
         prompt: String,
         modelName: String = MODEL_FLASH_LITE,
         temperature: Float = 0.4f,
-        maxOutputTokens: Int = 8192,
+        maxOutputTokens: Int? = null,
         systemPrompt: String? = null,
     ): Result<String> {
         return try {
