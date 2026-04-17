@@ -1,7 +1,6 @@
 package com.bestjournal.app.ui.screens.dashboard
 
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import com.bestjournal.app.util.rememberHapticAction
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,15 +45,19 @@ import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SelfImprovement
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.TipsAndUpdates
 import androidx.compose.material.icons.rounded.Undo
 import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +65,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,19 +79,22 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import com.bestjournal.app.R
 import com.bestjournal.app.domain.model.Advice
 import com.bestjournal.app.domain.model.AdvicePriority
 import com.bestjournal.app.domain.model.TopAction
-import androidx.compose.runtime.LaunchedEffect
 import com.bestjournal.app.ui.components.AdviceCategoryCard
 import com.bestjournal.app.ui.components.AiInfoBanner
 import com.bestjournal.app.ui.components.FreeLimitIndicator
@@ -96,6 +104,7 @@ import com.bestjournal.app.ui.components.ParticleBackground
 import com.bestjournal.app.ui.components.ShimmerLoadingEffect
 import com.bestjournal.app.ui.components.TwinklingStars
 import com.bestjournal.app.ui.theme.CustomPalette
+import com.bestjournal.app.ui.theme.FeatureAccentOrange
 import com.bestjournal.app.ui.theme.GoalPalette
 import com.bestjournal.app.ui.theme.InsightPalette
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
@@ -103,18 +112,9 @@ import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
-import com.bestjournal.app.ui.theme.FeatureAccentOrange
 import com.bestjournal.app.ui.theme.SummaryPalette
 import com.bestjournal.app.util.EdgeTtsPlayer
-import android.content.Intent
-import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material.icons.rounded.Stop
-import androidx.compose.material.icons.rounded.VolumeUp
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import com.bestjournal.app.R
+import com.bestjournal.app.util.rememberHapticAction
 
 @Composable
 fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String) -> Unit = {}) {
@@ -136,15 +136,22 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
     val dashboardTts = remember { EdgeTtsPlayer(context) }
     val dashboardTtsPrefs = remember {
         try {
-            val mk = androidx.security.crypto.MasterKeys.getOrCreate(
-                androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-            )
+            val mk =
+                androidx.security.crypto.MasterKeys.getOrCreate(
+                    androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
+                )
             androidx.security.crypto.EncryptedSharedPreferences.create(
-                com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME, mk, context,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME,
+                mk,
+                context,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme
+                    .AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme
+                    .AES256_GCM,
             )
-        } catch (_: Exception) { null }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     DisposableEffect(Unit) {
@@ -183,7 +190,12 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                         com.bestjournal.app.ui.components.SunMoonToggle()
                     }
                     Row {
-                        IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); showLegendDialog = true }) {
+                        IconButton(
+                            onClick = {
+                                doHaptic(HapticFeedbackType.LongPress)
+                                showLegendDialog = true
+                            }
+                        ) {
                             Icon(
                                 Icons.Rounded.Info,
                                 stringResource(R.string.dashboard_legend),
@@ -191,11 +203,25 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                             )
                         }
                         if (uiState.canUndo) {
-                            IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.undoDashboard() }) {
-                                Icon(Icons.Rounded.Undo, stringResource(R.string.action_undo), tint = NeonAmber)
+                            IconButton(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    viewModel.undoDashboard()
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Undo,
+                                    stringResource(R.string.action_undo),
+                                    tint = NeonAmber,
+                                )
                             }
                         }
-                        IconButton(onClick = { doHaptic(HapticFeedbackType.LongPress); viewModel.refreshDashboard() }) {
+                        IconButton(
+                            onClick = {
+                                doHaptic(HapticFeedbackType.LongPress)
+                                viewModel.refreshDashboard()
+                            }
+                        ) {
                             Icon(
                                 Icons.Rounded.Refresh,
                                 stringResource(R.string.dashboard_refresh),
@@ -243,7 +269,10 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                             .clip(CircleShape)
                                             .background(
                                                 Brush.linearGradient(
-                                                    listOf(InsightPalette.primary, InsightPalette.secondary)
+                                                    listOf(
+                                                        InsightPalette.primary,
+                                                        InsightPalette.secondary,
+                                                    )
                                                 )
                                             ),
                                     contentAlignment = Alignment.Center,
@@ -267,7 +296,10 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = stringResource(R.string.dashboard_weekly_review_upsell_body),
+                                    text =
+                                        stringResource(
+                                            R.string.dashboard_weekly_review_upsell_body
+                                        ),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -384,7 +416,10 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 TextButton(onClick = { viewModel.dismissLimitMessage() }) {
-                                    Text(stringResource(R.string.action_understood), color = MaterialTheme.colorScheme.primary)
+                                    Text(
+                                        stringResource(R.string.action_understood),
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
                                 }
                             }
                         }
@@ -419,7 +454,11 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = stringResource(R.string.dashboard_gemini_unavailable),
+                                    text =
+                                        uiState.errorMessage
+                                            ?: stringResource(
+                                                R.string.dashboard_gemini_unavailable
+                                            ),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -479,7 +518,9 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         )
                                         Spacer(modifier = Modifier.height(8.dp))
                                         Text(
-                                            stringResource(R.string.dashboard_create_entries_custom),
+                                            stringResource(
+                                                R.string.dashboard_create_entries_custom
+                                            ),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.outline,
                                             textAlign = TextAlign.Center,
@@ -552,7 +593,10 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         )
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            text = stringResource(R.string.dashboard_premium_upsell_body),
+                                            text =
+                                                stringResource(
+                                                    R.string.dashboard_premium_upsell_body
+                                                ),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -564,7 +608,8 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         ) {
                                             TextButton(
                                                 onClick = {
-                                                    doHaptic(HapticFeedbackType.LongPress); viewModel.dismissAnalysisUpsellBanner()
+                                                    doHaptic(HapticFeedbackType.LongPress)
+                                                    viewModel.dismissAnalysisUpsellBanner()
                                                 }
                                             ) {
                                                 Text(
@@ -651,7 +696,9 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                             modifier =
                                                 Modifier.size(32.dp)
                                                     .clip(CircleShape)
-                                                    .background(SummaryPalette.primary.copy(alpha = 0.12f)),
+                                                    .background(
+                                                        SummaryPalette.primary.copy(alpha = 0.12f)
+                                                    ),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Icon(
@@ -663,12 +710,14 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                         }
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            stringResource(R.string.dashboard_summary_overview_title),
+                                            stringResource(
+                                                R.string.dashboard_summary_overview_title
+                                            ),
                                             style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold,
                                             color = SummaryPalette.primary,
                                         )
-                                Spacer(modifier = Modifier.width(40.dp))
+                                        Spacer(modifier = Modifier.width(40.dp))
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
@@ -741,7 +790,9 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     modifier =
                                         Modifier.size(32.dp)
                                             .clip(CircleShape)
-                                            .background(SummaryPalette.secondary.copy(alpha = 0.12f)),
+                                            .background(
+                                                SummaryPalette.secondary.copy(alpha = 0.12f)
+                                            ),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
@@ -809,7 +860,9 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                             modifier =
                                                 Modifier.size(32.dp)
                                                     .clip(CircleShape)
-                                                    .background(InsightPalette.primary.copy(alpha = 0.12f)),
+                                                    .background(
+                                                        InsightPalette.primary.copy(alpha = 0.12f)
+                                                    ),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Icon(
@@ -826,7 +879,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                             fontWeight = FontWeight.Bold,
                                             color = InsightPalette.primary,
                                         )
-                                Spacer(modifier = Modifier.width(40.dp))
+                                        Spacer(modifier = Modifier.width(40.dp))
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
@@ -963,7 +1016,9 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                             modifier =
                                                 Modifier.size(32.dp)
                                                     .clip(CircleShape)
-                                                    .background(GoalPalette.primary.copy(alpha = 0.12f)),
+                                                    .background(
+                                                        GoalPalette.primary.copy(alpha = 0.12f)
+                                                    ),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Icon(
@@ -980,7 +1035,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                             fontWeight = FontWeight.Bold,
                                             color = GoalPalette.primary,
                                         )
-                                Spacer(modifier = Modifier.width(40.dp))
+                                        Spacer(modifier = Modifier.width(40.dp))
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
@@ -1097,12 +1152,16 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                         }
                     } else if (uiState.currentScenario == 4) {
                         // ═══════ INDIVIDUELLE ANALYSE DASHBOARD ═══════
-                        val fallbackTop5 = context.getString(R.string.dashboard_top_results_fallback)
-                        val fallbackAnalyse = context.getString(R.string.dashboard_analysis_fallback)
-                        val fallbackErgebnisse = context.getString(R.string.dashboard_all_results_fallback)
+                        val fallbackTop5 =
+                            context.getString(R.string.dashboard_top_results_fallback)
+                        val fallbackAnalyse =
+                            context.getString(R.string.dashboard_analysis_fallback)
+                        val fallbackErgebnisse =
+                            context.getString(R.string.dashboard_all_results_fallback)
                         val customTop5 = uiState.customHeaderTop5.ifBlank { fallbackTop5 }
                         val customAnalyse = uiState.customHeaderAnalyse.ifBlank { fallbackAnalyse }
-                        val customErgebnisse = uiState.customHeaderErgebnisse.ifBlank { fallbackErgebnisse }
+                        val customErgebnisse =
+                            uiState.customHeaderErgebnisse.ifBlank { fallbackErgebnisse }
 
                         val topActions = blocks.firstOrNull()?.topActions ?: emptyList()
                         if (topActions.isNotEmpty()) {
@@ -1122,7 +1181,9 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                             modifier =
                                                 Modifier.size(32.dp)
                                                     .clip(CircleShape)
-                                                    .background(CustomPalette.primary.copy(alpha = 0.12f)),
+                                                    .background(
+                                                        CustomPalette.primary.copy(alpha = 0.12f)
+                                                    ),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Icon(
@@ -1457,7 +1518,10 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            LegendDot(color = NeonRed, label = stringResource(R.string.legend_activity_high))
+                            LegendDot(
+                                color = NeonRed,
+                                label = stringResource(R.string.legend_activity_high),
+                            )
                             LegendDot(
                                 color = NeonAmber,
                                 label = stringResource(R.string.legend_activity_medium),
@@ -1479,7 +1543,9 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                     modifier =
                                         Modifier.size(20.dp)
                                             .clip(CircleShape)
-                                            .background(SummaryPalette.secondary.copy(alpha = 0.12f)),
+                                            .background(
+                                                SummaryPalette.secondary.copy(alpha = 0.12f)
+                                            ),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
@@ -1555,9 +1621,18 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            LegendDot(color = InsightPalette.primary, label = stringResource(R.string.legend_reflection_deep))
-                            LegendDot(color = InsightPalette.muted, label = stringResource(R.string.legend_reflection_aware))
-                            LegendDot(color = InsightPalette.accent, label = stringResource(R.string.legend_reflection_surface))
+                            LegendDot(
+                                color = InsightPalette.primary,
+                                label = stringResource(R.string.legend_reflection_deep),
+                            )
+                            LegendDot(
+                                color = InsightPalette.muted,
+                                label = stringResource(R.string.legend_reflection_aware),
+                            )
+                            LegendDot(
+                                color = InsightPalette.accent,
+                                label = stringResource(R.string.legend_reflection_surface),
+                            )
                         }
                         NeonDivider()
                         Text(
@@ -1647,9 +1722,18 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            LegendDot(color = GoalPalette.muted, label = stringResource(R.string.legend_blocked_range))
-                            LegendDot(color = GoalPalette.accent, label = stringResource(R.string.legend_in_progress_range))
-                            LegendDot(color = GoalPalette.primary, label = stringResource(R.string.legend_progress_range))
+                            LegendDot(
+                                color = GoalPalette.muted,
+                                label = stringResource(R.string.legend_blocked_range),
+                            )
+                            LegendDot(
+                                color = GoalPalette.accent,
+                                label = stringResource(R.string.legend_in_progress_range),
+                            )
+                            LegendDot(
+                                color = GoalPalette.primary,
+                                label = stringResource(R.string.legend_progress_range),
+                            )
                         }
                         NeonDivider()
                         Text(
@@ -1786,7 +1870,9 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
                                     modifier =
                                         Modifier.size(20.dp)
                                             .clip(CircleShape)
-                                            .background(CustomPalette.secondary.copy(alpha = 0.12f)),
+                                            .background(
+                                                CustomPalette.secondary.copy(alpha = 0.12f)
+                                            ),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
@@ -1944,7 +2030,10 @@ private fun LegendDialog(scenario: Int, onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_understood), color = MaterialTheme.colorScheme.primary)
+                Text(
+                    stringResource(R.string.action_understood),
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
         },
     )
@@ -2104,7 +2193,10 @@ private fun CategoryDetailDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_close), color = MaterialTheme.colorScheme.primary)
+                Text(
+                    stringResource(R.string.action_close),
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
         },
     )
@@ -2213,7 +2305,10 @@ private fun AdviceDerivationDialog(advice: Advice, categoryName: String, onDismi
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_close), color = MaterialTheme.colorScheme.primary)
+                Text(
+                    stringResource(R.string.action_close),
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
         },
     )
@@ -2315,7 +2410,8 @@ private fun TopActionDetailDialog(action: TopAction, index: Int, onDismiss: () -
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(dotColor),
+                    modifier =
+                        Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(dotColor),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -2354,7 +2450,10 @@ private fun TopActionDetailDialog(action: TopAction, index: Int, onDismiss: () -
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_close), color = MaterialTheme.colorScheme.primary)
+                Text(
+                    stringResource(R.string.action_close),
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
         },
     )
@@ -2474,7 +2573,7 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
                     fontWeight = FontWeight.Bold,
                     color = SummaryPalette.secondary,
                 )
-                                Spacer(modifier = Modifier.width(40.dp))
+                Spacer(modifier = Modifier.width(40.dp))
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -2500,7 +2599,9 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
                             Modifier.size(34.dp)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(
-                                    Brush.linearGradient(listOf(SummaryPalette.primary, SummaryPalette.secondary))
+                                    Brush.linearGradient(
+                                        listOf(SummaryPalette.primary, SummaryPalette.secondary)
+                                    )
                                 ),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -2567,7 +2668,11 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
                     modifier =
                         Modifier.size(38.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Brush.linearGradient(listOf(SummaryPalette.primary, SummaryPalette.secondary))),
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(SummaryPalette.primary, SummaryPalette.secondary)
+                                )
+                            ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -2614,7 +2719,9 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close), color = SummaryPalette.primary) }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_close), color = SummaryPalette.primary)
+            }
         },
     )
 }
@@ -2622,8 +2729,16 @@ private fun SummaryInsightDetailDialog(action: TopAction, index: Int, onDismiss:
 @Composable
 private fun SummaryRelevanceLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        SummaryLegendItem(icon = Icons.Rounded.Star, label = stringResource(R.string.summary_central), color = SummaryPalette.secondary)
-        SummaryLegendItem(icon = Icons.Rounded.PushPin, label = stringResource(R.string.summary_relevant), color = SummaryPalette.primary)
+        SummaryLegendItem(
+            icon = Icons.Rounded.Star,
+            label = stringResource(R.string.summary_central),
+            color = SummaryPalette.secondary,
+        )
+        SummaryLegendItem(
+            icon = Icons.Rounded.PushPin,
+            label = stringResource(R.string.summary_relevant),
+            color = SummaryPalette.primary,
+        )
         SummaryLegendItem(
             icon = Icons.Rounded.BookmarkBorder,
             label = stringResource(R.string.summary_side_note),
@@ -2762,7 +2877,7 @@ private fun InsightKeyBlock(actions: List<TopAction>) {
                     fontWeight = FontWeight.Bold,
                     color = InsightPalette.primary,
                 )
-                                Spacer(modifier = Modifier.width(40.dp))
+                Spacer(modifier = Modifier.width(40.dp))
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -2787,7 +2902,9 @@ private fun InsightKeyBlock(actions: List<TopAction>) {
                             Modifier.size(34.dp)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(
-                                    Brush.linearGradient(listOf(InsightPalette.primary, InsightPalette.secondary))
+                                    Brush.linearGradient(
+                                        listOf(InsightPalette.primary, InsightPalette.secondary)
+                                    )
                                 ),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -2850,7 +2967,11 @@ private fun InsightDetailDialog(action: TopAction, index: Int, onDismiss: () -> 
                     modifier =
                         Modifier.size(38.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Brush.linearGradient(listOf(InsightPalette.primary, InsightPalette.secondary))),
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(InsightPalette.primary, InsightPalette.secondary)
+                                )
+                            ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -2897,7 +3018,9 @@ private fun InsightDetailDialog(action: TopAction, index: Int, onDismiss: () -> 
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close), color = InsightPalette.primary) }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_close), color = InsightPalette.primary)
+            }
         },
     )
 }
@@ -2915,7 +3038,11 @@ private fun InsightDepthLegend() {
             label = stringResource(R.string.insight_aware_label),
             color = InsightPalette.muted,
         )
-        InsightLegendItem(icon = Icons.Rounded.Eco, label = stringResource(R.string.insight_surface_label), color = InsightPalette.accent)
+        InsightLegendItem(
+            icon = Icons.Rounded.Eco,
+            label = stringResource(R.string.insight_surface_label),
+            color = InsightPalette.accent,
+        )
     }
 }
 
@@ -3045,7 +3172,7 @@ private fun GoalNextStepsBlock(actions: List<TopAction>) {
                     fontWeight = FontWeight.Bold,
                     color = GoalPalette.primary,
                 )
-                                Spacer(modifier = Modifier.width(40.dp))
+                Spacer(modifier = Modifier.width(40.dp))
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -3069,7 +3196,11 @@ private fun GoalNextStepsBlock(actions: List<TopAction>) {
                         modifier =
                             Modifier.size(34.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Brush.linearGradient(listOf(GoalPalette.primary, GoalPalette.secondary))),
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(GoalPalette.primary, GoalPalette.secondary)
+                                    )
+                                ),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -3128,7 +3259,11 @@ private fun GoalStepDetailDialog(action: TopAction, index: Int, onDismiss: () ->
                     modifier =
                         Modifier.size(38.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Brush.linearGradient(listOf(GoalPalette.primary, GoalPalette.secondary))),
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(GoalPalette.primary, GoalPalette.secondary)
+                                )
+                            ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -3171,7 +3306,9 @@ private fun GoalStepDetailDialog(action: TopAction, index: Int, onDismiss: () ->
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close), color = GoalPalette.primary) }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_close), color = GoalPalette.primary)
+            }
         },
     )
 }
@@ -3179,9 +3316,21 @@ private fun GoalStepDetailDialog(action: TopAction, index: Int, onDismiss: () ->
 @Composable
 private fun GoalStatusLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        GoalLegendItem(icon = Icons.Rounded.Block, label = stringResource(R.string.goal_blocked_label), color = GoalPalette.muted)
-        GoalLegendItem(icon = Icons.Rounded.LockOpen, label = stringResource(R.string.goal_open_label), color = GoalPalette.accent)
-        GoalLegendItem(icon = Icons.Rounded.CheckCircle, label = stringResource(R.string.goal_progress_label), color = GoalPalette.primary)
+        GoalLegendItem(
+            icon = Icons.Rounded.Block,
+            label = stringResource(R.string.goal_blocked_label),
+            color = GoalPalette.muted,
+        )
+        GoalLegendItem(
+            icon = Icons.Rounded.LockOpen,
+            label = stringResource(R.string.goal_open_label),
+            color = GoalPalette.accent,
+        )
+        GoalLegendItem(
+            icon = Icons.Rounded.CheckCircle,
+            label = stringResource(R.string.goal_progress_label),
+            color = GoalPalette.primary,
+        )
     }
 }
 
@@ -3337,7 +3486,11 @@ private fun CustomInsightsBlock(
                         modifier =
                             Modifier.size(34.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Brush.linearGradient(listOf(CustomPalette.primary, CustomPalette.secondary))),
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(CustomPalette.primary, CustomPalette.secondary)
+                                    )
+                                ),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -3396,7 +3549,11 @@ private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> U
                     modifier =
                         Modifier.size(38.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Brush.linearGradient(listOf(CustomPalette.primary, CustomPalette.secondary))),
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(CustomPalette.primary, CustomPalette.secondary)
+                                )
+                            ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -3439,7 +3596,9 @@ private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> U
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close), color = CustomPalette.primary) }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_close), color = CustomPalette.primary)
+            }
         },
     )
 }
@@ -3447,13 +3606,21 @@ private fun CustomDetailDialog(action: TopAction, index: Int, onDismiss: () -> U
 @Composable
 private fun CustomRelevanceLegend() {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        CustomLegendItem(icon = Icons.Rounded.Whatshot, label = stringResource(R.string.custom_important_label), color = CustomPalette.primary)
+        CustomLegendItem(
+            icon = Icons.Rounded.Whatshot,
+            label = stringResource(R.string.custom_important_label),
+            color = CustomPalette.primary,
+        )
         CustomLegendItem(
             icon = Icons.Rounded.TipsAndUpdates,
             label = stringResource(R.string.custom_relevant_label),
             color = CustomPalette.secondary,
         )
-        CustomLegendItem(icon = Icons.Rounded.EditNote, label = stringResource(R.string.custom_note_label), color = CustomPalette.accent)
+        CustomLegendItem(
+            icon = Icons.Rounded.EditNote,
+            label = stringResource(R.string.custom_note_label),
+            color = CustomPalette.accent,
+        )
     }
 }
 
@@ -3547,7 +3714,6 @@ private fun CustomResultCard(advice: Advice, categoryName: String = "", onClick:
     }
 }
 
-
 @Composable
 private fun AnalysisTtsShareRow(
     text: String,
@@ -3565,7 +3731,7 @@ private fun AnalysisTtsShareRow(
         modifier =
             Modifier.fillMaxWidth()
                 .height(1.dp)
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)),
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f))
     )
     Spacer(modifier = Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -3577,22 +3743,29 @@ private fun AnalysisTtsShareRow(
                     onSpeakingChange(false)
                     onTtsLoadingChange(false)
                 } else {
-                    val ttsOn = ttsPrefs?.getBoolean(
-                        com.bestjournal.app.util.Constants.PREF_TTS_ENABLED, false
-                    ) ?: false
+                    val ttsOn =
+                        ttsPrefs?.getBoolean(
+                            com.bestjournal.app.util.Constants.PREF_TTS_ENABLED,
+                            false,
+                        ) ?: false
                     if (!ttsOn) {
                         android.widget.Toast.makeText(
-                            context,
-                            context.getString(R.string.dashboard_enable_voices),
-                            android.widget.Toast.LENGTH_SHORT,
-                        ).show()
+                                context,
+                                context.getString(R.string.dashboard_enable_voices),
+                                android.widget.Toast.LENGTH_SHORT,
+                            )
+                            .show()
                     } else {
                         onTtsLoadingChange(true)
                         onSpeakingChange(true)
-                        val voice = ttsPrefs?.getString(
-                            com.bestjournal.app.util.Constants.PREF_EDGE_TTS_VOICE,
-                            com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices().defaultVoiceId,
-                        ) ?: com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices().defaultVoiceId
+                        val voice =
+                            ttsPrefs?.getString(
+                                com.bestjournal.app.util.Constants.PREF_EDGE_TTS_VOICE,
+                                com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices()
+                                    .defaultVoiceId,
+                            )
+                                ?: com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices()
+                                    .defaultVoiceId
                         tts.speak(
                             text,
                             voice = voice,
@@ -3608,7 +3781,9 @@ private fun AnalysisTtsShareRow(
         ) {
             Icon(
                 if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
-                contentDescription = if (isSpeaking) stringResource(R.string.dashboard_tts_stop) else stringResource(R.string.dashboard_tts_read),
+                contentDescription =
+                    if (isSpeaking) stringResource(R.string.dashboard_tts_stop)
+                    else stringResource(R.string.dashboard_tts_read),
                 tint = FeatureAccentOrange,
                 modifier = Modifier.size(24.dp),
             )
@@ -3621,7 +3796,12 @@ private fun AnalysisTtsShareRow(
                         type = "text/plain"
                         putExtra(Intent.EXTRA_TEXT, text)
                     }
-                context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.dashboard_share_analysis)))
+                context.startActivity(
+                    Intent.createChooser(
+                        shareIntent,
+                        context.getString(R.string.dashboard_share_analysis),
+                    )
+                )
             },
             modifier = Modifier.size(40.dp),
         ) {
@@ -3635,10 +3815,7 @@ private fun AnalysisTtsShareRow(
     }
     if (isTtsLoading) {
         Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             CircularProgressIndicator(
                 modifier = Modifier.size(16.dp),
                 strokeWidth = 2.dp,
@@ -3653,4 +3830,3 @@ private fun AnalysisTtsShareRow(
         }
     }
 }
-

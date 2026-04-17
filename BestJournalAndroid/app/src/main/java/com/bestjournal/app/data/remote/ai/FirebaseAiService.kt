@@ -1,5 +1,6 @@
 package com.bestjournal.app.data.remote.ai
 
+import android.util.Log
 import com.google.firebase.Firebase
 import com.google.firebase.ai.GenerativeModel
 import com.google.firebase.ai.ai
@@ -16,6 +17,7 @@ class FirebaseAiService @Inject constructor() {
     companion object {
         const val MODEL_FLASH = "gemini-3.1-flash-lite-preview"
         const val MODEL_FLASH_LITE = "gemini-2.5-flash-lite"
+        private const val TAG = "FirebaseAiService"
     }
 
     private data class ModelCacheKey(
@@ -56,10 +58,15 @@ class FirebaseAiService @Inject constructor() {
         systemPrompt: String? = null,
     ): Result<String> {
         return try {
+            Log.d(
+                TAG,
+                "generateContent start: model=$modelName, promptChars=${prompt.length}, systemChars=${systemPrompt?.length ?: 0}",
+            )
+            val t0 = System.currentTimeMillis()
             val model = createModel(modelName, temperature, maxOutputTokens, systemPrompt)
             val response = model.generateContent(prompt)
-            // Try response.text first; if it throws (e.g. MAX_TOKENS),
-            // fall back to reading partial text from candidates directly.
+            val elapsed = System.currentTimeMillis() - t0
+            Log.d(TAG, "generateContent returned after ${elapsed}ms")
             val text =
                 try {
                     response.text
@@ -72,11 +79,17 @@ class FirebaseAiService @Inject constructor() {
                         ?.joinToString("") { it.text }
                 }
             if (text != null) {
+                Log.d(TAG, "generateContent success: ${text.length} chars returned")
                 Result.success(text)
             } else {
+                Log.w(
+                    TAG,
+                    "generateContent: response.text is null, candidates=${response.candidates?.size}",
+                )
                 Result.failure(Exception("No response text from Gemini"))
             }
         } catch (e: Exception) {
+            Log.e(TAG, "generateContent FAILED: ${e.javaClass.simpleName}: ${e.message}", e)
             Result.failure(e)
         }
     }

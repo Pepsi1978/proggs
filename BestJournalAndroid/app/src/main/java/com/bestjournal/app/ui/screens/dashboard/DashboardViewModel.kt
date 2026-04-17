@@ -1,8 +1,10 @@
 package com.bestjournal.app.ui.screens.dashboard
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bestjournal.app.R
 import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.local.dao.JournalEntryDao
@@ -15,8 +17,6 @@ import com.bestjournal.app.domain.usecase.AnalyzeEntropyUseCase
 import com.bestjournal.app.domain.usecase.GenerateAdviceUseCase
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
-import android.content.Context
-import com.bestjournal.app.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -84,8 +84,9 @@ constructor(
                 MutableStateFlow(false).also { flow ->
                     viewModelScope.launch {
                         subState.collect { state ->
-                            flow.value = state is SubscriptionState.Free &&
-                                aiUsageTracker.getCurrentPhase() == AiPhase.FREEMIUM
+                            flow.value =
+                                state is SubscriptionState.Free &&
+                                    aiUsageTracker.getCurrentPhase() == AiPhase.FREEMIUM
                         }
                     }
                 }
@@ -142,7 +143,8 @@ constructor(
         if (encryptedPrefs.getBoolean(Constants.PREF_DASHBOARD_UPDATING, false)) {
             val startedAt = encryptedPrefs.getLong(updateStartKey, 0L)
             if (startedAt == 0L || System.currentTimeMillis() - startedAt > 120_000L) {
-                encryptedPrefs.edit()
+                encryptedPrefs
+                    .edit()
                     .putBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
                     .remove(updateStartKey)
                     .apply()
@@ -154,7 +156,8 @@ constructor(
                 if (updating) {
                     val startedAt = encryptedPrefs.getLong(updateStartKey, 0L)
                     if (startedAt == 0L || System.currentTimeMillis() - startedAt > 120_000L) {
-                        encryptedPrefs.edit()
+                        encryptedPrefs
+                            .edit()
                             .putBoolean(Constants.PREF_DASHBOARD_UPDATING, false)
                             .remove(updateStartKey)
                             .apply()
@@ -256,8 +259,7 @@ constructor(
         val maxWaitMs = 10L * 60 * 1000
         val start = System.currentTimeMillis()
         while (System.currentTimeMillis() - start < maxWaitMs) {
-            val restorePending =
-                encryptedPrefs.getBoolean(Constants.PREF_RESTORE_PENDING, false)
+            val restorePending = encryptedPrefs.getBoolean(Constants.PREF_RESTORE_PENDING, false)
             if (!restorePending) break
             Log.d("DashboardVM", "Restore in progress, waiting...")
             kotlinx.coroutines.delay(3000)
@@ -280,13 +282,22 @@ constructor(
             when (accessResult) {
                 is TieredAccessResult.HardLimitReached -> {
                     _uiState.update {
-                        it.copy(dashboardLimitMessage = context.getString(R.string.dashboard_limit_daily))
+                        it.copy(
+                            dashboardLimitMessage =
+                                context.getString(R.string.dashboard_limit_daily)
+                        )
                     }
                     return@launch
                 }
                 is TieredAccessResult.Cooldown -> {
                     _uiState.update {
-                        it.copy(dashboardLimitMessage = context.getString(R.string.dashboard_limit_cooldown, accessResult.minutesLeft))
+                        it.copy(
+                            dashboardLimitMessage =
+                                context.getString(
+                                    R.string.dashboard_limit_cooldown,
+                                    accessResult.minutesLeft,
+                                )
+                        )
                     }
                     return@launch
                 }
@@ -295,7 +306,8 @@ constructor(
                 }
             }
 
-            val modelName = (accessResult as? TieredAccessResult.Allowed)?.modelName ?: return@launch
+            val modelName =
+                (accessResult as? TieredAccessResult.Allowed)?.modelName ?: return@launch
 
             manualRefreshActive = true
             analyticsTracker.trackDashboardRefreshed(_uiState.value.currentScenario)
@@ -351,12 +363,18 @@ constructor(
                     }
                 }
                 .onFailure { error ->
+                    android.util.Log.e(
+                        "DashboardVM",
+                        "refreshDashboard FAILED: ${error.javaClass.simpleName}: ${error.message}",
+                        error,
+                    )
                     manualRefreshActive = false
+                    val msg = "${error.javaClass.simpleName}: ${error.message ?: "null"}"
                     _uiState.value =
                         _uiState.value.copy(
                             isLoading = false,
                             isScenarioSwitch = false,
-                            errorMessage = error.message ?: context.getString(R.string.dashboard_analysis_failed),
+                            errorMessage = msg,
                         )
                 }
         }
