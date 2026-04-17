@@ -2232,22 +2232,18 @@ fun SettingsScreen(
                             )
                 ) {
                     Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
+                        Box(modifier = Modifier.fillMaxWidth()) {
                             Icon(
                                 Icons.Rounded.Description,
                                 null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
+                                modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 stringResource(R.string.settings_export_data),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.align(Alignment.Center),
                             )
                         }
                         if (uiState.isSubscribed) {
