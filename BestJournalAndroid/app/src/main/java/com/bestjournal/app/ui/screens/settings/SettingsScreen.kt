@@ -1539,6 +1539,7 @@ fun SettingsScreen(
                                             scenarioPrefs
                                                 .edit()
                                                 .putInt(Constants.PREF_DASHBOARD_SCENARIO, index)
+                                                .putBoolean(Constants.PREF_RETRO_NEEDS_REGEN, true)
                                                 .apply()
                                             showScenarioInfoIndex = index
                                             if (index == 4) showCustomPromptDialog = true
@@ -1556,6 +1557,7 @@ fun SettingsScreen(
                                         scenarioPrefs
                                             .edit()
                                             .putInt(Constants.PREF_DASHBOARD_SCENARIO, index)
+                                            .putBoolean(Constants.PREF_RETRO_NEEDS_REGEN, true)
                                             .apply()
                                         showScenarioInfoIndex = index
                                         if (index == 4) showCustomPromptDialog = true
@@ -1676,6 +1678,7 @@ fun SettingsScreen(
                                                     Constants.PREF_DASHBOARD_SCENARIO,
                                                     previousScenario,
                                                 )
+                                                .putBoolean(Constants.PREF_RETRO_NEEDS_REGEN, true)
                                                 .apply()
                                             onProfileChanged()
                                         }

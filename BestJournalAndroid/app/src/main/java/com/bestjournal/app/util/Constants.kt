@@ -69,7 +69,9 @@ object Constants {
 
     // Freemium
     const val TRIAL_USAGE_DAYS = 8
-    const val FREE_REVIEW_PERIOD_DAYS = 14 // Weekly reviews free for 14 days after first entry
+    const val FREE_REVIEW_PERIOD_DAYS = 14 // Legacy, no longer used for weekly review gating
+    // Free users always get the N most recent weekly reviews, independent of first-entry date.
+    const val FREE_WEEKLY_REVIEW_COUNT = 2
     const val FREE_WEEKLY_DASHBOARD_LIMIT = 5
     const val FREE_WEEKLY_TEXT_LIMIT = 5
     // Unlimited entries: Gemini 2.5/3.x models support 1M token context.
@@ -125,6 +127,9 @@ object Constants {
     const val PREF_WEEKLY_REVIEW_HOUR = "weekly_review_hour"
     const val PREF_WEEKLY_REVIEW_MINUTE = "weekly_review_minute"
     const val PREF_FROM_WEEKLY_REVIEW = "from_weekly_review"
+    // Set to true when user switches dashboard scenario/profile.
+    // RetrospectiveViewModel reads+clears this on init to auto-regenerate.
+    const val PREF_RETRO_NEEDS_REGEN = "retro_needs_regen"
     const val PREF_MONTHLY_REVIEW_ENABLED = "monthly_review_enabled"
     const val PREF_YEARLY_REVIEW_ENABLED = "yearly_review_enabled"
     const val PREF_USER_TIMEZONE = "user_timezone"

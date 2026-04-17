@@ -13,7 +13,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.text.DateFormatSymbols
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Locale
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
@@ -65,8 +64,8 @@ constructor(
         get() = _lastFailureCount.get()
 
     /**
-     * Represents a week that qualifies for a review but is locked behind premium.
-     * Used to show placeholder cards in the UI.
+     * Represents a week that qualifies for a review but is locked behind premium. Used to show
+     * placeholder cards in the UI.
      */
     data class LockedWeekRange(
         val weekStart: Calendar,
@@ -76,8 +75,8 @@ constructor(
     )
 
     /**
-     * Calculates the free review cutoff: first entry timestamp + FREE_REVIEW_PERIOD_DAYS.
-     * Returns null if no entries exist yet (everything is free).
+     * Calculates the free review cutoff: first entry timestamp + FREE_REVIEW_PERIOD_DAYS. Returns
+     * null if no entries exist yet (everything is free).
      */
     private suspend fun getFreeCutoffMillis(): Long? {
         val earliest = journalDao.getEarliestTimestamp() ?: return null
@@ -85,8 +84,8 @@ constructor(
     }
 
     /**
-     * Checks whether a given week's review is within the free period.
-     * If cutoff is null (no entries yet), everything is free.
+     * Checks whether a given week's review is within the free period. If cutoff is null (no entries
+     * yet), everything is free.
      */
     private fun isWeekFree(weekEnd: Calendar, cutoffMillis: Long?): Boolean {
         if (cutoffMillis == null) return true
@@ -106,49 +105,54 @@ constructor(
         }
         // If ALL attempts failed and nothing was generated, signal the error
         if (generated == 0 && lastFailureCount > 0) {
-            throw Exception(
-                context.getString(R.string.error_retro_all_failed, lastFailureCount)
-            )
+            throw Exception(context.getString(R.string.error_retro_all_failed, lastFailureCount))
         }
         return generated
     }
 
     /**
-     * Returns week ranges that have enough entries for a review but are locked
-     * behind premium (outside the free 14-day window). Used for placeholder cards.
+     * Returns week ranges that have enough entries for a review but are locked behind premium
+     * (outside the free 14-day window). Used for placeholder cards.
      */
     suspend fun getLockedWeekRanges(): List<LockedWeekRange> {
-        val cutoff = getFreeCutoffMillis() ?: return emptyList()
         val now = Calendar.getInstance()
         val locked = mutableListOf<LockedWeekRange>()
 
         for (weeksBack in 1..8) {
             val (weekStart, weekEnd) = getWeekRange(weeksBack)
-            val deadline = Calendar.getInstance().apply {
-                timeInMillis = weekEnd.timeInMillis
-                set(Calendar.HOUR_OF_DAY, 15)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
+            val deadline =
+                Calendar.getInstance().apply {
+                    timeInMillis = weekEnd.timeInMillis
+                    set(Calendar.HOUR_OF_DAY, 15)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
             if (deadline.timeInMillis > now.timeInMillis) continue
-            // Only include weeks OUTSIDE the free window
-            if (isWeekFree(weekEnd, cutoff)) continue
+            // Skip weeks the free user gets for free (the N most recent)
+            if (weeksBack <= Constants.FREE_WEEKLY_REVIEW_COUNT) continue
             // Skip if already generated (user may have upgraded and then downgraded)
             if (retroRepo.existsForPeriod("WEEKLY", weekStart.timeInMillis)) continue
             // Check if enough entries exist for this week
             val entries = journalDao.getEntriesBetween(weekStart.timeInMillis, weekEnd.timeInMillis)
             if (entries.size < 2) continue
 
-            val weekOfMonth = weekEnd.get(Calendar.DAY_OF_MONTH).let { day ->
-                when {
-                    day <= 7 -> 1
-                    day <= 14 -> 2
-                    day <= 21 -> 3
-                    else -> 4
+            val weekOfMonth =
+                weekEnd.get(Calendar.DAY_OF_MONTH).let { day ->
+                    when {
+                        day <= 7 -> 1
+                        day <= 14 -> 2
+                        day <= 21 -> 3
+                        else -> 4
+                    }
                 }
-            }
-            val label = context.getString(R.string.retro_period_label_week, weekOfMonth, dfLabel.format(weekStart.time), dfLabel.format(weekEnd.time))
+            val label =
+                context.getString(
+                    R.string.retro_period_label_week,
+                    weekOfMonth,
+                    dfLabel.format(weekStart.time),
+                    dfLabel.format(weekEnd.time),
+                )
             locked.add(LockedWeekRange(weekStart, weekEnd, label, weekOfMonth))
         }
         return locked
@@ -162,10 +166,7 @@ constructor(
         val entriesText: String,
     )
 
-    private suspend fun generateMissingWeekly(
-        isPremium: Boolean,
-        cutoffMillis: Long?,
-    ): Int {
+    private suspend fun generateMissingWeekly(isPremium: Boolean, cutoffMillis: Long?): Int {
         val now = Calendar.getInstance()
 
         // Phase 1: Collect all weeks that need generation
@@ -181,9 +182,13 @@ constructor(
                     set(Calendar.MILLISECOND, 0)
                 }
             if (deadline.timeInMillis > now.timeInMillis) continue
-            // Free users: skip weeks outside the free review period
-            if (!isPremium && !isWeekFree(weekEnd, cutoffMillis)) {
-                Log.d("Retro", "Week ${weeksBack}w ago: outside free period, skipping")
+            // Free users get the FREE_WEEKLY_REVIEW_COUNT most recent weeks (default: 2),
+            // independent of first-entry date or any other parameter.
+            if (!isPremium && weeksBack > Constants.FREE_WEEKLY_REVIEW_COUNT) {
+                Log.d(
+                    "Retro",
+                    "Week ${weeksBack}w ago: locked for free user (> ${Constants.FREE_WEEKLY_REVIEW_COUNT})",
+                )
                 continue
             }
             if (retroRepo.existsForPeriod("WEEKLY", weekStart.timeInMillis)) continue
@@ -298,7 +303,8 @@ ${summaryText.take(500)}"""
                     maxOutputTokens = 50,
                 )
             val title =
-                titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60) ?: context.getString(R.string.retro_fallback_week)
+                titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60)
+                    ?: context.getString(R.string.retro_fallback_week)
 
             // Use endDate to determine week number — consistent with month grouping by endDate
             val weekOfMonth =
@@ -312,7 +318,12 @@ ${summaryText.take(500)}"""
                 }
 
             val label =
-                context.getString(R.string.retro_period_label_week, weekOfMonth, dfLabel.format(task.weekStart.time), dfLabel.format(task.weekEnd.time))
+                context.getString(
+                    R.string.retro_period_label_week,
+                    weekOfMonth,
+                    dfLabel.format(task.weekStart.time),
+                    dfLabel.format(task.weekEnd.time),
+                )
 
             return RetrospectiveSummaryEntity(
                 type = "WEEKLY",
@@ -482,7 +493,8 @@ ${summaryText.take(500)}"""
                     maxOutputTokens = 50,
                 )
             val title =
-                titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60) ?: context.getString(R.string.retro_fallback_month)
+                titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60)
+                    ?: context.getString(R.string.retro_fallback_month)
 
             return RetrospectiveSummaryEntity(
                 type = "MONTHLY",
@@ -611,7 +623,8 @@ Rückblick:
                 maxOutputTokens = 50,
             )
         val title =
-            titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60) ?: context.getString(R.string.retro_fallback_year, year)
+            titleResult.getOrNull()?.trim()?.replace("—", ", ")?.take(60)
+                ?: context.getString(R.string.retro_fallback_year, year)
 
         retroRepo.insert(
             RetrospectiveSummaryEntity(
@@ -691,8 +704,7 @@ Rückblick:
             4 -> {
                 val custom =
                     prefs.getString(com.bestjournal.app.util.Constants.PREF_CUSTOM_PROMPT, "") ?: ""
-                if (custom.isNotBlank())
-                    context.getString(R.string.profile_style_custom, custom)
+                if (custom.isNotBlank()) context.getString(R.string.profile_style_custom, custom)
                 else ""
             }
             else -> ""

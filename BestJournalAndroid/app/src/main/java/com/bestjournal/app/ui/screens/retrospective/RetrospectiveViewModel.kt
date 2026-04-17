@@ -204,6 +204,43 @@ constructor(
                     Log.d("RetroVM", "One-time cleanup: cleared old retrospective data")
                 }
 
+                // Profile-change trigger: if the user switched dashboard scenario since last visit,
+                // wipe all retros and regenerate them with the new profile style.
+                // Uses the same EncryptedSharedPreferences store that SettingsScreen writes to.
+                val encPrefs =
+                    try {
+                        val mk =
+                            androidx.security.crypto.MasterKeys.getOrCreate(
+                                androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
+                            )
+                        androidx.security.crypto.EncryptedSharedPreferences.create(
+                            com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME,
+                            mk,
+                            context,
+                            androidx.security.crypto.EncryptedSharedPreferences
+                                .PrefKeyEncryptionScheme
+                                .AES256_SIV,
+                            androidx.security.crypto.EncryptedSharedPreferences
+                                .PrefValueEncryptionScheme
+                                .AES256_GCM,
+                        )
+                    } catch (_: Exception) {
+                        null
+                    }
+                if (
+                    encPrefs?.getBoolean(
+                        com.bestjournal.app.util.Constants.PREF_RETRO_NEEDS_REGEN,
+                        false,
+                    ) == true
+                ) {
+                    encPrefs
+                        .edit()
+                        .remove(com.bestjournal.app.util.Constants.PREF_RETRO_NEEDS_REGEN)
+                        .apply()
+                    repository.deleteAll()
+                    Log.d("RetroVM", "Profile change detected — regenerating all reviews")
+                }
+
                 val premium = isPremium()
                 _isGenerating.value = true
                 val count = generateUseCase.generateMissing(isPremium = premium)
@@ -267,7 +304,8 @@ constructor(
                         Log.d("RetroVM", "Regenerated $count reviews with new profile style")
                     }
                     // Recalculate locked weeks (or clear for premium)
-                    _lockedWeeks.value = if (!premium) generateUseCase.getLockedWeekRanges() else emptyList()
+                    _lockedWeeks.value =
+                        if (!premium) generateUseCase.getLockedWeekRanges() else emptyList()
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e // Don't catch cancellation
                 } catch (e: Exception) {
@@ -294,7 +332,8 @@ constructor(
                 val count = generateUseCase.generateMissing(isPremium = premium)
                 Log.d("RetroVM", "Retry generated $count reviews")
                 // Recalculate locked weeks (or clear for premium)
-                _lockedWeeks.value = if (!premium) generateUseCase.getLockedWeekRanges() else emptyList()
+                _lockedWeeks.value =
+                    if (!premium) generateUseCase.getLockedWeekRanges() else emptyList()
             } catch (e: Exception) {
                 Log.e("RetroVM", "Retry failed: ${e.message}", e)
                 _errorMessage.value = e.message
