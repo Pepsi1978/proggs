@@ -3746,8 +3746,8 @@ private fun AnalysisTtsShareRow(
                     val ttsOn =
                         ttsPrefs?.getBoolean(
                             com.bestjournal.app.util.Constants.PREF_TTS_ENABLED,
-                            false,
-                        ) ?: false
+                            true,
+                        ) ?: true
                     if (!ttsOn) {
                         android.widget.Toast.makeText(
                                 context,

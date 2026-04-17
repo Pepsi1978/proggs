@@ -78,8 +78,8 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -98,14 +98,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import com.bestjournal.app.util.rememberHapticAction
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
@@ -113,17 +112,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.res.stringResource
 import coil3.compose.AsyncImage
 import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.components.highlightMatches
 import com.bestjournal.app.ui.theme.FeatureAccentOrange
+import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
 import com.bestjournal.app.util.DateTimeFormatter
 import com.bestjournal.app.util.EdgeTtsPlayer
+import com.bestjournal.app.util.rememberHapticAction
 import java.io.File
 import kotlinx.coroutines.delay
 
@@ -165,15 +165,22 @@ fun EntryDetailScreen(
     val tts = remember { EdgeTtsPlayer(context) }
     val ttsPrefs = remember {
         try {
-            val mk = androidx.security.crypto.MasterKeys.getOrCreate(
-                androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-            )
+            val mk =
+                androidx.security.crypto.MasterKeys.getOrCreate(
+                    androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
+                )
             androidx.security.crypto.EncryptedSharedPreferences.create(
-                com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME, mk, context,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME,
+                mk,
+                context,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme
+                    .AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme
+                    .AES256_GCM,
             )
-        } catch (_: Exception) { null }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     DisposableEffect(Unit) {
@@ -255,7 +262,12 @@ fun EntryDetailScreen(
             }
     ) {
         TopAppBar(
-            title = { Text(stringResource(R.string.entry_title), color = MaterialTheme.colorScheme.onBackground) },
+            title = {
+                Text(
+                    stringResource(R.string.entry_title),
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            },
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(
@@ -267,7 +279,11 @@ fun EntryDetailScreen(
             },
             actions = {
                 IconButton(onClick = { viewModel.showDeleteDialog(true) }) {
-                    Icon(Icons.Rounded.Delete, stringResource(R.string.action_delete), tint = NeonRed)
+                    Icon(
+                        Icons.Rounded.Delete,
+                        stringResource(R.string.action_delete),
+                        tint = NeonRed,
+                    )
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
@@ -587,7 +603,10 @@ fun EntryDetailScreen(
                                 )
                             }
                             Button(
-                                onClick = { doHaptic(HapticFeedbackType.LongPress); showPhotoSourceDialog = true },
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    showPhotoSourceDialog = true
+                                },
                                 shape = RoundedCornerShape(12.dp),
                             ) {
                                 Icon(
@@ -611,7 +630,9 @@ fun EntryDetailScreen(
                                         AsyncImage(
                                             model = File(photo.filePath),
                                             contentDescription =
-                                                if (photo.isVideo) stringResource(R.string.label_video) else stringResource(R.string.label_photo),
+                                                if (photo.isVideo)
+                                                    stringResource(R.string.label_video)
+                                                else stringResource(R.string.label_photo),
                                             imageLoader =
                                                 if (photo.isVideo) videoImageLoader
                                                 else coil3.ImageLoader(appContext),
@@ -627,7 +648,8 @@ fun EntryDetailScreen(
                                         if (photo.isVideo) {
                                             Icon(
                                                 Icons.Rounded.PlayCircle,
-                                                contentDescription = stringResource(R.string.entry_cd_play_video),
+                                                contentDescription =
+                                                    stringResource(R.string.entry_cd_play_video),
                                                 modifier =
                                                     Modifier.size(40.dp).align(Alignment.Center),
                                                 tint = Color.White.copy(alpha = 0.9f),
@@ -645,7 +667,8 @@ fun EntryDetailScreen(
                                         ) {
                                             Icon(
                                                 Icons.Rounded.Close,
-                                                contentDescription = stringResource(R.string.entry_cd_remove),
+                                                contentDescription =
+                                                    stringResource(R.string.entry_cd_remove),
                                                 modifier = Modifier.size(16.dp),
                                                 tint = Color.White,
                                             )
@@ -692,9 +715,7 @@ fun EntryDetailScreen(
                     modifier =
                         Modifier.fillMaxWidth()
                             .height(1.dp)
-                            .background(
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-                            )
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f))
                 )
 
                 // Action icons + recording duration directly below divider
@@ -715,25 +736,35 @@ fun EntryDetailScreen(
                                     isSpeaking = false
                                     isTtsLoading = false
                                 } else {
-                                    val ttsOn = ttsPrefs?.getBoolean(
-                                        com.bestjournal.app.util.Constants.PREF_TTS_ENABLED, false
-                                    ) ?: false
+                                    val ttsOn =
+                                        ttsPrefs?.getBoolean(
+                                            com.bestjournal.app.util.Constants.PREF_TTS_ENABLED,
+                                            true,
+                                        ) ?: true
                                     if (!ttsOn) {
                                         android.widget.Toast.makeText(
-                                            context,
-                                            context.getString(R.string.entry_tts_enable_hint),
-                                            android.widget.Toast.LENGTH_SHORT,
-                                        ).show()
+                                                context,
+                                                context.getString(R.string.entry_tts_enable_hint),
+                                                android.widget.Toast.LENGTH_SHORT,
+                                            )
+                                            .show()
                                     } else {
                                         isTtsLoading = true
                                         isSpeaking = true
                                         val speakText =
                                             if (isShowingOriginal) entry.rawText
                                             else entry.displayText
-                                        val voice = ttsPrefs?.getString(
-                                            com.bestjournal.app.util.Constants.PREF_EDGE_TTS_VOICE,
-                                            com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices().defaultVoiceId,
-                                        ) ?: com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices().defaultVoiceId
+                                        val voice =
+                                            ttsPrefs?.getString(
+                                                com.bestjournal.app.util.Constants
+                                                    .PREF_EDGE_TTS_VOICE,
+                                                com.bestjournal.app.util.TtsVoiceRegistry
+                                                    .getLocaleVoices()
+                                                    .defaultVoiceId,
+                                            )
+                                                ?: com.bestjournal.app.util.TtsVoiceRegistry
+                                                    .getLocaleVoices()
+                                                    .defaultVoiceId
                                         tts.speak(
                                             speakText,
                                             voice = voice,
@@ -748,10 +779,10 @@ fun EntryDetailScreen(
                             modifier = Modifier.size(36.dp),
                         ) {
                             Icon(
-                                if (isSpeaking) Icons.Rounded.Stop
-                                else Icons.Rounded.VolumeUp,
+                                if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
                                 contentDescription =
-                                    if (isSpeaking) stringResource(R.string.entry_tts_stop) else stringResource(R.string.entry_tts_read),
+                                    if (isSpeaking) stringResource(R.string.entry_tts_stop)
+                                    else stringResource(R.string.entry_tts_read),
                                 tint = FeatureAccentOrange,
                                 modifier = Modifier.size(22.dp),
                             )
@@ -760,8 +791,7 @@ fun EntryDetailScreen(
                             onClick = {
                                 doHaptic(HapticFeedbackType.LongPress)
                                 val hasImprovedForShare =
-                                    entry.isImproved &&
-                                        !entry.improvedText.isNullOrBlank()
+                                    entry.isImproved && !entry.improvedText.isNullOrBlank()
                                 val photos = uiState.photos
                                 if (!hasImprovedForShare && photos.size <= 1) {
                                     val shareText =
@@ -788,7 +818,11 @@ fun EntryDetailScreen(
                         }
                     }
                     Text(
-                        text = stringResource(R.string.entry_recording_duration, DateTimeFormatter.formatDuration(entry.audioDurationSeconds)),
+                        text =
+                            stringResource(
+                                R.string.entry_recording_duration,
+                                DateTimeFormatter.formatDuration(entry.audioDurationSeconds),
+                            ),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.padding(end = 34.dp),
@@ -804,9 +838,7 @@ fun EntryDetailScreen(
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp,
-                            color =
-                                if (isDark) Color(0xFF5C7AA3)
-                                else Color(0xFF1976D2),
+                            color = if (isDark) Color(0xFF5C7AA3) else Color(0xFF1976D2),
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
@@ -932,7 +964,8 @@ fun EntryDetailScreen(
                         } else {
                             AsyncImage(
                                 model = File(photos[page].filePath),
-                                contentDescription = stringResource(R.string.entry_cd_photo_page, page + 1),
+                                contentDescription =
+                                    stringResource(R.string.entry_cd_photo_page, page + 1),
                                 modifier =
                                     Modifier.fillMaxSize().graphicsLayer {
                                         scaleX = scale
@@ -1068,16 +1101,26 @@ fun EntryDetailScreen(
                                             colors =
                                                 listOf(
                                                     lerp(
-                                                        if (isDark) tilePrimary else Color(0xFF1565C0),
-                                                        if (isDark) tileSecondary else Color(0xFFBDBDBD),
+                                                        if (isDark) tilePrimary
+                                                        else Color(0xFF1565C0),
+                                                        if (isDark) tileSecondary
+                                                        else Color(0xFFBDBDBD),
                                                         flow,
                                                     ),
                                                     lerp(
-                                                        if (isDark) tilePrimary.copy(alpha = 0.8f) else Color(0xFF1976D2),
-                                                        if (isDark) tilePrimary else Color(0xFF1565C0),
+                                                        if (isDark) tilePrimary.copy(alpha = 0.8f)
+                                                        else Color(0xFF1976D2),
+                                                        if (isDark) tilePrimary
+                                                        else Color(0xFF1565C0),
                                                         flow2,
                                                     ),
-                                                    lerp(if (isDark) tileSecondary else Color(0xFFBDBDBD), if (isDark) tilePrimary.copy(alpha = 0.8f) else Color(0xFF1976D2), flow),
+                                                    lerp(
+                                                        if (isDark) tileSecondary
+                                                        else Color(0xFFBDBDBD),
+                                                        if (isDark) tilePrimary.copy(alpha = 0.8f)
+                                                        else Color(0xFF1976D2),
+                                                        flow,
+                                                    ),
                                                 ),
                                             start = Offset(0f, 300f * flow),
                                             end = Offset(300f, 300f * (1f - flow)),
@@ -1126,18 +1169,24 @@ fun EntryDetailScreen(
                                             colors =
                                                 listOf(
                                                     lerp(
-                                                        if (isDark) tilePrimary.copy(alpha = 0.9f) else Color(0xFF0D47A1),
-                                                        if (isDark) tileSecondary else Color(0xFFBDBDBD),
+                                                        if (isDark) tilePrimary.copy(alpha = 0.9f)
+                                                        else Color(0xFF0D47A1),
+                                                        if (isDark) tileSecondary
+                                                        else Color(0xFFBDBDBD),
                                                         flow2,
                                                     ),
                                                     lerp(
-                                                        if (isDark) tilePrimary.copy(alpha = 0.7f) else Color(0xFF1565C0),
-                                                        if (isDark) tilePrimary.copy(alpha = 0.9f) else Color(0xFF0D47A1),
+                                                        if (isDark) tilePrimary.copy(alpha = 0.7f)
+                                                        else Color(0xFF1565C0),
+                                                        if (isDark) tilePrimary.copy(alpha = 0.9f)
+                                                        else Color(0xFF0D47A1),
                                                         flow,
                                                     ),
                                                     lerp(
-                                                        if (isDark) tileSecondary else Color(0xFFBDBDBD),
-                                                        if (isDark) tilePrimary.copy(alpha = 0.7f) else Color(0xFF1565C0),
+                                                        if (isDark) tileSecondary
+                                                        else Color(0xFFBDBDBD),
+                                                        if (isDark) tilePrimary.copy(alpha = 0.7f)
+                                                        else Color(0xFF1565C0),
                                                         flow2,
                                                     ),
                                                 ),
@@ -1197,7 +1246,12 @@ fun EntryDetailScreen(
         AlertDialog(
             onDismissRequest = { viewModel.showDeleteDialog(false) },
             containerColor = MaterialTheme.colorScheme.surface,
-            title = { Text(stringResource(R.string.entry_delete_title), color = MaterialTheme.colorScheme.onSurface) },
+            title = {
+                Text(
+                    stringResource(R.string.entry_delete_title),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            },
             text = {
                 Text(
                     stringResource(R.string.entry_delete_message),
@@ -1217,7 +1271,10 @@ fun EntryDetailScreen(
             },
             dismissButton = {
                 OutlinedButton(onClick = { viewModel.showDeleteDialog(false) }) {
-                    Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        stringResource(R.string.action_cancel),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             },
         )
