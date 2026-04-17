@@ -1,53 +1,170 @@
 ---
 name: string-extraktor
-description: Findet ALLE hardcodierten Strings in Android-Apps (Compose und XML), prueft bestehende String-Ressourcen auf Uebersetzungskompatibilitaet und erstellt fehlende Strings nach internationalen Best Practices. Nutze diesen Skill IMMER wenn der Benutzer sagt "Strings finden", "Strings erstellen", "String-Extraktion", "hardcodierte Strings", "hardcoded Strings suchen", "i18n Audit", "i18n pruefen", "Strings ueberpruefen", "String-Qualitaet", "fehlende Strings", "Strings fehlen noch", "alle Strings extrahieren", "Internationalisierung vorbereiten", "strings.xml auffuellen", "String Extractor", "String Extraktor", "sind alle Strings erstellt?", "Strings komplett?", "i18n fertig?", "alle Texte externalisiert?", "noch nicht uebersetzte Strings". Auch wenn der Benutzer nach einem Feature fragt "pruefe ob alle Strings da sind" oder "bevor wir uebersetzen — sind die Strings vollstaendig?". Dieser Skill ist die VORSTUFE zum Uebersetzungs-Skill: erst String-Extraktor (Strings finden + erstellen), DANN Uebersetzung (Strings in andere Sprachen). Funktioniert fuer JEDES Android-Projekt, nicht nur ein bestimmtes.
+description: Findet ALLE hardcodierten Strings in Android-Apps (Compose und XML), prueft bestehende String-Ressourcen und erstellt fehlende Strings nach deutschen Sprach- und Typografie-Regeln. Primaersprache ist Deutsch — der Skill kennt deutsche Orthographie (ß, Umlaute, neue Rechtschreibung), Typografie („deutsche Anfuehrungszeichen", Halbgeviert –, geschuetzte Leerzeichen), Substantiv-Grossschreibung, Du/Sie-Konsistenz, gendergerechte Sprache, Kompositum-Laengen-Strategien, deutsche Zahlen-/Datums-/Zeit-/Waehrungs-Formate (DIN 5008), CLDR-Plurals (one/other fuer Deutsch) und die DACH-Regionsunterschiede. Nutze diesen Skill IMMER wenn der Benutzer sagt "Strings finden", "Strings erstellen", "String-Extraktion", "hardcodierte Strings", "hardcoded Strings suchen", "i18n Audit", "i18n pruefen", "Strings ueberpruefen", "String-Qualitaet", "fehlende Strings", "Strings fehlen noch", "alle Strings extrahieren", "Internationalisierung vorbereiten", "strings.xml auffuellen", "String Extractor", "String Extraktor", "sind alle Strings erstellt?", "Strings komplett?", "i18n fertig?", "alle Texte externalisiert?", "noch nicht uebersetzte Strings", "deutsche Strings erstellen", "deutsche Sprache pruefen", "sind die Strings korrekt deutsch?". Auch wenn der Benutzer nach einem Feature fragt "pruefe ob alle Strings da sind" oder "bevor wir uebersetzen — sind die Strings vollstaendig?". Dieser Skill ist die VORSTUFE zum Uebersetzungs-Skill: erst String-Extraktor (deutsche Strings finden + erstellen nach DE-Regeln), DANN Uebersetzung (DE-Strings in andere Sprachen). Funktioniert fuer JEDES Android-Projekt, nicht nur ein bestimmtes.
 ---
 
-# String-Extraktor: Hardcodierte Strings finden, pruefen und erstellen
+# String-Extraktor: Deutsche Strings finden, pruefen und erstellen
 
 Dieser Skill arbeitet ein Android-Projekt systematisch ab um sicherzustellen, dass
 **100% aller benutzersichtbaren Strings** als String-Ressourcen in `strings.xml`
-vorliegen — korrekt benannt, mit Platzhaltern, Kommentaren und Plural-Unterstuetzung,
-bereit fuer die Uebersetzung durch den separaten Uebersetzungs-Skill.
+vorliegen — **auf korrektem Deutsch**, typografisch sauber, konsistent in der
+Anrede (Du/Sie), gender-inklusiv wo sinnvoll, mit korrekter Grossschreibung,
+Platzhaltern, Kommentaren und Plural-Unterstuetzung, bereit fuer die
+Uebersetzung durch den separaten Uebersetzungs-Skill.
+
+**Primaersprache:** Alle Apps werden zuerst auf **Deutsch** entwickelt.
+Die deutschen Strings sind der Master — aus ihnen werden alle anderen Sprachen
+uebersetzt. **Qualitaet der deutschen Originale entscheidet ueber die Qualitaet
+aller Uebersetzungen.** Deshalb hat Deutsch in diesem Skill hoechste Prioritaet.
 
 **Abgrenzung:** Dieser Skill ERSTELLT Strings in der Default-Sprache (Deutsch).
 Er uebersetzt NICHT in andere Sprachen — dafuer gibt es den `uebersetzung`-Skill.
 
 ---
 
-## Referenzdatei laden
+## Referenzdateien laden
 
-**Vor dem Start MUSS die Referenzdatei gelesen werden:**
+**Vor dem Start MUESSEN beide Referenzdateien gelesen werden:**
 
 ```
-Read: ~/proggs/string-best-practices.md
+Read: references/string-best-practices.md     (Grep-Muster, Naming, Struktur)
+Read: references/deutsche-sprache.md          (Deutsche Rechtschreibung, Stil, Formate)
 ```
 
-Diese Datei enthaelt 25 Kapitel mit allen Grep-Mustern, Naming-Konventionen,
-Erstellungsregeln und Qualitaets-Checklisten. Die Kapitel werden im Folgenden
-per Nummer referenziert.
+`string-best-practices.md` enthaelt 25 Kapitel mit Grep-Mustern, Naming-Konventionen,
+Erstellungsregeln und Qualitaets-Checklisten (allgemein fuer Android).
 
-Falls die Datei nicht existiert, liegt eine Kopie unter:
-`references/string-best-practices.md` (gebundelt mit diesem Skill).
+`deutsche-sprache.md` enthaelt die komplette deutsche Sprach-Referenz:
+- **Teil A** — Orthographie & Typografie (ß, Umlaute, Anfuehrungszeichen, Striche, Grossschreibung, Rechtschreibung, Zeichensetzung, Abkuerzungen)
+- **Teil B** — UX & Stil (Du/Sie, Gendern, Kompositum-Laenge, System-Strings, Button-Labels, Fehlermeldungen, Anglizismen)
+- **Teil C** — Zahlen, Datum, Zeit, Waehrung, Einheiten, Plurals, Listen, Regional (DE/AT/CH)
+- **Teil D** — Kotlin-Utility + 20-Punkte-Checkliste
+
+Falls die Hauptdatei nicht an der zentralen Stelle liegt, nutze die gebundelten
+Kopien im `references/`-Verzeichnis dieses Skills.
 
 ---
 
-## Die 4 Phasen im Ueberblick
+## Die 5 Phasen im Ueberblick
 
 ```
-PHASE 1: SCAN ──────── Alle hardcodierten Strings finden (Referenz: Kap. 1-10)
+PHASE 0: SPRACH-KONTEXT ── Du/Sie-Entscheidung, Gender-Strategie, Region (NEU)
     │
-PHASE 2: AUDIT ─────── Bestehende strings.xml pruefen (Referenz: Kap. 11-22)
+PHASE 1: SCAN ──────────── Alle hardcodierten Strings finden
     │
-PHASE 3: CREATE ────── Fehlende Strings erstellen (Referenz: Kap. 11-22)
+PHASE 2: AUDIT ─────────── Bestehende strings.xml pruefen (+ deutsche Qualitaet)
     │
-PHASE 4: VERIFY ────── Zweiter Durchlauf + Qualitaet (Referenz: Kap. 23-25)
+PHASE 3: CREATE ────────── Fehlende Strings nach DE-Regeln erstellen
     │
-PHASE 5: FUNKTIONS-CHECK ── Strings duerfen nichts kaputt machen (NEU)
+PHASE 4: VERIFY ────────── Zweiter Durchlauf + DE-Qualitaets-Checkliste (20 Punkte)
+    │
+PHASE 5: FUNKTIONS-CHECK ── Strings duerfen nichts kaputt machen
 ```
 
 Jede Phase endet mit einem **Fortschritts-Report** an den Benutzer.
 Der Benutzer soll nach jeder Phase sehen was gefunden/erstellt/geprueft wurde.
+
+---
+
+## Phase 0: SPRACH-KONTEXT — Deutsche Sprach-Entscheidungen festlegen
+
+> **Warum diese Phase EXISTIERT:** Ein String wie „Willkommen zurueck" kann fuer
+> eine Banking-App komplett falsch sein (muesste Sie-Form heissen), und
+> „Benutzer" ist fuer eine moderne Consumer-App nicht mehr inklusiv (besser
+> „Nutzende"). Diese Entscheidungen MUESSEN einmalig fuer die gesamte App
+> getroffen werden, bevor auch nur ein String erstellt wird.
+
+**Wann diese Phase laeuft:**
+- Bei JEDEM Erstdurchlauf (wenn noch keine `strings.xml` existiert)
+- Wenn `strings.xml` bereits existiert: schnell-pruefen ob die Entscheidungen
+  konsistent umgesetzt wurden, dann zu Phase 1
+- Bei spaeteren Aufrufen: Gespeicherte Entscheidungen laden (siehe 0.4)
+
+### 0.1 Anrede-Entscheidung: Du oder Sie?
+
+Die wichtigste und verbindlichste Entscheidung. Gilt fuer die gesamte App.
+
+**Faustregel fuer Default:**
+- Consumer/Social/Spiele/Fitness/Streaming → **Du**
+- Banking/Versicherung/Medizin/Behoerden/B2B → **Sie**
+- Unklar → **Du** ist der moderne Standard der 2020er
+
+Aus Teil B.1 der Referenz fuer die detaillierte Entscheidungsmatrix.
+
+**Wenn `strings.xml` bereits existiert:** Autodetection durch Stichprobe:
+```
+Grep in values/strings.xml nach "Sie " und "\bdu\b" / "\bdir\b" / "\bdein"
+```
+- Ueberwiegend „Sie/Ihr/Ihnen" → App nutzt Sie-Form
+- Ueberwiegend „du/dir/dein/deine" → App nutzt Du-Form
+- Gemischt → **ALARM** — Inkonsistenz, muss bereinigt werden bevor weitergemacht wird
+
+**Wenn `strings.xml` neu ist:** Benutzer fragen (mit begruendetem Vorschlag):
+```
+Diese App sieht nach [KONTEXT aus Projektname/Features] aus.
+Meine Empfehlung: [Du/Sie]. Grund: [...]
+Ist das okay, oder soll ich eine andere Anrede verwenden?
+```
+
+### 0.2 Gender-Strategie festlegen
+
+**Empfohlene Rangfolge (siehe Teil B.2):**
+1. **Partizip-Substantive** (Nutzende, Lernende) — empfohlen
+2. **Geschlechtsneutrale Substantive** (Person, Konto, Mitglied) — empfohlen
+3. **Doppelpunkt-Notation** (Nutzer:innen) — nur Fliesstext, nie Buttons
+4. **Gender-Stern** (Nutzer*innen) — nur wenn Zielgruppe das erwartet
+5. **Generisches Maskulinum** (Nutzer) — nur noch im absoluten Ausnahmefall
+
+**Default fuer neue Apps:** Strategie 1+2 (Partizip + Neutral).
+
+**Wenn `strings.xml` existiert:** Autodetection via Grep nach `\*in`, `:innen`,
+`_innen`, `/innen` in bestehenden Strings.
+
+### 0.3 Region festlegen
+
+| Region | values-Ordner | Besonderheiten |
+|--------|--------------|---------------|
+| Deutschland (Standard) | `values-de/` | ß, EUR, DIN 5008 |
+| Oesterreich | `values-de-rAT/` | ß, EUR, regionaler Wortschatz (Jaenner) |
+| Schweiz | `values-de-rCH/` | Kein ß (ss), CHF, Apostroph-Trenner |
+
+**Default:** `values-de` fuer alle DACH-Regionen (Deutschland als Basis).
+Nur bei expliziter Zielregion Schweiz/Oesterreich einen zusaetzlichen
+Ordner anlegen.
+
+### 0.4 Entscheidungen in der App festschreiben
+
+Damit spaetere Skill-Aufrufe die Entscheidungen nicht neu treffen muessen,
+werden sie im Kommentar-Header der `strings.xml` hinterlegt:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sprach-Konfiguration:
+  - Anrede: Du (informell, modern)
+  - Gender: Partizip-Substantive + geschlechtsneutrale Begriffe
+  - Region: de (DACH-Standard, Schweiz separat in values-de-rCH)
+  - Stil-Referenz: ~/.claude/skills/string-extraktor/references/deutsche-sprache.md
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+           xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+           tools:locale="de">
+```
+
+### 0.5 Phase-0-Report
+
+```
+SPRACH-KONTEXT FESTGELEGT:
+═══════════════════════════════════════
+Anrede:       Du / Sie
+Gender:       Partizip + Neutral / Gender-Stern / ...
+Region:       Deutschland (values-de)
+Quell-App:    [App-Name]
+Referenz:     references/deutsche-sprache.md
+═══════════════════════════════════════
+
+Alle nachfolgenden Strings werden gemaess dieser Konfiguration erstellt.
+```
 
 ---
 
@@ -402,6 +519,71 @@ sealed class UiText {
 }
 ```
 
+**Schritt 6: Deutsche Sprach-Validierung (PFLICHT fuer jeden neuen String)**
+
+> **Warum dieser Schritt PFLICHT ist:** Primaersprache ist Deutsch. Ein schlecht
+> formulierter deutscher String sabotiert ALLE spaeteren Uebersetzungen. Dieser
+> Schritt fliesst direkt aus `references/deutsche-sprache.md`.
+
+Fuer JEDEN neu erstellten deutschen String diese 10 Validierungen durchgehen
+(Details je Punkt in der DE-Referenz):
+
+| # | Pruefung | DE-Ref | Haeufige Fehler |
+|---|---------|--------|-----------------|
+| 1 | Anrede konsistent mit Phase-0-Entscheidung (Du oder Sie, nie gemischt) | B.1 | `Sie` + `dein` mischen |
+| 2 | Sie/Ihnen/Ihr grossgeschrieben (nur bei Sie-App) | A.3, B.1 | `ihre Daten` statt `Ihre Daten` |
+| 3 | Substantive gross — aber KEINE englische Title Case | A.3 | `Einstellungen Speichern` |
+| 4 | ß vs. ss korrekt (ß nach lang, ss nach kurz, dass/muss) | A.1 | `daß`, `muß`, `Fluß` |
+| 5 | Umlaute direkt (ä, ö, ü, ß) — nie `\u00dc` oder `ae/oe/ue` im Fliesstext | A.1 | `Ueberblick`, `\u00dc` |
+| 6 | Typografische Anfuehrungszeichen „..." wenn Text zitiert wird | A.2 | `"Text"` statt `„Text"` |
+| 7 | Gedankenstrich – (U+2013) mit Leerzeichen fuer Einschuebe; Bis-Strich ohne | A.2 | `9-17 Uhr` statt `9–17 Uhr` |
+| 8 | Kein Punkt bei Buttons, Labels, Titeln; Punkt bei vollstaendigen Saetzen | A.5 | `Speichern.`, `Speichere!` |
+| 9 | Gender: Partizip (`Nutzende`) oder neutral (`Person`) bei neuen Strings | B.2 | neu: `Benutzer` ohne Begruendung |
+| 10 | Kein Denglisch (`geshared`, `geliked`, `canceln`) — deutsche Form | B.7 | `geshared` statt `geteilt` |
+
+**Zusaetzliche Validierung bei bestimmten String-Typen:**
+
+| String-Typ | Zusaetzliche Pruefung | DE-Ref |
+|-----------|----------------------|--------|
+| Button | Infinitiv, nicht Imperativ; max 20 Zeichen; aktionsorientiert | B.5 |
+| Dialog-Button-Paar | Spezifisch statt "Ja"/"Nein" (`Loeschen`/`Behalten`) | B.5 |
+| Fehlermeldung | Nuetzlich + verstaendlich + knapp + empathisch; keine Schuldzuweisung | B.6 |
+| Tab/AppBar-Titel | Unter Laengenlimit; bei langem Kompositum Soft-Hyphen einplanen | B.3 |
+| Zahl/Datum/Zeit/Waehrung | DIN-5008-konform; `GermanFormatter`-Helper nutzen | C.1-C.5 |
+| Plural-String | Nur `one` + `other`; 0 faellt unter `other`; Empty-State separat | C.6 |
+| Technische Abk. (URL, API, PDF) | Immer Grossbuchstaben | A.6 |
+| Geschuetztes Leerzeichen | Vor Einheiten (`100\u00A0MB`), in `z.\u00A0B.` | A.6 |
+
+**Bei Verstoss:** Direkt den String ueberarbeiten. Nicht erst am Ende sammeln —
+der Fix ist waehrend des Schreibens 10x schneller als nachtraeglich.
+
+**Automatisierbare DE-Checks (Grep-basiert):**
+
+```
+# Verstoss: englische Title Case in Composita
+Grep: "[a-zäöüß]+\s+[A-ZÄÖÜ][a-zäöüß]+\s+[A-ZÄÖÜ]"  (in strings.xml, kontextabhaengig)
+
+# Verstoss: veraltete Rechtschreibung
+Grep: "daß|muß|Haß|Fluß|Tip\b"
+
+# Verstoss: Schreibmaschinen-Anfuehrungszeichen
+Grep: >[^<]*"[^"]*"[^<]*<    (in strings.xml, indikativ)
+
+# Verstoss: Bindestrich statt Bis-Strich
+Grep: "\d+\s*-\s*\d+\s*Uhr"
+
+# Verstoss: Denglisch
+Grep: "ge(shared|liked|checked|pushed|downloaded)"
+
+# Verstoss: Unicode-Escape fuer deutsche Umlaute im Code
+Grep: "\\u00(dc|fc|d6|f6|c4|e4|df)"
+
+# Verstoss: fehlendes geschuetztes Leerzeichen vor Einheit
+Grep: "\d+(MB|GB|KB|kg|km|°C|%)\b"    (ohne NBSP oder Leerzeichen davor)
+```
+
+Diese Grep-Muster laufen automatisch in Phase 4 (VERIFY).
+
 ### 3.3 Mengenangaben: Plurals statt if/else
 
 Wenn ein String eine Zahl enthaelt die sich auf eine Menge bezieht:
@@ -469,17 +651,17 @@ Diesmal sollten KEINE Treffer mehr erscheinen. Wenn doch:
 
 Wenn der Build fehlschlaegt: Fehler analysieren und fixen bevor weitergegangen wird.
 
-### 4.4 Abschluss-Checkliste (14 Punkte)
+### 4.4 Abschluss-Checkliste (14 Struktur + 20 Deutsch = 34 Punkte)
 
-Alle Punkte muessen mit JA beantwortet werden (Details: Referenzdatei Kapitel 24):
+Alle Punkte muessen mit JA beantwortet werden (Details: Referenzdateien).
 
-**Nach dem Finden:**
+**Nach dem Finden (Struktur):**
 - [ ] Grep-Muster 1-9 auf alle .kt-Dateien angewendet?
 - [ ] Alle Screens im Inventar abgehakt?
 - [ ] ViewModels auf benutzersichtbare Strings geprueft?
 - [ ] Content Descriptions fuer alle Icons/Bilder vorhanden?
 
-**Nach dem Erstellen:**
+**Nach dem Erstellen (Struktur):**
 - [ ] Naming-Konvention `screen_element_beschreibung` konsistent?
 - [ ] Alle Platzhalter nummeriert (`%1$s`, nicht `%s`)?
 - [ ] `xliff:g` fuer alle Platzhalter mit `id` + `example`?
@@ -490,6 +672,57 @@ Alle Punkte muessen mit JA beantwortet werden (Details: Referenzdatei Kapitel 24
 - [ ] `tools:locale="de"` im `<resources>`-Tag gesetzt?
 - [ ] XLIFF-Namespace im `<resources>`-Tag deklariert?
 - [ ] Build kompiliert ohne Fehler?
+
+**Deutsche Sprach-Qualitaet — 20 Punkte (aus references/deutsche-sprache.md, Teil D.2):**
+
+*Orthographie & Typografie (6 Punkte)*
+- [ ] ß nach langem Vokal / nach Diphthong; ss nach kurzem Vokal (kein `daß`, `muß`, `Haß`, `Fluß`)
+- [ ] Umlaute ä/ö/ü/ß direkt in UTF-8 — KEIN `\u00dc`-Escape im Kotlin-Code
+- [ ] Typografische Anfuehrungszeichen `„..."` statt `"..."`
+- [ ] Gedankenstrich `–` (U+2013) mit Leerzeichen fuer Einschuebe; ohne fuer Bis-Spannen (`9–17 Uhr`)
+- [ ] Substantive IMMER gross, auch in Ueberschriften (kein `Einstellungen Speichern`)
+- [ ] Auslassungspunkte `…` (U+2026) als 1 Zeichen, nicht drei Punkte
+
+*Stil & UX (4 Punkte)*
+- [ ] Du/Sie konsistent in der GESAMTEN App — keine Mischung
+- [ ] Sie/Ihnen/Ihr IMMER grossgeschrieben (bei Sie-Apps)
+- [ ] Gender-neutrale Formen bei neuen Strings bevorzugt (Partizip: `Nutzende`, `Lernende`)
+- [ ] Keine Genderzeichen (`*`, `:`, `_`) in Button-Labels (Screenreader-Stoerung!)
+
+*Buttons & Labels (5 Punkte)*
+- [ ] Buttons im Infinitiv, nicht Imperativ (`Speichern`, nicht `Speichere!`)
+- [ ] Kein Punkt bei Buttons, Titeln, Labels, Menue-Eintraegen
+- [ ] Dialog-Buttons spezifisch statt `Ja`/`Nein` (`Loeschen`/`Behalten`)
+- [ ] Technische Abkuerzungen IMMER gross (URL, API, PDF, ID)
+- [ ] Max. Laengen beachtet (Tab: 12, Button: 20, AppBar: 25, Menue: 30)
+
+*Formate (5 Punkte)*
+- [ ] Dezimaltrennzeichen `,` — NIE `.` (`3,14`, nicht `3.14`)
+- [ ] Datum `TT.MM.JJJJ` (`17.04.2026`) oder ausgeschrieben `17. April 2026`
+- [ ] Zeit 24-Stunden-Format (`14:30`), nie 12h mit PM
+- [ ] Waehrung `10,50 €` (Symbol NACH Betrag, mit geschuetztem Leerzeichen `\u00A0`)
+- [ ] Plurals: NUR `one` + `other` fuer Deutsch (kein `zero`/`few`/`many`)
+
+**Automatisierte DE-Grep-Checks in Phase 4:**
+```
+# Veraltete Rechtschreibung
+Grep: (daß|muß|mußt|Haß|Fluß|Tip\b)    → muss 0 Treffer sein
+
+# Unicode-Escape-Umlaute im Code
+Grep: \\u00(dc|fc|d6|f6|c4|e4|df)       → muss 0 Treffer sein
+
+# Denglisch
+Grep: ge(shared|liked|checked|pushed|downloaded)   → 0 Treffer
+
+# Bindestrich statt Bis-Strich bei Zeitspannen
+Grep: \d+\s*-\s*\d+\s*Uhr                → muss 0 Treffer sein
+
+# Schreibmaschinen-Anfuehrungszeichen in sichtbaren Strings
+Grep in strings.xml: >[^<]*\"[^\"]*\"[^<]*<    → pruefen
+
+# Fehlendes NBSP vor Einheit
+Grep: \d+(MB|GB|kg|km|°C)\b              → pruefen
+```
 
 ### 4.5 Ergebnis-Report (PFLICHT — dem Benutzer zeigen)
 
@@ -748,6 +981,7 @@ FUNKTIONALITAETS-CHECK
 
 ### Was NIEMALS gemacht werden darf
 
+**Struktur/Technik:**
 - ❌ Bestehende Strings loeschen (nur neue hinzufuegen oder bestehende korrigieren)
 - ❌ Log-Statements, Analytics-Events oder technische Keys extrahieren
 - ❌ Strings in `@Preview`-Composables extrahieren (nur IDE-Vorschau)
@@ -761,6 +995,28 @@ FUNKTIONALITAETS-CHECK
 - ❌ Enum-displayName gleichzeitig fuer UI-Anzeige UND Datenspeicherung nutzen
 - ❌ `stringResource()` in `remember {}` cachen (aktualisiert sich nicht bei Sprachwechsel)
 - ❌ Click-Handler beim Refactoring von Text() zu stringResource() verlieren
+
+**Deutsche Sprache (zusaetzlich):**
+- ❌ Du und Sie in der gleichen App mischen — muss app-weit konsistent sein
+- ❌ Sie/Ihnen/Ihr klein schreiben (das ist 3. Person Plural, nicht Anrede)
+- ❌ Veraltete Rechtschreibung (`daß`, `muß`, `Haß`, `Fluß`, `Tip`) verwenden
+- ❌ Unicode-Escapes `\u00dc` statt `Ü` im Kotlin-Code — muss als String-Ressource extrahiert werden
+- ❌ Englische Title Case in deutschen Ueberschriften (`Einstellungen Speichern` statt `Einstellungen speichern`)
+- ❌ Schreibmaschinen-Anfuehrungszeichen `"..."` statt typografischer `„..."` in sichtbaren Strings
+- ❌ Bindestrich `-` statt Bis-Strich `–` bei Zeitspannen (`9-17 Uhr`)
+- ❌ Drei Punkte `...` statt Auslassungspunkte `…` (U+2026)
+- ❌ Generisches Maskulinum (`Benutzer`) in NEUEN Strings ohne Begruendung — bevorzugt Partizip (`Nutzende`) oder Neutral (`Person`)
+- ❌ Genderzeichen (`*`, `:`, `_`) in Button-Labels (stoert Screenreader)
+- ❌ Denglisch-Formen (`geshared`, `geliked`, `downgeloaded`, `canceln`, `forwarden`)
+- ❌ Punkt am Ende von Buttons, Titeln, Labels, Menue-Eintraegen
+- ❌ Imperativ-Form statt Infinitiv (`Speichere!` statt `Speichern`)
+- ❌ Vage Dialog-Buttons (`Ja`/`Nein`) statt spezifischer Aktionen (`Loeschen`/`Behalten`)
+- ❌ Fehlendes geschuetztes Leerzeichen zwischen Zahl und Einheit (`100MB` statt `100\u00A0MB`)
+- ❌ Englisches Zahlenformat (`3.14`, `1,000.50`) statt deutschem (`3,14`, `1.000,50`)
+- ❌ 12-Stunden-Zeitformat mit AM/PM — immer 24h (`14:30`)
+- ❌ Waehrungssymbol VOR dem Betrag (`€10,50`) statt DANACH (`10,50 €`)
+- ❌ `quantity="zero"` in Plurals verwenden — fuer Deutsch wirkungslos, Empty-State separat
+- ❌ `Benutzer` durch `Benutzer*in` in Button-Label ersetzen — nutze `Person` oder `Nutzende`
 
 ### Effiziente Bearbeitung bei grossen Projekten
 
