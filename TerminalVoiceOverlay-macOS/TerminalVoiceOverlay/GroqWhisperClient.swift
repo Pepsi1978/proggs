@@ -32,7 +32,7 @@ final class GroqWhisperClient {
 
         var body = Data()
         let fields: [(String, String)] = [
-            ("model", "whisper-large-v3"),
+            ("model", "whisper-large-v3-turbo"),
             ("language", "de"),
             ("response_format", "text"),
             ("temperature", "0")

@@ -145,7 +145,7 @@ Trage mindestens deinen **Groq API-Key** ein. Die wichtigsten Einstellungen:
 | Variable | Pflicht | Beschreibung |
 |---|---|---|
 | `GROQ_API_KEY` | Ja | Dein Groq API-Key fuer Whisper Speech-to-Text |
-| `WHISPER_MODEL` | Nein | Whisper-Modell (Standard: `whisper-large-v3`) |
+| `WHISPER_MODEL` | Nein | Whisper-Modell (Standard: `whisper-large-v3-turbo`) |
 | `WHISPER_LANG` | Nein | Sprache der Aufnahme (Standard: `de` fuer Deutsch) |
 | `GEMINI_API_KEY` | Nein | Google Gemini API-Key fuer Textkorrektur |
 | `GEMINI_MODEL` | Nein | Gemini-Modell (Standard: `gemini-3.1-flash-lite-preview`) |
