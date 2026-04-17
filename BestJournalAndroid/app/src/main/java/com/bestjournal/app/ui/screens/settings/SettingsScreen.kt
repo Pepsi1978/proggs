@@ -2232,19 +2232,27 @@ fun SettingsScreen(
                             )
                 ) {
                     Column {
-                        Box(modifier = Modifier.fillMaxWidth()) {
+                        // Icon sits next to the text, but an invisible end-spacer of the same
+                        // width as (icon + icon-spacer) keeps the text optically centered
+                        // within the card — as if the icon weren't there.
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
                             Icon(
                                 Icons.Rounded.Description,
                                 null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp).align(Alignment.CenterStart),
+                                modifier = Modifier.size(20.dp),
                             )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 stringResource(R.string.settings_export_data),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.align(Alignment.Center),
                             )
+                            Spacer(modifier = Modifier.width(28.dp)) // mirrors icon + inner spacer
                         }
                         if (uiState.isSubscribed) {
                             Spacer(modifier = Modifier.height(12.dp))
