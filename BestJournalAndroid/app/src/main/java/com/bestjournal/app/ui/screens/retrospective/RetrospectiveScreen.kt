@@ -1,7 +1,5 @@
 package com.bestjournal.app.ui.screens.retrospective
 
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import com.bestjournal.app.util.rememberHapticAction
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.RepeatMode
@@ -46,15 +44,15 @@ import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -81,9 +79,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -92,15 +92,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import com.bestjournal.app.R
 import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity
-import com.bestjournal.app.domain.usecase.GenerateRetrospectiveUseCase
 import com.bestjournal.app.ui.components.SunMoonToggle
 import com.bestjournal.app.ui.theme.FeatureAccentOrange
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.util.EdgeTtsPlayer
-import androidx.compose.ui.res.stringResource
-import com.bestjournal.app.R
+import com.bestjournal.app.util.rememberHapticAction
 import java.util.Calendar
 
 object RetrospectiveColors {
@@ -126,17 +125,17 @@ object RetrospectiveColors {
         get() =
             if (LocalIsDarkTheme.current) {
                 listOf(
-                    Color(0xFF1A2744),  // Deep navy blue top
-                    Color(0xFF152238),  // Darker navy mid-upper
-                    Color(0xFF0D1929),  // Near-black blue mid-lower
-                    cardDark,           // CardSurface bottom
+                    Color(0xFF1A2744), // Deep navy blue top
+                    Color(0xFF152238), // Darker navy mid-upper
+                    Color(0xFF0D1929), // Near-black blue mid-lower
+                    cardDark, // CardSurface bottom
                 )
             } else {
                 listOf(
-                    Color(0xFFBBDEFB),  // Light blue top (Material Blue 100)
-                    Color(0xFFE3F2FD),  // Very light blue mid-upper (Blue 50)
-                    Color(0xFFF5F8FF),  // Near-white blue mid-lower
-                    Color.White,         // White bottom
+                    Color(0xFFBBDEFB), // Light blue top (Material Blue 100)
+                    Color(0xFFE3F2FD), // Very light blue mid-upper (Blue 50)
+                    Color(0xFFF5F8FF), // Near-white blue mid-lower
+                    Color.White, // White bottom
                 )
             }
 
@@ -158,10 +157,7 @@ object RetrospectiveColors {
             if (LocalIsDarkTheme.current) {
                 listOf(Color(0xFF1A2744), Color(0xFF181818)) // Deep navy → dark
             } else {
-                listOf(
-                    Color(0xFFE3F2FD),
-                    Color.White,
-                ) // Light blue → white (matches header theme)
+                listOf(Color(0xFFE3F2FD), Color.White) // Light blue → white (matches header theme)
             }
 
     val monthColors: List<Color>
@@ -191,6 +187,10 @@ fun RetrospectiveScreen(
     val lockedWeeks by viewModel.lockedWeeks.collectAsState()
     val subState by viewModel.subscriptionState.collectAsState()
     val isPremium = subState is SubscriptionState.Subscribed
+
+    // Check profile-change flag on every tab entry — triggers regeneration if user
+    // switched dashboard scenario since last visit.
+    LaunchedEffect(Unit) { viewModel.checkProfileChangeAndRegenerate() }
 
     var selectedSummary by remember { mutableStateOf<RetrospectiveSummaryEntity?>(null) }
     var weeklyExpanded by rememberSaveable { mutableStateOf(false) }
@@ -244,10 +244,12 @@ fun RetrospectiveScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         SunMoonToggle()
                     }
-                    IconButton(onClick = {
-                        doHaptic(HapticFeedbackType.LongPress)
-                        showInfoDialog = true
-                    }) {
+                    IconButton(
+                        onClick = {
+                            doHaptic(HapticFeedbackType.LongPress)
+                            showInfoDialog = true
+                        }
+                    ) {
                         Icon(
                             imageVector = Icons.Rounded.Info,
                             contentDescription = stringResource(R.string.retro_cd_info),
@@ -383,7 +385,10 @@ fun RetrospectiveScreen(
                             androidx.compose.material3.TextButton(
                                 onClick = { viewModel.clearError() }
                             ) {
-                                Text(stringResource(R.string.action_later), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    stringResource(R.string.action_later),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
@@ -406,9 +411,7 @@ fun RetrospectiveScreen(
                 ) {
                     Column(modifier = Modifier.padding(top = 12.dp)) {
                         if (weekly.isEmpty() && lockedWeeks.isEmpty()) {
-                            EmptyHint(
-                                stringResource(R.string.retro_weekly_empty)
-                            )
+                            EmptyHint(stringResource(R.string.retro_weekly_empty))
                         }
 
                         // Free weekly reviews
@@ -457,7 +460,8 @@ fun RetrospectiveScreen(
                             }
                         }
 
-                        // Locked week placeholders (premium-gated) — shown even without free reviews
+                        // Locked week placeholders (premium-gated) — shown even without free
+                        // reviews
                         if (lockedWeeks.isNotEmpty()) {
                             lockedWeeks.forEachIndexed { index, locked ->
                                 Spacer(modifier = Modifier.height(10.dp))
@@ -476,13 +480,13 @@ fun RetrospectiveScreen(
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        doHaptic(HapticFeedbackType.LongPress)
-                                        showPremiumSheet = true
-                                    }
-                                    .padding(vertical = 8.dp),
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .clickable {
+                                            doHaptic(HapticFeedbackType.LongPress)
+                                            showPremiumSheet = true
+                                        }
+                                        .padding(vertical = 8.dp),
                             )
                         }
                     }
@@ -513,9 +517,7 @@ fun RetrospectiveScreen(
                 ) {
                     Column(modifier = Modifier.padding(top = 12.dp)) {
                         if (monthly.isEmpty()) {
-                            EmptyHint(
-                                stringResource(R.string.retro_monthly_empty)
-                            )
+                            EmptyHint(stringResource(R.string.retro_monthly_empty))
                         } else {
                             monthly.forEachIndexed { index, summary ->
                                 if (index > 0) {
@@ -567,9 +569,7 @@ fun RetrospectiveScreen(
                 ) {
                     Column(modifier = Modifier.padding(top = 12.dp)) {
                         if (yearly.isEmpty()) {
-                            EmptyHint(
-                                stringResource(R.string.retro_yearly_empty)
-                            )
+                            EmptyHint(stringResource(R.string.retro_yearly_empty))
                         } else {
                             yearly.forEachIndexed { index, summary ->
                                 TimelineSummaryEntry(
@@ -700,9 +700,10 @@ private fun CategoryButton(
             }
 
             Icon(
-                imageVector = if (expanded) Icons.Rounded.ExpandLess
-                    else Icons.Rounded.ExpandMore,
-                contentDescription = if (expanded) stringResource(R.string.retro_cd_collapse) else stringResource(R.string.retro_cd_expand),
+                imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                contentDescription =
+                    if (expanded) stringResource(R.string.retro_cd_collapse)
+                    else stringResource(R.string.retro_cd_expand),
                 tint =
                     if (isDark) Color.White.copy(alpha = 0.7f)
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
@@ -825,15 +826,22 @@ private fun SummaryDetailDialog(
     val tts = remember { EdgeTtsPlayer(context) }
     val ttsPrefs = remember {
         try {
-            val mk = androidx.security.crypto.MasterKeys.getOrCreate(
-                androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-            )
+            val mk =
+                androidx.security.crypto.MasterKeys.getOrCreate(
+                    androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
+                )
             androidx.security.crypto.EncryptedSharedPreferences.create(
-                com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME, mk, context,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME,
+                mk,
+                context,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme
+                    .AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme
+                    .AES256_GCM,
             )
-        } catch (_: Exception) { null }
+        } catch (_: Exception) {
+            null
+        }
     }
     val photos by viewModel.currentPhotos.collectAsState()
     val parsed = remember(summary.summaryText) { parseRetrospectiveText(summary.summaryText) }
@@ -1047,7 +1055,10 @@ private fun SummaryDetailDialog(
                                 Box {
                                     AsyncImage(
                                         model = photo.filePath,
-                                        contentDescription = if (photo.isVideo) stringResource(R.string.retro_cd_video) else stringResource(R.string.retro_cd_photo),
+                                        contentDescription =
+                                            if (photo.isVideo)
+                                                stringResource(R.string.retro_cd_video)
+                                            else stringResource(R.string.retro_cd_photo),
                                         contentScale = ContentScale.Crop,
                                         modifier =
                                             Modifier.size(120.dp)
@@ -1057,7 +1068,8 @@ private fun SummaryDetailDialog(
                                     if (photo.isVideo) {
                                         Icon(
                                             Icons.Rounded.PlayCircle,
-                                            contentDescription = stringResource(R.string.retro_play_video),
+                                            contentDescription =
+                                                stringResource(R.string.retro_play_video),
                                             modifier = Modifier.size(40.dp).align(Alignment.Center),
                                             tint = Color.White.copy(alpha = 0.9f),
                                         )
@@ -1089,15 +1101,18 @@ private fun SummaryDetailDialog(
                                     isSpeaking = false
                                     isTtsLoading = false
                                 } else {
-                                    val ttsOn = ttsPrefs?.getBoolean(
-                                        com.bestjournal.app.util.Constants.PREF_TTS_ENABLED, false
-                                    ) ?: false
+                                    val ttsOn =
+                                        ttsPrefs?.getBoolean(
+                                            com.bestjournal.app.util.Constants.PREF_TTS_ENABLED,
+                                            false,
+                                        ) ?: false
                                     if (!ttsOn) {
                                         android.widget.Toast.makeText(
-                                            context,
-                                            context.getString(R.string.retro_enable_voices),
-                                            android.widget.Toast.LENGTH_SHORT,
-                                        ).show()
+                                                context,
+                                                context.getString(R.string.retro_enable_voices),
+                                                android.widget.Toast.LENGTH_SHORT,
+                                            )
+                                            .show()
                                     } else {
                                         isTtsLoading = true
                                         isSpeaking = true
@@ -1107,10 +1122,17 @@ private fun SummaryDetailDialog(
                                                     "${it.heading}.\n${it.body}"
                                                 }
                                             else summary.summaryText
-                                        val voice = ttsPrefs?.getString(
-                                            com.bestjournal.app.util.Constants.PREF_EDGE_TTS_VOICE,
-                                            com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices().defaultVoiceId,
-                                        ) ?: com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices().defaultVoiceId
+                                        val voice =
+                                            ttsPrefs?.getString(
+                                                com.bestjournal.app.util.Constants
+                                                    .PREF_EDGE_TTS_VOICE,
+                                                com.bestjournal.app.util.TtsVoiceRegistry
+                                                    .getLocaleVoices()
+                                                    .defaultVoiceId,
+                                            )
+                                                ?: com.bestjournal.app.util.TtsVoiceRegistry
+                                                    .getLocaleVoices()
+                                                    .defaultVoiceId
                                         tts.speak(
                                             speakText,
                                             voice = voice,
@@ -1126,13 +1148,18 @@ private fun SummaryDetailDialog(
                         ) {
                             Icon(
                                 if (isSpeaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp,
-                                contentDescription = if (isSpeaking) stringResource(R.string.retro_tts_stop) else stringResource(R.string.retro_tts_read),
+                                contentDescription =
+                                    if (isSpeaking) stringResource(R.string.retro_tts_stop)
+                                    else stringResource(R.string.retro_tts_read),
                                 tint = FeatureAccentOrange,
                                 modifier = Modifier.size(24.dp),
                             )
                         }
                         IconButton(
-                            onClick = { doHaptic(HapticFeedbackType.LongPress); showShareDialog = true },
+                            onClick = {
+                                doHaptic(HapticFeedbackType.LongPress)
+                                showShareDialog = true
+                            },
                             modifier = Modifier.size(40.dp),
                         ) {
                             Icon(
@@ -1154,7 +1181,9 @@ private fun SummaryDetailDialog(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = if (LocalIsDarkTheme.current) Color(0xFF5C7AA3) else Color(0xFF1976D2),
+                                color =
+                                    if (LocalIsDarkTheme.current) Color(0xFF5C7AA3)
+                                    else Color(0xFF1976D2),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
@@ -1176,7 +1205,12 @@ private fun SummaryDetailDialog(
 
         AlertDialog(
             onDismissRequest = { showShareDialog = false },
-            title = { Text(stringResource(R.string.retro_share_title), color = MaterialTheme.colorScheme.onSurface) },
+            title = {
+                Text(
+                    stringResource(R.string.retro_share_title),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     // Text checkbox
@@ -1189,7 +1223,10 @@ private fun SummaryDetailDialog(
                             onCheckedChange = { shareText = it },
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.retro_share_text_content), color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            stringResource(R.string.retro_share_text_content),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
 
                     // Photo/Video checkboxes
@@ -1222,7 +1259,8 @@ private fun SummaryDetailDialog(
                                             .padding(end = 8.dp),
                                 )
                                 Text(
-                                    if (photo.isVideo) stringResource(R.string.retro_cd_video) else stringResource(R.string.retro_cd_photo),
+                                    if (photo.isVideo) stringResource(R.string.retro_cd_video)
+                                    else stringResource(R.string.retro_cd_photo),
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
@@ -1233,7 +1271,8 @@ private fun SummaryDetailDialog(
             confirmButton = {
                 androidx.compose.material3.Button(
                     onClick = {
-                        val textContent = if (shareText) buildShareText(context, summary, parsed) else null
+                        val textContent =
+                            if (shareText) buildShareText(context, summary, parsed) else null
                         val photoUris =
                             photos
                                 .filterIndexed { i, _ ->
@@ -1272,14 +1311,19 @@ private fun SummaryDetailDialog(
 
                         if (intent != null) {
                             context.startActivity(
-                                android.content.Intent.createChooser(intent, context.getString(R.string.retro_share_title))
+                                android.content.Intent.createChooser(
+                                    intent,
+                                    context.getString(R.string.retro_share_title),
+                                )
                             )
                         }
                         showShareDialog = false
                     },
                     colors =
                         androidx.compose.material3.ButtonDefaults.buttonColors(
-                            containerColor = if (LocalIsDarkTheme.current) Color(0xFF2C4A6E) else Color(0xFF1976D2)
+                            containerColor =
+                                if (LocalIsDarkTheme.current) Color(0xFF2C4A6E)
+                                else Color(0xFF1976D2)
                         ),
                 ) {
                     Text(stringResource(R.string.action_share))
@@ -1287,7 +1331,10 @@ private fun SummaryDetailDialog(
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { showShareDialog = false }) {
-                    Text(stringResource(R.string.action_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        stringResource(R.string.action_cancel),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             },
         )
@@ -1404,7 +1451,8 @@ private fun SummaryDetailDialog(
                         } else {
                             AsyncImage(
                                 model = java.io.File(photos[page].filePath),
-                                contentDescription = stringResource(R.string.retro_photo_n, page + 1),
+                                contentDescription =
+                                    stringResource(R.string.retro_photo_n, page + 1),
                                 modifier =
                                     Modifier.fillMaxSize().graphicsLayer {
                                         scaleX = scale
@@ -1439,7 +1487,11 @@ private fun SummaryDetailDialog(
                             .padding(16.dp)
                             .background(Color.Black.copy(alpha = 0.5f), CircleShape),
                 ) {
-                    Icon(Icons.Rounded.Close, stringResource(R.string.action_close), tint = Color.White)
+                    Icon(
+                        Icons.Rounded.Close,
+                        stringResource(R.string.action_close),
+                        tint = Color.White,
+                    )
                 }
             }
         }
@@ -1476,11 +1528,7 @@ private fun buildShareText(
 // ── Locked Week Placeholder ────────────────────────────────────────────────
 
 @Composable
-private fun LockedWeekEntry(
-    periodLabel: String,
-    isLast: Boolean,
-    onClick: () -> Unit,
-) {
+private fun LockedWeekEntry(periodLabel: String, isLast: Boolean, onClick: () -> Unit) {
     val isDark = LocalIsDarkTheme.current
     Row(modifier = Modifier.fillMaxWidth()) {
         // Timeline dot (lock icon instead of color dot)
@@ -1489,32 +1537,33 @@ private fun LockedWeekEntry(
             modifier = Modifier.width(32.dp),
         ) {
             Box(
-                modifier = Modifier
-                    .size(14.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (isDark) Color.White.copy(alpha = 0.2f)
-                        else Color.Black.copy(alpha = 0.15f)
-                    ),
+                modifier =
+                    Modifier.size(14.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isDark) Color.White.copy(alpha = 0.2f)
+                            else Color.Black.copy(alpha = 0.15f)
+                        ),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Lock,
                     contentDescription = stringResource(R.string.retro_cd_locked),
                     modifier = Modifier.size(9.dp),
-                    tint = if (isDark) Color.White.copy(alpha = 0.5f)
+                    tint =
+                        if (isDark) Color.White.copy(alpha = 0.5f)
                         else Color.Black.copy(alpha = 0.4f),
                 )
             }
             if (!isLast) {
                 Box(
-                    modifier = Modifier
-                        .width(2.dp)
-                        .height(60.dp)
-                        .background(
-                            if (isDark) Color.White.copy(alpha = 0.08f)
-                            else Color.Black.copy(alpha = 0.08f)
-                        ),
+                    modifier =
+                        Modifier.width(2.dp)
+                            .height(60.dp)
+                            .background(
+                                if (isDark) Color.White.copy(alpha = 0.08f)
+                                else Color.Black.copy(alpha = 0.08f)
+                            )
                 )
             }
         }
@@ -1526,10 +1575,12 @@ private fun LockedWeekEntry(
             onClick = onClick,
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = if (isDark) Color(0xFF181818).copy(alpha = 0.5f)
-                    else Color.White.copy(alpha = 0.6f)
-            ),
+            colors =
+                CardDefaults.cardColors(
+                    containerColor =
+                        if (isDark) Color(0xFF181818).copy(alpha = 0.5f)
+                        else Color.White.copy(alpha = 0.6f)
+                ),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         ) {
             Row(
@@ -1540,7 +1591,8 @@ private fun LockedWeekEntry(
                     Text(
                         text = periodLabel,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (isDark) Color.White.copy(alpha = 0.4f)
+                        color =
+                            if (isDark) Color.White.copy(alpha = 0.4f)
                             else Color.Black.copy(alpha = 0.35f),
                         fontWeight = FontWeight.Medium,
                     )
@@ -1592,29 +1644,32 @@ private fun ReviewBenefitsDialog(onDismiss: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 BenefitSection(
                     title = stringResource(R.string.retro_weekly_title),
-                    points = listOf(
-                        stringResource(R.string.retro_weekly_p1),
-                        stringResource(R.string.retro_weekly_p2),
-                        stringResource(R.string.retro_weekly_p3),
-                        stringResource(R.string.retro_weekly_p4),
-                    ),
+                    points =
+                        listOf(
+                            stringResource(R.string.retro_weekly_p1),
+                            stringResource(R.string.retro_weekly_p2),
+                            stringResource(R.string.retro_weekly_p3),
+                            stringResource(R.string.retro_weekly_p4),
+                        ),
                 )
                 BenefitSection(
                     title = stringResource(R.string.retro_monthly_title),
-                    points = listOf(
-                        stringResource(R.string.retro_monthly_p1),
-                        stringResource(R.string.retro_monthly_p2),
-                        stringResource(R.string.retro_monthly_p3),
-                    ),
+                    points =
+                        listOf(
+                            stringResource(R.string.retro_monthly_p1),
+                            stringResource(R.string.retro_monthly_p2),
+                            stringResource(R.string.retro_monthly_p3),
+                        ),
                     isPremium = true,
                 )
                 BenefitSection(
                     title = stringResource(R.string.retro_yearly_title),
-                    points = listOf(
-                        stringResource(R.string.retro_yearly_p1),
-                        stringResource(R.string.retro_yearly_p2),
-                        stringResource(R.string.retro_yearly_p3),
-                    ),
+                    points =
+                        listOf(
+                            stringResource(R.string.retro_yearly_p1),
+                            stringResource(R.string.retro_yearly_p2),
+                            stringResource(R.string.retro_yearly_p3),
+                        ),
                     isPremium = true,
                 )
             }
@@ -1623,11 +1678,7 @@ private fun ReviewBenefitsDialog(onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun BenefitSection(
-    title: String,
-    points: List<String>,
-    isPremium: Boolean = false,
-) {
+private fun BenefitSection(title: String, points: List<String>, isPremium: Boolean = false) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -1675,26 +1726,24 @@ private fun BenefitSection(
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun ReviewPremiumSheet(
-    onSubscribe: () -> Unit,
-    onDismiss: () -> Unit,
-) {
+private fun ReviewPremiumSheet(onSubscribe: () -> Unit, onDismiss: () -> Unit) {
     // skipPartiallyExpanded = true → sheet opens fully, not half-way
-    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-    )
+    val sheetState =
+        androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // Breathing animation on the CTA button
     val infiniteTransition = rememberInfiniteTransition(label = "reviewCta")
-    val ctaScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.03f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = EaseInOutSine),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "reviewCtaScale",
-    )
+    val ctaScale by
+        infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.03f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(2000, easing = EaseInOutSine),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "reviewCtaScale",
+        )
 
     androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1741,17 +1790,16 @@ private fun ReviewPremiumSheet(
             Spacer(modifier = Modifier.height(28.dp))
             androidx.compose.material3.Button(
                 onClick = onSubscribe,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp)
-                    .graphicsLayer {
+                modifier =
+                    Modifier.fillMaxWidth().height(54.dp).graphicsLayer {
                         scaleX = ctaScale
                         scaleY = ctaScale
                     },
                 shape = RoundedCornerShape(16.dp),
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                ),
+                colors =
+                    androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
             ) {
                 Text(
                     stringResource(R.string.retro_start_sub),

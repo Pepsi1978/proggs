@@ -282,6 +282,46 @@ constructor(
         }
     }
 
+    /**
+     * Called whenever the user re-enters the Retrospective screen. Checks the profile-change flag
+     * and triggers a full regeneration if the user switched dashboard scenarios since last visit.
+     */
+    fun checkProfileChangeAndRegenerate() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val encPrefs =
+                try {
+                    val mk =
+                        androidx.security.crypto.MasterKeys.getOrCreate(
+                            androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
+                        )
+                    androidx.security.crypto.EncryptedSharedPreferences.create(
+                        com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME,
+                        mk,
+                        context,
+                        androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme
+                            .AES256_SIV,
+                        androidx.security.crypto.EncryptedSharedPreferences
+                            .PrefValueEncryptionScheme
+                            .AES256_GCM,
+                    )
+                } catch (_: Exception) {
+                    return@launch
+                }
+            val needsRegen =
+                encPrefs.getBoolean(
+                    com.bestjournal.app.util.Constants.PREF_RETRO_NEEDS_REGEN,
+                    false,
+                )
+            if (!needsRegen) return@launch
+            encPrefs
+                .edit()
+                .remove(com.bestjournal.app.util.Constants.PREF_RETRO_NEEDS_REGEN)
+                .apply()
+            Log.d("RetroVM", "Profile change detected on tab enter — regenerating")
+            regenerateAll()
+        }
+    }
+
     private var regenerationJob: kotlinx.coroutines.Job? = null
 
     fun regenerateAll() {
