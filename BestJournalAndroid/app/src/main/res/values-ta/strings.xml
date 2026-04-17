@@ -1,0 +1,1067 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+    tools:locale="ta">
+    <!-- App brand name — do not translate -->
+    <string name="app_name" translatable="false">Best Journal</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NAVIGATION & TABS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="nav_journal">நாட்குறிப்பு</string>
+    <string name="nav_retrospective">மீள்பார்வை</string>
+    <string name="nav_dashboard">டாஷ்போர்டு</string>
+    <string name="nav_settings">அமைப்புகள்</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         COMMON / SHARED
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_cancel">ரத்து செய்</string>
+    <string name="action_save">சேமி</string>
+    <string name="action_close">மூடு</string>
+    <string name="action_continue">தொடரவும்</string>
+    <string name="action_understood">புரிந்தது</string>
+    <string name="action_retry">மீண்டும் முயற்சி</string>
+    <string name="action_later">பிறகு</string>
+    <string name="action_share">பகிர்</string>
+    <string name="action_discard">நிராகரி</string>
+    <string name="action_back">பின்னே</string>
+    <string name="action_done">முடிந்தது</string>
+    <string name="action_no_thanks">வேண்டாம்</string>
+    <string name="action_delete">நீக்கு</string>
+    <!-- Accessibility label for the undo icon button on the dashboard. -->
+    <string name="action_undo">செயல் மீட்டெடு</string>
+    <string name="action_ok">சரி</string>
+    <string name="action_go_google_play">Google Play-க்கு செல்</string>
+    <string name="journal_drive_backup_dialog">Google Drive காப்புப்பிரதி</string>
+    <string name="journal_improve_text">✨ உரையை மேம்படுத்து</string>
+    <string name="journal_show_original">↩ அசல் காட்டு</string>
+    <string name="journal_show_improved">✨ மேம்படுத்திய பதிப்பு காட்டு</string>
+    <string name="journal_ai_improving">KI உரையை மேம்படுத்துகிறது — காத்திருங்கள்</string>
+    <string name="journal_later">பிறகு</string>
+    <!-- Paywall missed strings -->
+    <string name="paywall_from_per_day">நாளுக்கு %1$s முதல்</string>
+    <string name="paywall_instead_per_month">மாதத்திற்கு %1$s பதிலாக</string>
+    <string name="paywall_or">அல்லது</string>
+    <string name="paywall_with_limited">வரையறுக்கப்பட்ட வரம்புகளுடன்.</string>
+    <!-- Churn missed string -->
+    <string name="churn_instead_of">பதிலாக </string>
+    <string name="label_premium">Premium</string>
+    <string name="label_original">அசல்</string>
+    <string name="label_improved">மேம்படுத்தப்பட்டது</string>
+    <string name="label_photo">படம்</string>
+    <string name="label_video">வீடியோ</string>
+    <string name="label_current">தற்போதைய</string>
+    <string name="label_record">சாதனை</string>
+    <string name="cd_sync_status">ஒத்திசைவு நிலை</string>
+    <string name="cd_day">பகல்</string>
+    <string name="cd_night">இரவு</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JOURNAL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="journal_title">நாட்குறிப்பு</string>
+    <string name="journal_search_placeholder">பதிவுகளைத் தேடுங்கள்\u2026</string>
+    <string name="journal_search">தேடு</string>
+    <string name="journal_search_hint">தேடல்</string>
+    <string name="journal_search_close">தேடலை மூடு</string>
+    <string name="journal_no_entries">இன்னும் பதிவுகள் இல்லை</string>
+    <string name="journal_tap_mic_to_start">தொடங்க மைக்ரோஃபோனை தொடுங்கள்</string>
+    <string name="journal_cd_streak">தொடர் நாட்கள்</string>
+    <string name="journal_cd_text_input">உரை உள்ளீடு</string>
+    <string name="journal_achievement_unlocked">சாதனை திறக்கப்பட்டது!</string>
+    <string name="journal_drive_not_signed_in">Google-ல் உள்நுழையவில்லை</string>
+    <string name="journal_drive_backup_current">காப்புப்பிரதி தற்போதைய நிலையில் உள்ளது</string>
+    <string name="journal_drive_uploading">காப்புப்பிரதி பதிவேற்றப்படுகிறது\u2026</string>
+    <string name="journal_drive_downloading">புகைப்படங்கள்/வீடியோக்கள் பதிவிறக்கப்படுகின்றன\u2026</string>
+    <string name="journal_drive_failed">காப்புப்பிரதி தோல்வியடைந்தது!</string>
+    <string name="journal_drive_last_sync">கடைசி ஒத்திசைவு: %1$s</string>
+    <string name="journal_new_entry_prompt">எழுதுவதற்கான தூண்டுதல்</string>
+    <string name="journal_new_entry">புதிய பதிவு</string>
+    <string name="journal_save_improved">மேம்படுத்தியதை சேமி</string>
+    <string name="journal_save">சேமி</string>
+    <string name="journal_cd_write">எழுது</string>
+    <string name="journal_write">எழுது</string>
+    <string name="journal_cd_speak">பேசு</string>
+    <string name="journal_speak">பேசு</string>
+    <string name="journal_your_answer">உங்கள் பதில்:</string>
+    <string name="journal_placeholder_prompt">உங்கள் எண்ணங்களை இங்கே எழுதுங்கள்\u2026</string>
+    <string name="journal_placeholder_edit">உரையை திருத்த இங்கே தொடுங்கள்\u2026</string>
+    <string name="journal_freeflow_hint">உங்கள் எண்ணங்களை சுதந்திரமாக வெளியிடுங்கள். சரி அல்லது தவறு என்று எதுவுமில்லை.</string>
+    <string name="journal_transcribed_with">%1$s மூலம் படியெடுக்கப்பட்டது</string>
+    <!-- Default label for the transcription model (local Whisper, runs on-device). -->
+    <string name="transcription_model_local">உள்ளூர் Whisper மாதிரி</string>
+    <!-- Brand name of the Groq transcription model — do not translate. -->
+    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
+    <string name="journal_text_upsell_title">ஆச்சரியமாக இருக்கிறதல்லவா?</string>
+    <string name="journal_text_upsell_body">Premium மூலம் ஒவ்வொரு பதிவையும் மேம்படுத்தலாம்.</string>
+    <string name="journal_discover_premium">Premium கண்டுபிடி →</string>
+    <string name="journal_entries_label">பதிவுகள்</string>
+    <string name="journal_entry_count">%1$d பதிவுகள்</string>
+    <string name="journal_streak_days">%1$d நாட்கள்</string>
+    <string name="journal_streak_days_in_row">%1$d நாட்கள் தொடர்ச்சியாக</string>
+    <string name="journal_streak_next_goal">அடுத்த இலக்கு: %1$d நாட்கள்</string>
+    <string name="journal_streak_remaining">இன்னும் %1$d</string>
+    <string name="journal_streak_premium">Streak பாதுகாப்பு: Premium-ல் கிடைக்கும்</string>
+    <string name="journal_keep_going">தொடர்ந்து செல்லுங்கள்!</string>
+    <string name="journal_daily_prompt">இன்றைய எழுத்து தூண்டுதல்</string>
+    <string name="journal_write_about">இதைப் பற்றி எழுது</string>
+    <string name="journal_recording_error">பதிவு தோல்வியடைந்தது: %1$s</string>
+    <string name="journal_transcription_error">படியெடுத்தல் தோல்வியடைந்தது: %1$s</string>
+    <string name="journal_rate_limit">சிறிது இடைவெளி: அடுத்த மேம்பாட்டிற்கு இன்னும் %1$d நிமிடங்கள்.</string>
+    <string name="journal_improve_error">உரை மேம்பாடு தோல்வியடைந்தது: %1$s</string>
+    <string name="journal_save_error">சேமிப்பு தோல்வியடைந்தது: %1$s</string>
+    <string name="recording_tap_stop">நிறுத்த மீண்டும் தொடுங்கள்</string>
+
+    <!-- Streak messages -->
+    <string name="streak_365">முழு ஒரு ஆண்டு!</string>
+    <string name="streak_180">அசாத்தியமான ஒழுக்கம்!</string>
+    <string name="streak_90">நீங்கள் தடுக்க முடியாதவர்!</string>
+    <string name="streak_30">முழு ஒரு மாதம்!</string>
+    <string name="streak_14">இரண்டு வாரங்கள் வலிமையாக!</string>
+    <string name="streak_7">முழு ஒரு வாரம்!</string>
+    <string name="streak_3">நீங்கள் தொடர்கிறீர்கள்!</string>
+    <string name="streak_default">ஒவ்வொரு நாளும் முக்கியமானது!</string>
+    <string name="streak_desc_365">சிறிய பழக்கமாக தொடங்கியது இப்போது உங்கள் வாழ்வின் அங்கமாகிவிட்டது. உங்கள் நாட்குறிப்பு உங்களை எப்போதையும் விட நன்றாக அறிந்திருக்கிறது.</string>
+    <string name="streak_desc_14">தொடர்ச்சியாக இரண்டு வாரங்கள் — இது மிகச் சிலரால் மட்டுமே சாதிக்கப்படுகிறது. உங்கள் எதிர்கால நான் இதற்காக நன்றி சொல்வார்.</string>
+    <string name="streak_desc_7">எண்ணங்கள், உணர்வுகள் மற்றும் நினைவுகள் நிறைந்த ஒரு வாரம். நீங்கள் இப்போது மதிப்புமிக்க ஒன்றை கட்டி எழுப்புகிறீர்கள்.</string>
+    <string name="streak_desc_3">மூன்று தொடர் நாட்கள் ஒரு உண்மையான பழக்கத்தின் தொடக்கம். தொடர்ந்து செல்லுங்கள், இது மதிப்புக்குரியது!</string>
+    <string name="streak_desc_1">ஒவ்வொரு பதிவும் உங்கள் எதிர்கால நானுக்கு ஒரு சிறிய பரிசு. நாளை மீண்டும் எழுதுங்கள்!</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ENTRY DETAIL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="entry_title">பதிவு</string>
+    <string name="entry_summary">சுருக்கம்</string>
+    <string name="entry_stress_label">சுமை: </string>
+    <string name="entry_saving">சேமிக்கப்படுகிறது\u2026</string>
+    <string name="entry_improving">மேம்படுத்தப்படுகிறது\u2026</string>
+    <string name="entry_improve_with_ai">KI மூலம் பிறகு மேம்படுத்து</string>
+    <string name="entry_photos_videos">புகைப்படங்கள்/வீடியோக்கள்</string>
+    <string name="entry_add">சேர்க்கவும்</string>
+    <string name="entry_no_photos_yet">இன்னும் புகைப்படங்கள்/வீடியோக்கள் சேர்க்கப்படவில்லை</string>
+    <string name="entry_cd_play_video">வீடியோ இயக்கு</string>
+    <string name="entry_cd_remove">அகற்று</string>
+    <string name="entry_tts_enable_hint">அமைப்புகளில் குரல்களை இயக்கவும்</string>
+    <string name="entry_tts_stop">நிறுத்து</string>
+    <string name="entry_tts_read">வாசி</string>
+    <string name="entry_cd_share">பகிர்</string>
+    <string name="entry_recording_duration">பதிவு நேரம்: %1$s</string>
+    <string name="entry_tts_generating">காத்திருங்கள், Text-to-Speech உருவாக்கப்படுகிறது\u2026</string>
+    <string name="entry_cd_photo_page">படம் %1$d</string>
+    <string name="entry_add_photo_video">படம்/வீடியோ சேர்க்கவும்</string>
+    <string name="entry_camera">கேமரா</string>
+    <string name="entry_gallery">கேலரி</string>
+    <string name="entry_delete_title">பதிவை நீக்கவா?</string>
+    <string name="entry_delete_message">இந்த பதிவை நிரந்தரமாக நீக்கவா?</string>
+
+    <!-- Share dialog -->
+    <string name="share_title">பதிவைப் பகிர்</string>
+    <string name="share_which_version">எந்த பதிப்பை பகிர்வது?</string>
+    <string name="share_improved_version">மேம்படுத்திய பதிப்பு</string>
+    <string name="share_photos_videos_label">புகைப்படங்கள்/வீடியோக்கள் பகிர்:</string>
+    <string name="share_footer">BestJournal App-இல் இருந்து நாட்குறிப்பு பதிவு</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DASHBOARD SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="dashboard_title">டாஷ்போர்டு</string>
+    <string name="dashboard_legend">விளக்கம்</string>
+    <string name="dashboard_refresh">புதுப்பி</string>
+    <string name="dashboard_weekly_review_waiting">உங்கள் வார மீள்பார்வை காத்திருக்கிறது</string>
+    <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
+    <string name="dashboard_weekly_review_upsell_body">உங்களுக்கு ஒரு நிறைவான வாரம் இருந்தது. Premium-ல் முழு பகுப்பாய்வை காணலாம் — வடிவங்களை அறியுங்கள், நுண்ணறிவுகளை கண்டுபிடியுங்கள், உங்களை உண்மையிலேயே நகர்த்துவதை புரிந்துகொள்ளுங்கள்.</string>
+    <string name="dashboard_discover_premium">Premium கண்டுபிடி</string>
+    <string name="dashboard_please_wait">காத்திருங்கள்</string>
+    <string name="dashboard_gemini_unavailable">Gemini இப்போது கிடைக்கவில்லை, சற்று நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.</string>
+    <string name="dashboard_no_custom_focus">பகுப்பாய்வு கவனம் உள்ளிடவில்லை</string>
+    <string name="dashboard_custom_focus_hint">அமைப்புகளில் \u201eதனிப்பட்ட பகுப்பாய்வு\u201c என்பதன் கீழ் ஒரு கவனத்தை உள்ளிடுங்கள்,\nஅல்லது வேறொரு சுயவிவரத்தை தேர்வு செய்யுங்கள்.</string>
+    <string name="dashboard_no_analysis_yet">இன்னும் பகுப்பாய்வு இல்லை</string>
+    <string name="dashboard_create_entries_custom">நாட்குறிப்பு பதிவுகளை உருவாக்குங்கள்,\nபிறகு KI உங்கள் கவனத்தை பகுப்பாய்வு செய்யும்.</string>
+    <string name="dashboard_create_entries_default">நாட்குறிப்பு பதிவுகளை உருவாக்குங்கள்,\nபிறகு KI உங்கள் வடிவங்களை பகுப்பாய்வு செய்யும்.</string>
+    <string name="dashboard_like_analysis">பகுப்பாய்வு பிடித்திருக்கிறதா?</string>
+    <string name="dashboard_premium_upsell_body">Premium மூலம் 5 வெவ்வேறு கோணங்களில் வரம்பற்ற பகுப்பாய்வுகள் பெறலாம்.</string>
+    <string name="dashboard_learn_more">மேலும் அறிக</string>
+    <string name="dashboard_feature_analyses">பகுப்பாய்வுகள்</string>
+    <string name="dashboard_all_observations">அனைத்து கவனிப்புகளும்</string>
+    <string name="dashboard_inner_mirror">உள் கண்ணாடி</string>
+    <string name="dashboard_all_insights">அனைத்து நுண்ணறிவுகளும்</string>
+    <string name="dashboard_goal_overview">இலக்கு மேலோட்டம்</string>
+    <string name="dashboard_all_goals">அனைத்து இலக்குகளும்</string>
+    <string name="dashboard_top_results_fallback">முக்கிய முடிவுகள்</string>
+    <string name="dashboard_analysis_fallback">பகுப்பாய்வு</string>
+    <string name="dashboard_all_results_fallback">அனைத்து முடிவுகளும்</string>
+    <string name="dashboard_overall_analysis">ஒட்டுமொத்த பகுப்பாய்வு</string>
+    <!-- Title of the overview card in the Summary dashboard (scenario 0). -->
+    <string name="dashboard_summary_overview_title">மேலோட்டம்</string>
+    <!-- Title of the next-steps card in the Goals dashboard (scenario 3). -->
+    <string name="dashboard_goals_next_steps_title">அடுத்த படிகள்</string>
+    <string name="dashboard_all_recommendations">அனைத்து பரிந்துரைகளும்</string>
+    <string name="dashboard_connection">தொடர்பு</string>
+    <string name="dashboard_limit_daily">நாள் வரம்பு அடைந்தது. நாளை தொடரலாம்!</string>
+    <string name="dashboard_limit_cooldown">சிறிது இடைவெளி: அடுத்த பகுப்பாய்விற்கு இன்னும் %1$d நிமிடங்கள்.</string>
+    <string name="dashboard_analysis_failed">பகுப்பாய்வு தோல்வியடைந்தது</string>
+    <string name="dashboard_last_updated">கடைசியாக புதுப்பிக்கப்பட்டது %1$s</string>
+    <string name="dashboard_loading_profile_switch">ஒவ்வொரு சுயவிவர மாற்றத்திற்கும் பிறகு KI டாஷ்போர்டு தானாக புதுப்பிக்கப்படும்</string>
+    <string name="dashboard_loading_delete_update">ஒவ்வொரு நீக்கப்பட்ட நாட்குறிப்பு பதிவிற்கும் பிறகு KI டாஷ்போர்டு தானாக புதுப்பிக்கப்படும்</string>
+    <string name="dashboard_loading_auto_update">ஒவ்வொரு புதிய நாட்குறிப்பு பதிவிற்கும் பிறகு KI டாஷ்போர்டு தானாக புதுப்பிக்கப்படும்</string>
+    <string name="dashboard_loading_default">KI டாஷ்போர்டு புதுப்பிக்கப்படுகிறது</string>
+
+    <!-- Legend labels -->
+    <string name="legend_urgent">அவசரம்</string>
+    <string name="legend_attention">கவனம்</string>
+    <string name="legend_observe">கவனி</string>
+    <string name="legend_activity_level">செயல்பாட்டு அளவு</string>
+    <string name="legend_activity_desc">அரை வட்டம் இந்த பகுதியில் எவ்வளவு நடக்கிறது என்பதை காட்டுகிறது:</string>
+    <string name="legend_activity_high">அதிக செயல்பாடு (67–100%)</string>
+    <string name="legend_activity_medium">மிதமான செயல்பாடு (34–66%)</string>
+    <string name="legend_activity_low">குறைந்த செயல்பாடு (0–33%)</string>
+    <string name="legend_observation_relevance">கவனிப்புகளின் பொருத்தப்பாடு</string>
+    <string name="legend_relevance_high">மையமானது, உங்கள் பதிவுகளின் முக்கிய தலைப்புகள்</string>
+    <string name="legend_relevance_medium">பொருத்தமானது, திரும்பி வரும் கவனிப்புகள்</string>
+    <string name="legend_relevance_low">ஓரிரு குறிப்பு, ஒரே ஒரு முறை குறிப்பிடப்பட்டது</string>
+    <string name="legend_reflection_depth">சிந்தனையின் ஆழம்</string>
+    <string name="legend_reflection_desc">அரை வட்டம் உங்கள் சுய சிந்தனையின் ஆழத்தை காட்டுகிறது:</string>
+    <string name="legend_reflection_deep">ஆழமானது (67–100%)</string>
+    <string name="legend_reflection_aware">விழிப்புள்ளது (34–66%)</string>
+    <string name="legend_reflection_surface">மேற்பரப்பு (0–33%)</string>
+    <string name="legend_insight_depth">நுண்ணறிவுகளின் ஆழம்</string>
+    <string name="legend_insight_deep">ஆழமானது, மறைந்த வடிவங்கள் மற்றும் நம்பிக்கைகள்</string>
+    <string name="legend_insight_aware">விழிப்புள்ளது, அறிந்த சிந்தனை மற்றும் உணர்வு வடிவங்கள்</string>
+    <string name="legend_insight_surface">மேற்பரப்பு, முதல் கவனிப்புகள்</string>
+    <string name="legend_progress">முன்னேற்றம்</string>
+    <!-- Legend: Goal progress -->
+    <string name="legend_goal_progress_desc">அரை வட்டம் உங்கள் இலக்குகளின் முன்னேற்றத்தை காட்டுகிறது:</string>
+    <string name="legend_blocked_range">தடுக்கப்பட்டது (0–33%)</string>
+    <string name="legend_in_progress_range">செயல்பாட்டில் (34–66%)</string>
+    <string name="legend_progress_range">முன்னேற்றம் (67–100%)</string>
+    <string name="legend_goal_status">இலக்கு நிலை</string>
+    <string name="legend_blocked_desc">தடுக்கப்பட்டது — தடைகள் உள்ள இலக்குகள்</string>
+    <string name="legend_open_desc">திறந்தது — இன்னும் முன்னேற்றமில்லாத இலக்குகள்</string>
+    <string name="legend_progress_success_desc">முன்னேற்றம் — தெரிந்த வெற்றியுடன் கூடிய இலக்குகள்</string>
+    <!-- Legend: Custom analysis -->
+    <string name="legend_analysis_value">பகுப்பாய்வு மதிப்பு</string>
+    <string name="legend_analysis_relevance_desc">அரை வட்டம் உங்கள் கவனத்திற்கான பொருத்தப்பாட்டை காட்டுகிறது:</string>
+    <string name="legend_high_focus">அதிகம் (67–100%) — உங்கள் கவனத்தின் மையம்</string>
+    <string name="legend_medium_focus">நடுத்தரம் (34–66%) — தொடர்பு கண்டுபிடிக்கப்பட்டது</string>
+    <string name="legend_low_focus">குறைந்தது (0–33%) — விளிம்பில்</string>
+    <string name="legend_result_relevance">முடிவுகளின் பொருத்தப்பாடு</string>
+    <string name="legend_important_desc">முக்கியமானது — உங்கள் கவனத்திற்கு நேரடியாக பொருத்தமானது</string>
+    <string name="legend_relevant_desc">பொருத்தமானது — உங்கள் கவனத்துடன் தொடர்பு</string>
+    <string name="legend_note_desc">குறிப்பு — ஓரத்து கருத்து</string>
+    <!-- Legend: Burden/Stress -->
+    <string name="legend_burden_scale">சுமை அளவுகோல்</string>
+    <string name="legend_burden_desc">அரை வட்டம் இந்த தலைப்பு உங்களை எவ்வளவு சுமைப்படுத்துகிறது என்பதை காட்டுகிறது:</string>
+    <string name="legend_high_burden">அதிகம் (67–100%) — உடனடியாக செயல்படவும்</string>
+    <string name="legend_medium_burden">நடுத்தரம் (34–66%) — கவனம் தேவை</string>
+    <string name="legend_low_burden">குறைந்தது (0–33%) — நல்ல நிலை</string>
+    <string name="legend_priority_title">ஆலோசனைகளின் முன்னுரிமை</string>
+    <string name="legend_priority_high">சிவப்பு = அவசரம் — உடனடியாக செயல்படவும்</string>
+    <string name="legend_priority_medium">ஆரஞ்சு = நடுத்தரம் — விரைவில் கவனிக்கவும்</string>
+    <string name="legend_priority_low">நீலம் = குறைந்தது — கவனிக்கவும்</string>
+    <!-- Legend: Categories -->
+    <string name="legend_categories">வகைகள்</string>
+    <string name="legend_categories_desc">வகைகள் மாறும் வகையில் உருவாக்கப்படுகின்றன — KI உங்கள் பதிவுகளில் உள்ள தலைப்புகளை அறிந்து பொருத்தமான வகைகளை உருவாக்குகிறது. புதிய தலைப்புகள் தானாகவே புதிய குறியீடுகளுக்கு வழிவகுக்கும்.</string>
+    <!-- CategoryDetailDialog levels -->
+    <string name="level_low">குறைந்தது</string>
+    <string name="level_medium">நடுத்தரம்</string>
+    <string name="level_high">அதிகம்</string>
+    <string name="urgency_high">அவசரம் — உடனடியாக செயல்படவும்</string>
+    <string name="urgency_medium">கவனம் தேவை</string>
+    <string name="urgency_low">நல்ல நிலை — கவனிக்கவும்</string>
+    <!-- Dashboard: Derivation dialog -->
+    <string name="dashboard_derived_from">இதிலிருந்து பெறப்பட்டது:</string>
+    <string name="dashboard_update_for_derivation">விரிவான மூலத்திற்கு டாஷ்போர்டை புதுப்பிக்கவும்.</string>
+    <!-- Dashboard: Summary section -->
+    <string name="dashboard_top_5_actions">சிறந்த 5 நடவடிக்கைகள்</string>
+    <string name="dashboard_core_insights">முக்கிய நுண்ணறிவுகள்</string>
+    <string name="dashboard_summary_subtitle">உங்கள் பதிவுகளில் இருந்து மிக முக்கியமான புள்ளிகள்</string>
+    <string name="summary_central">மையமானது</string>
+    <string name="summary_relevant">பொருத்தமானது</string>
+    <string name="summary_side_note">ஓரத்து குறிப்பு</string>
+    <!-- Dashboard: Insight section -->
+    <string name="dashboard_deepest_insights">ஆழமான நுண்ணறிவுகள்</string>
+    <string name="dashboard_insight_subtitle">உங்கள் பதிவுகள் உங்களைப் பற்றி என்ன சொல்கின்றன</string>
+    <string name="insight_deep_label">ஆழமானது</string>
+    <string name="insight_aware_label">விழிப்புள்ளது</string>
+    <string name="insight_surface_label">மேற்பரப்பு</string>
+    <!-- Dashboard: Goal section -->
+    <string name="dashboard_goal_steps">உங்கள் இலக்குகளுக்கான மிக முக்கியமான படிகள்</string>
+    <string name="goal_blocked_label">தடுக்கப்பட்டது</string>
+    <string name="goal_open_label">திறந்தது</string>
+    <string name="goal_progress_label">முன்னேற்றம்</string>
+    <!-- Dashboard: Custom analysis section -->
+    <string name="dashboard_custom_subtitle">உங்கள் தனிப்பட்ட பகுப்பாய்வின் அடிப்படையில்</string>
+    <string name="custom_important_label">முக்கியமானது</string>
+    <string name="custom_relevant_label">பொருத்தமானது</string>
+    <string name="custom_note_label">குறிப்பு</string>
+    <!-- Dashboard: TTS and sharing -->
+    <string name="dashboard_enable_voices">அமைப்புகளில் குரல்களை இயக்கவும்</string>
+    <string name="dashboard_tts_stop">நிறுத்து</string>
+    <string name="dashboard_tts_read">வாசி</string>
+    <string name="dashboard_share_analysis">பகுப்பாய்வை பகிர்</string>
+    <string name="dashboard_share">பகிர்</string>
+    <string name="dashboard_tts_wait">காத்திருங்கள், Text-to-Speech உருவாக்கப்படுகிறது\u2026</string>
+
+    <!-- Profile names -->
+    <string name="profile_summary">சுருக்கம்</string>
+    <string name="profile_entropy">உங்கள் வாழ்வை ஒழுங்குபடுத்துங்கள்</string>
+    <string name="profile_insight">சுய அறிவு</string>
+    <string name="profile_goals">தனிப்பட்ட இலக்குகள்</string>
+    <string name="profile_custom">தனிப்பட்ட பகுப்பாய்வு</string>
+    <string name="profile_summary_desc">தலைப்புகள், வடிவங்கள் மற்றும் அனுபவங்களை சுருக்கமாக கூறுகிறது</string>
+    <string name="profile_entropy_desc">மன அழுத்தம், கலைவரம் மற்றும் சுமையை கண்டறிகிறது</string>
+    <string name="profile_insight_desc">மறைந்த சிந்தனை மற்றும் உணர்வு வடிவங்களை வெளிப்படுத்துகிறது</string>
+    <string name="profile_goals_desc">இலக்குகள், விருப்பங்கள் மற்றும் முன்னேற்றங்களை கண்டறிகிறது</string>
+    <string name="profile_custom_desc">சொந்த பகுப்பாய்வு கவனத்தை அமைக்கவும்</string>
+
+    <!-- Profile long descriptions (settings) -->
+    <string name="profile_summary_long">உங்கள் பதிவுகள் மதிப்பீடு அல்லது ஆலோசனை இல்லாமல் நடுநிலையாக சுருக்கப்படுகின்றன.\n\nஒரே பார்வையில் நீங்கள் காண்பது:\n\n• தற்போது உங்களை அலைக்கழிக்கும் தலைப்புகள்\n• திரும்பி வரும் வடிவங்கள்\n• உங்கள் வாழ்வு எப்படி வளர்கிறது\n\nஉங்கள் வாழ்வில் நடக்கும் அனைத்தின் தினசரி மேலோட்டமாக சரியானது.</string>
+    <string name="profile_entropy_long">KI உங்கள் பதிவுகளில் மன அழுத்தம், சுமை மற்றும் கலைவரத்தை தேடுகிறது.\n\nநீங்கள் பெறுவது:\n\n• உங்கள் மிகப்பெரிய சுமை மூலங்களின் பகுப்பாய்வு\n• ஒழுங்குபடுத்துவதற்கான 5 திட்டமிட்ட நடவடிக்கைகள்\n• உடனடியாக உதவக்கூடிய குறிப்புகள்\n\nதற்போது எல்லாமே அதிகமாக இருப்பதாக உணரும்போது சரியானது.</string>
+    <string name="profile_insight_long">KI நிகழ்வுகளுக்கு அப்பால் ஆழமாக பார்க்கிறது. உங்கள் பதிவுகளில் அது காண்பது:\n\n• மறைந்த சிந்தனை வடிவங்கள் மற்றும் நம்பிக்கைகள்\n• திரும்பி வரும் உணர்வுகள் மற்றும் எதிர்வினைகள்\n• நீங்கள் அறியாத தனிப்பட்ட பலங்கள்\n• உங்கள் செயல்களை இயக்கும் மதிப்புகள்\n\nதங்களை சிறப்பாக புரிந்துகொண்டு உள்ளிருந்து வளர விரும்புவோருக்கு.</string>
+    <string name="profile_goals_long">KI உங்கள் பதிவுகளில் அனைத்து இலக்குகள், விருப்பங்கள் மற்றும் திட்டங்களையும் கண்டறிகிறது, சாதாரணமாக குறிப்பிட்டவற்றையும் கூட.\n\nநீங்கள் காண்பது:\n\n• உங்களிடம் என்ன இலக்குகள் உள்ளன (மறைந்தவையும் கூட)\n• ஒவ்வொரு இலக்கிலும் நீங்கள் எங்கே இருக்கிறீர்கள்\n• உங்கள் அடுத்த படி என்னவாக இருக்கலாம்\n\nஉங்கள் சொந்த வார்த்தைகளில் இருந்து படிக்கும் உங்கள் தனிப்பட்ட இலக்கு கண்காணிப்பு.</string>
+    <string name="profile_custom_long">KI என்ன கவனிக்க வேண்டும் என்பதை நீங்களே தீர்மானிக்கிறீர்கள்.\n\nஉங்கள் சொந்த பகுப்பாய்வு கவனத்தை எழுதுங்கள், உதாரணமாக:\n\n• \u201eவிளையாட்டின் அனைத்து குறிப்புகளையும் கண்டுபிடி\u201c\n• \u201eமனநிலை மாற்றங்களை பகுப்பாய்வு செய்\u201c\n• \u201eநான் எப்போது மிகவும் உற்பத்தியாக இருக்கிறேன் என்பதை காட்டு\u201c\n\nதாங்கள் என்ன தேடுகிறோம் என்று தெளிவாக தெரிந்தவர்களுக்கு முழு கட்டுப்பாடு.</string>
+    <string name="profile_custom_prompt">உங்களுக்கு எது மிகவும் முக்கியம்? உங்கள் நாட்குறிப்பு பதிவுகளை பகுப்பாய்வு செய்யும்போது KI எதில் கவனம் செலுத்த வேண்டும்?</string>
+    <string name="profile_select_hint">ஒரு சுயவிவரத்தை தேர்வு செய்யுங்கள். விரிவான விளக்கத்திற்கு சுயவிவரத்தை தொடுங்கள்.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SETTINGS SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">அமைப்புகள்</string>
+    <string name="settings_account">கணக்கு</string>
+    <string name="settings_sign_out">வெளியேறு</string>
+    <string name="settings_last_sync">கடைசி ஒத்திசைவு: %1$s</string>
+    <string name="settings_entries_auto_loaded">உள்நுழைவில் பதிவுகள் தானாக ஏற்றப்படும்</string>
+    <string name="settings_backup_photos">புகைப்படங்களை காப்பு செய்</string>
+    <string name="settings_backup_videos">வீடியோக்களை காப்பு செய்</string>
+    <string name="settings_syncing">காப்பு செய்யப்படுகிறது\u2026</string>
+    <!-- Shown briefly as a confirmation after a successful cloud backup. -->
+    <string name="settings_sync_success">வெற்றிகரமாக காப்பு செய்யப்பட்டது</string>
+    <!-- Error shown when Google sign-in fails. %1$s = error message from Google (e.g., "Network error"). -->
+    <string name="settings_signin_failed">உள்நுழைவு தோல்வியடைந்தது: <xliff:g id="error_reason" example="Network error">%1$s</xliff:g></string>
+    <string name="settings_backup_entries">நாட்குறிப்பு பதிவுகளை காப்பு செய்</string>
+    <string name="settings_not_signed_in">உள்நுழையவில்லை</string>
+    <string name="settings_entries_loaded_on_sign_in">உள்நுழைவில் காப்பு பதிவுகள் ஏற்றப்படும்</string>
+    <string name="settings_sign_in_google">Google-ல் உள்நுழை</string>
+    <string name="settings_appearance">தோற்றம்</string>
+    <string name="settings_dark_mode">இருண்ட பயன்முறை</string>
+    <string name="settings_dark_active">செயலில்</string>
+    <string name="settings_dark_off">அணைக்கப்பட்டது</string>
+    <string name="settings_follow_system">கணினியை பின்பற்று</string>
+    <string name="settings_automatic">தானியங்கி</string>
+    <string name="settings_sunrise_sunset">சூரிய உதயம்/அஸ்தமனம்</string>
+    <string name="settings_sunrise_sunset_desc">இரவில் இருண்டு, பகலில் ஒளிரும்</string>
+    <string name="settings_sounds_haptics_section">ஒலிகள் / அதிர்வுகள்</string>
+    <string name="settings_app_sounds">App ஒலிகள்</string>
+    <string name="settings_sounds_on">ஒலிகள் இயக்கப்பட்டுள்ளன</string>
+    <string name="settings_sounds_off">ஒலிகள் அணைக்கப்பட்டுள்ளன</string>
+    <string name="settings_haptics">அதிர்வு</string>
+    <string name="settings_haptics_on">அதிர்வு இயக்கப்பட்டுள்ளது</string>
+    <string name="settings_haptics_off">அதிர்வு அணைக்கப்பட்டுள்ளது</string>
+    <string name="settings_voices">குரல்கள்</string>
+    <string name="settings_tts_on">வாசிப்பு இயக்கப்பட்டுள்ளது</string>
+    <string name="settings_tts_off">வாசிப்பு அணைக்கப்பட்டுள்ளது</string>
+    <string name="settings_voice_select">குரலை தேர்ந்தெடு</string>
+    <string name="settings_voice_choose">குரல் தேர்வு</string>
+    <string name="settings_reminder_section">நினைவூட்டல் / மீள்பார்வை</string>
+    <string name="settings_daily_reminder">தினசரி நினைவூட்டல்</string>
+    <string name="settings_reminder_time">நேரம்: %02d:%02d மணி</string>
+    <string name="settings_reminder_desc">நாட்குறிப்பு எழுதுவதை நினைவூட்டுகிறது</string>
+    <string name="settings_weekly_review">வார மீள்பார்வை</string>
+    <string name="settings_weekly_review_on">நினைவூட்டல் இயக்கம்</string>
+    <string name="settings_weekly_review_off">ஞாயிறு மாலை 15:00 மணிக்கு</string>
+    <string name="settings_monthly_review">மாத மீள்பார்வை</string>
+    <string name="settings_monthly_review_on">நினைவூட்டல் இயக்கம்</string>
+    <string name="settings_yearly_review">ஆண்டு மீள்பார்வை</string>
+    <string name="settings_yearly_review_on">நினைவூட்டல் இயக்கம்</string>
+    <string name="settings_timezone">நேர மண்டலம்: %1$s</string>
+    <string name="settings_security">பாதுகாப்பு</string>
+    <string name="settings_fingerprint">கைரேகை</string>
+    <string name="settings_fingerprint_desc">தொடங்கும்போது App-ஐ திறக்கவும்</string>
+    <string name="settings_auto_lock">பின்னணியில் 60 வினாடிகளுக்குப் பிறகு தானாக பூட்டும்</string>
+    <string name="settings_ai_profiles_title">KI டாஷ்போர்டு சுயவிவரங்கள்:</string>
+    <string name="settings_ai_automations">KI தன்னியக்கங்கள்</string>
+    <string name="settings_custom_prompt_placeholder">எ.கா. தூக்க தரம் மற்றும் மன அழுத்த அளவில் கவனம் செலுத்துங்கள். உணவு முறையில் வடிவங்களை காட்டுங்கள். வாரம் முழுவதும் மனநிலை எப்படி மாறுகிறது என்பதை பகுப்பாய்வு செய்யுங்கள்.\n\nநீங்கள் உங்கள் கவனத்தை எவ்வளவு விரிவாக விவரிக்கிறீர்கள், அவ்வளவு சிறந்த முடிவுகள் கிடைக்கும்.</string>
+    <string name="churn_google_play_redirect">உங்கள் சந்தாவை நிர்வகிக்க Google Play-க்கு திருப்பி விடப்படுவீர்கள். உங்கள் நாட்குறிப்பு பதிவுகள் நிச்சயமாக சேமிக்கப்பட்டிருக்கும்.</string>
+    <string name="splash_subtitle">உங்கள் அறிவார்ந்த நாட்குறிப்பு</string>
+    <string name="biometric_subtitle">உங்கள் நாட்குறிப்பை திறக்கவும்</string>
+    <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
+    <string name="biometric_prompt_subtitle">திறக்க அங்கீகரிக்கவும்</string>
+    <!-- Button in the biometric lock screen to trigger the fingerprint prompt. Keep short. -->
+    <string name="biometric_unlock_button">திறக்கவும்</string>
+    <string name="settings_text_improvement">உரை மேம்பாடு</string>
+    <string name="settings_text_improvement_desc">இயல்பாக இயக்கவும்</string>
+    <string name="settings_dashboard_section">டாஷ்போர்டு</string>
+    <string name="settings_auto_update">புதிய நாட்குறிப்பு பதிவில் தானாக புதுப்பிக்கவும்</string>
+    <string name="settings_premium_section">Premium</string>
+    <string name="settings_premium_lifetime">வாழ்நாள் அணுகல் செயலில்</string>
+    <string name="settings_premium_active">Premium சந்தா செயலில்</string>
+    <string name="settings_premium_lifetime_desc">ஒரு முறை வாங்கல், அனைத்து அம்சங்களும் எப்போதும் திறக்கப்படும்.</string>
+    <string name="settings_premium_desc">அனைத்து அம்சங்களும் திறக்கப்பட்டன, வரம்பற்ற KI, PDF ஏற்றுமதி மற்றும் பல.</string>
+    <string name="settings_manage_subscription">சந்தாவை நிர்வகி</string>
+    <string name="settings_export">ஏற்றுமதி</string>
+    <string name="settings_export_pdf_desc">அனைத்து நாட்குறிப்பு பதிவுகளையும் புகைப்படங்களையும் PDF ஆவணமாக ஏற்றுமதி செய்யுங்கள்.</string>
+
+    <!-- Premium feature list (settings) -->
+    <string name="settings_premium_feature_improve">வரம்பற்ற KI உரை மேம்பாடு</string>
+    <string name="settings_premium_feature_improve_desc">ஒவ்வொரு பதிவும் மிகவும் வலிமையாகிறது</string>
+    <string name="settings_premium_feature_dashboard">வரம்பற்ற டாஷ்போர்டு பகுப்பாய்வுகள்</string>
+    <string name="settings_premium_feature_dashboard_desc">உங்கள் டாஷ்போர்டு உங்களுடன் வளர்கிறது</string>
+    <string name="settings_premium_feature_5_perspectives">5 KI கோணங்கள்</string>
+    <string name="settings_premium_feature_5_perspectives_desc">தெளிவிலிருந்து சுய அறிவு வரை</string>
+    <string name="settings_premium_feature_reviews">வார, மாத மற்றும் ஆண்டு மீள்பார்வைகள்</string>
+    <string name="settings_premium_feature_reviews_desc">KI உங்கள் கதையை சொல்கிறது</string>
+    <string name="settings_premium_feature_patterns">வடிவ கண்டறிதல்</string>
+    <string name="settings_premium_feature_patterns_desc">KI நீங்கள் கவனிக்காத தொடர்புகளை கண்டறிகிறது</string>
+    <string name="settings_premium_feature_pdf">புகைப்படங்களுடன் PDF ஏற்றுமதி</string>
+    <string name="settings_premium_feature_pdf_desc">படங்களுடன் அனைத்து நாட்குறிப்பு பதிவுகளும் ஆவணமாக</string>
+    <string name="settings_premium_feature_voice">மிகவும் துல்லியமான குரல் அங்கீகாரம்</string>
+    <string name="settings_premium_feature_voice_desc">குரல் பதிவுகளுக்கு அதிக தரம்</string>
+    <string name="settings_unlock_premium">Premium திறக்கவும்</string>
+    <!-- Export dialog -->
+    <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
+    <string name="settings_export_dialog_title">PDF ஏற்றுமதி</string>
+    <string name="settings_export_what">என்ன ஏற்றுமதி செய்ய வேண்டும்?</string>
+    <string name="settings_export_entries">நாட்குறிப்பு பதிவுகள்</string>
+    <string name="settings_export_photos">புகைப்படங்கள்</string>
+    <string name="settings_export_action">ஏற்றுமதி</string>
+    <string name="settings_exporting">ஏற்றுமதி செய்யப்படுகிறது\u2026</string>
+    <!-- Export error shown when the user has no journal entries yet. -->
+    <string name="settings_export_no_entries">பதிவுகள் எதுவும் இல்லை</string>
+    <string name="settings_export_entries_photos_pdf">நாட்குறிப்பு பதிவுகளையும் புகைப்படங்களையும் PDF ஆக ஏற்றுமதி செய்யுங்கள்</string>
+    <string name="settings_export_data">தரவை ஏற்றுமதி செய்</string>
+    <string name="settings_export_entries_photos_pdf_full">புகைப்படங்களுடன் நாட்குறிப்பு பதிவுகளை PDF ஆக ஏற்றுமதி செய்யுங்கள்</string>
+    <!-- Feedback -->
+    <string name="settings_feedback">கருத்து</string>
+    <string name="settings_feedback_desc">பரிந்துரைகள், விருப்பங்கள், மேம்பாட்டு யோசனைகள், பிழைகளை தெரிவிக்கவும் 🐞</string>
+    <string name="settings_feedback_send">கருத்தை அனுப்பு</string>
+    <string name="settings_feedback_sent">வெற்றிகரமாக அனுப்பப்பட்டது</string>
+    <string name="settings_feedback_dialog_title">கருத்தை அனுப்பு</string>
+    <string name="settings_feedback_dialog_desc">டெவலப்பர்களுக்கு உங்கள் செய்தி — நாங்கள் அனைத்தையும் படிக்கிறோம் மற்றும் தனிப்பட்டு பதிலளிக்கிறோம்!</string>
+    <string name="settings_feedback_placeholder">உங்கள் கருத்தை எழுதுங்கள்\u2026</string>
+    <string name="settings_feedback_sending">அனுப்பப்படுகிறது\u2026</string>
+    <string name="settings_feedback_sign_in_first">முதலில் Google-ல் உள்நுழையவும்</string>
+    <string name="settings_feedback_allow_gmail">Gmail அணுகலை அனுமதித்து மீண்டும் முயற்சிக்கவும்.</string>
+    <string name="settings_feedback_token_error">Token பிழை: %1$s</string>
+    <string name="settings_feedback_unknown_error">தெரியாத பிழை</string>
+    <string name="settings_feedback_confirm_subject">Best Journal-க்கு உங்கள் கருத்து</string>
+    <string name="settings_feedback_confirm_body">இந்த செய்தியை நீங்கள் டெவலப்பருக்கு அனுப்பினீர்கள்.\nஅவர் உங்களிடம் தொடர்பு கொள்வார்.\n\n--- உங்கள் செய்தி ---\n%1$s\n\nமரியாதையுடன்\nDEV.FRANK</string>
+    <string name="settings_feedback_from">இதிலிருந்து கருத்து: %1$s</string>
+    <string name="action_send">அனுப்பு</string>
+    <!-- Drive errors -->
+    <string name="drive_consent_needed">Drive அணுகல் அனுமதிக்கப்பட வேண்டும்</string>
+    <string name="drive_not_signed_in">உள்நுழையவில்லை</string>
+    <string name="drive_no_backup">காப்புப்பிரதி கிடைக்கவில்லை</string>
+    <!-- Achievements -->
+    <string name="achievements_title">சாதனைகள்</string>
+    <string name="achievements_counter">%2$d இல் %1$d திறக்கப்பட்டது</string>
+    <string name="achievements_unlocked_at">%1$s அன்று திறக்கப்பட்டது</string>
+    <!-- About -->
+    <string name="settings_about">App பற்றி</string>
+    <string name="settings_about_version">Best Journal V0.12.19</string>
+    <string name="settings_about_desc">உங்கள் தனிப்பட்ட KI நாட்குறிப்பு</string>
+    <!-- Sign-out dialog -->
+    <string name="settings_sign_out_confirm">வெளியேறவா?</string>
+    <string name="settings_sign_out_body">நீங்கள் உண்மையிலேயே வெளியேற விரும்புகிறீர்களா?</string>
+    <!-- Toggle labels -->
+    <string name="toggle_light">ஒளிர்வு</string>
+    <string name="toggle_dark">இருண்டு</string>
+    <string name="toggle_sound_on">ஒலி இயக்கம்</string>
+    <string name="toggle_sound_off">ஒலி அணைப்பு</string>
+    <string name="toggle_haptic_on">அதிர்வு இயக்கம்</string>
+    <string name="toggle_haptic_off">அதிர்வு அணைப்பு</string>
+    <string name="toggle_voice_on">குரல் இயக்கம்</string>
+    <string name="toggle_voice_off">குரல் அணைப்பு</string>
+    <string name="toggle_sun">சூரியன்</string>
+    <string name="toggle_moon">நிலா</string>
+    <!-- Day names -->
+    <string name="day_monday">திங்கட்கிழமை</string>
+    <string name="day_tuesday">செவ்வாய்க்கிழமை</string>
+    <string name="day_wednesday">புதன்கிழமை</string>
+    <string name="day_thursday">வியாழக்கிழமை</string>
+    <string name="day_friday">வெள்ளிக்கிழமை</string>
+    <string name="day_saturday">சனிக்கிழமை</string>
+    <string name="day_sunday">ஞாயிற்றுக்கிழமை</string>
+    <!-- Short weekday labels (2 chars) for compact weekday picker. Monday to Sunday. -->
+    <string name="day_abbrev_mon">திங்</string>
+    <string name="day_abbrev_tue">செவ்</string>
+    <string name="day_abbrev_wed">புத்</string>
+    <string name="day_abbrev_thu">வியா</string>
+    <string name="day_abbrev_fri">வெள்</string>
+    <string name="day_abbrev_sat">சனி</string>
+    <string name="day_abbrev_sun">ஞாயி</string>
+    <!-- Array of short weekday labels for LazyRow / weekday pickers. Order: Mon-Sun. -->
+    <string-array name="weekday_abbreviations">
+        <item>@string/day_abbrev_mon</item>
+        <item>@string/day_abbrev_tue</item>
+        <item>@string/day_abbrev_wed</item>
+        <item>@string/day_abbrev_thu</item>
+        <item>@string/day_abbrev_fri</item>
+        <item>@string/day_abbrev_sat</item>
+        <item>@string/day_abbrev_sun</item>
+    </string-array>
+    <!-- Review schedule dialog -->
+    <string name="settings_reminder_when">எப்போது நினைவூட்டல் வேண்டும்?</string>
+    <string name="settings_review_when">உங்கள் மீள்பார்வை எப்போது வர வேண்டும்?</string>
+    <string name="settings_review_weekday">வாரத்தின் நாள்</string>
+    <string name="settings_review_time">நேரம்</string>
+    <string name="settings_monthly_review_off">மாதத்தின் கடைசி நாளில் மாலை 15:00 மணிக்கு</string>
+    <string name="settings_yearly_review_off">ஆண்டின் கடைசி நாளில் மாலை 15:00 மணிக்கு</string>
+    <string name="achievement_secret">ரகசியம்</string>
+    <string name="paywall_exit_bonus_days">+ %1$d கூடுதல் சோதனை நாட்கள்</string>
+    <!-- Splash screen start button -->
+    <string name="splash_start">தொடங்கு</string>
+    <!-- FreeLimitIndicator: remaining uses counter -->
+    <!-- %1$d = number of remaining AI uses this week -->
+    <string name="limit_remaining"><xliff:g id="count" example="3">%1$d</xliff:g> மீதம்</string>
+    <!-- FreeLimitIndicator: usage counter (X of Y used) -->
+    <!-- %1$d = used count, %2$d = max count -->
+    <string name="limit_used_of_max"><xliff:g id="used" example="3">%1$d</xliff:g> இல் <xliff:g id="max" example="5">%2$d</xliff:g> பயன்படுத்தப்பட்டது</string>
+    <!-- ChurnFlowDialog: retention discount badge -->
+    <!-- %1$d = discount percentage -->
+    <string name="churn_discount_badge"><xliff:g id="percent" example="50">%1$d</xliff:g>%% சேமிக்கவும்</string>
+    <!-- AI prompt language instruction — automatically uses device language -->
+    <string name="ai_prompt_language_style">எளிமையான, தெளிவான. வெளிநாட்டு வார்த்தைகள் வேண்டாம்.</string>
+    <string name="ai_prompt_language_override"></string>
+    <!-- Final response-language instruction appended to every AI prompt. -->
+    <string name="ai_prompt_response_language">பதில் மொழி: தமிழில் முழுமையாக பதிலளிக்கவும். அனைத்து உரைகளும் தலைப்புகளும் தமிழில் இருக்க வேண்டும், வேறு மொழி வேண்டாம்.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JSON-KEYS for AI response (Dashboard).
+         ════════════════════════════════════════════════════════════════════ -->
+    <!-- Top-level JSON keys -->
+    <string name="json_key_overall_analysis">gesamtanalyse</string>
+    <string name="json_key_top_actions">top_massnahmen</string>
+    <string name="json_key_categories">kategorien</string>
+    <string name="json_key_heading_top5">ueberschrift_top5</string>
+    <string name="json_key_heading_analysis">ueberschrift_analyse</string>
+    <string name="json_key_heading_results">ueberschrift_ergebnisse</string>
+    <string name="json_key_progress">fortschritte</string>
+    <string name="json_key_overall_entropy">gesamt_entropie</string>
+    <string name="json_key_trend">trend</string>
+    <!-- Category-level JSON keys -->
+    <string name="json_key_category_name">name</string>
+    <string name="json_key_category_icon">icon</string>
+    <string name="json_key_category_color">farbe</string>
+    <string name="json_key_category_entropy_level">entropie_level</string>
+    <string name="json_key_category_summary">zusammenfassung</string>
+    <string name="json_key_category_advices">ratschlaege</string>
+    <!-- Item-level JSON keys (advice, action, progress) -->
+    <string name="json_key_item_title">titel</string>
+    <string name="json_key_item_description">beschreibung</string>
+    <string name="json_key_item_explanation">erklaerung</string>
+    <string name="json_key_item_reference">bezug</string>
+    <string name="json_key_item_priority">prioritaet</string>
+    <string name="json_key_item_connection">verknuepfung</string>
+    <string name="json_key_item_derivation">herleitung</string>
+    <!-- Derivation-level JSON keys -->
+    <string name="json_key_derivation_date">datum</string>
+    <string name="json_key_derivation_summary">zusammenfassung</string>
+    <!-- Enum values (priorities) -->
+    <string name="json_value_priority_high">hoch</string>
+    <string name="json_value_priority_medium">mittel</string>
+    <string name="json_value_priority_low">niedrig</string>
+    <string name="ai_prompt_fresh_summary">புதிய சுருக்கம் — முழுமையாக புதிய, சுதந்திரமான பகுப்பாய்வை உருவாக்கவும்.</string>
+    <string name="ai_prompt_fresh_insight">புதிய சுய அறிவு பகுப்பாய்வு — முழுமையாக புதிய, சுதந்திரமான பகுப்பாய்வை உருவாக்கவும்.</string>
+    <string name="ai_prompt_fresh_goals">புதிய இலக்கு பகுப்பாய்வு — முழுமையாக புதிய, சுதந்திரமான பகுப்பாய்வை உருவாக்கவும்.</string>
+    <string name="ai_prompt_fresh_custom">புதிய தனிப்பட்ட பகுப்பாய்வு — பயனர் கவனத்தின் அடிப்படையில் முழுமையாக புதிய, சுதந்திரமான பகுப்பாய்வை உருவாக்கவும்.</string>
+    <string name="ai_prompt_fresh_default">புதிய பகுப்பாய்வு — முழுமையாக புதிய, சுதந்திரமான பகுப்பாய்வை உருவாக்கவும்.</string>
+    <string name="ai_prompt_check_summary">கட்டாய சரிபார்ப்பு: நீங்கள் %1$d பதிவுகளை பெற்றீர்கள். ஒவ்வொன்றும் சுருக்கத்தில் மற்றும் குறைந்தது ஒரு தலைப்பில் இடம் பெற வேண்டும்.</string>
+    <string name="ai_prompt_check_insight">கட்டாய சரிபார்ப்பு: நீங்கள் %1$d பதிவுகளை பெற்றீர்கள். ஒவ்வொன்றும் சிந்தனை வடிவங்கள், உணர்வுகள், நம்பிக்கைகள் மற்றும் தனிப்பட்ட பலங்களுக்காக தேட வேண்டும்.</string>
+    <string name="ai_prompt_check_goals">கட்டாய சரிபார்ப்பு: நீங்கள் %1$d பதிவுகளை பெற்றீர்கள். ஒவ்வொன்றும் இலக்குகளுக்காக தேட வேண்டும்.</string>
+    <string name="ai_prompt_check_custom">கட்டாய சரிபார்ப்பு: நீங்கள் %1$d பதிவுகளை பெற்றீர்கள். ஒவ்வொன்றும் பயனர் கவனத்தின் அடிப்படையில் தேட வேண்டும்.</string>
+    <string name="ai_prompt_check_default">கட்டாய சரிபார்ப்பு: நீங்கள் %1$d பதிவுகளை பெற்றீர்கள். ஒவ்வொன்றும் பகுப்பாய்வில் இடம் பெற வேண்டும்.</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Retrospective Prompts (Weekly / Monthly / Yearly)
+         ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Weekly retrospective prompt blocks -->
+    <string name="ai_retro_week_intro">நீங்கள் நாட்குறிப்பு பதிவுகளிலிருந்து இயற்கையான, நன்றாக படிக்கக்கூடிய வார மீள்பார்வையை எழுதும் ஒரு கதை சொல்லி.</string>
+    <string name="ai_retro_week_task">பணி: பின்வரும் நாட்குறிப்பு பதிவுகளை ஒரு கட்டமைக்கப்பட்ட வார மீள்பார்வையாக சுருக்கவும்.</string>
+    <string name="ai_retro_week_format">வடிவம் (சரியாக பின்பற்றவும்):\n1. குறுகிய புள்ளிகளாக சுருக்கத்துடன் தொடங்கவும் (3-5 புள்ளிகள்), ஒவ்வொன்றும் \"• \" இல் தொடங்கும்\n2. பின் ஒரு வெற்று வரி\n3. பின் 2-4 தலைப்பு பிரிவுகளாக நடைமுறை உரை\n4. ஒவ்வொரு பிரிவும் இவ்வடிவில் தலைப்புடன் தொடங்கும்: [தலைப்பு]\n5. தலைப்பிற்குப் பிறகு பிரிவின் கதை உரை\n6. வாரத்தின் தொடக்கத்திலிருந்து இறுதி வரை காலவரிசையில் ஒழுங்குபடுத்தவும்</string>
+    <string name="ai_retro_week_rules">விதிகள்:\n- நேரடி, தனிப்பட்ட முகவரி வடிவில் எழுதவும்\n- வாழ்த்து இல்லை, நேரடியாக கதையில் தொடங்கவும்\n- பிரிவுகளுக்குள் நல்ல மாற்றங்களுடன் நடைமுறை பாணி\n- தலைப்புகள் குறுகியதாகவும் தலைப்பிற்கு பொருத்தமாகவும் இருக்க வேண்டும் (2-4 வார்த்தைகள்)\n- குறிப்பிட்ட நிகழ்வுகள், உணர்வுகள் மற்றும் நுண்ணறிவுகளை குறிப்பிடவும்\n- அன்றாட நடவடிக்கைகளை முக்கியமாக இருந்தால் மட்டும் குறிப்பிடவும்\n- நேர்மறையானவற்றை சிறப்பாக எடுத்துக்காட்டுங்கள் — ஆனால் சவால்களை மறைக்காதீர்கள்\n- வெப்பமான மற்றும் தனிப்பட்ட முறையில் எழுதுங்கள், ஆனால் மிகைப்படுத்தாதீர்கள்\n- குறைந்தது 200 வார்த்தைகள்\n- நீண்ட கோடுகளை (—) பயன்படுத்தாதீர்கள். அதற்கு பதில் கமாக்கள் அல்லது குறுகிய வாக்கியங்களை பயன்படுத்தவும்.</string>
+    <!-- Section header that introduces the journal entries block. -->
+    <string name="ai_retro_week_entries_header">வாரத்தின் பதிவுகள்:</string>
+    <!-- Title-generation prompt after a weekly review is ready. -->
+    <string name="ai_retro_week_title_prompt">இந்த வார மீள்பார்வையின் அடிப்படையில், <xliff:g id="lang" example="Tamil">%1$s</xliff:g>-ல் ஒரு குறுகிய, உணர்ச்சிப்பூர்வமான தலைப்பை (அதிகபட்சம் 6 வார்த்தைகள்) தருங்கள்.\nதலைப்பை மட்டும் வெளியிடவும், வேறு எதுவும் வேண்டாம். மேற்கோள் குறிகள் வேண்டாம். நீண்ட கோடுகள் (—) வேண்டாம்.\n\nமீள்பார்வை:\n<xliff:g id="summary_preview" example="வாரம் தொடங்கியது\u2026">%2$s</xliff:g></string>
+
+    <!-- Monthly retrospective prompt blocks -->
+    <string name="ai_retro_month_intro">நீங்கள் வார மீள்பார்வைகளிலிருந்து இயற்கையான, நன்றாக படிக்கக்கூடிய மாத மீள்பார்வையை எழுதும் ஒரு கதை சொல்லி.</string>
+    <!-- %1$s = month name, %2$d = year. -->
+    <string name="ai_retro_month_task">பணி: பின்வரும் வார மீள்பார்வைகளை <xliff:g id="month" example="ஏப்ரல்">%1$s</xliff:g> <xliff:g id="year" example="2026">%2$d</xliff:g>-க்கான கட்டமைக்கப்பட்ட மாத மீள்பார்வையாக சுருக்கவும்.</string>
+    <string name="ai_retro_month_format">வடிவம் (சரியாக பின்பற்றவும்):\n1. குறுகிய புள்ளிகளாக சுருக்கத்துடன் தொடங்கவும் (4-6 புள்ளிகள்), ஒவ்வொன்றும் \"• \" இல் தொடங்கும்\n2. பின் ஒரு வெற்று வரி\n3. பின் 3-5 தலைப்பு பிரிவுகளாக நடைமுறை உரை\n4. ஒவ்வொரு பிரிவும் இவ்வடிவில் தலைப்புடன் தொடங்கும்: [தலைப்பு]\n5. தலைப்பிற்குப் பிறகு பிரிவின் கதை உரை\n6. மாதத்தின் தொடக்கத்திலிருந்து இறுதி வரை காலவரிசையில் ஒழுங்குபடுத்தவும்</string>
+    <string name="ai_retro_month_rules">விதிகள்:\n- நேரடி, தனிப்பட்ட முகவரி வடிவில் எழுதவும்\n- வாழ்த்து இல்லை, நேரடியாக கதையில் தொடங்கவும்\n- பிரிவுகளுக்குள் நல்ல மாற்றங்களுடன் நடைமுறை பாணி\n- தலைப்புகள் குறுகியதாகவும் தலைப்பிற்கு பொருத்தமாகவும் இருக்க வேண்டும் (2-4 வார்த்தைகள்)\n- வாரங்களுக்கிடையே தொடர்புகளை ஏற்படுத்துங்கள் — வளர்ச்சிகளையும் சிவப்புக் குழல்களையும் காட்டுங்கள்\n- மீள்பார்வைகளை ஒன்றன்பின் ஒன்றாக திரும்பச் சொல்லாதீர்கள், தலைப்பு வாரியாக இணைக்கவும்\n- அன்றாட நடவடிக்கைகளை முக்கியமாக இருந்தால் மட்டும் குறிப்பிடவும்\n- நேர்மறையானவற்றை சிறப்பாக எடுத்துக்காட்டுங்கள் — ஆனால் சவால்களை மறைக்காதீர்கள்\n- வெப்பமான மற்றும் தனிப்பட்ட முறையில் எழுதுங்கள், ஆனால் மிகைப்படுத்தாதீர்கள்\n- குறைந்தது 300 வார்த்தைகள்\n- நீண்ட கோடுகளை (—) பயன்படுத்தாதீர்கள். அதற்கு பதில் கமாக்கள் அல்லது குறுகிய வாக்கியங்களை பயன்படுத்தவும்.</string>
+    <string name="ai_retro_month_entries_header">வார மீள்பார்வைகள்:</string>
+    <!-- %1$s = target language, %2$s = preview of the generated review. -->
+    <string name="ai_retro_month_title_prompt">இந்த மாத மீள்பார்வையின் அடிப்படையில், <xliff:g id="lang" example="Tamil">%1$s</xliff:g>-ல் ஒரு குறுகிய, உணர்ச்சிப்பூர்வமான தலைப்பை (அதிகபட்சம் 6 வார்த்தைகள்) தருங்கள்.\nதலைப்பை மட்டும் வெளியிடவும், வேறு எதுவும் வேண்டாம். மேற்கோள் குறிகள் வேண்டாம். நீண்ட கோடுகள் (—) வேண்டாம்.\n\nமீள்பார்வை:\n<xliff:g id="summary_preview" example="ஏப்ரல் கொண்டுவந்தது\u2026">%2$s</xliff:g></string>
+
+    <!-- Yearly retrospective prompt blocks -->
+    <string name="ai_retro_year_intro">நீங்கள் மாத மீள்பார்வைகளிலிருந்து இயற்கையான, நன்றாக படிக்கக்கூடிய ஆண்டு மீள்பார்வையை எழுதும் ஒரு கதை சொல்லி.</string>
+    <!-- %1$d = year. -->
+    <string name="ai_retro_year_task">பணி: பின்வரும் மாத மீள்பார்வைகளை <xliff:g id="year" example="2026">%1$d</xliff:g>-க்கான கட்டமைக்கப்பட்ட ஆண்டு மீள்பார்வையாக சுருக்கவும்.</string>
+    <string name="ai_retro_year_format">வடிவம் (சரியாக பின்பற்றவும்):\n1. குறுகிய புள்ளிகளாக சுருக்கத்துடன் தொடங்கவும் (5-8 புள்ளிகள்), ஒவ்வொன்றும் \"• \" இல் தொடங்கும்\n2. பின் ஒரு வெற்று வரி\n3. பின் 4-6 தலைப்பு பிரிவுகளாக நடைமுறை உரை\n4. ஒவ்வொரு பிரிவும் இவ்வடிவில் தலைப்புடன் தொடங்கும்: [தலைப்பு]\n5. தலைப்பிற்குப் பிறகு பிரிவின் கதை உரை\n6. ஆண்டின் தொடக்கத்திலிருந்து இறுதி வரை காலவரிசையில் ஒழுங்குபடுத்தவும்</string>
+    <string name="ai_retro_year_rules">விதிகள்:\n- நேரடி, தனிப்பட்ட முகவரி வடிவில் எழுதவும்\n- வாழ்த்து இல்லை, நேரடியாக கதையில் தொடங்கவும்\n- பிரிவுகளுக்குள் நல்ல மாற்றங்களுடன் நடைமுறை பாணி\n- தலைப்புகள் குறுகியதாகவும் தலைப்பிற்கு பொருத்தமாகவும் இருக்க வேண்டும் (2-5 வார்த்தைகள்)\n- மாதங்களுக்கிடையே தொடர்புகளை ஏற்படுத்துங்கள் — ஆண்டு முழுவதும் வளர்ச்சிகளை காட்டுங்கள்\n- ஆண்டின் பெரிய தலைப்புகளை அறிந்து நிகழ்வுகளை அந்த வரிகளில் ஒழுங்குபடுத்தவும்\n- அன்றாட நடவடிக்கைகளை முக்கியமாக இருந்தால் மட்டும் குறிப்பிடவும்\n- நேர்மறையானவற்றை சிறப்பாக எடுத்துக்காட்டுங்கள் — ஆனால் சவால்களை மறைக்காதீர்கள்\n- முன்னோக்கிய எண்ணத்துடன் முடிக்கவும்\n- வெப்பமான மற்றும் தனிப்பட்ட முறையில் எழுதுங்கள், ஆனால் மிகைப்படுத்தாதீர்கள்\n- குறைந்தது 400 வார்த்தைகள்\n- நீண்ட கோடுகளை (—) பயன்படுத்தாதீர்கள். அதற்கு பதில் கமாக்கள் அல்லது குறுகிய வாக்கியங்களை பயன்படுத்தவும்.</string>
+    <string name="ai_retro_year_entries_header">மாத மீள்பார்வைகள்:</string>
+    <!-- %1$s = target language, %2$s = preview of the generated review. -->
+    <string name="ai_retro_year_title_prompt">இந்த ஆண்டு மீள்பார்வையின் அடிப்படையில், <xliff:g id="lang" example="Tamil">%1$s</xliff:g>-ல் ஒரு குறுகிய, உணர்ச்சிப்பூர்வமான தலைப்பை (அதிகபட்சம் 6 வார்த்தைகள்) தருங்கள்.\nதலைப்பை மட்டும் வெளியிடவும், வேறு எதுவும் வேண்டாம். மேற்கோள் குறிகள் வேண்டாம். நீண்ட கோடுகள் (—) வேண்டாம்.\n\nமீள்பார்வை:\n<xliff:g id="summary_preview" example="ஆண்டு தொடங்கியது\u2026">%2$s</xliff:g></string>
+
+    <!-- Goals Analysis System Prompt (Profile: Personal Goals) -->
+    <string name="ai_prompt_goals_intro">நீங்கள் ஒரு கவனமுள்ள, ஊக்கமளிக்கும் இலக்கு பகுப்பாய்வாளர் மற்றும் முன்னேற்ற கண்காணிப்பாளர்.\n\nஉங்கள் பணி:\nஒரு பயனரின் நாட்குறிப்பு பதிவுகளை பகுப்பாய்வு செய்யவும். அனைத்து இலக்குகள், விருப்பங்கள், திட்டங்கள் மற்றும் செயல்திட்டங்களை அறியவும் — சாதாரணமாக குறிப்பிட்டவற்றையும் கூட. பல பதிவுகளில் முன்னேற்றத்தை கண்காணிக்கவும். JSON வடிவத்தில் கட்டமைக்கப்பட்ட இலக்கு டாஷ்போர்டை உருவாக்கவும்.</string>
+    <string name="ai_prompt_goals_definition">வரையறை — என்ன ஒரு இலக்கு:\nபயனர் அடைய, மாற்ற, தொடங்க, முடிக்க, மேம்படுத்த அல்லது கட்டி எழுப்ப விரும்புவது அனைத்தும். மறைமுகமான குறிப்புகளும் கணக்கில் வரும்:\n- நேரடி: \"நான் உடல் எடையை குறைக்க விரும்புகிறேன்\"\n- மறைமுகம்: \"ஓடச் செல்வது நல்லது\" = உடற்பயிற்சி இலக்கு\n- புலம்பல்கள்: \"என் தூக்கம் மிகவும் மோசமாக இருக்கிறது\" = உட்புக்கிய தூக்கம் மேம்பாடு இலக்கு\n- கனவுகள்: \"ஒரு நாள் ஸ்வீடன் போகவேண்டும்\" = நீண்ட கால பயண இலக்கு</string>
+    <string name="ai_prompt_goals_entry_rules">உச்சந்தலை விதி — எந்த பதிவும் தவறவிடக்கூடாது:\nநீங்கள் எண்ணிடப்பட்ட பதிவுகளை பெறுவீர்கள் (எ.கா. \"பதிவு 1 / 5\").\nஒவ்வொரு பதிவையும் படித்து, பகுப்பாய்வு செய்து, சேர்க்க வேண்டும்.\n\nகுறைந்த பதிவுகளை கையாள்வது:\n- 1-2 பதிவுகளில்: தனிப்பட்ட இலக்குகளை அறியுங்கள், முன்னேற்றத்தை \"தெரியாது\" என்று மதிப்பிடுங்கள்.\n- 3+ பதிவுகளில்: முன்னேற்றத்தை தீவிரமாக கண்காணிக்கவும் மற்றும் வடிவங்களை அறியவும்.</string>
+    <string name="ai_prompt_goals_rules">மொழி விதிகள்:\n- %1$s\n- ஊக்கமளிக்கும் மற்றும் நேர்மையான, முன்னேற்றத்தை கொண்டாடுங்கள், எதுவும் அழகாக்காதீர்கள்.\n- நீண்ட கோடுகளை (—) பயன்படுத்தாதீர்கள். கமாக்கள் அல்லது புள்ளிகளை பயன்படுத்தவும்.\n\nஅளவு விதி, ஒவ்வொரு இலக்கும் முக்கியம்:\nஅனைத்து இலக்குகளையும் அறியுங்கள் — சிறியவற்றையும் கூட. தொகுக்காதீர்கள்.</string>
+    <string name="ai_prompt_goals_schema">JSON வெளியீட்டு திட்டம்:\n{\n  \"gesamtanalyse\": \"...\",\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\n1) \"gesamtanalyse\" (15-25 வாக்கியங்கள்): அனைத்து இலக்குகளையும் பெயரிடவும், முன்னேற்றத்தை அறியவும்.\n\n2) \"top_massnahmen\" (சரியாக 5): அடுத்த படிகள்.\n   { \"titel\": \"...\", \"beschreibung\": \"13-21 வார்த்தைகள்\", \"erklaerung\": \"5-8 வாக்கியங்கள்\" }\n\n3) \"kategorien\": இலக்கு பகுதிகள்.\n   {\n     \"name\": \"அதிகபட்சம் 12 எழுத்துகள்\", \"icon\": \"material_icon\", \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0, \"zusammenfassung\": \"3-5 வாக்கியங்கள்\",\n     \"ratschlaege\": [{\n       \"titel\": \"...\",\n       \"beschreibung\": \"13-21 வார்த்தைகள். நிலை: [திறந்தது/செயல்பாட்டில்/தடுக்கப்பட்டது/அடைந்தது]. அடுத்த படி: [...].\",\n       \"prioritaet\": \"hoch|mittel|niedrig\",\n       \"verknuepfung\": \"...\", \"herleitung\": [{\"datum\":\"...\",\"zusammenfassung\":\"...\"}]\n     }]\n   }</string>
+    <string name="ai_prompt_goals_output">வெளியீட்டு வடிவம்: JSON மட்டும். Backticks வேண்டாம். { இல் தொடங்கவும்.</string>
+
+    <!-- Self-Insight Analysis System Prompt -->
+    <string name="ai_prompt_insight_intro">நீங்கள் தனிப்பட்ட வளர்ச்சிக்கான ஒரு அக்கறையுள்ள, ஆழமான வடிவ பகுப்பாய்வாளர்.\n\nஉங்கள் பணி:\nஒரு பயனரின் நாட்குறிப்பு பதிவுகளை பகுப்பாய்வு செய்யவும். மறைந்த வடிவங்கள், திரும்பி வரும் சிந்தனை மற்றும் நடத்தை முறைகள், உணர்வு எதிர்வினை வடிவங்கள் மற்றும் தனிப்பட்ட பலங்களை கண்டறியவும். JSON வடிவத்தில் கட்டமைக்கப்பட்ட சுய அறிவு டாஷ்போர்டை உருவாக்கவும்.</string>
+    <string name="ai_prompt_insight_attitude">உங்கள் அணுகுமுறை:\nநீங்கள் ஒரு நல்ல மனமுள்ள கண்ணாடி. பயனர் என்ன எழுதினாரோ அதை நேர்மையாக காட்டுகிறீர்கள் — ஆனால் அவர் அதிலிருந்து வளர முடியும் என்ற இலக்குடன். ஒவ்வொரு நுண்ணறிவும் அவர் தங்களை சிறப்பாக புரிந்துகொள்ள உதவ வேண்டும். கடினமான வடிவங்களையும் தெளிவாக, ஆனால் ஆக்கப்பூர்வமாகவும் குற்றமற்ற முறையிலும் பெயரிடுகிறீர்கள்.\n\nநீங்கள் என்ன தேடுகிறீர்கள்:\n- திரும்பி வரும் உணர்வுகள்: எந்த உணர்ச்சிகள் திரும்பி திரும்பி வருகின்றன?\n- சிந்தனை வடிவங்கள்: பயனர் தங்களைப் பற்றி, மற்றவர்களைப் பற்றி, உலகைப் பற்றி எப்படி நினைக்கிறார்?\n- தவிர்ப்பு வடிவங்கள்: பயனர் என்ன தவிர்க்கிறார்?\n- பலங்கள்: பயனர் என்ன நன்றாக செய்கிறார், அவர் தங்களே பார்க்காவிட்டாலும்?\n- மதிப்புகள்: பயனருக்கு உண்மையிலேயே என்ன முக்கியம்?\n- தூண்டுதல்கள்: என்ன வலுவான எதிர்வினைகளை தூண்டுகிறது?\n- முரண்பாடுகள்: பயனர் ஒன்று சொல்கிறார், ஆனால் வேறுவிதமாக செயல்படுகிறாரா?\n- தேவைகள்: பயனர் என்ன தேவைப்படுகிறார்?\n- வளர்ச்சி: பயனரின் பார்வை எங்கு மாறியுள்ளது?</string>
+    <string name="ai_prompt_insight_entry_rules">உச்சந்தலை விதி — எந்த பதிவும் தவறவிடக்கூடாது:\nநீங்கள் எண்ணிடப்பட்ட பதிவுகளை பெறுவீர்கள்.\nஒவ்வொரு பதிவையும் படித்து, பகுப்பாய்வு செய்து, சேர்க்க வேண்டும்.\nபதிலளிப்பதற்கு முன்பு கணக்கிடுங்கள்: அனைத்து பதிவுகளையும் சேர்த்தேனா?\nஒன்று விடுபட்டால் — உடனே சேர்க்கவும்.\n\nகுறைந்த பதிவுகளை கையாள்வது:\n- 1-2 பதிவுகளில்: முதல் கவனிப்புகளை பெயரிடவும், ஆனால் ஆழமான வடிவங்களை கூறாதீர்கள்.\n  விளக்கத்தில் நுண்ணறிவுகளை \"தற்காலிகம்\" என்று குறிக்கவும்.\n- 3+ பதிவுகளில்: திரும்பி வரும் வடிவங்கள் மற்றும் ஆழமான தொடர்புகளை தீவிரமாக தேடவும்.</string>
+    <string name="ai_prompt_insight_rules">மொழி விதிகள் (JSON-ல் உள்ள அனைத்து உரை புலங்களுக்கும் பொருந்தும்):\n- எளிமையான, தெளிவான மொழி. குறுகிய வாக்கியங்கள்.\n- வெளிநாட்டு வார்த்தைகள் வேண்டாம், தொழில் வார்த்தைகள் வேண்டாம்.\n- அக்கறையான, நேர்மையான மற்றும் ஆக்கப்பூர்வமான, குற்றம் கூறாதீர்கள்.\n- நேர்மறையான பக்கத்தில் எப்போதும் கவனம்: பயனர் என்ன கற்றுக்கொள்ளலாம்?\n- நீண்ட கோடுகளை (—) பயன்படுத்தாதீர்கள். கமாக்கள் அல்லது புள்ளிகளை பயன்படுத்தவும்.\n\nஅளவு விதி, கூர்மை முன் முழுமை:\nதலைப்புகள் முழுவதிலும் மொத்த நுண்ணறிவுகளின் எண்ணிக்கை குறைந்தது 15 ஆக இருக்க வேண்டும். 10-க்கும் குறைவாக இருந்தால் பிழை.</string>
+    <string name="ai_prompt_insight_schema_header">JSON வெளியீட்டு திட்டம்:\n{\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"wachsend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\nவயல் வரையறைகள்:\n\n1) \"gesamt_entropie\" (எண், 0.0 முதல் 1.0 வரை)\n   பயனர் தங்கள் பதிவுகளில் எவ்வளவு சுய சிந்தனை செய்கிறார்?\n   - 0.0-0.33 = குறைந்த சுய சிந்தனை\n   - 0.34-0.66 = பகுதி சுய சிந்தனை\n   - 0.67-1.0 = வலுவான சுய சிந்தனை\n\n2) \"trend\" (உரை)\n   குறைந்தது 3 பதிவுகள் பல நாட்களுக்கு இருந்தால் மட்டும்.\n   - \"wachsend\" = பயனர் மேலும் ஆழமாக சிந்திக்கிறார்\n   - \"stabil\" = ஒரே மாதிரியான சிந்தனை அளவு\n   - \"sinkend\" = குறைவான சுய சிந்தனை\n   - \"unbekannt\" = போதுமான தரவு இல்லை\n\n3) \"gesamtanalyse\" (உரை, 15-25 வாக்கியங்கள்)</string>
+    <string name="ai_prompt_insight_schema_fields">4) \"fortschritte\" (வரிசை, 0-8 உள்ளீடுகள்)\n   பதிவுகளிலிருந்து தெரியும் தனிப்பட்ட பலங்கள் மற்றும் நேர்மறை குணங்கள்.\n   ஒவ்வொரு பலத்தின் திட்டம்:\n   {\n     \"titel\": \"குறுகிய தலைப்பு (அதிகபட்சம் 5 வார்த்தைகள்)\",\n     \"beschreibung\": \"என்ன பலம் தெரிகிறது மற்றும் அதை எப்படி அறியலாம் (2-3 வாக்கியங்கள்).\",\n     \"bezug\": \"இது எந்த பதிவிலிருந்து வருகிறது (1 வாக்கியம்).\"\n   }\n\n5) \"top_massnahmen\" (வரிசை, சரியாக 5 உள்ளீடுகள்)\n   அனைத்து பதிவுகளிலிருந்தும் 5 ஆழமான சுய நுண்ணறிவுகள்.\n   {\n     \"titel\": \"குறுகிய தலைப்பு (அதிகபட்சம் 6 வார்த்தைகள்)\",\n     \"beschreibung\": \"13-21 வார்த்தைகள்\",\n     \"erklaerung\": \"5-8 வாக்கியங்கள்\"\n   }</string>
+    <string name="ai_prompt_insight_schema_categories">6) \"kategorien\" (வரிசை, தேவைப்படும் அளவு)\n   ஒவ்வொரு அறிந்த சுய அறிவு பகுதிக்கும் ஒரு குழு.\n   {\n     \"name\": \"பகுதி பெயர் (அதிகபட்சம் 12 எழுத்துகள்)\",\n     \"icon\": \"material_icon_name\",\n     \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"3-5 வாக்கியங்கள்\",\n     \"ratschlaege\": [...]\n   }</string>
+    <string name="ai_prompt_insight_output">விளக்கங்களுக்கான வார்த்தை எண்ணிக்கை விதி (கண்டிப்பாக பின்பற்றவும்):\n\"top_massnahmen\" மற்றும் \"ratschlaege\" இல் \"beschreibung\" எப்போதும் 13-21 வார்த்தைகளாக இருக்க வேண்டும்.\n\nவெளியீட்டு வடிவம்:\n- JSON பொருளுடன் மட்டும் பதிலளிக்கவும்.\n- Backticks வேண்டாம்.\n- நேரடியாக { இல் தொடங்கி } இல் முடிக்கவும்.</string>
+
+    <!-- Entropy Analysis System Prompt -->
+    <string name="ai_prompt_entropy_intro">நீங்கள் ஒரு அக்கறையுள்ள, மிகவும் அறிவார்ந்த வாழ்க்கை ஆலோசகர் மற்றும் வடிவ பகுப்பாய்வாளர்.\n\nஉங்கள் பணி:\nஒரு பயனரின் நாட்குறிப்பு பதிவுகளை பகுப்பாய்வு செய்யவும். திரும்பி வரும் மன அழுத்தம், கலைவரம் மற்றும் சுமை மூலங்களை கண்டறியவும். JSON வடிவத்தில் கட்டமைக்கப்பட்ட ஆலோசனை டாஷ்போர்டை உருவாக்கவும்.</string>
+    <string name="ai_prompt_entropy_entry_rules">உச்சந்தலை விதி — எந்த பதிவும் தவறவிடக்கூடாது:\nநீங்கள் எண்ணிடப்பட்ட பதிவுகளை பெறுவீர்கள்.\nஒவ்வொரு பதிவையும் படித்து, பகுப்பாய்வு செய்து, சேர்க்க வேண்டும்.\nபதிலளிப்பதற்கு முன்பு கணக்கிடுங்கள்: அனைத்து பதிவுகளையும் சேர்த்தேனா?\nஒன்று விடுபட்டால் — உடனே சேர்க்கவும்.\n\nகுறைந்த பதிவுகளை கையாள்வது:\n- 1-2 பதிவுகளில்: வடிவங்களுக்கு பதிலாக தனிப்பட்ட கவனிப்புகளை பெயரிடவும்.\n  ஆலோசனைகளை \"தற்காலிகம்\" என்று விளக்கத்தில் குறிக்கவும்.\n- 3+ பதிவுகளில்: வடிவங்கள் மற்றும் குறுக்கு தொடர்புகளை தீவிரமாக தேடவும்.</string>
+    <string name="ai_prompt_entropy_rules">மொழி விதிகள் (JSON-ல் உள்ள அனைத்து உரை புலங்களுக்கும் பொருந்தும்):\n- எளிமையான, தெளிவான மொழி. குறுகிய வாக்கியங்கள்.\n- வெளிநாட்டு வார்த்தைகள் வேண்டாம்.\n- அக்கறையான, நேரடி மற்றும் குறிப்பிட்டது.\n- நீண்ட கோடுகளை (—) பயன்படுத்தாதீர்கள்.\n\nஅளவு விதி:\nமொத்த ஆலோசனைகளின் எண்ணிக்கை குறைந்தது 15 ஆக இருக்க வேண்டும்.</string>
+    <string name="ai_prompt_entropy_schema_header">JSON வெளியீட்டு திட்டம்:\n{\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"steigend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\nவயல் வரையறைகள்:\n\n1) \"gesamt_entropie\" (எண், 0.0 முதல் 1.0 வரை)\n   அனைத்து வகை சுமை மதிப்புகளின் சராசரி.\n   - 0.0-0.33 = குறைந்தது (நல்ல நிலை)\n   - 0.34-0.66 = நடுத்தரம் (கவனம் தேவை)\n   - 0.67-1.0 = அதிகம் (உடனடி நடவடிக்கை பரிந்துரைக்கப்படுகிறது)</string>
+    <string name="ai_prompt_entropy_schema_fields">4) \"fortschritte\" (வரிசை, 0-5 உள்ளீடுகள்)\n   சுமை குறைந்த இடங்கள் அல்லது நன்றாக செயல்படும் பழக்கங்கள்.\n   {\n     \"titel\": \"குறுகிய தலைப்பு (அதிகபட்சம் 5 வார்த்தைகள்)\",\n     \"beschreibung\": \"என்ன மேம்பட்டது அல்லது நன்றாக செல்கிறது (2-3 வாக்கியங்கள்).\",\n     \"bezug\": \"இது எந்த பதிவிலிருந்து வருகிறது (1 வாக்கியம்).\"\n   }\n\n5) \"top_massnahmen\" (வரிசை, சரியாக 5 உள்ளீடுகள்)\n   தனிப்பட்ட சுமையை மிகவும் வலிமையாக குறைக்கும் 5 முக்கிய நடவடிக்கைகள்.\n   {\n     \"titel\": \"குறுகிய தலைப்பு (அதிகபட்சம் 6 வார்த்தைகள்)\",\n     \"beschreibung\": \"13-21 வார்த்தைகள்\",\n     \"erklaerung\": \"5-8 வாக்கியங்கள்\"\n   }</string>
+    <string name="ai_prompt_entropy_schema_categories">6) \"kategorien\" (வரிசை, தேவைப்படும் அளவு)\n   ஒவ்வொரு அறிந்த தலைப்பிற்கும் ஒரு வகை.\n   {\n     \"name\": \"வகை பெயர் (அதிகபட்சம் 12 எழுத்துகள்)\",\n     \"icon\": \"material_icon_name\",\n     \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"3-5 வாக்கியங்கள்\",\n     \"ratschlaege\": [...]\n   }</string>
+    <string name="ai_prompt_entropy_output">வெளியீட்டு வடிவம்:\n- JSON பொருளுடன் மட்டும் பதிலளிக்கவும்.\n- Backticks வேண்டாம்.\n- நேரடியாக { இல் தொடங்கி } இல் முடிக்கவும்.</string>
+
+    <!-- Summary Analysis System Prompt -->
+    <string name="ai_prompt_summary_intro">நீங்கள் ஒரு கவனமுள்ள, கட்டமைக்கப்பட்ட நாட்குறிப்பு பகுப்பாய்வாளர்.\n\nஉங்கள் பணி:\nஒரு பயனரின் நாட்குறிப்பு பதிவுகளை பகுப்பாய்வு செய்யவும். பயனர் என்ன அனுபவித்தார், என்ன நினைத்தார், என்ன உணர்ந்தார் மற்றும் என்ன செய்தார் என்பதை சுருக்கவும். JSON வடிவத்தில் கட்டமைக்கப்பட்ட சுருக்க டாஷ்போர்டை உருவாக்கவும்.\n\nநீங்கள் மதிப்பீடு செய்வதில்லை. நீங்கள் சுருக்குகிறீர்கள், ஒழுங்குபடுத்துகிறீர்கள் மற்றும் தொடர்புகளை காட்டுகிறீர்கள். பயிற்சி வேண்டாம், பிரச்சினை தேட வேண்டாம், மதிப்பீடு வேண்டாம்.</string>
+    <string name="ai_prompt_summary_entry_rules">உச்சந்தலை விதி — எந்த பதிவும் தவறவிடக்கூடாது:\nநீங்கள் எண்ணிடப்பட்ட பதிவுகளை பெறுவீர்கள்.\nஒவ்வொரு பதிவையும் படித்து, பகுப்பாய்வு செய்து, சேர்க்க வேண்டும்.\n\nகுறைந்த பதிவுகளை கையாள்வது:\n- 1-2 பதிவுகளில்: வடிவங்களை கூறாமல் உள்ளடக்கங்களை சுருக்கவும்.\n  கவனிப்புகளை விளக்கத்தில் \"தற்காலிகம்\" என்று குறிக்கவும்.\n- 3+ பதிவுகளில்: திரும்பி வரும் தலைப்புகள் மற்றும் தொடர்புகளை தீவிரமாக தேடவும்.</string>
+    <string name="ai_prompt_summary_rules">மொழி விதிகள்:\n- எளிமையான, தெளிவான மொழி. குறுகிய வாக்கியங்கள்.\n- நடுநிலையான, தெளிவான மற்றும் உண்மையான, மதிப்பீடுகள் வேண்டாம்.\n- நீண்ட கோடுகளை (—) பயன்படுத்தாதீர்கள்.\n\nஅளவு விதி:\nமொத்த நுண்ணறிவுகளின் எண்ணிக்கை குறைந்தது 15 ஆக இருக்க வேண்டும்.</string>
+    <string name="ai_prompt_summary_schema_header">JSON வெளியீட்டு திட்டம்:\n{\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"steigend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\nவயல் வரையறைகள்:\n\n1) \"gesamt_entropie\" (எண், 0.0 முதல் 1.0 வரை)\n   பயனரின் வாழ்வில் இப்போது எவ்வளவு நடக்கிறது?\n   - 0.0-0.33 = அமைதியான கட்டம் (குறைந்த செயல்பாடு)\n   - 0.34-0.66 = சாதாரண கட்டம்\n   - 0.67-1.0 = தீவிரமான கட்டம் (நிறைய நடக்கிறது)</string>
+    <string name="ai_prompt_summary_schema_fields">4) \"fortschritte\" (வரிசை, 0-5 உள்ளீடுகள்)\n   திரும்பி வரும் தலைப்புகள் அல்லது பல பதிவுகளில் தெரியும் தொடர்புகள்.\n   {\n     \"titel\": \"குறுகிய தலைப்பு (அதிகபட்சம் 5 வார்த்தைகள்)\",\n     \"beschreibung\": \"என்ன திரும்புகிறது அல்லது தொடர்புள்ளது (2-3 வாக்கியங்கள்).\",\n     \"bezug\": \"இது எந்த பதிவிலிருந்து வருகிறது (1 வாக்கியம்).\"\n   }\n\n5) \"top_massnahmen\" (வரிசை, சரியாக 5 உள்ளீடுகள்)\n   அனைத்து நாட்குறிப்பு பதிவுகளிலிருந்தும் 5 முக்கியமான நுண்ணறிவுகள்.\n   {\n     \"titel\": \"குறுகிய தலைப்பு (அதிகபட்சம் 6 வார்த்தைகள்)\",\n     \"beschreibung\": \"13-21 வார்த்தைகள்\",\n     \"erklaerung\": \"5-8 வாக்கியங்கள்\"\n   }</string>
+    <string name="ai_prompt_summary_schema_categories">6) \"kategorien\" (வரிசை, தேவைப்படும் அளவு)\n   ஒவ்வொரு அறிந்த தலைப்பிற்கும் ஒரு குழு.\n   {\n     \"name\": \"தலைப்பு பெயர் (அதிகபட்சம் 12 எழுத்துகள்)\",\n     \"icon\": \"material_icon_name\",\n     \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"3-5 வாக்கியங்கள்\",\n     \"ratschlaege\": [...]\n   }</string>
+    <string name="ai_prompt_summary_output">விளக்கங்களுக்கான வார்த்தை எண்ணிக்கை விதி (கண்டிப்பாக பின்பற்றவும்):\n\"top_massnahmen\" மற்றும் \"ratschlaege\" இல் \"beschreibung\" எப்போதும் 13-21 வார்த்தைகளாக இருக்க வேண்டும்.\n\nவெளியீட்டு வடிவம்:\n- JSON பொருளுடன் மட்டும் பதிலளிக்கவும்.\n- Backticks வேண்டாம்.\n- நேரடியாக { இல் தொடங்கி } இல் முடிக்கவும்.</string>
+
+    <!-- Custom Analysis System Prompt -->
+    <!-- %1$s = user-defined focus text -->
+    <string name="ai_prompt_custom_intro">நீங்கள் ஒரு அறிவார்ந்த, கவனமுள்ள நாட்குறிப்பு பகுப்பாய்வாளர்.\n\nபயனர் கவனம் (இதுவே உங்கள் பணி):\n%1$s\n\nபயனரின் நாட்குறிப்பு பதிவுகளை இந்த கவனத்துடன் மட்டும் பகுப்பாய்வு செய்யவும். கவனத்துடன் தொடர்புள்ள அனைத்தையும் கண்டறியவும். JSON வடிவத்தில் கட்டமைக்கப்பட்ட டாஷ்போர்டை உருவாக்கவும்.</string>
+    <string name="ai_prompt_custom_headings">முக்கியம் — மாறும் தலைப்புகள்:\nபயனர் கவனத்திற்கு சரியாக பொருந்தும் மூன்று டாஷ்போர்டு தலைப்புகளை நீங்களே உருவாக்க வேண்டும். \"முக்கிய முடிவுகள்\" அல்லது \"பகுப்பாய்வு\" போன்ற பொதுவான தலைப்புகள் வேண்டாம். கவனத்தை பிரதிபலிக்கும் படைப்பாற்றல் நிறைந்த, குறிப்பிட்ட தலைப்புகள்.\nமாதிரிகள்:\n- கவனம் \"மீன்பிடி\": \"சிறந்த வேட்டைகள்\", \"மீன்பிடி மேலோட்டம்\", \"அனைத்து மீன் அறிக்கைகளும்\"</string>
+    <string name="ai_prompt_custom_rules">உச்சந்தலை விதி — எந்த பதிவும் தவறவிடக்கூடாது:\nநீங்கள் எண்ணிடப்பட்ட பதிவுகளை பெறுவீர்கள். ஒவ்வொன்றையும் படிக்கவும் மற்றும் சேர்க்கவும்.\n\nமொழி விதிகள்:\n- எளிமையான, தெளிவான. வெளிநாட்டு வார்த்தைகள் வேண்டாம்.\n- அக்கறையான மற்றும் நேரடி.\n- நீண்ட கோடுகளை (—) பயன்படுத்தாதீர்கள்.\n\nஅளவு விதி:\nமொத்தமாக குறைந்தது 10 நுண்ணறிவுகள். ஒவ்வொரு கோணமும் தனி நுண்ணறிவை பெறும்.</string>
+    <string name="ai_prompt_custom_schema">JSON வெளியீட்டு திட்டம்:\n{\n  \"ueberschrift_top5\": \"கவனத்திற்கு பொருத்தமான படைப்பாற்றல் தலைப்பு (அதிகபட்சம் 3 வார்த்தைகள்)\",\n  \"ueberschrift_analyse\": \"மேலோட்டத்திற்கு படைப்பாற்றல் தலைப்பு (அதிகபட்சம் 3 வார்த்தைகள்)\",\n  \"ueberschrift_ergebnisse\": \"அனைத்து முடிவுகளுக்கும் படைப்பாற்றல் தலைப்பு (அதிகபட்சம் 3 வார்த்தைகள்)\",\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"steigend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}</string>
+    <string name="ai_prompt_custom_output">வார்த்தை எண்ணிக்கை விதி: top_massnahmen மற்றும் ratschlaege இல் \"beschreibung\" எப்போதும் 13-21 வார்த்தைகள்.\n\nவெளியீட்டு வடிவம்:\n- JSON பொருளுடன் மட்டும் பதிலளிக்கவும்.\n- Backticks வேண்டாம்.\n- நேரடியாக { இல் தொடங்கி } இல் முடிக்கவும்.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         RETROSPECTIVE SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="retro_title">மீள்பார்வை</string>
+    <string name="retro_cd_info">மீள்பார்வைகளைப் பற்றி தகவல்</string>
+    <string name="retro_personal_review">உங்கள் தனிப்பட்ட மீள்பார்வை</string>
+    <string name="retro_intro_body">சில நேரங்களில் அன்றாட வாழ்வில் நாம் எவ்வளவு அனுபவித்தோம் என்பதை மறந்துவிடுகிறோம். உங்கள் நாட்குறிப்பு அனைத்தையும் நினைவில் வைத்திருக்கிறது, பெரிய தருணங்களையும் சிறிய தருணங்களையும், </string>
+    <string name="retro_intro_cta">பின்னோக்கி பார்த்து, உங்களை நகர்த்தியதை கண்டுபிடியுங்கள்.</string>
+    <string name="retro_please_wait">காத்திருங்கள்</string>
+    <string name="retro_backup_loading">காப்புப்பிரதி ஏற்றப்படுகிறது\u2026 மீள்பார்வைகள் பின்னர் தானாக தொடங்கும்.</string>
+    <string name="retro_profile_switching">சுயவிவர மாற்றத்திற்குப் பிறகு மீள்பார்வைகள் தானாக புதுப்பிக்கப்படும்</string>
+    <string name="retro_generating">மீள்பார்வைகள் உருவாக்கப்படுகின்றன\u2026</string>
+    <string name="retro_ai_unavailable">KI இப்போது கிடைக்கவில்லை, சற்று நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.</string>
+    <string name="retro_weekly_title">வார மீள்பார்வை</string>
+    <string name="retro_weekly_subtitle">கடந்த 7 நாட்களின் மேலோட்டம்</string>
+    <string name="retro_weekly_empty">இன்னும் வார மீள்பார்வைகள் இல்லை.\nவாரத்திற்கு குறைந்தது 2 நாட்குறிப்பு பதிவுகள் தேவை.</string>
+    <string name="retro_monthly_title">மாத மீள்பார்வை</string>
+    <string name="retro_monthly_subtitle">கடந்த மாதம் ஒரே பார்வையில்</string>
+    <string name="retro_monthly_empty">இன்னும் மாத மீள்பார்வைகள் இல்லை.\nமாத இறுதியில் வார மீள்பார்வைகளிலிருந்து உருவாக்கப்படும்.</string>
+    <string name="retro_yearly_title">ஆண்டு மீள்பார்வை</string>
+    <string name="retro_yearly_subtitle">நினைவுகளால் நிறைந்த முழு ஆண்டு</string>
+    <string name="retro_yearly_empty">இன்னும் ஆண்டு மீள்பார்வைகள் இல்லை.\nஆண்டு இறுதியில் மாத மீள்பார்வைகளிலிருந்து உருவாக்கப்படும்.</string>
+    <string name="retro_premium_unlock">Premium மூலம் அனைத்து மீள்பார்வைகளையும் திறக்கவும்</string>
+    <string name="retro_at_a_glance">ஒரே பார்வையில்</string>
+    <string name="retro_cd_expand">விரிக்கவும்</string>
+    <string name="retro_cd_collapse">சுருக்கவும்</string>
+    <string name="retro_share_text_label">உரை</string>
+
+    <!-- Fallback titles (when AI title generation fails) -->
+    <string name="retro_fallback_week">வார மீள்பார்வை</string>
+    <string name="retro_fallback_month">மாத மீள்பார்வை</string>
+    <string name="retro_fallback_year">ஆண்டு மீள்பார்வை %1$d</string>
+    <string name="retro_period_label_week">வாரம் %1$d (%2$s - %3$s)</string>
+    <!-- Retro: Photos, TTS, Sharing -->
+    <string name="retro_photos_videos">புகைப்படங்கள் &amp; வீடியோக்கள்</string>
+    <string name="retro_photos_videos_colon">புகைப்படங்கள் &amp; வீடியோக்கள்:</string>
+    <string name="retro_cd_video">வீடியோ</string>
+    <string name="retro_cd_photo">படம்</string>
+    <string name="retro_play_video">வீடியோ இயக்கு</string>
+    <string name="retro_enable_voices">அமைப்புகளில் குரல்களை இயக்கவும்</string>
+    <string name="retro_tts_stop">நிறுத்து</string>
+    <string name="retro_tts_read">வாசி</string>
+    <string name="retro_tts_wait">காத்திருங்கள், Text-to-Speech உருவாக்கப்படுகிறது\u2026</string>
+    <string name="retro_cd_share">பகிர்</string>
+    <string name="retro_share_title">மீள்பார்வையை பகிர்</string>
+    <string name="retro_share_text_content">மீள்பார்வை உரை</string>
+    <string name="retro_photo_n">படம் %1$d</string>
+    <string name="retro_share_header">BestJournal App-இல் இருந்து மீள்பார்வை</string>
+    <string name="retro_at_a_glance_colon">ஒரே பார்வையில்:</string>
+    <!-- Retro: Locked/Premium -->
+    <string name="retro_cd_locked">பூட்டப்பட்டது</string>
+    <string name="retro_unlock_premium_short">Premium திறக்கவும்</string>
+    <string name="retro_cd_premium_required">Premium தேவை</string>
+    <!-- Retro: Benefits info dialog -->
+    <string name="retro_your_ai_reviews">உங்கள் KI மீள்பார்வைகள்</string>
+    <string name="retro_weekly_p1">KI உங்கள் வாரத்தை ஒரு தனிப்பட்ட கதையாக சுருக்குகிறது</string>
+    <string name="retro_weekly_p2">உணர்ச்சி வடிவங்கள் மற்றும் சிறப்பு நிகழ்வுகள் தெரியும்</string>
+    <string name="retro_weekly_p3">குறைந்தது 2 பதிவுகள் இருந்தால் ஒவ்வொரு ஞாயிறும் தானாக உருவாக்கப்படும்</string>
+    <string name="retro_weekly_p4">முதல் 2 வாரங்கள் இலவசம்</string>
+    <string name="retro_monthly_p1">உங்கள் வார மீள்பார்வைகளை ஒரு மாத கதையாக இணைக்கிறது</string>
+    <string name="retro_monthly_p2">மாதம் முழுவதும் சிவப்பு நூல்கள் மற்றும் வளர்ச்சிகள் தெரியும்</string>
+    <string name="retro_monthly_p3">அன்றாட வாழ்வில் உங்களுக்கு தெரியாத மாற்றங்களை காட்டுகிறது</string>
+    <string name="retro_yearly_p1">உங்கள் முழு ஆண்டும் ஒரே பார்வையில்</string>
+    <string name="retro_yearly_p2">KI உங்கள் ஆண்டின் பெரிய தலைப்புகளை கண்டறிகிறது</string>
+    <string name="retro_yearly_p3">தனிப்பட்ட வளர்ச்சி தெரியும் மற்றும் உணரக்கூடியதாக ஆகும்</string>
+    <!-- Retro: Premium upsell sheet -->
+    <string name="retro_your_reviews">உங்கள் தனிப்பட்ட மீள்பார்வைகள்</string>
+    <string name="retro_premium_reviews_desc">Premium மூலம் KI உங்கள் நாட்குறிப்பு பதிவுகளிலிருந்து தானாக மீள்பார்வைகளை உருவாக்குகிறது:</string>
+    <string name="retro_benefit_weekly">வரம்பற்ற வார மீள்பார்வைகள், முதல் 2 வாரங்கள் மட்டும் அல்ல</string>
+    <string name="retro_benefit_monthly">உங்கள் முன்னேற்றங்கள் மற்றும் மாற்றங்களை காட்டும் மாத மீள்பார்வைகள்</string>
+    <string name="retro_benefit_yearly">ஆண்டு மீள்பார்வைகள், உங்கள் முழு ஆண்டும் ஒரு தனிப்பட்ட கதையாக</string>
+    <string name="retro_start_sub">சந்தா தொடங்கு</string>
+    <string name="retro_decide_later">பிறகு முடிவு செய்</string>
+
+    <!-- Month names for retrospective grouping -->
+    <string name="month_january">ஜனவரி</string>
+    <string name="month_february">பிப்ரவரி</string>
+    <string name="month_march">மார்ச்</string>
+    <string name="month_april">ஏப்ரல்</string>
+    <string name="month_may">மே</string>
+    <string name="month_june">ஜூன்</string>
+    <string name="month_july">ஜூலை</string>
+    <string name="month_august">ஆகஸ்ட்</string>
+    <string name="month_september">செப்டம்பர்</string>
+    <string name="month_october">அக்டோபர்</string>
+    <string name="month_november">நவம்பர்</string>
+    <string name="month_december">டிசம்பர்</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ONBOARDING
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_welcome">Best Journal-க்கு\nவரவேற்கிறோம்</string>
+    <string name="onboarding_subtitle">தெளிவு மற்றும் மாற்றத்திற்கான\nஉங்கள் தனிப்பட்ட KI நாட்குறிப்பு</string>
+    <string name="onboarding_feature_speech">பேசுங்கள் அல்லது எழுதுங்கள், KI இரண்டையும் புரிந்துகொள்கிறது</string>
+    <string name="onboarding_feature_secure">உங்கள் தரவு உங்களிடமே இருக்கும், குறியாக்கம் செய்யப்பட்டு பாதுகாப்பாக</string>
+    <string name="onboarding_goals_title">KI நாட்குறிப்பால்\nநீங்கள் என்ன அடைய விரும்புகிறீர்கள்?</string>
+    <string name="onboarding_goal_stress">மன அழுத்தத்தை குறைக்கவும்</string>
+    <string name="onboarding_goal_clarity">தெளிவு கண்டுபிடிக்கவும்</string>
+    <string name="onboarding_goal_growth">தனிப்பட்ட வளர்ச்சி</string>
+    <string name="onboarding_goal_thoughts">என் எண்ணங்களை பதிவு செய்யவும்</string>
+    <string name="onboarding_how_step1_title">உங்கள் பதிவை பேசுங்கள் அல்லது தட்டவும்</string>
+    <string name="onboarding_how_step1_desc">உங்கள் எண்ணங்களை குரல் செய்தியாக பதிவு செய்யுங்கள் அல்லது தட்டவும், நீங்கள் விரும்பியபடி.</string>
+    <string name="onboarding_how_step2_title">KI மேம்படுத்துகிறது மற்றும் பகுப்பாய்வு செய்கிறது</string>
+    <string name="onboarding_how_step2_desc">உங்கள் உரை தானாக செம்மைப்படுத்தப்பட்டு வெவ்வேறு கோணங்களில் பகுப்பாய்வு செய்யப்படுகிறது.</string>
+    <string name="onboarding_how_step3_desc">சிறப்பு தருணங்களை பதிவு செய்யுங்கள், KI அவற்றை பகுப்பாய்வில் கணக்கில் எடுத்துக்கொள்கிறது.</string>
+    <string name="onboarding_how_step4_title">வடிவங்கள் மற்றும் நுண்ணறிவுகளை கண்டுபிடியுங்கள்</string>
+    <string name="onboarding_how_step4_desc">டாஷ்போர்டு அன்றாட வாழ்வில் உங்களுக்கு மறைந்திருக்கும் தொடர்புகளை காட்டுகிறது.</string>
+    <string name="onboarding_how_step5_title">வார, மாத மற்றும் ஆண்டு மீள்பார்வை</string>
+    <string name="onboarding_how_step5_desc">தானியங்கி மீள்பார்வைகள் காலப்போக்கில் நீங்கள் எப்படி வளர்கிறீர்கள் என்பதை காட்டுகின்றன.</string>
+    <string name="onboarding_premium_feature_improve">வரம்பற்ற KI உரை மேம்பாடு, ஒவ்வொரு பதிவும் தெளிவாகவும் வலிமையாகவும் ஆகும்</string>
+    <string name="onboarding_premium_feature_dashboard">ஒவ்வொரு புதிய பதிவிலும் தானியங்கி டாஷ்போர்டு புதுப்பிப்புகள்</string>
+    <string name="onboarding_premium_feature_retro">வார, மாத மற்றும் ஆண்டு மீள்பார்வைகள் உங்கள் வளர்ச்சியை காட்டுகின்றன</string>
+    <string name="onboarding_premium_feature_patterns">தனிப்பட்ட வடிவங்களை அறிதல், KI மறைந்த சிந்தனை மற்றும் உணர்வு வடிவங்களை கண்டறிகிறது</string>
+    <string name="onboarding_premium_feature_noads">விளம்பரங்கள் இல்லை, தொந்தரவின்றி எழுதவும் மற்றும் சிந்திக்கவும்</string>
+    <string name="onboarding_free_trial">இலவசமாகவும் கட்டுப்பாடின்றியும்</string>
+    <string name="onboarding_free_after_trial">பிறகு Best Journal-ஐ தொடர்ந்து பயன்படுத்தலாம்,\nவாரத்திற்கு வரையறுக்கப்பட்ட KI அழைப்புகளுடன் இலவசமாக.</string>
+    <string name="onboarding_start_free">இலவசமாக தொடங்கவும்</string>
+    <string name="onboarding_without_premium">Premium இல்லாமல் தொடரவும்</string>
+    <string name="onboarding_feature_profiles">வெவ்வேறு கோணங்களுக்கான 5 அறிவார்ந்த பகுப்பாய்வு சுயவிவரங்கள்</string>
+    <string name="onboarding_goals_select">ஒன்று அல்லது பல இலக்குகளை தேர்வு செய்யவும்</string>
+    <string name="onboarding_how_step3_title">புகைப்படங்களை சேர்க்கவும்</string>
+    <string name="onboarding_how_title">இவ்வளவு எளிதானது</string>
+    <string name="onboarding_perspectives_title">உங்கள் வாழ்வில்\n5 கோணங்கள்</string>
+    <string name="onboarding_premium_feature_pdf">புகைப்படங்களுடன் PDF ஏற்றுமதி, உங்கள் பதிவுகளை ஆவணமாக காப்பிடுங்கள்</string>
+    <string name="onboarding_premium_profiles">உங்கள் வாழ்வில் ஆழமான நுண்ணறிவுகளுக்கான 5 அறிவார்ந்த டாஷ்போர்டு சுயவிவரங்கள்</string>
+    <string name="onboarding_try_premium">8 நாட்கள் Premium சோதனை</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PAYWALL
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="paywall_prices_loading">விலைகள் ஏற்றப்படுகின்றன\u2026</string>
+    <string name="paywall_sub_loading_toast">சந்தா ஏற்றப்படுகிறது, சற்று நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.</string>
+    <string name="paywall_purchase_loading_toast">வாங்கல் செயல்முறை ஏற்றப்படுகிறது, சற்று நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.</string>
+    <string name="paywall_today">இன்று</string>
+    <string name="paywall_full_access">முழு அணுகல்</string>
+    <string name="paywall_day7">நாள் 7</string>
+    <string name="paywall_reminder">நினைவூட்டல்</string>
+    <string name="paywall_day8">நாள் 8</string>
+    <string name="paywall_first_payment">முதல் கட்டணம்</string>
+    <string name="paywall_yearly_note">பிறகு ஆண்டுக்கு %1$s\nசோதனை காலத்தில் எப்போதும் ரத்து செய்யலாம்</string>
+    <string name="paywall_most_popular">மிகவும் பிரபலமான தேர்வு</string>
+    <string name="paywall_monthly_plan">மாத சந்தா, மாதத்திற்கு %1$s</string>
+    <string name="paywall_yearly_savings">மாத சந்தாவுடன் ஒப்பிட்டு %1$d%% சேமிக்கவும், எப்போதும் ரத்து செய்யலாம்</string>
+    <string name="paywall_lifetime_title">ஒரு முறை வாங்கல்</string>
+    <string name="paywall_lifetime_desc">ஒரு முறை செலுத்துங்கள், எப்போதும் பயன்படுத்துங்கள்</string>
+    <string name="paywall_lifetime_note">சந்தா இல்லை, புதுப்பிப்பு இல்லை</string>
+    <string name="paywall_free_note">App சந்தா இல்லாமலும் செயல்படும்,</string>
+    <string name="paywall_cd_close">மூடு</string>
+
+    <!-- Paywall features -->
+    <string name="paywall_feature_patterns">உங்கள் சிந்தனையில் மறைந்த வடிவங்களை புரிந்துகொள்ளுங்கள்</string>
+    <string name="paywall_feature_improve">ஒவ்வொரு பதிவிற்கும் வரம்பற்ற KI உரை மேம்பாடு</string>
+    <string name="paywall_feature_dashboard">ஒவ்வொரு பதிவிற்கும் பிறகு தானியங்கி டாஷ்போர்டு புதுப்பிப்புகள்</string>
+    <string name="paywall_feature_retro">KI மூலம் வார, மாத மற்றும் ஆண்டு மீள்பார்வைகள்</string>
+    <string name="paywall_feature_pdf">புகைப்படங்களுடன் நாட்குறிப்பு பதிவுகளை PDF ஆக ஏற்றுமதி செய்யுங்கள்</string>
+    <string name="paywall_feature_noads">விளம்பரங்கள் இல்லாமல் பேசுங்கள் அல்லது எழுதுங்கள்</string>
+
+    <!-- Paywall personalized headlines -->
+    <string name="paywall_headline_stress">உங்கள் உள் அமைதியை கண்டுபிடியுங்கள்</string>
+    <string name="paywall_headline_stress_sub">உங்களை சுமைப்படுத்துவதை அது உங்களை மூழ்கடிப்பதற்கு முன்பே அறியுங்கள்</string>
+    <string name="paywall_headline_clarity">உங்களை சிறப்பாக புரிந்துகொள்ளுங்கள்</string>
+    <string name="paywall_headline_clarity_sub">KI உங்களுக்கு மறைந்திருக்கும் வடிவங்களை கண்டறிகிறது</string>
+    <string name="paywall_headline_growth">ஒவ்வொரு நாளிலும் நல்லதை கண்டுபிடியுங்கள்</string>
+    <string name="paywall_headline_growth_sub">நன்றி மற்றும் வளர்ச்சிக்கான உங்கள் தனிப்பட்ட இடம்</string>
+    <string name="paywall_headline_thoughts">உங்கள் எண்ணங்களை சுதந்திரமாக விடுங்கள்</string>
+    <string name="paywall_headline_thoughts_sub">வரம்பின்றி உங்கள் படைப்பாற்றல் துணை</string>
+    <string name="paywall_headline_default">உங்களை நீங்களே கண்டுபிடியுங்கள்\nஒவ்வொரு நாளும் கொஞ்சம் கொஞ்சமாக</string>
+    <string name="paywall_headline_default_sub">வரம்பின்றி உங்கள் தனிப்பட்ட KI துணை</string>
+
+    <!-- Exit intent offer -->
+    <string name="paywall_exit_wait">ஒரு நிமிடம்!</string>
+    <string name="paywall_exit_special_offer">உங்களுக்காக ஒரு சிறப்பு\nவாய்ப்பு இருக்கிறது:</string>
+    <string name="paywall_exit_discount">%1$d மாதங்களுக்கு தள்ளுபடி</string>
+    <string name="paywall_exit_price_comparison">மாதத்திற்கு %2$s பதிலாக வெறும் %1$s</string>
+    <string name="paywall_exit_start_discount">50%% தள்ளுபடியில் மாத சந்தா தொடங்கு</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CHURN FLOW DIALOG
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="churn_your_sub">உங்கள் சந்தா</string>
+    <string name="churn_plan_yearly">ஆண்டு சந்தா</string>
+    <string name="churn_plan_monthly">மாத சந்தா</string>
+    <string name="churn_plan">திட்டம்</string>
+    <string name="churn_price">விலை</string>
+    <string name="churn_renewal">புதுப்பிப்பு</string>
+    <string name="churn_automatic">தானியங்கி</string>
+    <string name="churn_auto_renew_note">உங்கள் சந்தா Google Play மூலம் தானாக புதுப்பிக்கப்படும். எப்போது வேண்டுமானாலும் ரத்து செய்யலாம்.</string>
+    <string name="churn_cancel_sub">சந்தாவை ரத்து செய்</string>
+    <string name="churn_reason_too_expensive">மிகவும் விலை அதிகம்</string>
+    <string name="churn_reason_unused">மிகவும் அரிதாக பயன்படுத்துகிறேன்</string>
+    <string name="churn_per_year">ஆண்டுக்கு</string>
+    <string name="churn_per_month">மாதத்திற்கு</string>
+    <string name="churn_reason_features">எனக்கு தேவையான அம்சங்கள் இல்லை</string>
+    <string name="churn_reason_other">வேறு காரணம்</string>
+    <string name="churn_sorry_title">நீங்கள் செல்வது வருந்தத்தக்கது</string>
+    <string name="churn_sorry_body">ரத்து செய்வதற்கு முன்பு, ஏன் என்று சொல்ல முடியுமா? App-ஐ மேம்படுத்த இது உதவும்.</string>
+    <string name="churn_exclusive_offer">பிரத்யேக வாய்ப்பு</string>
+    <string name="churn_offer_subtitle">உங்களுக்காக மட்டும், நீங்கள் எங்களுக்கு முக்கியம்</string>
+    <string name="churn_offer_feature_ai">வரம்பற்ற KI பகுப்பாய்வுகள்</string>
+    <string name="churn_offer_feature_perspectives">அனைத்து 5 கோணங்களும்</string>
+    <string name="churn_offer_feature_voice">Premium குரல் அங்கீகாரம்</string>
+    <string name="churn_offer_auto_renew">தானாக புதுப்பிக்கப்படும், எப்போதும் ரத்து செய்யலாம்</string>
+    <string name="churn_accept_offer">வாய்ப்பை ஏற்றுக்கொள்</string>
+    <string name="churn_switch_yearly">அல்லது ஆண்டு சந்தாவிற்கு மாறி இன்னும் சேமிக்கவும்</string>
+    <string name="churn_pause_sub">அல்லது Google Play-ல் சந்தாவை இடைநிறுத்தவும்</string>
+    <string name="churn_cancel_anyway">எப்படியாயினும் ரத்து செய்</string>
+    <string name="churn_are_you_sure">நீங்கள் உறுதியாக இருக்கிறீர்களா?</string>
+    <string name="churn_stay">இருந்துவிட விரும்புகிறேன்</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI LIMIT / COMPONENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="ai_limit_title">உங்கள் வார வரம்பு அடைந்தது</string>
+    <string name="ai_limit_body">சந்தா இல்லாமல் வாரத்திற்கு 5\u00A0உரை மேம்பாடுகள் மற்றும் 5\u00A0டாஷ்போர்டு புதுப்பிப்புகள்.\nPremium சந்தாவுடன்: நாளுக்கு 150 வரை, முழு தரத்தில்.</string>
+    <string name="ai_limit_monthly">மாத சந்தா, %1$s/மாதம்</string>
+    <string name="ai_limit_yearly">ஆண்டு சந்தா, %1$s/ஆண்டு (37%% சேமிக்கவும்)</string>
+    <string name="ai_limit_no_thanks">வேண்டாம், KI இல்லாமல் தொடரவும்</string>
+    <string name="ai_banner_title">உங்கள் நாட்குறிப்பு KI ஆல் ஆதரிக்கப்படுகிறது</string>
+    <string name="ai_banner_body">• கூறிய உரைகள் தானாக மேம்படுத்தப்படுகின்றன\n• ஒவ்வொரு பதிவிற்கும் சுருக்கங்கள்\n• உங்கள் வடிவங்களிலிருந்து அறிவார்ந்த வாழ்க்கை ஆலோசனை\n• உங்கள் இலவச சோதனை காலத்தில் அனைத்தும் சேர்க்கப்பட்டுள்ளது</string>
+    <string name="cd_mic_start">பதிவை தொடங்கு</string>
+    <string name="cd_mic_stop">பதிவை நிறுத்து</string>
+    <string name="entry_improve_limit_daily">நாள் வரம்பு அடைந்தது. நாளை தொடரலாம்!</string>
+    <string name="entry_improve_limit_cooldown">சிறிது இடைவெளி: இன்னும் %1$d நிமிடங்கள்.</string>
+    <string name="entry_improve_failed">உரை மேம்பாடு தோல்வியடைந்தது</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NOTIFICATIONS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="notif_reminder_title">உங்கள் நாட்குறிப்பிற்கு நேரம்</string>
+    <string name="notif_reminder_body_0">இன்று உங்களை என்ன நகர்த்துகிறது?</string>
+    <string name="notif_reminder_body_1">உங்களுக்கான ஒரு தருணம், அதை பதிவு செய்யுங்கள்</string>
+    <string name="notif_reminder_body_2">உங்கள் எதிர்கால நான் நன்றி சொல்வார்</string>
+    <string name="notif_reminder_body_3">ஒரே ஒரு எண்ணம் போதும், தொடங்குங்கள்</string>
+    <string name="notif_reminder_body_4">இன்று உங்கள் சிறப்பு நிகழ்வு என்ன?</string>
+    <string name="notif_weekly_title">உங்கள் வார மீள்பார்வை</string>
+    <string name="notif_weekly_body">இந்த வாரம் உங்களை என்ன நகர்த்தியது என்று பாருங்கள், உங்கள் டாஷ்போர்டில் புதிய நுண்ணறிவுகள் உள்ளன.</string>
+    <string name="notif_monthly_title">உங்கள் மாத மீள்பார்வை</string>
+    <string name="notif_monthly_body">நினைவுகளால் நிறைந்த முழு மாதம் உங்களுக்காக காத்திருக்கிறது.</string>
+    <string name="notif_yearly_title">உங்கள் ஆண்டு மீள்பார்வை</string>
+    <string name="notif_yearly_body">நினைவுகளால் நிறைந்த முழு ஆண்டு, உங்கள் பயணத்தை பின்னோக்கி பாருங்கள்.</string>
+
+    <!-- Notification channel names -->
+    <string name="notif_channel_daily_name">தினசரி நினைவூட்டல்</string>
+    <string name="notif_channel_daily_desc">நாட்குறிப்பு எழுதுவதை தினசரி நினைவூட்டுகிறது</string>
+    <string name="notif_channel_weekly_name">வார மீள்பார்வை</string>
+    <string name="notif_channel_weekly_desc">ஒவ்வொரு ஞாயிறு மாலை 15:00 மணிக்கு உங்கள் வார மீள்பார்வை</string>
+    <string name="notif_channel_monthly_name">மாத மீள்பார்வை</string>
+    <string name="notif_channel_monthly_desc">உங்கள் மாத மீள்பார்வை தயாரானபோது அறிவிப்பு</string>
+    <string name="notif_channel_yearly_name">ஆண்டு மீள்பார்வை</string>
+    <string name="notif_channel_yearly_desc">உங்கள் ஆண்டு மீள்பார்வை தயாரானபோது அறிவிப்பு</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DATE / TIME
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="datetime_just_now">இப்போதே</string>
+    <plurals name="datetime_minutes_ago">
+        <item quantity="one">%1$d நிமிடத்திற்கு முன்பு</item>
+        <item quantity="other">%1$d நிமிடங்களுக்கு முன்பு</item>
+    </plurals>
+    <plurals name="datetime_hours_ago">
+        <item quantity="one">%1$d மணி நேரத்திற்கு முன்பு</item>
+        <item quantity="other">%1$d மணி நேரங்களுக்கு முன்பு</item>
+    </plurals>
+    <plurals name="datetime_days_ago">
+        <item quantity="one">%1$d நாளுக்கு முன்பு</item>
+        <item quantity="other">%1$d நாட்களுக்கு முன்பு</item>
+    </plurals>
+    <!-- Confirmation after PDF export. -->
+    <plurals name="settings_export_success">
+        <item quantity="one">%1$d பதிவு ஏற்றுமதி செய்யப்பட்டது</item>
+        <item quantity="other">%1$d பதிவுகள் ஏற்றுமதி செய்யப்பட்டன</item>
+    </plurals>
+    <string name="datetime_today">இன்று</string>
+    <string name="datetime_yesterday">நேற்று</string>
+    <string name="datetime_day_before_yesterday">முன்நாள்</string>
+    <string name="datetime_this_week">இந்த வாரம்</string>
+    <string name="datetime_last_week">கடந்த வாரம்</string>
+    <string name="datetime_weeks_ago">%1$d வாரங்களுக்கு முன்பு</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ACHIEVEMENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="achievement_nightowl_title">இரவு ஆந்தை</string>
+    <string name="achievement_nightowl_desc">இரவு 22 மணிக்குப் பிறகு 50 பதிவுகள் எழுதப்பட்டன</string>
+    <string name="achievement_earlybird_title">அதிகாலை பறவை</string>
+    <string name="achievement_earlybird_desc">காலை 7 மணிக்கு முன்பு 20 பதிவுகள் எழுதப்பட்டன</string>
+    <string name="achievement_confession_title">வெளிப்பாடு</string>
+    <string name="achievement_confession_desc">1,000 வார்த்தைகளுக்கும் மேலாக ஒரு பதிவு எழுதப்பட்டது</string>
+    <string name="achievement_marathon_title">மாரத்தான் எழுத்தாளர்</string>
+    <string name="achievement_marathon_desc">100 நாட்குறிப்பு பதிவுகள் எழுதப்பட்டன</string>
+    <string name="achievement_wordartist_title">வார்த்தை கலைஞர்</string>
+    <string name="achievement_wordartist_desc">500 நாட்குறிப்பு பதிவுகள் எழுதப்பட்டன</string>
+    <string name="achievement_consistency_title">நிலைத்தன்மை</string>
+    <string name="achievement_consistency_desc">30 நாள் தொடர் அடைந்தது</string>
+    <string name="achievement_chronicler_title">ஆண்டு வரலாற்றாசிரியர்</string>
+    <string name="achievement_chronicler_desc">365 பதிவுகள் எழுதப்பட்டன</string>
+    <string name="achievement_photodiary_title">புகைப்பட நாட்குறிப்பு</string>
+    <string name="achievement_photodiary_desc">பதிவுகளில் 50 புகைப்படங்கள் இணைக்கப்பட்டன</string>
+    <string name="achievement_voiceartist_title">குரல் கலைஞர்</string>
+    <string name="achievement_voiceartist_desc">25 குரல் பதிவுகள் உருவாக்கப்பட்டன</string>
+    <string name="achievement_reflectionmaster_title">சிந்தனை நிபுணர்</string>
+    <string name="achievement_reflectionmaster_desc">50 டாஷ்போர்டு பகுப்பாய்வுகள் செய்யப்பட்டன</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DAILY PROMPTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="prompt_cat_self_reflection">சுய சிந்தனை</string>
+    <string name="prompt_cat_gratitude">நன்றி</string>
+    <string name="prompt_cat_future">எதிர்காலம்</string>
+    <string name="prompt_cat_relationships">உறவுகள்</string>
+
+    <string-array name="prompts_self_reflection">
+        <item>இன்று உங்களை புன்னகைக்க வைத்தது என்ன?</item>
+        <item>இன்று எந்த எண்ணத்தை விட முடியவில்லை?</item>
+        <item>இன்று உங்களைப் பற்றி என்ன கற்றுக்கொண்டீர்கள்?</item>
+        <item>இன்று எந்த தருணம் மிகவும் தீவிரமாக இருந்தது?</item>
+        <item>முடிந்தால் இன்று என்ன வேறுவிதமாக செய்திருப்பீர்கள்?</item>
+        <item>இன்று உங்களை மிகவும் அதிகமாக வழிநடத்திய உணர்வு என்ன?</item>
+        <item>இன்று உங்களை என்ன ஆச்சரியப்படுத்தியது?</item>
+        <item>இன்று மிக நீண்ட நேரம் என்னைப் பற்றி நினைத்தீர்கள்?</item>
+        <item>இன்று உங்களுக்கு ஆற்றல் அளித்தது என்ன?</item>
+        <item>இன்று உங்கள் ஆற்றலை எடுத்தது என்ன?</item>
+        <item>நீங்கள் எந்த பழக்கத்தை மாற்ற விரும்புகிறீர்கள்?</item>
+        <item>இப்போது உங்களுக்கு வெற்றி என்று அர்த்தம் என்ன?</item>
+        <item>தற்போது உங்களை தடுக்கும் என்ன பயம் இருக்கிறது?</item>
+        <item>உங்கள் இளமை நான் இன்றைய வாழ்வைப் பற்றி என்ன சொல்வார்?</item>
+        <item>இப்போது நீங்கள் உங்களுக்கே என்ன ஆலோசனை தருவீர்கள்?</item>
+        <item>உங்களை தனித்துவமாக ஆக்குவது என்ன?</item>
+    </string-array>
+
+    <string-array name="prompts_gratitude">
+        <item>இன்று நீங்கள் எதற்கு நன்றி கூறுகிறீர்கள்?</item>
+        <item>இன்று யார் உங்கள் நாளை செழுமைப்படுத்தினார்?</item>
+        <item>இன்று எந்த சிறிய விவரம் உங்களை மகிழ்வித்தது?</item>
+        <item>நீங்கள் பெரும்பாலும் சாதாரணமாக எடுத்துக்கொள்ளும் திறன் எது?</item>
+        <item>இந்த வாரம் உங்களுக்கு நடந்த சிறந்த விஷயம் என்ன?</item>
+        <item>யாருக்கு நன்றி சொல்ல விரும்புகிறீர்கள், ஏன்?</item>
+        <item>எந்த இடம் உங்களுக்கு வீட்டின் உணர்வை தருகிறது?</item>
+        <item>எந்த நினைவு உங்களை உடனடியாக மகிழ்விக்கிறது?</item>
+        <item>உங்கள் உடலில் என்ன அதிக பாராட்டு பெற வேண்டும்?</item>
+        <item>இன்று எந்த உணவு உங்களுக்கு உண்மையிலேயே நல்லது செய்தது?</item>
+        <item>கடைசியாக எந்த இசை உங்களை நெகிழ்த்தியது?</item>
+        <item>நீங்கள் கொண்டிருக்கும் மிகவும் மதிப்புமிக்க, பணம் செலுத்தாத விஷயம் என்ன?</item>
+        <item>கடந்த காலத்தில் எந்த அனுபவம் உங்களை வலுப்படுத்தியது?</item>
+        <item>உங்கள் அன்றாட வாழ்வில் எது உண்மையில் ஒரு சலுகை?</item>
+        <item>உங்கள் அன்றாட வாழ்வில் மறைந்திருக்கும் நாயகன் யார்?</item>
+        <item>நீங்கள் இப்போது மிகவும் அனுபவிக்கும் பருவகாலம் எது, ஏன்?</item>
+    </string-array>
+
+    <string-array name="prompts_future">
+        <item>ஒரு வருடத்தில் நீங்கள் என்ன அடைந்திருக்க விரும்புகிறீர்கள்?</item>
+        <item>ஐந்து வருடங்களில் உங்கள் சரியான நாள் எப்படி இருக்கும்?</item>
+        <item>இப்போது நீங்கள் மிகவும் உற்சாகத்துடன் பின்பற்றும் இலக்கு எது?</item>
+        <item>தோல்வியடைய முடியாது என்று தெரிந்தால் என்ன செய்வீர்கள்?</item>
+        <item>நீங்கள் எந்த புதிய திறனை கற்றுக்கொள்ள விரும்புகிறீர்கள்?</item>
+        <item>அடுத்து எங்கே பயணிக்க விரும்புகிறீர்கள்?</item>
+        <item>பத்து வருடங்களில் நீங்கள் எந்த மனிதராக இருக்க விரும்புகிறீர்கள்?</item>
+        <item>நீங்கள் கைவிட்ட எந்த கனவை மீண்டும் உயிரூட்ட முடியும்?</item>
+        <item>இப்போது நீங்கள் செய்யக்கூடிய மிகவும் தைரியமான படி என்ன?</item>
+        <item>தொடங்காத எந்த திட்டம் உங்களை உற்சாகப்படுத்துகிறது?</item>
+        <item>நீங்கள் திருப்தியடைந்தேன் என்று சொல்ல என்ன நடக்க வேண்டும்?</item>
+        <item>உலகில் நீங்கள் என்ன மாற்றத்தை காண விரும்புகிறீர்கள்?</item>
+        <item>உங்கள் Bucket List-ல் முதலில் என்ன இருக்கிறது?</item>
+        <item>அடுத்த மாதத்திற்குள் கைவிட விரும்பும் மோசமான பழக்கம் என்ன?</item>
+        <item>நீங்கள் எப்படி நினைவில் வைக்கப்பட விரும்புகிறீர்கள்?</item>
+        <item>நாளை நீங்கள் எடுக்கக்கூடிய ஒரு சிறிய படி என்ன?</item>
+    </string-array>
+
+    <string-array name="prompts_relationships">
+        <item>இதுவரை சொல்லாத என்னவோ ஒருவருக்கு சொல்ல விரும்புகிறீர்கள்?</item>
+        <item>உங்கள் வாழ்வில் எந்த உறவு அதிக கவனம் தகுதியானது?</item>
+        <item>உங்கள் சிறந்த நண்பரில் நீங்கள் மிகவும் மதிப்பிடுவது என்ன?</item>
+        <item>கடைசியாக நீங்கள் உண்மையிலேயே புரிந்துகொள்ளப்பட்டதாக எப்போது உணர்ந்தீர்கள்?</item>
+        <item>உங்களுக்கு முக்கியமான ஒருவருக்கு என்ன சொல்வீர்கள்?</item>
+        <item>எந்த மனிதர் உங்கள் வாழ்வை மிகவும் வலிமையாக வடிவமைத்தார்?</item>
+        <item>நீங்கள் மற்றவர்களை நேசிக்கிறீர்கள் என்று எப்படி காட்டுகிறீர்கள்?</item>
+        <item>எந்த மோதலை தீர்க்க விரும்புகிறீர்கள்?</item>
+        <item>நட்பு என்று அர்த்தம் என்ன?</item>
+        <item>கடைசியாக யார் உங்களுக்கு முக்கியமான ஒன்றை கற்றுக்கொடுத்தார்?</item>
+        <item>மற்றவர்களில் நீங்கள் மிகவும் பாராட்டும் குணம் எது?</item>
+        <item>யாருடன் ஒரு நாள் முழுவதும் கழிக்க விரும்புகிறீர்கள்?</item>
+        <item>நீங்கள் பெற்ற மிகவும் அழகான பாராட்டு என்ன?</item>
+        <item>உறவுகளில் எந்த எல்லைகளை சிறப்பாக அமைக்க விரும்புகிறீர்கள்?</item>
+        <item>காலப்போக்கில் அன்பைப் பற்றிய உங்கள் எண்ணம் எப்படி மாறியது?</item>
+        <item>யாருக்கு இன்று ஒரு அழைப்பு அல்லது செய்தி தகுதியானது?</item>
+    </string-array>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PDF EXPORT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="pdf_entry_fallback_title">பதிவு #%1$d</string>
+    <string name="pdf_entry_counter">பதிவு %1$d / %2$d</string>
+    <string name="pdf_summary_label">சுருக்கம்</string>
+    <string name="pdf_continuation">%1$s (தொடர்ச்சி)</string>
+    <string name="pdf_page_number">பக்கம் %1$d</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ERRORS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="error_retro_all_failed">அனைத்து %1$d KI கோரிக்கைகளும் தோல்வியடைந்தன. இணைய இணைப்பை சரிபார்க்கவும்.</string>
+    <string name="error_whisper_audio_empty">ஆடியோ கோப்பு காலியாக உள்ளது</string>
+    <string name="error_whisper_no_text">உரை எதுவும் அங்கீகரிக்கப்படவில்லை</string>
+    <string name="error_sync_db_not_found">தரவுத்தளம் கிடைக்கவில்லை</string>
+    <string name="error_file_open_failed">பிழை: கோப்பை திறக்க முடியவில்லை</string>
+    <string name="error_generic">பிழை: %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI PROFILE STYLE INSTRUCTIONS (for Gemini prompts)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="profile_style_chronicler">\n- சுருக்கமான கதை நடையில் எழுதவும், ஒரு தனிப்பட்ட வரலாற்றாசிரியர் போல் முக்கிய நிகழ்வுகள் மற்றும் உணர்வுகளை சுருக்கவும்</string>
+    <string name="profile_style_advisor">\n- ஒரு வாழ்க்கை ஆலோசகரின் நடையில் எழுதவும், நன்றாக நடந்தது என்ன, என்ன மேம்படுத்தலாம் என்று சிறப்பிடுங்கள், வாசகருக்கு தெளிவு மற்றும் ஒழுங்கு உணர்வை தாருங்கள்</string>
+    <string name="profile_style_insight">\n- ஆழமான சுய அறிவு கதை நடையில் எழுதவும், சிந்தனை வடிவங்கள், திரும்பி வரும் உணர்வுகள் மற்றும் மறைந்த பலங்களை வெளிப்படுத்துங்கள்</string>
+    <string name="profile_style_coach">\n- ஊக்கமளிக்கும் இலக்கு துணையாளரின் நடையில் எழுதவும், தனிப்பட்ட இலக்குகளில் முன்னேற்றங்களை காட்டுங்கள் மற்றும் தொடர்ந்து செல்ல ஊக்குவியுங்கள்</string>
+    <string name="profile_style_custom">\n- பயனரின் பின்வரும் தனிப்பட்ட கவனத்துடன் மீள்பார்வையை எழுதவும்: \"%1$s\"</string>
+</resources>
