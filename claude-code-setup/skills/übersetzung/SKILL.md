@@ -189,7 +189,7 @@ die im ersten Durchlauf entstehen.
 1. **Prompt erneut laden**: Den sprach-spezifischen Prompt-Block NOCHMAL lesen.
    Nicht aus dem Gedaechtnis arbeiten — frisch laden, damit keine Warnung vergessen wird.
 
-2. **Systematische Pruefung (8 Checks):**
+2. **Systematische Pruefung (9 Checks):**
 
    | # | Check | Was geprueft wird | Wie pruefen |
    |---|-------|------------------|-------------|
@@ -201,6 +201,7 @@ die im ersten Durchlauf entstehen.
    | 6 | Konsistenz | Gleiche Begriffe fuer gleiche Konzepte | Stichprobe der Kern-Vokabeln |
    | **7** | **Native-Ziffern (indische Sprachen PFLICHT)** | **Keine bengalischen/devanagari/tamilischen etc. Ziffern** | **Python-Regex pro Sprache (siehe unten)** |
    | **8** | **Full-width Punctuation (CJK-Sprachen PFLICHT)** | **Keine half-width `, . ! ? : ; ( )` nach CJK-Zeichen** | **Python-Regex (siehe unten)** |
+   | **9** | **Portugiesisch-Varianten-Trennung (pt-BR ↔ pt-PT PFLICHT)** | **Keine PT-BR-Vokabeln in pt-PT und umgekehrt** | **Python-Regex bidirektional (siehe unten)** |
 
 #### Check 7 — Native-Ziffern-Pflichtcheck fuer indische Sprachen
 
@@ -366,6 +367,143 @@ else:
 Dieser Check ist **nicht optional** fuer zh-Hans, zh-Hant, ja. Er wird nach Schritt A
 (Uebersetzen) und vor Schritt C (Commit) ausgefuehrt. Bei >0 Vorkommen: automatisch
 ersetzen, in die Verbesserungs-Meldung aufnehmen.
+
+#### Check 9 — Portugiesisch-Varianten-Trennung (pt-BR ↔ pt-PT PFLICHT)
+
+Portugiesisch ist die Sprache mit der hoechsten LLM-Verwechslungs-Rate aller 26 Zielsprachen.
+Praktisch alle Standard-LLMs defaulten auf pt-BR und streuen BR-Vokabular auch dann ein,
+wenn explizit pt-PT angefragt wurde (und umgekehrt). Deshalb PFLICHT-Check via Python
+nach jeder portugiesischen Uebersetzung — BIDIREKTIONAL.
+
+**Empirische Daten** (BestJournal-App, April 2026):
+- pt-PT Uebersetzung: 108 você-Vorkommen, 97 Salvar/Excluir/Compartilhar-Leakage,
+  29 Retrospectiva statt Retrospetiva (AO 1990), ~580 systematische Fixes insgesamt
+- pt-BR darf KEINE PT-PT-Vokabeln haben und umgekehrt. Ein einziges "utilizador"
+  in pt-BR ist genauso falsch wie ein "usuário" in pt-PT.
+
+**Marker-Woerter (die 20 wichtigsten in beide Richtungen):**
+
+| Konzept | pt-PT (KORREKT fuer Portugal) | pt-BR (KORREKT fuer Brasilien) |
+|---------|-------------------------------|--------------------------------|
+| Benutzer | utilizador | usuário |
+| App | aplicação (fem.) | aplicativo (masc.) |
+| Speichern | guardar | salvar |
+| Einstellungen | definições | configurações |
+| Passwort | palavra-passe | senha |
+| Herunterladen | transferir | baixar |
+| Handy | telemóvel | celular |
+| Datei | ficheiro | arquivo |
+| Loeschen | eliminar | excluir |
+| Bildschirm | ecrã | tela |
+| Anmelden | iniciar sessão | fazer login / entrar |
+| Teilen | partilhar | compartilhar |
+| Abonnement | subscrição | assinatura |
+| Kamera | câmara | câmera |
+| Aufzeichnung | registo | registro |
+| Du (Pronomen) | tu | você |
+| Wir (ugs) | nós | a gente |
+| Stress | stress | estresse |
+| Retrospektive (AO 1990) | retrospetiva | retrospectiva |
+| Zugreifen | aceder | acessar |
+| Managen | gerir | gerenciar |
+| Progressiv | "a + Infinitiv" (a guardar) | "-ando / -endo / -indo" (salvando) |
+
+**Pflicht-Script (nach jeder pt-PT ODER pt-BR Uebersetzung ausfuehren):**
+
+```python
+import re, os, tempfile, sys
+
+# Variante definieren: "pt-PT" fuer Portugal, "pt-BR" fuer Brasilien
+TARGET_VARIANT = "pt-PT"  # oder "pt-BR"
+LOCALE = "pt-rPT" if TARGET_VARIANT == "pt-PT" else "pt-rBR"
+PATH = f"[APP_DIR]/app/src/main/res/values-{LOCALE}/strings.xml"
+
+# Marker-Paare: (PT-PT-Wort, PT-BR-Wort)
+MARKERS = [
+    ("utilizador", "usuário"), ("aplicação", "aplicativo"),
+    ("guardar", "salvar"), ("definições", "configurações"),
+    ("palavra-passe", "senha"), ("transferir", "baixar"),
+    ("telemóvel", "celular"), ("ficheiro", "arquivo"),
+    ("eliminar", "excluir"), ("ecrã", "tela"),
+    ("iniciar sessão", "fazer login"), ("partilhar", "compartilhar"),
+    ("subscrição", "assinatura"), ("câmara", "câmera"),
+    ("registo", "registro"), ("tu", "você"),
+    ("nós", "a gente"), ("stress", "estresse"),
+    ("retrospetiva", "retrospectiva"), ("aceder", "acessar"),
+    ("gerir", "gerenciar"),
+]
+
+# Gerundium-Indikatoren (BR-only in Progressiv):
+# In pt-PT VERBOTEN: "-ando/-endo/-indo" nach "estar/está/estou"
+GERUND_PATTERNS = [
+    r'\b(est[aoáãou]\w*)\s+\w+(ando|endo|indo)\b',
+]
+
+with open(PATH, "r", encoding="utf-8") as f:
+    content = f.read()
+
+# Nur user-visible Strings pruefen (keine Kommentare, keine Resource-Namen)
+def extract_visible(text):
+    parts = []
+    for m in re.finditer(r'<string[^>]*>([^<]*(?:<(?!/string>)[^<]*)*)</string>', text, re.DOTALL):
+        parts.append(m.group(1))
+    for m in re.finditer(r'<item[^>]*>([^<]*(?:<(?!/item>)[^<]*)*)</item>', text, re.DOTALL):
+        parts.append(m.group(1))
+    return '\n'.join(parts)
+
+visible = extract_visible(content)
+
+# Je nach Zielvariante: den ANDEREN Marker finden
+forbidden_idx = 1 if TARGET_VARIANT == "pt-PT" else 0
+ok_idx = 0 if TARGET_VARIANT == "pt-PT" else 1
+label_forbidden = "pt-BR" if TARGET_VARIANT == "pt-PT" else "pt-PT"
+
+print(f"=== Check 9 — Varianten-Trennung fuer {TARGET_VARIANT} ===")
+print(f"Suche nach {label_forbidden}-Woertern (sollten NICHT vorkommen):\n")
+
+total_leakage = 0
+for pt, br in MARKERS:
+    forbidden = br if TARGET_VARIANT == "pt-PT" else pt
+    # "tu" ist zu unspezifisch — nur mit Wortgrenzen und nicht in Anfuehrungszeichen
+    if forbidden in ("tu", "nós"):
+        # Nur als eigenstaendiges Pronomen
+        pat = r'\b' + re.escape(forbidden) + r'\b'
+    else:
+        pat = r'\b' + re.escape(forbidden) + r'\b'
+    matches = re.findall(pat, visible, re.IGNORECASE)
+    if matches:
+        total_leakage += len(matches)
+        print(f"  WARN {forbidden} (sollte: {pt if TARGET_VARIANT == 'pt-PT' else br}): {len(matches)}x")
+
+# Gerundium-Check (nur fuer pt-PT)
+if TARGET_VARIANT == "pt-PT":
+    gerund_matches = []
+    for pat in GERUND_PATTERNS:
+        for m in re.finditer(pat, visible):
+            gerund_matches.append(m.group(0))
+    if gerund_matches:
+        total_leakage += len(gerund_matches)
+        print(f"  WARN BR-Gerundium (sollte 'a + Infinitiv'): {len(gerund_matches)}x")
+        for g in gerund_matches[:5]:
+            print(f"    Beispiel: {g}")
+
+if total_leakage == 0:
+    print(f"OK: 0 {label_forbidden}-Kontaminationen ✓")
+else:
+    print(f"\nFEHLER: {total_leakage} Varianten-Verletzungen gefunden")
+    print(f"MUESSEN korrigiert werden BEVOR der Commit erfolgt.")
+    sys.exit(1)
+```
+
+**Wann automatisch ausfuehren:**
+- Nach jeder pt-PT Uebersetzung: `TARGET_VARIANT = "pt-PT"` setzen
+- Nach jeder pt-BR Uebersetzung: `TARGET_VARIANT = "pt-BR"` setzen
+- Bei >0 Leakage: automatisch in die sprach-spezifische Fix-Schleife einspeisen
+  (siehe Check 5 sprach-spezifische Warnungen fuer pt-BR und pt-PT)
+
+Dieser Check ist **nicht optional** fuer pt-BR und pt-PT. Er wird nach Schritt A
+(Uebersetzen) und vor Schritt C (Commit) ausgefuehrt. Bei >0 Vorkommen: automatisch
+ersetzen (siehe Batch-Script-Muster in Check 5), in die Verbesserungs-Meldung aufnehmen.
 
 3. **Check 5 im Detail — Sprach-spezifische Warnungen:**
    Das ist der wichtigste Check. Fuer jede Sprache gibt es spezifische Gefahren:
