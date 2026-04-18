@@ -1,0 +1,1069 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+    tools:locale="gu">
+    <!-- App brand name — do not translate -->
+    <string name="app_name" translatable="false">Best Journal</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NAVIGATION & TABS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="nav_journal">ડાયરી</string>
+    <string name="nav_retrospective">અવલોકન</string>
+    <string name="nav_dashboard">ડૅશબોર્ડ</string>
+    <string name="nav_settings">સેટિંગ્સ</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         COMMON / SHARED
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="action_cancel">રદ કરો</string>
+    <string name="action_save">સાચવો</string>
+    <string name="action_close">બંધ કરો</string>
+    <string name="action_continue">આગળ વધો</string>
+    <string name="action_understood">સમજાઈ ગયું</string>
+    <string name="action_retry">ફરી પ્રયાસ કરો</string>
+    <string name="action_later">પછીથી</string>
+    <string name="action_share">શૅર કરો</string>
+    <string name="action_discard">કાઢી નાખો</string>
+    <string name="action_back">પાછળ</string>
+    <string name="action_done">થઈ ગયું</string>
+    <string name="action_no_thanks">ના, આભાર</string>
+    <string name="action_delete">ડિલીટ કરો</string>
+    <!-- Accessibility label for the undo icon button on the dashboard. -->
+    <string name="action_undo">પૂર્વવત્</string>
+    <string name="action_ok">ઑકે</string>
+    <string name="action_go_google_play">Google Play પર જાઓ</string>
+    <string name="journal_drive_backup_dialog">Google Drive બૅકઅપ</string>
+    <string name="journal_improve_text">✨ ટેક્સ્ટ સુધારો</string>
+    <string name="journal_show_original">↩ મૂળ બતાવો</string>
+    <string name="journal_show_improved">✨ સુધારેલ વર્ઝન બતાવો</string>
+    <string name="journal_ai_improving">AI ટેક્સ્ટ સુધારી રહ્યું છે — કૃપા કરી રાહ જુઓ</string>
+    <string name="journal_later">પછીથી</string>
+    <!-- Paywall missed strings -->
+    <string name="paywall_from_per_day">%1$s પ્રતિ દિવસથી</string>
+    <string name="paywall_instead_per_month">%1$s પ્રતિ માસને બદલે</string>
+    <string name="paywall_or">અથવા</string>
+    <string name="paywall_with_limited">મર્યાદિત લિમિટ સાથે.</string>
+    <!-- Churn missed string -->
+    <string name="churn_instead_of">ને બદલે </string>
+    <string name="label_premium">Premium</string>
+    <string name="label_original">મૂળ</string>
+    <string name="label_improved">સુધારેલ</string>
+    <string name="label_photo">ફોટો</string>
+    <string name="label_video">વિડિઓ</string>
+    <string name="label_current">વર્તમાન</string>
+    <string name="label_record">રેકૉર્ડ</string>
+    <string name="cd_sync_status">સિંક સ્ટેટસ</string>
+    <string name="cd_day">દિવસ</string>
+    <string name="cd_night">રાત</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JOURNAL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="journal_title">ડાયરી</string>
+    <string name="journal_search_placeholder">નોંધો શોધો\u2026</string>
+    <string name="journal_search">શોધો</string>
+    <string name="journal_search_hint">શોધ</string>
+    <string name="journal_search_close">શોધ બંધ કરો</string>
+    <string name="journal_no_entries">હજુ કોઈ નોંધ નથી</string>
+    <string name="journal_tap_mic_to_start">શરૂ કરવા માઇક પર ટૅપ કરો</string>
+    <string name="journal_cd_streak">સળંગ દિવસો</string>
+    <string name="journal_cd_text_input">ટેક્સ્ટ દાખલ કરો</string>
+    <string name="journal_achievement_unlocked">Achievement અનલૉક થઈ!</string>
+    <string name="journal_drive_not_signed_in">Google માં સાઇન ઇન નથી</string>
+    <string name="journal_drive_backup_current">બૅકઅપ અપ-ટૂ-ડેટ, બધી નોંધો સુરક્ષિત</string>
+    <string name="journal_drive_uploading">બૅકઅપ અપલોડ થઈ રહ્યું છે\u2026</string>
+    <string name="journal_drive_downloading">ફોટો/વિડિઓ ડાઉનલોડ થઈ રહ્યા છે\u2026</string>
+    <string name="journal_drive_failed">બૅકઅપ નિષ્ફળ!</string>
+    <string name="journal_drive_last_sync">છેલ્લી સિંક: %1$s</string>
+    <string name="journal_new_entry_prompt">લખવાની પ્રેરણા</string>
+    <string name="journal_new_entry">નવી નોંધ</string>
+    <string name="journal_save_improved">સુધારેલ સાચવો</string>
+    <string name="journal_save">સાચવો</string>
+    <string name="journal_cd_write">લખો</string>
+    <string name="journal_write">લખો</string>
+    <string name="journal_cd_speak">બોલો</string>
+    <string name="journal_speak">બોલો</string>
+    <string name="journal_your_answer">તમારો જવાબ:</string>
+    <string name="journal_placeholder_prompt">અહીં તમારા વિચારો લખો\u2026</string>
+    <string name="journal_placeholder_edit">ટેક્સ્ટ સંપાદિત કરવા અહીં ટૅપ કરો\u2026</string>
+    <string name="journal_freeflow_hint">તમારા વિચારો મુક્ત રીતે વહેવા દો. અહીં સાચું કે ખોટું કંઈ નથી.</string>
+    <string name="journal_transcribed_with">%1$s વડે ટ્રાન્સ્ક્રાઇબ</string>
+    <!-- Default label for the transcription model (local Whisper, runs on-device). -->
+    <string name="transcription_model_local">સ્થાનિક Whisper મૉડેલ</string>
+    <!-- Brand name of the Groq transcription model — do not translate. -->
+    <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
+    <string name="journal_text_upsell_title">પ્રભાવશાળી, ખરું ને?</string>
+    <string name="journal_text_upsell_body">Premium સાથે તમે દરેક નોંધ સુધારી શકો છો.</string>
+    <string name="journal_discover_premium">Premium શોધો →</string>
+    <string name="journal_entries_label">નોંધો</string>
+    <string name="journal_entry_count">%1$d નોંધો</string>
+    <string name="journal_streak_days">%1$d દિવસ</string>
+    <string name="journal_streak_days_in_row">%1$d સળંગ દિવસ</string>
+    <string name="journal_streak_next_goal">આગળનો લક્ષ્ય: %1$d દિવસ</string>
+    <string name="journal_streak_remaining">હજુ %1$d બાકી</string>
+    <string name="journal_streak_premium">Streak સુરક્ષા: Premium સાથે ઉપલબ્ધ</string>
+    <string name="journal_keep_going">આગળ વધો!</string>
+    <string name="journal_daily_prompt">આજનો લખવાનો વિષય</string>
+    <string name="journal_write_about">આ વિશે લખો</string>
+    <string name="journal_recording_error">રેકૉર્ડિંગ નિષ્ફળ: %1$s</string>
+    <string name="journal_transcription_error">ટ્રાન્સ્ક્રિપ્શન નિષ્ફળ: %1$s</string>
+    <string name="journal_rate_limit">ટૂંકો વિરામ: આગળની સુધારણા સુધી %1$d મિનિટ બાકી.</string>
+    <string name="journal_improve_error">ટેક્સ્ટ સુધારણા નિષ્ફળ: %1$s</string>
+    <string name="journal_save_error">સાચવવું નિષ્ફળ: %1$s</string>
+    <string name="recording_tap_stop">રોકવા ફરી ટૅપ કરો</string>
+
+    <!-- Streak messages -->
+    <string name="streak_365">આખું એક વર્ષ!</string>
+    <string name="streak_180">અવિશ્વસનીય શિસ્ત!</string>
+    <string name="streak_90">તમને કોઈ રોકી શકે નહીં!</string>
+    <string name="streak_30">આખો એક મહિનો!</string>
+    <string name="streak_14">બે સળંગ અઠવાડિયાં!</string>
+    <string name="streak_7">આખું એક અઠવાડિયું!</string>
+    <string name="streak_3">તમે ટ્રૅક પર છો!</string>
+    <string name="streak_default">દરેક દિવસ ગણાય!</string>
+    <string name="streak_desc_365">નાની ટેવ તરીકે શરૂ થયેલ આ હવે તમારા જીવનનો અભિન્ન ભાગ બની ગઈ છે. તમારી ડાયરી તમને અગાઉ કરતાં વધુ સારી રીતે ઓળખે છે.</string>
+    <string name="streak_desc_14">સળંગ બે અઠવાડિયાં, આ ઓછા લોકો કરી શકે. તમારું ભવિષ્ય-સ્વ તમારો આભાર માનશે.</string>
+    <string name="streak_desc_7">વિચારો, લાગણીઓ અને યાદોથી ભરેલ એક અઠવાડિયું. તમે કંઈ મૂલ્યવાન બનાવી રહ્યા છો.</string>
+    <string name="streak_desc_3">સળંગ ત્રણ દિવસ એ સાચી ટેવની શરૂઆત છે. ટ્રૅક પર રહો, આ ફળ આપે છે!</string>
+    <string name="streak_desc_1">દરેક નોંધ તમારા ભવિષ્ય-સ્વ માટે નાની ભેટ છે. કાલે ફરી લખો!</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ENTRY DETAIL SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="entry_title">નોંધ</string>
+    <string name="entry_summary">સારાંશ</string>
+    <string name="entry_stress_label">ભાર: </string>
+    <string name="entry_saving">સાચવાઈ રહ્યું છે\u2026</string>
+    <string name="entry_improving">સુધારાઈ રહ્યું છે\u2026</string>
+    <string name="entry_improve_with_ai">AI વડે પછીથી સુધારો</string>
+    <string name="entry_photos_videos">ફોટો/વિડિઓ</string>
+    <string name="entry_add">ઉમેરો</string>
+    <string name="entry_no_photos_yet">હજુ કોઈ ફોટો/વિડિઓ ઉમેર્યા નથી</string>
+    <string name="entry_cd_play_video">વિડિઓ ચલાવો</string>
+    <string name="entry_cd_remove">દૂર કરો</string>
+    <string name="entry_tts_enable_hint">સેટિંગ્સમાં અવાજ ચાલુ કરો</string>
+    <string name="entry_tts_stop">રોકો</string>
+    <string name="entry_tts_read">વાંચો</string>
+    <string name="entry_cd_share">શૅર કરો</string>
+    <string name="entry_recording_duration">રેકૉર્ડિંગ સમય: %1$s</string>
+    <string name="entry_tts_generating">કૃપા કરી રાહ જુઓ, Text-to-Speech બનાવવામાં આવી રહ્યું છે\u2026</string>
+    <string name="entry_cd_photo_page">ફોટો %1$d</string>
+    <string name="entry_add_photo_video">ફોટો/વિડિઓ ઉમેરો</string>
+    <string name="entry_camera">કૅમેરા</string>
+    <string name="entry_gallery">ગૅલેરી</string>
+    <string name="entry_delete_title">નોંધ ડિલીટ કરીએ?</string>
+    <string name="entry_delete_message">આ નોંધ કાયમ માટે ડિલીટ કરવી?</string>
+
+    <!-- Share dialog -->
+    <string name="share_title">નોંધ શૅર કરો</string>
+    <string name="share_which_version">કઈ આવૃત્તિ શૅર કરવી?</string>
+    <string name="share_improved_version">સુધારેલ આવૃત્તિ</string>
+    <string name="share_photos_videos_label">ફોટો/વિડિઓ શૅર કરો:</string>
+    <string name="share_footer">BestJournal App ની ડાયરી નોંધ</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DASHBOARD SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="dashboard_title">ડૅશબોર્ડ</string>
+    <string name="dashboard_legend">લિજેન્ડ</string>
+    <string name="dashboard_refresh">તાજું કરો</string>
+    <string name="dashboard_weekly_review_waiting">તમારો સાપ્તાહિક અવલોકન તૈયાર છે</string>
+    <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
+    <string name="dashboard_weekly_review_upsell_body">તમારો સપ્તાહ ઘટનાઓથી ભરેલ હતો. Premium સાથે સંપૂર્ણ વિશ્લેષણ જુઓ — પૅટર્ન ઓળખો, આંતરદૃષ્ટિ શોધો અને સમજો કે શું ખરેખર તમને પ્રેરે છે.</string>
+    <string name="dashboard_discover_premium">Premium શોધો</string>
+    <string name="dashboard_please_wait">કૃપા કરી રાહ જુઓ</string>
+    <string name="dashboard_gemini_unavailable">Gemini અત્યારે ઉપલબ્ધ નથી, કૃપા કરી ટૂંક સમયમાં ફરી પ્રયાસ કરો.</string>
+    <string name="dashboard_no_custom_focus">કોઈ વિશ્લેષણ ફોકસ દાખલ નથી</string>
+    <string name="dashboard_custom_focus_hint">સેટિંગ્સમાં\n\"વ્યક્તિગત વિશ્લેષણ\" હેઠળ ફોકસ દાખલ કરો,\nઅથવા બીજી પ્રોફાઇલ પસંદ કરો.</string>
+    <string name="dashboard_no_analysis_yet">હજુ કોઈ વિશ્લેષણ નથી</string>
+    <string name="dashboard_create_entries_custom">ડાયરી નોંધો બનાવો,\nપછી AI તમારા ફોકસનું વિશ્લેષણ કરશે.</string>
+    <string name="dashboard_create_entries_default">ડાયરી નોંધો બનાવો,\nપછી AI તમારા પૅટર્નનું વિશ્લેષણ કરશે.</string>
+    <string name="dashboard_like_analysis">શું વિશ્લેષણ ગમ્યું?</string>
+    <string name="dashboard_premium_upsell_body">Premium સાથે 5 અલગ-અલગ દ્રષ્ટિકોણથી અમર્યાદ વિશ્લેષણ મળે છે.</string>
+    <string name="dashboard_learn_more">વધુ જાણો</string>
+    <string name="dashboard_feature_analyses">વિશ્લેષણો</string>
+    <string name="dashboard_all_observations">બધા અવલોકનો</string>
+    <string name="dashboard_inner_mirror">આંતરિક અરીસો</string>
+    <string name="dashboard_all_insights">બધી આંતરદૃષ્ટિ</string>
+    <string name="dashboard_goal_overview">લક્ષ્ય-અવલોકન</string>
+    <string name="dashboard_all_goals">બધા લક્ષ્યો</string>
+    <string name="dashboard_top_results_fallback">સૌથી મહત્વના પરિણામો</string>
+    <string name="dashboard_analysis_fallback">વિશ્લેષણ</string>
+    <string name="dashboard_all_results_fallback">બધા પરિણામો</string>
+    <string name="dashboard_overall_analysis">સંપૂર્ણ વિશ્લેષણ</string>
+    <!-- Title of the overview card in the Summary dashboard (scenario 0). -->
+    <string name="dashboard_summary_overview_title">ઝલક</string>
+    <!-- Title of the next-steps card in the Goals dashboard (scenario 3). -->
+    <string name="dashboard_goals_next_steps_title">આગળના પગલાં</string>
+    <string name="dashboard_all_recommendations">બધી ભલામણો</string>
+    <string name="dashboard_connection">જોડાણ</string>
+    <string name="dashboard_limit_daily">દૈનિક મર્યાદા પહોંચી. કાલે ફરી!</string>
+    <string name="dashboard_limit_cooldown">ટૂંકો વિરામ: આગળના વિશ્લેષણ સુધી %1$d મિનિટ બાકી.</string>
+    <string name="dashboard_analysis_failed">વિશ્લેષણ નિષ્ફળ</string>
+    <string name="dashboard_last_updated">છેલ્લે %1$s ના રોજ અપડેટ</string>
+    <string name="dashboard_loading_profile_switch">પ્રોફાઇલ બદલ્યા પછી AI ડૅશબોર્ડ આપોઆપ અપડેટ થાય છે</string>
+    <string name="dashboard_loading_delete_update">ડાયરી નોંધ ડિલીટ કર્યા પછી AI ડૅશબોર્ડ આપોઆપ અપડેટ થાય છે</string>
+    <string name="dashboard_loading_auto_update">નવી ડાયરી નોંધ પછી AI ડૅશબોર્ડ આપોઆપ અપડેટ થાય છે</string>
+    <string name="dashboard_loading_default">AI ડૅશબોર્ડ અપડેટ થઈ રહ્યું છે</string>
+
+    <!-- Legend labels -->
+    <string name="legend_urgent">તાત્કાલિક</string>
+    <string name="legend_attention">ધ્યાન</string>
+    <string name="legend_observe">અવલોકન</string>
+    <string name="legend_activity_level">પ્રવૃત્તિ સ્તર</string>
+    <string name="legend_activity_desc">અર્ધવર્તુળ દર્શાવે છે આ ક્ષેત્રમાં કેટલું થઈ રહ્યું છે:</string>
+    <string name="legend_activity_high">ઘણી પ્રવૃત્તિ (67–100%)</string>
+    <string name="legend_activity_medium">મધ્યમ પ્રવૃત્તિ (34–66%)</string>
+    <string name="legend_activity_low">ઓછી પ્રવૃત્તિ (0–33%)</string>
+    <string name="legend_observation_relevance">અવલોકનોની પ્રસ્તુતતા</string>
+    <string name="legend_relevance_high">કેન્દ્રીય, તમારી નોંધોના મૂળ વિષયો</string>
+    <string name="legend_relevance_medium">પ્રસ્તુત, વારંવાર આવતા અવલોકનો</string>
+    <string name="legend_relevance_low">સહેજ ઉલ્લેખ, એક વાર આવ્યું</string>
+    <string name="legend_reflection_depth">પ્રતિબિંબ ઊંડાઈ</string>
+    <string name="legend_reflection_desc">અર્ધવર્તુળ તમારા આત્મ-પ્રતિબિંબની ઊંડાઈ દર્શાવે છે:</string>
+    <string name="legend_reflection_deep">ઊંડું (67–100%)</string>
+    <string name="legend_reflection_aware">સભાન (34–66%)</string>
+    <string name="legend_reflection_surface">સ્તર (0–33%)</string>
+    <string name="legend_insight_depth">આંતરદૃષ્ટિ ઊંડાઈ</string>
+    <string name="legend_insight_deep">ઊંડું, છુપાયેલ પૅટર્ન અને માન્યતાઓ</string>
+    <string name="legend_insight_aware">સભાન, ઓળખાયેલ વિચાર અને ભાવ પૅટર્ન</string>
+    <string name="legend_insight_surface">સ્તર, પ્રથમ અવલોકનો</string>
+    <string name="legend_progress">પ્રગતિ</string>
+    <!-- Legend: Goal progress -->
+    <string name="legend_goal_progress_desc">અર્ધવર્તુળ તમારા લક્ષ્યોની પ્રગતિ દર્શાવે છે:</string>
+    <string name="legend_blocked_range">અવરોધિત (0–33%)</string>
+    <string name="legend_in_progress_range">ચાલુ (34–66%)</string>
+    <string name="legend_progress_range">પ્રગતિ (67–100%)</string>
+    <string name="legend_goal_status">લક્ષ્ય સ્ટેટસ</string>
+    <string name="legend_blocked_desc">અવરોધિત — અવરોધ ધરાવતા લક્ષ્યો</string>
+    <string name="legend_open_desc">ખુલ્લું — હજુ પ્રગતિ વિનાના લક્ષ્યો</string>
+    <string name="legend_progress_success_desc">પ્રગતિ — દૃશ્ય સફળતા ધરાવતા લક્ષ્યો</string>
+    <!-- Legend: Custom analysis -->
+    <string name="legend_analysis_value">વિશ્લેષણ મૂલ્ય</string>
+    <string name="legend_analysis_relevance_desc">અર્ધવર્તુળ તમારા ફોકસ માટે પ્રસ્તુતતા દર્શાવે છે:</string>
+    <string name="legend_high_focus">ઊંચું (67–100%) — ફોકસનો કેન્દ્ર</string>
+    <string name="legend_medium_focus">મધ્યમ (34–66%) — જોડાણ ઓળખાયું</string>
+    <string name="legend_low_focus">નીચું (0–33%) — કિનારે</string>
+    <string name="legend_result_relevance">પરિણામોની પ્રસ્તુતતા</string>
+    <string name="legend_important_desc">મહત્વપૂર્ણ — સીધા ફોકસ સાથે સંબંધિત</string>
+    <string name="legend_relevant_desc">પ્રસ્તુત — ફોકસ સાથે જોડાણ</string>
+    <string name="legend_note_desc">નોંધ — સહેજ ઉલ્લેખ</string>
+    <!-- Legend: Burden/Stress -->
+    <string name="legend_burden_scale">ભાર-સ્કેલ</string>
+    <string name="legend_burden_desc">અર્ધવર્તુળ આ વિષય ક્યારે ભાર આપે છે તે દર્શાવે છે:</string>
+    <string name="legend_high_burden">ઊંચું (67–100%) — તરત કાર્ય કરો</string>
+    <string name="legend_medium_burden">મધ્યમ (34–66%) — ધ્યાન જરૂરી</string>
+    <string name="legend_low_burden">નીચું (0–33%) — સારી સ્થિતિ</string>
+    <string name="legend_priority_title">સલાહ પ્રાથમિકતા</string>
+    <string name="legend_priority_high">લાલ = તાત્કાલિક — તરત કાર્ય કરો</string>
+    <string name="legend_priority_medium">નારંગી = મધ્યમ — જલ્દી કરો</string>
+    <string name="legend_priority_low">વાદળી = નીચું — અવલોકન કરો</string>
+    <!-- Legend: Categories -->
+    <string name="legend_categories">શ્રેણીઓ</string>
+    <string name="legend_categories_desc">શ્રેણીઓ ગતિશીલ રીતે બનાવવામાં આવે છે — AI તમારી નોંધોમાં વિષયો ઓળખે છે અને યોગ્ય શ્રેણીઓ બનાવે છે. નવા વિષયો આપોઆપ નવા ચિહ્નો લાવે છે.</string>
+    <!-- CategoryDetailDialog levels -->
+    <string name="level_low">નીચું</string>
+    <string name="level_medium">મધ્યમ</string>
+    <string name="level_high">ઊંચું</string>
+    <string name="urgency_high">તાત્કાલિક — તરત કાર્ય કરો</string>
+    <string name="urgency_medium">ધ્યાન જરૂરી</string>
+    <string name="urgency_low">સારી સ્થિતિ — અવલોકન કરો</string>
+    <!-- Dashboard: Derivation dialog -->
+    <string name="dashboard_derived_from">આ પરથી:</string>
+    <string name="dashboard_update_for_derivation">વિગતવાર વ્યુત્પત્તિ માટે ડૅશબોર્ડ અપડેટ કરો.</string>
+    <!-- Dashboard: Summary section -->
+    <string name="dashboard_top_5_actions">ટૉપ 5 પગલાં</string>
+    <string name="dashboard_core_insights">મૂળ આંતરદૃષ્ટિ</string>
+    <string name="dashboard_summary_subtitle">તમારી નોંધોના સૌથી મહત્વના મુદ્દા</string>
+    <string name="summary_central">કેન્દ્રીય</string>
+    <string name="summary_relevant">પ્રસ્તુત</string>
+    <string name="summary_side_note">સહેજ ઉલ્લેખ</string>
+    <!-- Dashboard: Insight section -->
+    <string name="dashboard_deepest_insights">સૌથી ઊંડી આંતરદૃષ્ટિ</string>
+    <string name="dashboard_insight_subtitle">તમારી નોંધો તમારા વિશે શું કહે છે</string>
+    <string name="insight_deep_label">ઊંડું</string>
+    <string name="insight_aware_label">સભાન</string>
+    <string name="insight_surface_label">સ્તર</string>
+    <!-- Dashboard: Goal section -->
+    <string name="dashboard_goal_steps">તમારા લક્ષ્યો માટે સૌથી મહત્વના પગલાં</string>
+    <string name="goal_blocked_label">અવરોધિત</string>
+    <string name="goal_open_label">ખુલ્લું</string>
+    <string name="goal_progress_label">પ્રગતિ</string>
+    <!-- Dashboard: Custom analysis section -->
+    <string name="dashboard_custom_subtitle">તમારા વ્યક્તિગત વિશ્લેષણ આધારે</string>
+    <string name="custom_important_label">મહત્વપૂર્ણ</string>
+    <string name="custom_relevant_label">પ્રસ્તુત</string>
+    <string name="custom_note_label">નોંધ</string>
+    <!-- Dashboard: TTS and sharing -->
+    <string name="dashboard_enable_voices">સેટિંગ્સમાં અવાજ ચાલુ કરો</string>
+    <string name="dashboard_tts_stop">રોકો</string>
+    <string name="dashboard_tts_read">વાંચો</string>
+    <string name="dashboard_share_analysis">વિશ્લેષણ શૅર કરો</string>
+    <string name="dashboard_share">શૅર કરો</string>
+    <string name="dashboard_tts_wait">કૃપા કરી રાહ જુઓ, Text-to-Speech બનાવવામાં આવી રહ્યું છે\u2026</string>
+
+    <!-- Profile names -->
+    <string name="profile_summary">સારાંશ</string>
+    <string name="profile_entropy">તમારું જીવન સ્વચ્છ કરો</string>
+    <string name="profile_insight">આત્મ-જ્ઞાન</string>
+    <string name="profile_goals">વ્યક્તિગત લક્ષ્યો</string>
+    <string name="profile_custom">વ્યક્તિગત વિશ્લેષણ</string>
+    <string name="profile_summary_desc">વિષયો, પૅટર્ન અને અનુભવો સારાંશ કરે છે</string>
+    <string name="profile_entropy_desc">તણાવ, અવ્યવસ્થા અને ભારને ઓળખે છે</string>
+    <string name="profile_insight_desc">છુપાયેલ વિચાર અને ભાવ પૅટર્ન ખોલે છે</string>
+    <string name="profile_goals_desc">લક્ષ્યો, ઇચ્છાઓ અને પ્રગતિ ઓળખે છે</string>
+    <string name="profile_custom_desc">પોતાનો વિશ્લેષણ ફોકસ નક્કી કરો</string>
+
+    <!-- Profile long descriptions (settings) -->
+    <string name="profile_summary_long">તમારી નોંધો ટીકા કે સલાહ વિના તટસ્થ રીતે સારાંશ થાય છે.\n\nતમે એક નજરે જોઈ શકો:\n\n• અત્યારે ક્યા વિષયો તમને વ્યસ્ત રાખે છે\n• ક્યા પૅટર્ન વારંવાર આવે છે\n• તમારું જીવન કેવી રીતે વિકસે છે\n\nતમારા જીવનમાં જે ચાલી રહ્યું છે તેની દૈનિક ઝલક માટે આદર્શ.</string>
+    <string name="profile_entropy_long">AI ખાસ કરીને તમારી નોંધોમાં તણાવ, ભાર અને અવ્યવસ્થા શોધે છે.\n\nતમને મળે:\n\n• ભારના સૌથી મોટા સ્ત્રોતોનું વિશ્લેષણ\n• સ્વચ્છ કરવા 5 ચોક્કસ પગલાં\n• ટીપ્સ જે તરત મદદ કરી શકે\n\nજ્યારે લાગે કે બધું ઘણું થઈ ગયું છે ત્યારે આદર્શ.</string>
+    <string name="profile_insight_long">AI ઘટનાઓ કરતાં ઊંડે જુએ છે. તે તમારી નોંધોમાં ઓળખે છે:\n\n• છુપાયેલ વિચાર પૅટર્ન અને માન્યતાઓ\n• વારંવાર આવતી ભાવનાઓ અને પ્રતિક્રિયાઓ\n• વ્યક્તિગત શક્તિઓ જેની તમને ખબર નહીં\n• તમારી ક્રિયાઓ ચલાવતા મૂલ્યો\n\nજેઓ પોતાને વધુ સારી રીતે સમજવા અને આંતરિક રીતે વિકસવા ઈચ્છે છે.</string>
+    <string name="profile_goals_long">AI તમારી નોંધોમાં બધા લક્ષ્યો, ઇચ્છાઓ અને ઇરાદાઓ શોધે છે, સહેજ ઉલ્લેખ પણ.\n\nતમે જોઈ શકો:\n\n• ક્યા લક્ષ્યો છે (છુપાયેલ પણ)\n• દરેક લક્ષ્ય પર ક્યાં છો\n• આગળનું પગલું શું હોઈ શકે\n\nતમારા પોતાના શબ્દો વાંચતો વ્યક્તિગત લક્ષ્ય-ટ્રૅકર.</string>
+    <string name="profile_custom_long">AI શું ધ્યાન આપવું તે તમે જ નક્કી કરો.\n\nતમારો પોતાનો વિશ્લેષણ ફોકસ લખો, ઉદાહરણ:\n\n• \"રમતગમતના બધા ઉલ્લેખ શોધો\"\n• \"મારા મૂડ ફેરફારો વિશ્લેષણ કરો\"\n• \"ક્યારે હું સૌથી વધુ ઉત્પાદક છું\"\n\nજેઓ ઠીક ઠીક જાણે છે કે શું શોધવું છે.</string>
+    <string name="profile_custom_prompt">તમારા માટે ખાસ શું મહત્વપૂર્ણ છે? AI ડાયરી નોંધો વિશ્લેષણ કરતી વખતે શેના પર ધ્યાન આપવું?</string>
+    <string name="profile_select_hint">પ્રોફાઇલ પસંદ કરો. વધુ સ્પષ્ટ સ્પષ્ટીકરણ માટે પ્રોફાઇલ પર ટૅપ કરો.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         SETTINGS SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_title">સેટિંગ્સ</string>
+    <string name="settings_account">એકાઉન્ટ</string>
+    <string name="settings_sign_out">સાઇન આઉટ</string>
+    <string name="settings_last_sync">છેલ્લી સિંક: %1$s</string>
+    <string name="settings_entries_auto_loaded">સાઇન ઇન થતી વખતે નોંધો આપોઆપ લોડ થઈ જશે</string>
+    <string name="settings_backup_photos">ફોટો સાચવો</string>
+    <string name="settings_backup_videos">વિડિઓ સાચવો</string>
+    <string name="settings_syncing">સાચવવામાં આવી રહ્યું છે\u2026</string>
+    <!-- Shown briefly as a confirmation after a successful cloud backup. -->
+    <string name="settings_sync_success">સફળતાપૂર્વક સાચવ્યું</string>
+    <!-- Error shown when Google sign-in fails. %1$s = error message from Google (e.g., "Network error"). -->
+    <string name="settings_signin_failed">સાઇન ઇન નિષ્ફળ: <xliff:g id="error_reason" example="Network error">%1$s</xliff:g></string>
+    <string name="settings_backup_entries">ડાયરી નોંધો સાચવો</string>
+    <string name="settings_not_signed_in">સાઇન ઇન નથી</string>
+    <string name="settings_entries_loaded_on_sign_in">સાઇન ઇન થતી વખતે સાચવેલ નોંધો લોડ થશે</string>
+    <string name="settings_sign_in_google">Google સાથે સાઇન ઇન</string>
+    <string name="settings_appearance">દેખાવ</string>
+    <string name="settings_dark_mode">ડાર્ક મોડ</string>
+    <string name="settings_dark_active">ચાલુ</string>
+    <string name="settings_dark_off">બંધ</string>
+    <string name="settings_follow_system">સિસ્ટમ અનુસરો</string>
+    <string name="settings_automatic">આપોઆપ</string>
+    <string name="settings_sunrise_sunset">સૂર્યોદય/સૂર્યાસ્ત</string>
+    <string name="settings_sunrise_sunset_desc">રાત્રે ડાર્ક, દિવસે હળવું</string>
+    <string name="settings_sounds_haptics_section">અવાજ / સ્પંદન</string>
+    <string name="settings_app_sounds">App અવાજ</string>
+    <string name="settings_sounds_on">અવાજ ચાલુ છે</string>
+    <string name="settings_sounds_off">અવાજ બંધ છે</string>
+    <string name="settings_haptics">સ્પંદન</string>
+    <string name="settings_haptics_on">સ્પંદન ચાલુ છે</string>
+    <string name="settings_haptics_off">સ્પંદન બંધ છે</string>
+    <string name="settings_voices">અવાજ</string>
+    <string name="settings_tts_on">વાંચવું ચાલુ છે</string>
+    <string name="settings_tts_off">વાંચવું બંધ છે</string>
+    <string name="settings_voice_select">અવાજ પસંદ કરો</string>
+    <string name="settings_voice_choose">અવાજ પસંદ કરો</string>
+    <string name="settings_reminder_section">રિમાઇન્ડર / અવલોકન</string>
+    <string name="settings_daily_reminder">દૈનિક રિમાઇન્ડર</string>
+    <string name="settings_reminder_time">સમય: %02d:%02d</string>
+    <string name="settings_reminder_desc">ડાયરી લખવાની યાદ અપાવે છે</string>
+    <string name="settings_weekly_review">સાપ્તાહિક અવલોકન</string>
+    <string name="settings_weekly_review_on">રિમાઇન્ડર ચાલુ</string>
+    <string name="settings_weekly_review_off">રવિવારે 15:00 વાગ્યે</string>
+    <string name="settings_monthly_review">માસિક અવલોકન</string>
+    <string name="settings_monthly_review_on">રિમાઇન્ડર ચાલુ</string>
+    <string name="settings_yearly_review">વાર્ષિક અવલોકન</string>
+    <string name="settings_yearly_review_on">રિમાઇન્ડર ચાલુ</string>
+    <string name="settings_timezone">ટાઇમ ઝોન: %1$s</string>
+    <string name="settings_security">સુરક્ષા</string>
+    <string name="settings_fingerprint">ફિંગરપ્રિન્ટ</string>
+    <string name="settings_fingerprint_desc">શરૂ થતી વખતે App અનલૉક કરો</string>
+    <string name="settings_auto_lock">60 સેકન્ડ પછી આપોઆપ બ્લૉક</string>
+    <string name="settings_ai_profiles_title">AI ડૅશબોર્ડ પ્રોફાઇલ:</string>
+    <string name="settings_ai_automations">AI ઓટોમેશન</string>
+    <string name="settings_custom_prompt_placeholder">ઉ.ત. ઊંઘની ગુણવત્તા અને તણાવ સ્તર પર ધ્યાન આપો. ખોરાકમાં પૅટર્ન બતાવો. સાપ્તાહ દરમ્યાન મૂડ કેવી રીતે બદલાય. ક્યારે સૌથી ઉત્પાદક છું અને શું અવરોધ છે.\n\nફોકસ જેટલો વિગતવાર, પરિણામ એટલા સારા.</string>
+    <string name="churn_google_play_redirect">Abo manage કરવા Google Play પર redirect. ડાયરી નોંધો સ્વાભાવિક રીતે સુરક્ષિત.</string>
+    <string name="splash_subtitle">તમારી સ્માર્ટ ડાયરી</string>
+    <string name="biometric_subtitle">ડાયરી અનલૉક કરો</string>
+    <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
+    <string name="biometric_prompt_subtitle">અનલૉક કરવા ઓળખ આપો</string>
+    <!-- Button in the biometric lock screen to trigger the fingerprint prompt. Keep short. -->
+    <string name="biometric_unlock_button">અનલૉક</string>
+    <string name="settings_text_improvement">ટેક્સ્ટ સુધારણા</string>
+    <string name="settings_text_improvement_desc">મૂળ રૂપે ચાલુ</string>
+    <string name="settings_dashboard_section">ડૅશબોર્ડ</string>
+    <string name="settings_auto_update">નવી ડાયરી નોંધ પર આપોઆપ અપડેટ</string>
+    <string name="settings_premium_section">Premium</string>
+    <string name="settings_premium_lifetime">Lifetime ઍક્સેસ ચાલુ</string>
+    <string name="settings_premium_active">Premium સબ્સ્ક્રિપ્શન ચાલુ</string>
+    <string name="settings_premium_lifetime_desc">એક વાર ચૂકવો, બધા ફીચર હંમેશ માટે.</string>
+    <string name="settings_premium_desc">બધા ફીચર ચાલુ, અમર્યાદ AI, PDF Export અને વધુ.</string>
+    <string name="settings_manage_subscription">સબ્સ્ક્રિપ્શન manage કરો</string>
+    <string name="settings_export">Export</string>
+    <string name="settings_export_pdf_desc">બધી ડાયરી નોંધો અને ફોટો PDF document તરીકે export.</string>
+
+    <!-- Premium feature list (settings) -->
+    <string name="settings_premium_feature_improve">અમર્યાદ AI ટેક્સ્ટ સુધારણા</string>
+    <string name="settings_premium_feature_improve_desc">દરેક નોંધ વધુ અભિવ્યક્ત બને</string>
+    <string name="settings_premium_feature_dashboard">અમર્યાદ ડૅશબોર્ડ વિશ્લેષણ</string>
+    <string name="settings_premium_feature_dashboard_desc">ડૅશબોર્ડ તમારી સાથે વધે</string>
+    <string name="settings_premium_feature_5_perspectives">5 AI દ્રષ્ટિકોણ</string>
+    <string name="settings_premium_feature_5_perspectives_desc">સ્પષ્ટતાથી આત્મ-જ્ઞાન સુધી</string>
+    <string name="settings_premium_feature_reviews">સાપ્તાહિક, માસિક અને વાર્ષિક અવલોકન</string>
+    <string name="settings_premium_feature_reviews_desc">AI તમારી વાર્તા કહે</string>
+    <string name="settings_premium_feature_patterns">પૅટર્ન ઓળખ</string>
+    <string name="settings_premium_feature_patterns_desc">AI એ જોડાણો ઓળખે છે જે તમને ન દેખાય</string>
+    <string name="settings_premium_feature_pdf">ફોટો સહ PDF Export</string>
+    <string name="settings_premium_feature_pdf_desc">ફોટો સાથે document તરીકે ડાયરી</string>
+    <string name="settings_premium_feature_voice">ચોક્કસ વાણી ઓળખ</string>
+    <string name="settings_premium_feature_voice_desc">અવાજ નોંધ માટે ઊંચી ગુણવત્તા</string>
+    <string name="settings_unlock_premium">Premium ખોલો</string>
+    <!-- Export dialog -->
+    <!-- AlertDialog title shown before PDF export. Max 25 chars — fits in dialog header. -->
+    <string name="settings_export_dialog_title">PDF Export</string>
+    <string name="settings_export_what">શું export કરવું?</string>
+    <string name="settings_export_entries">ડાયરી નોંધો</string>
+    <string name="settings_export_photos">ફોટો</string>
+    <string name="settings_export_action">Export</string>
+    <string name="settings_exporting">Export થઈ રહ્યું છે\u2026</string>
+    <!-- Export error shown when the user has no journal entries yet. -->
+    <string name="settings_export_no_entries">કોઈ નોંધ ઉપલબ્ધ નથી</string>
+    <string name="settings_export_entries_photos_pdf">ડાયરી નોંધો અને ફોટો PDF export</string>
+    <string name="settings_export_data">ડેટા export</string>
+    <string name="settings_export_entries_photos_pdf_full">ફોટો સહ ડાયરી નોંધો PDF export</string>
+    <!-- Feedback -->
+    <string name="settings_feedback">ફીડબૅક</string>
+    <string name="settings_feedback_desc">સૂચનો, ઇચ્છાઓ, સુધારા, bugs 🐞</string>
+    <string name="settings_feedback_send">ફીડબૅક મોકલો</string>
+    <string name="settings_feedback_sent">સફળતાપૂર્વક મોકલ્યું</string>
+    <string name="settings_feedback_dialog_title">ફીડબૅક મોકલો</string>
+    <string name="settings_feedback_dialog_desc">ડેવલપર્સ માટે સંદેશ — અમે બધું વાંચીએ છીએ!</string>
+    <string name="settings_feedback_placeholder">ફીડબૅક લખો\u2026</string>
+    <string name="settings_feedback_sending">મોકલવામાં આવી રહ્યું છે\u2026</string>
+    <string name="settings_feedback_sign_in_first">પ્રથમ Google સાથે સાઇન ઇન કરો</string>
+    <string name="settings_feedback_allow_gmail">Gmail ઍક્સેસ આપો અને ફરી પ્રયાસ કરો.</string>
+    <string name="settings_feedback_token_error">ટોકન ભૂલ: %1$s</string>
+    <string name="settings_feedback_unknown_error">અજ્ઞાત ભૂલ</string>
+    <string name="settings_feedback_confirm_subject">Best Journal ને ફીડબૅક</string>
+    <string name="settings_feedback_confirm_body">આ સંદેશ ડેવલપરને મોકલ્યો.\nતે તમારો સંપર્ક કરશે.\n\n--- તમારો સંદેશ ---\n%1$s\n\nઆભાર\nDEV.FRANK</string>
+    <string name="settings_feedback_from">ફીડબૅક: %1$s</string>
+    <string name="action_send">મોકલો</string>
+    <!-- Drive errors -->
+    <string name="drive_consent_needed">Drive ઍક્સેસ આપવી જરૂરી</string>
+    <string name="drive_not_signed_in">સાઇન ઇન નથી</string>
+    <string name="drive_no_backup">કોઈ બૅકઅપ મળ્યું નહીં</string>
+    <!-- Achievements -->
+    <string name="achievements_title">Achievements</string>
+    <string name="achievements_counter">%1$d ઓ %2$d અનલૉક</string>
+    <string name="achievements_unlocked_at">%1$s ના રોજ અનલૉક</string>
+    <!-- About -->
+    <string name="settings_about">App વિશે</string>
+    <string name="settings_about_version">Best Journal V0.12.19</string>
+    <string name="settings_about_desc">તમારી વ્યક્તિગત AI ડાયરી</string>
+    <!-- Sign-out dialog -->
+    <string name="settings_sign_out_confirm">સાઇન આઉટ?</string>
+    <string name="settings_sign_out_body">શું ખરેખર સાઇન આઉટ કરવું?</string>
+    <!-- Toggle labels -->
+    <string name="toggle_light">હળવું</string>
+    <string name="toggle_dark">ડાર્ક</string>
+    <string name="toggle_sound_on">અવાજ ચાલુ</string>
+    <string name="toggle_sound_off">અવાજ બંધ</string>
+    <string name="toggle_haptic_on">સ્પંદન ચાલુ</string>
+    <string name="toggle_haptic_off">સ્પંદન બંધ</string>
+    <string name="toggle_voice_on">અવાજ ચાલુ</string>
+    <string name="toggle_voice_off">અવાજ બંધ</string>
+    <string name="toggle_sun">સૂર્ય</string>
+    <string name="toggle_moon">ચંદ્ર</string>
+    <!-- Day names -->
+    <string name="day_monday">સોમવાર</string>
+    <string name="day_tuesday">મંગળવાર</string>
+    <string name="day_wednesday">બુધવાર</string>
+    <string name="day_thursday">ગુરુવાર</string>
+    <string name="day_friday">શુક્રવાર</string>
+    <string name="day_saturday">શનિવાર</string>
+    <string name="day_sunday">રવિવાર</string>
+    <!-- Short weekday labels (2 chars) for compact weekday picker. Monday to Sunday. -->
+    <string name="day_abbrev_mon">સો</string>
+    <string name="day_abbrev_tue">મં</string>
+    <string name="day_abbrev_wed">બુ</string>
+    <string name="day_abbrev_thu">ગુ</string>
+    <string name="day_abbrev_fri">શુ</string>
+    <string name="day_abbrev_sat">શ</string>
+    <string name="day_abbrev_sun">ર</string>
+    <!-- Array of short weekday labels for LazyRow / weekday pickers. Order: Mon-Sun. -->
+    <string-array name="weekday_abbreviations">
+        <item>@string/day_abbrev_mon</item>
+        <item>@string/day_abbrev_tue</item>
+        <item>@string/day_abbrev_wed</item>
+        <item>@string/day_abbrev_thu</item>
+        <item>@string/day_abbrev_fri</item>
+        <item>@string/day_abbrev_sat</item>
+        <item>@string/day_abbrev_sun</item>
+    </string-array>
+    <!-- Review schedule dialog -->
+    <string name="settings_reminder_when">ક્યારે રિમાઇન્ડ કરવું?</string>
+    <string name="settings_review_when">અવલોકન ક્યારે આવવો?</string>
+    <string name="settings_review_weekday">અઠવાડિયાનો દિવસ</string>
+    <string name="settings_review_time">સમય</string>
+    <string name="settings_monthly_review_off">મહિનાના છેલ્લા દિવસે 15:00 વાગ્યે</string>
+    <string name="settings_yearly_review_off">વર્ષના છેલ્લા દિવસે 15:00 વાગ્યે</string>
+    <string name="achievement_secret">ગુપ્ત</string>
+    <string name="paywall_exit_bonus_days">+ %1$d વધારાના ટ્રાયલ દિવસ</string>
+    <!-- Splash screen start button -->
+    <string name="splash_start">શરૂ</string>
+    <!-- FreeLimitIndicator: remaining uses counter -->
+    <!-- %1$d = number of remaining AI uses this week -->
+    <string name="limit_remaining"><xliff:g id="count" example="3">%1$d</xliff:g> બાકી</string>
+    <!-- FreeLimitIndicator: usage counter (X of Y used) -->
+    <!-- %1$d = used count, %2$d = max count -->
+    <string name="limit_used_of_max"><xliff:g id="used" example="3">%1$d</xliff:g> ઓ <xliff:g id="max" example="5">%2$d</xliff:g> ઉપયોગ</string>
+    <!-- ChurnFlowDialog: retention discount badge -->
+    <!-- %1$d = discount percentage -->
+    <string name="churn_discount_badge"><xliff:g id="percent" example="50">%1$d</xliff:g>%% બચત</string>
+    <!-- AI prompt language instruction — automatically uses device language -->
+    <string name="ai_prompt_language_style">સરળ, સ્પષ્ટ. અંગ્રેજી શબ્દો નહીં.</string>
+    <string name="ai_prompt_language_override"></string>
+    <!-- Final response-language instruction appended to every AI prompt.
+         Kept in the device language so the model's last signal matches the UI language. -->
+    <string name="ai_prompt_response_language">જવાબ ભાષા: સંપૂર્ણ ગુજરાતીમાં જવાબ આપો. બધા ટેક્સ્ટ અને હેડિંગ ગુજરાતીમાં, બીજી કોઈ ભાષા નહીં.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         JSON-KEYS for the AI response (Dashboard).
+         ════════════════════════════════════════════════════════════════════ -->
+    <!-- Top-level JSON keys -->
+    <string name="json_key_overall_analysis">gesamtanalyse</string>
+    <string name="json_key_top_actions">top_massnahmen</string>
+    <string name="json_key_categories">kategorien</string>
+    <string name="json_key_heading_top5">ueberschrift_top5</string>
+    <string name="json_key_heading_analysis">ueberschrift_analyse</string>
+    <string name="json_key_heading_results">ueberschrift_ergebnisse</string>
+    <string name="json_key_progress">fortschritte</string>
+    <string name="json_key_overall_entropy">gesamt_entropie</string>
+    <string name="json_key_trend">trend</string>
+    <!-- Category-level JSON keys -->
+    <string name="json_key_category_name">name</string>
+    <string name="json_key_category_icon">icon</string>
+    <string name="json_key_category_color">farbe</string>
+    <string name="json_key_category_entropy_level">entropie_level</string>
+    <string name="json_key_category_summary">zusammenfassung</string>
+    <string name="json_key_category_advices">ratschlaege</string>
+    <!-- Item-level JSON keys (advice, action, progress) -->
+    <string name="json_key_item_title">titel</string>
+    <string name="json_key_item_description">beschreibung</string>
+    <string name="json_key_item_explanation">erklaerung</string>
+    <string name="json_key_item_reference">bezug</string>
+    <string name="json_key_item_priority">prioritaet</string>
+    <string name="json_key_item_connection">verknuepfung</string>
+    <string name="json_key_item_derivation">herleitung</string>
+    <!-- Derivation-level JSON keys -->
+    <string name="json_key_derivation_date">datum</string>
+    <string name="json_key_derivation_summary">zusammenfassung</string>
+    <!-- Enum values (priorities) -->
+    <string name="json_value_priority_high">hoch</string>
+    <string name="json_value_priority_medium">mittel</string>
+    <string name="json_value_priority_low">niedrig</string>
+    <string name="ai_prompt_fresh_summary">તાજો સારાંશ — સંપૂર્ણ નવું, સ્વતંત્ર વિશ્લેષણ બનાવો.</string>
+    <string name="ai_prompt_fresh_insight">તાજો આત્મ-જ્ઞાન વિશ્લેષણ — સંપૂર્ણ નવું, સ્વતંત્ર વિશ્લેષણ બનાવો.</string>
+    <string name="ai_prompt_fresh_goals">તાજો લક્ષ્ય-વિશ્લેષણ — સંપૂર્ણ નવું, સ્વતંત્ર વિશ્લેષણ બનાવો.</string>
+    <string name="ai_prompt_fresh_custom">તાજો વ્યક્તિગત વિશ્લેષણ — user ફોકસ આધારે સંપૂર્ણ નવું, સ્વતંત્ર વિશ્લેષણ બનાવો.</string>
+    <string name="ai_prompt_fresh_default">તાજો વિશ્લેષણ — સંપૂર્ણ નવું, સ્વતંત્ર વિશ્લેષણ બનાવો.</string>
+    <string name="ai_prompt_check_summary">ફરજિયાત ચેક: તમને %1$d નોંધો મળી છે. દરેક સારાંશ અને ઓછામાં ઓછા એક વિષયમાં દેખાવી જોઈએ.</string>
+    <string name="ai_prompt_check_insight">ફરજિયાત ચેક: તમને %1$d નોંધો મળી છે. દરેક વિચાર પૅટર્ન, ભાવ, માન્યતાઓ અને વ્યક્તિગત શક્તિ માટે તપાસવી જોઈએ.</string>
+    <string name="ai_prompt_check_goals">ફરજિયાત ચેક: તમને %1$d નોંધો મળી છે. દરેક લક્ષ્ય માટે તપાસવી જોઈએ.</string>
+    <string name="ai_prompt_check_custom">ફરજિયાત ચેક: તમને %1$d નોંધો મળી છે. દરેક user ફોકસ માટે તપાસવી જોઈએ.</string>
+    <string name="ai_prompt_check_default">ફરજિયાત ચેક: તમને %1$d નોંધો મળી છે. દરેક વિશ્લેષણમાં દેખાવી જોઈએ.</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Retrospective Prompts (Weekly / Monthly / Yearly reviews)
+         ═══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Weekly retrospective prompt blocks -->
+    <string name="ai_retro_week_intro">તમે એક વાર્તાકાર છો જે ડાયરી નોંધો પરથી સ્વાભાવિક, વાંચવા-લાયક સાપ્તાહિક અવલોકન લખે છે.</string>
+    <string name="ai_retro_week_task">કાર્ય: નીચેની ડાયરી નોંધોને સંરચિત સાપ્તાહિક અવલોકનમાં સારાંશ કરો.</string>
+    <string name="ai_retro_week_format">ફૉર્મૅટ (કૃપા કરી ચોક્કસ પાળો):\n1. 3-5 મુદ્દાઓ સાથે સારાંશ, દરેક \"• \" થી\n2. પછી ખાલી લાઇન\n3. પછી વાર્તા, 2-4 વિષય-વિભાગ\n4. દરેક વિભાગ [વિષય] સ્વરૂપ હેડ (ઉ.ત. [નવા મિળાપ] [નાના વિજય])\n5. હેડ પછી વિભાગ ટેક્સ્ટ\n6. વિભાગ અઠવાડિયા શરૂથી અંત ક્રમ</string>
+    <string name="ai_retro_week_rules">નિયમો:\n- \"તમે\" સ્વરૂપ (વ્યક્તિગત સંબોધનનો ભાષાકીય સ્વ)\n- કોઈ સ્વાગત, કોઈ અભિવાદન — સ્પષ્ટ વાર્તામાં\n- વિભાગમાં સારા સંક્રમણ સાથે પ્રવાહી શૈલી\n- હેડ ટૂંકા અને વિષય-ઉચિત (2-4 શબ્દ)\n- ઘટના, ભાવ અને સૂઝ ઉજાગર\n- સામાન્ય બાબત ફક્ત મહત્વ હોય ત્યારે\n- સકારાત્મક ઉજાગર — પરંતુ પડકારો છુપાવ્યા નહીં. કઠિન ક્ષણોથી સૂઝ\n- ઉષ્ણ અને વ્યક્તિગત, પ્રચારજ નહીં\n- ઓછામાં ઓછા 200 શબ્દ\n- લાંબા EM ડૅશ (—) ન વાપરો. બદલે અલ્પ-વિરામ કે ટૂંકા વાક્ય.</string>
+    <!-- Section header that introduces the journal entries block. -->
+    <string name="ai_retro_week_entries_header">અઠવાડિયાની નોંધો:</string>
+    <!-- Title-generation prompt after a weekly review is ready. %1$s = target language (e.g. "Deutsch"), %2$s = preview of the generated review. -->
+    <string name="ai_retro_week_title_prompt">આ સાપ્તાહિક અવલોકન પરથી, <xliff:g id="lang" example="Deutsch">%1$s</xliff:g>માં ટૂંકો, ભાવાત્મક શીર્ષક (મહ. 6 શબ્દ) આપો.\nફક્ત શીર્ષક, બાકી કંઈ નહીં. અવતરણ ચિહ્ન નહીં. EM ડૅશ (—) નહીં.\n\nઅવલોકન:\n<xliff:g id="summary_preview" example="Die Woche begann…">%2$s</xliff:g></string>
+
+    <!-- Monthly retrospective prompt blocks -->
+    <string name="ai_retro_month_intro">તમે એક વાર્તાકાર છો જે સાપ્તાહિક અવલોકન પરથી સ્વાભાવિક, વાંચવા-લાયક માસિક અવલોકન લખે છે.</string>
+    <!-- %1$s = month name (e.g. "April"), %2$d = year. -->
+    <string name="ai_retro_month_task">કાર્ય: નીચેના સાપ્તાહિક અવલોકનોને <xliff:g id="month" example="April">%1$s</xliff:g> <xliff:g id="year" example="2026">%2$d</xliff:g> ના સંરચિત માસિક અવલોકનમાં સારાંશ કરો.</string>
+    <string name="ai_retro_month_format">ફૉર્મૅટ (કૃપા કરી ચોક્કસ પાળો):\n1. 4-6 મુદ્દાઓ સાથે સારાંશ, દરેક \"• \" થી\n2. પછી ખાલી લાઇન\n3. પછી વાર્તા, 3-5 વિષય-વિભાગ\n4. દરેક વિભાગ [વિષય] સ્વરૂપ હેડ (ઉ.ત. [નવો આરંભ] [શાંત સૂઝ])\n5. હેડ પછી વિભાગ ટેક્સ્ટ\n6. વિભાગ મહિના શરૂથી અંત ક્રમ</string>
+    <string name="ai_retro_month_rules">નિયમો:\n- \"તમે\" સ્વરૂપ\n- કોઈ સ્વાગત, કોઈ અભિવાદન — સ્પષ્ટ વાર્તામાં\n- વિભાગમાં સારા સંક્રમણ\n- હેડ ટૂંકા (2-4 શબ્દ)\n- અઠવાડિયા વચ્ચે જોડાણ — વિકાસ અને સૂત્ર\n- ફક્ત સ્ક્રીન-ફ્રી, વિષય-ઉચિત\n- સામાન્ય ફક્ત મહત્વ હોય ત્યારે\n- સકારાત્મક ઉજાગર, પડકારો છુપાવ્યા નહીં\n- ઉષ્ણ, પ્રચારજ નહીં\n- ઓછામાં ઓછા 300 શબ્દ\n- EM ડૅશ (—) ન વાપરો.</string>
+    <string name="ai_retro_month_entries_header">સાપ્તાહિક અવલોકનો:</string>
+    <!-- %1$s = target language, %2$s = preview of the generated review. -->
+    <string name="ai_retro_month_title_prompt">આ માસિક અવલોકન પરથી, <xliff:g id="lang" example="Deutsch">%1$s</xliff:g>માં ટૂંકો, ભાવાત્મક શીર્ષક (મહ. 6 શબ્દ) આપો.\nફક્ત શીર્ષક, બાકી કંઈ નહીં. અવતરણ ચિહ્ન નહીં. EM ડૅશ (—) નહીં.\n\nઅવલોકન:\n<xliff:g id="summary_preview" example="April brachte…">%2$s</xliff:g></string>
+
+    <!-- Yearly retrospective prompt blocks -->
+    <string name="ai_retro_year_intro">તમે એક વાર્તાકાર છો જે માસિક અવલોકન પરથી સ્વાભાવિક, વાંચવા-લાયક વાર્ષિક અવલોકન લખે છે.</string>
+    <!-- %1$d = year. -->
+    <string name="ai_retro_year_task">કાર્ય: નીચેના માસિક અવલોકનોને <xliff:g id="year" example="2026">%1$d</xliff:g> ના સંરચિત વાર્ષિક અવલોકનમાં સારાંશ કરો.</string>
+    <string name="ai_retro_year_format">ફૉર્મૅટ (કૃપા કરી ચોક્કસ પાળો):\n1. 5-8 મુદ્દાઓ સાથે સારાંશ, દરેક \"• \" થી\n2. પછી ખાલી લાઇન\n3. પછી વાર્તા, 4-6 વિષય-વિભાગ\n4. દરેક વિભાગ [વિષય] સ્વરૂપ હેડ (ઉ.ત. [નવા આરંભ] [શાંતિ]\n5. હેડ પછી વિભાગ ટેક્સ્ટ\n6. વિભાગ વર્ષ શરૂથી અંત ક્રમ</string>
+    <string name="ai_retro_year_rules">નિયમો:\n- \"તમે\" સ્વરૂપ\n- કોઈ સ્વાગત, કોઈ અભિવાદન — સ્પષ્ટ વાર્તામાં\n- વિભાગમાં સારા સંક્રમણ\n- હેડ ટૂંકા (2-5 શબ્દ)\n- મહિના વચ્ચે જોડાણ — વર્ષ-ભર વિકાસ\n- વર્ષના મોટા વિષયો ઓળખો\n- સામાન્ય ફક્ત મહત્વ હોય ત્યારે\n- સકારાત્મક ઉજાગર, પડકારો છુપાવ્યા નહીં\n- ભવિષ્ય ભણી જોતા વિચારથી સમાપ્ત\n- ઉષ્ણ, પ્રચારજ નહીં\n- ઓછામાં ઓછા 400 શબ્દ\n- EM ડૅશ (—) ન વાપરો.</string>
+    <string name="ai_retro_year_entries_header">માસિક અવલોકનો:</string>
+    <!-- %1$s = target language, %2$s = preview of the generated review. -->
+    <string name="ai_retro_year_title_prompt">આ વાર્ષિક અવલોકન પરથી, <xliff:g id="lang" example="Deutsch">%1$s</xliff:g>માં ટૂંકો, ભાવાત્મક શીર્ષક (મહ. 6 શબ્દ) આપો.\nફક્ત શીર્ષક, બાકી કંઈ નહીં. અવતરણ ચિહ્ન નહીં. EM ડૅશ (—) નહીં.\n\nઅવલોકન:\n<xliff:g id="summary_preview" example="Das Jahr begann…">%2$s</xliff:g></string>
+
+    <!-- Goals Analysis System Prompt (Profile: Personal Goals) -->
+    <string name="ai_prompt_goals_intro">તમે એક સચેત, પ્રેરણાદાયક લક્ષ્ય-વિશ્લેષક અને પ્રગતિ-ટ્રૅકર છો.\n\nતમારું કાર્ય:\nUser ની ડાયરી નોંધો વિશ્લેષિત કરો. બધા લક્ષ્ય, ઇચ્છાઓ, ઇરાદા અને યોજના ઓળખો — ભલે સહેજ ઉલ્લેખ. ઘણી નોંધોમાં પ્રગતિ ટ્રૅક કરો. JSON ફૉર્મૅટમાં સંરચિત લક્ષ્ય-ડૅશબોર્ડ બનાવો.</string>
+    <string name="ai_prompt_goals_definition">વ્યાખ્યા — લક્ષ્ય શું છે:\nUser જે મેળવવા, બદલવા, શરૂ કરવા, સમાપ્ત કરવા, સુધારવા કે બનાવવા ઇચ્છે. પ્રત્યક્ષ ઉલ્લેખ:\n- સ્પષ્ટ: \"વજન ઘટાડવું\", \"ડૉક્ટરને ફોન\"\n- પ્રત્યક્ષ: \"ફરી દોડવા ગયો\" = ફિટનેસ\n- ફરિયાદ: \"ઊંઘ ઘણી ખરાબ\" = ઊંઘ સુધારવી\n- સ્વપ્ન: \"ક્યારેક Sweden\" = મુસાફરી</string>
+    <string name="ai_prompt_goals_entry_rules">સર્વોચ્ચ નિયમ — કોઈ નોંધ ચૂટવી નહીં:\nતમને ક્રમાંકિત નોંધો મળે છે (ઉ.ત. \"નોંધ 1 5 માંથી\").\nતમારે દરેક નોંધ વાંચવી, વિશ્લેષિત કરવી અને સામેલ કરવી.\n\nઓછી નોંધ સાથે:\n- 1-2 નોંધ: ઓળખો, \"અજ્ઞાત\" પ્રગતિ.\n- 3+ નોંધ: સક્રિય પ્રગતિ ટ્રૅક અને પૅટર્ન.</string>
+    <string name="ai_prompt_goals_rules">ભાષા નિયમો:\n- %1$s\n- પ્રેરક અને સ્પષ્ટ, પ્રગતિ ઉજાગર, કોઈ ઢાંકો નહીં.\n- EM ડૅશ (—) ન વાપરો. અલ્પ-વિરામ કે ટૂંકા વાક્ય.\n\nઓળખ નિયમ:\nબધા લક્ષ્ય ઓળખો — નાના પણ. સારાંશ નહીં.</string>
+    <string name="ai_prompt_goals_schema">JSON આઉટપુટ સ્કીમા:\n{\n  \"gesamtanalyse\": \"...\",\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\n1) \"gesamtanalyse\" (15-25 વાક્ય): બધા લક્ષ્ય, પ્રગતિ.\n\n2) \"top_massnahmen\" (ઠીક 5): આગળના પગલાં.\n   { \"titel\": \"...\", \"beschreibung\": \"13-21 શબ્દ\", \"erklaerung\": \"5-8 વાક્ય\" }\n\n3) \"kategorien\": લક્ષ્ય-ક્ષેત્ર.\n   {\n     \"name\": \"મહ. 12 અક્ષર\", \"icon\": \"material_icon\", \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0, \"zusammenfassung\": \"3-5 વાક્ય\",\n     \"ratschlaege\": [{\n       \"titel\": \"...\",\n       \"beschreibung\": \"13-21 શબ્દ. સ્ટેટસ: [ખુલ્લું/ચાલુ/અવરોધ/પ્રાપ્ત]. આગળ: [...].\",\n       \"prioritaet\": \"hoch|mittel|niedrig\",\n       \"verknuepfung\": \"...\", \"herleitung\": [{\"datum\":\"...\",\"zusammenfassung\":\"...\"}]\n     }]\n   }\n   ક્ષેત્ર: ફિટ, સ્વાસ્થ્ય, કામ, કારકિર્દ, નાણા, સંબંધ, પ્રોજ. ભણ, ઊંઘ, મન, મુ, ક્રમ, સ. ઉ.\n   પ્રાથ: hoch=અવ, mittel=ખુ, niedrig=ચા/પ્રા</string>
+    <string name="ai_prompt_goals_output">આઉટપુટ: ફક્ત JSON. Backtick નહીં. { થી શરૂ.</string>
+
+    <!-- Self-Insight Analysis System Prompt (Profile: Self-Knowledge) -->
+    <string name="ai_prompt_insight_intro">તમે વ્યક્તિગત વિકાસ માટે સહાનુભૂતિ ધરાવતા, ઊંડા પૅટર્ન-વિશ્લેષક છો.\n\nતમારું કાર્ય:\nUser ની ડાયરી નોંધો વિશ્લેષિત કરો. છુપાયેલ પૅટર્ન, વારંવાર આવતા વિચાર, અભ્યાસ, બેભાન માન્યતા, ભાવ-પ્રતિક્રિયા અને વ્યક્તિગત શક્તિ. JSON ફૉર્મૅટ.</string>
+    <string name="ai_prompt_insight_attitude">તમારો અભિગમ:\nતમે ઉષ્ણ અરીસો છો. User ને નોંધોમાં ઓળખો — હંમેશા વિકાસ લક્ષ. ઊંડ<br/>ા પૅટર્ન પણ સ્પષ્ટ, રચનાત્મક, ઠપકો નહીં.\n\nશું શોધો:\n- વારંવાર ભાવ\n- વિચાર પૅટર્ન\n- ટાળ-ટાળ\n- શક્તિ\n- મૂલ્ય\n- ટ્રિગર\n- વિરોધ\n- જરૂરિયાત\n- વૃદ્ધિ</string>
+    <string name="ai_prompt_insight_entry_rules">સર્વોચ્ચ નિયમ — કોઈ નોંધ ચૂટવી નહીં:\nક્રમાંકિત નોંધ. દરેક વાંચ, વિશ્લેષ, સામેલ.\nજવાબ પહેલા ગણો: બધી સામેલ?\nચૂટ્યું — તરત ઉમેરો.\n\nઓછી નોંધ:\n- 1-2: પ્રારંભિક.\n- 3+: ઊંડા.\n\nક્રમ:\nવિકાસ ટ્રૅક. ઊંડો ઉ.ત. \"onslaught\"?</string>
+    <string name="ai_prompt_insight_rules">ભાષા નિયમો (JSON ના દરેક ટેક્સ્ટ ફીલ્ડ માટે):\n- સરળ, સ્પષ્ટ ભાષા. ટૂંકા વાક્ય.\n- કોઈ વિદેશી શબ્દ, ટૅક્નિકલ શબ્દ કે ક્લિષ્ટ ભાષા નહીં.\n- દરેક જણ તરત સમજી શકે એ રીતે.\n- સહાનુભૂતિ, ઇમાનદારી, રચનાત્મક — ઠપકો નહીં.\n- સકારાત્મક દ્રષ્ટિ: User શું શીખી શકે?\n- લાંબા EM ડૅશ (—) નહીં. અલ્પ-વિરામ કે પૂર્ણ-વિરામ વાપરો.\n\nસંખ્યા-નિયમ, સંપૂર્ણતા પ્રથમ:\nબધી ક્ષેત્ર-ઓળખ ઓછામાં ઓછી 15 હોવી જોઈએ. 10 થી ઓછી ભૂલ છે. દરેક પૅટર્ન, દરેક ભાવ, દરેક માન્યતા — અલગ નોંધ. સારાંશ ન બનાવો. JSON લાંબો થઈ શકે — સંપૂર્ણતા વધારે અગત્યની છે.</string>
+    <string name="ai_prompt_insight_schema_header">JSON-આઉટપુટ-સ્કીમા:\n{\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"wachsend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\nફીલ્ડ વ્યાખ્યા:\n\n1) \"gesamt_entropie\" (0.0-1.0): User ડાયરીમાં કેટલો આત્મ-પ્રતિબિંબ છે?\n   0.0-0.33 = ઓછો, 0.34-0.66 = મધ્યમ, 0.67-1.0 = ઊંડો\n\n2) \"trend\": ઓછામાં ઓછા 3 નોંધ હોય ત્યારે.\n   wachsend = ઊંડો, stabil = સ્થિર, sinkend = ઘટ્યો, unbekannt = ઓછો ડેટા\n\n3) \"gesamtanalyse\" (15-25 વાક્ય): User ના શબ્દો શું કહે છે? પૅટર્ન, શક્તિ, ઊંડી માન્યતા — સ. ઉ. User ને સ. બો.</string>
+    <string name="ai_prompt_insight_schema_fields">4) \"fortschritte\" (0-8 નોંધ): ડાયરીમાં દૃશ્ય થતી વ્યક્તિગત શક્તિ.\n   { \"titel\": \"5 શ.\", \"beschreibung\": \"2-3 વ.\", \"bezug\": \"1 વ.\" }\n   1 નોંધ = []\n\n5) \"top_massnahmen\" (ઠીક 5): ઊંડી 5 સ્વ-ઓળખ, ઊંડી પ્રથમ.\n   { \"titel\": \"6 શ.\", \"beschreibung\": \"13-21 શ.\", \"erklaerung\": \"5-8 વ.\" }</string>
+    <string name="ai_prompt_insight_schema_categories">6) \"kategorien\" (જેટલી જરૂર): આંતરિક ક્ષેત્ર (Denkmuster, Gefühle, Selbstbild, Antrieb, Werte, Beziehungen, Resilienz, Gewohnheiten, Ängste, Grenzen, Kreativität, Umgang, Wachstum, Bedürfnisse, Kontrolle).\n   {\n     \"name\": \"12 અ., 1-2 શ.\", \"icon\": \"material_icon\", \"farbe\": \"#HEX\",\n     \"entropie_level\": 0.0,\n     \"zusammenfassung\": \"3-5 વ.\",\n     \"ratschlaege\": [{\n       \"titel\": \"6 શ.\",\n       \"beschreibung\": \"13-21 શ.\",\n       \"prioritaet\": \"hoch|mittel|niedrig\",\n       \"verknuepfung\": \"...\",\n       \"herleitung\": [{\"datum\":\"...\",\"zusammenfassung\":\"1-2 વ.\"}]\n     }]\n   }</string>
+    <string name="ai_prompt_insight_output">શબ્દ-ગણના નિયમ: \"beschreibung\" હંમેશ 13-21 શબ્દ. ઓછા = ભૂલ. વધારે = ભૂલ.\n\nઆઉટપુટ ફૉર્મૅટ:\n- ફક્ત JSON.\n- કોઈ ટેક્સ્ટ પહેલા-પછી નહીં.\n- Backtick નહીં.\n- { થી શરૂ, } પર અંત.\n- Valid JSON.</string>
+
+    <!-- Entropy Analysis System Prompt (Profile: Clean up your life) -->
+    <string name="ai_prompt_entropy_intro">તમે સહાનુભૂતિ ધરાવતા, ઊંડા-ઊંડા જીવન-સલાહ-આ. અને પૅટર્ન-વિશ્લેષક છો.\n\nતમારું કાર્ય:\nUser ની ડાયરી-નોંધ વિશ્લેષ. વારંવાર આવતા તણાવ, ગૂંચ, બોજ. JSON ફૉર્મૅટ.\n\nશું શોધવું — વ્યક્તિગત બોજ:\nબધું જે ગૂંચ, તણાવ, ઊર્જા-ખોટ, દર્દ, ઊંઘ-સમસ્યા, ભાવ-બોજ અથવા નિયંત્રણ-ખોટ ઉત્પ. કરે.</string>
+    <string name="ai_prompt_entropy_entry_rules">સર્વોચ્ચ નિયમ — કોઈ નોંધ ચૂટવી નહીં:\nક્રમાંકિત નોંધ (ઉ.ત. \"EINTRAG 1 von 5\").\nદરેક વાંચ, વિશ્લેષ, સામેલ.\nજવાબ પહેલા ગણો: બધી સામેલ?\nચૂટ્યું — તરત ઉમેરો.\n\nઓછી નોંધ:\n- 1-2: અલગ-અલગ ઓળખ, પૅટર્ન નહીં. \"અ.\" ઉ.\n- 3+: સ. પૅ. અ.\n\nસ. ક.:\nવ. — ન. ઘ. ઉ. વ. ઊ.</string>
+    <string name="ai_prompt_entropy_rules">ભાષા નિયમો (JSON ના દરેક ટેક્સ્ટ ફીલ્ડ):\n- સરળ, સ્પષ્ટ ભાષા. ટૂંકા વાક્ય.\n- કોઈ વિ. શ., ટૅ. શ., ક. ભ. નહીં.\n- સહ., સ., EM(—) ન. — અ-વ. ક. પ. વ.\n\nસ. ન., સ. ≥15. &lt;10 ભૂ. 3 અ.=3 ર. JSON ≥.</string>
+    <string name="ai_prompt_entropy_schema_header">JSON-આઉટપુટ-સ્કીમા:\n{\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"steigend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\nફ. વ.:\n1) \"gesamt_entropie\" (0.0-1.0): 0.0-0.33=ઓ., 0.34-0.66=મ., 0.67-1.0=ઊ.\n2) \"trend\": ≥3 ન. હોય. steigend=વ., stabil=સ., sinkend=ઘ., unbekannt=ઓ. ડ.\n3) \"gesamtanalyse\" (15-25 વ.): User ને સ. બો., ઊ., ઓ.</string>
+    <string name="ai_prompt_entropy_schema_fields">4) \"fortschritte\" (0-5): ઘ. ઘ. ક. ક. { \"titel\" 5 શ., \"beschreibung\" 2-3 વ., \"bezug\" 1 વ. } 1 ન.=[]\n\n5) \"top_massnahmen\" (ઠ. 5): સ. 5 ઊ., ઊ. પ્ર. { \"titel\" 6 શ., \"beschreibung\" 13-21 શ., \"erklaerung\" 5-8 વ. }</string>
+    <string name="ai_prompt_entropy_schema_categories">6) \"kategorien\" (જ. જ.): { \"name\" 12 અ., \"icon\", \"farbe\", \"entropie_level\" 0.0-1.0, \"zusammenfassung\" 3-5 વ., \"ratschlaege\": [{ \"titel\" 6 શ., \"beschreibung\" 13-21 શ., \"prioritaet\": hoch|mittel|niedrig, \"verknuepfung\", \"herleitung\": [{\"datum\",\"zusammenfassung\" 1-2 વ.}] }] }</string>
+    <string name="ai_prompt_entropy_output">આઉટ. ફ.:\n- ફ. JSON.\n- ક. ટ. પ.-પ. ન.\n- Backtick ન.\n- { થ. ], } પ. અ.\n- Valid JSON.</string>
+
+    <!-- Summary Analysis System Prompt (Profile: Summary) -->
+    <string name="ai_prompt_summary_intro">તમે ધ્યાનથી સાંભળ. સ., ર. ડ.-વ. છો.\n\nતમારું કાર્ય:\nUser ની ડ. ન. વ. ક., ભ., ઊ., ક. JSON.\n\nત. ન. — ક. ન. ઘ., ક. ક., ક. ક. — ક. ઘ. User ઝ.</string>
+    <string name="ai_prompt_summary_entry_rules">સ. — ): ક. ન. (1-2: સ. \'અ.\'; 3+: ત. ?) સ. ≥3: ત. ?,ઓ.</string>
+    <string name="ai_prompt_summary_rules">ભ. (JSON):\n- સ., સ્પ. EM(—) ન. — અ-વ. ક. પ. વ.\n\nસ. ≥15. &lt;10 ભૂ. JSON ≥.</string>
+    <string name="ai_prompt_summary_schema_header">JSON-આઉ.-સ.:\n{\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"steigend|stabil|sinkend|unbekannt\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}\n\nf.:\n1) gesamt_entropie: 0.0-0.33=શ., 0.34-0.66=ન., 0.67-1.0=ઘ.\n2) trend: ≥3 ન. | steigend=વ., stabil=સ., sinkend=ઓ., unbekannt\n3) gesamtanalyse (15-25 વ.): ન. ઝ., ત., User .</string>
+    <string name="ai_prompt_summary_schema_fields">4) fortschritte (0-5): { \"titel\" 5 શ., \"beschreibung\" 2-3 વ., \"bezug\" 1 વ. } 1 ન.=[]\n\n5) top_massnahmen (5): { \"titel\" 6 શ., \"beschreibung\" 13-21 શ., \"erklaerung\" 5-8 વ. }</string>
+    <string name="ai_prompt_summary_schema_categories">6) kategorien: { \"name\" 12 અ., \"icon\", \"farbe\", \"entropie_level\", \"zusammenfassung\" 3-5 વ., \"ratschlaege\": [{ \"titel\" 6 શ., \"beschreibung\" 13-21 શ., \"prioritaet\": hoch|mittel|niedrig, \"verknuepfung\", \"herleitung\": [{\"datum\",\"zusammenfassung\" 1-2 વ.}] }] }</string>
+    <string name="ai_prompt_summary_output">13-21 શ. \"beschreibung\" — ≥13 = ભૂ, ≤21 = ભૂ. ફ. JSON. { }.</string>
+
+    <!-- Custom Analysis System Prompt (Profile: Individual Analysis) -->
+    <!-- %1$s = user-defined focus text -->
+    <string name="ai_prompt_custom_intro">તમે બ. ડ.-વ. છો.\n\nUser ફોકસ:\n%1$s\n\nUser ડ. ન. EXACT ફ. JSON.</string>
+    <string name="ai_prompt_custom_headings">ડ. headings:\nFOKUS {\n- \"angling\": \"ફ. ક.\"\n- \"sleep\": \"ઊ. ઝ.\"\n- \"overwork\": \"ઊ. &#9888;\"\n}</string>
+    <string name="ai_prompt_custom_rules">સ. — ): ક. ન. &#10003;.\n\nભ.:\n- સ., સ્પ. EM(—) ન. — .|,\n\nસ. ≥10. JSON ≥.</string>
+    <string name="ai_prompt_custom_schema">JSON-આઉ.-સ.:\n{\n  \"ueberschrift_top5\": \"3 શ., ફ-ઉ.\",\n  \"ueberschrift_analyse\": \"3 શ., ફ-ઉ.\",\n  \"ueberschrift_ergebnisse\": \"3 શ., ફ-ઉ.\",\n  \"gesamt_entropie\": 0.0,\n  \"trend\": \"...\",\n  \"gesamtanalyse\": \"...\",\n  \"fortschritte\": [...],\n  \"top_massnahmen\": [...],\n  \"kategorien\": [...]\n}</string>
+    <string name="ai_prompt_custom_output">13-21 શ. \"beschreibung\". Backtick ન. { }.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         RETROSPECTIVE SCREEN
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="retro_title">અવલોકન</string>
+    <string name="retro_cd_info">અવલોકન વિશે માહિતી</string>
+    <string name="retro_personal_review">તમારો વ્યક્તિગત અવલોકન</string>
+    <string name="retro_intro_body">ક્યારેક આપણે ભૂલી જઈએ છીએ કે આપણે ખરેખર ક્યા-ક્યા અનુભવ્યું. ડાયરી બધું યાદ રાખે, મોટી ક્ષણ અને નાની. </string>
+    <string name="retro_intro_cta">પાછળ જુઓ અને શોધો શું ચળ્યું.</string>
+    <string name="retro_please_wait">કૃપા કરી રાહ જુઓ</string>
+    <string name="retro_backup_loading">બૅકઅપ લોડ થઈ રહ્યું છે… ત્યારબાદ અવલોકન આપમેળે શરૂ થશે.</string>
+    <string name="retro_profile_switching">પ્રોફાઇલ બદલ્યા પછી અવ. .).</string>
+    <string name="retro_generating">અ. .).…</string>
+    <string name="retro_ai_unavailable">AI .</string>
+    <string name="retro_weekly_title">.</string>
+    <string name="retro_weekly_subtitle">.</string>
+    <string name="retro_weekly_empty">ક. .).\n.</string>
+    <string name="retro_monthly_title">.</string>
+    <string name="retro_monthly_subtitle">.</string>
+    <string name="retro_monthly_empty">ક. .).\n.</string>
+    <string name="retro_yearly_title">.</string>
+    <string name="retro_yearly_subtitle">.</string>
+    <string name="retro_yearly_empty">ક. .).\n.</string>
+    <string name="retro_premium_unlock">Premium .).</string>
+    <string name="retro_at_a_glance">.</string>
+    <string name="retro_cd_expand">.</string>
+    <string name="retro_cd_collapse">.</string>
+    <string name="retro_share_text_label">.</string>
+
+    <!-- Fallback titles (when AI title generation fails) -->
+    <string name="retro_fallback_week">.</string>
+    <string name="retro_fallback_month">.</string>
+    <string name="retro_fallback_year">. %1$d</string>
+    <string name="retro_period_label_week">. %1$d (%2$s - %3$s)</string>
+    <!-- Retro: Photos, TTS, Sharing -->
+    <string name="retro_photos_videos">. &amp; .</string>
+    <string name="retro_photos_videos_colon">. &amp; .:</string>
+    <string name="retro_cd_video">.</string>
+    <string name="retro_cd_photo">.</string>
+    <string name="retro_play_video">.</string>
+    <string name="retro_enable_voices">.</string>
+    <string name="retro_tts_stop">.</string>
+    <string name="retro_tts_read">.</string>
+    <string name="retro_tts_wait">.\u2026</string>
+    <string name="retro_cd_share">.</string>
+    <string name="retro_share_title">.</string>
+    <string name="retro_share_text_content">.</string>
+    <string name="retro_photo_n">. %1$d</string>
+    <string name="retro_share_header">.</string>
+    <string name="retro_at_a_glance_colon">.</string>
+    <!-- Retro: Locked/Premium -->
+    <string name="retro_cd_locked">.</string>
+    <string name="retro_unlock_premium_short">Premium .</string>
+    <string name="retro_cd_premium_required">Premium .</string>
+    <!-- Retro: Benefits info dialog -->
+    <string name="retro_your_ai_reviews">AI .</string>
+    <string name="retro_weekly_p1">AI .</string>
+    <string name="retro_weekly_p2">.</string>
+    <string name="retro_weekly_p3">.</string>
+    <string name="retro_weekly_p4">. 2 .</string>
+    <string name="retro_monthly_p1">.</string>
+    <string name="retro_monthly_p2">.</string>
+    <string name="retro_monthly_p3">.</string>
+    <string name="retro_yearly_p1">.</string>
+    <string name="retro_yearly_p2">AI .</string>
+    <string name="retro_yearly_p3">.</string>
+    <!-- Retro: Premium upsell sheet -->
+    <string name="retro_your_reviews">.</string>
+    <string name="retro_premium_reviews_desc">Premium .</string>
+    <string name="retro_benefit_weekly">. 2 .</string>
+    <string name="retro_benefit_monthly">.</string>
+    <string name="retro_benefit_yearly">.</string>
+    <string name="retro_start_sub">.</string>
+    <string name="retro_decide_later">.</string>
+
+    <!-- Month names for retrospective grouping -->
+    <string name="month_january">જાન્યુ.</string>
+    <string name="month_february">ફેબ્રુ.</string>
+    <string name="month_march">માર્ચ</string>
+    <string name="month_april">એપ્રિ.</string>
+    <string name="month_may">મે</string>
+    <string name="month_june">જૂન</string>
+    <string name="month_july">જુ.</string>
+    <string name="month_august">ઑગ.</string>
+    <string name="month_september">સપ્ટ.</string>
+    <string name="month_october">ઑક્ટ.</string>
+    <string name="month_november">નવ.</string>
+    <string name="month_december">ડિસ.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ONBOARDING
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_welcome">Best Journal\nમાં સ્વાગત</string>
+    <string name="onboarding_subtitle">સ્પષ્ટ. અને\nbadlAv mATe AI &#x2699;</string>
+    <string name="onboarding_feature_speech">&#x267B; AI &#x267B;</string>
+    <string name="onboarding_feature_secure">&#x267B; &#x267B;</string>
+    <string name="onboarding_goals_title">AI &#x267B; &#x267B;?\n</string>
+    <string name="onboarding_goal_stress">&#x267B;</string>
+    <string name="onboarding_goal_clarity">&#x267B;</string>
+    <string name="onboarding_goal_growth">&#x267B;</string>
+    <string name="onboarding_goal_thoughts">&#x267B;</string>
+    <string name="onboarding_how_step1_title">&#x267B;</string>
+    <string name="onboarding_how_step1_desc">&#x267B;</string>
+    <string name="onboarding_how_step2_title">AI &#x267B;</string>
+    <string name="onboarding_how_step2_desc">&#x267B;</string>
+    <string name="onboarding_how_step3_desc">&#x267B;</string>
+    <string name="onboarding_how_step4_title">&#x267B;</string>
+    <string name="onboarding_how_step4_desc">&#x267B;</string>
+    <string name="onboarding_how_step5_title">&#x267B;</string>
+    <string name="onboarding_how_step5_desc">&#x267B;</string>
+    <string name="onboarding_premium_feature_improve">&#x267B;</string>
+    <string name="onboarding_premium_feature_dashboard">&#x267B;</string>
+    <string name="onboarding_premium_feature_retro">&#x267B;</string>
+    <string name="onboarding_premium_feature_patterns">&#x267B;</string>
+    <string name="onboarding_premium_feature_noads">&#x267B;</string>
+    <string name="onboarding_free_trial">&#x267B;</string>
+    <string name="onboarding_free_after_trial">&#x267B;\nAI &#x267B;</string>
+    <string name="onboarding_start_free">&#x267B;</string>
+    <string name="onboarding_without_premium">Premium &#x267B;</string>
+    <string name="onboarding_feature_profiles">5 &#x267B;</string>
+    <string name="onboarding_goals_select">&#x267B;</string>
+    <string name="onboarding_how_step3_title">&#x267B;</string>
+    <string name="onboarding_how_title">&#x267B;</string>
+    <string name="onboarding_perspectives_title">5 &#x267B;\n&#x267B;</string>
+    <string name="onboarding_premium_feature_pdf">PDF &#x267B;</string>
+    <string name="onboarding_premium_profiles">5 AI &#x267B;</string>
+    <string name="onboarding_try_premium">8 &#x267B; Premium</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PAYWALL
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="paywall_prices_loading">&#x267B;\u2026</string>
+    <string name="paywall_sub_loading_toast">&#x267B;</string>
+    <string name="paywall_purchase_loading_toast">&#x267B;</string>
+    <string name="paywall_today">&#x267B;</string>
+    <string name="paywall_full_access">&#x267B;</string>
+    <string name="paywall_day7">&#x267B; 7</string>
+    <string name="paywall_reminder">&#x267B;</string>
+    <string name="paywall_day8">&#x267B; 8</string>
+    <string name="paywall_first_payment">&#x267B;</string>
+    <string name="paywall_yearly_note">&#x267B; %1$s &#x267B;\n&#x267B;</string>
+    <string name="paywall_most_popular">&#x267B;</string>
+    <string name="paywall_monthly_plan">&#x267B;, %1$s/&#x267B;</string>
+    <string name="paywall_yearly_savings">&#x267B; %1$d%% &#x267B;</string>
+    <string name="paywall_lifetime_title">&#x267B;</string>
+    <string name="paywall_lifetime_desc">&#x267B;</string>
+    <string name="paywall_lifetime_note">&#x267B;</string>
+    <string name="paywall_free_note">&#x267B;,</string>
+    <string name="paywall_cd_close">&#x267B;</string>
+
+    <!-- Paywall features -->
+    <string name="paywall_feature_patterns">&#x267B;</string>
+    <string name="paywall_feature_improve">&#x267B;</string>
+    <string name="paywall_feature_dashboard">&#x267B;</string>
+    <string name="paywall_feature_retro">&#x267B;</string>
+    <string name="paywall_feature_pdf">PDF &#x267B;</string>
+    <string name="paywall_feature_noads">&#x267B;</string>
+
+    <!-- Paywall personalized headlines -->
+    <string name="paywall_headline_stress">&#x267B;</string>
+    <string name="paywall_headline_stress_sub">&#x267B;</string>
+    <string name="paywall_headline_clarity">&#x267B;</string>
+    <string name="paywall_headline_clarity_sub">AI &#x267B;</string>
+    <string name="paywall_headline_growth">&#x267B;</string>
+    <string name="paywall_headline_growth_sub">&#x267B;</string>
+    <string name="paywall_headline_thoughts">&#x267B;</string>
+    <string name="paywall_headline_thoughts_sub">&#x267B;</string>
+    <string name="paywall_headline_default">&#x267B;\n&#x267B;</string>
+    <string name="paywall_headline_default_sub">AI &#x267B;</string>
+
+    <!-- Exit intent offer -->
+    <string name="paywall_exit_wait">&#x267B;!</string>
+    <string name="paywall_exit_special_offer">&#x267B;\n&#x267B;:</string>
+    <string name="paywall_exit_discount">&#x267B; %1$d &#x267B;</string>
+    <string name="paywall_exit_price_comparison">&#x267B; %1$s &#x267B; %2$s/&#x267B;</string>
+    <string name="paywall_exit_start_discount">50%% &#x267B;</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CHURN FLOW DIALOG
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="churn_your_sub">&#x267B;</string>
+    <string name="churn_plan_yearly">&#x267B;</string>
+    <string name="churn_plan_monthly">&#x267B;</string>
+    <string name="churn_plan">&#x267B;</string>
+    <string name="churn_price">&#x267B;</string>
+    <string name="churn_renewal">&#x267B;</string>
+    <string name="churn_automatic">&#x267B;</string>
+    <string name="churn_auto_renew_note">Google Play &#x267B;</string>
+    <string name="churn_cancel_sub">&#x267B;</string>
+    <string name="churn_reason_too_expensive">&#x267B;</string>
+    <string name="churn_reason_unused">&#x267B;</string>
+    <string name="churn_per_year">/&#x267B;</string>
+    <string name="churn_per_month">/&#x267B;</string>
+    <string name="churn_reason_features">&#x267B;</string>
+    <string name="churn_reason_other">&#x267B;</string>
+    <string name="churn_sorry_title">&#x267B;</string>
+    <string name="churn_sorry_body">&#x267B;</string>
+    <string name="churn_exclusive_offer">&#x267B;</string>
+    <string name="churn_offer_subtitle">&#x267B;</string>
+    <string name="churn_offer_feature_ai">AI &#x267B;</string>
+    <string name="churn_offer_feature_perspectives">5 &#x267B;</string>
+    <string name="churn_offer_feature_voice">Premium &#x267B;</string>
+    <string name="churn_offer_auto_renew">&#x267B;</string>
+    <string name="churn_accept_offer">&#x267B;</string>
+    <string name="churn_switch_yearly">&#x267B;</string>
+    <string name="churn_pause_sub">Google Play &#x267B;</string>
+    <string name="churn_cancel_anyway">&#x267B;</string>
+    <string name="churn_are_you_sure">&#x267B;?</string>
+    <string name="churn_stay">&#x267B;</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI LIMIT / COMPONENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="ai_limit_title">&#x267B;</string>
+    <string name="ai_limit_body">&#x267B; 5\u00A0&#x267B; 5\u00A0&#x267B;\nPremium: 150 &#x267B;</string>
+    <string name="ai_limit_monthly">&#x267B;, %1$s/&#x267B;</string>
+    <string name="ai_limit_yearly">&#x267B;, %1$s/&#x267B; (37%% &#x267B;)</string>
+    <string name="ai_limit_no_thanks">&#x267B; AI &#x267B;</string>
+    <string name="ai_banner_title">AI &#x267B;</string>
+    <string name="ai_banner_body">• &#x267B;\n• &#x267B;\n• &#x267B;\n• &#x267B;</string>
+    <string name="cd_mic_start">&#x267B;</string>
+    <string name="cd_mic_stop">&#x267B;</string>
+    <string name="entry_improve_limit_daily">&#x267B;!</string>
+    <string name="entry_improve_limit_cooldown">&#x267B; %1$d &#x267B;.</string>
+    <string name="entry_improve_failed">&#x267B;</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         NOTIFICATIONS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="notif_reminder_title">&#x267B;</string>
+    <string name="notif_reminder_body_0">&#x267B;?</string>
+    <string name="notif_reminder_body_1">&#x267B;</string>
+    <string name="notif_reminder_body_2">&#x267B;</string>
+    <string name="notif_reminder_body_3">&#x267B;</string>
+    <string name="notif_reminder_body_4">&#x267B;?</string>
+    <string name="notif_weekly_title">&#x267B;</string>
+    <string name="notif_weekly_body">&#x267B; &#x267B;</string>
+    <string name="notif_monthly_title">&#x267B;</string>
+    <string name="notif_monthly_body">&#x267B;</string>
+    <string name="notif_yearly_title">&#x267B;</string>
+    <string name="notif_yearly_body">&#x267B;</string>
+
+    <!-- Notification channel names -->
+    <string name="notif_channel_daily_name">&#x267B;</string>
+    <string name="notif_channel_daily_desc">&#x267B;</string>
+    <string name="notif_channel_weekly_name">&#x267B;</string>
+    <string name="notif_channel_weekly_desc">&#x267B; 15:00</string>
+    <string name="notif_channel_monthly_name">&#x267B;</string>
+    <string name="notif_channel_monthly_desc">&#x267B;</string>
+    <string name="notif_channel_yearly_name">&#x267B;</string>
+    <string name="notif_channel_yearly_desc">&#x267B;</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DATE / TIME
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="datetime_just_now">&#x267B;</string>
+    <plurals name="datetime_minutes_ago">
+        <item quantity="one">%1$d &#x267B;</item>
+        <item quantity="other">%1$d &#x267B;</item>
+    </plurals>
+    <plurals name="datetime_hours_ago">
+        <item quantity="one">%1$d &#x267B;</item>
+        <item quantity="other">%1$d &#x267B;</item>
+    </plurals>
+    <plurals name="datetime_days_ago">
+        <item quantity="one">%1$d &#x267B;</item>
+        <item quantity="other">%1$d &#x267B;</item>
+    </plurals>
+    <!-- Confirmation after PDF export. %1$d = number of entries included in the PDF. -->
+    <plurals name="settings_export_success">
+        <item quantity="one">%1$d &#x267B;</item>
+        <item quantity="other">%1$d &#x267B;</item>
+    </plurals>
+    <string name="datetime_today">&#x267B;</string>
+    <string name="datetime_yesterday">&#x267B;</string>
+    <string name="datetime_day_before_yesterday">&#x267B;</string>
+    <string name="datetime_this_week">&#x267B;</string>
+    <string name="datetime_last_week">&#x267B;</string>
+    <string name="datetime_weeks_ago">%1$d &#x267B;</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ACHIEVEMENTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="achievement_nightowl_title">&#x267B;</string>
+    <string name="achievement_nightowl_desc">22 &#x267B; 50 &#x267B;</string>
+    <string name="achievement_earlybird_title">&#x267B;</string>
+    <string name="achievement_earlybird_desc">7 &#x267B; 20 &#x267B;</string>
+    <string name="achievement_confession_title">&#x267B;</string>
+    <string name="achievement_confession_desc">1,000 &#x267B;</string>
+    <string name="achievement_marathon_title">&#x267B;</string>
+    <string name="achievement_marathon_desc">100 &#x267B;</string>
+    <string name="achievement_wordartist_title">&#x267B;</string>
+    <string name="achievement_wordartist_desc">500 &#x267B;</string>
+    <string name="achievement_consistency_title">&#x267B;</string>
+    <string name="achievement_consistency_desc">30 &#x267B;</string>
+    <string name="achievement_chronicler_title">&#x267B;</string>
+    <string name="achievement_chronicler_desc">365 &#x267B;</string>
+    <string name="achievement_photodiary_title">&#x267B;</string>
+    <string name="achievement_photodiary_desc">50 &#x267B;</string>
+    <string name="achievement_voiceartist_title">&#x267B;</string>
+    <string name="achievement_voiceartist_desc">25 &#x267B;</string>
+    <string name="achievement_reflectionmaster_title">&#x267B;</string>
+    <string name="achievement_reflectionmaster_desc">50 &#x267B;</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         DAILY PROMPTS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="prompt_cat_self_reflection">&#x267B;</string>
+    <string name="prompt_cat_gratitude">&#x267B;</string>
+    <string name="prompt_cat_future">&#x267B;</string>
+    <string name="prompt_cat_relationships">&#x267B;</string>
+
+    <string-array name="prompts_self_reflection">
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+    </string-array>
+
+    <string-array name="prompts_gratitude">
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+    </string-array>
+
+    <string-array name="prompts_future">
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+    </string-array>
+
+    <string-array name="prompts_relationships">
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+        <item>&#x267B;?</item>
+    </string-array>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         PDF EXPORT
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="pdf_entry_fallback_title">&#x267B; #%1$d</string>
+    <string name="pdf_entry_counter">&#x267B; %1$d / %2$d</string>
+    <string name="pdf_summary_label">&#x267B;</string>
+    <string name="pdf_continuation">%1$s (&#x267B;)</string>
+    <string name="pdf_page_number">&#x267B; %1$d</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         ERRORS
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="error_retro_all_failed">&#x267B; %1$d AI &#x267B;</string>
+    <string name="error_whisper_audio_empty">&#x267B;</string>
+    <string name="error_whisper_no_text">&#x267B;</string>
+    <string name="error_sync_db_not_found">&#x267B;</string>
+    <string name="error_file_open_failed">&#x267B;</string>
+    <string name="error_generic">&#x267B;: %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         AI PROFILE STYLE INSTRUCTIONS (for Gemini prompts)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="profile_style_chronicler">\n- &#x267B;</string>
+    <string name="profile_style_advisor">\n- &#x267B;</string>
+    <string name="profile_style_insight">\n- &#x267B;</string>
+    <string name="profile_style_coach">\n- &#x267B;</string>
+    <string name="profile_style_custom">\n- &#x267B; \"%1$s\"</string>
+
+</resources>
