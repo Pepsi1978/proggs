@@ -32,8 +32,8 @@
     <!-- Accessibility label for the undo icon button on the dashboard. -->
     <string name="action_undo">পূর্বাবস্থায় ফেরাও</string>
     <string name="action_ok">ঠিক আছে</string>
-    <string name="action_go_google_play">গুগল প্লে তে যাও</string>
-    <string name="journal_drive_backup_dialog">গুগল ড্রাইভ ব্যাকআপ</string>
+    <string name="action_go_google_play">Google প্লে তে যাও</string>
+    <string name="journal_drive_backup_dialog">Google ড্রাইভ ব্যাকআপ</string>
     <string name="journal_improve_text">✨ লেখা উন্নত করো</string>
     <string name="journal_show_original">↩ আসল লেখা দেখাও</string>
     <string name="journal_show_improved">✨ উন্নত সংস্করণ দেখাও</string>
@@ -70,7 +70,7 @@
     <string name="journal_cd_streak">টানা দিন</string>
     <string name="journal_cd_text_input">লেখা লিখো</string>
     <string name="journal_achievement_unlocked">অ্যাচিভমেন্ট আনলক হয়েছে!</string>
-    <string name="journal_drive_not_signed_in">গুগলে সাইন ইন করা নেই</string>
+    <string name="journal_drive_not_signed_in">Googleে সাইন ইন করা নেই</string>
     <string name="journal_drive_backup_current">ব্যাকআপ হালনাগাদ, সব লেখা সুরক্ষিত</string>
     <string name="journal_drive_uploading">ব্যাকআপ আপলোড হচ্ছে…</string>
     <string name="journal_drive_downloading">ছবি/ভিডিও ডাউনলোড হচ্ছে…</string>
@@ -342,7 +342,7 @@
     <string name="settings_backup_entries">দিনলিপির লেখা ব্যাকআপ করো</string>
     <string name="settings_not_signed_in">সাইন ইন করা নেই</string>
     <string name="settings_entries_loaded_on_sign_in">সাইন ইন করার সময় ব্যাকআপ করা লেখা লোড হয়</string>
-    <string name="settings_sign_in_google">গুগল দিয়ে সাইন ইন করো</string>
+    <string name="settings_sign_in_google">Google দিয়ে সাইন ইন করো</string>
     <string name="settings_appearance">চেহারা</string>
     <string name="settings_dark_mode">ডার্ক মোড</string>
     <string name="settings_dark_active">চালু</string>
@@ -382,7 +382,7 @@
     <string name="settings_ai_profiles_title">এআই-ড্যাশবোর্ড প্রোফাইল:</string>
     <string name="settings_ai_automations">এআই-অটোমেশন</string>
     <string name="settings_custom_prompt_placeholder">উদাহরণ: আমার ঘুমের গুণমান আর চাপের স্তরে মনোযোগ দাও। আমার খাবারে প্যাটার্ন দেখাও। সপ্তাহ জুড়ে আমার মেজাজ কীভাবে পরিবর্তন হয় তা বিশ্লেষণ করো। আমি কখন সবচেয়ে উৎপাদনশীল আর কী আমাকে আটকায় তা খুঁজে বের করো।\n\nতুমি তোমার ফোকাস যত বিস্তারিত বর্ণনা করবে, ফলাফল তত ভালো হবে।</string>
-    <string name="churn_google_play_redirect">তোমাকে গুগল প্লে তে নিয়ে যাওয়া হবে তোমার সাবস্ক্রিপশন ব্যবস্থাপনার জন্য। তোমার দিনলিপির লেখা অবশ্যই সুরক্ষিত থাকবে।</string>
+    <string name="churn_google_play_redirect">তোমাকে Google প্লে তে নিয়ে যাওয়া হবে তোমার সাবস্ক্রিপশন ব্যবস্থাপনার জন্য। তোমার দিনলিপির লেখা অবশ্যই সুরক্ষিত থাকবে।</string>
     <string name="splash_subtitle">তোমার স্মার্ট দিনলিপি</string>
     <string name="biometric_subtitle">তোমার দিনলিপি আনলক করো</string>
     <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
@@ -440,7 +440,7 @@
     <string name="settings_feedback_dialog_desc">ডেভেলপারদের কাছে তোমার বার্তা — আমরা সব কিছু পড়ি আর ব্যক্তিগতভাবে উত্তর দিই!</string>
     <string name="settings_feedback_placeholder">আমাদের তোমার ফিডব্যাক লিখো…</string>
     <string name="settings_feedback_sending">পাঠানো হচ্ছে…</string>
-    <string name="settings_feedback_sign_in_first">অনুগ্রহ করে প্রথমে গুগল দিয়ে সাইন ইন করো</string>
+    <string name="settings_feedback_sign_in_first">অনুগ্রহ করে প্রথমে Google দিয়ে সাইন ইন করো</string>
     <string name="settings_feedback_allow_gmail">অনুগ্রহ করে জিমেইল অ্যাক্সেস অনুমতি দাও আর আবার চেষ্টা করো।</string>
     <string name="settings_feedback_token_error">টোকেন ত্রুটি: %1$s</string>
     <string name="settings_feedback_unknown_error">অজানা ত্রুটি</string>
@@ -837,7 +837,7 @@
     <string name="churn_price">দাম</string>
     <string name="churn_renewal">পুনর্নবীকরণ</string>
     <string name="churn_automatic">স্বয়ংক্রিয়</string>
-    <string name="churn_auto_renew_note">তোমার সাবস্ক্রিপশন গুগল প্লে তে স্বয়ংক্রিয়ভাবে নবীকরণ হয়। যেকোনো সময় বাতিল করা যায়।</string>
+    <string name="churn_auto_renew_note">তোমার সাবস্ক্রিপশন Google প্লে তে স্বয়ংক্রিয়ভাবে নবীকরণ হয়। যেকোনো সময় বাতিল করা যায়।</string>
     <string name="churn_cancel_sub">সাবস্ক্রিপশন বাতিল করো</string>
     <string name="churn_reason_too_expensive">খুব দামী</string>
     <string name="churn_reason_unused">খুব কম ব্যবহার করি</string>
@@ -855,7 +855,7 @@
     <string name="churn_offer_auto_renew">স্বয়ংক্রিয়ভাবে নবীকরণ হয়, যেকোনো সময় বাতিলযোগ্য</string>
     <string name="churn_accept_offer">অফার গ্রহণ করো</string>
     <string name="churn_switch_yearly">অথবা বার্ষিক সাবস্ক্রিপশনে স্যুইচ করো আর আরো সাশ্রয় করো</string>
-    <string name="churn_pause_sub">অথবা গুগল প্লে তে সাবস্ক্রিপশন বিরতি দাও</string>
+    <string name="churn_pause_sub">অথবা Google প্লে তে সাবস্ক্রিপশন বিরতি দাও</string>
     <string name="churn_cancel_anyway">তবুও বাতিল করো</string>
     <string name="churn_are_you_sure">তুমি কি নিশ্চিত?</string>
     <string name="churn_stay">আবার থাকতে চাই</string>
