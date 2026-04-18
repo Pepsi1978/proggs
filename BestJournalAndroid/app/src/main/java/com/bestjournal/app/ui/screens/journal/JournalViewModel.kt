@@ -28,6 +28,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -538,8 +539,7 @@ constructor(
 
         _uiState.value = state.copy(recordingState = RecordingState.SAVING)
 
-        // Use independent scope — viewModelScope can be cancelled by Android
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val entry =
                 JournalEntry(
                     timestamp = System.currentTimeMillis(),
@@ -767,7 +767,7 @@ constructor(
     private fun triggerSync() {
         syncDebounceJob?.cancel()
         syncDebounceJob =
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            viewModelScope.launch(Dispatchers.IO) {
                 _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.UPLOADING)
                 syncWithDriveUseCase
                     .backup()

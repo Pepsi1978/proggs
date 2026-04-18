@@ -7,8 +7,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bestjournal.app.R
-import com.bestjournal.app.data.local.entity.EntryPhotoEntity
 import com.bestjournal.app.billing.BillingManager
+import com.bestjournal.app.data.local.entity.EntryPhotoEntity
 import com.bestjournal.app.data.remote.ai.AiRateLimiter
 import com.bestjournal.app.data.remote.ai.TieredAccessResult
 import com.bestjournal.app.data.repository.JournalRepository
@@ -22,6 +22,7 @@ import com.bestjournal.app.util.Constants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -84,13 +85,12 @@ constructor(
         }
     }
 
-    @Suppress("OPT_IN_USAGE")
     private fun triggerAutoBackup() {
         val email = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, null)
         if (email.isNullOrBlank()) return
         autoBackupJob?.cancel()
         autoBackupJob =
-            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            viewModelScope.launch(Dispatchers.IO) {
                 delay(5000)
                 try {
                     encryptedPrefs.edit().putBoolean(Constants.PREF_SYNC_IN_PROGRESS, true).apply()
@@ -183,16 +183,27 @@ constructor(
             val accessResult = aiRateLimiter.checkTextAccess(subState)
             when (accessResult) {
                 is TieredAccessResult.HardLimitReached -> {
-                    _uiState.value = _uiState.value.copy(improveError = context.getString(R.string.entry_improve_limit_daily))
+                    _uiState.value =
+                        _uiState.value.copy(
+                            improveError = context.getString(R.string.entry_improve_limit_daily)
+                        )
                     return@launch
                 }
                 is TieredAccessResult.Cooldown -> {
-                    _uiState.value = _uiState.value.copy(improveError = context.getString(R.string.entry_improve_limit_cooldown, accessResult.minutesLeft))
+                    _uiState.value =
+                        _uiState.value.copy(
+                            improveError =
+                                context.getString(
+                                    R.string.entry_improve_limit_cooldown,
+                                    accessResult.minutesLeft,
+                                )
+                        )
                     return@launch
                 }
-                is TieredAccessResult.Allowed -> { }
+                is TieredAccessResult.Allowed -> {}
             }
-            val modelName = (accessResult as? TieredAccessResult.Allowed)?.modelName ?: return@launch
+            val modelName =
+                (accessResult as? TieredAccessResult.Allowed)?.modelName ?: return@launch
 
             _uiState.value = _uiState.value.copy(isImproving = true, improveError = null)
             aiRateLimiter.recordTextAttempt()
@@ -218,7 +229,8 @@ constructor(
                     _uiState.value =
                         _uiState.value.copy(
                             isImproving = false,
-                            improveError = error.message ?: context.getString(R.string.entry_improve_failed),
+                            improveError =
+                                error.message ?: context.getString(R.string.entry_improve_failed),
                         )
                 }
         }
@@ -235,7 +247,8 @@ constructor(
     fun deleteEntry() {
         viewModelScope.launch {
             _uiState.value.entry?.let { entry ->
-                // Delete photo/video files from disk BEFORE the entry (CASCADE only deletes DB rows)
+                // Delete photo/video files from disk BEFORE the entry (CASCADE only deletes DB
+                // rows)
                 try {
                     photoRepository.getFilePathsForEntry(entry.id).forEach { path ->
                         java.io.File(path).delete()
@@ -243,7 +256,7 @@ constructor(
                 } catch (_: Exception) {}
                 journalRepository.deleteEntry(entry)
                 analyticsTracker.trackEntryDeleted()
-                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                viewModelScope.launch(Dispatchers.IO) {
                     try {
                         encryptedPrefs
                             .edit()
@@ -265,8 +278,7 @@ constructor(
                         encryptedPrefs.getBoolean(Constants.PREF_AUTO_UPDATE_DASHBOARD, true)
                     if (autoUpdate) {
                         // Sync scenario so per-scenario counter tracks the correct profile
-                        val scenario =
-                            encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
+                        val scenario = encryptedPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
                         aiRateLimiter.setCurrentScenario(scenario)
                         // Check access before auto-update — silently skip if limit reached
                         val subState = billingManager.subscriptionState.value
@@ -282,7 +294,10 @@ constructor(
                             .apply()
                         try {
                             aiRateLimiter.recordDashboardAttempt()
-                            analyzeEntropyUseCase(freshAnalysis = true, modelName = accessResult.modelName)
+                            analyzeEntropyUseCase(
+                                freshAnalysis = true,
+                                modelName = accessResult.modelName,
+                            )
                             aiRateLimiter.recordDashboardSuccess()
                             encryptedPrefs
                                 .edit()

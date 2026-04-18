@@ -1,5 +1,7 @@
 package com.bestjournal.app.ui.screens.onboarding
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -314,7 +316,7 @@ private fun PersonalizationPage(viewModel: OnboardingViewModel) {
     val visible = remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible.value = true }
 
-    val selectedGoals by viewModel.selectedGoals.collectAsState()
+    val selectedGoals by viewModel.selectedGoals.collectAsStateWithLifecycle()
 
     val goals = listOf(
         "stress" to stringResource(R.string.onboarding_goal_stress),

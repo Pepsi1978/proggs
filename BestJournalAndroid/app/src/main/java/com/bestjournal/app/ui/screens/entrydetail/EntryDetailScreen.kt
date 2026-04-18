@@ -1,5 +1,7 @@
 package com.bestjournal.app.ui.screens.entrydetail
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -134,7 +136,7 @@ fun EntryDetailScreen(
     onBack: () -> Unit,
     searchQuery: String = "",
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     var lastEditTime by remember { mutableLongStateOf(0L) }

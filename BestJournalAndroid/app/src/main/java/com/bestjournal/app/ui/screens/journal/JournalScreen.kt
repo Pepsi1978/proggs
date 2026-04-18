@@ -70,7 +70,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -98,6 +97,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.AnimatedMicButton
 import com.bestjournal.app.ui.components.EvolvingStreakIcon
@@ -122,18 +122,18 @@ fun JournalScreen(
     onEntryClick: (Long, String) -> Unit,
     onNavigateToPaywall: (String) -> Unit = {},
 ) {
-    val allEntries by viewModel.entries.collectAsState()
-    val uiState by viewModel.uiState.collectAsState()
+    val allEntries by viewModel.entries.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchResults by
-        viewModel.searchEntries(uiState.searchQuery).collectAsState(initial = emptyList())
+        viewModel.searchEntries(uiState.searchQuery).collectAsStateWithLifecycle(emptyList())
     val entries =
         if (uiState.isSearchActive && uiState.searchQuery.isNotBlank()) {
             searchResults
         } else {
             allEntries
         }
-    val amplitude by viewModel.amplitude.collectAsState()
-    val duration by viewModel.durationSeconds.collectAsState()
+    val amplitude by viewModel.amplitude.collectAsStateWithLifecycle()
+    val duration by viewModel.durationSeconds.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val doHaptic = rememberHapticAction()
     val context = LocalContext.current
@@ -165,7 +165,7 @@ fun JournalScreen(
     }
 
     // Achievement unlock Snackbar
-    val achievementTitle by viewModel.achievementUnlocked.collectAsState()
+    val achievementTitle by viewModel.achievementUnlocked.collectAsStateWithLifecycle()
     var showAchievementSnackbar by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(achievementTitle) {
         achievementTitle?.let {

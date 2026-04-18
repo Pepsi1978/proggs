@@ -1,5 +1,7 @@
 package com.bestjournal.app.ui.screens.dashboard
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -118,11 +120,11 @@ import com.bestjournal.app.util.rememberHapticAction
 
 @Composable
 fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String) -> Unit = {}) {
-    val blocks by viewModel.adviceBlocks.collectAsState()
-    val uiState by viewModel.uiState.collectAsState()
-    val dashboardUsed by viewModel.weeklyDashboardUsed.collectAsState()
-    val dashboardMax by viewModel.weeklyDashboardMax.collectAsState()
-    val isFreemiumUser by viewModel.isFreemiumUser.collectAsState()
+    val blocks by viewModel.adviceBlocks.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val dashboardUsed by viewModel.weeklyDashboardUsed.collectAsStateWithLifecycle()
+    val dashboardMax by viewModel.weeklyDashboardMax.collectAsStateWithLifecycle()
+    val isFreemiumUser by viewModel.isFreemiumUser.collectAsStateWithLifecycle()
     val isDark = LocalIsDarkTheme.current
     val doHaptic = rememberHapticAction()
     var showLegendDialog by remember { mutableStateOf(false) }

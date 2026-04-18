@@ -1,5 +1,7 @@
 package com.bestjournal.app.ui.screens.settings
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.EaseInOutSine
@@ -127,7 +129,7 @@ fun SettingsScreen(
     onNavigateToPaywall: (String) -> Unit = {},
     onProfileChanged: () -> Unit = {},
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // Click sound helper � plays only when sounds are enabled
@@ -1895,7 +1897,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         if (uiState.isSubscribed) {
-                            val subType by viewModel.subscriptionType.collectAsState()
+                            val subType by viewModel.subscriptionType.collectAsStateWithLifecycle()
                             val isLifetime =
                                 subType == com.bestjournal.app.billing.SubscriptionType.LIFETIME
                             Text(

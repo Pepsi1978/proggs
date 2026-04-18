@@ -16,4 +16,6 @@
     <exclude domain="database" path="retrospective_db-journal" />
     <exclude domain="database" path="retrospective_db-wal" />
     <exclude domain="database" path="retrospective_db-shm" />
+    <exclude domain="sharedpref" path="entropy_journal_secure_prefs.xml" />
+    <exclude domain="sharedpref" path="entropy_journal_secure_prefs" />
 </full-backup-content>

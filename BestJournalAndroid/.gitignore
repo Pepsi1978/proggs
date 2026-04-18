@@ -1,0 +1,21 @@
+# Keystores und Secrets
+local.properties
+*.jks
+*.keystore
+debug-shared.keystore
+release.keystore
+google-services.json
+!app/src/debug/google-services.json
+
+# Build-Outputs
+/app/build/
+/build/
+.gradle/
+local.properties
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+.DS_Store

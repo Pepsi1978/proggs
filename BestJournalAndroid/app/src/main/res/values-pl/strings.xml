@@ -908,22 +908,26 @@
     <plurals name="datetime_minutes_ago">
         <item quantity="one">%1$d minutę temu</item>
         <item quantity="few">%1$d minuty temu</item>
+        <item quantity="many">%1$d minut temu</item>
         <item quantity="other">%1$d minut temu</item>
     </plurals>
     <plurals name="datetime_hours_ago">
         <item quantity="one">%1$d godzinę temu</item>
         <item quantity="few">%1$d godziny temu</item>
+        <item quantity="many">%1$d godzin temu</item>
         <item quantity="other">%1$d godzin temu</item>
     </plurals>
     <plurals name="datetime_days_ago">
         <item quantity="one">%1$d dzień temu</item>
         <item quantity="few">%1$d dni temu</item>
+        <item quantity="many">%1$d dni temu</item>
         <item quantity="other">%1$d dni temu</item>
     </plurals>
     <!-- Confirmation after PDF export. %1$d = number of entries included in the PDF. -->
     <plurals name="settings_export_success">
         <item quantity="one">Wyeksportowano %1$d wpis</item>
         <item quantity="few">Wyeksportowano %1$d wpisy</item>
+        <item quantity="many">Wyeksportowano %1$d wpisów</item>
         <item quantity="other">Wyeksportowano %1$d wpisów</item>
     </plurals>
     <string name="datetime_today">Dziś</string>

@@ -1,5 +1,7 @@
 package com.bestjournal.app.ui.screens.retrospective
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.RepeatMode
@@ -177,15 +179,15 @@ fun RetrospectiveScreen(
     onNavigateToPaywall: (String) -> Unit = {},
 ) {
     val doHaptic = rememberHapticAction()
-    val weekly by viewModel.weeklySummaries.collectAsState()
-    val monthly by viewModel.monthlySummaries.collectAsState()
-    val yearly by viewModel.yearlySummaries.collectAsState()
-    val isGenerating by viewModel.isGenerating.collectAsState()
-    val isWaitingForRestore by viewModel.isWaitingForRestore.collectAsState()
-    val isProfileSwitch by viewModel.isProfileSwitch.collectAsState()
-    val errorMessage by viewModel.errorMessage.collectAsState()
-    val lockedWeeks by viewModel.lockedWeeks.collectAsState()
-    val subState by viewModel.subscriptionState.collectAsState()
+    val weekly by viewModel.weeklySummaries.collectAsStateWithLifecycle()
+    val monthly by viewModel.monthlySummaries.collectAsStateWithLifecycle()
+    val yearly by viewModel.yearlySummaries.collectAsStateWithLifecycle()
+    val isGenerating by viewModel.isGenerating.collectAsStateWithLifecycle()
+    val isWaitingForRestore by viewModel.isWaitingForRestore.collectAsStateWithLifecycle()
+    val isProfileSwitch by viewModel.isProfileSwitch.collectAsStateWithLifecycle()
+    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val lockedWeeks by viewModel.lockedWeeks.collectAsStateWithLifecycle()
+    val subState by viewModel.subscriptionState.collectAsStateWithLifecycle()
     val isPremium = subState is SubscriptionState.Subscribed
 
     // Check profile-change flag on every tab entry — triggers regeneration if user
@@ -836,7 +838,7 @@ private fun SummaryDetailDialog(
             null
         }
     }
-    val photos by viewModel.currentPhotos.collectAsState()
+    val photos by viewModel.currentPhotos.collectAsStateWithLifecycle()
     val parsed = remember(summary.summaryText) { parseRetrospectiveText(summary.summaryText) }
 
     // Load photos for this retrospective period when the dialog opens

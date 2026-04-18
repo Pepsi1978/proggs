@@ -7,8 +7,8 @@ import android.os.Build
 import com.bestjournal.app.util.ReminderReceiver
 import com.bestjournal.app.util.WeeklyReviewReceiver
 import com.google.firebase.FirebaseApp
+import com.google.firebase.appcheck.AppCheckProviderFactory
 import com.google.firebase.appcheck.FirebaseAppCheck
-import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import dagger.hilt.android.HiltAndroidApp
 
@@ -20,9 +20,20 @@ class BestJournalApp : Application() {
         FirebaseApp.initializeApp(this)
         // Debug builds use DebugAppCheckProvider (no Play Integrity needed).
         // Release builds use Play Integrity for production App Check.
-        val factory =
+        // DebugAppCheckProviderFactory is only available as debugImplementation,
+        // so reflection is used to avoid a compile error in release builds.
+        val factory: AppCheckProviderFactory =
             if (BuildConfig.DEBUG) {
-                DebugAppCheckProviderFactory.getInstance()
+                try {
+                    val clazz =
+                        Class.forName(
+                            "com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory"
+                        )
+                    @Suppress("UNCHECKED_CAST")
+                    clazz.getMethod("getInstance").invoke(null) as AppCheckProviderFactory
+                } catch (e: Exception) {
+                    PlayIntegrityAppCheckProviderFactory.getInstance()
+                }
             } else {
                 PlayIntegrityAppCheckProviderFactory.getInstance()
             }

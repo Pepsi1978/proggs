@@ -1,5 +1,7 @@
 package com.bestjournal.app.ui.screens.paywall
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import android.app.Activity
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -91,10 +93,10 @@ fun PaywallScreen(
     viewModel: PaywallViewModel,
     onDismiss: () -> Unit,
 ) {
-    val monthlyPrice by viewModel.monthlyPrice.collectAsState()
-    val yearlyPrice by viewModel.yearlyPrice.collectAsState()
-    val lifetimePrice by viewModel.lifetimePrice.collectAsState()
-    val personalizedHeadline by viewModel.personalizedHeadline.collectAsState()
+    val monthlyPrice by viewModel.monthlyPrice.collectAsStateWithLifecycle()
+    val yearlyPrice by viewModel.yearlyPrice.collectAsStateWithLifecycle()
+    val lifetimePrice by viewModel.lifetimePrice.collectAsStateWithLifecycle()
+    val personalizedHeadline by viewModel.personalizedHeadline.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val activity = context as? Activity
 

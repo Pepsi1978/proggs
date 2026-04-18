@@ -19,6 +19,8 @@
         <exclude domain="database" path="retrospective_db-journal" />
         <exclude domain="database" path="retrospective_db-wal" />
         <exclude domain="database" path="retrospective_db-shm" />
+        <exclude domain="sharedpref" path="entropy_journal_secure_prefs.xml" />
+        <exclude domain="sharedpref" path="entropy_journal_secure_prefs" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="database" path="dashboard_db" />
@@ -29,5 +31,7 @@
         <exclude domain="database" path="retrospective_db-journal" />
         <exclude domain="database" path="retrospective_db-wal" />
         <exclude domain="database" path="retrospective_db-shm" />
+        <exclude domain="sharedpref" path="entropy_journal_secure_prefs.xml" />
+        <exclude domain="sharedpref" path="entropy_journal_secure_prefs" />
     </device-transfer>
 </data-extraction-rules>
