@@ -2252,7 +2252,17 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
-                            Spacer(modifier = Modifier.width(28.dp)) // mirrors icon + inner spacer
+                            if (!uiState.isSubscribed) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Icon(
+                                    Icons.Rounded.Star,
+                                    contentDescription = stringResource(R.string.label_premium),
+                                    tint = FeatureAccentOrange,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.width(28.dp))
+                            }
                         }
                         if (uiState.isSubscribed) {
                             Spacer(modifier = Modifier.height(12.dp))
@@ -2303,27 +2313,6 @@ fun SettingsScreen(
                                 stringResource(R.string.settings_export_entries_photos_pdf_full),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            val premiumLabel = stringResource(R.string.label_premium)
-                            Text(
-                                buildAnnotatedString {
-                                    withStyle(
-                                        SpanStyle(color = MaterialTheme.colorScheme.onSurface)
-                                    ) {
-                                        append("(")
-                                    }
-                                    withStyle(SpanStyle(color = FeatureAccentOrange)) {
-                                        append("\u2605 $premiumLabel")
-                                    }
-                                    withStyle(
-                                        SpanStyle(color = MaterialTheme.colorScheme.onSurface)
-                                    ) {
-                                        append(")")
-                                    }
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth(),
                             )
