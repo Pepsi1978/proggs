@@ -821,7 +821,10 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     }
                                 }
 
-                        itemsIndexed(allObservations) { _, (advice, catName, _) ->
+                        itemsIndexed(
+                            allObservations,
+                            key = { _, (advice, catName, _) -> "obs::$catName::${advice.title}" },
+                        ) { _, (advice, catName, _) ->
                             SummaryObservationCard(
                                 advice = advice,
                                 categoryName = catName,
@@ -979,7 +982,10 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     }
                                 }
 
-                        itemsIndexed(allInsights) { _, (advice, catName, _) ->
+                        itemsIndexed(
+                            allInsights,
+                            key = { _, (advice, catName, _) -> "ins::$catName::${advice.title}" },
+                        ) { _, (advice, catName, _) ->
                             InsightCard(
                                 advice = advice,
                                 categoryName = catName,
@@ -1137,7 +1143,10 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     }
                                 }
 
-                        itemsIndexed(allGoals) { _, (advice, catName, _) ->
+                        itemsIndexed(
+                            allGoals,
+                            key = { _, (advice, catName, _) -> "goal::$catName::${advice.title}" },
+                        ) { _, (advice, catName, _) ->
                             GoalCard(
                                 advice = advice,
                                 categoryName = catName,
@@ -1302,7 +1311,10 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     }
                                 }
 
-                        itemsIndexed(allCustom) { _, (advice, catName, _) ->
+                        itemsIndexed(
+                            allCustom,
+                            key = { _, (advice, catName, _) -> "cust::$catName::${advice.title}" },
+                        ) { _, (advice, catName, _) ->
                             CustomResultCard(
                                 advice = advice,
                                 categoryName = catName,
@@ -1431,7 +1443,10 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     }
                                 }
 
-                        itemsIndexed(allAdvicesWithCategory) { _, (advice, catName, _) ->
+                        itemsIndexed(
+                            allAdvicesWithCategory,
+                            key = { _, (advice, catName, _) -> "adv::$catName::${advice.title}" },
+                        ) { _, (advice, catName, _) ->
                             AdviceCard(
                                 advice = advice,
                                 categoryName = catName,
