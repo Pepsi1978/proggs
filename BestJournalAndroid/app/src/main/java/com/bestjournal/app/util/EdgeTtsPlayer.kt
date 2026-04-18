@@ -2,6 +2,8 @@ package com.bestjournal.app.util
 
 import android.content.Context
 import android.media.MediaPlayer
+import android.os.Bundle
+import com.google.firebase.analytics.FirebaseAnalytics
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
@@ -26,11 +28,13 @@ class EdgeTtsPlayer(private val context: Context) {
     private var onDone: (() -> Unit)? = null
     private var onPlayStart: (() -> Unit)? = null
     private var watchdogJob: Job? = null
+    private var currentVoice: String = ""
     private val watchdogScope = MainScope()
+    private val analytics: FirebaseAnalytics by lazy { FirebaseAnalytics.getInstance(context) }
     private val client =
         OkHttpClient.Builder()
             .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(45, java.util.concurrent.TimeUnit.SECONDS)
             .build()
 
     private companion object {
@@ -42,8 +46,10 @@ class EdgeTtsPlayer(private val context: Context) {
         // Watchdog: abort if no audio bytes received within this window.
         // Timer resets on every received audio chunk, so long streaming audio
         // (40s+ generated speech) is NOT affected — only genuine silence triggers.
-        const val WATCHDOG_INITIAL_MS = 15_000L // from onOpen until first audio byte
-        const val WATCHDOG_IDLE_MS = 15_000L // gap between any two audio chunks
+        // 30s initial gives Microsoft plenty of time to start streaming even on
+        // slow mobile networks or when the server is under load.
+        const val WATCHDOG_INITIAL_MS = 30_000L // from onOpen until first audio byte
+        const val WATCHDOG_IDLE_MS = 30_000L // gap between any two audio chunks
 
         fun generateSecMsGec(): String {
             var ticks = (System.currentTimeMillis() / 1000.0) + WIN_EPOCH
@@ -75,6 +81,7 @@ class EdgeTtsPlayer(private val context: Context) {
 
         onDone = onComplete
         onPlayStart = onPlaybackStart
+        currentVoice = voice
 
         val connectionId = UUID.randomUUID().toString().replace("-", "")
         val requestId = UUID.randomUUID().toString().replace("-", "")
@@ -167,6 +174,7 @@ class EdgeTtsPlayer(private val context: Context) {
                         android.util.Log.e("EdgeTTS", "WebSocket failure: ${t.message}", t)
                         watchdogJob?.cancel()
                         watchdogJob = null
+                        logTtsFailure(currentVoice, t.message ?: "unknown")
                         try {
                             outputStream.close()
                         } catch (_: Exception) {}
@@ -179,26 +187,68 @@ class EdgeTtsPlayer(private val context: Context) {
     /**
      * Starts or restarts the watchdog timer. If the timer expires before it is reset by incoming
      * audio bytes or cancelled by turn.end/failure, the WebSocket is aborted and the UI is
-     * unblocked via onDone().
+     * unblocked via onDone(). A Firebase Analytics event is sent so the developer can see — from
+     * aggregated user data — which voices/locales are failing.
      *
-     * This prevents the "eternal spinner" bug when Edge TTS silently stops responding (e.g. after a
-     * voice is deprecated server-side, or during transient Microsoft outages). Long audio
-     * generation (40s+) is NOT affected because the timer resets on every received chunk — only
-     * genuine silence triggers the abort.
+     * Long audio generation (40s+ streaming speech) is NOT affected because the timer resets on
+     * every received chunk. Only genuine silence triggers abort.
      */
     private fun startWatchdog(ws: WebSocket, timeoutMs: Long, initial: Boolean) {
         watchdogJob?.cancel()
         watchdogJob = watchdogScope.launch {
             delay(timeoutMs)
-            val reason =
+            val reason = if (initial) "initial_silence" else "idle_during_stream"
+            val detail =
                 if (initial) "no audio received within ${timeoutMs}ms after onOpen"
                 else "no audio bytes for ${timeoutMs}ms during streaming"
-            android.util.Log.w("EdgeTTS", "Watchdog fired: $reason — aborting")
+            android.util.Log.w("EdgeTTS", "Watchdog fired: $detail — aborting")
+            logTtsWatchdogFired(currentVoice, reason)
             ws.cancel()
             try {
                 currentOutputStream?.close()
             } catch (_: Exception) {}
             onDone?.invoke()
+        }
+    }
+
+    /**
+     * Log a watchdog abort to Firebase Analytics so failures in locales the developer does not
+     * personally use (e.g. Italian, Chinese) become visible in the dashboard. Event parameters:
+     * voice, locale, reason (initial_silence | idle_during_stream).
+     */
+    private fun logTtsWatchdogFired(voice: String, reason: String) {
+        try {
+            val locale = TtsVoiceRegistry.extractLocale(voice)
+            analytics.logEvent(
+                "tts_watchdog_fired",
+                Bundle().apply {
+                    putString("voice", voice.take(100))
+                    putString("locale", locale.take(20))
+                    putString("reason", reason.take(20))
+                },
+            )
+        } catch (e: Exception) {
+            android.util.Log.w("EdgeTTS", "Failed to log watchdog event: ${e.message}")
+        }
+    }
+
+    /**
+     * Log a WebSocket-level failure (network error, SSL issue, protocol error) to Firebase
+     * Analytics. Complements the watchdog event to cover all failure modes.
+     */
+    private fun logTtsFailure(voice: String, error: String) {
+        try {
+            val locale = TtsVoiceRegistry.extractLocale(voice)
+            analytics.logEvent(
+                "tts_failure",
+                Bundle().apply {
+                    putString("voice", voice.take(100))
+                    putString("locale", locale.take(20))
+                    putString("error", error.take(100))
+                },
+            )
+        } catch (e: Exception) {
+            android.util.Log.w("EdgeTTS", "Failed to log failure event: ${e.message}")
         }
     }
 

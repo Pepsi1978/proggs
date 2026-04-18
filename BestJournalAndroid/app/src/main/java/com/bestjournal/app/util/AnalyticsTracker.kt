@@ -6,13 +6,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Centralized analytics tracker for all Firebase Analytics events.
- * Injected as a Singleton via Hilt into ViewModels and utility classes.
+ * Centralized analytics tracker for all Firebase Analytics events. Injected as a Singleton via Hilt
+ * into ViewModels and utility classes.
  */
 @Singleton
-class AnalyticsTracker @Inject constructor(
-    private val firebaseAnalytics: FirebaseAnalytics,
-) {
+class AnalyticsTracker @Inject constructor(private val firebaseAnalytics: FirebaseAnalytics) {
 
     // ── Onboarding ──────────────────────────────────────────────────────
 
@@ -25,21 +23,24 @@ class AnalyticsTracker @Inject constructor(
     }
 
     fun trackOnboardingSkipped(screenIndex: Int) {
-        firebaseAnalytics.logEvent("onboarding_skipped", Bundle().apply {
-            putInt("screen_index", screenIndex)
-        })
+        firebaseAnalytics.logEvent(
+            "onboarding_skipped",
+            Bundle().apply { putInt("screen_index", screenIndex) },
+        )
     }
 
     fun trackOnboardingScreenViewed(screenIndex: Int) {
-        firebaseAnalytics.logEvent("onboarding_screen_viewed", Bundle().apply {
-            putInt("screen_index", screenIndex)
-        })
+        firebaseAnalytics.logEvent(
+            "onboarding_screen_viewed",
+            Bundle().apply { putInt("screen_index", screenIndex) },
+        )
     }
 
     fun trackOnboardingGoalsSelected(goals: String) {
-        firebaseAnalytics.logEvent("onboarding_goals_selected", Bundle().apply {
-            putString("goals", goals.take(100))
-        })
+        firebaseAnalytics.logEvent(
+            "onboarding_goals_selected",
+            Bundle().apply { putString("goals", goals.take(100)) },
+        )
     }
 
     fun trackTrialStartedOnboarding() {
@@ -49,9 +50,7 @@ class AnalyticsTracker @Inject constructor(
     // ── Entry Events ────────────────────────────────────────────────────
 
     fun trackEntryCreated(source: String) {
-        firebaseAnalytics.logEvent("entry_created", Bundle().apply {
-            putString("source", source)
-        })
+        firebaseAnalytics.logEvent("entry_created", Bundle().apply { putString("source", source) })
     }
 
     fun trackEntryImproved() {
@@ -65,30 +64,33 @@ class AnalyticsTracker @Inject constructor(
     // ── Dashboard Events ────────────────────────────────────────────────
 
     fun trackDashboardViewed(scenario: Int) {
-        firebaseAnalytics.logEvent("dashboard_viewed", Bundle().apply {
-            putInt("scenario", scenario)
-        })
+        firebaseAnalytics.logEvent(
+            "dashboard_viewed",
+            Bundle().apply { putInt("scenario", scenario) },
+        )
     }
 
     fun trackDashboardRefreshed(scenario: Int) {
-        firebaseAnalytics.logEvent("dashboard_refreshed", Bundle().apply {
-            putInt("scenario", scenario)
-        })
+        firebaseAnalytics.logEvent(
+            "dashboard_refreshed",
+            Bundle().apply { putInt("scenario", scenario) },
+        )
     }
 
     fun trackProfileSwitched(fromScenario: Int, toScenario: Int) {
-        firebaseAnalytics.logEvent("profile_switched", Bundle().apply {
-            putInt("from_scenario", fromScenario)
-            putInt("to_scenario", toScenario)
-        })
+        firebaseAnalytics.logEvent(
+            "profile_switched",
+            Bundle().apply {
+                putInt("from_scenario", fromScenario)
+                putInt("to_scenario", toScenario)
+            },
+        )
     }
 
     // ── Paywall Events ──────────────────────────────────────────────────
 
     fun trackPaywallShown(source: String) {
-        firebaseAnalytics.logEvent("paywall_shown", Bundle().apply {
-            putString("source", source)
-        })
+        firebaseAnalytics.logEvent("paywall_shown", Bundle().apply { putString("source", source) })
     }
 
     fun trackPaywallDismissed() {
@@ -120,9 +122,10 @@ class AnalyticsTracker @Inject constructor(
     }
 
     fun trackPaywallPersonalized(goal: String) {
-        firebaseAnalytics.logEvent("paywall_personalized", Bundle().apply {
-            putString("goal", goal)
-        })
+        firebaseAnalytics.logEvent(
+            "paywall_personalized",
+            Bundle().apply { putString("goal", goal) },
+        )
     }
 
     fun trackYearlyBadgeViewed() {
@@ -142,19 +145,25 @@ class AnalyticsTracker @Inject constructor(
     }
 
     fun trackLifetimePurchased(value: Double = 0.0, currency: String = "EUR") {
-        firebaseAnalytics.logEvent(FirebaseAnalytics.Event.PURCHASE, Bundle().apply {
-            putString("subscription_type", "lifetime")
-            putDouble(FirebaseAnalytics.Param.VALUE, value)
-            putString(FirebaseAnalytics.Param.CURRENCY, currency)
-        })
+        firebaseAnalytics.logEvent(
+            FirebaseAnalytics.Event.PURCHASE,
+            Bundle().apply {
+                putString("subscription_type", "lifetime")
+                putDouble(FirebaseAnalytics.Param.VALUE, value)
+                putString(FirebaseAnalytics.Param.CURRENCY, currency)
+            },
+        )
     }
 
     fun trackSubscriptionPurchased(type: String, value: Double = 0.0, currency: String = "EUR") {
-        firebaseAnalytics.logEvent(FirebaseAnalytics.Event.PURCHASE, Bundle().apply {
-            putString("subscription_type", type)
-            putDouble(FirebaseAnalytics.Param.VALUE, value)
-            putString(FirebaseAnalytics.Param.CURRENCY, currency)
-        })
+        firebaseAnalytics.logEvent(
+            FirebaseAnalytics.Event.PURCHASE,
+            Bundle().apply {
+                putString("subscription_type", type)
+                putDouble(FirebaseAnalytics.Param.VALUE, value)
+                putString(FirebaseAnalytics.Param.CURRENCY, currency)
+            },
+        )
     }
 
     fun trackPremiumBenefitsViewed() {
@@ -164,9 +173,10 @@ class AnalyticsTracker @Inject constructor(
     // ── Retention Events ────────────────────────────────────────────────
 
     fun trackStreakUpdated(length: Int) {
-        firebaseAnalytics.logEvent("streak_updated", Bundle().apply {
-            putInt("streak_length", length)
-        })
+        firebaseAnalytics.logEvent(
+            "streak_updated",
+            Bundle().apply { putInt("streak_length", length) },
+        )
     }
 
     fun trackStreakBroken() {
@@ -174,9 +184,7 @@ class AnalyticsTracker @Inject constructor(
     }
 
     fun trackStreakMilestone(days: Int) {
-        firebaseAnalytics.logEvent("streak_milestone", Bundle().apply {
-            putInt("days", days)
-        })
+        firebaseAnalytics.logEvent("streak_milestone", Bundle().apply { putInt("days", days) })
     }
 
     fun trackReminderEnabled() {
@@ -188,9 +196,7 @@ class AnalyticsTracker @Inject constructor(
     }
 
     fun trackReminderTimeChanged(hour: Int) {
-        firebaseAnalytics.logEvent("reminder_time_changed", Bundle().apply {
-            putInt("hour", hour)
-        })
+        firebaseAnalytics.logEvent("reminder_time_changed", Bundle().apply { putInt("hour", hour) })
     }
 
     fun trackReminderOpened() {
@@ -232,15 +238,17 @@ class AnalyticsTracker @Inject constructor(
     // ── Daily Prompt Events ──────────────────────────────────────────────
 
     fun trackDailyPromptShown(promptId: String) {
-        firebaseAnalytics.logEvent("daily_prompt_shown", Bundle().apply {
-            putString("prompt_id", promptId)
-        })
+        firebaseAnalytics.logEvent(
+            "daily_prompt_shown",
+            Bundle().apply { putString("prompt_id", promptId) },
+        )
     }
 
     fun trackDailyPromptUsed(promptId: String) {
-        firebaseAnalytics.logEvent("daily_prompt_used", Bundle().apply {
-            putString("prompt_id", promptId)
-        })
+        firebaseAnalytics.logEvent(
+            "daily_prompt_used",
+            Bundle().apply { putString("prompt_id", promptId) },
+        )
     }
 
     fun trackDailyPromptPremiumBlocked() {
@@ -250,15 +258,17 @@ class AnalyticsTracker @Inject constructor(
     // ── Upsell Events ───────────────────────────────────────────────────
 
     fun trackUpsellBannerShown(source: String) {
-        firebaseAnalytics.logEvent("upsell_banner_shown", Bundle().apply {
-            putString("source", source)
-        })
+        firebaseAnalytics.logEvent(
+            "upsell_banner_shown",
+            Bundle().apply { putString("source", source) },
+        )
     }
 
     fun trackUpsellBannerClicked(source: String) {
-        firebaseAnalytics.logEvent("upsell_banner_clicked", Bundle().apply {
-            putString("source", source)
-        })
+        firebaseAnalytics.logEvent(
+            "upsell_banner_clicked",
+            Bundle().apply { putString("source", source) },
+        )
     }
 
     // ── Export Events ───────────────────────────────────────────────────
@@ -268,9 +278,10 @@ class AnalyticsTracker @Inject constructor(
     }
 
     fun trackExportCompleted(entryCount: Int) {
-        firebaseAnalytics.logEvent("export_completed", Bundle().apply {
-            putInt("entry_count", entryCount)
-        })
+        firebaseAnalytics.logEvent(
+            "export_completed",
+            Bundle().apply { putInt("entry_count", entryCount) },
+        )
     }
 
     fun trackExportPremiumBlocked() {
@@ -280,9 +291,10 @@ class AnalyticsTracker @Inject constructor(
     // ── Churn Flow Events ───────────────────────────────────────────────
 
     fun trackFreeLimitIndicatorShown(remaining: Int) {
-        firebaseAnalytics.logEvent("free_limit_indicator_shown", Bundle().apply {
-            putInt("remaining", remaining)
-        })
+        firebaseAnalytics.logEvent(
+            "free_limit_indicator_shown",
+            Bundle().apply { putInt("remaining", remaining) },
+        )
     }
 
     fun trackFreeLimitUpgradeClicked() {
@@ -294,9 +306,10 @@ class AnalyticsTracker @Inject constructor(
     }
 
     fun trackChurnReasonSelected(reason: String) {
-        firebaseAnalytics.logEvent("churn_reason_selected", Bundle().apply {
-            putString("reason", reason)
-        })
+        firebaseAnalytics.logEvent(
+            "churn_reason_selected",
+            Bundle().apply { putString("reason", reason) },
+        )
     }
 
     fun trackChurnOfferShown() {
@@ -314,12 +327,41 @@ class AnalyticsTracker @Inject constructor(
     // ── Achievement Events ──────────────────────────────────────────────
 
     fun trackAchievementUnlocked(achievementId: String) {
-        firebaseAnalytics.logEvent("achievement_unlocked", Bundle().apply {
-            putString("achievement_id", achievementId)
-        })
+        firebaseAnalytics.logEvent(
+            "achievement_unlocked",
+            Bundle().apply { putString("achievement_id", achievementId) },
+        )
     }
 
     fun trackAchievementsViewed() {
         firebaseAnalytics.logEvent("achievements_viewed", null)
+    }
+
+    // ── TTS (Edge Read-Aloud) Diagnostics ────────────────────────────────
+    // Fires when the TTS watchdog aborts a request due to silence from Edge TTS.
+    // Used to detect voices that Microsoft has deprecated server-side, regional
+    // outages, or any unexpected hang that bypasses the registry-level fix.
+    // Dashboard query: count events grouped by voice + locale to find bad voices.
+
+    fun trackTtsWatchdogFired(voice: String, locale: String, reason: String) {
+        firebaseAnalytics.logEvent(
+            "tts_watchdog_fired",
+            Bundle().apply {
+                putString("voice", voice.take(100))
+                putString("locale", locale.take(20))
+                putString("reason", reason.take(20))
+            },
+        )
+    }
+
+    fun trackTtsFailure(voice: String, locale: String, error: String) {
+        firebaseAnalytics.logEvent(
+            "tts_failure",
+            Bundle().apply {
+                putString("voice", voice.take(100))
+                putString("locale", locale.take(20))
+                putString("error", error.take(100))
+            },
+        )
     }
 }
