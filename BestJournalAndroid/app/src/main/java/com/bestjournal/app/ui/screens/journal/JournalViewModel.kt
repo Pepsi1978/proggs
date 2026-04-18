@@ -34,6 +34,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -105,6 +106,45 @@ constructor(
     private val aiRateLimiter: com.bestjournal.app.data.remote.ai.AiRateLimiter,
 ) : ViewModel() {
 
+    // AudioFocus: request exclusive focus during recording to prevent call contamination
+    private var audioFocusRequest: android.media.AudioFocusRequest? = null
+
+    private fun requestAudioFocus(): Boolean {
+        val audioManager =
+            context.getSystemService(android.content.Context.AUDIO_SERVICE)
+                as android.media.AudioManager
+        val attrs =
+            android.media.AudioAttributes.Builder()
+                .setUsage(android.media.AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build()
+        val req =
+            android.media.AudioFocusRequest.Builder(
+                    android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
+                )
+                .setAudioAttributes(attrs)
+                .setOnAudioFocusChangeListener { change ->
+                    if (
+                        change == android.media.AudioManager.AUDIOFOCUS_LOSS ||
+                            change == android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT
+                    ) {
+                        stopRecording()
+                    }
+                }
+                .build()
+        audioFocusRequest = req
+        return audioManager.requestAudioFocus(req) ==
+            android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+    }
+
+    private fun releaseAudioFocus() {
+        val audioManager =
+            context.getSystemService(android.content.Context.AUDIO_SERVICE)
+                as android.media.AudioManager
+        audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+        audioFocusRequest = null
+    }
+
     // Emits achievement title when a new one is unlocked (UI shows gold Snackbar)
     private val _achievementUnlocked = MutableStateFlow<String?>(null)
     val achievementUnlocked: StateFlow<String?> = _achievementUnlocked
@@ -137,6 +177,24 @@ constructor(
     private var syncDebounceJob: Job? = null
     private var analysisDebounceJob: Job? = null
 
+    // Stored listener reference so it can be unregistered in onCleared() (prevents leak).
+    private val syncPrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        when (key) {
+            Constants.PREF_SYNC_IN_PROGRESS -> {
+                val inProgress = encryptedPrefs.getBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
+                if (inProgress) {
+                    _uiState.update { it.copy(syncStatus = SyncStatus.SYNCING) }
+                } else {
+                    _uiState.update { it.copy(syncStatus = SyncStatus.SYNCED) }
+                }
+            }
+            Constants.PREF_LAST_SYNC_TIMESTAMP -> {
+                val ts = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L)
+                _uiState.update { it.copy(lastSyncTimestamp = ts) }
+            }
+        }
+    }
+
     /**
      * Verify sign-in state: email pref AND Google account still exists on device. External account
      * removal (system settings) is detected here and triggers local sign-out.
@@ -144,17 +202,29 @@ constructor(
     fun refreshSignInStatus() {
         val signedInEmail = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")
         val hasEmailPref = !signedInEmail.isNullOrBlank()
-        val accountStillExists =
+
+        // External-removal detection via AccountManager.getAccountsByType("com.google").
+        // On Android 8+ this returns an EMPTY LIST (not a SecurityException) when the
+        // app is not Google-signed and lacks GET_ACCOUNTS permission. BestJournal has
+        // neither — so an empty list means "cannot verify", NOT "account removed".
+        //
+        // Only treat it as an external removal when the list is non-empty AND our
+        // email is not in it: that's the single case where we can be CERTAIN the
+        // user removed this specific account. Otherwise trust the local pref;
+        // a genuinely revoked account will surface as UserRecoverableAuthException
+        // on the next Drive call, where it's handled separately.
+        val accountExternallyRemoved =
             hasEmailPref &&
                 try {
                     val am = android.accounts.AccountManager.get(context)
-                    am.getAccountsByType("com.google").any { it.name == signedInEmail }
+                    val accounts = am.getAccountsByType("com.google")
+                    accounts.isNotEmpty() && accounts.none { it.name == signedInEmail }
                 } catch (e: SecurityException) {
                     android.util.Log.w("JournalVM", "AccountManager check skipped: ${e.message}")
-                    true
+                    false
                 }
 
-        if (hasEmailPref && !accountStillExists) {
+        if (accountExternallyRemoved) {
             android.util.Log.w(
                 "JournalVM",
                 "Google account removed externally — clearing local sign-in",
@@ -168,7 +238,7 @@ constructor(
                 .apply()
         }
 
-        val isSignedIn = hasEmailPref && accountStillExists
+        val isSignedIn = hasEmailPref && !accountExternallyRemoved
         val lastSync =
             if (isSignedIn) encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L) else 0L
 
@@ -231,24 +301,9 @@ constructor(
             analyticsTracker.trackDailyPromptShown(todaysPrompt.id)
         }
 
-        // Listen for sync-in-progress changes from other ViewModels (e.g. delete in EntryDetail)
-        encryptedPrefs.registerOnSharedPreferenceChangeListener { _, key ->
-            when (key) {
-                Constants.PREF_SYNC_IN_PROGRESS -> {
-                    val inProgress =
-                        encryptedPrefs.getBoolean(Constants.PREF_SYNC_IN_PROGRESS, false)
-                    if (inProgress) {
-                        _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCING)
-                    } else {
-                        _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
-                    }
-                }
-                Constants.PREF_LAST_SYNC_TIMESTAMP -> {
-                    val ts = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L)
-                    _uiState.value = _uiState.value.copy(lastSyncTimestamp = ts)
-                }
-            }
-        }
+        // Listen for sync-in-progress changes from other ViewModels (e.g. delete in EntryDetail).
+        // Stored as a field so it can be unregistered in onCleared() to prevent a listener leak.
+        encryptedPrefs.registerOnSharedPreferenceChangeListener(syncPrefsListener)
 
         // Observe subscription state changes
         viewModelScope.launch {
@@ -258,21 +313,21 @@ constructor(
         }
 
         // Backfill summaries for existing entries without title/summary.
-        // Sequential with pauses to avoid hitting Gemini rate limits.
+        // Runs exactly once at startup (first non-empty snapshot). Sequential with pauses to avoid
+        // hitting Gemini rate limits. Using first{} instead of collect{} prevents repeated calls
+        // on every DB change which would cause duplicate Gemini requests.
         viewModelScope.launch {
-            entries.collect { list ->
-                val missing =
-                    list
-                        .filter {
-                            (it.summary.isNullOrBlank() || it.title.isNullOrBlank()) &&
-                                it.displayText.isNotBlank()
-                        }
-                        .take(3)
-                for (entry in missing) {
-                    summarizeEntryUseCase(entry.id, entry.displayText)
-                    delay(3_000)
-                }
-                return@collect
+            val list = entries.first { it.isNotEmpty() }
+            val missing =
+                list
+                    .filter {
+                        (it.summary.isNullOrBlank() || it.title.isNullOrBlank()) &&
+                            it.displayText.isNotBlank()
+                    }
+                    .take(3)
+            for (entry in missing) {
+                summarizeEntryUseCase(entry.id, entry.displayText)
+                delay(3_000)
             }
         }
     }
@@ -349,7 +404,8 @@ constructor(
                     /* Tone is optional */
                 }
 
-            // NOW start recording — tone is done
+            // NOW start recording — tone is done; request audio focus first
+            requestAudioFocus()
             try {
                 recordAudioUseCase.startRecording(audioFile)
             } catch (e: Exception) {
@@ -364,7 +420,12 @@ constructor(
 
         // Auto-stop after max duration
         viewModelScope.launch {
-            delay(com.bestjournal.app.util.Constants.MAX_RECORDING_DURATION_MINUTES * 60 * 1000L)
+            val maxMinutes =
+                encryptedPrefs.getInt(
+                    com.bestjournal.app.util.Constants.PREF_MAX_RECORDING_DURATION,
+                    5, // Default 5 minutes (matches SettingsViewModel default)
+                )
+            delay(maxMinutes * 60 * 1000L)
             if (_uiState.value.recordingState == RecordingState.RECORDING) {
                 stopRecording()
             }
@@ -373,6 +434,7 @@ constructor(
 
     private fun stopRecording() {
         recordAudioUseCase.stopRecording()
+        releaseAudioFocus()
 
         viewModelScope.launch {
             // Wait for the recording coroutine to finish writing the WAV header
@@ -581,17 +643,34 @@ constructor(
                             )
                         }
                     }
-                } catch (_: Exception) {}
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    android.util.Log.w("JournalVM", "Streak update failed", e)
+                }
                 // Background tasks — best effort
+                // Background tasks — best effort, but CancellationException must propagate
                 try {
                     summarizeEntryUseCase(savedId, displayText)
-                } catch (_: Exception) {}
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    android.util.Log.w("JournalVM", "Background summarize failed", e)
+                }
                 try {
                     triggerSync()
-                } catch (_: Exception) {}
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    android.util.Log.w("JournalVM", "Background triggerSync failed", e)
+                }
                 try {
                     triggerDebouncedAnalysis()
-                } catch (_: Exception) {}
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    android.util.Log.w("JournalVM", "Background analysis failed", e)
+                }
                 // Check achievements after entry save
                 try {
                     val totalEntries = journalRepository.getEntryCount()
@@ -632,9 +711,18 @@ constructor(
                         )
                     val newlyUnlocked = achievementTracker.checkAchievements(stats)
                     if (newlyUnlocked.isNotEmpty()) {
-                        val title = achievementTracker.getTitle(context, newlyUnlocked.first())
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                            _achievementUnlocked.value = title
+                        // Inner try so that getTitle() failure doesn't prevent _reviewEvent update
+                        val title =
+                            try {
+                                achievementTracker.getTitle(context, newlyUnlocked.first())
+                            } catch (e: Exception) {
+                                android.util.Log.w("JournalVM", "getTitle failed", e)
+                                null
+                            }
+                        if (title != null) {
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                _achievementUnlocked.value = title
+                            }
                         }
                     }
 
@@ -642,7 +730,11 @@ constructor(
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                         _reviewEvent.value = totalEntries
                     }
-                } catch (_: Exception) {}
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    android.util.Log.w("JournalVM", "Achievement check failed", e)
+                }
             } catch (e: Exception) {
                 android.util.Log.e(
                     "SaveEntry",
@@ -809,6 +901,13 @@ constructor(
             end = iterator.next()
         }
         return count
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        try {
+            encryptedPrefs.unregisterOnSharedPreferenceChangeListener(syncPrefsListener)
+        } catch (_: Exception) {}
     }
 
     private fun triggerDebouncedAnalysis() {
