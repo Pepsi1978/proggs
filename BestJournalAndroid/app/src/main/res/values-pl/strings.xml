@@ -213,18 +213,18 @@
     <string name="legend_observe">Obserwować</string>
     <string name="legend_activity_level">Poziom aktywności</string>
     <string name="legend_activity_desc">Półkole pokazuje, ile dzieje się w tym obszarze:</string>
-    <string name="legend_activity_high">Duża aktywność (67–100\u00A0%%)</string>
-    <string name="legend_activity_medium">Umiarkowana aktywność (34–66\u00A0%%)</string>
-    <string name="legend_activity_low">Mała aktywność (0–33\u00A0%%)</string>
+    <string name="legend_activity_high">Duża aktywność (67–100%)</string>
+    <string name="legend_activity_medium">Umiarkowana aktywność (34–66%)</string>
+    <string name="legend_activity_low">Mała aktywność (0–33%)</string>
     <string name="legend_observation_relevance">Znaczenie spostrzeżeń</string>
     <string name="legend_relevance_high">Kluczowe, główne tematy wpisów</string>
     <string name="legend_relevance_medium">Istotne, powtarzające się spostrzeżenia</string>
     <string name="legend_relevance_low">Uwaga na marginesie, pojedyncze wzmianki</string>
     <string name="legend_reflection_depth">Głębia refleksji</string>
     <string name="legend_reflection_desc">Półkole pokazuje głębię Twojej autorefleksji:</string>
-    <string name="legend_reflection_deep">Głęboka (67–100\u00A0%%)</string>
-    <string name="legend_reflection_aware">Świadoma (34–66\u00A0%%)</string>
-    <string name="legend_reflection_surface">Powierzchowna (0–33\u00A0%%)</string>
+    <string name="legend_reflection_deep">Głęboka (67–100%)</string>
+    <string name="legend_reflection_aware">Świadoma (34–66%)</string>
+    <string name="legend_reflection_surface">Powierzchowna (0–33%)</string>
     <string name="legend_insight_depth">Głębia wglądów</string>
     <string name="legend_insight_deep">Głęboka, ukryte wzorce i przekonania</string>
     <string name="legend_insight_aware">Świadoma, rozpoznane wzorce myślenia i uczuć</string>
@@ -232,9 +232,9 @@
     <string name="legend_progress">Postęp</string>
     <!-- Legend: Goal progress -->
     <string name="legend_goal_progress_desc">Półkole pokazuje postęp Twoich celów:</string>
-    <string name="legend_blocked_range">Zablokowane (0–33\u00A0%%)</string>
-    <string name="legend_in_progress_range">W toku (34–66\u00A0%%)</string>
-    <string name="legend_progress_range">Postęp (67–100\u00A0%%)</string>
+    <string name="legend_blocked_range">Zablokowane (0–33%)</string>
+    <string name="legend_in_progress_range">W toku (34–66%)</string>
+    <string name="legend_progress_range">Postęp (67–100%)</string>
     <string name="legend_goal_status">Status celów</string>
     <string name="legend_blocked_desc">Zablokowany — cele z przeszkodami</string>
     <string name="legend_open_desc">Otwarty — cele jeszcze bez postępu</string>
@@ -242,9 +242,9 @@
     <!-- Legend: Custom analysis -->
     <string name="legend_analysis_value">Wartość analizy</string>
     <string name="legend_analysis_relevance_desc">Półkole pokazuje znaczenie dla Twojego tematu:</string>
-    <string name="legend_high_focus">Wysokie (67–100\u00A0%%) — rdzeń tematu</string>
-    <string name="legend_medium_focus">Średnie (34–66\u00A0%%) — wykryte powiązanie</string>
-    <string name="legend_low_focus">Niskie (0–33\u00A0%%) — na obrzeżu</string>
+    <string name="legend_high_focus">Wysokie (67–100%) — rdzeń tematu</string>
+    <string name="legend_medium_focus">Średnie (34–66%) — wykryte powiązanie</string>
+    <string name="legend_low_focus">Niskie (0–33%) — na obrzeżu</string>
     <string name="legend_result_relevance">Znaczenie wyników</string>
     <string name="legend_important_desc">Ważne — bezpośrednio istotne dla tematu</string>
     <string name="legend_relevant_desc">Istotne — powiązanie z tematem</string>
@@ -252,9 +252,9 @@
     <!-- Legend: Burden/Stress -->
     <string name="legend_burden_scale">Skala obciążenia</string>
     <string name="legend_burden_desc">Półkole pokazuje, jak bardzo ten temat Cię obciąża:</string>
-    <string name="legend_high_burden">Wysokie (67–100\u00A0%%) — działać od razu</string>
-    <string name="legend_medium_burden">Średnie (34–66\u00A0%%) — wymaga uwagi</string>
-    <string name="legend_low_burden">Niskie (0–33\u00A0%%) — dobry stan</string>
+    <string name="legend_high_burden">Wysokie (67–100%) — działać od razu</string>
+    <string name="legend_medium_burden">Średnie (34–66%) — wymaga uwagi</string>
+    <string name="legend_low_burden">Niskie (0–33%) — dobry stan</string>
     <string name="legend_priority_title">Priorytet rad</string>
     <string name="legend_priority_high">Czerwony = pilne — działać od razu</string>
     <string name="legend_priority_medium">Pomarańczowy = średnie — zająć się wkrótce</string>
@@ -519,7 +519,7 @@
     <string name="limit_used_of_max">użyto <xliff:g id="used" example="3">%1$d</xliff:g> z <xliff:g id="max" example="5">%2$d</xliff:g></string>
     <!-- ChurnFlowDialog: retention discount badge -->
     <!-- %1$d = discount percentage -->
-    <string name="churn_discount_badge"><xliff:g id="percent" example="50">%1$d</xliff:g>\u00A0%% OSZCZĘDNOŚCI</string>
+    <string name="churn_discount_badge"><xliff:g id="percent" example="50">%1$d</xliff:g>%% OSZCZĘDNOŚCI</string>
     <!-- AI prompt language instruction — automatically uses device language -->
     <string name="ai_prompt_language_style">Prosto, jasno. Bez trudnych słów.</string>
     <string name="ai_prompt_language_override"></string>
@@ -792,7 +792,7 @@
     <string name="paywall_yearly_note">Potem %1$s rocznie\nW okresie próbnym anulujesz w każdej chwili</string>
     <string name="paywall_most_popular">Najczęściej wybierane</string>
     <string name="paywall_monthly_plan">Subskrypcja miesięczna, %1$s miesięcznie</string>
-    <string name="paywall_yearly_savings">Oszczędź %1$d\u00A0%% w porównaniu z miesięczną, anulujesz w każdej chwili</string>
+    <string name="paywall_yearly_savings">Oszczędź %1$d%% w porównaniu z miesięczną, anulujesz w każdej chwili</string>
     <string name="paywall_lifetime_title">Zakup jednorazowy</string>
     <string name="paywall_lifetime_desc">Płacisz raz, korzystasz na zawsze</string>
     <string name="paywall_lifetime_note">Bez subskrypcji, bez odnowień</string>
@@ -824,7 +824,7 @@
     <string name="paywall_exit_special_offer">Mamy dla Ciebie\nwyjątkową ofertę:</string>
     <string name="paywall_exit_discount">Rabat na %1$d miesięcy</string>
     <string name="paywall_exit_price_comparison">Tylko %1$s zamiast %2$s miesięcznie</string>
-    <string name="paywall_exit_start_discount">Rozpocznij subskrypcję miesięczną z 50\u00A0%% rabatem</string>
+    <string name="paywall_exit_start_discount">Rozpocznij subskrypcję miesięczną z 50%% rabatem</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CHURN FLOW DIALOG
@@ -862,10 +862,10 @@
     <!-- ════════════════════════════════════════════════════════════════════
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
-    <string name="ai_limit_title">Osiągnąłeś tygodniowy limit</string>
+    <string name="ai_limit_title">Osiągnięto tygodniowy limit</string>
     <string name="ai_limit_body">Bez subskrypcji masz 5\u00A0poprawek tekstu i 5\u00A0odświeżeń panelu tygodniowo.\nZ Premium: do 150 dziennie, w pełnej jakości.</string>
     <string name="ai_limit_monthly">Subskrypcja miesięczna, %1$s/mies.</string>
-    <string name="ai_limit_yearly">Subskrypcja roczna, %1$s/rok (oszczędzasz 37\u00A0%%)</string>
+    <string name="ai_limit_yearly">Subskrypcja roczna, %1$s/rok (oszczędzasz 37%%)</string>
     <string name="ai_limit_no_thanks">Nie dziękuję, dalej bez SI</string>
     <string name="ai_banner_title">Twój dziennik wspiera SI</string>
     <string name="ai_banner_body">• Dyktowane teksty są poprawiane automatycznie\n• Podsumowania dla każdego wpisu\n• Inteligentne rady życiowe na podstawie Twoich wzorców\n• Wszystko w cenie darmowego okresu próbnego</string>
