@@ -430,7 +430,7 @@
     <string name="settings_feedback_token_error">Token error: %1$s</string>
     <string name="settings_feedback_unknown_error">Unknown error</string>
     <string name="settings_feedback_confirm_subject">Your feedback to Best Journal</string>
-    <string name="settings_feedback_confirm_body">You sent this message to the developer.\nThey'll get back to you personally.\n\n--- Your message ---\n%1$s\n\nCheers,\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">You sent this message to the developer.\nThey\'ll get back to you personally.\n\n--- Your message ---\n%1$s\n\nCheers,\nDEV.FRANK</string>
     <string name="settings_feedback_from">Feedback from: %1$s</string>
     <string name="action_send">Send</string>
     <!-- Drive errors -->
