@@ -10,7 +10,8 @@ import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -29,7 +30,11 @@ class EdgeTtsPlayer(private val context: Context) {
     private var onPlayStart: (() -> Unit)? = null
     private var watchdogJob: Job? = null
     private var currentVoice: String = ""
-    private val watchdogScope = MainScope()
+
+    // Single owned scope — cancelled in shutdown(). stop() only cancels the current watchdog job,
+    // not the scope itself, since stop() is called frequently (e.g. on each new speak() call).
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     private val analytics: FirebaseAnalytics by lazy { FirebaseAnalytics.getInstance(context) }
     private val client =
         OkHttpClient.Builder()
@@ -162,7 +167,7 @@ class EdgeTtsPlayer(private val context: Context) {
                             watchdogJob?.cancel()
                             watchdogJob = null
                             outputStream.close()
-                            CoroutineScope(Dispatchers.Main).launch { playFile(audioFile) }
+                            scope.launch { playFile(audioFile) }
                         }
                     }
 
@@ -178,7 +183,7 @@ class EdgeTtsPlayer(private val context: Context) {
                         try {
                             outputStream.close()
                         } catch (_: Exception) {}
-                        CoroutineScope(Dispatchers.Main).launch { onDone?.invoke() }
+                        scope.launch { onDone?.invoke() }
                     }
                 },
             )
@@ -195,7 +200,7 @@ class EdgeTtsPlayer(private val context: Context) {
      */
     private fun startWatchdog(ws: WebSocket, timeoutMs: Long, initial: Boolean) {
         watchdogJob?.cancel()
-        watchdogJob = watchdogScope.launch {
+        watchdogJob = scope.launch {
             delay(timeoutMs)
             val reason = if (initial) "initial_silence" else "idle_during_stream"
             val detail =
@@ -290,5 +295,6 @@ class EdgeTtsPlayer(private val context: Context) {
 
     fun shutdown() {
         stop()
+        scope.cancel()
     }
 }
