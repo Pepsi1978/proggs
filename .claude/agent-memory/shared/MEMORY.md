@@ -109,6 +109,22 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### [2026-04-17 07:31] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-04-17 07:41 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
 ### [2026-04-17 07:51] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-18 07:58 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-18 07:58 — Hook: auto-sync.sh — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: OFFEN
+### 2026-04-18 08:07 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-18 08:08 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-18 08:11 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-18 08:16 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-18 08:18 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-18 08:24 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-18 08:37 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+
+### 2026-04-18 08:59 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+**Quelle:** Hook: StopFailure (command-type, no API dependency)
+**Symptom:** Session-Turn endete durch API-Fehler
+**Details:** {"session_id":"b6155c28-60d1-4e2d-a1fa-a8e4aa724d85","transcript_path":"/Users/frank/.claude/projects/-Users-frank-proggs/b6155c28-60d1-4e2d-a1fa-a8e4aa724d85.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"rate_limit","last_assistant_message":"You've hit your limit · resets 10am (Europe/Berlin)"}
+**Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
+**Status:** OFFEN
 ---
 
 ## Systemzustand (aktuell)
@@ -137,7 +153,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Cross-Platform:** 82 Commits von macOS synchronisiert (12.04). Massive Feature-Arbeit: Retrospektiven, Fotos, TTS, Share-Dialog, Nav-Redesign, Cloud-Backup-Redesign.
 - **Neue Features seit 07.04 (macOS):** Retrospective-Screen, EntryPhoto, EdgeTtsPlayer, ShareEntryDialog, DriveRestoreManager, SyncProgressHolder, MonthlyReviewReceiver, YearlyReviewReceiver. DB Schema v4→v8.
 - **Speicherplatz (macOS):** 16 GB frei (42%) — bereinigt, stabil
-- **Pending Admin Updates (20):** biome,oven-sh/bun/bun,deno,fzf,gh,giflib,go,harfbuzz,htop,libngtcp2,libomp,libpng,node,ollama,openssl@3,python@3.13,python@3.14,simdjson,sqlite,steipete/tap/summarize,
+- **Pending Admin Updates (20):** biome,oven-sh/bun/bun,deno,dotnet,fzf,gh,giflib,go,harfbuzz,htop,libngtcp2,libomp,libpng,node,ollama,openssl@3,powershell,python@3.13,python@3.14,simdjson,
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -360,6 +376,21 @@ _Noch keine Eintraege._
 - **[2026-04-12] self-observation-checker**: [WARNING] Session 4fcdf1e4 (77 Turns) zeigte keine Selbstbeobachtung
 - **[2026-04-17] intelligence-checker**: [WARNING] Session bd3225d3 (10 Turns) hatte keinen Intelligenz-Vorschlag
 - **[2026-04-17] intelligence-checker**: [WARNING] Session bd3225d3 (10 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-18] intelligence-checker**: [WARNING] Session bbb1b888 (11 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-18] self-observation-checker**: [WARNING] Session 0cbea525 (17 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-18] intelligence-checker**: [WARNING] Session d870b233 (11 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-18] intelligence-checker**: [WARNING] Session 842c323f (31 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-18] self-observation-checker**: [WARNING] Session 842c323f (31 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-18] self-observation-checker**: [WARNING] Session d870b233 (18 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-18] self-observation-checker**: [WARNING] Session 23053cae (158 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-18] self-observation-checker**: [WARNING] Session 842c323f (53 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-18] self-observation-checker**: [WARNING] Session 842c323f (53 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-18] intelligence-checker**: [WARNING] Session 287c86e9 (15 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-18] self-observation-checker**: [WARNING] Session 287c86e9 (15 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-18] intelligence-checker**: [WARNING] Session c83d01b3 (20 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-18] self-observation-checker**: [WARNING] Session c83d01b3 (20 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-18] self-observation-checker**: [WARNING] Session 23053cae (162 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-18] self-observation-checker**: [WARNING] Session d73576fd (36 Turns) zeigte keine Selbstbeobachtung
 ---
 
 ## Regeln & Konventionen
