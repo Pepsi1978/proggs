@@ -12,7 +12,9 @@
       "Bash(mv /Users/frank/.claude/skills/android-design-audit /Users/frank/.claude/skills/designer)",
       "Bash(mkdir -p /Users/frank/.claude/skills/designer/references)",
       "Bash(cp \"C:/Users/barwa/.claude/hooks/subagent-stop-summarizer.ps1\" \"C:/Users/barwa/proggs/claude-code-setup/hooks/subagent-stop-summarizer.ps1\")",
-      "Bash(cp \"C:/Users/barwa/.claude/hooks/subagent-stop-summarizer.sh\" \"C:/Users/barwa/proggs/claude-code-setup/hooks/subagent-stop-summarizer.sh\")"
+      "Bash(cp \"C:/Users/barwa/.claude/hooks/subagent-stop-summarizer.sh\" \"C:/Users/barwa/proggs/claude-code-setup/hooks/subagent-stop-summarizer.sh\")",
+      "Bash(cp /Users/frank/.claude/skills/übersetzung/SKILL.md claude-code-setup/skills/übersetzung/SKILL.md)",
+      "Read(//Users/frank/.claude/skills/übersetzung/**)"
     ]
   }
 }

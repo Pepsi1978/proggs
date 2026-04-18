@@ -125,6 +125,13 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Details:** {"session_id":"b6155c28-60d1-4e2d-a1fa-a8e4aa724d85","transcript_path":"/Users/frank/.claude/projects/-Users-frank-proggs/b6155c28-60d1-4e2d-a1fa-a8e4aa724d85.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"rate_limit","last_assistant_message":"You've hit your limit · resets 10am (Europe/Berlin)"}
 **Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
 **Status:** OFFEN
+### 2026-04-18 10:01 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-18 10:20 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-18 10:24 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-18 10:26 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-18 10:30 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### [2026-04-18 10:44] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
+### 2026-04-18 10:49 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
 ---
 
 ## Systemzustand (aktuell)
@@ -391,6 +398,15 @@ _Noch keine Eintraege._
 - **[2026-04-18] self-observation-checker**: [WARNING] Session c83d01b3 (20 Turns) zeigte keine Selbstbeobachtung
 - **[2026-04-18] self-observation-checker**: [WARNING] Session 23053cae (162 Turns) zeigte keine Selbstbeobachtung
 - **[2026-04-18] self-observation-checker**: [WARNING] Session d73576fd (36 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-18] intelligence-checker**: [WARNING] Session b6155c28 (13 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-18] intelligence-checker**: [WARNING] Session f0d9908d (19 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-18] self-observation-checker**: [WARNING] Session f0d9908d (19 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-18] intelligence-checker**: [WARNING] Session f0d9908d (28 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-18] self-observation-checker**: [WARNING] Session f0d9908d (28 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-18] intelligence-checker**: [WARNING] Session e87cd241 (21 Turns) hatte keinen Intelligenz-Vorschlag
+- **[2026-04-18] self-observation-checker**: [WARNING] Session e87cd241 (21 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-18] self-observation-checker**: [WARNING] Session e87cd241 (56 Turns) zeigte keine Selbstbeobachtung
+- **[2026-04-18] self-observation-checker**: [WARNING] Session e87cd241 (56 Turns) zeigte keine Selbstbeobachtung
 ---
 
 ## Regeln & Konventionen
