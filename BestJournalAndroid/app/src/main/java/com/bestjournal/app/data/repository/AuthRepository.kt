@@ -87,12 +87,16 @@ constructor(
             .apply()
     }
 
+    @Suppress("ApplySharedPref")
     private fun saveProfile(profile: UserProfile) {
+        // commit() (not apply()) so writes land on disk BEFORE the caller proceeds —
+        // sign-in is immediately followed by Runtime.exit(0) for auto-restore restart
+        // in SettingsViewModel, which would discard async apply() writes.
         encryptedPrefs
             .edit()
             .putString(Constants.PREF_GOOGLE_ACCOUNT_NAME, profile.displayName)
             .putString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, profile.email)
             .putString(Constants.PREF_GOOGLE_AVATAR_URL, profile.avatarUrl)
-            .apply()
+            .commit()
     }
 }

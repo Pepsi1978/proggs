@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Открыто: %1$s</string>
     <!-- About -->
     <string name="settings_about">О приложении</string>
-    <string name="settings_about_version">Best Journal V0.12.26</string>
+    <string name="settings_about_version">Best Journal V0.12.27</string>
     <string name="settings_about_desc">Ваш личный дневник с ИИ</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Выйти?</string>

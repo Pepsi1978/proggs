@@ -59,6 +59,9 @@ data class SettingsUiState(
     val userTimezone: String = "",
     val isExporting: Boolean = false,
     val exportMessage: String? = null,
+    // Locale-safe way to color the export message red vs green — replaces
+    // the former `msg.startsWith("Fehler")` check which only worked in German.
+    val exportIsError: Boolean = false,
 )
 
 @HiltViewModel
@@ -384,11 +387,14 @@ constructor(
                         val hasBackup = syncUseCase.hasBackup()
                         android.util.Log.w("AutoRestore", "hasBackup = $hasBackup")
                         if (hasBackup) {
-                            // Block retrospective generation until restore+download complete
+                            // Block retrospective generation until restore+download complete.
+                            // commit() (not apply()) so the flag lands on disk BEFORE
+                            // Runtime.exit(0) below — async apply() would be discarded.
+                            @Suppress("ApplySharedPref")
                             encryptedPrefs
                                 .edit()
                                 .putBoolean(Constants.PREF_RESTORE_PENDING, true)
-                                .apply()
+                                .commit()
                             val result = syncUseCase.restore()
                             android.util.Log.w(
                                 "AutoRestore",
@@ -503,7 +509,8 @@ constructor(
 
     fun exportToPdf(context: android.content.Context, uri: Uri, includePhotos: Boolean = false) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isExporting = true, exportMessage = null)
+            _uiState.value =
+                _uiState.value.copy(isExporting = true, exportMessage = null, exportIsError = false)
             try {
                 val entries = journalEntryDao.getAllEntriesOnce()
                 if (entries.isEmpty()) {
@@ -511,6 +518,7 @@ constructor(
                         _uiState.value.copy(
                             isExporting = false,
                             exportMessage = context.getString(R.string.settings_export_no_entries),
+                            exportIsError = false,
                         )
                     delay(3000)
                     _uiState.value = _uiState.value.copy(exportMessage = null)
@@ -546,22 +554,27 @@ constructor(
                                     count,
                                     count,
                                 ),
+                            exportIsError = false,
                         )
                 } else {
                     _uiState.value =
                         _uiState.value.copy(
                             isExporting = false,
                             exportMessage = context.getString(R.string.error_file_open_failed),
+                            exportIsError = true,
                         )
                 }
 
                 delay(4000)
                 _uiState.value = _uiState.value.copy(exportMessage = null)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value =
                     _uiState.value.copy(
                         isExporting = false,
                         exportMessage = context.getString(R.string.error_generic, e.message ?: ""),
+                        exportIsError = true,
                     )
                 delay(4000)
                 _uiState.value = _uiState.value.copy(exportMessage = null)
