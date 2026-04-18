@@ -266,11 +266,8 @@ object TtsVoiceRegistry {
             "es-ES" to
                 LocaleVoices(
                     "es-ES",
-                    "es-ES-ArabellaMultilingualNeural",
+                    "es-ES-ElviraNeural",
                     listOf(
-                        ml("es-ES-ArabellaMultilingualNeural", "Arabella", F),
-                        ml("es-ES-TristanMultilingualNeural", "Tristan", M),
-                        ml("es-ES-XimenaMultilingualNeural", "Ximena", F),
                         st("es-ES-ElviraNeural", "Elvira", F),
                         st("es-ES-AlvaroNeural", "Alvaro", M),
                     ),
@@ -278,12 +275,30 @@ object TtsVoiceRegistry {
             "es-MX" to
                 LocaleVoices(
                     "es-MX",
-                    "es-MX-DaliaMultilingualNeural",
+                    "es-MX-DaliaNeural",
                     listOf(
-                        ml("es-MX-DaliaMultilingualNeural", "Dalia", F),
-                        ml("es-MX-JorgeMultilingualNeural", "Jorge", M),
-                    ),
+                    st("es-MX-DaliaNeural", "Dalia", F),
+                    st("es-MX-JorgeNeural", "Jorge", M),
+),
                 ),
+            "es-US" to
+
+                LocaleVoices(
+
+                    "es-US",
+
+                    "es-US-PalomaNeural",
+
+                    listOf(
+
+                        st("es-US-PalomaNeural", "Paloma", F),
+
+                        st("es-US-AlonsoNeural", "Alonso", M),
+
+                    ),
+
+                ),
+
             "es-AR" to
                 LocaleVoices(
                     "es-AR",
@@ -299,7 +314,6 @@ object TtsVoiceRegistry {
                     listOf(
                         ml("fr-FR-VivienneMultilingualNeural", "Vivienne", F),
                         ml("fr-FR-RemyMultilingualNeural", "R\u00e9my", M),
-                        ml("fr-FR-LucienMultilingualNeural", "Lucien", M),
                         st("fr-FR-DeniseNeural", "Denise", F),
                         st("fr-FR-HenriNeural", "Henri", M),
                     ),
@@ -319,10 +333,8 @@ object TtsVoiceRegistry {
             "it-IT" to
                 LocaleVoices(
                     "it-IT",
-                    "it-IT-IsabellaMultilingualNeural",
+                    "it-IT-ElsaNeural",
                     listOf(
-                        ml("it-IT-IsabellaMultilingualNeural", "Isabella", F),
-                        ml("it-IT-AlessioMultilingualNeural", "Alessio", M),
                         ml("it-IT-GiuseppeMultilingualNeural", "Giuseppe", M),
                         st("it-IT-ElsaNeural", "Elsa", F),
                         st("it-IT-DiegoNeural", "Diego", M),
@@ -336,7 +348,6 @@ object TtsVoiceRegistry {
                     "pt-BR-ThalitaMultilingualNeural",
                     listOf(
                         ml("pt-BR-ThalitaMultilingualNeural", "Thalita", F),
-                        ml("pt-BR-MacerioMultilingualNeural", "Mac\u00e9rio", M),
                         st("pt-BR-FranciscaNeural", "Francisca", F),
                         st("pt-BR-AntonioNeural", "Antonio", M),
                     ),
@@ -355,12 +366,8 @@ object TtsVoiceRegistry {
             "zh-CN" to
                 LocaleVoices(
                     "zh-CN",
-                    "zh-CN-XiaoxiaoMultilingualNeural",
+                    "zh-CN-XiaoxiaoNeural",
                     listOf(
-                        ml("zh-CN-XiaoxiaoMultilingualNeural", "Xiaoxiao", F),
-                        ml("zh-CN-YunyiMultilingualNeural", "Yunyi", M),
-                        ml("zh-CN-XiaochenMultilingualNeural", "Xiaochen", F),
-                        ml("zh-CN-YunfanMultilingualNeural", "Yunfan", M),
                         st("zh-CN-XiaoxiaoNeural", "Xiaoxiao Classic", F),
                         st("zh-CN-YunxiNeural", "Yunxi", M),
                     ),
@@ -390,7 +397,6 @@ object TtsVoiceRegistry {
                     "ja-JP",
                     "ja-JP-NanamiNeural",
                     listOf(
-                        ml("ja-JP-MasaruMultilingualNeural", "Masaru", M),
                         st("ja-JP-NanamiNeural", "Nanami", F),
                         st("ja-JP-KeitaNeural", "Keita", M),
                     ),
