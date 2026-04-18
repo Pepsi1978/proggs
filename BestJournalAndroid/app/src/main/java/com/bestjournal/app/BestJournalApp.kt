@@ -1,9 +1,12 @@
 package com.bestjournal.app
 
 import android.app.Application
+import android.app.LocaleManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Context
 import android.os.Build
+import android.os.LocaleList
 import com.bestjournal.app.util.ReminderReceiver
 import com.bestjournal.app.util.WeeklyReviewReceiver
 import com.google.firebase.FirebaseApp
@@ -17,6 +20,17 @@ class BestJournalApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Enforce: app language ALWAYS follows device language.
+        // Android 13+ supports per-app locale overrides (via Settings → App → Language,
+        // adb, or earlier app versions). Any such override would make a Polish user see
+        // German/English instead of Polish. Clear overrides unconditionally on every
+        // start so the system locale wins.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val localeManager = getSystemService(Context.LOCALE_SERVICE) as? LocaleManager
+            if (localeManager != null && !localeManager.applicationLocales.isEmpty) {
+                localeManager.applicationLocales = LocaleList.getEmptyLocaleList()
+            }
+        }
         FirebaseApp.initializeApp(this)
         // Debug builds use DebugAppCheckProvider (no Play Integrity needed).
         // Release builds use Play Integrity for production App Check.
