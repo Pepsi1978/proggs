@@ -213,18 +213,18 @@
     <string name="legend_observe">观察</string>
     <string name="legend_activity_level">活跃度</string>
     <string name="legend_activity_desc">半圆显示这一领域发生了多少事：</string>
-    <string name="legend_activity_high">高 (67–100\u00A0%%)</string>
-    <string name="legend_activity_medium">中等 (34–66\u00A0%%)</string>
-    <string name="legend_activity_low">较低 (0–33\u00A0%%)</string>
+    <string name="legend_activity_high">高（67–100\u00A0%%）</string>
+    <string name="legend_activity_medium">中等（34–66\u00A0%%）</string>
+    <string name="legend_activity_low">较低（0–33\u00A0%%）</string>
     <string name="legend_observation_relevance">观察的重要度</string>
     <string name="legend_relevance_high">核心，条目的主要主题</string>
     <string name="legend_relevance_medium">相关，反复出现的观察</string>
     <string name="legend_relevance_low">边角，单次提及</string>
     <string name="legend_reflection_depth">反思的深度</string>
     <string name="legend_reflection_desc">半圆显示你自我反思的深度：</string>
-    <string name="legend_reflection_deep">深 (67–100\u00A0%%)</string>
-    <string name="legend_reflection_aware">自觉 (34–66\u00A0%%)</string>
-    <string name="legend_reflection_surface">浅 (0–33\u00A0%%)</string>
+    <string name="legend_reflection_deep">深（67–100\u00A0%%）</string>
+    <string name="legend_reflection_aware">自觉（34–66\u00A0%%）</string>
+    <string name="legend_reflection_surface">浅（0–33\u00A0%%）</string>
     <string name="legend_insight_depth">洞见的深度</string>
     <string name="legend_insight_deep">深入，隐藏的规律与信念</string>
     <string name="legend_insight_aware">自觉，被识别的思维与情感规律</string>
@@ -232,9 +232,9 @@
     <string name="legend_progress">进展</string>
     <!-- Legend: Goal progress -->
     <string name="legend_goal_progress_desc">半圆显示目标的进展情况：</string>
-    <string name="legend_blocked_range">受阻 (0–33\u00A0%%)</string>
-    <string name="legend_in_progress_range">进行中 (34–66\u00A0%%)</string>
-    <string name="legend_progress_range">有进展 (67–100\u00A0%%)</string>
+    <string name="legend_blocked_range">受阻（0–33\u00A0%%）</string>
+    <string name="legend_in_progress_range">进行中（34–66\u00A0%%）</string>
+    <string name="legend_progress_range">有进展（67–100\u00A0%%）</string>
     <string name="legend_goal_status">目标状态</string>
     <string name="legend_blocked_desc">受阻 — 有阻碍的目标</string>
     <string name="legend_open_desc">待开始 — 还没有进展的目标</string>
@@ -242,9 +242,9 @@
     <!-- Legend: Custom analysis -->
     <string name="legend_analysis_value">分析值</string>
     <string name="legend_analysis_relevance_desc">半圆显示对你的焦点的重要度：</string>
-    <string name="legend_high_focus">高 (67–100\u00A0%%) — 焦点的核心</string>
-    <string name="legend_medium_focus">中 (34–66\u00A0%%) — 已识别关联</string>
-    <string name="legend_low_focus">低 (0–33\u00A0%%) — 边缘</string>
+    <string name="legend_high_focus">高（67–100\u00A0%%） — 焦点的核心</string>
+    <string name="legend_medium_focus">中（34–66\u00A0%%） — 已识别关联</string>
+    <string name="legend_low_focus">低（0–33\u00A0%%） — 边缘</string>
     <string name="legend_result_relevance">结果的重要度</string>
     <string name="legend_important_desc">重要 — 与焦点直接相关</string>
     <string name="legend_relevant_desc">相关 — 与焦点有关联</string>
@@ -252,9 +252,9 @@
     <!-- Legend: Burden/Stress -->
     <string name="legend_burden_scale">负担刻度</string>
     <string name="legend_burden_desc">半圆显示这个主题让你有多累：</string>
-    <string name="legend_high_burden">高 (67–100\u00A0%%) — 立刻处理</string>
-    <string name="legend_medium_burden">中 (34–66\u00A0%%) — 需要留意</string>
-    <string name="legend_low_burden">低 (0–33\u00A0%%) — 状态良好</string>
+    <string name="legend_high_burden">高（67–100\u00A0%%） — 立刻处理</string>
+    <string name="legend_medium_burden">中（34–66\u00A0%%） — 需要留意</string>
+    <string name="legend_low_burden">低（0–33\u00A0%%） — 状态良好</string>
     <string name="legend_priority_title">建议的优先度</string>
     <string name="legend_priority_high">红 = 紧急 — 立刻处理</string>
     <string name="legend_priority_medium">橙 = 中等 — 尽快处理</string>
@@ -579,46 +579,46 @@
     <!-- Weekly retrospective prompt blocks -->
     <string name="ai_retro_week_intro">你是一位讲述者，把日记条目编织成自然、好读的每周回顾。</string>
     <string name="ai_retro_week_task">任务：把下面的日记条目汇总成一份结构清晰的每周回顾。</string>
-    <string name="ai_retro_week_format">格式（严格遵守）：\n1. 先用 3-5 条短要点开头，每行以「• 」开始\n2. 接着一行空行\n3. 然后连贯的正文，分成 2-4 个主题段落\n4. 每段以方括号标题开头: [主题](如 [新相遇] 或 [小胜利])\n5. 标题之后是该段的叙述\n6. 段落按时间顺序从一周的开始到结束排列</string>
-    <string name="ai_retro_week_rules">规则：\n- 使用贴近读者的第二人称「你」（或该语言里的亲切人称）\n- 不要称呼语或结束语，直接进入叙述\n- 段落之内行文流畅，过渡自然\n- 标题要短且切题(2-4 个字词）\n- 提到具体的事件、情绪和体会\n- 只在有意义时才提及日常\n- 突出积极面，也不回避挑战。难时刻里的体会也属于故事\n- 写得温暖而亲切，不要夸大\n- 至少 200 字\n- 不要使用长破折号(—)。用逗号或短句代替。</string>
+    <string name="ai_retro_week_format">格式（严格遵守）：\n1. 先用 3-5 条短要点开头，每行以「• 」开始\n2. 接着一行空行\n3. 然后连贯的正文，分成 2-4 个主题段落\n4. 每段以方括号标题开头：[主题](如 [新相遇] 或 [小胜利])\n5. 标题之后是该段的叙述\n6. 段落按时间顺序从一周的开始到结束排列</string>
+    <string name="ai_retro_week_rules">规则：\n- 使用贴近读者的第二人称「你」（或该语言里的亲切人称）\n- 不要称呼语或结束语，直接进入叙述\n- 段落之内行文流畅，过渡自然\n- 标题要短且切题（2-4 个字词）\n- 提到具体的事件、情绪和体会\n- 只在有意义时才提及日常\n- 突出积极面，也不回避挑战。难时刻里的体会也属于故事\n- 写得温暖而亲切，不要夸大\n- 至少 200 字\n- 不要使用长破折号（—）。用逗号或短句代替。</string>
     <!-- Section header that introduces the journal entries block. -->
     <string name="ai_retro_week_entries_header">本周条目：</string>
     <!-- Title-generation prompt after a weekly review is ready. %1$s = target language, %2$s = preview. -->
-    <string name="ai_retro_week_title_prompt">基于这份每周回顾，用<xliff:g id="lang" example="简体中文">%1$s</xliff:g>给一个简短、有情感的标题（不超过 6 个字词）。\n只给标题，不要其它内容。不要引号。不要长破折号(—)。\n\n回顾：\n<xliff:g id="summary_preview" example="这一周开始于…">%2$s</xliff:g></string>
+    <string name="ai_retro_week_title_prompt">基于这份每周回顾，用<xliff:g id="lang" example="简体中文">%1$s</xliff:g>给一个简短、有情感的标题（不超过 6 个字词）。\n只给标题，不要其它内容。不要引号。不要长破折号（—）。\n\n回顾：\n<xliff:g id="summary_preview" example="这一周开始于…">%2$s</xliff:g></string>
 
     <!-- Monthly retrospective prompt blocks -->
     <string name="ai_retro_month_intro">你是一位讲述者，把每周回顾编织成自然、好读的每月回顾。</string>
     <!-- %1$s = month name, %2$d = year. -->
     <string name="ai_retro_month_task">任务：把下面的每周回顾汇总成 <xliff:g id="month" example="四月">%1$s</xliff:g> <xliff:g id="year" example="2026">%2$d</xliff:g> 的结构清晰的每月回顾。</string>
-    <string name="ai_retro_month_format">格式（严格遵守）：\n1. 先用 4-6 条短要点开头，每行以「• 」开始\n2. 接着一行空行\n3. 然后连贯的正文，分成 3-5 个主题段落\n4. 每段以方括号标题开头: [主题](如 [新开始] 或 [悄悄的体悟])\n5. 标题之后是该段的叙述\n6. 段落按时间顺序从月初到月末排列</string>
-    <string name="ai_retro_month_rules">规则：\n- 使用贴近读者的第二人称「你」\n- 不要称呼语或结束语，直接进入叙述\n- 段落之内行文流畅，过渡自然\n- 标题要短且切题(2-4 个字词）\n- 把不同的周串起来，呈现变化与主线\n- 不要按顺序重复一周又一周，而要按主题连接\n- 只在有意义时才提及日常\n- 突出积极面，也不回避挑战\n- 写得温暖而亲切，不要夸大\n- 至少 300 字\n- 不要使用长破折号(—)。用逗号或短句代替。</string>
+    <string name="ai_retro_month_format">格式（严格遵守）：\n1. 先用 4-6 条短要点开头，每行以「• 」开始\n2. 接着一行空行\n3. 然后连贯的正文，分成 3-5 个主题段落\n4. 每段以方括号标题开头：[主题](如 [新开始] 或 [悄悄的体悟])\n5. 标题之后是该段的叙述\n6. 段落按时间顺序从月初到月末排列</string>
+    <string name="ai_retro_month_rules">规则：\n- 使用贴近读者的第二人称「你」\n- 不要称呼语或结束语，直接进入叙述\n- 段落之内行文流畅，过渡自然\n- 标题要短且切题（2-4 个字词）\n- 把不同的周串起来，呈现变化与主线\n- 不要按顺序重复一周又一周，而要按主题连接\n- 只在有意义时才提及日常\n- 突出积极面，也不回避挑战\n- 写得温暖而亲切，不要夸大\n- 至少 300 字\n- 不要使用长破折号（—）。用逗号或短句代替。</string>
     <string name="ai_retro_month_entries_header">每周回顾：</string>
     <!-- %1$s = target language, %2$s = preview. -->
-    <string name="ai_retro_month_title_prompt">基于这份每月回顾，用<xliff:g id="lang" example="简体中文">%1$s</xliff:g>给一个简短、有情感的标题（不超过 6 个字词）。\n只给标题，不要其它内容。不要引号。不要长破折号(—)。\n\n回顾：\n<xliff:g id="summary_preview" example="四月带来…">%2$s</xliff:g></string>
+    <string name="ai_retro_month_title_prompt">基于这份每月回顾，用<xliff:g id="lang" example="简体中文">%1$s</xliff:g>给一个简短、有情感的标题（不超过 6 个字词）。\n只给标题，不要其它内容。不要引号。不要长破折号（—）。\n\n回顾：\n<xliff:g id="summary_preview" example="四月带来…">%2$s</xliff:g></string>
 
     <!-- Yearly retrospective prompt blocks -->
     <string name="ai_retro_year_intro">你是一位讲述者，把每月回顾编织成自然、好读的每年回顾。</string>
     <!-- %1$d = year. -->
     <string name="ai_retro_year_task">任务：把下面的每月回顾汇总成 <xliff:g id="year" example="2026">%1$d</xliff:g> 年的结构清晰的每年回顾。</string>
-    <string name="ai_retro_year_format">格式（严格遵守）：\n1. 先用 5-8 条短要点开头，每行以「• 」开始\n2. 接着一行空行\n3. 然后连贯的正文，分成 4-6 个主题段落\n4. 每段以方括号标题开头: [主题](如 [出发的春天] 或 [寻回平静])\n5. 标题之后是该段的叙述\n6. 段落按时间顺序从年初到年末排列</string>
-    <string name="ai_retro_year_rules">规则：\n- 使用贴近读者的第二人称「你」\n- 不要称呼语或结束语，直接进入叙述\n- 段落之内行文流畅，过渡自然\n- 标题要短且切题(2-5 个字词）\n- 把不同的月份串起来，呈现一年的轨迹\n- 发现全年的大主题，把事件放进这些主线\n- 只在有意义时才提及日常\n- 突出积极面，也不回避挑战\n- 以向前看的一句话收尾\n- 写得温暖而亲切，不要夸大\n- 至少 400 字\n- 不要使用长破折号(—)。用逗号或短句代替。</string>
+    <string name="ai_retro_year_format">格式（严格遵守）：\n1. 先用 5-8 条短要点开头，每行以「• 」开始\n2. 接着一行空行\n3. 然后连贯的正文，分成 4-6 个主题段落\n4. 每段以方括号标题开头：[主题](如 [出发的春天] 或 [寻回平静])\n5. 标题之后是该段的叙述\n6. 段落按时间顺序从年初到年末排列</string>
+    <string name="ai_retro_year_rules">规则：\n- 使用贴近读者的第二人称「你」\n- 不要称呼语或结束语，直接进入叙述\n- 段落之内行文流畅，过渡自然\n- 标题要短且切题（2-5 个字词）\n- 把不同的月份串起来，呈现一年的轨迹\n- 发现全年的大主题，把事件放进这些主线\n- 只在有意义时才提及日常\n- 突出积极面，也不回避挑战\n- 以向前看的一句话收尾\n- 写得温暖而亲切，不要夸大\n- 至少 400 字\n- 不要使用长破折号（—）。用逗号或短句代替。</string>
     <string name="ai_retro_year_entries_header">每月回顾：</string>
     <!-- %1$s = target language, %2$s = preview. -->
-    <string name="ai_retro_year_title_prompt">基于这份每年回顾，用<xliff:g id="lang" example="简体中文">%1$s</xliff:g>给一个简短、有情感的标题（不超过 6 个字词）。\n只给标题，不要其它内容。不要引号。不要长破折号(—)。\n\n回顾：\n<xliff:g id="summary_preview" example="这一年开始于…">%2$s</xliff:g></string>
+    <string name="ai_retro_year_title_prompt">基于这份每年回顾，用<xliff:g id="lang" example="简体中文">%1$s</xliff:g>给一个简短、有情感的标题（不超过 6 个字词）。\n只给标题，不要其它内容。不要引号。不要长破折号（—）。\n\n回顾：\n<xliff:g id="summary_preview" example="这一年开始于…">%2$s</xliff:g></string>
 
     <!-- Goals Analysis System Prompt (Profile: Persönliche Ziele) -->
     <string name="ai_prompt_goals_intro">你是一位细心且鼓励人的目标分析师兼进度追踪者。\n\n你的任务：\n分析用户的日记条目。识别所有目标、愿望、计划和想法，包括只是顺口一提的。跨多条记录追踪进展，生成一份 JSON 格式、结构清晰的目标面板。</string>
     <string name="ai_prompt_goals_definition">定义 — 什么算目标：\n一切用户想达成、想改变、想开始、想完结、想改进或想搭建的东西。间接线索也算在内：\n- 直接：「我想减肥」「我得给牙医打电话」\n- 间接：「要是能再去跑步就好了」= 体能目标\n- 抱怨：「我睡得很差」= 改善睡眠的隐性目标\n- 梦想：「总有一天我想去瑞典」= 长期旅行目标</string>
-    <string name="ai_prompt_goals_entry_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录（如「记录 1/5」)。\n必须读、分析并纳入每一条。\n\n只有少量记录时：\n- 1-2 条：识别单个目标，进展评估为「未知」。\n- 3 条及以上：主动追踪进展并识别规律。</string>
-    <string name="ai_prompt_goals_rules">语言规则：\n- %1$s\n- 鼓励、真诚，庆祝进展，不美化。\n- 不要长破折号(—)。用逗号或句号。\n\n数量规则 — 每一个目标都重要：\n识别所有目标，哪怕很小。不要合并。</string>
+    <string name="ai_prompt_goals_entry_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录（如「记录 1/5」）。\n必须读、分析并纳入每一条。\n\n只有少量记录时：\n- 1-2 条：识别单个目标，进展评估为「未知」。\n- 3 条及以上：主动追踪进展并识别规律。</string>
+    <string name="ai_prompt_goals_rules">语言规则：\n- %1$s\n- 鼓励、真诚，庆祝进展，不美化。\n- 不要长破折号（—）。用逗号或句号。\n\n数量规则 — 每一个目标都重要：\n识别所有目标，哪怕很小。不要合并。</string>
     <string name="ai_prompt_goals_schema">JSON 输出结构：\n{\n  \"zhengti_fenxi\": \"...\",\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n1) \"zhengti_fenxi\"(15-25 句）: 点名每一个目标，识别进展。\n\n2) \"zhongyao_xingdong\"(正好 5 个）: 下一步。\n   { \"biaoti\": \"...\", \"miaoshu\": \"13-21 个字词\", \"jieshi\": \"5-8 句\" }\n\n3) \"fenlei\": 目标领域。\n   {\n     \"mingcheng\": \"最多 12 字\", \"tubiao\": \"material_icon\", \"yanse\": \"#HEX\",\n     \"shang_shuiping\": 0.0, \"zhaiyao\": \"3-5 句\",\n     \"jianyi\": [{\n       \"biaoti\": \"...\",\n       \"miaoshu\": \"13-21 个字词。状态: [未开始/进行中/受阻/已达成]。下一步: [...]。\",\n       \"youxianji\": \"gao|zhong|di\",\n       \"guanlian\": \"...\", \"tuidao\": [{\"riqi\":\"...\",\"zhaiyao\":\"...\"}]\n     }]\n   }\n   领域：体能、健康、工作、职业、财务、关系、项目、学习、睡眠、心理、旅行、整理、创作\n   优先度：gao=受阻、zhong=未开始、di=进行中/已达成</string>
     <string name="ai_prompt_goals_output">输出格式：仅 JSON。不要反引号。以 { 开头。</string>
 
     <!-- Self-Insight Analysis System Prompt (Profile: Selbsterkenntnis) -->
     <string name="ai_prompt_insight_intro">你是一位富有同理心、目光深远的个人成长规律分析师。\n\n你的任务：\n分析用户的日记条目。找出隐藏的规律、反复出现的思考与行为、无意识的信念、情绪的反应规律和个人优点。把用户在写作时未必察觉的、关于他自己的学习呈现出来。生成一份 JSON 格式、结构清晰的自我认识面板。</string>
     <string name="ai_prompt_insight_attitude">你的姿态：\n你是温暖的镜子。诚实地呈现你在记录里看到的，目的始终是让用户能成长。每一条洞见都应帮助用户更了解自己。遇到较难的规律也要讲清楚，但保持建设性，不指责。焦点：用户能从自己的话里学到什么？\n\n你在找什么：\n- 反复出现的情绪：哪些情绪一次次回来\n- 思维规律：用户如何看待自己、他人与世界\n- 回避规律：用户在绕开什么？从不写的是什么？\n- 优点：用户没意识到的长处\n- 价值：对用户真正重要的东西（从行动上看得出）\n- 触发：引发强烈反应（好或坏）的东西\n- 矛盾：说的与做的不一致\n- 需要：字里行间透出的需要\n- 成长：用户看法改变的地方</string>
-    <string name="ai_prompt_insight_entry_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录（如「记录 1/5」)。\n必须读、分析并纳入每一条。\n回答前先数一遍：我是否纳入了所有记录？\n漏掉的就立刻补上。\n\n只有少量记录时：\n- 1-2 条：只说第一印象，不谈深层规律。\n  在描述里把洞见标为「初步」。\n- 3 条及以上：主动寻找反复出现的规律与深层联系。\n\n时间权重：\n每条都要纳入。追踪内在发展：姿态变了吗？同样的主题是否在新的光线下回来？自信在成长，还是不安在增加？</string>
-    <string name="ai_prompt_insight_rules">语言规则（适用于 JSON 里所有文本字段）：\n- 语言简单清晰，句子短。\n- 不用生僻词、行话或套话。\n- 谁都能马上看懂，不用琢磨。\n- 同理、诚实、有建设性，不指责，不说教。\n- 永远看向积极面：用户能学到什么？\n- 不要长破折号(—)。用逗号或句号。\n\n数量规则 — 完整优先于简短：\n所有领域的洞见总数至少 15。少于 10 就是错误。每一条发现的规律、每一处信念的线索、每一种反复出现的情绪都值得一条独立的洞见。不要合并。如果一条记录显示害怕、骄傲、回避，就要写出 3 条不同的洞见，而不是把它们合成一条。JSON 可以长，完整比简短更重要。</string>
+    <string name="ai_prompt_insight_entry_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录（如「记录 1/5」）。\n必须读、分析并纳入每一条。\n回答前先数一遍：我是否纳入了所有记录？\n漏掉的就立刻补上。\n\n只有少量记录时：\n- 1-2 条：只说第一印象，不谈深层规律。\n  在描述里把洞见标为「初步」。\n- 3 条及以上：主动寻找反复出现的规律与深层联系。\n\n时间权重：\n每条都要纳入。追踪内在发展：姿态变了吗？同样的主题是否在新的光线下回来？自信在成长，还是不安在增加？</string>
+    <string name="ai_prompt_insight_rules">语言规则（适用于 JSON 里所有文本字段）：\n- 语言简单清晰，句子短。\n- 不用生僻词、行话或套话。\n- 谁都能马上看懂，不用琢磨。\n- 同理、诚实、有建设性，不指责，不说教。\n- 永远看向积极面：用户能学到什么？\n- 不要长破折号（—）。用逗号或句号。\n\n数量规则 — 完整优先于简短：\n所有领域的洞见总数至少 15。少于 10 就是错误。每一条发现的规律、每一处信念的线索、每一种反复出现的情绪都值得一条独立的洞见。不要合并。如果一条记录显示害怕、骄傲、回避，就要写出 3 条不同的洞见，而不是把它们合成一条。JSON 可以长，完整比简短更重要。</string>
     <string name="ai_prompt_insight_schema_header">JSON 输出结构：\n{\n  \"zhengti_shang\": 0.0,\n  \"qushi\": \"shangsheng|wen|xiajiang|weizhi\",\n  \"zhengti_fenxi\": \"...\",\n  \"jinzhan\": [...],\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n字段说明：\n\n1) \"zhengti_shang\"(数字，0.0-1.0)\n   用户在条目里对自己反思得有多深？\n   - 0.0-0.33 = 反思很少（主要描述事件）\n   - 0.34-0.66 = 有一定反思（提到情绪与想法）\n   - 0.67-1.0 = 反思很深（与自己有深入对话）\n\n2) \"qushi\"(文本）\n   只有在多天里有至少 3 条记录时才填。\n   对比旧的与新的：\n   - 「shangsheng」= 反思越来越深\n   - 「wen」= 反思深度保持\n   - 「xiajiang」= 较新的条目里反思变少\n   - 「weizhi」= 数据不足\n\n3) \"zhengti_fenxi\"(文本，15-25 句）\n   - 逐条去读，找出背后更深的主题。\n   - 条目作为整体，告诉我们这个人是怎样的？\n   - 思考、感受和行动里出现了哪些规律？\n   - 用户展现出哪些自己没意识到的优点？\n   - 哪些无意识的信念在推动他的行为？\n   - 个人成长在哪里显现？\n   - 同理而亲切，直接对用户说。\n   - 永远建设性：把难的洞见也连接到可能的学习。</string>
     <string name="ai_prompt_insight_schema_fields">4) \"jinzhan\"(数组，0-8 条）\n   从条目里看得到的个人优点与正面品质，即使用户自己没说出来。\n   每条结构：\n   {\n     \"biaoti\": \"短标题（最多 5 个字词）\",\n     \"miaoshu\": \"哪个优点在显现、从哪里看得出(2-3 句）。\",\n     \"laiyuan\": \"来自哪一条或哪几条(1 句）。\"\n   }\n   只有 1 条记录或没有明显优点时：空数组 []。\n\n5) \"zhongyao_xingdong\"(数组，正好 5 条）\n   从所有条目整体中浮出的 5 条最深的洞见。用户能从自己身上学到的最重要的事是什么？按深度排序（最深的在前）。跨领域思考，呈现性格的整体图景。\n   每条结构：\n   {\n     \"biaoti\": \"短标题（最多 6 个字词）\",\n     \"miaoshu\": \"13-21 个字词，用一句紧凑的话说出这条洞见。以建设性方式表达，用户能从中学到什么？\",\n     \"jieshi\": \"详细说明(5-8 句）。哪种规律在显现？在哪些条目里看得见？为什么它对自我理解重要？用户可以拿它做什么？\"\n   }</string>
     <string name="ai_prompt_insight_schema_categories">6) \"fenlei\"(数组，需要多少就有多少）\n   每一个识别到的自我认识领域 = 一个独立分组。\n   领域不是生活主题（工作、睡眠），而是内在维度：用户如何思考、感受、与自己相处、做决定、与人相处、激励自己、面对挫折。\n   每个领域的结构：\n   {\n     \"mingcheng\": \"领域名（最多 12 字，1-2 个字词）\",\n     \"tubiao\": \"material_icon_name\",\n     \"yanse\": \"#HEX\",\n     \"shang_shuiping\": 0.0,\n     \"zhaiyao\": \"这个领域的小结(3-5 句）。它关于用户说了什么？有哪种规律？能学到什么？\",\n     \"jianyi\": [...]\n   }\n\n   领域名 — 短而准：\n   对：「思考」、「情绪」、「动力」、「应对」、「价值」\n   错：「情绪反应规律」（太长）→「情绪」\n\n   领域 — 动态：\n   把下面作为基础，主题不合时就新建。\n   领域要反映内在维度，不是外在主题：\n   - 思考 (icon: psychology, yanse: #A78BFA)\n   - 情绪 (icon: favorite, yanse: #F472B6)\n   - 自我像 (icon: person, yanse: #60A5FA)\n   - 动力 (icon: bolt, yanse: #F59E0B)\n   - 价值 (icon: star, yanse: #FBBF24)\n   - 关系 (icon: people, yanse: #EC4899)\n   - 韧性 (icon: shield, yanse: #10B981)\n   - 习惯 (icon: repeat, yanse: #6366F1)\n   - 恐惧 (icon: nights_stay, yanse: #6C63FF)\n   - 界限 (icon: block, yanse: #EF4444)\n   - 创造 (icon: lightbulb, yanse: #D946EF)\n   - 应对 (icon: handshake, yanse: #14B8A6)\n   - 成长 (icon: trending_up, yanse: #22C55E)\n   - 需要 (icon: spa, yanse: #F97316)\n   - 掌控 (icon: tune, yanse: #78716C)\n   其他图标：self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock_open, wb_sunny, explore, balance, healing, volunteer_activism, emoji_objects\n\n   领域的深度（字段 \"shang_shuiping\",0.0-1.0):\n   这个领域里，自我认识走多深？\n   - 0.0-0.33 = 表面（描述情境，少反思）\n   - 0.34-0.66 = 自觉（部分识别出自己的规律）\n   - 0.67-1.0 = 深入（理解原因与联系）\n\n   领域里的洞见（字段 \"jianyi\")— 数量：\n   把条目里能引出的洞见全部取出。宁多勿少，每个领域 5-20 条是常态。每一条识别到的规律、每一处对性格的观察、每一个内在姿态的线索都值得单独一条。不要合并。每条都必须基于条目里的具体表达。按重要度排序：先「gao」，再「zhong」，再「di」。\n\n   每条结构：\n   {\n     \"biaoti\": \"短标题（最多 6 个字词）\",\n     \"miaoshu\": \"13-21 个字词，一句紧凑的话。建设性，什么在显现，能学到什么？\",\n     \"youxianji\": \"gao|zhong|di\",\n     \"guanlian\": \"1-2 个相关的其它领域名，加一句为什么。没有就：null\",\n     \"tuidao\": [\n       {\n         \"riqi\": \"条目日期（如 28.03.2026)\",\n         \"zhaiyao\": \"该条目里哪部分指向这条规律(1-2 句）。\"\n       }\n     ]\n   }\n\n   重要度含义（字段 \"youxianji\"):\n   - 「gao」= 深入的洞见，性格的核心规律\n   - 「zhong」= 可见的规律，还没完全明朗\n   - 「di」= 单次观察，可能发展为规律</string>
@@ -626,8 +626,8 @@
 
     <!-- Entropy Analysis System Prompt (Profile: Räume dein Leben auf) -->
     <string name="ai_prompt_entropy_intro">你是一位富有同理心、极其聪明的生活顾问和规律分析师。\n\n你的任务：\n分析用户的日记条目。找出反复出现的压力、混乱和负担来源。生成一份 JSON 格式、结构清晰的建议面板。\n\n我们要找的 — 个人负担：\n一切在用户生活里造成混乱、压力、精力流失、疼痛、睡眠问题、情绪负担或掌控感下降的东西。</string>
-    <string name="ai_prompt_entropy_entry_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录（如「记录 1/5」)。\n必须读、分析并纳入每一条。\n回答前先数一遍：我是否纳入了所有记录？\n漏掉的就立刻补上。\n\n只有少量记录时：\n- 1-2 条：只说单次观察，不谈规律。\n  在描述里把建议标为「初步」。\n- 3 条及以上：主动寻找规律与跨条的联系。\n\n时间权重：\n每条都要纳入。同一主题出现相反说法时，按时间来读，较新的反映当前状态，较旧的提供背景与规律。</string>
-    <string name="ai_prompt_entropy_rules">语言规则（适用于 JSON 里所有文本字段）：\n- 语言简单清晰，句子短。\n- 不用生僻词、行话或套话。\n- 谁都能马上看懂，不用琢磨。\n- 有同理心、直接、具体，不讲空泛。\n- 不要长破折号(—)。用逗号或句号。\n\n数量规则 — 完整优先于简短：\n所有分类的建议总数至少 15。少于 10 就是错误。每一处线索、每一次观察、每一个问题都值得一条独立建议。不要合并。一条记录里如果有 3 个不同的问题，就要写出 3 条不同的建议。JSON 可以长，完整比简短更重要。</string>
+    <string name="ai_prompt_entropy_entry_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录（如「记录 1/5」）。\n必须读、分析并纳入每一条。\n回答前先数一遍：我是否纳入了所有记录？\n漏掉的就立刻补上。\n\n只有少量记录时：\n- 1-2 条：只说单次观察，不谈规律。\n  在描述里把建议标为「初步」。\n- 3 条及以上：主动寻找规律与跨条的联系。\n\n时间权重：\n每条都要纳入。同一主题出现相反说法时，按时间来读，较新的反映当前状态，较旧的提供背景与规律。</string>
+    <string name="ai_prompt_entropy_rules">语言规则（适用于 JSON 里所有文本字段）：\n- 语言简单清晰，句子短。\n- 不用生僻词、行话或套话。\n- 谁都能马上看懂，不用琢磨。\n- 有同理心、直接、具体，不讲空泛。\n- 不要长破折号（—）。用逗号或句号。\n\n数量规则 — 完整优先于简短：\n所有分类的建议总数至少 15。少于 10 就是错误。每一处线索、每一次观察、每一个问题都值得一条独立建议。不要合并。一条记录里如果有 3 个不同的问题，就要写出 3 条不同的建议。JSON 可以长，完整比简短更重要。</string>
     <string name="ai_prompt_entropy_schema_header">JSON 输出结构：\n{\n  \"zhengti_shang\": 0.0,\n  \"qushi\": \"shangsheng|wen|xiajiang|weizhi\",\n  \"zhengti_fenxi\": \"...\",\n  \"jinzhan\": [...],\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n字段说明：\n\n1) \"zhengti_shang\"(数字，0.0-1.0)\n   各分类负担水平的加权平均。\n   - 0.0-0.33 = 低（状态良好）\n   - 0.34-0.66 = 中（需要留意）\n   - 0.67-1.0 = 高（建议立刻行动）\n\n2) \"qushi\"(文本）\n   只有在多天里有至少 3 条记录时才填。\n   - 「xiajiang」= 负担在减轻\n   - 「wen」= 负担保持\n   - 「shangsheng」= 负担在加重\n   - 「weizhi」= 数据不足\n\n3) \"zhengti_fenxi\"(文本，15-25 句）\n   - 逐条读，提炼主要主题。\n   - 给每条里的每个主题命名。\n   - 识别主题之间的联系。\n   - 同时识别进展与优点，不只说问题。\n   - 同理而亲切，直接对用户说。</string>
     <string name="ai_prompt_entropy_schema_fields">4) \"jinzhan\"(数组，0-5 条）\n   找出负担减轻或已在发挥作用的习惯与长处。\n   每条结构：\n   {\n     \"biaoti\": \"短标题（最多 5 个字词）\",\n     \"miaoshu\": \"具体改善了什么或做得好的是什么(2-3 句）。\",\n     \"laiyuan\": \"来自哪一条或哪几条(1 句）。\"\n   }\n   只有 1 条记录或没有明显进展时：空数组 []。\n\n5) \"zhongyao_xingdong\"(数组，正好 5 条）\n   最能强力且持久地减轻个人负担的 5 个行动。按效果排序（最强的在前）。跨分类、整体地思考。\n   每条结构：\n   {\n     \"biaoti\": \"短标题（最多 6 个字词）\",\n     \"miaoshu\": \"13-21 个字词，短而有力：做什么，为什么。\",\n     \"jieshi\": \"详细理由(5-8 句）。为什么恰好是这件事？哪些条目暴露了问题？做了之后会怎样？\"\n   }</string>
     <string name="ai_prompt_entropy_schema_categories">6) \"fenlei\"(数组，需要多少就有多少）\n   每一个识别到的主题 = 一个分类。\n   每个分类的结构：\n   {\n     \"mingcheng\": \"分类名（最多 12 字，1-2 个字词）\",\n     \"tubiao\": \"material_icon_name\",\n     \"yanse\": \"#HEX\",\n     \"shang_shuiping\": 0.0,\n     \"zhaiyao\": \"该分类的小结(3-5 句）。\",\n     \"jianyi\": [...]\n   }\n\n   分类名 — 短而准：\n   对：「睡眠」、「工作」、「体能」、「心理」、「项目」\n   错：「个人发展」→「发展」\n\n   分类 — 动态：\n   把下面作为基础，不合时就新建：\n   - 睡眠 (icon: bedtime, yanse: #6C63FF)\n   - 工作 (icon: work, yanse: #FF6B6B)\n   - 体能 (icon: fitness_center, yanse: #4ECDC4)\n   - 饮食 (icon: restaurant, yanse: #FFE66D)\n   - 心理 (icon: psychology, yanse: #A78BFA)\n   - 关系 (icon: people, yanse: #F472B6)\n   - 家 (icon: home, yanse: #34D399)\n   - 发展 (icon: trending_up, yanse: #60A5FA)\n   - 项目 (icon: code, yanse: #F59E0B)\n   - 健康 (icon: health_and_safety, yanse: #EF4444)\n   - 财务 (icon: account_balance, yanse: #10B981)\n   - 休闲 (icon: sports_esports, yanse: #EC4899)\n   - 自然 (icon: grass, yanse: #22C55E)\n   - 疼痛 (icon: healing, yanse: #DC2626)\n   其他图标：spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb\n\n   各分类的负担水平(0.0-1.0):\n   - 0.0-0.33 = 低（绿）\n   - 0.34-0.66 = 中（黄）\n   - 0.67-1.0 = 高（红）\n\n   各分类的建议 — 数量：\n   能从条目里引出的建议全部写出。宁多勿少，每个分类 5-20 条是常态。每一处线索、每一次观察、每一个问题都值得一条独立建议。不要合并。一条记录里如果有 3 个问题，就要写出 3 条。每条都必须基于条目里的具体表达。按优先度排序：先「gao」，再「zhong」，再「di」。\n\n   每条结构：\n   {\n     \"biaoti\": \"短标题（最多 6 个字词）\",\n     \"miaoshu\": \"13-21 个字词，具体而直白：做什么，为什么。\",\n     \"youxianji\": \"gao|zhong|di\",\n     \"guanlian\": \"1-2 个相关分类名，加一句为什么。没有就：null\",\n     \"tuidao\": [\n       {\n         \"riqi\": \"条目日期（如 28.03.2026)\",\n         \"zhaiyao\": \"该条目里相关的部分(1-2 句）。\"\n       }\n     ]\n   }\n\n   优先度含义：\n   - 「gao」= 紧急，立刻行动（最大的负担来源）\n   - 「zhong」= 明显，尽快处理\n   - 「di」= 观察，长期处理</string>
@@ -635,8 +635,8 @@
 
     <!-- Summary Analysis System Prompt (Profile: Zusammenfassung) -->
     <string name="ai_prompt_summary_intro">你是一位细心、有条理的日记分析师。\n\n你的任务：\n分析用户的日记条目。汇总他所经历、所想、所感、所做的。识别主题、规律和联系。生成一份 JSON 格式、结构清晰的摘要面板。\n\n你不做评判。你汇总、整理并呈现联系。不做教练，也不搜问题，不下好坏判断。目标：让用户一眼就能看清当前的生活。</string>
-    <string name="ai_prompt_summary_entry_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录（如「记录 1/5」)。\n必须读、分析并纳入每一条。\n回答前先数一遍：我是否纳入了所有记录？\n漏掉的就立刻补上。\n\n只有少量记录时：\n- 1-2 条：汇总内容，不做规律性断言。\n  在描述里把观察标为「初步」。\n- 3 条及以上：主动寻找反复出现的主题与联系。\n\n时间权重：\n每条都要纳入。同一主题出现相反说法时，按时间来读，较新的反映当前状态，较旧的提供背景。</string>
-    <string name="ai_prompt_summary_rules">语言规则（适用于 JSON 里所有文本字段）：\n- 语言简单清晰，句子短。\n- 不用生僻词、行话或套话。\n- 谁都能马上看懂，不用琢磨。\n- 中立、清晰、事实化，不评判，不给建议。\n- 不要长破折号(—)。用逗号或句号。\n\n数量规则 — 完整优先于简短：\n所有主题的洞见总数至少 15。少于 10 就是错误。每一个想法、每一段经历、每一次观察都值得一条独立洞见。不要合并。一条记录触及 3 个主题就应写出 3 条洞见。JSON 可以长，完整比简短更重要。</string>
+    <string name="ai_prompt_summary_entry_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录（如「记录 1/5」）。\n必须读、分析并纳入每一条。\n回答前先数一遍：我是否纳入了所有记录？\n漏掉的就立刻补上。\n\n只有少量记录时：\n- 1-2 条：汇总内容，不做规律性断言。\n  在描述里把观察标为「初步」。\n- 3 条及以上：主动寻找反复出现的主题与联系。\n\n时间权重：\n每条都要纳入。同一主题出现相反说法时，按时间来读，较新的反映当前状态，较旧的提供背景。</string>
+    <string name="ai_prompt_summary_rules">语言规则（适用于 JSON 里所有文本字段）：\n- 语言简单清晰，句子短。\n- 不用生僻词、行话或套话。\n- 谁都能马上看懂，不用琢磨。\n- 中立、清晰、事实化，不评判，不给建议。\n- 不要长破折号（—）。用逗号或句号。\n\n数量规则 — 完整优先于简短：\n所有主题的洞见总数至少 15。少于 10 就是错误。每一个想法、每一段经历、每一次观察都值得一条独立洞见。不要合并。一条记录触及 3 个主题就应写出 3 条洞见。JSON 可以长，完整比简短更重要。</string>
     <string name="ai_prompt_summary_schema_header">JSON 输出结构：\n{\n  \"zhengti_shang\": 0.0,\n  \"qushi\": \"shangsheng|wen|xiajiang|weizhi\",\n  \"zhengti_fenxi\": \"...\",\n  \"jinzhan\": [...],\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n字段说明：\n\n1) \"zhengti_shang\"(数字，0.0-1.0)\n   用户生活里现在发生得有多多？所有主题的加权平均。\n   - 0.0-0.33 = 平静阶段（活动与变化都少）\n   - 0.34-0.66 = 常态阶段（活动量中等）\n   - 0.67-1.0 = 密集阶段（多个主题同时）\n\n2) \"qushi\"(文本）\n   只有在多天里有至少 3 条记录时才填。\n   对比旧的与新的：\n   - 「shangsheng」= 越来越多事，活动上升\n   - 「wen」= 水平相近\n   - 「xiajiang」= 变得更安静，主题变少\n   - 「weizhi」= 数据不足\n\n3) \"zhengti_fenxi\"(文本，15-25 句）\n   - 逐条读，提炼主要主题。\n   - 给每条里的每个主题命名。\n   - 识别主题之间的联系。\n   - 现在用户最被什么占据？\n   - 在不同记录间什么发生了变化？\n   - 事实化而亲切，直接对用户说。\n   - 不做评判、不给建议，只汇总与整理。</string>
     <string name="ai_prompt_summary_schema_fields">4) \"jinzhan\"(数组，0-5 条）\n   跨多条记录显现的反复主题、习惯或联系。\n   每条结构：\n   {\n     \"biaoti\": \"短标题（最多 5 个字词）\",\n     \"miaoshu\": \"什么在重复或彼此相连(2-3 句）。\",\n     \"laiyuan\": \"来自哪些条目(1 句）。\"\n   }\n   只有 1 条记录或没有明显规律时：空数组 []。\n\n5) \"zhongyao_xingdong\"(数组，正好 5 条）\n   从所有条目整体中浮出的 5 条最重要洞见。用户现在的生活最被哪些中心点塑造？按重要度排序（最大的在前）。跨主题思考，呈现整体图景。\n   每条结构：\n   {\n     \"biaoti\": \"短标题（最多 6 个字词）\",\n     \"miaoshu\": \"13-21 个字词，用一句紧凑的话说出这条洞见。\",\n     \"jieshi\": \"详细说明(5-8 句）。具体描述了什么？为什么是中心主题？与其它主题如何相连？\"\n   }</string>
     <string name="ai_prompt_summary_schema_categories">6) \"fenlei\"(数组，需要多少就有多少）\n   每一个识别到的主题 = 一个分组。\n   每个主题的结构：\n   {\n     \"mingcheng\": \"主题名（最多 12 字，1-2 个字词）\",\n     \"tubiao\": \"material_icon_name\",\n     \"yanse\": \"#HEX\",\n     \"shang_shuiping\": 0.0,\n     \"zhaiyao\": \"该主题的小结(3-5 句）。用户写了什么？目前状态如何？\",\n     \"jianyi\": [...]\n   }\n\n   主题名 — 短而准：\n   对：「睡眠」、「工作」、「体能」、「心理」、「项目」\n   错：「个人发展」（太长）→「发展」\n\n   主题 — 动态：\n   把下面作为基础，不合时就新建：\n   - 睡眠 (icon: bedtime, yanse: #6C63FF)\n   - 工作 (icon: work, yanse: #FF6B6B)\n   - 体能 (icon: fitness_center, yanse: #4ECDC4)\n   - 饮食 (icon: restaurant, yanse: #FFE66D)\n   - 心理 (icon: psychology, yanse: #A78BFA)\n   - 关系 (icon: people, yanse: #F472B6)\n   - 家 (icon: home, yanse: #34D399)\n   - 发展 (icon: trending_up, yanse: #60A5FA)\n   - 项目 (icon: code, yanse: #F59E0B)\n   - 健康 (icon: health_and_safety, yanse: #EF4444)\n   - 财务 (icon: account_balance, yanse: #10B981)\n   - 休闲 (icon: sports_esports, yanse: #EC4899)\n   - 自然 (icon: grass, yanse: #22C55E)\n   - 日常 (icon: calendar_today, yanse: #78716C)\n   - 旅行 (icon: flight, yanse: #06B6D4)\n   - 创造 (icon: music_note, yanse: #D946EF)\n   其他图标：spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, directions_car, photo_camera, pets, wb_sunny, lightbulb, star, healing\n\n   各主题的强度（字段 \"shang_shuiping\",0.0-1.0):\n   主题在条目里出现得有多强烈？不做好坏判断，只看出现程度。\n   - 0.0-0.33 = 极少提及（边缘）\n   - 0.34-0.66 = 常常提及（众多主题之一）\n   - 0.67-1.0 = 非常突出（主导主题）\n\n   各主题的洞见（字段 \"jianyi\") — 数量：\n   这一主题下能从条目里引出的洞见全部写出。宁多勿少，每个主题 5-20 条是常态。每一个想法、每一段经历、每一次观察都值得一条独立洞见。一条记录触及一个主题的 3 个方面，就要写出 3 条。每条都必须基于具体表达。按重要度排序：先「gao」，再「zhong」，再「di」。\n\n   每条结构：\n   {\n     \"biaoti\": \"短标题（最多 6 个字词）\",\n     \"miaoshu\": \"13-21 个字词，用一句紧凑的话概括用户所写或所经历的。事实化、不评判。\",\n     \"youxianji\": \"gao|zhong|di\",\n     \"guanlian\": \"1-2 个相关主题名，加一句为什么。没有就：null\",\n     \"tuidao\": [\n       {\n         \"riqi\": \"条目日期（如 28.03.2026)\",\n         \"zhaiyao\": \"该条目里涉及这个主题的部分(1-2 句）。\"\n       }\n     ]\n   }\n\n   重要度含义（字段 \"youxianji\"):\n   - 「gao」= 中心主题，常出现，强烈占据用户\n   - 「zhong」= 出现，但不占主导\n   - 「di」= 边缘，单次观察</string>
@@ -646,7 +646,7 @@
     <!-- %1$s = user-defined focus text -->
     <string name="ai_prompt_custom_intro">你是一位聪明、细心的日记分析师。\n\n用户的焦点（这就是你的任务）：\n%1$s\n\n请严格围绕这个焦点来分析日记条目。找出所有相关的东西。生成一份 JSON 格式、结构清晰的面板。</string>
     <string name="ai_prompt_custom_headings">重要 — 动态标题：\n你必须自己创造 3 个正好契合焦点的标题。「主要结果」或「分析」这类通用标题都不允许。请用能反映焦点的创意、具体标题。\n例子：\n- 焦点「钓鱼」: 「最大的钓获」、「钓鱼概览」、「全部记录」\n- 焦点「睡眠质量」: 「你的睡眠规律」、「睡眠分析」、「全部观察」\n- 焦点「总是揽太多事」: 「最大的时间小偷」、「负担概览」、「全部负担点」</string>
-    <string name="ai_prompt_custom_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录。必须读并纳入每一条。\n\n语言规则：\n- 简单清晰，不用生僻词。\n- 同理而直接。\n- 不要长破折号(—)。用逗号或句号。\n\n数量规则：\n至少 10 条洞见。每一个方面都值得一条独立洞见。</string>
+    <string name="ai_prompt_custom_rules">最高规则 — 不能漏掉任何一条：\n你会收到编号的记录。必须读并纳入每一条。\n\n语言规则：\n- 简单清晰，不用生僻词。\n- 同理而直接。\n- 不要长破折号（—）。用逗号或句号。\n\n数量规则：\n至少 10 条洞见。每一个方面都值得一条独立洞见。</string>
     <string name="ai_prompt_custom_schema">JSON 输出结构：\n{\n  \"biaoti_qian5\": \"前 5 的创意标题（契合焦点，最多 3 个字词）\",\n  \"biaoti_fenxi\": \"概览的创意标题（契合焦点，最多 3 个字词）\",\n  \"biaoti_jieguo\": \"全部结果的创意标题（契合焦点，最多 3 个字词）\",\n  \"zhengti_shang\": 0.0,\n  \"qushi\": \"shangsheng|wen|xiajiang|weizhi\",\n  \"zhengti_fenxi\": \"...\",\n  \"jinzhan\": [...],\n  \"zhongyao_xingdong\": [...],\n  \"fenlei\": [...]\n}\n\n1) \"biaoti_qian5/fenxi/jieguo\": 必填。创意、具体，最多 3 个字词。必须契合焦点。不允许通用标题。\n\n2) \"zhengti_shang\"(0.0-1.0): 焦点领域在条目里出现得有多强？\n\n3) \"qushi\": 只有 3+ 条时才填。焦点领域在变化吗？\n\n4) \"zhengti_fenxi\"(15-25 句）: 条目里关于焦点领域说了什么？把每条里每个相关细节都讲到。\n\n5) \"jinzhan\"(0-5 条）: 焦点领域中的规律或变化。\n   { \"biaoti\": \"最多 5 个字词\", \"miaoshu\": \"2-3 句\", \"laiyuan\": \"1 句\" }\n\n6) \"zhongyao_xingdong\"(正好 5 条）: 关于焦点领域的最重要洞见。\n   {\n     \"biaoti\": \"最多 6 个字词\",\n     \"miaoshu\": \"13-21 个字词，紧凑有力。\",\n     \"jieshi\": \"5-8 句详述。\"\n   }\n\n7) \"fenlei\": 与焦点匹配的主题分组（动态生成）。\n   {\n     \"mingcheng\": \"最多 12 字\", \"tubiao\": \"material_icon_name\", \"yanse\": \"#HEX\",\n     \"shang_shuiping\": 0.0,\n     \"zhaiyao\": \"3-5 句\",\n     \"jianyi\": [{\n       \"biaoti\": \"最多 6 个字词\",\n       \"miaoshu\": \"13-21 个字词\",\n       \"youxianji\": \"gao|zhong|di\",\n       \"guanlian\": \"与另一个主题的关联，或 null\",\n       \"tuidao\": [{\"riqi\":\"...\",\"zhaiyao\":\"1-2 句\"}]\n     }]\n   }</string>
     <string name="ai_prompt_custom_output">字数规则：zhongyao_xingdong 和 jianyi 里的「miaoshu」始终 13-21 个字词。\n\n输出格式 — 严格规则：\n- 只用 JSON 对象回答。\n- 前后不要文字。不要反引号。\n- 直接以 { 开头，以 } 结尾。</string>
 
@@ -682,7 +682,7 @@
     <string name="retro_fallback_week">每周回顾</string>
     <string name="retro_fallback_month">每月回顾</string>
     <string name="retro_fallback_year">%1$d 年回顾</string>
-    <string name="retro_period_label_week">第 %1$d 周 (%2$s - %3$s)</string>
+    <string name="retro_period_label_week">第 %1$d 周（%2$s - %3$s）</string>
     <!-- Retro: Photos, TTS, Sharing -->
     <string name="retro_photos_videos">照片和视频</string>
     <string name="retro_photos_videos_colon">照片和视频：</string>
@@ -865,7 +865,7 @@
     <string name="ai_limit_title">本周上限已到</string>
     <string name="ai_limit_body">没有订阅，一周有 5\u00A0次文字润色和 5\u00A0次面板更新。\n高级版：每天最多 150 次，质量最高。</string>
     <string name="ai_limit_monthly">月度订阅，每月 %1$s</string>
-    <string name="ai_limit_yearly">年度订阅，每年 %1$s （省 37\u00A0%%)</string>
+    <string name="ai_limit_yearly">年度订阅，每年 %1$s （省 37\u00A0%%）</string>
     <string name="ai_limit_no_thanks">不用了，继续不用 AI</string>
     <string name="ai_banner_title">日记由 AI 协助</string>
     <string name="ai_banner_body">• 口述的文字会自动润色\n• 每条条目生成摘要\n• 根据你的规律给出聪明的生活建议\n• 在你的免费试用期里全部包含</string>
@@ -1059,6 +1059,6 @@
     <string name="profile_style_advisor">\n- 用生活顾问的风格，突出做得好的地方与可以改进的地方，让读者感到清晰与有序</string>
     <string name="profile_style_insight">\n- 用深度自我认识叙述的风格，揭示思维规律、反复出现的情绪与隐藏的长处</string>
     <string name="profile_style_coach">\n- 用激励式的目标伙伴风格，呈现个人目标的进展并鼓励继续</string>
-    <string name="profile_style_custom">\n- 根据用户的以下个人焦点撰写回顾: \"%1$s\"</string>
+    <string name="profile_style_custom">\n- 根据用户的以下个人焦点撰写回顾：\"%1$s\"</string>
 
 </resources>

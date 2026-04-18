@@ -75,7 +75,7 @@
     <string name="journal_drive_uploading">バックアップをアップロード中…</string>
     <string name="journal_drive_downloading">写真と動画をダウンロード中…</string>
     <string name="journal_drive_failed">バックアップに失敗しました!</string>
-    <string name="journal_drive_last_sync">最終同期: %1$s</string>
+    <string name="journal_drive_last_sync">最終同期：%1$s</string>
     <string name="journal_new_entry_prompt">書き出しのヒント</string>
     <string name="journal_new_entry">新しい記録</string>
     <string name="journal_save_improved">改善版を保存</string>
@@ -100,10 +100,10 @@
     <string name="journal_entry_count">%1$d件の記録</string>
     <string name="journal_streak_days">%1$d日</string>
     <string name="journal_streak_days_in_row">%1$d日連続</string>
-    <string name="journal_streak_next_goal">次の目標: %1$d日</string>
+    <string name="journal_streak_next_goal">次の目標：%1$d日</string>
     <string name="journal_streak_remaining">あと%1$d</string>
-    <string name="journal_streak_premium">連続記録の保護: プレミアムで利用できます</string>
-    <string name="journal_keep_going">この調子!</string>
+    <string name="journal_streak_premium">連続記録の保護：プレミアムで利用できます</string>
+    <string name="journal_keep_going">この調子！</string>
     <string name="journal_daily_prompt">今日のヒント</string>
     <string name="journal_write_about">これについて書く</string>
     <string name="journal_recording_error">録音に失敗しました: %1$s</string>
@@ -114,12 +114,12 @@
     <string name="recording_tap_stop">もう一度タップして停止</string>
 
     <!-- Streak messages -->
-    <string name="streak_365">まるまる1年!</string>
-    <string name="streak_180">驚くほどの継続力!</string>
+    <string name="streak_365">まるまる1年！</string>
+    <string name="streak_180">驚くほどの継続力！</string>
     <string name="streak_90">止められません!</string>
-    <string name="streak_30">まるまる1か月!</string>
-    <string name="streak_14">強い2週間!</string>
-    <string name="streak_7">まるまる1週間!</string>
+    <string name="streak_30">まるまる1か月！</string>
+    <string name="streak_14">強い2週間！</string>
+    <string name="streak_7">まるまる1週間！</string>
     <string name="streak_3">続けています!</string>
     <string name="streak_default">毎日が大切です!</string>
     <string name="streak_desc_365">小さな習慣として始めたことが、今では生活の一部になっています。日記は以前よりずっとあなたのことを知っています。</string>
@@ -133,7 +133,7 @@
          ════════════════════════════════════════════════════════════════════ -->
     <string name="entry_title">記録</string>
     <string name="entry_summary">要約</string>
-    <string name="entry_stress_label">負担: </string>
+    <string name="entry_stress_label">負担： </string>
     <string name="entry_saving">保存中…</string>
     <string name="entry_improving">改善中…</string>
     <string name="entry_improve_with_ai">あとからAIで改善</string>
@@ -146,7 +146,7 @@
     <string name="entry_tts_stop">停止</string>
     <string name="entry_tts_read">読み上げ</string>
     <string name="entry_cd_share">共有</string>
-    <string name="entry_recording_duration">録音時間: %1$s</string>
+    <string name="entry_recording_duration">録音時間：%1$s</string>
     <string name="entry_tts_generating">音声を生成しています。少々お待ちください…</string>
     <string name="entry_cd_photo_page">写真%1$d</string>
     <string name="entry_add_photo_video">写真・動画を追加</string>
@@ -201,7 +201,7 @@
     <string name="dashboard_limit_daily">今日の上限に達しました。明日続きをどうぞ!</string>
     <string name="dashboard_limit_cooldown">少し休憩です。次の分析まであと%1$d分。</string>
     <string name="dashboard_analysis_failed">分析に失敗しました</string>
-    <string name="dashboard_last_updated">最終更新: %1$s</string>
+    <string name="dashboard_last_updated">最終更新：%1$s</string>
     <string name="dashboard_loading_profile_switch">プロフィール変更後、AIダッシュボードは自動で更新されます</string>
     <string name="dashboard_loading_delete_update">記録を削除すると、AIダッシュボードは自動で更新されます</string>
     <string name="dashboard_loading_auto_update">新しい記録ごとに、AIダッシュボードは自動で更新されます</string>
@@ -213,8 +213,8 @@
     <string name="legend_observe">観察</string>
     <string name="legend_activity_level">活動レベル</string>
     <string name="legend_activity_desc">半円はこの領域でどれだけ動きがあるかを示します:</string>
-    <string name="legend_activity_high">活発 (67–100\u00A0%%)</string>
-    <string name="legend_activity_medium">標準的 (34–66\u00A0%%)</string>
+    <string name="legend_activity_high">活発（67–100\u00A0%%）</string>
+    <string name="legend_activity_medium">標準的（34–66\u00A0%%）</string>
     <string name="legend_activity_low">少なめ (0–33\u00A0%%)</string>
     <string name="legend_observation_relevance">観察の重要度</string>
     <string name="legend_relevance_high">中心。記録の主要テーマです</string>
@@ -223,8 +223,8 @@
     <string name="legend_reflection_depth">内省の深さ</string>
     <string name="legend_reflection_desc">半円は内省の深さを示します:</string>
     <string name="legend_reflection_deep">深い (67–100\u00A0%%)</string>
-    <string name="legend_reflection_aware">自覚的 (34–66\u00A0%%)</string>
-    <string name="legend_reflection_surface">表面的 (0–33\u00A0%%)</string>
+    <string name="legend_reflection_aware">自覚的（34–66\u00A0%%）</string>
+    <string name="legend_reflection_surface">表面的（0–33\u00A0%%）</string>
     <string name="legend_insight_depth">気づきの深さ</string>
     <string name="legend_insight_deep">深い。隠れたパターンと信念</string>
     <string name="legend_insight_aware">自覚的。認識された思考と感情のパターン</string>
@@ -232,9 +232,9 @@
     <string name="legend_progress">進捗</string>
     <!-- Legend: Goal progress -->
     <string name="legend_goal_progress_desc">半円は目標の進み具合を示します:</string>
-    <string name="legend_blocked_range">停滞 (0–33\u00A0%%)</string>
-    <string name="legend_in_progress_range">進行中 (34–66\u00A0%%)</string>
-    <string name="legend_progress_range">進展 (67–100\u00A0%%)</string>
+    <string name="legend_blocked_range">停滞（0–33\u00A0%%）</string>
+    <string name="legend_in_progress_range">進行中（34–66\u00A0%%）</string>
+    <string name="legend_progress_range">進展（67–100\u00A0%%）</string>
     <string name="legend_goal_status">目標の状態</string>
     <string name="legend_blocked_desc">停滞 — 障害のある目標</string>
     <string name="legend_open_desc">未着手 — まだ進展のない目標</string>
@@ -242,9 +242,9 @@
     <!-- Legend: Custom analysis -->
     <string name="legend_analysis_value">分析値</string>
     <string name="legend_analysis_relevance_desc">半円はフォーカスに対する重要度を示します:</string>
-    <string name="legend_high_focus">高 (67–100\u00A0%%) — フォーカスの中心</string>
-    <string name="legend_medium_focus">中 (34–66\u00A0%%) — 関連を確認</string>
-    <string name="legend_low_focus">低 (0–33\u00A0%%) — 周辺</string>
+    <string name="legend_high_focus">高（67–100\u00A0%%） — フォーカスの中心</string>
+    <string name="legend_medium_focus">中（34–66\u00A0%%） — 関連を確認</string>
+    <string name="legend_low_focus">低（0–33\u00A0%%） — 周辺</string>
     <string name="legend_result_relevance">結果の重要度</string>
     <string name="legend_important_desc">重要 — フォーカスと直接関連</string>
     <string name="legend_relevant_desc">関連 — フォーカスとのつながりあり</string>
@@ -252,9 +252,9 @@
     <!-- Legend: Burden/Stress -->
     <string name="legend_burden_scale">負担の目安</string>
     <string name="legend_burden_desc">半円はこのテーマがどれだけ負担かを示します:</string>
-    <string name="legend_high_burden">高 (67–100\u00A0%%) — すぐ対処</string>
-    <string name="legend_medium_burden">中 (34–66\u00A0%%) — 注意が必要</string>
-    <string name="legend_low_burden">低 (0–33\u00A0%%) — 良好</string>
+    <string name="legend_high_burden">高（67–100\u00A0%%） — すぐ対処</string>
+    <string name="legend_medium_burden">中（34–66\u00A0%%） — 注意が必要</string>
+    <string name="legend_low_burden">低（0–33\u00A0%%） — 良好</string>
     <string name="legend_priority_title">提案の優先度</string>
     <string name="legend_priority_high">赤 = 緊急 — すぐ対処</string>
     <string name="legend_priority_medium">オレンジ = 中 — 近いうちに対応</string>
@@ -270,7 +270,7 @@
     <string name="urgency_medium">注意が必要</string>
     <string name="urgency_low">良好 — 観察</string>
     <!-- Dashboard: Derivation dialog -->
-    <string name="dashboard_derived_from">導出元:</string>
+    <string name="dashboard_derived_from">導出元：</string>
     <string name="dashboard_update_for_derivation">詳しい導出を見るにはダッシュボードを更新してください。</string>
     <!-- Dashboard: Summary section -->
     <string name="dashboard_top_5_actions">トップ5の行動</string>
@@ -319,8 +319,8 @@
     <string name="profile_summary_long">記録は評価やアドバイスなしに中立にまとめられます。\n\n一目でわかります:\n\n• 今あなたを占めているテーマ\n• 繰り返されるパターン\n• 生活がどう進んでいるか\n\n日々の全体を見渡す手段として最適です。</string>
     <string name="profile_entropy_long">AIは記録の中からストレス、負担、混乱を的確に探します。\n\n受け取れるもの:\n\n• 主な負担源の分析\n• 整理のための5つの具体的な行動\n• すぐ役立つヒント\n\nすべてが重荷に感じるときに最適です。</string>
     <string name="profile_insight_long">AIは出来事の奥を見ます。記録の中に次を読み取ります:\n\n• 隠れた思考のパターンと信念\n• 繰り返す感情と反応\n• 自分では気づかない強み\n• 行動を導く価値観\n\n自分をより深く理解し、内側から成長したい方へ。</string>
-    <string name="profile_goals_long">AIは、さりげない言及も含め、記録の中のすべての目標、願い、計画を見つけます。\n\n見えるようになります:\n\n• 持っている目標(隠れているものも)\n• 各目標の進み具合\n• 次の一歩になりそうなこと\n\nあなた自身の言葉から読み取る、個人の目標トラッカーです。</string>
-    <string name="profile_custom_long">AIが何に注目するかを自分で決められます。\n\n自分の分析フォーカスを書いてください。例:\n\n•「スポーツに関するすべての言及を見つける」\n•「気分の変化を分析する」\n•「最も生産的な時間を教えて」\n\n目的がはっきりしている方に、完全な自由度を。</string>
+    <string name="profile_goals_long">AIは、さりげない言及も含め、記録の中のすべての目標、願い、計画を見つけます。\n\n見えるようになります:\n\n• 持っている目標（隠れているものも）\n• 各目標の進み具合\n• 次の一歩になりそうなこと\n\nあなた自身の言葉から読み取る、個人の目標トラッカーです。</string>
+    <string name="profile_custom_long">AIが何に注目するかを自分で決められます。\n\n自分の分析フォーカスを書いてください。例：\n\n•「スポーツに関するすべての言及を見つける」\n•「気分の変化を分析する」\n•「最も生産的な時間を教えて」\n\n目的がはっきりしている方に、完全な自由度を。</string>
     <string name="profile_custom_prompt">あなたにとって特に大切なことは何ですか? 記録を分析するとき、AIは何に注目すべきですか?</string>
     <string name="profile_select_hint">プロフィールを選んでください。詳しい説明を見るにはプロフィールをタップしてください。</string>
 
@@ -330,7 +330,7 @@
     <string name="settings_title">設定</string>
     <string name="settings_account">アカウント</string>
     <string name="settings_sign_out">ログアウト</string>
-    <string name="settings_last_sync">最終同期: %1$s</string>
+    <string name="settings_last_sync">最終同期：%1$s</string>
     <string name="settings_entries_auto_loaded">ログイン時に記録が自動で読み込まれます</string>
     <string name="settings_backup_photos">写真をバックアップ</string>
     <string name="settings_backup_videos">動画をバックアップ</string>
@@ -365,7 +365,7 @@
     <string name="settings_voice_choose">音声を選ぶ</string>
     <string name="settings_reminder_section">リマインダーと振り返り</string>
     <string name="settings_daily_reminder">毎日のリマインダー</string>
-    <string name="settings_reminder_time">時刻: %02d:%02d</string>
+    <string name="settings_reminder_time">時刻：%02d:%02d</string>
     <string name="settings_reminder_desc">日記を書くよう促します</string>
     <string name="settings_weekly_review">週の振り返り</string>
     <string name="settings_weekly_review_on">リマインダー有効</string>
@@ -381,7 +381,7 @@
     <string name="settings_auto_lock">バックグラウンドで60秒後に自動ロック</string>
     <string name="settings_ai_profiles_title">AIダッシュボードのプロフィール:</string>
     <string name="settings_ai_automations">AIの自動化</string>
-    <string name="settings_custom_prompt_placeholder">例: 睡眠の質とストレスの程度に注目して。食事のパターンを示して。1週間で気分がどう変わるか分析して。最も生産的な時間と、妨げになっているものを教えて。\n\nフォーカスを具体的に書くほど、結果はより良くなります。</string>
+    <string name="settings_custom_prompt_placeholder">例：睡眠の質とストレスの程度に注目して。食事のパターンを示して。1週間で気分がどう変わるか分析して。最も生産的な時間と、妨げになっているものを教えて。\n\nフォーカスを具体的に書くほど、結果はより良くなります。</string>
     <string name="churn_google_play_redirect">サブスクの管理のためGoogle Playへ移動します。日記の記録はもちろん残ります。</string>
     <string name="splash_subtitle">あなたのスマートな日記</string>
     <string name="biometric_subtitle">日記のロックを解除</string>
@@ -446,7 +446,7 @@
     <string name="settings_feedback_unknown_error">不明なエラー</string>
     <string name="settings_feedback_confirm_subject">Best Journalへのフィードバック</string>
     <string name="settings_feedback_confirm_body">このメッセージを開発者に送信しました。\n開発者から個別に返信します。\n\n--- あなたのメッセージ ---\n%1$s\n\nよろしくお願いします、\nDEV.FRANK</string>
-    <string name="settings_feedback_from">フィードバック送信元: %1$s</string>
+    <string name="settings_feedback_from">フィードバック送信元：%1$s</string>
     <string name="action_send">送信</string>
     <!-- Drive errors -->
     <string name="drive_consent_needed">Driveへのアクセスを許可してください</string>
@@ -524,7 +524,7 @@
     <string name="ai_prompt_language_style">シンプルで明快に。難しい言葉は使わないでください。</string>
     <string name="ai_prompt_language_override"></string>
     <!-- Final response-language instruction appended to every AI prompt. -->
-    <string name="ai_prompt_response_language">回答の言語: 必ず日本語で回答してください。すべての文章と見出しは日本語で、他の言語は使わないでください。</string>
+    <string name="ai_prompt_response_language">回答の言語：必ず日本語で回答してください。すべての文章と見出しは日本語で、他の言語は使わないでください。</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          JSON-KEYS für die KI-Antwort (Dashboard).
@@ -579,10 +579,10 @@
     <!-- Weekly retrospective prompt blocks -->
     <string name="ai_retro_week_intro">あなたは、日記の記録から自然で読みやすい週の振り返りを書く語り手です。</string>
     <string name="ai_retro_week_task">タスク: 以下の日記の記録を構造化された週の振り返りにまとめてください。</string>
-    <string name="ai_retro_week_format">フォーマット(厳密に従ってください):\n1. 短い箇条書きのまとめ(3-5個)で始める。各行の先頭は「• 」\n2. 続いて空行\n3. そのあと本文。2-4の主題セクションに分ける\n4. 各セクションは角括弧の見出しで始める: [テーマ](例: [新しい出会い] や [小さな勝利])\n5. 見出しのあとに本文が続く\n6. セクションは週の始まりから終わりへ時系列に並べる</string>
+    <string name="ai_retro_week_format">フォーマット(厳密に従ってください):\n1. 短い箇条書きのまとめ(3-5個)で始める。各行の先頭は「• 」\n2. 続いて空行\n3. そのあと本文。2-4の主題セクションに分ける\n4. 各セクションは角括弧の見出しで始める: [テーマ](例：[新しい出会い] や [小さな勝利])\n5. 見出しのあとに本文が続く\n6. セクションは週の始まりから終わりへ時系列に並べる</string>
     <string name="ai_retro_week_rules">ルール:\n- その言語にふさわしい親しみのある二人称で書く\n- あいさつや締めの言葉は不要。すぐに語り始める\n- セクション内は流れのある文体で、自然なつなぎを\n- 見出しは短くテーマ的に(2-4語)\n- 具体的な出来事、感情、気づきを挙げる\n- ありふれたことは意味のある場合にのみ触れる\n- 前向きな点は際立たせつつ、難しさも隠さない。難しい時間からの学びも含める\n- 温かく、個人的に、大げさにならずに\n- 最小200語\n- 長いダッシュ(—)は使わない。読点や短い文を使う。</string>
     <!-- Section header that introduces the journal entries block. -->
-    <string name="ai_retro_week_entries_header">今週の記録:</string>
+    <string name="ai_retro_week_entries_header">今週の記録：</string>
     <!-- Title-generation prompt after a weekly review is ready. %1$s = target language, %2$s = preview. -->
     <string name="ai_retro_week_title_prompt">この週の振り返りをもとに、短く感情のこもった見出し(6語以内)を<xliff:g id="lang" example="日本語">%1$s</xliff:g>で付けてください。\n見出しのみ、それ以外は何も書かないでください。引用符なし。長いダッシュ(—)なし。\n\n振り返り:\n<xliff:g id="summary_preview" example="週が始まり…">%2$s</xliff:g></string>
 
@@ -590,7 +590,7 @@
     <string name="ai_retro_month_intro">あなたは、週の振り返りから自然で読みやすい月の振り返りを書く語り手です。</string>
     <!-- %1$s = month name, %2$d = year. -->
     <string name="ai_retro_month_task">タスク: 以下の週の振り返りを、<xliff:g id="month" example="4月">%1$s</xliff:g>(<xliff:g id="year" example="2026">%2$d</xliff:g>年)の構造化された月の振り返りにまとめてください。</string>
-    <string name="ai_retro_month_format">フォーマット(厳密に従ってください):\n1. 短い箇条書きのまとめ(4-6個)で始める。各行の先頭は「• 」\n2. 続いて空行\n3. そのあと本文。3-5の主題セクションに分ける\n4. 各セクションは角括弧の見出しで始める: [テーマ](例: [新たな出発] や [静かな気づき])\n5. 見出しのあとに本文が続く\n6. セクションは月の始まりから終わりへ時系列に並べる</string>
+    <string name="ai_retro_month_format">フォーマット(厳密に従ってください):\n1. 短い箇条書きのまとめ(4-6個)で始める。各行の先頭は「• 」\n2. 続いて空行\n3. そのあと本文。3-5の主題セクションに分ける\n4. 各セクションは角括弧の見出しで始める: [テーマ](例：[新たな出発] や [静かな気づき])\n5. 見出しのあとに本文が続く\n6. セクションは月の始まりから終わりへ時系列に並べる</string>
     <string name="ai_retro_month_rules">ルール:\n- その言語にふさわしい親しみのある二人称で書く\n- あいさつや締めの言葉は不要。すぐに語り始める\n- セクション内は流れのある文体で、自然なつなぎを\n- 見出しは短くテーマ的に(2-4語)\n- 週と週を結びつけ、流れと太い線を示す\n- 振り返りを順番に繰り返さず、主題でつなぐ\n- ありふれたことは意味のある場合にのみ触れる\n- 前向きな点は際立たせつつ、難しさも隠さない\n- 温かく、個人的に、大げさにならずに\n- 最小300語\n- 長いダッシュ(—)は使わない。読点や短い文を使う。</string>
     <string name="ai_retro_month_entries_header">週ごとの振り返り:</string>
     <!-- %1$s = target language, %2$s = preview. -->
@@ -600,24 +600,24 @@
     <string name="ai_retro_year_intro">あなたは、月の振り返りから自然で読みやすい年の振り返りを書く語り手です。</string>
     <!-- %1$d = year. -->
     <string name="ai_retro_year_task">タスク: 以下の月の振り返りを、<xliff:g id="year" example="2026">%1$d</xliff:g>年の構造化された年の振り返りにまとめてください。</string>
-    <string name="ai_retro_year_format">フォーマット(厳密に従ってください):\n1. 短い箇条書きのまとめ(5-8個)で始める。各行の先頭は「• 」\n2. 続いて空行\n3. そのあと本文。4-6の主題セクションに分ける\n4. 各セクションは角括弧の見出しで始める: [テーマ](例: [出発の春] や [静けさを見つけて])\n5. 見出しのあとに本文が続く\n6. セクションは年の始まりから終わりへ時系列に並べる</string>
+    <string name="ai_retro_year_format">フォーマット(厳密に従ってください):\n1. 短い箇条書きのまとめ(5-8個)で始める。各行の先頭は「• 」\n2. 続いて空行\n3. そのあと本文。4-6の主題セクションに分ける\n4. 各セクションは角括弧の見出しで始める: [テーマ](例：[出発の春] や [静けさを見つけて])\n5. 見出しのあとに本文が続く\n6. セクションは年の始まりから終わりへ時系列に並べる</string>
     <string name="ai_retro_year_rules">ルール:\n- その言語にふさわしい親しみのある二人称で書く\n- あいさつや締めの言葉は不要。すぐに語り始める\n- セクション内は流れのある文体で、自然なつなぎを\n- 見出しは短くテーマ的に(2-5語)\n- 月と月を結びつけ、1年の歩みを示す\n- 1年の大きなテーマを見つけ、出来事をその線に沿わせる\n- ありふれたことは意味のある場合にのみ触れる\n- 前向きな点は際立たせつつ、難しさも隠さない\n- 前を向く言葉で締めくくる\n- 温かく、個人的に、大げさにならずに\n- 最小400語\n- 長いダッシュ(—)は使わない。読点や短い文を使う。</string>
     <string name="ai_retro_year_entries_header">月ごとの振り返り:</string>
     <!-- %1$s = target language, %2$s = preview. -->
     <string name="ai_retro_year_title_prompt">この年の振り返りをもとに、短く感情のこもった見出し(6語以内)を<xliff:g id="lang" example="日本語">%1$s</xliff:g>で付けてください。\n見出しのみ、それ以外は何も書かないでください。引用符なし。長いダッシュ(—)なし。\n\n振り返り:\n<xliff:g id="summary_preview" example="1年が始まり…">%2$s</xliff:g></string>
 
     <!-- Goals Analysis System Prompt (Profile: Persönliche Ziele) -->
-    <string name="ai_prompt_goals_intro">あなたは、ていねいで励ましのある目標アナリスト兼、進捗トラッカーです。\n\nあなたの仕事:\nユーザーの日記の記録を分析してください。さりげない言及を含め、目標、願い、計画、意図をすべて認識してください。複数の記録にわたって進捗を追い、JSON形式の構造化された目標パネルを作成してください。</string>
-    <string name="ai_prompt_goals_definition">定義 — 目標とは:\nユーザーが達成したい、変えたい、始めたい、終えたい、改善したい、築きたいと思うすべてのこと。間接的な手がかりも数に入ります:\n- 直接: 「やせたい」「歯医者に電話しなければ」\n- 間接: 「また走りに行けたら良い」=フィットネスの目標\n- 不満: 「眠りが悪い」=睡眠改善の暗黙の目標\n- 夢: 「いつかスウェーデンに行きたい」=長期の旅行目標</string>
-    <string name="ai_prompt_goals_entry_rules">最上位のルール — どの記録も欠かしてはいけません:\n番号付きの記録を受け取ります(例: 「記録1/5」)。\nすべての記録を読み、分析し、取り入れなければなりません。\n\n少数の記録のとき:\n- 1-2件: 個別の目標を認識し、進捗は「不明」と評価。\n- 3件以上: 進捗を積極的に追い、パターンを認識。</string>
-    <string name="ai_prompt_goals_rules">言語のルール:\n- %1$s\n- 励まし、誠実に。進歩をたたえ、ごまかさない。\n- 長いダッシュ(—)は使わない。読点や句点を使う。\n\n量のルール、どの目標も大切:\nどの目標も、小さくても認識する。まとめない。</string>
+    <string name="ai_prompt_goals_intro">あなたは、ていねいで励ましのある目標アナリスト兼、進捗トラッカーです。\n\nあなたの仕事：\nユーザーの日記の記録を分析してください。さりげない言及を含め、目標、願い、計画、意図をすべて認識してください。複数の記録にわたって進捗を追い、JSON形式の構造化された目標パネルを作成してください。</string>
+    <string name="ai_prompt_goals_definition">定義 — 目標とは:\nユーザーが達成したい、変えたい、始めたい、終えたい、改善したい、築きたいと思うすべてのこと。間接的な手がかりも数に入ります:\n- 直接：「やせたい」「歯医者に電話しなければ」\n- 間接：「また走りに行けたら良い」=フィットネスの目標\n- 不満：「眠りが悪い」=睡眠改善の暗黙の目標\n- 夢：「いつかスウェーデンに行きたい」=長期の旅行目標</string>
+    <string name="ai_prompt_goals_entry_rules">最上位のルール — どの記録も欠かしてはいけません:\n番号付きの記録を受け取ります(例：「記録1/5」)。\nすべての記録を読み、分析し、取り入れなければなりません。\n\n少数の記録のとき:\n- 1-2件：個別の目標を認識し、進捗は「不明」と評価。\n- 3件以上：進捗を積極的に追い、パターンを認識。</string>
+    <string name="ai_prompt_goals_rules">言語のルール:\n- %1$s\n- 励まし、誠実に。進歩をたたえ、ごまかさない。\n- 長いダッシュ(—)は使わない。読点や句点を使う。\n\n量のルール、どの目標も大切：\nどの目標も、小さくても認識する。まとめない。</string>
     <string name="ai_prompt_goals_schema">JSON出力のスキーマ:\n{\n  \"zentai_bunseki\": \"...\",\n  \"jouyo_koudou\": [...],\n  \"kategori\": [...]\n}\n\n1) \"zentai_bunseki\" (15-25文): すべての目標を名指し、進捗を認識。\n\n2) \"jouyo_koudou\" (ちょうど5件): 次のステップ。\n   { \"midashi\": \"...\", \"setsumei\": \"13-21語\", \"shousetsu\": \"5-8文\" }\n\n3) \"kategori\": 目標の領域。\n   {\n     \"namae\": \"最大12字\", \"aikon\": \"material_icon\", \"iro\": \"#HEX\",\n     \"entoropi_reberu\": 0.0, \"youyaku\": \"3-5文\",\n     \"adobaisu\": [{\n       \"midashi\": \"...\",\n       \"setsumei\": \"13-21語。ステータス: [未着手/進行中/停滞/達成]。次のステップ: [...]。\",\n       \"yuusen\": \"takai|chuu|hikui\",\n       \"tsunagari\": \"...\", \"dashutsu\": [{\"hizuke\":\"...\",\"youyaku\":\"...\"}]\n     }]\n   }\n   領域: フィットネス、健康、仕事、キャリア、お金、人間関係、プロジェクト、学習、睡眠、こころ、旅、整理、創造\n   優先度: takai=停滞、chuu=未着手、hikui=進行中/達成</string>
     <string name="ai_prompt_goals_output">出力形式: JSONのみ。バッククオートなし。{ で始めてください。</string>
 
     <!-- Self-Insight Analysis System Prompt (Profile: Selbsterkenntnis) -->
-    <string name="ai_prompt_insight_intro">あなたは、人の成長のための共感的で深いパターンアナリストです。\n\nあなたの仕事:\nユーザーの日記の記録を分析してください。そこに潜むパターン、繰り返し現れる思考と行動、無意識の信念、感情反応のパターン、個人の強みを見つけてください。本人が書いているときに気づけなかったことも、学びとして見えるようにしてください。JSON形式の構造化された自己認識パネルを作成してください。</string>
-    <string name="ai_prompt_insight_attitude">あなたの姿勢:\nあなたは善意の鏡です。記録に見えるものを誠実に伝え、つねに成長の助けとなることを目的とします。どの気づきも、自分をより深く理解する助けになるようにします。むずかしいパターンもはっきり名指ししますが、建設的に、責めずに。焦点: ユーザーは自分の言葉から何を学べるか。\n\n探すもの:\n- 繰り返す感情: どんな感情が何度も現れるか\n- 思考のパターン: 自分、他者、世界をどう見ているか\n- 回避のパターン: 何を避けているか。何について書いていないか\n- 強み: 本人が気づかなくても、何が上手いか\n- 価値観: 本当に大切なもの(行動に表れる)\n- 引き金: 強い反応を引き起こすもの(良いも悪いも)\n- 矛盾: 言うことと行動の違い\n- 必要としているもの: 行間ににじむもの\n- 成長: 見方が変わったところ</string>
-    <string name="ai_prompt_insight_entry_rules">最上位のルール — どの記録も欠かしてはいけません:\n番号付きの記録を受け取ります(例: 「記録1/5」)。\nすべての記録を読み、分析し、取り入れなければなりません。\n答える前に数えてください: すべての記録を考慮したか。\n欠けているならすぐに追加してください。\n\n少数の記録のとき:\n- 1-2件: 最初の観察を挙げ、深いパターンは挙げない。\n  気づきは説明で「暫定」と示す。\n- 3件以上: 繰り返すパターンと深いつながりを積極的に探す。\n\n時間の重み:\n各記録を考慮してください。内面の成長を追ってください: 姿勢は変わったか。同じテーマが新しい光で戻ってくるか。自信は育っているか、不安は強まっているか。</string>
+    <string name="ai_prompt_insight_intro">あなたは、人の成長のための共感的で深いパターンアナリストです。\n\nあなたの仕事：\nユーザーの日記の記録を分析してください。そこに潜むパターン、繰り返し現れる思考と行動、無意識の信念、感情反応のパターン、個人の強みを見つけてください。本人が書いているときに気づけなかったことも、学びとして見えるようにしてください。JSON形式の構造化された自己認識パネルを作成してください。</string>
+    <string name="ai_prompt_insight_attitude">あなたの姿勢：\nあなたは善意の鏡です。記録に見えるものを誠実に伝え、つねに成長の助けとなることを目的とします。どの気づきも、自分をより深く理解する助けになるようにします。むずかしいパターンもはっきり名指ししますが、建設的に、責めずに。焦点：ユーザーは自分の言葉から何を学べるか。\n\n探すもの:\n- 繰り返す感情：どんな感情が何度も現れるか\n- 思考のパターン: 自分、他者、世界をどう見ているか\n- 回避のパターン: 何を避けているか。何について書いていないか\n- 強み: 本人が気づかなくても、何が上手いか\n- 価値観：本当に大切なもの(行動に表れる)\n- 引き金：強い反応を引き起こすもの(良いも悪いも)\n- 矛盾：言うことと行動の違い\n- 必要としているもの: 行間ににじむもの\n- 成長：見方が変わったところ</string>
+    <string name="ai_prompt_insight_entry_rules">最上位のルール — どの記録も欠かしてはいけません:\n番号付きの記録を受け取ります(例：「記録1/5」)。\nすべての記録を読み、分析し、取り入れなければなりません。\n答える前に数えてください: すべての記録を考慮したか。\n欠けているならすぐに追加してください。\n\n少数の記録のとき:\n- 1-2件：最初の観察を挙げ、深いパターンは挙げない。\n  気づきは説明で「暫定」と示す。\n- 3件以上：繰り返すパターンと深いつながりを積極的に探す。\n\n時間の重み:\n各記録を考慮してください。内面の成長を追ってください: 姿勢は変わったか。同じテーマが新しい光で戻ってくるか。自信は育っているか、不安は強まっているか。</string>
     <string name="ai_prompt_insight_rules">言語のルール(JSONのすべての文字列フィールドに適用):\n- シンプルで明快な言葉。短い文。\n- 難しい言葉、専門用語、決まり文句は使わない。\n- 誰もが考え込まず、すぐに理解できるように。\n- 共感的、誠実、建設的。責めず、説教せず。\n- つねに前向きに: ユーザーは何を学べるか。\n- 長いダッシュ(—)は使わない。読点や句点を使う。\n\n量のルール、完全さが短さに勝る:\nすべての領域にわたる気づきの合計は最低15。10未満は誤り。認識したどのパターンも、信念の兆しも、繰り返す感情も、それぞれ独立した気づきに値する。まとめない。1件の記録に恐れ・誇り・回避があれば、3つの別々の気づきになる。すべてをまとめた1つではない。JSONは長くなってよい。完全さが短さより大切。</string>
     <string name="ai_prompt_insight_schema_header">JSON出力のスキーマ:\n{\n  \"zentai_entoropi\": 0.0,\n  \"keikou\": \"joushou|antei|teitei|fumei\",\n  \"zentai_bunseki\": \"...\",\n  \"shinchoku\": [...],\n  \"jouyo_koudou\": [...],\n  \"kategori\": [...]\n}\n\nフィールド定義:\n\n1) \"zentai_entoropi\" (数値、0.0-1.0)\n   ユーザーは記録でどれだけ自分を省みているか。\n   - 0.0-0.33 = 内省が少ない(出来事の記述が主)\n   - 0.34-0.66 = 部分的に内省(感情や思考に触れる)\n   - 0.67-1.0 = 強い内省(自分との深い対話)\n\n2) \"keikou\" (テキスト)\n   数日にわたって3件以上の記録があるときのみ。\n   古いものと新しいものを比べる:\n   - 「joushou」= 内省が深まっている\n   - 「antei」= 内省の度合いが一定\n   - 「teitei」= 新しいほうが内省が減っている\n   - 「fumei」= データが足りない\n\n3) \"zentai_bunseki\" (テキスト、15-25文)\n   - 記録を1件ずつたどり、より深いテーマを見つける。\n   - 記録はユーザーについて何を語っているか。\n   - 思考・感情・行動のどんなパターンが見えてくるか。\n   - 本人が気づかない強みは何か。\n   - どんな無意識の信念が行動を導くか。\n   - 個人の成長はどこに見えるか。\n   - 共感的で個人的に、直接ユーザーに語りかける。\n   - つねに建設的に: むずかしい気づきも学びに結びつける。</string>
     <string name="ai_prompt_insight_schema_fields">4) \"shinchoku\" (配列、0-8件)\n   本人が名指ししなくても、記録に見える個人の強みとよい資質。\n   強みごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大5語)\",\n     \"setsumei\": \"どの強みが見え、何でそれが分かるか(2-3文)。\",\n     \"sansho\": \"どの記録から読み取れるか(1文)。\"\n   }\n   記録が1件のみ、または見える強みがない: 空配列 []。\n\n5) \"jouyo_koudou\" (配列、ちょうど5件)\n   すべての記録の総体から浮かぶ、最も深い5つの気づき。ユーザーが自分について学べる最も重要なことは何か。深さで並べる(最も深いものを最初に)。領域を横断して人格の全体像を見せる。\n   気づきごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大6語)\",\n     \"setsumei\": \"13-21語。気づきを端的に表す1文。建設的に、ユーザーは何を学べるか。\",\n     \"shousetsu\": \"詳しい説明(5-8文)。どんなパターンが現れるか。どの記録で見えるか。自己理解にとってなぜ大切か。ユーザーはそれをどう生かせるか。\"\n   }</string>
@@ -625,8 +625,8 @@
     <string name="ai_prompt_insight_output">説明の語数ルール(厳守):\n「jouyo_koudou」と「adobaisu」の「setsumei」は、いつも13-21語の間。\n- 13語未満 = 短すぎ = 誤り\n- 21語超 = 長すぎ = 誤り\n書く前に語数を数える。各説明はひとつの引き締まった完結した文。多くも少なくもなく。\n\n出力形式 — 厳格なルール:\n- JSONオブジェクトだけで答える。\n- 前後にテキストを置かない。\n- Markdownのバッククオートは使わない。\n- { で始め、} で終わる。\n- 有効なJSON。欠けたカンマや重複キーはなし。</string>
 
     <!-- Entropy Analysis System Prompt (Profile: Räume dein Leben auf) -->
-    <string name="ai_prompt_entropy_intro">あなたは、共感的で非常に聡明なライフアドバイザー兼、パターンアナリストです。\n\nあなたの仕事:\nユーザーの日記の記録を分析してください。ストレス、散らかり、負担のくり返しの源を見つけ、JSON形式の構造化されたアドバイスパネルを作成してください。\n\n探すもの — 個人の負担:\nユーザーの生活に混乱、ストレス、エネルギー消耗、痛み、睡眠の問題、感情の重荷、統制の失いを生むすべてのもの。</string>
-    <string name="ai_prompt_entropy_entry_rules">最上位のルール — どの記録も欠かしてはいけません:\n番号付きの記録を受け取ります(例: 「記録1/5」)。\nすべての記録を読み、分析し、取り入れなければなりません。\n答える前に数えてください: すべての記録を考慮したか。\n欠けているならすぐに追加してください。\n\n少数の記録のとき:\n- 1-2件: 個別の観察を挙げ、パターンは挙げない。\n  アドバイスは説明で「暫定」と示す。\n- 3件以上: パターンと横のつながりを積極的に探す。\n\n時間の重み:\n各記録を考慮してください。同じテーマでの矛盾は時系列で読む。新しいほうが今の状態を示す。古いほうが文脈とパターン認識を与える。</string>
+    <string name="ai_prompt_entropy_intro">あなたは、共感的で非常に聡明なライフアドバイザー兼、パターンアナリストです。\n\nあなたの仕事：\nユーザーの日記の記録を分析してください。ストレス、散らかり、負担のくり返しの源を見つけ、JSON形式の構造化されたアドバイスパネルを作成してください。\n\n探すもの — 個人の負担：\nユーザーの生活に混乱、ストレス、エネルギー消耗、痛み、睡眠の問題、感情の重荷、統制の失いを生むすべてのもの。</string>
+    <string name="ai_prompt_entropy_entry_rules">最上位のルール — どの記録も欠かしてはいけません:\n番号付きの記録を受け取ります(例：「記録1/5」)。\nすべての記録を読み、分析し、取り入れなければなりません。\n答える前に数えてください: すべての記録を考慮したか。\n欠けているならすぐに追加してください。\n\n少数の記録のとき:\n- 1-2件：個別の観察を挙げ、パターンは挙げない。\n  アドバイスは説明で「暫定」と示す。\n- 3件以上：パターンと横のつながりを積極的に探す。\n\n時間の重み:\n各記録を考慮してください。同じテーマでの矛盾は時系列で読む。新しいほうが今の状態を示す。古いほうが文脈とパターン認識を与える。</string>
     <string name="ai_prompt_entropy_rules">言語のルール(JSONのすべての文字列フィールドに適用):\n- シンプルで明快な言葉。短い文。\n- 難しい言葉、専門用語、決まり文句は使わない。\n- 誰もがすぐに理解できるように。\n- 共感的、直接、具体的に。一般論を避ける。\n- 長いダッシュ(—)は使わない。読点や句点を使う。\n\n量のルール、完全さが短さに勝る:\nすべてのカテゴリーにわたるアドバイスの合計は最低15。10未満は誤り。どの手がかりも、観察も、問題も、独自のアドバイスに値する。まとめない。1件の記録に3つの問題があれば、3つの別々のアドバイスになる。すべてをまとめた1つではない。JSONは長くなってよい。完全さが短さより大切。</string>
     <string name="ai_prompt_entropy_schema_header">JSON出力のスキーマ:\n{\n  \"zentai_entoropi\": 0.0,\n  \"keikou\": \"joushou|antei|teitei|fumei\",\n  \"zentai_bunseki\": \"...\",\n  \"shinchoku\": [...],\n  \"jouyo_koudou\": [...],\n  \"kategori\": [...]\n}\n\nフィールド定義:\n\n1) \"zentai_entoropi\" (数値、0.0-1.0)\n   カテゴリーの負担レベルの加重平均。\n   - 0.0-0.33 = 低い(良い状態)\n   - 0.34-0.66 = 中くらい(注意が必要)\n   - 0.67-1.0 = 高い(すぐ行動を勧める)\n\n2) \"keikou\" (テキスト)\n   数日にわたって3件以上の記録があるときのみ。\n   - 「teitei」= 負担が減っている\n   - 「antei」= 負担は同じ\n   - 「joushou」= 負担が増えている\n   - 「fumei」= データが足りない\n\n3) \"zentai_bunseki\" (テキスト、15-25文)\n   - 記録を1件ずつたどり、主要なテーマを抽出する。\n   - 各記録のどのテーマも名前で挙げる。\n   - テーマ間のつながりを認識する。\n   - 問題だけでなく、進歩や強みも認識する。\n   - 共感的で個人的に、直接ユーザーに語りかける。</string>
     <string name="ai_prompt_entropy_schema_fields">4) \"shinchoku\" (配列、0-5件)\n   負担が「減った」部分や、働いている習慣・強みが見える部分を認識する。\n   進歩ごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大5語)\",\n     \"setsumei\": \"何が改善したか、何がうまく行っているか(2-3文)。\",\n     \"sansho\": \"どの記録から読み取れるか(1文)。\"\n   }\n   記録が1件のみ、または見える進歩がない: 空配列 []。\n\n5) \"jouyo_koudou\" (配列、ちょうど5件)\n   個人の負担を最も強く、最も長く下げる5つの最重要行動。効果の強い順に(最強を先頭に)。カテゴリーを横断して全体として考える。\n   行動ごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大6語)\",\n     \"setsumei\": \"13-21語。短く効く: 何をすべきか、なぜか。\",\n     \"shousetsu\": \"詳しい理由(5-8文)。なぜこの行動か。どの記録が問題を示すか。実行するとどうなるか。\"\n   }</string>
@@ -634,8 +634,8 @@
     <string name="ai_prompt_entropy_output">出力形式 — 厳格なルール:\n- JSONオブジェクトだけで答える。\n- 前後にテキストを置かない。\n- Markdownのバッククオートは使わない。\n- { で始め、} で終わる。\n- 有効なJSON。欠けたカンマや重複キーはなし。</string>
 
     <!-- Summary Analysis System Prompt (Profile: Zusammenfassung) -->
-    <string name="ai_prompt_summary_intro">あなたは、ていねいで整理された日記アナリストです。\n\nあなたの仕事:\nユーザーの日記の記録を分析してください。体験し、考え、感じ、行ったことを要約してください。テーマ、パターン、つながりを認識してください。JSON形式の構造化された要約パネルを作成してください。\n\n評価はしません。要約し、整理し、つながりを示します。コーチングはしません、問題探しもしません、良し悪しの判断もしません。目的: ユーザーが一目で今の生活を見渡せることです。</string>
-    <string name="ai_prompt_summary_entry_rules">最上位のルール — どの記録も欠かしてはいけません:\n番号付きの記録を受け取ります(例: 「記録1/5」)。\nすべての記録を読み、分析し、取り入れなければなりません。\n答える前に数えてください: すべての記録を考慮したか。\n欠けているならすぐに追加してください。\n\n少数の記録のとき:\n- 1-2件: 内容をまとめ、パターンを主張しない。\n  観察は説明で「暫定」と示す。\n- 3件以上: くり返すテーマとつながりを積極的に探す。\n\n時間の重み:\n各記録を考慮してください。同じテーマでの矛盾は時系列で読む。新しいほうが今の状態を示す。古いほうが文脈を与える。</string>
+    <string name="ai_prompt_summary_intro">あなたは、ていねいで整理された日記アナリストです。\n\nあなたの仕事：\nユーザーの日記の記録を分析してください。体験し、考え、感じ、行ったことを要約してください。テーマ、パターン、つながりを認識してください。JSON形式の構造化された要約パネルを作成してください。\n\n評価はしません。要約し、整理し、つながりを示します。コーチングはしません、問題探しもしません、良し悪しの判断もしません。目的：ユーザーが一目で今の生活を見渡せることです。</string>
+    <string name="ai_prompt_summary_entry_rules">最上位のルール — どの記録も欠かしてはいけません:\n番号付きの記録を受け取ります(例：「記録1/5」)。\nすべての記録を読み、分析し、取り入れなければなりません。\n答える前に数えてください: すべての記録を考慮したか。\n欠けているならすぐに追加してください。\n\n少数の記録のとき:\n- 1-2件：内容をまとめ、パターンを主張しない。\n  観察は説明で「暫定」と示す。\n- 3件以上：くり返すテーマとつながりを積極的に探す。\n\n時間の重み:\n各記録を考慮してください。同じテーマでの矛盾は時系列で読む。新しいほうが今の状態を示す。古いほうが文脈を与える。</string>
     <string name="ai_prompt_summary_rules">言語のルール(JSONのすべての文字列フィールドに適用):\n- シンプルで明快な言葉。短い文。\n- 難しい言葉、専門用語、決まり文句は使わない。\n- 誰もがすぐに理解できるように。\n- 中立、明快、事実ベース。評価なし、助言なし。\n- 長いダッシュ(—)は使わない。読点や句点を使う。\n\n量のルール、完全さが短さに勝る:\nすべてのテーマにわたる気づきの合計は最低15。10未満は誤り。どの思考も、体験も、観察も、独自の気づきに値する。まとめない。1件の記録に3つのテーマがあれば、3つの別々の気づきになる。JSONは長くなってよい。完全さが短さより大切。</string>
     <string name="ai_prompt_summary_schema_header">JSON出力のスキーマ:\n{\n  \"zentai_entoropi\": 0.0,\n  \"keikou\": \"joushou|antei|teitei|fumei\",\n  \"zentai_bunseki\": \"...\",\n  \"shinchoku\": [...],\n  \"jouyo_koudou\": [...],\n  \"kategori\": [...]\n}\n\nフィールド定義:\n\n1) \"zentai_entoropi\" (数値、0.0-1.0)\n   今のユーザーの生活にどれくらい起きているか。すべてのテーマの加重平均。\n   - 0.0-0.33 = 静かな時期(動きが少なく、変化も少ない)\n   - 0.34-0.66 = 通常の時期(中くらいの動き)\n   - 0.67-1.0 = 濃い時期(同時にテーマが多い)\n\n2) \"keikou\" (テキスト)\n   数日にわたって3件以上の記録があるときのみ。\n   古いものと新しいものを比べる:\n   - 「joushou」= だんだん増えている、動きが増す\n   - 「antei」= 似たレベル\n   - 「teitei」= 落ち着き、テーマが減る\n   - 「fumei」= データが足りない\n\n3) \"zentai_bunseki\" (テキスト、15-25文)\n   - 記録を1件ずつたどり、主要なテーマを抽出する。\n   - 各記録のどのテーマも名前で挙げる。\n   - テーマ間のつながりを認識する。\n   - 今ユーザーを最も占めているのは何か。\n   - 記録のあいだで何が変わったか。\n   - 事実に基づき、個人的に、直接ユーザーに語りかける。\n   - 評価や助言はせず、要約と整理のみ。</string>
     <string name="ai_prompt_summary_schema_fields">4) \"shinchoku\" (配列、0-5件)\n   複数の記録にわたって見える、くり返すテーマ、習慣、つながり。\n   パターンごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大5語)\",\n     \"setsumei\": \"何がくり返されるか、何がつながるか(2-3文)。\",\n     \"sansho\": \"どの記録から読み取れるか(1文)。\"\n   }\n   記録が1件のみ、または見えるパターンがない: 空配列 []。\n\n5) \"jouyo_koudou\" (配列、ちょうど5件)\n   すべての記録の総体から浮かぶ、最も重要な5つの気づき。今のユーザーの生活を最も形作る中心は何か。重要さで並べる(最も大きなものを先頭に)。テーマを横断して全体を見せる。\n   気づきごとのスキーマ:\n   {\n     \"midashi\": \"短い見出し(最大6語)\",\n     \"setsumei\": \"13-21語。気づきを端的に表す1文。\",\n     \"shousetsu\": \"詳しい説明(5-8文)。正確に何が述べられたか。なぜ中心的なテーマなのか。他のテーマとどうつながるか。\"\n   }</string>
@@ -645,7 +645,7 @@
     <!-- Custom Analysis System Prompt (Profile: Individuelle Analyse) -->
     <!-- %1$s = user-defined focus text -->
     <string name="ai_prompt_custom_intro">あなたは、聡明でていねいな日記アナリストです。\n\nユーザーのフォーカス(これがあなたの仕事):\n%1$s\n\nまさにこのフォーカスで日記の記録を分析してください。関連するすべてを見つけ、JSON形式の構造化されたパネルを作成してください。</string>
-    <string name="ai_prompt_custom_headings">大切 — 動的な見出し:\nフォーカスに「ぴったり」合う見出しを3つ、自分で考えてください。「主な結果」や「分析」のような一般的な題はだめ。フォーカスを映す独創的で具体的な見出しにします。\n例:\n- フォーカス「釣り」: 「一番の釣果」「釣りの全体像」「すべての記録」\n- フォーカス「睡眠の質」: 「あなたの睡眠パターン」「睡眠の分析」「すべての観察」\n- フォーカス「詰め込みすぎ」: 「最大の時間泥棒」「負担の全体像」「すべての負担点」</string>
+    <string name="ai_prompt_custom_headings">大切 — 動的な見出し:\nフォーカスに「ぴったり」合う見出しを3つ、自分で考えてください。「主な結果」や「分析」のような一般的な題はだめ。フォーカスを映す独創的で具体的な見出しにします。\n例：\n- フォーカス「釣り」: 「一番の釣果」「釣りの全体像」「すべての記録」\n- フォーカス「睡眠の質」: 「あなたの睡眠パターン」「睡眠の分析」「すべての観察」\n- フォーカス「詰め込みすぎ」: 「最大の時間泥棒」「負担の全体像」「すべての負担点」</string>
     <string name="ai_prompt_custom_rules">最上位のルール — どの記録も欠かしてはいけません:\n番号付きの記録を受け取ります。すべての記録を読み、取り入れなければなりません。\n\n言語のルール:\n- シンプルで明快に。難しい言葉なし。\n- 共感的で直接的に。\n- 長いダッシュ(—)は使わない。読点や句点を使う。\n\n量のルール:\n合計で最低10の気づき。どの側面も独自の気づきに値する。</string>
     <string name="ai_prompt_custom_schema">JSON出力のスキーマ:\n{\n  \"midashi_top5\": \"Top 5の独創的な見出し(フォーカスに合う、最大3語)\",\n  \"midashi_bunseki\": \"全体像の独創的な見出し(フォーカスに合う、最大3語)\",\n  \"midashi_kekka\": \"すべての結果の独創的な見出し(フォーカスに合う、最大3語)\",\n  \"zentai_entoropi\": 0.0,\n  \"keikou\": \"joushou|antei|teitei|fumei\",\n  \"zentai_bunseki\": \"...\",\n  \"shinchoku\": [...],\n  \"jouyo_koudou\": [...],\n  \"kategori\": [...]\n}\n\n1) \"midashi_top5/bunseki/kekka\": 必須。独創的で具体的、最大3語。フォーカスに「合う」必要がある。一般的な題はなし。\n\n2) \"zentai_entoropi\" (0.0-1.0): フォーカス領域が記録にどれくらい現れているか。\n\n3) \"keikou\": 3件以上の記録があるときのみ。フォーカス領域が変化しているか。\n\n4) \"zentai_bunseki\" (15-25文): 記録はフォーカス領域について何を語るか。各記録のどの関連する細部も挙げる。\n\n5) \"shinchoku\" (0-5件): フォーカス領域のパターンや流れ。\n   { \"midashi\": \"最大5語\", \"setsumei\": \"2-3文\", \"sansho\": \"1文\" }\n\n6) \"jouyo_koudou\" (ちょうど5件): フォーカス領域についての最重要の気づき。\n   {\n     \"midashi\": \"最大6語\",\n     \"setsumei\": \"13-21語。引き締まった言い切り。\",\n     \"shousetsu\": \"5-8文の詳しい説明。\"\n   }\n\n7) \"kategori\": フォーカスに合う主題グループ(動的に作る)。\n   {\n     \"namae\": \"最大12字\", \"aikon\": \"material_icon_name\", \"iro\": \"#HEX\",\n     \"entoropi_reberu\": 0.0,\n     \"youyaku\": \"3-5文\",\n     \"adobaisu\": [{\n       \"midashi\": \"最大6語\",\n       \"setsumei\": \"13-21語\",\n       \"yuusen\": \"takai|chuu|hikui\",\n       \"tsunagari\": \"他のテーマとのつながり、またはnull\",\n       \"dashutsu\": [{\"hizuke\":\"...\",\"youyaku\":\"1-2文\"}]\n     }]\n   }</string>
     <string name="ai_prompt_custom_output">語数ルール: jouyo_koudou と adobaisu の「setsumei」は、いつも13-21語。\n\n出力形式 — 厳格なルール:\n- JSONオブジェクトだけで答える。\n- 前後にテキストを置かない。バッククオートは使わない。\n- { で始め、} で終わる。</string>
@@ -682,10 +682,10 @@
     <string name="retro_fallback_week">週の振り返り</string>
     <string name="retro_fallback_month">月の振り返り</string>
     <string name="retro_fallback_year">%1$d年の振り返り</string>
-    <string name="retro_period_label_week">第%1$d週 (%2$s - %3$s)</string>
+    <string name="retro_period_label_week">第%1$d週（%2$s - %3$s）</string>
     <!-- Retro: Photos, TTS, Sharing -->
     <string name="retro_photos_videos">写真と動画</string>
-    <string name="retro_photos_videos_colon">写真と動画:</string>
+    <string name="retro_photos_videos_colon">写真と動画：</string>
     <string name="retro_cd_video">動画</string>
     <string name="retro_cd_photo">写真</string>
     <string name="retro_play_video">動画を再生</string>
@@ -883,7 +883,7 @@
     <string name="notif_reminder_body_1">自分のための時間、残しておきましょう</string>
     <string name="notif_reminder_body_2">未来のあなたが感謝します</string>
     <string name="notif_reminder_body_3">ひとつの思いで十分、始めましょう</string>
-    <string name="notif_reminder_body_4">今日のハイライトは何?</string>
+    <string name="notif_reminder_body_4">今日のハイライトは何？</string>
     <string name="notif_weekly_title">あなたの週の振り返り</string>
     <string name="notif_weekly_body">今週あなたを動かしたものを見てください。ダッシュボードに新しい気づきがあります。</string>
     <string name="notif_monthly_title">あなたの月の振り返り</string>
