@@ -39,7 +39,10 @@ constructor(
                 val busy = cursor.getInt(0)
                 val logFrames = cursor.getInt(1)
                 val checkpointed = cursor.getInt(2)
-                Log.d("SyncDebug", "WAL checkpoint: busy=$busy, log=$logFrames, checkpointed=$checkpointed")
+                Log.d(
+                    "SyncDebug",
+                    "WAL checkpoint: busy=$busy, log=$logFrames, checkpointed=$checkpointed",
+                )
                 if (busy != 0) {
                     cursor.close()
                     Log.e("SyncDebug", "WAL checkpoint busy — aborting backup to prevent data loss")
@@ -186,9 +189,10 @@ constructor(
                     null,
                     android.database.sqlite.SQLiteDatabase.OPEN_READWRITE,
                 )
-            val countCursor = db.rawQuery("SELECT COUNT(*) FROM entry_photos", null)
-            val photoCount = if (countCursor.moveToFirst()) countCursor.getInt(0) else 0
-            countCursor.close()
+            val photoCount =
+                db.rawQuery("SELECT COUNT(*) FROM entry_photos", null).use { cursor ->
+                    if (cursor.moveToFirst()) cursor.getInt(0) else 0
+                }
             Log.d(
                 "SyncDebug",
                 "DB references $photoCount photos/videos — downloading after restart",
@@ -242,14 +246,14 @@ constructor(
                     null,
                     android.database.sqlite.SQLiteDatabase.OPEN_READONLY,
                 )
-            val cursor = db.rawQuery("SELECT filePath FROM entry_photos", null)
-            while (cursor.moveToNext()) {
-                val path = cursor.getString(0)
-                if (!File(path).exists()) {
-                    missingFiles.add(path)
+            db.rawQuery("SELECT filePath FROM entry_photos", null).use { cursor ->
+                while (cursor.moveToNext()) {
+                    val path = cursor.getString(0)
+                    if (!File(path).exists()) {
+                        missingFiles.add(path)
+                    }
                 }
             }
-            cursor.close()
             db.close()
         } catch (e: Exception) {
             Log.e("SyncDebug", "Missing file check failed: ${e.message}")
@@ -286,20 +290,23 @@ constructor(
                     null,
                     android.database.sqlite.SQLiteDatabase.OPEN_READWRITE,
                 )
-            val cursor = db.rawQuery("SELECT id, filePath FROM entry_photos", null)
             val orphanIds = mutableListOf<Long>()
-            while (cursor.moveToNext()) {
-                val id = cursor.getLong(0)
-                val path = cursor.getString(1)
-                if (!File(path).exists()) {
-                    orphanIds.add(id)
-                    Log.w("SyncDebug", "Orphaned photo (not on Drive): $path")
+            db.rawQuery("SELECT id, filePath FROM entry_photos", null).use { cursor ->
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(0)
+                    val path = cursor.getString(1)
+                    if (!File(path).exists()) {
+                        orphanIds.add(id)
+                        Log.w("SyncDebug", "Orphaned photo (not on Drive): $path")
+                    }
                 }
             }
-            cursor.close()
             if (orphanIds.isNotEmpty()) {
-                val idList = orphanIds.joinToString(",")
-                db.execSQL("DELETE FROM entry_photos WHERE id IN ($idList)")
+                val placeholders = orphanIds.joinToString(",") { "?" }
+                db.execSQL(
+                    "DELETE FROM entry_photos WHERE id IN ($placeholders)",
+                    orphanIds.map { it as Any }.toTypedArray(),
+                )
                 Log.d("SyncDebug", "Removed ${orphanIds.size} orphaned photo entries from DB")
             }
             db.close()
@@ -307,13 +314,14 @@ constructor(
             Log.e("SyncDebug", "Orphan cleanup failed: ${e.message}", e)
         }
 
-        // Trigger Room's invalidation tracker so the UI refreshes with the new photos
+        // Trigger Room's invalidation tracker so the UI refreshes with the new photos.
+        // Raw SQL via openHelper would bypass the tracker — we must go through a DAO.
         if (restoredCount > 0) {
             try {
-                database.openHelper.writableDatabase.execSQL(
-                    "UPDATE entry_photos SET filePath = filePath WHERE 1=1"
-                )
+                database.entryPhotoDao().notifyPhotosChanged()
                 Log.d("SyncDebug", "Triggered UI refresh for downloaded photos")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("SyncDebug", "UI refresh trigger failed: ${e.message}")
             }
@@ -340,56 +348,83 @@ constructor(
         }
         Log.d("SyncDebug", "Auto-merge: Drive backup is newer — checking for new entries")
         val tempFile = File(context.cacheDir, "drive_merge_temp.db")
+        var remoteDb: android.database.sqlite.SQLiteDatabase? = null
         try {
             val result = driveRestoreManager.restore(tempFile)
-            if (result.isFailure) { tempFile.delete(); return 0 }
-            val remoteDb = android.database.sqlite.SQLiteDatabase.openDatabase(
-                tempFile.path, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
-            )
+            if (result.isFailure) {
+                return 0
+            }
+            remoteDb =
+                android.database.sqlite.SQLiteDatabase.openDatabase(
+                    tempFile.path,
+                    null,
+                    android.database.sqlite.SQLiteDatabase.OPEN_READONLY,
+                )
             val localTimestamps = mutableSetOf<Long>()
             val localDb = database.openHelper.readableDatabase
-            val tsCursor = localDb.query("SELECT timestamp FROM journal_entries")
-            while (tsCursor.moveToNext()) { localTimestamps.add(tsCursor.getLong(0)) }
-            tsCursor.close()
-            val remoteCursor = remoteDb.rawQuery(
-                "SELECT timestamp, rawText, improvedText, isImproved, displayText, " +
-                    "audioDurationSeconds, moodTag, entropyScore, adviceCategoryTags, " +
-                    "summary, title, isSynced FROM journal_entries",
-                null,
-            )
-            val writableDb = database.openHelper.writableDatabase
-            var imported = 0
-            while (remoteCursor.moveToNext()) {
-                val ts = remoteCursor.getLong(0)
-                if (ts !in localTimestamps) {
-                    val values = android.content.ContentValues().apply {
-                        put("timestamp", ts)
-                        put("rawText", remoteCursor.getString(1))
-                        if (!remoteCursor.isNull(2)) put("improvedText", remoteCursor.getString(2))
-                        put("isImproved", remoteCursor.getInt(3))
-                        put("displayText", remoteCursor.getString(4))
-                        put("audioDurationSeconds", remoteCursor.getInt(5))
-                        if (!remoteCursor.isNull(6)) put("moodTag", remoteCursor.getString(6))
-                        if (!remoteCursor.isNull(7)) put("entropyScore", remoteCursor.getFloat(7))
-                        if (!remoteCursor.isNull(8)) put("adviceCategoryTags", remoteCursor.getString(8))
-                        if (!remoteCursor.isNull(9)) put("summary", remoteCursor.getString(9))
-                        if (!remoteCursor.isNull(10)) put("title", remoteCursor.getString(10))
-                        put("isSynced", remoteCursor.getInt(11))
-                    }
-                    writableDb.insert("journal_entries", android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE, values)
-                    imported++
+            localDb.query("SELECT timestamp FROM journal_entries").use { tsCursor ->
+                while (tsCursor.moveToNext()) {
+                    localTimestamps.add(tsCursor.getLong(0))
                 }
             }
-            remoteCursor.close(); remoteDb.close(); tempFile.delete()
+            val writableDb = database.openHelper.writableDatabase
+            var imported = 0
+            remoteDb
+                .rawQuery(
+                    "SELECT timestamp, rawText, improvedText, isImproved, displayText, " +
+                        "audioDurationSeconds, moodTag, entropyScore, adviceCategoryTags, " +
+                        "summary, title, isSynced FROM journal_entries",
+                    null,
+                )
+                .use { remoteCursor ->
+                    while (remoteCursor.moveToNext()) {
+                        val ts = remoteCursor.getLong(0)
+                        if (ts !in localTimestamps) {
+                            val values =
+                                android.content.ContentValues().apply {
+                                    put("timestamp", ts)
+                                    put("rawText", remoteCursor.getString(1))
+                                    if (!remoteCursor.isNull(2))
+                                        put("improvedText", remoteCursor.getString(2))
+                                    put("isImproved", remoteCursor.getInt(3))
+                                    put("displayText", remoteCursor.getString(4))
+                                    put("audioDurationSeconds", remoteCursor.getInt(5))
+                                    if (!remoteCursor.isNull(6))
+                                        put("moodTag", remoteCursor.getString(6))
+                                    if (!remoteCursor.isNull(7))
+                                        put("entropyScore", remoteCursor.getFloat(7))
+                                    if (!remoteCursor.isNull(8))
+                                        put("adviceCategoryTags", remoteCursor.getString(8))
+                                    if (!remoteCursor.isNull(9))
+                                        put("summary", remoteCursor.getString(9))
+                                    if (!remoteCursor.isNull(10))
+                                        put("title", remoteCursor.getString(10))
+                                    put("isSynced", remoteCursor.getInt(11))
+                                }
+                            writableDb.insert(
+                                "journal_entries",
+                                android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE,
+                                values,
+                            )
+                            imported++
+                        }
+                    }
+                }
             if (imported > 0) {
                 writableDb.execSQL("UPDATE journal_entries SET isSynced = isSynced WHERE 1=0")
                 Log.d("SyncDebug", "Auto-merged $imported entries from Drive")
             }
-            encryptedPrefs.edit().putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis()).apply()
+            encryptedPrefs
+                .edit()
+                .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
+                .apply()
             return imported
         } catch (e: Exception) {
             Log.e("SyncDebug", "Auto-merge failed: ${e.message}", e)
-            tempFile.delete(); return 0
+            return 0
+        } finally {
+            runCatching { remoteDb?.close() }
+            runCatching { tempFile.delete() }
         }
     }
 

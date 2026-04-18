@@ -17,30 +17,35 @@ object SyncProgressHolder {
     val downloadTotal: StateFlow<Int> = _downloadTotal.asStateFlow()
 
     fun setUploading(current: Int = 0, total: Int = 0) {
-        _status.value = SyncStatus.UPLOADING
+        // Set counters first so observers never see UPLOADING with stale counter values
         _downloadCurrent.value = current
         _downloadTotal.value = total
+        _status.value = SyncStatus.UPLOADING
     }
 
     fun setDownloading(current: Int, total: Int) {
-        _status.value = SyncStatus.DOWNLOADING
+        // Set counters first so observers never see DOWNLOADING with stale counter values
         _downloadCurrent.value = current
         _downloadTotal.value = total
+        _status.value = SyncStatus.DOWNLOADING
     }
 
     fun setSynced() {
+        // Set terminal status first, then reset counters
         _status.value = SyncStatus.SYNCED
         _downloadCurrent.value = 0
         _downloadTotal.value = 0
     }
 
     fun setError() {
+        // Set terminal status first, then reset counters
         _status.value = SyncStatus.ERROR
         _downloadCurrent.value = 0
         _downloadTotal.value = 0
     }
 
     fun setIdle() {
+        // Set terminal status first, then reset counters
         _status.value = SyncStatus.IDLE
         _downloadCurrent.value = 0
         _downloadTotal.value = 0

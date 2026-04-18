@@ -89,20 +89,11 @@ constructor(
         // Only wait if user is signed in — no account means no sync can happen
         val prefs =
             try {
-                val masterKey =
-                    androidx.security.crypto.MasterKeys.getOrCreate(
-                        androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-                    )
-                androidx.security.crypto.EncryptedSharedPreferences.create(
-                    com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME,
-                    masterKey,
-                    context,
-                    androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme
-                        .AES256_SIV,
-                    androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme
-                        .AES256_GCM,
-                )
-            } catch (_: Exception) {
+                com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("RetroVM", "Failed to init encrypted prefs", e)
                 return
             }
         // Step 1: Wait for PREF_RESTORE_PENDING flag to clear.
@@ -160,15 +151,18 @@ constructor(
                     null,
                     android.database.sqlite.SQLiteDatabase.OPEN_READONLY,
                 )
-            val cursor = db.rawQuery("SELECT filePath FROM entry_photos", null)
-            var missing = 0
-            while (cursor.moveToNext()) {
-                val path = cursor.getString(0)
-                if (!java.io.File(path).exists()) missing++
+            try {
+                db.rawQuery("SELECT filePath FROM entry_photos", null).use { cursor ->
+                    var missing = 0
+                    while (cursor.moveToNext()) {
+                        val path = cursor.getString(0)
+                        if (!java.io.File(path).exists()) missing++
+                    }
+                    missing
+                }
+            } finally {
+                runCatching { db.close() }
             }
-            cursor.close()
-            db.close()
-            missing
         } catch (_: Exception) {
             0
         }
@@ -201,7 +195,12 @@ constructor(
                 val flagFile = java.io.File(context.filesDir, ".retro_cleaned_v3")
                 if (!flagFile.exists()) {
                     repository.deleteAll()
-                    flagFile.createNewFile()
+                    if (!flagFile.createNewFile()) {
+                        Log.w(
+                            "RetroVM",
+                            "Flag file already exists or could not be created: ${flagFile.absolutePath}",
+                        )
+                    }
                     Log.d("RetroVM", "One-time cleanup: cleared old retrospective data")
                 }
 
@@ -210,21 +209,7 @@ constructor(
                 // Uses the same EncryptedSharedPreferences store that SettingsScreen writes to.
                 val encPrefs =
                     try {
-                        val mk =
-                            androidx.security.crypto.MasterKeys.getOrCreate(
-                                androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-                            )
-                        androidx.security.crypto.EncryptedSharedPreferences.create(
-                            com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME,
-                            mk,
-                            context,
-                            androidx.security.crypto.EncryptedSharedPreferences
-                                .PrefKeyEncryptionScheme
-                                .AES256_SIV,
-                            androidx.security.crypto.EncryptedSharedPreferences
-                                .PrefValueEncryptionScheme
-                                .AES256_GCM,
-                        )
+                        com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
                     } catch (_: Exception) {
                         null
                     }
@@ -303,20 +288,7 @@ constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val encPrefs =
                 try {
-                    val mk =
-                        androidx.security.crypto.MasterKeys.getOrCreate(
-                            androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-                        )
-                    androidx.security.crypto.EncryptedSharedPreferences.create(
-                        com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME,
-                        mk,
-                        context,
-                        androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme
-                            .AES256_SIV,
-                        androidx.security.crypto.EncryptedSharedPreferences
-                            .PrefValueEncryptionScheme
-                            .AES256_GCM,
-                    )
+                    com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
                 } catch (_: Exception) {
                     return@launch
                 }

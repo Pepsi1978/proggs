@@ -24,7 +24,11 @@ interface JournalEntryDao {
     fun search(query: String): Flow<List<JournalEntryEntity>>
 
     @Query(
-        "SELECT * FROM journal_entries WHERE adviceCategoryTags LIKE '%' || :category || '%' ORDER BY timestamp DESC"
+        """
+        SELECT * FROM journal_entries
+        WHERE ',' || COALESCE(adviceCategoryTags, '') || ',' LIKE '%,' || :category || ',%'
+        ORDER BY timestamp DESC
+        """
     )
     fun filterByCategory(category: String): Flow<List<JournalEntryEntity>>
 
@@ -35,8 +39,7 @@ interface JournalEntryDao {
 
     @Query("SELECT COUNT(*) FROM journal_entries") suspend fun getEntryCount(): Int
 
-    @Query("SELECT MIN(timestamp) FROM journal_entries")
-    suspend fun getEarliestTimestamp(): Long?
+    @Query("SELECT MIN(timestamp) FROM journal_entries") suspend fun getEarliestTimestamp(): Long?
 
     @Query("SELECT * FROM journal_entries ORDER BY timestamp DESC")
     suspend fun getAllEntriesOnce(): List<JournalEntryEntity>

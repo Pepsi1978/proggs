@@ -29,6 +29,15 @@ interface EntryPhotoDao {
     @Query("SELECT filePath FROM entry_photos WHERE entryId = :entryId")
     suspend fun getFilePathsForEntry(entryId: Long): List<String>
 
-    @Query("SELECT * FROM entry_photos WHERE entryId = :entryId AND isVideo = 0 ORDER BY timestamp ASC")
+    @Query(
+        "SELECT * FROM entry_photos WHERE entryId = :entryId AND isVideo = 0 ORDER BY timestamp ASC"
+    )
     suspend fun getPhotoOnlyForEntryOnce(entryId: Long): List<EntryPhotoEntity>
+
+    /**
+     * No-op UPDATE that goes through Room so its InvalidationTracker notifies all observers. Used
+     * after external writes (e.g. photo downloads during sync) to force the UI to re-query. Raw SQL
+     * via openHelper would bypass the tracker.
+     */
+    @Query("UPDATE entry_photos SET filePath = filePath") suspend fun notifyPhotosChanged(): Int
 }

@@ -6,6 +6,7 @@ import android.util.Log
 import com.android.billingclient.api.*
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,9 +14,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 @Singleton
-class BillingManager @Inject constructor(
-    private val analyticsTracker: AnalyticsTracker,
-) : PurchasesUpdatedListener {
+class BillingManager @Inject constructor(private val analyticsTracker: AnalyticsTracker) :
+    PurchasesUpdatedListener {
 
     companion object {
         private const val TAG = "BillingManager"
@@ -27,7 +27,7 @@ class BillingManager @Inject constructor(
         private const val YEARLY_BASE_PLAN_ID = "yearly"
     }
 
-    private var billingClient: BillingClient? = null
+    @Volatile private var billingClient: BillingClient? = null
     private val _subscriptionState = MutableStateFlow<SubscriptionState>(SubscriptionState.Free)
     val subscriptionState: StateFlow<SubscriptionState> = _subscriptionState.asStateFlow()
 
@@ -43,12 +43,15 @@ class BillingManager @Inject constructor(
     private val _lifetimePrice = MutableStateFlow("")
     val lifetimePrice: StateFlow<String> = _lifetimePrice.asStateFlow()
 
-    private var monthlyProductDetails: ProductDetails? = null
-    private var yearlyProductDetails: ProductDetails? = null
-    private var lifetimeProductDetails: ProductDetails? = null
+    @Volatile private var monthlyProductDetails: ProductDetails? = null
+    @Volatile private var yearlyProductDetails: ProductDetails? = null
+    @Volatile private var lifetimeProductDetails: ProductDetails? = null
 
     // Store active purchase token for subscription updates (retention offers)
-    private var activePurchaseToken: String? = null
+    @Volatile private var activePurchaseToken: String? = null
+
+    // Guard against duplicate purchase flows triggered by double-tap
+    private val isPurchaseInFlight = AtomicBoolean(false)
 
     private val connectionListener =
         object : BillingClientStateListener {
@@ -87,11 +90,14 @@ class BillingManager @Inject constructor(
                 if (activePurchase != null) {
                     _subscriptionState.value = SubscriptionState.Subscribed
                     activePurchaseToken = activePurchase.purchaseToken
-                    _subscriptionType.value = when {
-                        activePurchase.products.contains(YEARLY_PRODUCT_ID) -> SubscriptionType.YEARLY
-                        activePurchase.products.contains(MONTHLY_PRODUCT_ID) -> SubscriptionType.MONTHLY
-                        else -> SubscriptionType.MONTHLY
-                    }
+                    _subscriptionType.value =
+                        when {
+                            activePurchase.products.contains(YEARLY_PRODUCT_ID) ->
+                                SubscriptionType.YEARLY
+                            activePurchase.products.contains(MONTHLY_PRODUCT_ID) ->
+                                SubscriptionType.MONTHLY
+                            else -> SubscriptionType.MONTHLY
+                        }
                 } else if (_subscriptionType.value != SubscriptionType.LIFETIME) {
                     // Only set Free if no lifetime purchase was already detected
                     // (prevents race condition between querySubscriptions and queryInAppPurchases)
@@ -110,7 +116,9 @@ class BillingManager @Inject constructor(
 
     private fun queryInAppPurchases() {
         val params =
-            QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build()
+            QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.INAPP)
+                .build()
         billingClient?.queryPurchasesAsync(params) { billingResult, purchases ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 val hasLifetime = purchases.any { purchase ->
@@ -148,19 +156,19 @@ class BillingManager @Inject constructor(
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 for (details in productDetailsList) {
                     // Get price from the MAIN base plan only — not from retention or promo plans
-                    val mainBasePlanId = when (details.productId) {
-                        MONTHLY_PRODUCT_ID -> MONTHLY_BASE_PLAN_ID
-                        YEARLY_PRODUCT_ID -> YEARLY_BASE_PLAN_ID
-                        else -> null
-                    }
-                    val mainOffer = details.subscriptionOfferDetails
-                        ?.firstOrNull { it.basePlanId == mainBasePlanId }
-                        ?: details.subscriptionOfferDetails?.firstOrNull()
-                    val price = mainOffer
-                        ?.pricingPhases
-                        ?.pricingPhaseList
-                        ?.firstOrNull()
-                        ?.formattedPrice ?: ""
+                    val mainBasePlanId =
+                        when (details.productId) {
+                            MONTHLY_PRODUCT_ID -> MONTHLY_BASE_PLAN_ID
+                            YEARLY_PRODUCT_ID -> YEARLY_BASE_PLAN_ID
+                            else -> null
+                        }
+                    val mainOffer =
+                        details.subscriptionOfferDetails?.firstOrNull {
+                            it.basePlanId == mainBasePlanId
+                        } ?: details.subscriptionOfferDetails?.firstOrNull()
+                    val price =
+                        mainOffer?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice
+                            ?: ""
                     when (details.productId) {
                         MONTHLY_PRODUCT_ID -> {
                             monthlyProductDetails = details
@@ -182,7 +190,7 @@ class BillingManager @Inject constructor(
                 QueryProductDetailsParams.Product.newBuilder()
                     .setProductId(LIFETIME_PRODUCT_ID)
                     .setProductType(BillingClient.ProductType.INAPP)
-                    .build(),
+                    .build()
             )
         val params = QueryProductDetailsParams.newBuilder().setProductList(productList).build()
         billingClient?.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
@@ -199,33 +207,34 @@ class BillingManager @Inject constructor(
     }
 
     /**
-     * Look for a promotional/introductory offer on the monthly plan.
-     * First checks for a dedicated "monthly-50-off-first" base plan,
-     * then falls back to looking for offers with multiple pricing phases (intro + base).
-     * Returns the offerToken if found, null otherwise.
+     * Look for a promotional/introductory offer on the monthly plan. First checks for a dedicated
+     * "monthly-50-off-first" base plan, then falls back to looking for offers with multiple pricing
+     * phases (intro + base). Returns the offerToken if found, null otherwise.
      */
     fun getMonthlyPromoOfferToken(): String? {
         val details = monthlyProductDetails ?: return null
         // First: look for dedicated 50%-off base plan by ID
-        val promoBasePlan = details.subscriptionOfferDetails
-            ?.firstOrNull { offer -> offer.basePlanId == "monthly-50-off-first" }
+        val promoBasePlan =
+            details.subscriptionOfferDetails?.firstOrNull { offer ->
+                offer.basePlanId == "monthly-50-off-first"
+            }
         if (promoBasePlan != null) return promoBasePlan.offerToken
         // Fallback: look for offers with more than 1 pricing phase (intro + base)
         return details.subscriptionOfferDetails
-            ?.firstOrNull { offer ->
-                offer.pricingPhases.pricingPhaseList.size > 1
-            }?.offerToken
+            ?.firstOrNull { offer -> offer.pricingPhases.pricingPhaseList.size > 1 }
+            ?.offerToken
     }
 
     /**
-     * Look for a retention base plan on the given subscription (monthly or yearly).
-     * These are separate base plans configured in Play Console with developer-determined visibility.
-     * Using basePlanId (not offerId) because permanent discounts require a base plan, not an offer.
+     * Look for a retention base plan on the given subscription (monthly or yearly). These are
+     * separate base plans configured in Play Console with developer-determined visibility. Using
+     * basePlanId (not offerId) because permanent discounts require a base plan, not an offer.
      */
     fun getRetentionOfferToken(isYearly: Boolean): String? {
         val details = if (isYearly) yearlyProductDetails else monthlyProductDetails
         details ?: return null
-        val targetBasePlanId = if (isYearly) Constants.RETENTION_OFFER_ID_YEARLY
+        val targetBasePlanId =
+            if (isYearly) Constants.RETENTION_OFFER_ID_YEARLY
             else Constants.RETENTION_OFFER_ID_MONTHLY
         return details.subscriptionOfferDetails
             ?.firstOrNull { offer -> offer.basePlanId == targetBasePlanId }
@@ -235,11 +244,15 @@ class BillingManager @Inject constructor(
     fun getRetentionPrice(isYearly: Boolean): String? {
         val details = if (isYearly) yearlyProductDetails else monthlyProductDetails
         details ?: return null
-        val targetBasePlanId = if (isYearly) Constants.RETENTION_OFFER_ID_YEARLY
+        val targetBasePlanId =
+            if (isYearly) Constants.RETENTION_OFFER_ID_YEARLY
             else Constants.RETENTION_OFFER_ID_MONTHLY
         return details.subscriptionOfferDetails
             ?.firstOrNull { offer -> offer.basePlanId == targetBasePlanId }
-            ?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice
+            ?.pricingPhases
+            ?.pricingPhaseList
+            ?.firstOrNull()
+            ?.formattedPrice
     }
 
     fun restorePurchases() {
@@ -253,8 +266,18 @@ class BillingManager @Inject constructor(
         isLifetime: Boolean = false,
         promoOfferToken: String? = null,
     ) {
+        // Prevent duplicate purchase dialogs from double-tap
+        if (!isPurchaseInFlight.compareAndSet(false, true)) {
+            Log.d(TAG, "Purchase already in flight — ignoring duplicate tap")
+            return
+        }
+
         if (isLifetime) {
-            val details = lifetimeProductDetails ?: return
+            val details = lifetimeProductDetails
+            if (details == null) {
+                isPurchaseInFlight.set(false)
+                return
+            }
             val productDetailsParams =
                 BillingFlowParams.ProductDetailsParams.newBuilder()
                     .setProductDetails(details)
@@ -263,26 +286,36 @@ class BillingManager @Inject constructor(
                 BillingFlowParams.newBuilder()
                     .setProductDetailsParamsList(listOf(productDetailsParams))
                     .build()
-            billingClient?.launchBillingFlow(activity, billingFlowParams)
+            val launched = billingClient?.launchBillingFlow(activity, billingFlowParams)
+            // If billingClient was null the SafeCall returned null — onPurchasesUpdated will
+            // never fire, so release the in-flight guard here to avoid a permanent lockout.
+            if (launched == null) isPurchaseInFlight.set(false)
             return
         }
         val productDetails = if (isYearly) yearlyProductDetails else monthlyProductDetails
-        productDetails ?: return
+        if (productDetails == null) {
+            isPurchaseInFlight.set(false)
+            return
+        }
         // Use promo token if provided, otherwise find the MAIN base plan's offer token
         val mainBasePlanId = if (isYearly) YEARLY_BASE_PLAN_ID else MONTHLY_BASE_PLAN_ID
-        val offerToken = promoOfferToken
-            ?: productDetails.subscriptionOfferDetails
-                ?.firstOrNull { it.basePlanId == mainBasePlanId }?.offerToken
-            ?: productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken
-            ?: return
+        val offerToken =
+            promoOfferToken
+                ?: productDetails.subscriptionOfferDetails
+                    ?.firstOrNull { it.basePlanId == mainBasePlanId }
+                    ?.offerToken
+                ?: productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken
+        if (offerToken == null) {
+            isPurchaseInFlight.set(false)
+            return
+        }
         val productDetailsParams =
             BillingFlowParams.ProductDetailsParams.newBuilder()
                 .setProductDetails(productDetails)
                 .setOfferToken(offerToken)
                 .build()
         val billingFlowParamsBuilder =
-            BillingFlowParams.newBuilder()
-                .setProductDetailsParamsList(listOf(productDetailsParams))
+            BillingFlowParams.newBuilder().setProductDetailsParamsList(listOf(productDetailsParams))
 
         // If user already has an active subscription, add update params
         // to allow offer changes (retention, plan switch) without ITEM_ALREADY_OWNED
@@ -292,16 +325,22 @@ class BillingManager @Inject constructor(
                 BillingFlowParams.SubscriptionUpdateParams.newBuilder()
                     .setOldPurchaseToken(oldToken)
                     .setSubscriptionReplacementMode(
-                        BillingFlowParams.SubscriptionUpdateParams.ReplacementMode.WITHOUT_PRORATION,
+                        BillingFlowParams.SubscriptionUpdateParams.ReplacementMode.WITHOUT_PRORATION
                     )
-                    .build(),
+                    .build()
             )
         }
 
-        billingClient?.launchBillingFlow(activity, billingFlowParamsBuilder.build())
+        val launched = billingClient?.launchBillingFlow(activity, billingFlowParamsBuilder.build())
+        // Same guard as the lifetime branch: if billingClient is null, onPurchasesUpdated
+        // never fires, so we must release isPurchaseInFlight here.
+        if (launched == null) isPurchaseInFlight.set(false)
     }
 
     override fun onPurchasesUpdated(billingResult: BillingResult, purchases: List<Purchase>?) {
+        // Always release the in-flight guard regardless of outcome (success, error, or cancel)
+        isPurchaseInFlight.set(false)
+
         if (
             billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null
         ) {
@@ -327,12 +366,13 @@ class BillingManager @Inject constructor(
         } else {
             activePurchaseToken = null
         }
-        _subscriptionType.value = when {
-            isLifetime -> SubscriptionType.LIFETIME
-            purchase.products.contains(YEARLY_PRODUCT_ID) -> SubscriptionType.YEARLY
-            purchase.products.contains(MONTHLY_PRODUCT_ID) -> SubscriptionType.MONTHLY
-            else -> _subscriptionType.value
-        }
+        _subscriptionType.value =
+            when {
+                isLifetime -> SubscriptionType.LIFETIME
+                purchase.products.contains(YEARLY_PRODUCT_ID) -> SubscriptionType.YEARLY
+                purchase.products.contains(MONTHLY_PRODUCT_ID) -> SubscriptionType.MONTHLY
+                else -> _subscriptionType.value
+            }
     }
 
     // K-2 fix: Centralized acknowledge — only sets Subscribed after Google confirms
@@ -353,17 +393,21 @@ class BillingManager @Inject constructor(
                         currency = offer?.priceCurrencyCode ?: "EUR",
                     )
                 } else {
-                    val type = when {
-                        isYearly -> "yearly"
-                        purchase.products.contains(MONTHLY_PRODUCT_ID) -> "monthly"
-                        else -> "unknown"
-                    }
+                    val type =
+                        when {
+                            isYearly -> "yearly"
+                            purchase.products.contains(MONTHLY_PRODUCT_ID) -> "monthly"
+                            else -> "unknown"
+                        }
                     val details = if (isYearly) yearlyProductDetails else monthlyProductDetails
                     val mainPlanId = if (isYearly) YEARLY_BASE_PLAN_ID else MONTHLY_BASE_PLAN_ID
-                    val pricingPhase = (details?.subscriptionOfferDetails
-                        ?.firstOrNull { it.basePlanId == mainPlanId }
-                        ?: details?.subscriptionOfferDetails?.firstOrNull())
-                        ?.pricingPhases?.pricingPhaseList?.firstOrNull()
+                    val pricingPhase =
+                        (details?.subscriptionOfferDetails?.firstOrNull {
+                                it.basePlanId == mainPlanId
+                            } ?: details?.subscriptionOfferDetails?.firstOrNull())
+                            ?.pricingPhases
+                            ?.pricingPhaseList
+                            ?.firstOrNull()
                     val valueMicros = pricingPhase?.priceAmountMicros ?: 0L
                     val currency = pricingPhase?.priceCurrencyCode ?: "EUR"
                     analyticsTracker.trackSubscriptionPurchased(
@@ -373,10 +417,16 @@ class BillingManager @Inject constructor(
                     )
                 }
             } else if (retryCount < 3) {
-                Log.w(TAG, "Acknowledge failed (attempt ${retryCount + 1}/3): ${result.debugMessage}")
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    acknowledgePurchase(purchase, retryCount + 1)
-                }, 2000L * (retryCount + 1))
+                Log.w(
+                    TAG,
+                    "Acknowledge failed (attempt ${retryCount + 1}/3): ${result.debugMessage}",
+                )
+                android.os
+                    .Handler(android.os.Looper.getMainLooper())
+                    .postDelayed(
+                        { acknowledgePurchase(purchase, retryCount + 1) },
+                        2000L * (retryCount + 1),
+                    )
             } else {
                 Log.e(TAG, "Acknowledge failed after 3 retries: ${result.debugMessage}")
             }

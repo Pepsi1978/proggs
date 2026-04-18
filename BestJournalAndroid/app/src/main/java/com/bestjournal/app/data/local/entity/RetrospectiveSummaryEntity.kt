@@ -1,9 +1,13 @@
 package com.bestjournal.app.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "retrospective_summaries")
+// Indices accelerate the two most frequent DAO queries:
+//   WHERE type = :type ORDER BY startDate DESC
+//   WHERE type = :type AND startDate BETWEEN :a AND :b
+@Entity(tableName = "retrospective_summaries", indices = [Index(value = ["type", "startDate"])])
 data class RetrospectiveSummaryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val type: String, // WEEKLY, MONTHLY, YEARLY

@@ -117,19 +117,32 @@ object PdfExporter {
         context: Context,
     ): Int {
         val document = PdfDocument()
-        var pageNumber = 0
+        try {
+            var pageNumber = 0
 
-        for ((index, entry) in entries.withIndex()) {
-            pageNumber++
-            val photos = photosPerEntry[entry.id] ?: emptyList()
-            val pages =
-                renderEntry(context, document, entry, pageNumber, entries.size, index + 1, photos)
-            pageNumber = pages
+            for ((index, entry) in entries.withIndex()) {
+                pageNumber++
+                val photos = photosPerEntry[entry.id] ?: emptyList()
+                val pages =
+                    renderEntry(
+                        context,
+                        document,
+                        entry,
+                        pageNumber,
+                        entries.size,
+                        index + 1,
+                        photos,
+                    )
+                pageNumber = pages
+            }
+
+            document.writeTo(outputStream)
+            return entries.size
+        } finally {
+            // Close PdfDocument in a finally block so the native resources are
+            // released even if writeTo or renderEntry throws (OOM, IO exception).
+            document.close()
         }
-
-        document.writeTo(outputStream)
-        document.close()
-        return entries.size
     }
 
     /**

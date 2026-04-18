@@ -59,9 +59,12 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
         if (firstUse.isBlank()) {
             val usageDays = getUsageDaysSet()
             if (usageDays.isNotEmpty()) {
-                val earliest = usageDays.mapNotNull {
-                    runCatching { LocalDate.parse(it, dateFormatter) }.getOrNull()
-                }.minOrNull()
+                val earliest =
+                    usageDays
+                        .mapNotNull {
+                            runCatching { LocalDate.parse(it, dateFormatter) }.getOrNull()
+                        }
+                        .minOrNull()
                 if (earliest != null) {
                     firstUse = earliest.format(dateFormatter)
                     prefs.edit().putString(KEY_FIRST_USE_DATE, firstUse).apply()
@@ -73,8 +76,10 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
         val firstDate = LocalDate.parse(firstUse, dateFormatter)
         val daysSinceFirst = java.time.temporal.ChronoUnit.DAYS.between(firstDate, LocalDate.now())
         // Check if user got bonus trial days from the exit-intent offer
-        val bonusDays = if (prefs.getBoolean(Constants.PREF_EXIT_INTENT_TRIAL_EXTENDED, false))
-            Constants.EXIT_INTENT_TRIAL_BONUS_DAYS else 0
+        val bonusDays =
+            if (prefs.getBoolean(Constants.PREF_EXIT_INTENT_TRIAL_EXTENDED, false))
+                Constants.EXIT_INTENT_TRIAL_BONUS_DAYS
+            else 0
         val totalTrialDays = Constants.TRIAL_USAGE_DAYS + bonusDays
         return when {
             daysSinceFirst < totalTrialDays -> AiPhase.TRIAL
@@ -134,9 +139,11 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
         if (getCurrentPhase() != AiPhase.TRIAL) return false
         val firstUse = prefs.getString(KEY_FIRST_USE_DATE, "") ?: ""
         if (firstUse.isBlank()) return false
-        val daysSinceFirst = java.time.temporal.ChronoUnit.DAYS.between(
-            LocalDate.parse(firstUse, dateFormatter), LocalDate.now()
-        )
+        val daysSinceFirst =
+            java.time.temporal.ChronoUnit.DAYS.between(
+                LocalDate.parse(firstUse, dateFormatter),
+                LocalDate.now(),
+            )
         if (daysSinceFirst < 5) return false // Only show on calendar days 5-8 of trial
         val today = LocalDate.now().format(dateFormatter)
         val lastShown = prefs.getString(KEY_BANNER_LAST_SHOWN, "") ?: ""
@@ -150,14 +157,16 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
 
     // ── Dashboard daily limit (4-tier, per scenario) ──────────────────
 
-    private var currentScenario: Int = 0
+    @Volatile private var currentScenario: Int = 0
 
     fun setCurrentScenario(scenario: Int) {
         currentScenario = scenario
     }
 
     private fun dashboardCountKey() = "${KEY_DASHBOARD_DAILY_COUNT}_$currentScenario"
+
     private fun dashboardDateKey() = "${KEY_DASHBOARD_DAILY_DATE}_$currentScenario"
+
     private fun dashboardCooldownKey() = "${KEY_DASHBOARD_COOLDOWN_UNTIL}_$currentScenario"
 
     fun recordDashboardRefresh() {
@@ -294,7 +303,8 @@ class AiUsageTracker @Inject constructor(private val prefs: SharedPreferences) {
 
     fun isHourlySpamLimitReached(isPremium: Boolean = false): Boolean {
         resetHourlyCounterIfNeeded()
-        val limit = if (isPremium) Constants.SPAM_HOURLY_AI_LIMIT_PREMIUM
+        val limit =
+            if (isPremium) Constants.SPAM_HOURLY_AI_LIMIT_PREMIUM
             else Constants.SPAM_HOURLY_AI_LIMIT
         return prefs.getInt(KEY_HOURLY_AI_COUNT, 0) >= limit
     }

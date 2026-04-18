@@ -21,14 +21,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
 private const val RESUMABLE_THRESHOLD = 5L * 1024 * 1024 // 5 MB
 
-class NeedConsentException(val consentIntent: Intent) :
-    Exception("Drive consent needed")
+class NeedConsentException(val consentIntent: Intent) : Exception("Drive consent needed")
 
 @Singleton
 class DriveBackupManager
@@ -38,12 +39,16 @@ constructor(
     private val encryptedPrefs: SharedPreferences,
 ) {
     @Volatile private var sessionService: Drive? = null
+    private val sessionMutex = Mutex()
 
     private suspend fun getSessionDriveService(): Drive {
         sessionService?.let {
             return it
         }
-        return getDriveService().also { sessionService = it }
+        return sessionMutex.withLock {
+            // Double-check inside the lock to prevent duplicate token requests
+            sessionService ?: getDriveService().also { sessionService = it }
+        }
     }
 
     fun endSession() {

@@ -603,23 +603,15 @@ constructor(
 
     // ── Profile style ───────────────────────────────────────────────────────
 
-    /** Cached prefs instance — avoids re-creating EncryptedSharedPreferences on every call */
+    /**
+     * Cached prefs instance — delegates to the shared provider so we pay the Keystore cost only
+     * once per process, regardless of how many components ask for the prefs.
+     */
     private val cachedPrefs: android.content.SharedPreferences? by lazy {
         try {
-            val masterKey =
-                androidx.security.crypto.MasterKeys.getOrCreate(
-                    androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-                )
-            androidx.security.crypto.EncryptedSharedPreferences.create(
-                com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME,
-                masterKey,
-                context,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme
-                    .AES256_SIV,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme
-                    .AES256_GCM,
-            )
-        } catch (_: Exception) {
+            com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
+        } catch (e: Exception) {
+            android.util.Log.w("GenerateRetroUC", "Encrypted prefs unavailable", e)
             null
         }
     }

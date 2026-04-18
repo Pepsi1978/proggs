@@ -1077,6 +1077,12 @@ private fun PreviewDialog(
                                 color = MaterialTheme.colorScheme.outline,
                             )
                         },
+                        keyboardOptions =
+                            androidx.compose.foundation.text.KeyboardOptions(
+                                capitalization =
+                                    androidx.compose.ui.text.input.KeyboardCapitalization.Sentences,
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
+                            ),
                     )
 
                     if (transcriptionModel.isNotBlank()) {

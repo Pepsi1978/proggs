@@ -446,7 +446,14 @@ constructor(
         if (ts == 0L) return null
         val locale = java.util.Locale.getDefault()
         val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMHHmm")
-        val sdf = java.text.SimpleDateFormat(pattern, locale)
-        return context.getString(R.string.dashboard_last_updated, sdf.format(java.util.Date(ts)))
+        // Thread-safe: DateTimeFormatter is immutable, unlike SimpleDateFormat
+        val formatter = java.time.format.DateTimeFormatter.ofPattern(pattern, locale)
+        val formatted =
+            java.time.ZonedDateTime.ofInstant(
+                    java.time.Instant.ofEpochMilli(ts),
+                    java.time.ZoneId.systemDefault(),
+                )
+                .format(formatter)
+        return context.getString(R.string.dashboard_last_updated, formatted)
     }
 }

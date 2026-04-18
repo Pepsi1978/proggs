@@ -38,20 +38,7 @@ class MonthlyReviewReceiver : BroadcastReceiver() {
 
         // Re-schedule for next month (fromUserToggle=false to preserve enabled state)
         try {
-            val masterKey =
-                androidx.security.crypto.MasterKeys.getOrCreate(
-                    androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-                )
-            val prefs =
-                androidx.security.crypto.EncryptedSharedPreferences.create(
-                    Constants.ENCRYPTED_PREFS_NAME,
-                    masterKey,
-                    context,
-                    androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme
-                        .AES256_SIV,
-                    androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme
-                        .AES256_GCM,
-                )
+            val prefs = EncryptedPrefsProvider.get(context)
             DailyReminderManager(context, prefs).scheduleMonthlyReview(fromUserToggle = false)
         } catch (e: Exception) {
             android.util.Log.e("MonthlyReview", "Re-schedule failed: ${e.message}")

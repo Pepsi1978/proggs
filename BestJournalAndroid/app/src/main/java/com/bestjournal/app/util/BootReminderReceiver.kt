@@ -4,8 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
 
 /**
  * Re-schedules all alarms after device reboot, timezone change, or time adjustment. AlarmManager
@@ -26,15 +24,7 @@ class BootReminderReceiver : BroadcastReceiver() {
         Log.d("BootReminderReceiver", "Re-scheduling alarms (reason: ${intent.action})")
 
         try {
-            val masterKey = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
-            val prefs =
-                EncryptedSharedPreferences.create(
-                    Constants.ENCRYPTED_PREFS_NAME,
-                    masterKey,
-                    context,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-                )
+            val prefs = EncryptedPrefsProvider.get(context)
 
             val manager = DailyReminderManager(context, prefs)
             manager.rescheduleIfEnabled()

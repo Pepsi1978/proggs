@@ -2,38 +2,50 @@ package com.bestjournal.app.data.local.whisper
 
 import android.content.Context
 import com.bestjournal.app.R
+import com.bestjournal.app.util.DeviceLocale
 import com.k2fsa.sherpa.onnx.FeatureConfig
 import com.k2fsa.sherpa.onnx.OfflineModelConfig
 import com.k2fsa.sherpa.onnx.OfflineRecognizer
 import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OfflineWhisperModelConfig
-import com.bestjournal.app.util.DeviceLocale
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Singleton
-class LocalWhisperTranscriber @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
-    private var recognizer: OfflineRecognizer? = null
-    private var recognizerLanguage: String? = null
+class LocalWhisperTranscriber
+@Inject
+constructor(@ApplicationContext private val context: Context) {
+    @Volatile private var recognizer: OfflineRecognizer? = null
+    @Volatile private var recognizerLanguage: String? = null
 
+    @Synchronized
     private fun getOrCreateRecognizer(): OfflineRecognizer {
         val lang = DeviceLocale.languageCode
         // Recreate recognizer if device language changed at runtime
-        if (recognizer != null && recognizerLanguage == lang) return recognizer!!
+        val current = recognizer
+        if (current != null && recognizerLanguage == lang) return current
+
+        // Release old recognizer before replacing it
+        try {
+            if (recognizer is java.io.Closeable) {
+                (recognizer as java.io.Closeable).close()
+            } else {
+                recognizer?.javaClass?.getMethod("release")?.invoke(recognizer)
+            }
+        } catch (_: Exception) {}
         recognizer = null
 
-        val whisperConfig = OfflineWhisperModelConfig(
-            encoder = "whisper/base-encoder.int8.onnx",
-            decoder = "whisper/base-decoder.int8.onnx",
-            language = lang,
-            task = "transcribe"
-        )
+        val whisperConfig =
+            OfflineWhisperModelConfig(
+                encoder = "whisper/base-encoder.int8.onnx",
+                decoder = "whisper/base-decoder.int8.onnx",
+                language = lang,
+                task = "transcribe",
+            )
 
         val modelConfig = OfflineModelConfig()
         modelConfig.whisper = whisperConfig
@@ -42,10 +54,7 @@ class LocalWhisperTranscriber @Inject constructor(
 
         val featConfig = FeatureConfig()
 
-        val config = OfflineRecognizerConfig(
-            featConfig = featConfig,
-            modelConfig = modelConfig
-        )
+        val config = OfflineRecognizerConfig(featConfig = featConfig, modelConfig = modelConfig)
 
         val rec = OfflineRecognizer(context.assets, config)
         recognizer = rec
@@ -53,46 +62,63 @@ class LocalWhisperTranscriber @Inject constructor(
         return rec
     }
 
-    suspend fun transcribe(audioFile: File): Result<String> = withContext(Dispatchers.IO) {
+    /** Releases the native recognizer. Call when the transcriber is no longer needed. */
+    @Synchronized
+    fun releaseRecognizer() {
         try {
-            val rec = getOrCreateRecognizer()
-
-            val samples = readWavSamples(audioFile)
-            if (samples.isEmpty()) {
-                return@withContext Result.failure(Exception(context.getString(R.string.error_whisper_audio_empty)))
-            }
-
-            // Whisper processes audio in 30-second windows — split at silence points
-            val chunks = splitAtSilence(samples)
-            val results = StringBuilder()
-
-            for (chunk in chunks) {
-                val stream = rec.createStream()
-                stream.acceptWaveform(chunk, SAMPLE_RATE)
-                rec.decode(stream)
-                val chunkText = rec.getResult(stream).text.trim()
-
-                if (chunkText.isNotBlank()) {
-                    if (results.isNotEmpty()) results.append(" ")
-                    results.append(chunkText)
-                }
-            }
-
-            val text = results.toString().trim()
-            if (text.isBlank()) {
-                Result.failure(Exception(context.getString(R.string.error_whisper_no_text)))
+            if (recognizer is java.io.Closeable) {
+                (recognizer as java.io.Closeable).close()
             } else {
-                Result.success(text)
+                recognizer?.javaClass?.getMethod("release")?.invoke(recognizer)
             }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        } catch (_: Exception) {}
+        recognizer = null
+        recognizerLanguage = null
     }
 
+    suspend fun transcribe(audioFile: File): Result<String> =
+        withContext(Dispatchers.IO) {
+            try {
+                val rec = getOrCreateRecognizer()
+
+                val samples = readWavSamples(audioFile)
+                if (samples.isEmpty()) {
+                    return@withContext Result.failure(
+                        Exception(context.getString(R.string.error_whisper_audio_empty))
+                    )
+                }
+
+                // Whisper processes audio in 30-second windows — split at silence points
+                val chunks = splitAtSilence(samples)
+                val results = StringBuilder()
+
+                for (chunk in chunks) {
+                    val stream = rec.createStream()
+                    stream.acceptWaveform(chunk, SAMPLE_RATE)
+                    rec.decode(stream)
+                    val chunkText = rec.getResult(stream).text.trim()
+
+                    if (chunkText.isNotBlank()) {
+                        if (results.isNotEmpty()) results.append(" ")
+                        results.append(chunkText)
+                    }
+                }
+
+                val text = results.toString().trim()
+                if (text.isBlank()) {
+                    Result.failure(Exception(context.getString(R.string.error_whisper_no_text)))
+                } else {
+                    Result.success(text)
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
     /**
-     * Split audio samples into chunks at natural silence points.
-     * Each chunk is up to 30 seconds. The split point is chosen where
-     * the audio is quietest in a 3-second search window before the 30s mark.
+     * Split audio samples into chunks at natural silence points. Each chunk is up to 30 seconds.
+     * The split point is chosen where the audio is quietest in a 3-second search window before the
+     * 30s mark.
      */
     private fun splitAtSilence(samples: FloatArray): List<FloatArray> {
         val maxChunkSamples = SAMPLE_RATE * MAX_CHUNK_SECONDS
@@ -120,10 +146,7 @@ class LocalWhisperTranscriber @Inject constructor(
         return chunks
     }
 
-    /**
-     * Find the sample position with lowest energy (quietest moment)
-     * using a sliding RMS window.
-     */
+    /** Find the sample position with lowest energy (quietest moment) using a sliding RMS window. */
     private fun findQuietestPoint(samples: FloatArray, searchStart: Int, searchEnd: Int): Int {
         val windowSamples = SAMPLE_RATE * SILENCE_WINDOW_MS / 1000 // 300ms window
         var bestPos = searchEnd

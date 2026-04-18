@@ -1,7 +1,5 @@
 package com.bestjournal.app.ui.screens.retrospective
 
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.RepeatMode
@@ -62,7 +60,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -93,6 +90,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.bestjournal.app.R
 import com.bestjournal.app.billing.SubscriptionState
@@ -821,19 +819,7 @@ private fun SummaryDetailDialog(
     val tts = remember { EdgeTtsPlayer(context) }
     val ttsPrefs = remember {
         try {
-            val mk =
-                androidx.security.crypto.MasterKeys.getOrCreate(
-                    androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-                )
-            androidx.security.crypto.EncryptedSharedPreferences.create(
-                com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME,
-                mk,
-                context,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme
-                    .AES256_SIV,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme
-                    .AES256_GCM,
-            )
+            com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
         } catch (_: Exception) {
             null
         }

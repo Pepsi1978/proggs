@@ -36,7 +36,8 @@ class FirebaseAiService @Inject constructor() {
         systemPrompt: String? = null,
     ): GenerativeModel {
         val key = ModelCacheKey(modelName, temperature, maxOutputTokens, systemPrompt)
-        return modelCache.getOrPut(key) {
+        // computeIfAbsent is atomic in ConcurrentHashMap — prevents duplicate model creation
+        return modelCache.computeIfAbsent(key) {
             Firebase.ai(backend = GenerativeBackend.googleAI())
                 .generativeModel(
                     modelName = modelName,

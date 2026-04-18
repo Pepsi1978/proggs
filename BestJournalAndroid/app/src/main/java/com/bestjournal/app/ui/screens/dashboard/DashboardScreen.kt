@@ -1,7 +1,5 @@
 package com.bestjournal.app.ui.screens.dashboard
 
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -69,7 +67,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -93,6 +90,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestjournal.app.R
 import com.bestjournal.app.domain.model.Advice
 import com.bestjournal.app.domain.model.AdvicePriority
@@ -138,19 +136,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
     val dashboardTts = remember { EdgeTtsPlayer(context) }
     val dashboardTtsPrefs = remember {
         try {
-            val mk =
-                androidx.security.crypto.MasterKeys.getOrCreate(
-                    androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-                )
-            androidx.security.crypto.EncryptedSharedPreferences.create(
-                com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME,
-                mk,
-                context,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme
-                    .AES256_SIV,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme
-                    .AES256_GCM,
-            )
+            com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
         } catch (_: Exception) {
             null
         }
@@ -764,7 +750,9 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     contentPadding = PaddingValues(horizontal = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 ) {
-                                    itemsIndexed(blocks) { index, block ->
+                                    itemsIndexed(blocks, key = { _, block -> block.id }) {
+                                        index,
+                                        block ->
                                         AdviceCategoryCard(
                                             block = block,
                                             isSelected = index == uiState.selectedCategoryIndex,
@@ -924,7 +912,9 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     contentPadding = PaddingValues(horizontal = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 ) {
-                                    itemsIndexed(blocks) { index, block ->
+                                    itemsIndexed(blocks, key = { _, block -> block.id }) {
+                                        index,
+                                        block ->
                                         AdviceCategoryCard(
                                             block = block,
                                             isSelected = index == uiState.selectedCategoryIndex,
@@ -1080,7 +1070,9 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     contentPadding = PaddingValues(horizontal = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 ) {
-                                    itemsIndexed(blocks) { index, block ->
+                                    itemsIndexed(blocks, key = { _, block -> block.id }) {
+                                        index,
+                                        block ->
                                         AdviceCategoryCard(
                                             block = block,
                                             isSelected = index == uiState.selectedCategoryIndex,
@@ -1244,7 +1236,9 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     contentPadding = PaddingValues(horizontal = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 ) {
-                                    itemsIndexed(blocks) { index, block ->
+                                    itemsIndexed(blocks, key = { _, block -> block.id }) {
+                                        index,
+                                        block ->
                                         AdviceCategoryCard(
                                             block = block,
                                             isSelected = index == uiState.selectedCategoryIndex,
@@ -1384,7 +1378,9 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     contentPadding = PaddingValues(horizontal = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 ) {
-                                    itemsIndexed(blocks) { index, block ->
+                                    itemsIndexed(blocks, key = { _, block -> block.id }) {
+                                        index,
+                                        block ->
                                         AdviceCategoryCard(
                                             block = block,
                                             isSelected = index == uiState.selectedCategoryIndex,

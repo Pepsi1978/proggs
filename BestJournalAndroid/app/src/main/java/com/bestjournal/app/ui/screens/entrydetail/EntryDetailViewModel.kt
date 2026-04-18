@@ -251,9 +251,19 @@ constructor(
                 // rows)
                 try {
                     photoRepository.getFilePathsForEntry(entry.id).forEach { path ->
-                        java.io.File(path).delete()
+                        val deleted = java.io.File(path).delete()
+                        if (!deleted) {
+                            android.util.Log.w(
+                                "EntryDetailVM",
+                                "Could not delete photo/video file: $path",
+                            )
+                        }
                     }
-                } catch (_: Exception) {}
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    android.util.Log.w("EntryDetailVM", "Photo/video cleanup failed", e)
+                }
                 journalRepository.deleteEntry(entry)
                 analyticsTracker.trackEntryDeleted()
                 viewModelScope.launch(Dispatchers.IO) {

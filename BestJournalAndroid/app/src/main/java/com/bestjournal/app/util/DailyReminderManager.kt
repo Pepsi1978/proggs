@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Build
 import java.util.Calendar
 
 class DailyReminderManager(private val context: Context, private val prefs: SharedPreferences) {
@@ -33,12 +34,28 @@ class DailyReminderManager(private val context: Context, private val prefs: Shar
                     }
                 }
 
-            alarmManager.setRepeating(
-                AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
-                AlarmManager.INTERVAL_DAY,
-                createPendingIntent(),
-            )
+            // Use exact alarm so reminder fires reliably even in Doze mode.
+            // On API 31+ we need SCHEDULE_EXACT_ALARM permission; fall back to inexact if absent.
+            val canExact =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    alarmManager.canScheduleExactAlarms()
+                } else {
+                    true
+                }
+            if (canExact) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    calendar.timeInMillis,
+                    createPendingIntent(),
+                )
+            } else {
+                // Fallback: inexact but still wakes device from Doze
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    calendar.timeInMillis,
+                    createPendingIntent(),
+                )
+            }
         } catch (e: Exception) {
             android.util.Log.e("ReminderManager", "Failed to schedule daily reminder", e)
         }
@@ -94,12 +111,26 @@ class DailyReminderManager(private val context: Context, private val prefs: Shar
                     }
                 }
 
-            alarmManager.setRepeating(
-                AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
-                AlarmManager.INTERVAL_DAY * 7,
-                createWeeklyReviewPendingIntent(),
-            )
+            // Use exact-and-idle so the weekly review still fires in Doze mode;
+            // WeeklyReviewReceiver reschedules itself +7 days after each firing.
+            val canExact =
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    alarmManager.canScheduleExactAlarms()
+                } else true
+
+            if (canExact) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    calendar.timeInMillis,
+                    createWeeklyReviewPendingIntent(),
+                )
+            } else {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    calendar.timeInMillis,
+                    createWeeklyReviewPendingIntent(),
+                )
+            }
         } catch (e: Exception) {
             android.util.Log.e("ReminderManager", "Failed to schedule weekly review", e)
         }

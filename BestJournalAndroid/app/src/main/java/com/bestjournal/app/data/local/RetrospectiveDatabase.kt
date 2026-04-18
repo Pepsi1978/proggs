@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.bestjournal.app.data.local.dao.RetrospectiveDao
 import com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity
 
-@Database(entities = [RetrospectiveSummaryEntity::class], version = 1, exportSchema = true)
+@Database(entities = [RetrospectiveSummaryEntity::class], version = 2, exportSchema = true)
 abstract class RetrospectiveDatabase : RoomDatabase() {
 
     abstract fun retrospectiveDao(): RetrospectiveDao
@@ -24,6 +24,9 @@ abstract class RetrospectiveDatabase : RoomDatabase() {
                                 RetrospectiveDatabase::class.java,
                                 "retrospective_db",
                             )
+                            // Retrospective data is regenerable from journal entries — destructive
+                            // migration is safe
+                            .fallbackToDestructiveMigration()
                             .build()
                     INSTANCE = instance
                     instance

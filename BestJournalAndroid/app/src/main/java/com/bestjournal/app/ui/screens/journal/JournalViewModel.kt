@@ -907,7 +907,17 @@ constructor(
         super.onCleared()
         try {
             encryptedPrefs.unregisterOnSharedPreferenceChangeListener(syncPrefsListener)
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("JournalVM", "Failed to unregister prefs listener", e)
+        }
+        // Release AudioFocus on ViewModel teardown so other audio apps (Spotify, phone call)
+        // can reclaim focus immediately after the app is killed mid-recording. Without this
+        // the focus request remains registered until the OS process cleanup runs.
+        try {
+            releaseAudioFocus()
+        } catch (e: Exception) {
+            android.util.Log.w("JournalVM", "Failed to release audio focus on teardown", e)
+        }
     }
 
     private fun triggerDebouncedAnalysis() {

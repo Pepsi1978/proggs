@@ -20,7 +20,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
@@ -34,12 +36,15 @@ constructor(
     // Reuse the same authenticated Drive service within a restore session
     // (avoids redundant GoogleAuthUtil.getToken() calls)
     @Volatile private var sessionService: Drive? = null
+    private val sessionMutex = Mutex()
 
     private suspend fun getSessionDriveService(): Drive? {
         sessionService?.let {
             return it
         }
-        return getDriveService()?.also { sessionService = it }
+        return sessionMutex.withLock {
+            sessionService ?: getDriveService()?.also { sessionService = it }
+        }
     }
 
     /** Clear cached service after a restore session is complete. */
@@ -98,13 +103,17 @@ constructor(
             try {
                 val driveService = getDriveService() ?: return@withContext null
                 val files =
-                    driveService.files().list()
+                    driveService
+                        .files()
+                        .list()
                         .setSpaces("appDataFolder")
                         .setQ("name = '${Constants.DRIVE_BACKUP_FILENAME}'")
                         .setFields("files(id, modifiedTime)")
                         .execute()
                 files.files?.firstOrNull()?.modifiedTime?.value
-            } catch (e: Exception) { null }
+            } catch (e: Exception) {
+                null
+            }
         }
 
     suspend fun restore(targetFile: File): Result<Unit> =
@@ -112,9 +121,7 @@ constructor(
             try {
                 val driveService =
                     getDriveService()
-                        ?: return@withContext Result.failure(
-                            IllegalStateException("Not signed in")
-                        )
+                        ?: return@withContext Result.failure(IllegalStateException("Not signed in"))
 
                 val files =
                     driveService

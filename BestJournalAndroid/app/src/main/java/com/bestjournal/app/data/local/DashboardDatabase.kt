@@ -24,6 +24,9 @@ abstract class DashboardDatabase : RoomDatabase() {
                                 DashboardDatabase::class.java,
                                 "dashboard_db",
                             )
+                            // Dashboard data is regenerable from journal entries — destructive
+                            // migration is safe
+                            .fallbackToDestructiveMigration()
                             .build()
                     INSTANCE = instance
                     instance

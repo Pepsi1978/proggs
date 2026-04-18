@@ -25,7 +25,9 @@ class EdgeTtsPlayer(private val context: Context) {
 
     private var mediaPlayer: MediaPlayer? = null
     private var webSocket: WebSocket? = null
-    private var currentOutputStream: java.io.FileOutputStream? = null
+    // @Volatile because currentOutputStream is read from the OkHttp WebSocket thread
+    // (onMessage callback) and written/closed from the Main thread (stop/speak).
+    @Volatile private var currentOutputStream: java.io.FileOutputStream? = null
     private var onDone: (() -> Unit)? = null
     private var onPlayStart: (() -> Unit)? = null
     private var watchdogJob: Job? = null
@@ -118,75 +120,89 @@ class EdgeTtsPlayer(private val context: Context) {
         try {
             currentOutputStream?.close()
         } catch (_: Exception) {}
+        // Assign directly to the field BEFORE opening the WebSocket so stop()'s
+        // cleanup path (which closes currentOutputStream) also covers the case
+        // where client.newWebSocket() itself throws — previously the stream
+        // existed only as a local var and would leak on constructor failure.
         val outputStream = FileOutputStream(audioFile)
         currentOutputStream = outputStream
 
-        webSocket =
-            client.newWebSocket(
-                request,
-                object : WebSocketListener() {
-                    override fun onOpen(webSocket: WebSocket, response: Response) {
-                        android.util.Log.d("EdgeTTS", "WebSocket connected")
-                        startWatchdog(webSocket, WATCHDOG_INITIAL_MS, initial = true)
-                        val config =
-                            "Content-Type:application/json; charset=utf-8\r\n" +
-                                "Path:speech.config\r\n\r\n" +
-                                """{"context":{"synthesis":{"audio":{"metadataOptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-96kbitrate-mono-mp3"}}}}"""
-                        webSocket.send(config)
+        try {
+            webSocket =
+                client.newWebSocket(
+                    request,
+                    object : WebSocketListener() {
+                        override fun onOpen(webSocket: WebSocket, response: Response) {
+                            android.util.Log.d("EdgeTTS", "WebSocket connected")
+                            startWatchdog(webSocket, WATCHDOG_INITIAL_MS, initial = true)
+                            val config =
+                                "Content-Type:application/json; charset=utf-8\r\n" +
+                                    "Path:speech.config\r\n\r\n" +
+                                    """{"context":{"synthesis":{"audio":{"metadataOptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-96kbitrate-mono-mp3"}}}}"""
+                            webSocket.send(config)
 
-                        val escaped =
-                            text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                            val escaped =
+                                text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
-                        val lang = TtsVoiceRegistry.extractLocale(voice)
-                        val ssml =
-                            "X-RequestId:$requestId\r\n" +
-                                "Content-Type:application/ssml+xml\r\n" +
-                                "Path:ssml\r\n\r\n" +
-                                "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='$lang'>" +
-                                "<voice name='$voice'>$escaped</voice>" +
-                                "</speak>"
-                        webSocket.send(ssml)
-                    }
+                            val lang = TtsVoiceRegistry.extractLocale(voice)
+                            val ssml =
+                                "X-RequestId:$requestId\r\n" +
+                                    "Content-Type:application/ssml+xml\r\n" +
+                                    "Path:ssml\r\n\r\n" +
+                                    "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='$lang'>" +
+                                    "<voice name='$voice'>$escaped</voice>" +
+                                    "</speak>"
+                            webSocket.send(ssml)
+                        }
 
-                    override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-                        val data = bytes.toByteArray()
-                        if (data.size > 2) {
-                            val headerLen =
-                                ((data[0].toInt() and 0xFF) shl 8) or (data[1].toInt() and 0xFF)
-                            val audioStart = headerLen + 2
-                            if (data.size > audioStart) {
-                                outputStream.write(data, audioStart, data.size - audioStart)
-                                // Reset watchdog: bytes flowed, server is alive
-                                startWatchdog(webSocket, WATCHDOG_IDLE_MS, initial = false)
+                        override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                            val data = bytes.toByteArray()
+                            if (data.size > 2) {
+                                val headerLen =
+                                    ((data[0].toInt() and 0xFF) shl 8) or (data[1].toInt() and 0xFF)
+                                val audioStart = headerLen + 2
+                                if (data.size > audioStart) {
+                                    outputStream.write(data, audioStart, data.size - audioStart)
+                                    // Reset watchdog: bytes flowed, server is alive
+                                    startWatchdog(webSocket, WATCHDOG_IDLE_MS, initial = false)
+                                }
                             }
                         }
-                    }
 
-                    override fun onMessage(webSocket: WebSocket, text: String) {
-                        if (text.contains("Path:turn.end")) {
+                        override fun onMessage(webSocket: WebSocket, text: String) {
+                            if (text.contains("Path:turn.end")) {
+                                watchdogJob?.cancel()
+                                watchdogJob = null
+                                outputStream.close()
+                                scope.launch { playFile(audioFile) }
+                            }
+                        }
+
+                        override fun onFailure(
+                            webSocket: WebSocket,
+                            t: Throwable,
+                            response: Response?,
+                        ) {
+                            android.util.Log.e("EdgeTTS", "WebSocket failure: ${t.message}", t)
                             watchdogJob?.cancel()
                             watchdogJob = null
-                            outputStream.close()
-                            scope.launch { playFile(audioFile) }
+                            logTtsFailure(currentVoice, t.message ?: "unknown")
+                            try {
+                                outputStream.close()
+                            } catch (_: Exception) {}
+                            scope.launch { onDone?.invoke() }
                         }
-                    }
-
-                    override fun onFailure(
-                        webSocket: WebSocket,
-                        t: Throwable,
-                        response: Response?,
-                    ) {
-                        android.util.Log.e("EdgeTTS", "WebSocket failure: ${t.message}", t)
-                        watchdogJob?.cancel()
-                        watchdogJob = null
-                        logTtsFailure(currentVoice, t.message ?: "unknown")
-                        try {
-                            outputStream.close()
-                        } catch (_: Exception) {}
-                        scope.launch { onDone?.invoke() }
-                    }
-                },
-            )
+                    },
+                )
+        } catch (e: Exception) {
+            android.util.Log.e("EdgeTTS", "newWebSocket failed — releasing file stream", e)
+            try {
+                currentOutputStream?.close()
+            } catch (_: Exception) {}
+            currentOutputStream = null
+            logTtsFailure(currentVoice, "websocket-ctor: ${e.message ?: e.javaClass.simpleName}")
+            scope.launch { onDone?.invoke() }
+        }
     }
 
     /**

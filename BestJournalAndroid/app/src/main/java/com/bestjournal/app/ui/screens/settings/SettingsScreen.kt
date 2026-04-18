@@ -131,19 +131,7 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     // Click sound helper � plays only when sounds are enabled
-    val clickPrefs = remember {
-        val mk =
-            androidx.security.crypto.MasterKeys.getOrCreate(
-                androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-            )
-        androidx.security.crypto.EncryptedSharedPreferences.create(
-            Constants.ENCRYPTED_PREFS_NAME,
-            mk,
-            context,
-            androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
-    }
+    val clickPrefs = remember { com.bestjournal.app.util.EncryptedPrefsProvider.get(context) }
     val playClick = remember {
         {
             if (clickPrefs.getBoolean(Constants.PREF_SOUNDS_ENABLED, true)) {
@@ -203,8 +191,16 @@ fun SettingsScreen(
     var showSubscriptionSheet by remember { mutableStateOf(false) }
 
     val consentLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { _ ->
-            viewModel.syncNow()
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result
+            ->
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                viewModel.syncNow()
+            } else {
+                android.util.Log.d(
+                    "SettingsScreen",
+                    "Drive consent cancelled or failed, not retrying",
+                )
+            }
         }
     uiState.consentIntent?.let { intent ->
         androidx.compose.runtime.LaunchedEffect(intent) {
@@ -574,7 +570,13 @@ fun SettingsScreen(
                                             viewModel.saveLocation(loc.latitude, loc.longitude)
                                             viewModel.updateFollowSun(true)
                                         }
-                                    } catch (_: Exception) {}
+                                    } catch (e: Exception) {
+                                        android.util.Log.w(
+                                            "SettingsScreen",
+                                            "Failed to save location for Follow Sun",
+                                            e,
+                                        )
+                                    }
                                 }
                             }
                         // Sonnenauf-/untergang � Sun | Moon based on actual time
@@ -683,21 +685,7 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         val soundsPrefs = remember {
-                            val masterKey =
-                                androidx.security.crypto.MasterKeys.getOrCreate(
-                                    androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-                                )
-                            androidx.security.crypto.EncryptedSharedPreferences.create(
-                                Constants.ENCRYPTED_PREFS_NAME,
-                                masterKey,
-                                context,
-                                androidx.security.crypto.EncryptedSharedPreferences
-                                    .PrefKeyEncryptionScheme
-                                    .AES256_SIV,
-                                androidx.security.crypto.EncryptedSharedPreferences
-                                    .PrefValueEncryptionScheme
-                                    .AES256_GCM,
-                            )
+                            com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
                         }
                         var soundsEnabled by remember {
                             mutableStateOf(
@@ -1525,21 +1513,7 @@ fun SettingsScreen(
                                 stringResource(R.string.profile_custom),
                             )
                         val scenarioPrefs = remember {
-                            val masterKey =
-                                androidx.security.crypto.MasterKeys.getOrCreate(
-                                    androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-                                )
-                            androidx.security.crypto.EncryptedSharedPreferences.create(
-                                Constants.ENCRYPTED_PREFS_NAME,
-                                masterKey,
-                                context,
-                                androidx.security.crypto.EncryptedSharedPreferences
-                                    .PrefKeyEncryptionScheme
-                                    .AES256_SIV,
-                                androidx.security.crypto.EncryptedSharedPreferences
-                                    .PrefValueEncryptionScheme
-                                    .AES256_GCM,
-                            )
+                            com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
                         }
                         val selectedScenario =
                             scenarioPrefs.getInt(Constants.PREF_DASHBOARD_SCENARIO, 0)
@@ -2340,7 +2314,7 @@ fun SettingsScreen(
                                 msg,
                                 style = MaterialTheme.typography.labelMedium,
                                 color =
-                                    if (msg.startsWith("Fehler")) MaterialTheme.colorScheme.error
+                                    if (uiState.exportIsError) MaterialTheme.colorScheme.error
                                     else MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.fillMaxWidth(),
                                 textAlign = TextAlign.Center,

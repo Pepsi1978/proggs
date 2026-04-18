@@ -1,7 +1,5 @@
 package com.bestjournal.app.ui.screens.entrydetail
 
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -82,7 +80,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -114,6 +111,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.GlassCard
@@ -167,19 +165,7 @@ fun EntryDetailScreen(
     val tts = remember { EdgeTtsPlayer(context) }
     val ttsPrefs = remember {
         try {
-            val mk =
-                androidx.security.crypto.MasterKeys.getOrCreate(
-                    androidx.security.crypto.MasterKeys.AES256_GCM_SPEC
-                )
-            androidx.security.crypto.EncryptedSharedPreferences.create(
-                com.bestjournal.app.util.Constants.ENCRYPTED_PREFS_NAME,
-                mk,
-                context,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme
-                    .AES256_SIV,
-                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme
-                    .AES256_GCM,
-            )
+            com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
         } catch (_: Exception) {
             null
         }
@@ -197,6 +183,10 @@ fun EntryDetailScreen(
             .components { add(coil3.video.VideoFrameDecoder.Factory()) }
             .build()
     }
+    // Remember-stable ImageLoader for photos — without `remember` a new instance
+    // would be allocated on every recomposition, bypassing the Coil memory cache
+    // and increasing GC pressure in photo-heavy entries.
+    val photoImageLoader = remember { coil3.ImageLoader(appContext) }
 
     val photoPickerLauncher =
         rememberLauncherForActivityResult(
@@ -637,7 +627,7 @@ fun EntryDetailScreen(
                                                 else stringResource(R.string.label_photo),
                                             imageLoader =
                                                 if (photo.isVideo) videoImageLoader
-                                                else coil3.ImageLoader(appContext),
+                                                else photoImageLoader,
                                             modifier =
                                                 Modifier.size(120.dp)
                                                     .clip(RoundedCornerShape(12.dp))

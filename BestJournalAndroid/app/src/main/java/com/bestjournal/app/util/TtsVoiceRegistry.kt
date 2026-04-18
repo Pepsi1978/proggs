@@ -57,13 +57,14 @@ object TtsVoiceRegistry {
             }
         }
 
-        // Default to English US
-        return ALL_LOCALES["en-US"]!!
+        // Default to English US (fallback if ALL_LOCALES map is incomplete, e.g. after R8 strip)
+        return ALL_LOCALES["en-US"]
+            ?: LocaleVoices("en-US", "en-US-AvaMultilingualNeural", emptyList())
     }
 
     /** Get gender label in the voice's own language. */
     fun genderLabel(localeCode: String, gender: Gender): String {
-        val lang = localeCode.substring(0, 2)
+        val lang = if (localeCode.length >= 2) localeCode.substring(0, 2) else "en"
         return when (lang) {
             "de" -> if (gender == Gender.FEMALE) "weiblich" else "m\u00e4nnlich"
             "en" -> if (gender == Gender.FEMALE) "female" else "male"
@@ -104,7 +105,7 @@ object TtsVoiceRegistry {
 
     /** Get "very natural" quality label for Multilingual voices. */
     fun qualityLabel(localeCode: String): String {
-        val lang = localeCode.substring(0, 2)
+        val lang = if (localeCode.length >= 2) localeCode.substring(0, 2) else "en"
         return when (lang) {
             "de" -> "sehr nat\u00fcrlich"
             "en" -> "very natural"
@@ -276,29 +277,17 @@ object TtsVoiceRegistry {
                 LocaleVoices(
                     "es-MX",
                     "es-MX-DaliaNeural",
-                    listOf(
-                    st("es-MX-DaliaNeural", "Dalia", F),
-                    st("es-MX-JorgeNeural", "Jorge", M),
-),
+                    listOf(st("es-MX-DaliaNeural", "Dalia", F), st("es-MX-JorgeNeural", "Jorge", M)),
                 ),
             "es-US" to
-
                 LocaleVoices(
-
                     "es-US",
-
                     "es-US-PalomaNeural",
-
                     listOf(
-
                         st("es-US-PalomaNeural", "Paloma", F),
-
                         st("es-US-AlonsoNeural", "Alonso", M),
-
                     ),
-
                 ),
-
             "es-AR" to
                 LocaleVoices(
                     "es-AR",

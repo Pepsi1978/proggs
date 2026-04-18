@@ -8,12 +8,12 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -94,73 +94,87 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
                 hiltViewModel()
 
             Box(modifier = Modifier.fillMaxSize()) {
-            Scaffold(
-                containerColor = MaterialTheme.colorScheme.background,
-                bottomBar = {
-                    BottomNavBar(
-                        currentRoute = mainPages[pagerState.currentPage].route,
-                        onItemClick = { item ->
-                            val targetPage = mainPages.indexOf(item)
-                            if (targetPage >= 0) {
-                                coroutineScope.launch { pagerState.animateScrollToPage(targetPage) }
-                            }
-                        },
-                    )
-                },
-            ) { innerPadding ->
-                HorizontalPager(
-                    state = pagerState,
-                    beyondViewportPageCount = 3,
-                    modifier = Modifier.padding(innerPadding),
-                ) { page ->
-                    when (page) {
-                        0 ->
-                            RetrospectiveScreen(
-                                viewModel = retroViewModel,
-                                onNavigateToPaywall = { source ->
-                                    navController.navigate("paywall?source=$source")
-                                },
-                            )
-                        1 ->
-                            DashboardScreen(
-                                viewModel = hiltViewModel(),
-                                onNavigateToPaywall = { source ->
-                                    navController.navigate("paywall?source=$source")
-                                },
-                            )
-                        2 ->
-                            JournalScreen(
-                                viewModel = hiltViewModel(),
-                                onEntryClick = { entryId, searchQuery ->
-                                    val encodedQuery = Uri.encode(searchQuery)
-                                    navController.navigate(
-                                        "entry_detail/$entryId?searchQuery=$encodedQuery"
-                                    )
-                                },
-                                onNavigateToPaywall = { source ->
-                                    navController.navigate("paywall?source=$source")
-                                },
-                            )
-                        3 ->
-                            SettingsScreen(
-                                viewModel = hiltViewModel(),
-                                onSignOut = {},
-                                onNavigateToPaywall = { source ->
-                                    navController.navigate("paywall?source=$source")
-                                },
-                            )
+                Scaffold(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    bottomBar = {
+                        BottomNavBar(
+                            currentRoute = mainPages[pagerState.currentPage].route,
+                            onItemClick = { item ->
+                                val targetPage = mainPages.indexOf(item)
+                                if (targetPage >= 0) {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(targetPage)
+                                    }
+                                }
+                            },
+                        )
+                    },
+                ) { innerPadding ->
+                    HorizontalPager(
+                        state = pagerState,
+                        // Only preload 1 neighbor page — stops infinite animations on hidden
+                        // tabs from burning CPU (Retrospective reviewCta, Settings premiumCta).
+                        beyondViewportPageCount = 1,
+                        modifier = Modifier.padding(innerPadding),
+                    ) { page ->
+                        when (page) {
+                            0 ->
+                                RetrospectiveScreen(
+                                    viewModel = retroViewModel,
+                                    onNavigateToPaywall = { source ->
+                                        navController.navigate("paywall?source=$source") {
+                                            launchSingleTop = true
+                                        }
+                                    },
+                                )
+                            1 ->
+                                DashboardScreen(
+                                    viewModel = hiltViewModel(),
+                                    onNavigateToPaywall = { source ->
+                                        navController.navigate("paywall?source=$source") {
+                                            launchSingleTop = true
+                                        }
+                                    },
+                                )
+                            2 ->
+                                JournalScreen(
+                                    viewModel = hiltViewModel(),
+                                    onEntryClick = { entryId, searchQuery ->
+                                        val encodedQuery = Uri.encode(searchQuery)
+                                        navController.navigate(
+                                            "entry_detail/$entryId?searchQuery=$encodedQuery"
+                                        ) {
+                                            launchSingleTop = true
+                                        }
+                                    },
+                                    onNavigateToPaywall = { source ->
+                                        navController.navigate("paywall?source=$source") {
+                                            launchSingleTop = true
+                                        }
+                                    },
+                                )
+                            3 ->
+                                SettingsScreen(
+                                    viewModel = hiltViewModel(),
+                                    onSignOut = {},
+                                    onNavigateToPaywall = { source ->
+                                        navController.navigate("paywall?source=$source") {
+                                            launchSingleTop = true
+                                        }
+                                    },
+                                )
+                        }
                     }
                 }
-            }
-            // Black curtain ON TOP — fades from opaque to invisible
-            if (curtainAlpha.value > 0.01f) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { alpha = curtainAlpha.value }
-                        .background(Color(0xFF131313)),
-                )
-            }
+                // Black curtain ON TOP — fades from opaque to invisible
+                if (curtainAlpha.value > 0.01f) {
+                    Box(
+                        modifier =
+                            Modifier.fillMaxSize()
+                                .graphicsLayer { alpha = curtainAlpha.value }
+                                .background(Color(0xFF131313))
+                    )
+                }
             } // end enter-animation wrapper
         }
 
