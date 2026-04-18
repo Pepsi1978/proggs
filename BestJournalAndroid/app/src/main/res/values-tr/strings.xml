@@ -123,10 +123,10 @@
     <string name="streak_3">Sürdürüyorsun!</string>
     <string name="streak_default">Her gün sayılır!</string>
     <string name="streak_desc_365">Küçük bir alışkanlık olarak başlayan şey artık hayatının sağlam bir parçası. Günlük seni hiç olmadığı kadar tanıyor.</string>
-    <string name="streak_desc_14">İki hafta üst üste, çok az kişinin başardığı bir şey. Gelecekteki sen, bugünkü senden bunu için teşekkür edecek.</string>
+    <string name="streak_desc_14">İki hafta üst üste, çok az kişinin başardığı bir şey. Gelecekteki sen, bugünkü sana bunun için teşekkür edecek.</string>
     <string name="streak_desc_7">Düşünceler, duygular ve anılarla dolu bir hafta. Değerli bir şey inşa ediyorsun.</string>
     <string name="streak_desc_3">Üst üste üç gün, gerçek bir alışkanlığın başlangıcı. Sürdür, değer.</string>
-    <string name="streak_desc_1">Her giriş, gelecekteki sene küçük bir armağan. Yarın da yaz!</string>
+    <string name="streak_desc_1">Her giriş, gelecekteki sana küçük bir armağan. Yarın da yaz!</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          ENTRY DETAIL SCREEN
@@ -153,7 +153,7 @@
     <string name="entry_camera">Kamera</string>
     <string name="entry_gallery">Galeri</string>
     <string name="entry_delete_title">Girişi silmek istiyor musun?</string>
-    <string name="entry_delete_message">Bu girişi kalıcı olarak sil?</string>
+    <string name="entry_delete_message">Bu girişi kalıcı olarak silmek istiyor musun?</string>
 
     <!-- Share dialog -->
     <string name="share_title">Girişi paylaş</string>
@@ -377,18 +377,18 @@
     <string name="settings_timezone">Zaman dilimi: %1$s</string>
     <string name="settings_security">Güvenlik</string>
     <string name="settings_fingerprint">Parmak izi</string>
-    <string name="settings_fingerprint_desc">Uygulamayı başlatırken çöz</string>
+    <string name="settings_fingerprint_desc">Uygulama başlarken kilidi aç</string>
     <string name="settings_auto_lock">Arka planda 60 saniye sonra otomatik kilitlenir</string>
     <string name="settings_ai_profiles_title">YZ paneli profilleri:</string>
     <string name="settings_ai_automations">YZ otomasyonları</string>
     <string name="settings_custom_prompt_placeholder">Örneğin: uyku kaliteme ve stres seviyeme odaklan. Beslenmemdeki örüntüleri göster. Ruh halimin hafta içinde nasıl değiştiğini analiz et. En verimli olduğum anı ve beni neyin engellediğini bul.\n\nOdağını ne kadar ayrıntılı anlatırsan sonuçlar o kadar iyi olur.</string>
     <string name="churn_google_play_redirect">Aboneliği yönetmek için Google Play\'e yönlendirileceksin. Günlük girişlerin elbette duruyor.</string>
     <string name="splash_subtitle">AKILLI GÜNLÜĞÜN</string>
-    <string name="biometric_subtitle">Günlüğünü çöz</string>
+    <string name="biometric_subtitle">Günlüğünün kilidini aç</string>
     <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
-    <string name="biometric_prompt_subtitle">Çözmek için kimliğini doğrula</string>
+    <string name="biometric_prompt_subtitle">Kilidi açmak için kimliğini doğrula</string>
     <!-- Button in the biometric lock screen to trigger the fingerprint prompt. Keep short. -->
-    <string name="biometric_unlock_button">Çöz</string>
+    <string name="biometric_unlock_button">Kilidi aç</string>
     <string name="settings_text_improvement">Metin iyileştirme</string>
     <string name="settings_text_improvement_desc">Varsayılan olarak aç</string>
     <string name="settings_dashboard_section">Panel</string>
