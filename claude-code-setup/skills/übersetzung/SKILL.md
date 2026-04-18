@@ -189,7 +189,7 @@ die im ersten Durchlauf entstehen.
 1. **Prompt erneut laden**: Den sprach-spezifischen Prompt-Block NOCHMAL lesen.
    Nicht aus dem Gedaechtnis arbeiten — frisch laden, damit keine Warnung vergessen wird.
 
-2. **Systematische Pruefung (7 Checks):**
+2. **Systematische Pruefung (8 Checks):**
 
    | # | Check | Was geprueft wird | Wie pruefen |
    |---|-------|------------------|-------------|
@@ -200,6 +200,7 @@ die im ersten Durchlauf entstehen.
    | 5 | Sprach-Warnungen | Spezifische LLM-Pitfalls aus dem Prompt | Gegen Warnung-Liste pruefen |
    | 6 | Konsistenz | Gleiche Begriffe fuer gleiche Konzepte | Stichprobe der Kern-Vokabeln |
    | **7** | **Native-Ziffern (indische Sprachen PFLICHT)** | **Keine bengalischen/devanagari/tamilischen etc. Ziffern** | **Python-Regex pro Sprache (siehe unten)** |
+   | **8** | **Full-width Punctuation (CJK-Sprachen PFLICHT)** | **Keine half-width `, . ! ? : ; ( )` nach CJK-Zeichen** | **Python-Regex (siehe unten)** |
 
 #### Check 7 — Native-Ziffern-Pflichtcheck fuer indische Sprachen
 
@@ -259,6 +260,112 @@ else:
 Dieser Check ist **nicht optional** fuer bn, hi, mr, te, ta, gu, kn, ml, ur. Er wird
 nach Schritt A (Uebersetzen) und vor Schritt C (Commit) ausgefuehrt. Bei >0 nativen
 Ziffern: automatisch ersetzen, in die Verbesserungs-Meldung aufnehmen.
+
+#### Check 8 — Full-width Punctuation Pflichtcheck fuer CJK-Sprachen
+
+Die Referenzdatei schreibt fuer ALLE CJK-Sprachen explizit vor:
+**"Use full-width punctuation: 。，！？（）「」"**
+
+LLMs verwenden trotzdem haeufig half-width ASCII `, . ! ? : ; ( )` nach CJK-Zeichen.
+Das ist visuell sofort als unprofessionell erkennbar — besonders weil andere CJK-Apps
+(Apple, Google, Native-Apps) durchgaengig full-width verwenden.
+
+**Empirische Daten** (BestJournal-App, April 2026):
+- zh-Hans: 551 half-width Vorkommen → gefixt in #1530
+- zh-Hant: 446 half-width Vorkommen → gefixt in #1531/#1532
+- ja: weniger betroffen, aber auch vorhanden
+
+| Sprache | Half-width (VERBOTEN nach CJK) | Full-width (KORREKT) |
+|---------|-------------------------------|---------------------|
+| zh-Hans | `, . ! ? : ; ( )` | `， 。 ！ ？ ： ； （ ）` |
+| zh-Hant | `, . ! ? : ; ( )` | `， 。 ！ ？ ： ； （ ）` |
+| ja | `, . ! ? : ; ( )` | `、 。 ！ ？ ： ； （ ）` (Komma = `、` !) |
+
+**WICHTIG — Ausnahmen die NICHT gefixt werden duerfen:**
+- JSON-Schema-Strings (typisch in `ai_prompt_*` Keys): half-width `:` und `,` und `"`
+  sind dort Pflicht-Syntax, sonst bricht das KI-Parsing
+- Versionsnummern (`1.0.5`), Uhrzeiten (`12:30`) — half-width bleibt
+- Format-Platzhalter `%1$s`, `%d`
+
+**Pflicht-Script (nach jeder zh-Hans/zh-Hant/ja Uebersetzung ausfuehren):**
+
+```python
+import re, os, tempfile
+
+LOCALE = "zh-rTW"  # anpassen: zh-rCN, zh-rTW, ja
+PATH = f"[APP_DIR]/app/src/main/res/values-{LOCALE}/strings.xml"
+
+# Komma fuer ja anders als zh-Hans/zh-Hant!
+COMMA = "、" if LOCALE == "ja" else "，"
+
+def is_json_schema(s):
+    """JSON-Strings duerfen NICHT gefixt werden — sonst bricht KI-Parsing."""
+    if 'JSON' in s and ('\\"' in s or '{' in s):
+        return True
+    if re.search(r'\\"[a-zA-Z_]+\\"\s*:', s):
+        return True
+    return False
+
+def fix_string(text):
+    if is_json_schema(text):
+        return text, 0
+    fixed = text
+    n = 0
+    # Komma nach CJK
+    fixed, c = re.subn(r'([\u4e00-\u9fff]),', rf'\1{COMMA}', fixed); n += c
+    # Punkt nach CJK (nicht in 1.0)
+    fixed, c = re.subn(r'([\u4e00-\u9fff])\.(?!\d)', r'\1。', fixed); n += c
+    # Ausrufezeichen, Fragezeichen
+    fixed, c = re.subn(r'([\u4e00-\u9fff])!', r'\1！', fixed); n += c
+    fixed, c = re.subn(r'([\u4e00-\u9fff])\?', r'\1？', fixed); n += c
+    # Doppelpunkt (nicht in 12:30)
+    fixed, c = re.subn(r'([\u4e00-\u9fff]):(?!\d{2})', r'\1：', fixed); n += c
+    fixed, c = re.subn(r'([\u4e00-\u9fff]);', r'\1；', fixed); n += c
+    # Klammern: ( neben CJK -> （
+    fixed, c = re.subn(r'([\u4e00-\u9fff])\s*\(', r'\1（', fixed); n += c
+    # ) Paire schliessen
+    fixed, c = re.subn(r'（([^（）()]*?)\)', r'（\1）', fixed); n += c
+    # Kosmetisch: kein Space nach full-width Punctuation
+    fixed = re.sub(r'：[ \t]+(\S)', r'：\1', fixed)
+    fixed = re.sub(r'。[ \t]+(\S)', r'。\1', fixed)
+    return fixed, n
+
+with open(PATH, "r", encoding="utf-8") as f:
+    content = f.read()
+original = content
+total_fixes = 0
+strings_changed = 0
+
+def process(match):
+    global total_fixes, strings_changed
+    full = match.group(0)
+    body = match.groups()[-1]
+    new_body, n = fix_string(body)
+    if n > 0:
+        total_fixes += n
+        strings_changed += 1
+        return full.replace(body, new_body)
+    return full
+
+content = re.sub(r'<string name="([^"]+)"(?:[^>]*?)>(.*?)</string>',
+                 process, content, flags=re.DOTALL)
+content = re.sub(r'<item(?:\s+quantity="[^"]+")?>(.*?)</item>',
+                 process, content, flags=re.DOTALL)
+
+if content != original:
+    d = os.path.dirname(os.path.abspath(PATH))
+    with tempfile.NamedTemporaryFile("w", dir=d, suffix=".tmp",
+                                      delete=False, encoding="utf-8") as tmp:
+        tmp.write(content); tmp_path = tmp.name
+    os.replace(tmp_path, PATH)
+    print(f"Fixed: {strings_changed} Strings, {total_fixes} Punctuation-Aenderungen")
+else:
+    print(f"OK: 0 half-width Punctuation in {LOCALE}")
+```
+
+Dieser Check ist **nicht optional** fuer zh-Hans, zh-Hant, ja. Er wird nach Schritt A
+(Uebersetzen) und vor Schritt C (Commit) ausgefuehrt. Bei >0 Vorkommen: automatisch
+ersetzen, in die Verbesserungs-Meldung aufnehmen.
 
 3. **Check 5 im Detail — Sprach-spezifische Warnungen:**
    Das ist der wichtigste Check. Fuer jede Sprache gibt es spezifische Gefahren:
