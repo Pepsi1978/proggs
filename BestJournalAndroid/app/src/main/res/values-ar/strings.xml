@@ -22,30 +22,30 @@
     <string name="action_continue">متابعة</string>
     <string name="action_understood">مفهوم</string>
     <string name="action_retry">إعادة المحاولة</string>
-    <string name="action_later">لاحقًا</string>
+    <string name="action_later">لاحقا</string>
     <string name="action_share">مشاركة</string>
     <string name="action_discard">تجاهل</string>
     <string name="action_back">رجوع</string>
     <string name="action_done">تم</string>
-    <string name="action_no_thanks">لا، شكرًا</string>
+    <string name="action_no_thanks">لا، شكرا</string>
     <string name="action_delete">حذف</string>
     <!-- Accessibility label for the undo icon button on the dashboard. -->
     <string name="action_undo">تراجع</string>
     <string name="action_ok">موافق</string>
-    <string name="action_go_google_play">انتقل إلى Google Play</string>
-    <string name="journal_drive_backup_dialog">نسخة احتياطية على Google Drive</string>
+    <string name="action_go_google_play">انتقل إلى Google Play\u200E</string>
+    <string name="journal_drive_backup_dialog">نسخة احتياطية على Google Drive\u200E</string>
     <string name="journal_improve_text">✨ تحسين النص</string>
     <string name="journal_show_original">↩ عرض الأصلي</string>
     <string name="journal_show_improved">✨ عرض النسخة المحسّنة</string>
     <string name="journal_ai_improving">الذكاء الاصطناعي يحسّن النص، يرجى الانتظار</string>
-    <string name="journal_later">لاحقًا</string>
+    <string name="journal_later">لاحقا</string>
     <!-- Paywall missed strings -->
-    <string name="paywall_from_per_day">ابتداءً من %1$s في اليوم</string>
-    <string name="paywall_instead_per_month">بدلاً من %1$s في الشهر</string>
+    <string name="paywall_from_per_day">ابتداء من %1$s في اليوم</string>
+    <string name="paywall_instead_per_month">بدلا من %1$s في الشهر</string>
     <string name="paywall_or">أو</string>
     <string name="paywall_with_limited">مع حدود استخدام.</string>
     <!-- Churn missed string -->
-    <string name="churn_instead_of">بدلاً من </string>
+    <string name="churn_instead_of">بدلا من </string>
     <string name="label_premium">المميّز</string>
     <string name="label_original">الأصلي</string>
     <string name="label_improved">محسّن</string>
@@ -70,10 +70,10 @@
     <string name="journal_cd_streak">أيام متتالية</string>
     <string name="journal_cd_text_input">إدخال نص</string>
     <string name="journal_achievement_unlocked">تم فتح إنجاز!</string>
-    <string name="journal_drive_not_signed_in">لم يتم تسجيل الدخول إلى Google</string>
+    <string name="journal_drive_not_signed_in">لم يتم تسجيل الدخول إلى Google\u200E</string>
     <string name="journal_drive_backup_current">النسخة الاحتياطية محدّثة، جميع التسجيلات محفوظة</string>
-    <string name="journal_drive_uploading">جارٍ رفع النسخة الاحتياطية…</string>
-    <string name="journal_drive_downloading">جارٍ تحميل الصور ومقاطع الفيديو…</string>
+    <string name="journal_drive_uploading">جار رفع النسخة الاحتياطية…</string>
+    <string name="journal_drive_downloading">جار تحميل الصور ومقاطع الفيديو…</string>
     <string name="journal_drive_failed">فشلت النسخة الاحتياطية!</string>
     <string name="journal_drive_last_sync">آخر مزامنة: %1$s</string>
     <string name="journal_new_entry_prompt">محفّز الكتابة</string>
@@ -93,7 +93,7 @@
     <string name="transcription_model_local">نموذج Whisper المحلي</string>
     <!-- Brand name of the Groq transcription model — do not translate. -->
     <string name="transcription_model_groq" translatable="false">Groq Whisper Large V3 Turbo</string>
-    <string name="journal_text_upsell_title">مُبهر، أليس كذلك؟</string>
+    <string name="journal_text_upsell_title">مبهر، أليس كذلك؟</string>
     <string name="journal_text_upsell_body">مع النسخة المميّزة يمكنك تحسين كل تسجيل.</string>
     <string name="journal_discover_premium">اكتشف المميّز</string>
     <string name="journal_entries_label">التسجيلات</string>
@@ -122,11 +122,11 @@
     <string name="streak_7">أسبوع كامل!</string>
     <string name="streak_3">تستمر في المسير!</string>
     <string name="streak_default">كل يوم مهم!</string>
-    <string name="streak_desc_365">ما بدأ كعادة صغيرة أصبح الآن جزءًا من حياتك. مذكراتك تعرفك أفضل من أي وقت مضى.</string>
+    <string name="streak_desc_365">ما بدأ كعادة صغيرة أصبح الآن جزءا من حياتك. مذكراتك تعرفك أفضل من أي وقت مضى.</string>
     <string name="streak_desc_14">أسبوعان متتاليان، قلّة تحقّق ذلك. ذاتك المستقبلية ستشكرك على هذا.</string>
-    <string name="streak_desc_7">أسبوع كامل من الأفكار والمشاعر والذكريات. أنت تبني شيئًا ثمينًا.</string>
+    <string name="streak_desc_7">أسبوع كامل من الأفكار والمشاعر والذكريات. أنت تبني شيئا ثمينا.</string>
     <string name="streak_desc_3">ثلاثة أيام متتالية هي بداية عادة حقيقية. استمر، الأمر يستحق!</string>
-    <string name="streak_desc_1">كل تسجيل هو هدية صغيرة لذاتك المستقبلية. اكتب مجددًا غدًا!</string>
+    <string name="streak_desc_1">كل تسجيل هو هدية صغيرة لذاتك المستقبلية. اكتب مجددا غدا!</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          ENTRY DETAIL SCREEN
@@ -134,12 +134,12 @@
     <string name="entry_title">التسجيل</string>
     <string name="entry_summary">الملخّص</string>
     <string name="entry_stress_label">العبء: </string>
-    <string name="entry_saving">جارٍ الحفظ…</string>
-    <string name="entry_improving">جارٍ التحسين…</string>
-    <string name="entry_improve_with_ai">تحسين لاحقًا بالذكاء الاصطناعي</string>
+    <string name="entry_saving">جار الحفظ…</string>
+    <string name="entry_improving">جار التحسين…</string>
+    <string name="entry_improve_with_ai">تحسين لاحقا بالذكاء الاصطناعي</string>
     <string name="entry_photos_videos">الصور ومقاطع الفيديو</string>
     <string name="entry_add">إضافة</string>
-    <string name="entry_no_photos_yet">لم تُضف صور أو مقاطع فيديو بعد</string>
+    <string name="entry_no_photos_yet">لم تضف صور أو مقاطع فيديو بعد</string>
     <string name="entry_cd_play_video">تشغيل الفيديو</string>
     <string name="entry_cd_remove">إزالة</string>
     <string name="entry_tts_enable_hint">فعّل الأصوات من الإعدادات</string>
@@ -147,13 +147,13 @@
     <string name="entry_tts_read">قراءة</string>
     <string name="entry_cd_share">مشاركة</string>
     <string name="entry_recording_duration">مدة التسجيل: %1$s</string>
-    <string name="entry_tts_generating">يرجى الانتظار، جارٍ توليد الصوت…</string>
+    <string name="entry_tts_generating">يرجى الانتظار، جار توليد الصوت…</string>
     <string name="entry_cd_photo_page">صورة %1$d</string>
     <string name="entry_add_photo_video">إضافة صورة أو فيديو</string>
     <string name="entry_camera">الكاميرا</string>
     <string name="entry_gallery">المعرض</string>
     <string name="entry_delete_title">حذف التسجيل؟</string>
-    <string name="entry_delete_message">هل تريد حذف هذا التسجيل نهائيًا؟</string>
+    <string name="entry_delete_message">هل تريد حذف هذا التسجيل نهائيا؟</string>
 
     <!-- Share dialog -->
     <string name="share_title">مشاركة التسجيل</string>
@@ -170,12 +170,12 @@
     <string name="dashboard_refresh">تحديث</string>
     <string name="dashboard_weekly_review_waiting">مراجعتك الأسبوعية بانتظارك</string>
     <!-- Body text of the weekly-review premium upsell card on the dashboard. -->
-    <string name="dashboard_weekly_review_upsell_body">كان أسبوعك مليئًا. مع النسخة المميّزة ترى التحليل الكامل، تكتشف الأنماط والرؤى، وتفهم ما يحرّكك فعلاً.</string>
+    <string name="dashboard_weekly_review_upsell_body">كان أسبوعك مليئا. مع النسخة المميّزة ترى التحليل الكامل، تكتشف الأنماط والرؤى، وتفهم ما يحرّكك فعلا.</string>
     <string name="dashboard_discover_premium">اكتشف المميّز</string>
     <string name="dashboard_please_wait">يرجى الانتظار</string>
-    <string name="dashboard_gemini_unavailable">Gemini غير متاح حاليًا، حاول مجددًا بعد قليل.</string>
+    <string name="dashboard_gemini_unavailable">\u200FGemini غير متاح حاليا، حاول مجددا بعد قليل.</string>
     <string name="dashboard_no_custom_focus">لم يتم إدخال محور التحليل</string>
-    <string name="dashboard_custom_focus_hint">أدخل محورًا في الإعدادات تحت\n«التحليل المخصّص»،\nأو اختر ملفًا آخر.</string>
+    <string name="dashboard_custom_focus_hint">أدخل محورا في الإعدادات تحت\n«التحليل المخصّص»،\nأو اختر ملفا آخر.</string>
     <string name="dashboard_no_analysis_yet">لا يوجد تحليل بعد</string>
     <string name="dashboard_create_entries_custom">أنشئ تسجيلات،\nثم يحلّل الذكاء الاصطناعي محورك.</string>
     <string name="dashboard_create_entries_default">أنشئ تسجيلات،\nثم يحلّل الذكاء الاصطناعي أنماطك.</string>
@@ -198,14 +198,14 @@
     <string name="dashboard_goals_next_steps_title">الخطوات التالية</string>
     <string name="dashboard_all_recommendations">كل التوصيات</string>
     <string name="dashboard_connection">ترابط</string>
-    <string name="dashboard_limit_daily">تم بلوغ الحدّ اليومي. نواصل غدًا!</string>
+    <string name="dashboard_limit_daily">تم بلوغ الحدّ اليومي. نواصل غدا!</string>
     <string name="dashboard_limit_cooldown">استراحة قصيرة: %1$d دقيقة حتى التحليل التالي.</string>
     <string name="dashboard_analysis_failed">فشل التحليل</string>
     <string name="dashboard_last_updated">آخر تحديث: %1$s</string>
-    <string name="dashboard_loading_profile_switch">يتم تحديث لوحة الذكاء الاصطناعي تلقائيًا بعد كل تبديل للملف</string>
-    <string name="dashboard_loading_delete_update">يتم تحديث لوحة الذكاء الاصطناعي تلقائيًا بعد حذف أي تسجيل</string>
-    <string name="dashboard_loading_auto_update">يتم تحديث لوحة الذكاء الاصطناعي تلقائيًا بعد كل تسجيل جديد</string>
-    <string name="dashboard_loading_default">جارٍ تحديث لوحة الذكاء الاصطناعي</string>
+    <string name="dashboard_loading_profile_switch">يتم تحديث لوحة الذكاء الاصطناعي تلقائيا بعد كل تبديل للملف</string>
+    <string name="dashboard_loading_delete_update">يتم تحديث لوحة الذكاء الاصطناعي تلقائيا بعد حذف أي تسجيل</string>
+    <string name="dashboard_loading_auto_update">يتم تحديث لوحة الذكاء الاصطناعي تلقائيا بعد كل تسجيل جديد</string>
+    <string name="dashboard_loading_default">جار تحديث لوحة الذكاء الاصطناعي</string>
 
     <!-- Legend labels -->
     <string name="legend_urgent">عاجل</string>
@@ -223,11 +223,11 @@
     <string name="legend_reflection_depth">عمق التأمّل</string>
     <string name="legend_reflection_desc">يعرض نصف الدائرة عمق تأمّلك الذاتي:</string>
     <string name="legend_reflection_deep">عميق (67–100\u00A0%)</string>
-    <string name="legend_reflection_aware">واعٍ (34–66\u00A0%)</string>
+    <string name="legend_reflection_aware">واع (34–66\u00A0%)</string>
     <string name="legend_reflection_surface">سطحي (0–33\u00A0%)</string>
     <string name="legend_insight_depth">عمق الرؤى</string>
     <string name="legend_insight_deep">عميق، أنماط ومعتقدات خفيّة</string>
-    <string name="legend_insight_aware">واعٍ، أنماط تفكير ومشاعر مكتشفة</string>
+    <string name="legend_insight_aware">واع، أنماط تفكير ومشاعر مكتشفة</string>
     <string name="legend_insight_surface">سطحي، ملاحظات أولى</string>
     <string name="legend_progress">تقدّم</string>
     <!-- Legend: Goal progress -->
@@ -252,22 +252,22 @@
     <!-- Legend: Burden/Stress -->
     <string name="legend_burden_scale">مقياس العبء</string>
     <string name="legend_burden_desc">يعرض نصف الدائرة مدى إثقال هذا الموضوع عليك:</string>
-    <string name="legend_high_burden">مرتفع (67–100\u00A0%)، تصرّف فورًا</string>
-    <string name="legend_medium_burden">متوسط (34–66\u00A0%)، يتطلّب انتباهًا</string>
+    <string name="legend_high_burden">مرتفع (67–100\u00A0%)، تصرّف فورا</string>
+    <string name="legend_medium_burden">متوسط (34–66\u00A0%)، يتطلّب انتباها</string>
     <string name="legend_low_burden">منخفض (0–33\u00A0%)، حالة جيدة</string>
     <string name="legend_priority_title">أولوية التوصيات</string>
-    <string name="legend_priority_high">أحمر = عاجل، تصرّف فورًا</string>
-    <string name="legend_priority_medium">برتقالي = متوسط، قريبًا</string>
+    <string name="legend_priority_high">أحمر = عاجل، تصرّف فورا</string>
+    <string name="legend_priority_medium">برتقالي = متوسط، قريبا</string>
     <string name="legend_priority_low">أزرق = منخفض، مراقبة</string>
     <!-- Legend: Categories -->
     <string name="legend_categories">الفئات</string>
-    <string name="legend_categories_desc">تُنشأ الفئات تلقائيًا. يتعرّف الذكاء الاصطناعي على الموضوعات في تسجيلاتك وينشئ فئات مناسبة. الموضوعات الجديدة تؤدّي تلقائيًا إلى أيقونات جديدة.</string>
+    <string name="legend_categories_desc">تنشأ الفئات تلقائيا. يتعرّف الذكاء الاصطناعي على الموضوعات في تسجيلاتك وينشئ فئات مناسبة. الموضوعات الجديدة تؤدّي تلقائيا إلى أيقونات جديدة.</string>
     <!-- CategoryDetailDialog levels -->
     <string name="level_low">منخفض</string>
     <string name="level_medium">متوسط</string>
     <string name="level_high">مرتفع</string>
-    <string name="urgency_high">عاجل، تصرّف فورًا</string>
-    <string name="urgency_medium">يتطلّب انتباهًا</string>
+    <string name="urgency_high">عاجل، تصرّف فورا</string>
+    <string name="urgency_medium">يتطلّب انتباها</string>
     <string name="urgency_low">حالة جيدة، مراقبة</string>
     <!-- Dashboard: Derivation dialog -->
     <string name="dashboard_derived_from">مشتقّ من:</string>
@@ -283,7 +283,7 @@
     <string name="dashboard_deepest_insights">أعمق الرؤى</string>
     <string name="dashboard_insight_subtitle">ما تكشفه تسجيلاتك عنك</string>
     <string name="insight_deep_label">عميق</string>
-    <string name="insight_aware_label">واعٍ</string>
+    <string name="insight_aware_label">واع</string>
     <string name="insight_surface_label">سطحي</string>
     <!-- Dashboard: Goal section -->
     <string name="dashboard_goal_steps">أهم الخطوات نحو أهدافك</string>
@@ -291,7 +291,7 @@
     <string name="goal_open_label">مفتوح</string>
     <string name="goal_progress_label">تقدّم</string>
     <!-- Dashboard: Custom analysis section -->
-    <string name="dashboard_custom_subtitle">استنادًا إلى تحليلك المخصّص</string>
+    <string name="dashboard_custom_subtitle">استنادا إلى تحليلك المخصّص</string>
     <string name="custom_important_label">مهم</string>
     <string name="custom_relevant_label">ذو صلة</string>
     <string name="custom_note_label">ملاحظة</string>
@@ -301,7 +301,7 @@
     <string name="dashboard_tts_read">قراءة</string>
     <string name="dashboard_share_analysis">مشاركة التحليل</string>
     <string name="dashboard_share">مشاركة</string>
-    <string name="dashboard_tts_wait">يرجى الانتظار، جارٍ توليد الصوت…</string>
+    <string name="dashboard_tts_wait">يرجى الانتظار، جار توليد الصوت…</string>
 
     <!-- Profile names -->
     <string name="profile_summary">ملخّص</string>
@@ -313,16 +313,16 @@
     <string name="profile_entropy_desc">يكشف التوتّر والفوضى والأعباء</string>
     <string name="profile_insight_desc">يكشف أنماط التفكير والمشاعر الخفيّة</string>
     <string name="profile_goals_desc">يتعرّف على الأهداف والرغبات والتقدّم</string>
-    <string name="profile_custom_desc">حدّد محور تحليل خاصًا بك</string>
+    <string name="profile_custom_desc">حدّد محور تحليل خاصا بك</string>
 
     <!-- Profile long descriptions (settings) -->
-    <string name="profile_summary_long">تُلخَّص تسجيلاتك بحياد، دون حكم أو نصائح.\n\nترى بنظرة واحدة:\n\n• ما الذي يشغلك حاليًا\n• الأنماط التي تتكرّر\n• كيف تتطوّر حياتك\n\nمثالي كنظرة يومية شاملة على كل ما يدور في حياتك.</string>
-    <string name="profile_entropy_long">يبحث الذكاء الاصطناعي بدقّة عن التوتّر والأعباء والفوضى في تسجيلاتك.\n\nتحصل على:\n\n• تحليل لأكبر مصادر الإرهاق\n• 5 إجراءات ملموسة للترتيب\n• نصائح يمكنها مساعدتك فورًا\n\nمثالي عندما تشعر بأن كل شيء أصبح كثيرًا.</string>
-    <string name="profile_insight_long">يتجاوز الذكاء الاصطناعي مجرد الأحداث. يكتشف في تسجيلاتك:\n\n• أنماط تفكير ومعتقدات خفيّة\n• مشاعر وردود أفعال متكرّرة\n• نقاط قوّة شخصية لا تلاحظها\n• قيمًا تقود أفعالك\n\nلمن يرغب في فهم نفسه والنموّ من الداخل.</string>
-    <string name="profile_goals_long">يعثر الذكاء الاصطناعي على كل الأهداف والرغبات والخطط في تسجيلاتك، حتى ما ذُكر عرضًا.\n\nترى:\n\n• ما أهدافك (بما فيها الخفيّة)\n• إلى أين وصلت في كل هدف\n• ما يمكن أن تكون خطوتك التالية\n\nمتعقّب أهداف شخصي يقرأ من كلماتك.</string>
-    <string name="profile_custom_long">أنت تحدّد ما على الذكاء الاصطناعي الانتباه إليه.\n\nاكتب محور التحليل الخاص بك، مثلاً:\n\n• «اعثر على كل إشارات الرياضة»\n• «حلّل تقلّبات مزاجي»\n• «أرِني متى أكون الأكثر إنتاجًا»\n\nتحكّم كامل لمن يعرف بالضبط ما يبحث عنه.</string>
-    <string name="profile_custom_prompt">ما المهمّ لك تحديدًا؟ على ماذا يجب أن يركّز الذكاء الاصطناعي عند تحليل تسجيلاتك؟</string>
-    <string name="profile_select_hint">اختر ملفًا. اضغط على الملف لشرح أدقّ.</string>
+    <string name="profile_summary_long">تلخّص تسجيلاتك بحياد، دون حكم أو نصائح.\n\nترى بنظرة واحدة:\n\n• ما الذي يشغلك حاليا\n• الأنماط التي تتكرّر\n• كيف تتطوّر حياتك\n\nمثالي كنظرة يومية شاملة على كل ما يدور في حياتك.</string>
+    <string name="profile_entropy_long">يبحث الذكاء الاصطناعي بدقّة عن التوتّر والأعباء والفوضى في تسجيلاتك.\n\nتحصل على:\n\n• تحليل لأكبر مصادر الإرهاق\n• 5 إجراءات ملموسة للترتيب\n• نصائح يمكنها مساعدتك فورا\n\nمثالي عندما تشعر بأن كل شيء أصبح كثيرا.</string>
+    <string name="profile_insight_long">يتجاوز الذكاء الاصطناعي مجرد الأحداث. يكتشف في تسجيلاتك:\n\n• أنماط تفكير ومعتقدات خفيّة\n• مشاعر وردود أفعال متكرّرة\n• نقاط قوّة شخصية لا تلاحظها\n• قيما تقود أفعالك\n\nلمن يرغب في فهم نفسه والنموّ من الداخل.</string>
+    <string name="profile_goals_long">يعثر الذكاء الاصطناعي على كل الأهداف والرغبات والخطط في تسجيلاتك، حتى ما ذكر عرضا.\n\nترى:\n\n• ما أهدافك (بما فيها الخفيّة)\n• إلى أين وصلت في كل هدف\n• ما يمكن أن تكون خطوتك التالية\n\nمتعقّب أهداف شخصي يقرأ من كلماتك.</string>
+    <string name="profile_custom_long">أنت تحدّد ما على الذكاء الاصطناعي الانتباه إليه.\n\nاكتب محور التحليل الخاص بك، مثلا:\n\n• «اعثر على كل إشارات الرياضة»\n• «حلّل تقلّبات مزاجي»\n• «أرني متى أكون الأكثر إنتاجا»\n\nتحكّم كامل لمن يعرف بالضبط ما يبحث عنه.</string>
+    <string name="profile_custom_prompt">ما المهمّ لك تحديدا؟ على ماذا يجب أن يركّز الذكاء الاصطناعي عند تحليل تسجيلاتك؟</string>
+    <string name="profile_select_hint">اختر ملفا. اضغط على الملف لشرح أدقّ.</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          SETTINGS SCREEN
@@ -331,18 +331,18 @@
     <string name="settings_account">الحساب</string>
     <string name="settings_sign_out">تسجيل الخروج</string>
     <string name="settings_last_sync">آخر مزامنة: %1$s</string>
-    <string name="settings_entries_auto_loaded">تُحمَّل التسجيلات تلقائيًا عند تسجيل الدخول</string>
-    <string name="settings_backup_photos">نسخ الصور احتياطيًا</string>
-    <string name="settings_backup_videos">نسخ مقاطع الفيديو احتياطيًا</string>
-    <string name="settings_syncing">جارٍ النسخ الاحتياطي…</string>
+    <string name="settings_entries_auto_loaded">تحمّل التسجيلات تلقائيا عند تسجيل الدخول</string>
+    <string name="settings_backup_photos">نسخ الصور احتياطيا</string>
+    <string name="settings_backup_videos">نسخ مقاطع الفيديو احتياطيا</string>
+    <string name="settings_syncing">جار النسخ الاحتياطي…</string>
     <!-- Shown briefly as a confirmation after a successful cloud backup. -->
     <string name="settings_sync_success">تمّ النسخ الاحتياطي بنجاح</string>
     <!-- Error shown when Google sign-in fails. %1$s = error message from Google (e.g., "Network error"). -->
     <string name="settings_signin_failed">فشل تسجيل الدخول: <xliff:g id="error_reason" example="Network error">%1$s</xliff:g></string>
-    <string name="settings_backup_entries">نسخ التسجيلات احتياطيًا</string>
+    <string name="settings_backup_entries">نسخ التسجيلات احتياطيا</string>
     <string name="settings_not_signed_in">لم يتم تسجيل الدخول</string>
-    <string name="settings_entries_loaded_on_sign_in">تُحمَّل التسجيلات المحفوظة عند تسجيل الدخول</string>
-    <string name="settings_sign_in_google">تسجيل الدخول بحساب Google</string>
+    <string name="settings_entries_loaded_on_sign_in">تحمّل التسجيلات المحفوظة عند تسجيل الدخول</string>
+    <string name="settings_sign_in_google">تسجيل الدخول بحساب Google\u200E</string>
     <string name="settings_appearance">المظهر</string>
     <string name="settings_dark_mode">الوضع الداكن</string>
     <string name="settings_dark_active">مفعّل</string>
@@ -350,19 +350,19 @@
     <string name="settings_follow_system">اتباع النظام</string>
     <string name="settings_automatic">تلقائي</string>
     <string name="settings_sunrise_sunset">الشروق والغروب</string>
-    <string name="settings_sunrise_sunset_desc">داكن ليلاً، فاتح نهارًا</string>
+    <string name="settings_sunrise_sunset_desc">داكن ليلا، فاتح نهارا</string>
     <string name="settings_sounds_haptics_section">الأصوات والاهتزاز</string>
     <string name="settings_app_sounds">أصوات التطبيق</string>
     <string name="settings_sounds_on">الأصوات مفعّلة</string>
-    <string name="settings_sounds_off">الأصوات مُوقَفة</string>
+    <string name="settings_sounds_off">الأصوات موقفة</string>
     <string name="settings_haptics">اهتزاز</string>
     <string name="settings_haptics_on">الاهتزاز مفعّل</string>
-    <string name="settings_haptics_off">الاهتزاز مُوقَف</string>
+    <string name="settings_haptics_off">الاهتزاز موقف</string>
     <string name="settings_voices">الأصوات الصوتية</string>
     <string name="settings_tts_on">القراءة مفعّلة</string>
-    <string name="settings_tts_off">القراءة مُوقَفة</string>
+    <string name="settings_tts_off">القراءة موقفة</string>
     <string name="settings_voice_select">اختيار الصوت</string>
-    <string name="settings_voice_choose">اختر صوتًا</string>
+    <string name="settings_voice_choose">اختر صوتا</string>
     <string name="settings_reminder_section">التذكير والمراجعات</string>
     <string name="settings_daily_reminder">تذكير يومي</string>
     <string name="settings_reminder_time">الوقت: %02d:%02d</string>
@@ -381,8 +381,8 @@
     <string name="settings_auto_lock">قفل تلقائي بعد 60 ثانية في الخلفية</string>
     <string name="settings_ai_profiles_title">ملفات لوحة الذكاء الاصطناعي:</string>
     <string name="settings_ai_automations">أتمتة الذكاء الاصطناعي</string>
-    <string name="settings_custom_prompt_placeholder">مثال: ركّز على جودة نومي ومستوى التوتّر. أرِني أنماطًا في تغذيتي. حلّل كيف يتغيّر مزاجي خلال الأسبوع. اكتشف متى أكون الأكثر إنتاجًا وما الذي يعيقني.\n\nكلّما وصفت محورك بدقّة، كانت النتائج أفضل.</string>
-    <string name="churn_google_play_redirect">ستُوجَّه الآن إلى Google Play لإدارة اشتراكك. تسجيلاتك تبقى محفوظة بالطبع.</string>
+    <string name="settings_custom_prompt_placeholder">مثال: ركّز على جودة نومي ومستوى التوتّر. أرني أنماطا في تغذيتي. حلّل كيف يتغيّر مزاجي خلال الأسبوع. اكتشف متى أكون الأكثر إنتاجا وما الذي يعيقني.\n\nكلّما وصفت محورك بدقّة، كانت النتائج أفضل.</string>
+    <string name="churn_google_play_redirect">ستوجّه الآن إلى Google Play لإدارة اشتراكك. تسجيلاتك تبقى محفوظة بالطبع.</string>
     <string name="splash_subtitle">مذكراتك الذكية</string>
     <string name="biometric_subtitle">افتح مذكراتك</string>
     <!-- Shown in the biometric lock screen below the app name. Hint to authenticate. -->
@@ -400,11 +400,11 @@
     <string name="settings_premium_desc">جميع الميزات مفتوحة، ذكاء اصطناعي بلا حدود، تصدير PDF والمزيد.</string>
     <string name="settings_manage_subscription">إدارة الاشتراك</string>
     <string name="settings_export">تصدير</string>
-    <string name="settings_export_pdf_desc">صدِّر جميع التسجيلات والصور بصيغة PDF.</string>
+    <string name="settings_export_pdf_desc">صدّر جميع التسجيلات والصور بصيغة PDF.</string>
 
     <!-- Premium feature list (settings) -->
     <string name="settings_premium_feature_improve">تحسين نصّي بالذكاء الاصطناعي بلا حدود</string>
-    <string name="settings_premium_feature_improve_desc">كل تسجيل يصبح أكثر تعبيرًا</string>
+    <string name="settings_premium_feature_improve_desc">كل تسجيل يصبح أكثر تعبيرا</string>
     <string name="settings_premium_feature_dashboard">تحليلات لوحة تحكم لا محدودة</string>
     <string name="settings_premium_feature_dashboard_desc">لوحة تحكمك تنمو معك</string>
     <string name="settings_premium_feature_5_perspectives">5 زوايا ذكاء اصطناعي</string>
@@ -425,7 +425,7 @@
     <string name="settings_export_entries">التسجيلات</string>
     <string name="settings_export_photos">الصور</string>
     <string name="settings_export_action">تصدير</string>
-    <string name="settings_exporting">جارٍ التصدير…</string>
+    <string name="settings_exporting">جار التصدير…</string>
     <!-- Export error shown when the user has no journal entries yet. -->
     <string name="settings_export_no_entries">لا توجد تسجيلات للتصدير</string>
     <string name="settings_export_entries_photos_pdf">تصدير التسجيلات والصور كـPDF</string>
@@ -437,32 +437,32 @@
     <string name="settings_feedback_send">إرسال الملاحظات</string>
     <string name="settings_feedback_sent">تمّ الإرسال بنجاح</string>
     <string name="settings_feedback_dialog_title">إرسال الملاحظات</string>
-    <string name="settings_feedback_dialog_desc">رسالتك إلى المطوّرين، نقرأ كل شيء ونردّ شخصيًا!</string>
+    <string name="settings_feedback_dialog_desc">رسالتك إلى المطوّرين، نقرأ كل شيء ونردّ شخصيا!</string>
     <string name="settings_feedback_placeholder">اكتب لنا ملاحظاتك…</string>
-    <string name="settings_feedback_sending">جارٍ الإرسال…</string>
-    <string name="settings_feedback_sign_in_first">يرجى تسجيل الدخول بحساب Google أولاً</string>
+    <string name="settings_feedback_sending">جار الإرسال…</string>
+    <string name="settings_feedback_sign_in_first">يرجى تسجيل الدخول بحساب Google أولا</string>
     <string name="settings_feedback_allow_gmail">يرجى السماح بالوصول إلى Gmail والمحاولة مرة أخرى.</string>
     <string name="settings_feedback_token_error">خطأ في الرمز: %1$s</string>
     <string name="settings_feedback_unknown_error">خطأ غير معروف</string>
     <string name="settings_feedback_confirm_subject">ملاحظاتك إلى Best Journal</string>
-    <string name="settings_feedback_confirm_body">لقد أرسلتَ هذه الرسالة إلى المطوّر.\nسيتواصل معك.\n\n--- رسالتك ---\n%1$s\n\nمع خالص التحيات\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">لقد أرسلت هذه الرسالة إلى المطوّر.\nسيتواصل معك.\n\n--- رسالتك ---\n%1$s\n\nمع خالص التحيات\nDEV.FRANK</string>
     <string name="settings_feedback_from">ملاحظات من: %1$s</string>
     <string name="action_send">إرسال</string>
     <!-- Drive errors -->
-    <string name="drive_consent_needed">يلزم السماح بالوصول إلى Drive</string>
+    <string name="drive_consent_needed">يلزم السماح بالوصول إلى Drive\u200E</string>
     <string name="drive_not_signed_in">لم يتم تسجيل الدخول</string>
     <string name="drive_no_backup">لم يتم العثور على نسخة احتياطية</string>
     <!-- Achievements -->
     <string name="achievements_title">الإنجازات</string>
     <string name="achievements_counter">%1$d من %2$d مفتوحة</string>
-    <string name="achievements_unlocked_at">فُتِح في %1$s</string>
+    <string name="achievements_unlocked_at">فتح في %1$s</string>
     <!-- About -->
     <string name="settings_about">عن التطبيق</string>
     <string name="settings_about_version">Best Journal V0.12.19</string>
     <string name="settings_about_desc">مذكراتك الشخصية بالذكاء الاصطناعي</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">تسجيل الخروج؟</string>
-    <string name="settings_sign_out_body">هل تريد حقًا تسجيل الخروج؟</string>
+    <string name="settings_sign_out_body">هل تريد حقا تسجيل الخروج؟</string>
     <!-- Toggle labels -->
     <string name="toggle_light">فاتح</string>
     <string name="toggle_dark">داكن</string>
@@ -516,7 +516,7 @@
     <string name="limit_remaining">متبقّي <xliff:g id="count" example="3">%1$d</xliff:g></string>
     <!-- FreeLimitIndicator: usage counter (X of Y used) -->
     <!-- %1$d = used count, %2$d = max count -->
-    <string name="limit_used_of_max">استُخدم <xliff:g id="used" example="3">%1$d</xliff:g> من <xliff:g id="max" example="5">%2$d</xliff:g></string>
+    <string name="limit_used_of_max">استخدم <xliff:g id="used" example="3">%1$d</xliff:g> من <xliff:g id="max" example="5">%2$d</xliff:g></string>
     <!-- ChurnFlowDialog: retention discount badge -->
     <!-- %1$d = discount percentage -->
     <string name="churn_discount_badge">وفّر <xliff:g id="percent" example="50">%1$d</xliff:g>\u00A0%%</string>
@@ -561,94 +561,94 @@
     <string name="json_value_priority_high">3ali</string>
     <string name="json_value_priority_medium">mutawassit</string>
     <string name="json_value_priority_low">munkhafid</string>
-    <string name="ai_prompt_fresh_summary">ملخّص جديد، أنشئ تحليلاً جديدًا مستقلاً تمامًا.</string>
-    <string name="ai_prompt_fresh_insight">تحليل معرفة ذات جديد، أنشئ تحليلاً جديدًا مستقلاً تمامًا.</string>
-    <string name="ai_prompt_fresh_goals">تحليل أهداف جديد، أنشئ تحليلاً جديدًا مستقلاً تمامًا.</string>
-    <string name="ai_prompt_fresh_custom">تحليل مخصّص جديد، أنشئ تحليلاً جديدًا مستقلاً تمامًا استنادًا إلى محور المستخدم.</string>
-    <string name="ai_prompt_fresh_default">تحليل جديد، أنشئ تحليلاً جديدًا مستقلاً تمامًا.</string>
-    <string name="ai_prompt_check_summary">فحص إلزامي: استلمتَ %1$d من التسجيلات. كلٌّ منها يجب أن يظهر في الملخّص وفي موضوع واحد على الأقلّ.</string>
-    <string name="ai_prompt_check_insight">فحص إلزامي: استلمتَ %1$d من التسجيلات. يجب فحص كلٍّ منها بحثًا عن أنماط تفكير ومشاعر ومعتقدات ونقاط قوّة شخصية.</string>
-    <string name="ai_prompt_check_goals">فحص إلزامي: استلمتَ %1$d من التسجيلات. يجب فحص كلٍّ منها بحثًا عن الأهداف.</string>
-    <string name="ai_prompt_check_custom">فحص إلزامي: استلمتَ %1$d من التسجيلات. يجب فحص كلٍّ منها وفق محور المستخدم.</string>
-    <string name="ai_prompt_check_default">فحص إلزامي: استلمتَ %1$d من التسجيلات. كلٌّ منها يجب أن يظهر في التحليل.</string>
+    <string name="ai_prompt_fresh_summary">ملخّص جديد، أنشئ تحليلا جديدا مستقلا تماما.</string>
+    <string name="ai_prompt_fresh_insight">تحليل معرفة ذات جديد، أنشئ تحليلا جديدا مستقلا تماما.</string>
+    <string name="ai_prompt_fresh_goals">تحليل أهداف جديد، أنشئ تحليلا جديدا مستقلا تماما.</string>
+    <string name="ai_prompt_fresh_custom">تحليل مخصّص جديد، أنشئ تحليلا جديدا مستقلا تماما استنادا إلى محور المستخدم.</string>
+    <string name="ai_prompt_fresh_default">تحليل جديد، أنشئ تحليلا جديدا مستقلا تماما.</string>
+    <string name="ai_prompt_check_summary">فحص إلزامي: استلمت %1$d من التسجيلات. كلّ منها يجب أن يظهر في الملخّص وفي موضوع واحد على الأقلّ.</string>
+    <string name="ai_prompt_check_insight">فحص إلزامي: استلمت %1$d من التسجيلات. يجب فحص كلّ منها بحثا عن أنماط تفكير ومشاعر ومعتقدات ونقاط قوّة شخصية.</string>
+    <string name="ai_prompt_check_goals">فحص إلزامي: استلمت %1$d من التسجيلات. يجب فحص كلّ منها بحثا عن الأهداف.</string>
+    <string name="ai_prompt_check_custom">فحص إلزامي: استلمت %1$d من التسجيلات. يجب فحص كلّ منها وفق محور المستخدم.</string>
+    <string name="ai_prompt_check_default">فحص إلزامي: استلمت %1$d من التسجيلات. كلّ منها يجب أن يظهر في التحليل.</string>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
          Retrospective Prompts (Weekly / Monthly / Yearly)
          ═══════════════════════════════════════════════════════════════════════ -->
 
     <!-- Weekly retrospective prompt blocks -->
-    <string name="ai_retro_week_intro">أنت راوٍ ينسج من التسجيلات مراجعة أسبوعية طبيعية وسهلة القراءة.</string>
-    <string name="ai_retro_week_task">المهمّة: اجمع التسجيلات التالية في مراجعة أسبوعية مُهيكَلة.</string>
-    <string name="ai_retro_week_format">الصيغة (التزم بدقّة):\n1. ابدأ بنقاط قصيرة (3-5 نقاط)، كلٌّ منها تبدأ بـ«• »\n2. ثمّ سطر فارغ\n3. ثمّ نصّ متدفّق مقسَّم إلى 2-4 فقرات موضوعيّة\n4. كلّ فقرة تبدأ بعنوان بين معقوفتين: [الموضوع] (مثل [لقاءات جديدة] أو [انتصارات صغيرة])\n5. بعد العنوان يأتي نصّ الفقرة السردي\n6. رتّب الفقرات زمنيًا من بداية الأسبوع حتى نهايته</string>
-    <string name="ai_retro_week_rules">القواعد:\n- استخدم صيغة مخاطبة شخصية («أنت» أو المكافئ في اللغة)\n- لا نداءات ولا تحيّات، ادخل مباشرة في السرد\n- أسلوب انسيابي بانتقالات طبيعية داخل الفقرات\n- العناوين قصيرة وملائمة للموضوع (2-4 كلمات)\n- اذكر أحداثًا ومشاعر ورؤى محدّدة\n- الاعتيادي يُذكر فقط إن كان ذا معنى\n- أبرز الإيجابيات دون إخفاء التحديات، الرؤى في اللحظات الصعبة جزء من القصّة\n- اكتب بدفء شخصي دون مبالغة\n- 200 كلمة على الأقلّ\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو جملاً قصيرة.</string>
+    <string name="ai_retro_week_intro">أنت راو ينسج من التسجيلات مراجعة أسبوعية طبيعية وسهلة القراءة.</string>
+    <string name="ai_retro_week_task">المهمّة: اجمع التسجيلات التالية في مراجعة أسبوعية مهيكلة.</string>
+    <string name="ai_retro_week_format">الصيغة (التزم بدقّة):\n1. ابدأ بنقاط قصيرة (3-5 نقاط)، كلّ منها تبدأ بـ«• »\n2. ثمّ سطر فارغ\n3. ثمّ نصّ متدفّق مقسّم إلى 2-4 فقرات موضوعيّة\n4. كلّ فقرة تبدأ بعنوان بين معقوفتين: [الموضوع] (مثل [لقاءات جديدة] أو [انتصارات صغيرة])\n5. بعد العنوان يأتي نصّ الفقرة السردي\n6. رتّب الفقرات زمنيا من بداية الأسبوع حتى نهايته</string>
+    <string name="ai_retro_week_rules">القواعد:\n- استخدم صيغة مخاطبة شخصية («أنت» أو المكافئ في اللغة)\n- لا نداءات ولا تحيّات، ادخل مباشرة في السرد\n- أسلوب انسيابي بانتقالات طبيعية داخل الفقرات\n- العناوين قصيرة وملائمة للموضوع (2-4 كلمات)\n- اذكر أحداثا ومشاعر ورؤى محدّدة\n- الاعتيادي يذكر فقط إن كان ذا معنى\n- أبرز الإيجابيات دون إخفاء التحديات، الرؤى في اللحظات الصعبة جزء من القصّة\n- اكتب بدفء شخصي دون مبالغة\n- 200 كلمة على الأقلّ\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو جملا قصيرة.</string>
     <!-- Section header that introduces the journal entries block. -->
     <string name="ai_retro_week_entries_header">تسجيلات الأسبوع:</string>
     <!-- Title-generation prompt after a weekly review is ready. %1$s = target language, %2$s = preview. -->
-    <string name="ai_retro_week_title_prompt">بناءً على هذه المراجعة الأسبوعية، اقترح عنوانًا قصيرًا عاطفيًا (بحدّ أقصى 6 كلمات) باللغة <xliff:g id="lang" example="العربية">%1$s</xliff:g>.\nاكتفِ بالعنوان فقط. بدون علامات اقتباس. بدون شرطات طويلة (—).\n\nالمراجعة:\n<xliff:g id="summary_preview" example="بدأ الأسبوع…">%2$s</xliff:g></string>
+    <string name="ai_retro_week_title_prompt">بناء على هذه المراجعة الأسبوعية، اقترح عنوانا قصيرا عاطفيا (بحدّ أقصى 6 كلمات) باللغة <xliff:g id="lang" example="العربية">%1$s</xliff:g>.\nاكتف بالعنوان فقط. بدون علامات اقتباس. بدون شرطات طويلة (—).\n\nالمراجعة:\n<xliff:g id="summary_preview" example="بدأ الأسبوع…">%2$s</xliff:g></string>
 
     <!-- Monthly retrospective prompt blocks -->
-    <string name="ai_retro_month_intro">أنت راوٍ ينسج من المراجعات الأسبوعية مراجعة شهرية طبيعية وسهلة القراءة.</string>
+    <string name="ai_retro_month_intro">أنت راو ينسج من المراجعات الأسبوعية مراجعة شهرية طبيعية وسهلة القراءة.</string>
     <!-- %1$s = month name, %2$d = year. -->
-    <string name="ai_retro_month_task">المهمّة: اجمع المراجعات الأسبوعية التالية في مراجعة شهرية مُهيكَلة لشهر <xliff:g id="month" example="أبريل">%1$s</xliff:g> <xliff:g id="year" example="2026">%2$d</xliff:g>.</string>
-    <string name="ai_retro_month_format">الصيغة (التزم بدقّة):\n1. ابدأ بنقاط قصيرة (4-6 نقاط)، كلٌّ منها تبدأ بـ«• »\n2. ثمّ سطر فارغ\n3. ثمّ نصّ متدفّق مقسَّم إلى 3-5 فقرات موضوعيّة\n4. كلّ فقرة تبدأ بعنوان بين معقوفتين: [الموضوع] (مثل [بدايات جديدة] أو [رؤى هادئة])\n5. بعد العنوان يأتي نصّ الفقرة السردي\n6. رتّب الفقرات زمنيًا من بداية الشهر حتى نهايته</string>
-    <string name="ai_retro_month_rules">القواعد:\n- استخدم صيغة مخاطبة شخصية\n- لا نداءات ولا تحيّات، ادخل مباشرة في السرد\n- أسلوب انسيابي بانتقالات طبيعية\n- العناوين قصيرة وملائمة (2-4 كلمات)\n- اربط الأسابيع معًا لإظهار التطوّرات والخيوط الرئيسية\n- لا تكرّر المراجعات الأسبوعية ترتيبيًا بل اربطها موضوعيًا\n- الاعتيادي يُذكر فقط إن كان ذا معنى\n- أبرز الإيجابيات دون إخفاء التحديات\n- اكتب بدفء شخصي دون مبالغة\n- 300 كلمة على الأقلّ\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو جملاً قصيرة.</string>
+    <string name="ai_retro_month_task">المهمّة: اجمع المراجعات الأسبوعية التالية في مراجعة شهرية مهيكلة لشهر <xliff:g id="month" example="أبريل">%1$s</xliff:g> <xliff:g id="year" example="2026">%2$d</xliff:g>.</string>
+    <string name="ai_retro_month_format">الصيغة (التزم بدقّة):\n1. ابدأ بنقاط قصيرة (4-6 نقاط)، كلّ منها تبدأ بـ«• »\n2. ثمّ سطر فارغ\n3. ثمّ نصّ متدفّق مقسّم إلى 3-5 فقرات موضوعيّة\n4. كلّ فقرة تبدأ بعنوان بين معقوفتين: [الموضوع] (مثل [بدايات جديدة] أو [رؤى هادئة])\n5. بعد العنوان يأتي نصّ الفقرة السردي\n6. رتّب الفقرات زمنيا من بداية الشهر حتى نهايته</string>
+    <string name="ai_retro_month_rules">القواعد:\n- استخدم صيغة مخاطبة شخصية\n- لا نداءات ولا تحيّات، ادخل مباشرة في السرد\n- أسلوب انسيابي بانتقالات طبيعية\n- العناوين قصيرة وملائمة (2-4 كلمات)\n- اربط الأسابيع معا لإظهار التطوّرات والخيوط الرئيسية\n- لا تكرّر المراجعات الأسبوعية ترتيبيا بل اربطها موضوعيا\n- الاعتيادي يذكر فقط إن كان ذا معنى\n- أبرز الإيجابيات دون إخفاء التحديات\n- اكتب بدفء شخصي دون مبالغة\n- 300 كلمة على الأقلّ\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو جملا قصيرة.</string>
     <string name="ai_retro_month_entries_header">المراجعات الأسبوعية:</string>
     <!-- %1$s = target language, %2$s = preview. -->
-    <string name="ai_retro_month_title_prompt">بناءً على هذه المراجعة الشهرية، اقترح عنوانًا قصيرًا عاطفيًا (بحدّ أقصى 6 كلمات) باللغة <xliff:g id="lang" example="العربية">%1$s</xliff:g>.\nاكتفِ بالعنوان فقط. بدون علامات اقتباس. بدون شرطات طويلة (—).\n\nالمراجعة:\n<xliff:g id="summary_preview" example="جاء أبريل…">%2$s</xliff:g></string>
+    <string name="ai_retro_month_title_prompt">بناء على هذه المراجعة الشهرية، اقترح عنوانا قصيرا عاطفيا (بحدّ أقصى 6 كلمات) باللغة <xliff:g id="lang" example="العربية">%1$s</xliff:g>.\nاكتف بالعنوان فقط. بدون علامات اقتباس. بدون شرطات طويلة (—).\n\nالمراجعة:\n<xliff:g id="summary_preview" example="جاء أبريل…">%2$s</xliff:g></string>
 
     <!-- Yearly retrospective prompt blocks -->
-    <string name="ai_retro_year_intro">أنت راوٍ ينسج من المراجعات الشهرية مراجعة سنوية طبيعية وسهلة القراءة.</string>
+    <string name="ai_retro_year_intro">أنت راو ينسج من المراجعات الشهرية مراجعة سنوية طبيعية وسهلة القراءة.</string>
     <!-- %1$d = year. -->
-    <string name="ai_retro_year_task">المهمّة: اجمع المراجعات الشهرية التالية في مراجعة سنوية مُهيكَلة لعام <xliff:g id="year" example="2026">%1$d</xliff:g>.</string>
-    <string name="ai_retro_year_format">الصيغة (التزم بدقّة):\n1. ابدأ بنقاط قصيرة (5-8 نقاط)، كلٌّ منها تبدأ بـ«• »\n2. ثمّ سطر فارغ\n3. ثمّ نصّ متدفّق مقسَّم إلى 4-6 فقرات موضوعيّة\n4. كلّ فقرة تبدأ بعنوان بين معقوفتين: [الموضوع] (مثل [ربيع الانطلاق] أو [استعادة الهدوء])\n5. بعد العنوان يأتي نصّ الفقرة السردي\n6. رتّب الفقرات زمنيًا من بداية السنة حتى نهايتها</string>
-    <string name="ai_retro_year_rules">القواعد:\n- استخدم صيغة مخاطبة شخصية\n- لا نداءات ولا تحيّات، ادخل مباشرة في السرد\n- أسلوب انسيابي بانتقالات طبيعية\n- العناوين قصيرة وملائمة (2-5 كلمات)\n- اربط الأشهر معًا لإظهار مسار السنة\n- اكتشف الموضوعات الكبرى للسنة وضع الأحداث في هذه الخطوط\n- الاعتيادي يُذكر فقط إن كان ذا معنى\n- أبرز الإيجابيات دون إخفاء التحديات\n- اختم بجملة تنظر إلى الأمام\n- اكتب بدفء شخصي دون مبالغة\n- 400 كلمة على الأقلّ\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو جملاً قصيرة.</string>
+    <string name="ai_retro_year_task">المهمّة: اجمع المراجعات الشهرية التالية في مراجعة سنوية مهيكلة لعام <xliff:g id="year" example="2026">%1$d</xliff:g>.</string>
+    <string name="ai_retro_year_format">الصيغة (التزم بدقّة):\n1. ابدأ بنقاط قصيرة (5-8 نقاط)، كلّ منها تبدأ بـ«• »\n2. ثمّ سطر فارغ\n3. ثمّ نصّ متدفّق مقسّم إلى 4-6 فقرات موضوعيّة\n4. كلّ فقرة تبدأ بعنوان بين معقوفتين: [الموضوع] (مثل [ربيع الانطلاق] أو [استعادة الهدوء])\n5. بعد العنوان يأتي نصّ الفقرة السردي\n6. رتّب الفقرات زمنيا من بداية السنة حتى نهايتها</string>
+    <string name="ai_retro_year_rules">القواعد:\n- استخدم صيغة مخاطبة شخصية\n- لا نداءات ولا تحيّات، ادخل مباشرة في السرد\n- أسلوب انسيابي بانتقالات طبيعية\n- العناوين قصيرة وملائمة (2-5 كلمات)\n- اربط الأشهر معا لإظهار مسار السنة\n- اكتشف الموضوعات الكبرى للسنة وضع الأحداث في هذه الخطوط\n- الاعتيادي يذكر فقط إن كان ذا معنى\n- أبرز الإيجابيات دون إخفاء التحديات\n- اختم بجملة تنظر إلى الأمام\n- اكتب بدفء شخصي دون مبالغة\n- 400 كلمة على الأقلّ\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو جملا قصيرة.</string>
     <string name="ai_retro_year_entries_header">المراجعات الشهرية:</string>
     <!-- %1$s = target language, %2$s = preview. -->
-    <string name="ai_retro_year_title_prompt">بناءً على هذه المراجعة السنوية، اقترح عنوانًا قصيرًا عاطفيًا (بحدّ أقصى 6 كلمات) باللغة <xliff:g id="lang" example="العربية">%1$s</xliff:g>.\nاكتفِ بالعنوان فقط. بدون علامات اقتباس. بدون شرطات طويلة (—).\n\nالمراجعة:\n<xliff:g id="summary_preview" example="بدأ العام…">%2$s</xliff:g></string>
+    <string name="ai_retro_year_title_prompt">بناء على هذه المراجعة السنوية، اقترح عنوانا قصيرا عاطفيا (بحدّ أقصى 6 كلمات) باللغة <xliff:g id="lang" example="العربية">%1$s</xliff:g>.\nاكتف بالعنوان فقط. بدون علامات اقتباس. بدون شرطات طويلة (—).\n\nالمراجعة:\n<xliff:g id="summary_preview" example="بدأ العام…">%2$s</xliff:g></string>
 
     <!-- Goals Analysis System Prompt -->
-    <string name="ai_prompt_goals_intro">أنت محلّل أهداف يقظ ومشجّع ومُتتبّع للتقدّم.\n\nمهمّتك:\nحلّل تسجيلات المستخدم. تعرَّف على كلّ الأهداف والرغبات والخطط والأفكار، حتى العابرة منها. تتبَّع التقدّم عبر تسجيلات متعدّدة. أنشئ لوحة أهداف مُهيكَلة بصيغة JSON.</string>
-    <string name="ai_prompt_goals_definition">التعريف، ما الهدف:\nكلّ ما يريد المستخدم تحقيقه أو تغييره أو بدأه أو إنهاءه أو تحسينه أو بناءه. الإشارات غير المباشرة تُحتسب أيضًا:\n- مباشر: «أريد إنقاص وزني»، «عليّ الاتّصال بطبيب الأسنان»\n- غير مباشر: «أتمنّى لو أعود للجري» = هدف لياقة\n- شكاوى: «نومي سيّئ» = هدف ضمني لتحسين النوم\n- أحلام: «يومًا ما أودّ زيارة السويد» = هدف سفر طويل الأمد</string>
-    <string name="ai_prompt_goals_entry_rules">القاعدة العليا، لا تسجيل يُهمَل:\nستستقبل تسجيلات مرقّمة (مثل «التسجيل 1 من 5»).\nيجب أن تقرأ وتحلّل وتشمل كلّ تسجيل.\n\nعندما تكون التسجيلات قليلة:\n- تسجيلان أو أقلّ: تعرَّف على أهداف فردية، قيِّم التقدّم كـ«غير معروف».\n- 3 تسجيلات وأكثر: تتبَّع التقدّم بفاعلية وتعرَّف على الأنماط.</string>
-    <string name="ai_prompt_goals_rules">قواعد اللغة:\n- %1$s\n- مشجّع وصادق، احتفِ بالتقدّم، لا تجمّل.\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو النقاط.\n\nقاعدة الكميّة، كلّ هدف مهمّ:\nتعرَّف على كلّ الأهداف، حتى الصغيرة منها. لا تدمج.</string>
-    <string name="ai_prompt_goals_schema">هيكل إخراج JSON:\n{\n  \"tahlil_shamil\": \"…\",\n  \"ijraat_ra2isiya\": […],\n  \"fi2at\": […]\n}\n\n1) \"tahlil_shamil\" (15-25 جملة): اذكر كلّ هدف، تعرَّف على التقدّم.\n\n2) \"ijraat_ra2isiya\" (5 بالضبط): الخطوات التالية.\n   { \"unwan\": \"…\", \"wasf\": \"13-21 كلمة\", \"sharh\": \"5-8 جمل\" }\n\n3) \"fi2at\": مجالات الأهداف.\n   {\n     \"ism\": \"12 حرفًا كحدٍّ أقصى\", \"ayqona\": \"material_icon\", \"lawn\": \"#HEX\",\n     \"mustawa_entropia\": 0.0, \"mulakhkhas\": \"3-5 جمل\",\n     \"nasa2ih\": [{\n       \"unwan\": \"…\",\n       \"wasf\": \"13-21 كلمة. الحالة: [لم يبدأ/قيد التنفيذ/معطّل/تمّ]. الخطوة التالية: […].\",\n       \"awlawiya\": \"3ali|mutawassit|munkhafid\",\n       \"irtibat\": \"…\", \"ishtiqaq\": [{\"tarikh\":\"…\",\"mulakhkhas\":\"…\"}]\n     }]\n   }\n   المجالات: اللياقة، الصحّة، العمل، المهنة، المال، العلاقات، المشاريع، التعلّم، النوم، النفس، السفر، الترتيب، الإبداع\n   الأولوية: 3ali=معطّل، mutawassit=لم يبدأ، munkhafid=قيد التنفيذ أو تمّ</string>
+    <string name="ai_prompt_goals_intro">أنت محلّل أهداف يقظ ومشجّع ومتتبّع للتقدّم.\n\nمهمّتك:\nحلّل تسجيلات المستخدم. تعرّف على كلّ الأهداف والرغبات والخطط والأفكار، حتى العابرة منها. تتبّع التقدّم عبر تسجيلات متعدّدة. أنشئ لوحة أهداف مهيكلة بصيغة JSON.</string>
+    <string name="ai_prompt_goals_definition">التعريف، ما الهدف:\nكلّ ما يريد المستخدم تحقيقه أو تغييره أو بدأه أو إنهاءه أو تحسينه أو بناءه. الإشارات غير المباشرة تحتسب أيضا:\n- مباشر: «أريد إنقاص وزني»، «عليّ الاتّصال بطبيب الأسنان»\n- غير مباشر: «أتمنّى لو أعود للجري» = هدف لياقة\n- شكاوى: «نومي سيّئ» = هدف ضمني لتحسين النوم\n- أحلام: «يوما ما أودّ زيارة السويد» = هدف سفر طويل الأمد</string>
+    <string name="ai_prompt_goals_entry_rules">القاعدة العليا، لا تسجيل يهمل:\nستستقبل تسجيلات مرقّمة (مثل «التسجيل 1 من 5»).\nيجب أن تقرأ وتحلّل وتشمل كلّ تسجيل.\n\nعندما تكون التسجيلات قليلة:\n- تسجيلان أو أقلّ: تعرّف على أهداف فردية، قيّم التقدّم كـ«غير معروف».\n- 3 تسجيلات وأكثر: تتبّع التقدّم بفاعلية وتعرّف على الأنماط.</string>
+    <string name="ai_prompt_goals_rules">قواعد اللغة:\n- %1$s\n- مشجّع وصادق، احتف بالتقدّم، لا تجمّل.\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو النقاط.\n\nقاعدة الكميّة، كلّ هدف مهمّ:\nتعرّف على كلّ الأهداف، حتى الصغيرة منها. لا تدمج.</string>
+    <string name="ai_prompt_goals_schema">هيكل إخراج JSON:\n{\n  \"tahlil_shamil\": \"…\",\n  \"ijraat_ra2isiya\": […],\n  \"fi2at\": […]\n}\n\n1) \"tahlil_shamil\" (15-25 جملة): اذكر كلّ هدف، تعرّف على التقدّم.\n\n2) \"ijraat_ra2isiya\" (5 بالضبط): الخطوات التالية.\n   { \"unwan\": \"…\", \"wasf\": \"13-21 كلمة\", \"sharh\": \"5-8 جمل\" }\n\n3) \"fi2at\": مجالات الأهداف.\n   {\n     \"ism\": \"12 حرفا كحدّ أقصى\", \"ayqona\": \"material_icon\", \"lawn\": \"#HEX\",\n     \"mustawa_entropia\": 0.0, \"mulakhkhas\": \"3-5 جمل\",\n     \"nasa2ih\": [{\n       \"unwan\": \"…\",\n       \"wasf\": \"13-21 كلمة. الحالة: [لم يبدأ/قيد التنفيذ/معطّل/تمّ]. الخطوة التالية: […].\",\n       \"awlawiya\": \"3ali|mutawassit|munkhafid\",\n       \"irtibat\": \"…\", \"ishtiqaq\": [{\"tarikh\":\"…\",\"mulakhkhas\":\"…\"}]\n     }]\n   }\n   المجالات: اللياقة، الصحّة، العمل، المهنة، المال، العلاقات، المشاريع، التعلّم، النوم، النفس، السفر، الترتيب، الإبداع\n   الأولوية: 3ali=معطّل، mutawassit=لم يبدأ، munkhafid=قيد التنفيذ أو تمّ</string>
     <string name="ai_prompt_goals_output">صيغة الإخراج: JSON فقط. بدون backticks. ابدأ بـ{.</string>
 
     <!-- Self-Insight Analysis System Prompt -->
-    <string name="ai_prompt_insight_intro">أنت محلّل أنماط متعاطف وبعيد النظر للنموّ الشخصي.\n\nمهمّتك:\nحلّل تسجيلات المستخدم. اعثر على أنماط خفيّة، أفكار وأفعال متكرّرة، معتقدات غير واعية، أنماط انفعاليّة ونقاط قوّة شخصية. أظهر للمستخدم ما يمكن أن يتعلّمه عن نفسه، وهو ما قد لا يدركه أثناء الكتابة. أنشئ لوحة معرفة ذات مُهيكَلة بصيغة JSON.</string>
-    <string name="ai_prompt_insight_attitude">توجّهك:\nأنت مرآة ودودة. تُظهر للمستخدم بصدق ما تراه في تسجيلاته، بهدف أن ينمو منه دائمًا. كلّ رؤية يجب أن تساعده على فهم نفسه. حتى الأنماط الصعبة تُسمّيها بوضوح لكن بتركيز بنّاء ودون لوم. التركيز: ما الذي يمكن للمستخدم أن يتعلّمه عن نفسه من كلماته؟\n\nما تبحث عنه:\n- مشاعر متكرّرة: أيّ انفعالات تعود باستمرار\n- أنماط تفكير: كيف يرى المستخدم نفسه والآخرين والعالم\n- أنماط تجنّب: ماذا يتفاداه، ماذا لا يكتب عنه أبدًا\n- نقاط قوّة: مواطن تفوّق لا ينتبه لها\n- قيم: ما يهمّه حقًا، يظهر في الأفعال\n- مثيرات: ما يُطلق ردود فعل قوية إيجابية أو سلبية\n- تناقضات: يقول شيئًا ويفعل آخر\n- احتياجات: ما يبدو بين السطور\n- نموّ: حيث تغيّرت نظرته</string>
-    <string name="ai_prompt_insight_entry_rules">القاعدة العليا، لا تسجيل يُهمَل:\nستستقبل تسجيلات مرقّمة (مثل «التسجيل 1 من 5»).\nيجب أن تقرأ وتحلّل وتشمل كلّ تسجيل.\nقبل الردّ عُدّها: هل شملتُ كلّ التسجيلات؟\nالمفقود أضفه فورًا.\n\nعندما تكون التسجيلات قليلة:\n- تسجيلان أو أقلّ: اذكر انطباعات أولى دون أنماط عميقة.\n  اوسم الرؤى بـ«أوّلية» في الوصف.\n- 3 تسجيلات وأكثر: ابحث بنشاط عن أنماط متكرّرة وروابط أعمق.\n\nالتثقيل الزمني:\nيجب شمل كلّ تسجيل. تتبَّع التطوّر الداخلي: هل تغيّرت المواقف؟ هل تعود المواضيع في ضوء جديد؟ هل تنمو الثقة أم يزداد القلق؟</string>
-    <string name="ai_prompt_insight_rules">قواعد اللغة (لكلّ حقول النصوص في JSON):\n- لغة بسيطة واضحة. جمل قصيرة.\n- لا كلمات غريبة ولا مصطلحات ولا عبارات مُسبَكة.\n- يفهمها أيّ أحد فورًا دون تفكير.\n- متعاطف، صادق، بنّاء، بلا لوم ولا وعظ.\n- انظر دائمًا إلى الإيجابي: ما الذي يمكن تعلّمه؟\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو النقاط.\n\nقاعدة الكميّة، الاكتمال قبل الاختصار:\nمجموع الرؤى عبر كلّ المجالات 15 على الأقلّ. أقلّ من 10 خطأ. كلّ نمط مكتشف، كلّ أثر لمعتقد، كلّ شعور متكرّر يستحقّ رؤية مستقلّة. لا تدمج. إذا أظهر تسجيل خوفًا وفخرًا وتجنّبًا، فاكتب 3 رؤى مختلفة. يمكن أن يطول JSON، الاكتمال أهمّ من الاختصار.</string>
-    <string name="ai_prompt_insight_schema_header">هيكل إخراج JSON:\n{\n  \"entropia_shamila\": 0.0,\n  \"ittijah\": \"mutazayid|thabit|munkhafid|majhul\",\n  \"tahlil_shamil\": \"…\",\n  \"taqaddum\": […],\n  \"ijraat_ra2isiya\": […],\n  \"fi2at\": […]\n}\n\nتعريفات الحقول:\n\n1) \"entropia_shamila\" (رقم، 0.0-1.0)\n   إلى أيّ مدى يتأمّل المستخدم نفسه في تسجيلاته؟\n   - 0.0-0.33 = تأمّل ضئيل (يصف أحداثًا غالبًا)\n   - 0.34-0.66 = تأمّل جزئي (يذكر مشاعر وأفكارًا)\n   - 0.67-1.0 = تأمّل عميق (حوار عميق مع الذات)\n\n2) \"ittijah\" (نصّ)\n   يُملَأ فقط إذا توفّرت 3 تسجيلات على الأقلّ على مدى أيّام.\n   قارن القديم بالجديد:\n   - «mutazayid» = تأمّل أعمق\n   - «thabit» = نفس مستوى التأمّل\n   - «munkhafid» = تأمّل أقلّ في الأحدث\n   - «majhul» = بيانات غير كافية\n\n3) \"tahlil_shamil\" (نصّ، 15-25 جملة)\n   - اقرأ تسجيلاً تسجيلاً واكتشف الموضوع الأعمق.\n   - ماذا تقول التسجيلات كوحدة عن هذا الشخص؟\n   - أيّ أنماط في التفكير والشعور والتصرّف تظهر؟\n   - أيّ نقاط قوّة لا يعيها المستخدم؟\n   - أيّ معتقدات غير واعية تدفع سلوكه؟\n   - أين يظهر النموّ الشخصي؟\n   - متعاطف وشخصي، خاطب المستخدم مباشرة.\n   - بنّاء دائمًا: اربط حتى الرؤى الصعبة بتعلّم محتمل.</string>
-    <string name="ai_prompt_insight_schema_fields">4) \"taqaddum\" (مصفوفة، 0-8 عناصر)\n   نقاط قوّة وصفات إيجابية تبرز من التسجيلات حتى إن لم يُعبّر عنها المستخدم.\n   بنية كلّ عنصر:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 5 كلمات)\",\n     \"wasf\": \"أيّ نقطة قوّة تظهر ومن أين (جملتان إلى ثلاث).\",\n     \"marji3\": \"من أيّ تسجيل أو تسجيلات (جملة واحدة).\"\n   }\n   مع تسجيل واحد أو دون نقاط بارزة: مصفوفة فارغة [].\n\n5) \"ijraat_ra2isiya\" (مصفوفة، 5 عناصر بالضبط)\n   أعمق 5 رؤى تبرز من مجموع التسجيلات. ما أهمّ ما يمكن للمستخدم أن يتعلّمه عن نفسه؟ رتّب حسب العمق (الأعمق أولاً). فكّر عبر المجالات لإظهار صورة الشخصية الكاملة.\n   بنية كلّ عنصر:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 6 كلمات)\",\n     \"wasf\": \"13-21 كلمة، جملة مُركّزة تُلخّص الرؤية. بنّائية، ما الذي يمكن تعلّمه؟\",\n     \"sharh\": \"شرح مفصّل (5-8 جمل). أيّ نمط يظهر؟ في أيّ تسجيلات يُرى؟ لماذا هذا مهمّ لفهم الذات؟ بماذا يفيد المستخدم؟\"\n   }</string>
-    <string name="ai_prompt_insight_schema_categories">6) \"fi2at\" (مصفوفة، بقدر ما يلزم)\n   لكلّ مجال معرفة ذات مكتشف مجموعة مستقلّة.\n   المجالات ليست موضوعات حياتية (عمل، نوم) بل أبعاد داخلية: كيف يفكّر المستخدم ويشعر ويتعامل مع نفسه ويتّخذ قرارات ويتفاعل ويحفّز نفسه ويواجه الانتكاسات.\n   بنية كلّ مجال:\n   {\n     \"ism\": \"اسم المجال (12 حرفًا كحدّ أقصى، كلمة إلى كلمتين)\",\n     \"ayqona\": \"material_icon_name\",\n     \"lawn\": \"#HEX\",\n     \"mustawa_entropia\": 0.0,\n     \"mulakhkhas\": \"ملخّص المجال (3-5 جمل). ماذا يقول عن المستخدم؟ أيّ نمط يظهر؟ ما يمكن تعلّمه؟\",\n     \"nasa2ih\": […]\n   }\n\n   أسماء المجالات، قصيرة ودقيقة:\n   صحيح: «التفكير»، «المشاعر»، «الدافع»، «القيم»\n   خطأ: «أنماط الانفعال» (طويلة) → «المشاعر»\n\n   المجالات ديناميكية:\n   استخدم القائمة كأساس وأنشئ مجالات جديدة عند الحاجة.\n   - التفكير (icon: psychology, lawn: #A78BFA)\n   - المشاعر (icon: favorite, lawn: #F472B6)\n   - صورة الذات (icon: person, lawn: #60A5FA)\n   - الدافع (icon: bolt, lawn: #F59E0B)\n   - القيم (icon: star, lawn: #FBBF24)\n   - العلاقات (icon: people, lawn: #EC4899)\n   - المرونة (icon: shield, lawn: #10B981)\n   - العادات (icon: repeat, lawn: #6366F1)\n   - المخاوف (icon: nights_stay, lawn: #6C63FF)\n   - الحدود (icon: block, lawn: #EF4444)\n   - الإبداع (icon: lightbulb, lawn: #D946EF)\n   - التأقلم (icon: handshake, lawn: #14B8A6)\n   - النموّ (icon: trending_up, lawn: #22C55E)\n   - الاحتياجات (icon: spa, lawn: #F97316)\n   - التحكّم (icon: tune, lawn: #78716C)\n   أيقونات إضافية: self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock_open, wb_sunny, explore, balance, healing, volunteer_activism, emoji_objects\n\n   عمق كلّ مجال (الحقل \"mustawa_entropia\"، 0.0-1.0):\n   إلى أيّ مدى تذهب معرفة الذات في هذا المجال؟\n   - 0.0-0.33 = سطحي (يصف مواقف، تأمّل قليل)\n   - 0.34-0.66 = واعٍ (يتعرّف على أنماطه جزئيًا)\n   - 0.67-1.0 = عميق (يفهم الأسباب والروابط)\n\n   الرؤى في كلّ مجال (الحقل \"nasa2ih\")، الكميّة:\n   استخرج كلّ الرؤى التي يمكن اشتقاقها. الأكثر أفضل من الأقلّ، 5-20 لكلّ مجال معتاد. كلّ نمط مكتشف، كلّ ملاحظة على الشخصية، كلّ أثر لموقف داخلي يستحقّ رؤية مستقلّة. لا تدمج. يجب أن تستند كلّ رؤية إلى تعبير محدّد من التسجيلات. رتّب بحسب الأهمّية: «3ali» أولاً، ثمّ «mutawassit»، ثمّ «munkhafid».\n\n   بنية كلّ رؤية:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 6 كلمات)\",\n     \"wasf\": \"13-21 كلمة، جملة مُركّزة. بنّائية، ماذا يظهر وما يمكن تعلّمه؟\",\n     \"awlawiya\": \"3ali|mutawassit|munkhafid\",\n     \"irtibat\": \"مجال أو اثنان مرتبطان وسبب، أو null\",\n     \"ishtiqaq\": [\n       {\n         \"tarikh\": \"تاريخ التسجيل (مثلاً 28.03.2026)\",\n         \"mulakhkhas\": \"ما في هذا التسجيل يشير إلى هذا النمط (جملة إلى جملتين).\"\n       }\n     ]\n   }\n\n   معنى الأهمّية (الحقل \"awlawiya\"):\n   - «3ali» = رؤية عميقة، نمط جوهري للشخصية\n   - «mutawassit» = نمط واضح لكن غير مكتمل\n   - «munkhafid» = ملاحظة فردية قد تصير نمطًا</string>
-    <string name="ai_prompt_insight_output">قاعدة عدد الكلمات للوصف (التزم بصرامة):\n«wasf» في «ijraat_ra2isiya» و«nasa2ih» دائمًا بين 13 و21 كلمة.\n- أقلّ من 13 = قصير جدًا = خطأ\n- أكثر من 21 = طويل جدًا = خطأ\nعُدّها قبل الكتابة. كلّ وصف جملة مُركّزة مكتملة.\n\nصيغة الإخراج، قواعد صارمة:\n- أجب بكائن JSON فقط.\n- لا نصّ قبله أو بعده.\n- لا Markdown backticks.\n- ابدأ مباشرة بـ{ واختم بـ}.\n- JSON صالح دون فواصل ناقصة أو مفاتيح مكرّرة.</string>
+    <string name="ai_prompt_insight_intro">أنت محلّل أنماط متعاطف وبعيد النظر للنموّ الشخصي.\n\nمهمّتك:\nحلّل تسجيلات المستخدم. اعثر على أنماط خفيّة، أفكار وأفعال متكرّرة، معتقدات غير واعية، أنماط انفعاليّة ونقاط قوّة شخصية. أظهر للمستخدم ما يمكن أن يتعلّمه عن نفسه، وهو ما قد لا يدركه أثناء الكتابة. أنشئ لوحة معرفة ذات مهيكلة بصيغة JSON.</string>
+    <string name="ai_prompt_insight_attitude">توجّهك:\nأنت مرآة ودودة. تظهر للمستخدم بصدق ما تراه في تسجيلاته، بهدف أن ينمو منه دائما. كلّ رؤية يجب أن تساعده على فهم نفسه. حتى الأنماط الصعبة تسمّيها بوضوح لكن بتركيز بنّاء ودون لوم. التركيز: ما الذي يمكن للمستخدم أن يتعلّمه عن نفسه من كلماته؟\n\nما تبحث عنه:\n- مشاعر متكرّرة: أيّ انفعالات تعود باستمرار\n- أنماط تفكير: كيف يرى المستخدم نفسه والآخرين والعالم\n- أنماط تجنّب: ماذا يتفاداه، ماذا لا يكتب عنه أبدا\n- نقاط قوّة: مواطن تفوّق لا ينتبه لها\n- قيم: ما يهمّه حقا، يظهر في الأفعال\n- مثيرات: ما يطلق ردود فعل قوية إيجابية أو سلبية\n- تناقضات: يقول شيئا ويفعل آخر\n- احتياجات: ما يبدو بين السطور\n- نموّ: حيث تغيّرت نظرته</string>
+    <string name="ai_prompt_insight_entry_rules">القاعدة العليا، لا تسجيل يهمل:\nستستقبل تسجيلات مرقّمة (مثل «التسجيل 1 من 5»).\nيجب أن تقرأ وتحلّل وتشمل كلّ تسجيل.\nقبل الردّ عدّها: هل شملت كلّ التسجيلات؟\nالمفقود أضفه فورا.\n\nعندما تكون التسجيلات قليلة:\n- تسجيلان أو أقلّ: اذكر انطباعات أولى دون أنماط عميقة.\n  اوسم الرؤى بـ«أوّلية» في الوصف.\n- 3 تسجيلات وأكثر: ابحث بنشاط عن أنماط متكرّرة وروابط أعمق.\n\nالتثقيل الزمني:\nيجب شمل كلّ تسجيل. تتبّع التطوّر الداخلي: هل تغيّرت المواقف؟ هل تعود المواضيع في ضوء جديد؟ هل تنمو الثقة أم يزداد القلق؟</string>
+    <string name="ai_prompt_insight_rules">قواعد اللغة (لكلّ حقول النصوص في JSON):\n- لغة بسيطة واضحة. جمل قصيرة.\n- لا كلمات غريبة ولا مصطلحات ولا عبارات مسبكة.\n- يفهمها أيّ أحد فورا دون تفكير.\n- متعاطف، صادق، بنّاء، بلا لوم ولا وعظ.\n- انظر دائما إلى الإيجابي: ما الذي يمكن تعلّمه؟\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو النقاط.\n\nقاعدة الكميّة، الاكتمال قبل الاختصار:\nمجموع الرؤى عبر كلّ المجالات 15 على الأقلّ. أقلّ من 10 خطأ. كلّ نمط مكتشف، كلّ أثر لمعتقد، كلّ شعور متكرّر يستحقّ رؤية مستقلّة. لا تدمج. إذا أظهر تسجيل خوفا وفخرا وتجنّبا، فاكتب 3 رؤى مختلفة. يمكن أن يطول JSON، الاكتمال أهمّ من الاختصار.</string>
+    <string name="ai_prompt_insight_schema_header">هيكل إخراج JSON:\n{\n  \"entropia_shamila\": 0.0,\n  \"ittijah\": \"mutazayid|thabit|munkhafid|majhul\",\n  \"tahlil_shamil\": \"…\",\n  \"taqaddum\": […],\n  \"ijraat_ra2isiya\": […],\n  \"fi2at\": […]\n}\n\nتعريفات الحقول:\n\n1) \"entropia_shamila\" (رقم، 0.0-1.0)\n   إلى أيّ مدى يتأمّل المستخدم نفسه في تسجيلاته؟\n   - 0.0-0.33 = تأمّل ضئيل (يصف أحداثا غالبا)\n   - 0.34-0.66 = تأمّل جزئي (يذكر مشاعر وأفكارا)\n   - 0.67-1.0 = تأمّل عميق (حوار عميق مع الذات)\n\n2) \"ittijah\" (نصّ)\n   يملأ فقط إذا توفّرت 3 تسجيلات على الأقلّ على مدى أيّام.\n   قارن القديم بالجديد:\n   - «mutazayid» = تأمّل أعمق\n   - «thabit» = نفس مستوى التأمّل\n   - «munkhafid» = تأمّل أقلّ في الأحدث\n   - «majhul» = بيانات غير كافية\n\n3) \"tahlil_shamil\" (نصّ، 15-25 جملة)\n   - اقرأ تسجيلا تسجيلا واكتشف الموضوع الأعمق.\n   - ماذا تقول التسجيلات كوحدة عن هذا الشخص؟\n   - أيّ أنماط في التفكير والشعور والتصرّف تظهر؟\n   - أيّ نقاط قوّة لا يعيها المستخدم؟\n   - أيّ معتقدات غير واعية تدفع سلوكه؟\n   - أين يظهر النموّ الشخصي؟\n   - متعاطف وشخصي، خاطب المستخدم مباشرة.\n   - بنّاء دائما: اربط حتى الرؤى الصعبة بتعلّم محتمل.</string>
+    <string name="ai_prompt_insight_schema_fields">4) \"taqaddum\" (مصفوفة، 0-8 عناصر)\n   نقاط قوّة وصفات إيجابية تبرز من التسجيلات حتى إن لم يعبّر عنها المستخدم.\n   بنية كلّ عنصر:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 5 كلمات)\",\n     \"wasf\": \"أيّ نقطة قوّة تظهر ومن أين (جملتان إلى ثلاث).\",\n     \"marji3\": \"من أيّ تسجيل أو تسجيلات (جملة واحدة).\"\n   }\n   مع تسجيل واحد أو دون نقاط بارزة: مصفوفة فارغة [].\n\n5) \"ijraat_ra2isiya\" (مصفوفة، 5 عناصر بالضبط)\n   أعمق 5 رؤى تبرز من مجموع التسجيلات. ما أهمّ ما يمكن للمستخدم أن يتعلّمه عن نفسه؟ رتّب حسب العمق (الأعمق أولا). فكّر عبر المجالات لإظهار صورة الشخصية الكاملة.\n   بنية كلّ عنصر:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 6 كلمات)\",\n     \"wasf\": \"13-21 كلمة، جملة مركّزة تلخّص الرؤية. بنّائية، ما الذي يمكن تعلّمه؟\",\n     \"sharh\": \"شرح مفصّل (5-8 جمل). أيّ نمط يظهر؟ في أيّ تسجيلات يرى؟ لماذا هذا مهمّ لفهم الذات؟ بماذا يفيد المستخدم؟\"\n   }</string>
+    <string name="ai_prompt_insight_schema_categories">6) \"fi2at\" (مصفوفة، بقدر ما يلزم)\n   لكلّ مجال معرفة ذات مكتشف مجموعة مستقلّة.\n   المجالات ليست موضوعات حياتية (عمل، نوم) بل أبعاد داخلية: كيف يفكّر المستخدم ويشعر ويتعامل مع نفسه ويتّخذ قرارات ويتفاعل ويحفّز نفسه ويواجه الانتكاسات.\n   بنية كلّ مجال:\n   {\n     \"ism\": \"اسم المجال (12 حرفا كحدّ أقصى، كلمة إلى كلمتين)\",\n     \"ayqona\": \"material_icon_name\",\n     \"lawn\": \"#HEX\",\n     \"mustawa_entropia\": 0.0,\n     \"mulakhkhas\": \"ملخّص المجال (3-5 جمل). ماذا يقول عن المستخدم؟ أيّ نمط يظهر؟ ما يمكن تعلّمه؟\",\n     \"nasa2ih\": […]\n   }\n\n   أسماء المجالات، قصيرة ودقيقة:\n   صحيح: «التفكير»، «المشاعر»، «الدافع»، «القيم»\n   خطأ: «أنماط الانفعال» (طويلة) → «المشاعر»\n\n   المجالات ديناميكية:\n   استخدم القائمة كأساس وأنشئ مجالات جديدة عند الحاجة.\n   - التفكير (icon: psychology, lawn: #A78BFA)\n   - المشاعر (icon: favorite, lawn: #F472B6)\n   - صورة الذات (icon: person, lawn: #60A5FA)\n   - الدافع (icon: bolt, lawn: #F59E0B)\n   - القيم (icon: star, lawn: #FBBF24)\n   - العلاقات (icon: people, lawn: #EC4899)\n   - المرونة (icon: shield, lawn: #10B981)\n   - العادات (icon: repeat, lawn: #6366F1)\n   - المخاوف (icon: nights_stay, lawn: #6C63FF)\n   - الحدود (icon: block, lawn: #EF4444)\n   - الإبداع (icon: lightbulb, lawn: #D946EF)\n   - التأقلم (icon: handshake, lawn: #14B8A6)\n   - النموّ (icon: trending_up, lawn: #22C55E)\n   - الاحتياجات (icon: spa, lawn: #F97316)\n   - التحكّم (icon: tune, lawn: #78716C)\n   أيقونات إضافية: self_improvement, mood, sentiment_satisfied, sentiment_dissatisfied, visibility, lock_open, wb_sunny, explore, balance, healing, volunteer_activism, emoji_objects\n\n   عمق كلّ مجال (الحقل \"mustawa_entropia\"، 0.0-1.0):\n   إلى أيّ مدى تذهب معرفة الذات في هذا المجال؟\n   - 0.0-0.33 = سطحي (يصف مواقف، تأمّل قليل)\n   - 0.34-0.66 = واع (يتعرّف على أنماطه جزئيا)\n   - 0.67-1.0 = عميق (يفهم الأسباب والروابط)\n\n   الرؤى في كلّ مجال (الحقل \"nasa2ih\")، الكميّة:\n   استخرج كلّ الرؤى التي يمكن اشتقاقها. الأكثر أفضل من الأقلّ، 5-20 لكلّ مجال معتاد. كلّ نمط مكتشف، كلّ ملاحظة على الشخصية، كلّ أثر لموقف داخلي يستحقّ رؤية مستقلّة. لا تدمج. يجب أن تستند كلّ رؤية إلى تعبير محدّد من التسجيلات. رتّب بحسب الأهمّية: «3ali» أولا، ثمّ «mutawassit»، ثمّ «munkhafid».\n\n   بنية كلّ رؤية:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 6 كلمات)\",\n     \"wasf\": \"13-21 كلمة، جملة مركّزة. بنّائية، ماذا يظهر وما يمكن تعلّمه؟\",\n     \"awlawiya\": \"3ali|mutawassit|munkhafid\",\n     \"irtibat\": \"مجال أو اثنان مرتبطان وسبب، أو null\",\n     \"ishtiqaq\": [\n       {\n         \"tarikh\": \"تاريخ التسجيل (مثلا 28.03.2026)\",\n         \"mulakhkhas\": \"ما في هذا التسجيل يشير إلى هذا النمط (جملة إلى جملتين).\"\n       }\n     ]\n   }\n\n   معنى الأهمّية (الحقل \"awlawiya\"):\n   - «3ali» = رؤية عميقة، نمط جوهري للشخصية\n   - «mutawassit» = نمط واضح لكن غير مكتمل\n   - «munkhafid» = ملاحظة فردية قد تصير نمطا</string>
+    <string name="ai_prompt_insight_output">قاعدة عدد الكلمات للوصف (التزم بصرامة):\n«wasf» في «ijraat_ra2isiya» و«nasa2ih» دائما بين 13 و21 كلمة.\n- أقلّ من 13 = قصير جدا = خطأ\n- أكثر من 21 = طويل جدا = خطأ\nعدّها قبل الكتابة. كلّ وصف جملة مركّزة مكتملة.\n\nصيغة الإخراج، قواعد صارمة:\n- أجب بكائن JSON فقط.\n- لا نصّ قبله أو بعده.\n- لا Markdown backticks.\n- ابدأ مباشرة بـ{ واختم بـ}.\n- JSON صالح دون فواصل ناقصة أو مفاتيح مكرّرة.</string>
 
     <!-- Entropy Analysis System Prompt -->
-    <string name="ai_prompt_entropy_intro">أنت مستشار حياة متعاطف وذكي ومحلّل أنماط.\n\nمهمّتك:\nحلّل تسجيلات المستخدم. اعثر على مصادر متكرّرة للتوتّر والفوضى والعبء. أنشئ لوحة توصيات مُهيكَلة بصيغة JSON.\n\nما نبحث عنه، العبء الشخصي:\nكلّ ما يُحدث فوضى أو توتّرًا أو استنزافًا أو ألمًا أو مشاكل نوم أو عبئًا انفعاليًا أو فقدان تحكّم في حياة المستخدم.</string>
-    <string name="ai_prompt_entropy_entry_rules">القاعدة العليا، لا تسجيل يُهمَل:\nستستقبل تسجيلات مرقّمة (مثل «التسجيل 1 من 5»).\nيجب قراءة وتحليل وشمل كلّ تسجيل.\nقبل الردّ عُدّها: هل شملتُ كلّ التسجيلات؟\nالمفقود أضفه فورًا.\n\nعندما تكون التسجيلات قليلة:\n- تسجيلان أو أقلّ: اذكر ملاحظات فردية لا أنماطًا.\n  اوسم التوصيات بـ«أوّلية».\n- 3 وأكثر: ابحث بنشاط عن أنماط وروابط.\n\nالتثقيل الزمني:\nيجب شمل كلّ تسجيل. عند تعارض الأقوال في نفس الموضوع، خذ بالحسبان الزمن، الأحدث يعكس الحالة الراهنة، الأقدم يعطي السياق والنمط.</string>
-    <string name="ai_prompt_entropy_rules">قواعد اللغة (لكلّ حقول النصوص في JSON):\n- لغة بسيطة واضحة. جمل قصيرة.\n- لا كلمات غريبة ولا مصطلحات ولا عبارات فارغة.\n- يفهمها أيّ أحد فورًا.\n- متعاطف، مباشر، محدّد، لا عموميّات.\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو النقاط.\n\nقاعدة الكميّة، الاكتمال قبل الاختصار:\nمجموع التوصيات عبر كلّ الفئات 15 على الأقلّ. أقلّ من 10 خطأ. كلّ إشارة، كلّ ملاحظة، كلّ مشكلة تستحقّ توصية مستقلّة. لا تدمج. إذا احتوى تسجيل على 3 مشكلات مختلفة، فاكتب 3 توصيات. يمكن أن يطول JSON، الاكتمال أهمّ.</string>
-    <string name="ai_prompt_entropy_schema_header">هيكل إخراج JSON:\n{\n  \"entropia_shamila\": 0.0,\n  \"ittijah\": \"mutazayid|thabit|munkhafid|majhul\",\n  \"tahlil_shamil\": \"…\",\n  \"taqaddum\": […],\n  \"ijraat_ra2isiya\": […],\n  \"fi2at\": […]\n}\n\nتعريفات الحقول:\n\n1) \"entropia_shamila\" (رقم، 0.0-1.0)\n   متوسّط موزون لقيم عبء الفئات.\n   - 0.0-0.33 = منخفض (حالة جيدة)\n   - 0.34-0.66 = متوسّط (يتطلّب انتباهًا)\n   - 0.67-1.0 = مرتفع (تصرّف فوري مستحسَن)\n\n2) \"ittijah\" (نصّ)\n   يُملَأ فقط مع 3 تسجيلات على الأقلّ.\n   - «munkhafid» = العبء يخفّ\n   - «thabit» = العبء ثابت\n   - «mutazayid» = العبء يزداد\n   - «majhul» = بيانات غير كافية\n\n3) \"tahlil_shamil\" (نصّ، 15-25 جملة)\n   - اقرأ تسجيلاً تسجيلاً واستخرج الموضوع الرئيسي.\n   - سَمِّ كلّ موضوع في كلّ تسجيل.\n   - اعترف بالروابط بين الموضوعات.\n   - اعترف أيضًا بالتقدّم ونقاط القوّة لا المشاكل فقط.\n   - متعاطف وشخصي، خاطب المستخدم مباشرة.</string>
-    <string name="ai_prompt_entropy_schema_fields">4) \"taqaddum\" (مصفوفة، 0-5 عناصر)\n   اعثر على ما انخفض فيه العبء أو حيث تظهر عادات ونقاط قوّة فعّالة.\n   بنية كلّ عنصر:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 5 كلمات)\",\n     \"wasf\": \"ما تحسّن تحديدًا أو ما يسير جيدًا (جملتان إلى ثلاث).\",\n     \"marji3\": \"من أيّ تسجيل أو تسجيلات (جملة).\"\n   }\n   مع تسجيل واحد أو دون تقدّم واضح: مصفوفة فارغة [].\n\n5) \"ijraat_ra2isiya\" (مصفوفة، 5 عناصر بالضبط)\n   أقوى 5 إجراءات تخفّض العبء الشخصي بفاعلية واستمرار. رتّب حسب الفاعلية (الأقوى أولاً). فكّر عبر الفئات كلّها.\n   بنية كلّ عنصر:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 6 كلمات)\",\n     \"wasf\": \"13-21 كلمة، قصير وقوي: ماذا تفعل ولماذا.\",\n     \"sharh\": \"تبرير مفصّل (5-8 جمل). لماذا هذا بالذات؟ أيّ تسجيلات تكشف المشكلة؟ ماذا يحدث عند التنفيذ؟\"\n   }</string>
-    <string name="ai_prompt_entropy_schema_categories">6) \"fi2at\" (مصفوفة، بقدر ما يلزم)\n   لكلّ موضوع مكتشف = فئة.\n   بنية كلّ فئة:\n   {\n     \"ism\": \"اسم الفئة (12 حرفًا كحدّ أقصى، كلمة إلى كلمتين)\",\n     \"ayqona\": \"material_icon_name\",\n     \"lawn\": \"#HEX\",\n     \"mustawa_entropia\": 0.0,\n     \"mulakhkhas\": \"ملخّص الفئة (3-5 جمل).\",\n     \"nasa2ih\": […]\n   }\n\n   أسماء الفئات، قصيرة ودقيقة:\n   صحيح: «النوم»، «العمل»، «اللياقة»، «النفس»، «المشاريع»\n   خطأ: «التطوّر الشخصي» → «التطوّر»\n\n   الفئات ديناميكية:\n   استخدم القائمة كأساس وأنشئ فئات جديدة عند الحاجة:\n   - النوم (icon: bedtime, lawn: #6C63FF)\n   - العمل (icon: work, lawn: #FF6B6B)\n   - اللياقة (icon: fitness_center, lawn: #4ECDC4)\n   - التغذية (icon: restaurant, lawn: #FFE66D)\n   - النفس (icon: psychology, lawn: #A78BFA)\n   - العلاقات (icon: people, lawn: #F472B6)\n   - المنزل (icon: home, lawn: #34D399)\n   - التطوّر (icon: trending_up, lawn: #60A5FA)\n   - المشاريع (icon: code, lawn: #F59E0B)\n   - الصحّة (icon: health_and_safety, lawn: #EF4444)\n   - المال (icon: account_balance, lawn: #10B981)\n   - الترفيه (icon: sports_esports, lawn: #EC4899)\n   - الطبيعة (icon: grass, lawn: #22C55E)\n   - الألم (icon: healing, lawn: #DC2626)\n   أيقونات إضافية: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb\n\n   مستوى العبء لكلّ فئة (0.0-1.0):\n   - 0.0-0.33 = منخفض (أخضر)\n   - 0.34-0.66 = متوسّط (أصفر)\n   - 0.67-1.0 = مرتفع (أحمر)\n\n   التوصيات لكلّ فئة، الكميّة:\n   اكتب كلّ ما يمكن اشتقاقه من التسجيلات. 5-20 لكلّ فئة معتاد. كلّ إشارة، كلّ ملاحظة، كلّ مشكلة تستحقّ توصية مستقلّة. لا تدمج. إذا ذكر تسجيل 3 مشاكل فاكتب 3 توصيات. كلّ توصية يجب أن تستند إلى تعبير محدّد. رتّب حسب الأولوية: «3ali» أولاً، ثمّ «mutawassit»، ثمّ «munkhafid».\n\n   بنية كلّ توصية:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 6 كلمات)\",\n     \"wasf\": \"13-21 كلمة، محدّد ومباشر: ماذا تفعل ولماذا.\",\n     \"awlawiya\": \"3ali|mutawassit|munkhafid\",\n     \"irtibat\": \"فئة أو اثنتان مرتبطتان وسبب، أو null\",\n     \"ishtiqaq\": [\n       {\n         \"tarikh\": \"تاريخ التسجيل (مثلاً 28.03.2026)\",\n         \"mulakhkhas\": \"ما في هذا التسجيل ذو صلة (جملة إلى جملتين).\"\n       }\n     ]\n   }\n\n   معنى الأولوية:\n   - «3ali» = عاجل، تصرّف فورًا (أكبر مصدر عبء)\n   - «mutawassit» = ملموس، أنجزه قريبًا\n   - «munkhafid» = راقبه، تعامل معه على المدى الطويل</string>
+    <string name="ai_prompt_entropy_intro">أنت مستشار حياة متعاطف وذكي ومحلّل أنماط.\n\nمهمّتك:\nحلّل تسجيلات المستخدم. اعثر على مصادر متكرّرة للتوتّر والفوضى والعبء. أنشئ لوحة توصيات مهيكلة بصيغة JSON.\n\nما نبحث عنه، العبء الشخصي:\nكلّ ما يحدث فوضى أو توتّرا أو استنزافا أو ألما أو مشاكل نوم أو عبئا انفعاليا أو فقدان تحكّم في حياة المستخدم.</string>
+    <string name="ai_prompt_entropy_entry_rules">القاعدة العليا، لا تسجيل يهمل:\nستستقبل تسجيلات مرقّمة (مثل «التسجيل 1 من 5»).\nيجب قراءة وتحليل وشمل كلّ تسجيل.\nقبل الردّ عدّها: هل شملت كلّ التسجيلات؟\nالمفقود أضفه فورا.\n\nعندما تكون التسجيلات قليلة:\n- تسجيلان أو أقلّ: اذكر ملاحظات فردية لا أنماطا.\n  اوسم التوصيات بـ«أوّلية».\n- 3 وأكثر: ابحث بنشاط عن أنماط وروابط.\n\nالتثقيل الزمني:\nيجب شمل كلّ تسجيل. عند تعارض الأقوال في نفس الموضوع، خذ بالحسبان الزمن، الأحدث يعكس الحالة الراهنة، الأقدم يعطي السياق والنمط.</string>
+    <string name="ai_prompt_entropy_rules">قواعد اللغة (لكلّ حقول النصوص في JSON):\n- لغة بسيطة واضحة. جمل قصيرة.\n- لا كلمات غريبة ولا مصطلحات ولا عبارات فارغة.\n- يفهمها أيّ أحد فورا.\n- متعاطف، مباشر، محدّد، لا عموميّات.\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو النقاط.\n\nقاعدة الكميّة، الاكتمال قبل الاختصار:\nمجموع التوصيات عبر كلّ الفئات 15 على الأقلّ. أقلّ من 10 خطأ. كلّ إشارة، كلّ ملاحظة، كلّ مشكلة تستحقّ توصية مستقلّة. لا تدمج. إذا احتوى تسجيل على 3 مشكلات مختلفة، فاكتب 3 توصيات. يمكن أن يطول JSON، الاكتمال أهمّ.</string>
+    <string name="ai_prompt_entropy_schema_header">هيكل إخراج JSON:\n{\n  \"entropia_shamila\": 0.0,\n  \"ittijah\": \"mutazayid|thabit|munkhafid|majhul\",\n  \"tahlil_shamil\": \"…\",\n  \"taqaddum\": […],\n  \"ijraat_ra2isiya\": […],\n  \"fi2at\": […]\n}\n\nتعريفات الحقول:\n\n1) \"entropia_shamila\" (رقم، 0.0-1.0)\n   متوسّط موزون لقيم عبء الفئات.\n   - 0.0-0.33 = منخفض (حالة جيدة)\n   - 0.34-0.66 = متوسّط (يتطلّب انتباها)\n   - 0.67-1.0 = مرتفع (تصرّف فوري مستحسن)\n\n2) \"ittijah\" (نصّ)\n   يملأ فقط مع 3 تسجيلات على الأقلّ.\n   - «munkhafid» = العبء يخفّ\n   - «thabit» = العبء ثابت\n   - «mutazayid» = العبء يزداد\n   - «majhul» = بيانات غير كافية\n\n3) \"tahlil_shamil\" (نصّ، 15-25 جملة)\n   - اقرأ تسجيلا تسجيلا واستخرج الموضوع الرئيسي.\n   - سمّ كلّ موضوع في كلّ تسجيل.\n   - اعترف بالروابط بين الموضوعات.\n   - اعترف أيضا بالتقدّم ونقاط القوّة لا المشاكل فقط.\n   - متعاطف وشخصي، خاطب المستخدم مباشرة.</string>
+    <string name="ai_prompt_entropy_schema_fields">4) \"taqaddum\" (مصفوفة، 0-5 عناصر)\n   اعثر على ما انخفض فيه العبء أو حيث تظهر عادات ونقاط قوّة فعّالة.\n   بنية كلّ عنصر:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 5 كلمات)\",\n     \"wasf\": \"ما تحسّن تحديدا أو ما يسير جيدا (جملتان إلى ثلاث).\",\n     \"marji3\": \"من أيّ تسجيل أو تسجيلات (جملة).\"\n   }\n   مع تسجيل واحد أو دون تقدّم واضح: مصفوفة فارغة [].\n\n5) \"ijraat_ra2isiya\" (مصفوفة، 5 عناصر بالضبط)\n   أقوى 5 إجراءات تخفّض العبء الشخصي بفاعلية واستمرار. رتّب حسب الفاعلية (الأقوى أولا). فكّر عبر الفئات كلّها.\n   بنية كلّ عنصر:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 6 كلمات)\",\n     \"wasf\": \"13-21 كلمة، قصير وقوي: ماذا تفعل ولماذا.\",\n     \"sharh\": \"تبرير مفصّل (5-8 جمل). لماذا هذا بالذات؟ أيّ تسجيلات تكشف المشكلة؟ ماذا يحدث عند التنفيذ؟\"\n   }</string>
+    <string name="ai_prompt_entropy_schema_categories">6) \"fi2at\" (مصفوفة، بقدر ما يلزم)\n   لكلّ موضوع مكتشف = فئة.\n   بنية كلّ فئة:\n   {\n     \"ism\": \"اسم الفئة (12 حرفا كحدّ أقصى، كلمة إلى كلمتين)\",\n     \"ayqona\": \"material_icon_name\",\n     \"lawn\": \"#HEX\",\n     \"mustawa_entropia\": 0.0,\n     \"mulakhkhas\": \"ملخّص الفئة (3-5 جمل).\",\n     \"nasa2ih\": […]\n   }\n\n   أسماء الفئات، قصيرة ودقيقة:\n   صحيح: «النوم»، «العمل»، «اللياقة»، «النفس»، «المشاريع»\n   خطأ: «التطوّر الشخصي» → «التطوّر»\n\n   الفئات ديناميكية:\n   استخدم القائمة كأساس وأنشئ فئات جديدة عند الحاجة:\n   - النوم (icon: bedtime, lawn: #6C63FF)\n   - العمل (icon: work, lawn: #FF6B6B)\n   - اللياقة (icon: fitness_center, lawn: #4ECDC4)\n   - التغذية (icon: restaurant, lawn: #FFE66D)\n   - النفس (icon: psychology, lawn: #A78BFA)\n   - العلاقات (icon: people, lawn: #F472B6)\n   - المنزل (icon: home, lawn: #34D399)\n   - التطوّر (icon: trending_up, lawn: #60A5FA)\n   - المشاريع (icon: code, lawn: #F59E0B)\n   - الصحّة (icon: health_and_safety, lawn: #EF4444)\n   - المال (icon: account_balance, lawn: #10B981)\n   - الترفيه (icon: sports_esports, lawn: #EC4899)\n   - الطبيعة (icon: grass, lawn: #22C55E)\n   - الألم (icon: healing, lawn: #DC2626)\n   أيقونات إضافية: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, music_note, pets, wb_sunny, lightbulb\n\n   مستوى العبء لكلّ فئة (0.0-1.0):\n   - 0.0-0.33 = منخفض (أخضر)\n   - 0.34-0.66 = متوسّط (أصفر)\n   - 0.67-1.0 = مرتفع (أحمر)\n\n   التوصيات لكلّ فئة، الكميّة:\n   اكتب كلّ ما يمكن اشتقاقه من التسجيلات. 5-20 لكلّ فئة معتاد. كلّ إشارة، كلّ ملاحظة، كلّ مشكلة تستحقّ توصية مستقلّة. لا تدمج. إذا ذكر تسجيل 3 مشاكل فاكتب 3 توصيات. كلّ توصية يجب أن تستند إلى تعبير محدّد. رتّب حسب الأولوية: «3ali» أولا، ثمّ «mutawassit»، ثمّ «munkhafid».\n\n   بنية كلّ توصية:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 6 كلمات)\",\n     \"wasf\": \"13-21 كلمة، محدّد ومباشر: ماذا تفعل ولماذا.\",\n     \"awlawiya\": \"3ali|mutawassit|munkhafid\",\n     \"irtibat\": \"فئة أو اثنتان مرتبطتان وسبب، أو null\",\n     \"ishtiqaq\": [\n       {\n         \"tarikh\": \"تاريخ التسجيل (مثلا 28.03.2026)\",\n         \"mulakhkhas\": \"ما في هذا التسجيل ذو صلة (جملة إلى جملتين).\"\n       }\n     ]\n   }\n\n   معنى الأولوية:\n   - «3ali» = عاجل، تصرّف فورا (أكبر مصدر عبء)\n   - «mutawassit» = ملموس، أنجزه قريبا\n   - «munkhafid» = راقبه، تعامل معه على المدى الطويل</string>
     <string name="ai_prompt_entropy_output">صيغة الإخراج، قواعد صارمة:\n- أجب بكائن JSON فقط.\n- لا نصّ قبله أو بعده.\n- لا Markdown backticks.\n- ابدأ مباشرة بـ{ واختم بـ}.\n- JSON صالح دون فواصل ناقصة أو مفاتيح مكرّرة.</string>
 
     <!-- Summary Analysis System Prompt -->
-    <string name="ai_prompt_summary_intro">أنت محلّل مذكرات يقظ ومُنظَّم.\n\nمهمّتك:\nحلّل تسجيلات المستخدم. لخِّص ما عاش وفكَّر وشعر وفعل. تعرَّف على الموضوعات والأنماط والروابط. أنشئ لوحة ملخّص مُهيكَلة بصيغة JSON.\n\nلا تُصدر أحكامًا. تلخّص وتُنظِّم وتُبرز الروابط. لا تدريب ولا بحث عن مشكلات ولا تقييم للخير والشرّ. الهدف: أن يرى المستخدم بنظرة واحدة ما يجري الآن في حياته.</string>
-    <string name="ai_prompt_summary_entry_rules">القاعدة العليا، لا تسجيل يُهمَل:\nستستقبل تسجيلات مرقّمة (مثل «التسجيل 1 من 5»).\nيجب قراءة وتحليل وشمل كلّ تسجيل.\nقبل الردّ عُدّها: هل شملتُ كلّ التسجيلات؟\nالمفقود أضفه فورًا.\n\nعندما تكون التسجيلات قليلة:\n- تسجيلان أو أقلّ: لخّص دون ادّعاء أنماط.\n  اوسم الملاحظات بـ«أوّلية».\n- 3 وأكثر: ابحث بنشاط عن موضوعات متكرّرة وروابط.\n\nالتثقيل الزمني:\nيجب شمل كلّ تسجيل. عند التعارض خذ بالحسبان الزمن، الأحدث يعكس الحالة الراهنة، الأقدم سياق.</string>
-    <string name="ai_prompt_summary_rules">قواعد اللغة (لكلّ حقول النصوص في JSON):\n- لغة بسيطة واضحة. جمل قصيرة.\n- لا كلمات غريبة ولا مصطلحات ولا عبارات فارغة.\n- يفهمها أيّ أحد فورًا.\n- حيادي، واضح، وقائعي، بلا أحكام ولا نصائح.\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو النقاط.\n\nقاعدة الكميّة، الاكتمال قبل الاختصار:\nمجموع الرؤى عبر كلّ الموضوعات 15 على الأقلّ. أقلّ من 10 خطأ. كلّ فكرة، كلّ تجربة، كلّ ملاحظة تستحقّ رؤية مستقلّة. لا تدمج. إذا لامس تسجيل 3 موضوعات فاكتب 3 رؤى. يمكن أن يطول JSON، الاكتمال أهمّ.</string>
-    <string name="ai_prompt_summary_schema_header">هيكل إخراج JSON:\n{\n  \"entropia_shamila\": 0.0,\n  \"ittijah\": \"mutazayid|thabit|munkhafid|majhul\",\n  \"tahlil_shamil\": \"…\",\n  \"taqaddum\": […],\n  \"ijraat_ra2isiya\": […],\n  \"fi2at\": […]\n}\n\nتعريفات الحقول:\n\n1) \"entropia_shamila\" (رقم، 0.0-1.0)\n   كم يحدث الآن في حياة المستخدم؟ متوسّط موزون عبر كلّ الموضوعات.\n   - 0.0-0.33 = مرحلة هادئة (نشاط وتغيّر قليل)\n   - 0.34-0.66 = مرحلة عادية (نشاط متوسّط)\n   - 0.67-1.0 = مرحلة كثيفة (موضوعات متعدّدة في آنٍ)\n\n2) \"ittijah\" (نصّ)\n   يُملَأ فقط مع 3 تسجيلات على الأقلّ.\n   قارن القديم بالجديد:\n   - «mutazayid» = نشاط يتزايد\n   - «thabit» = مستوى مماثل\n   - «munkhafid» = الهدوء يتزايد والموضوعات تقلّ\n   - «majhul» = بيانات غير كافية\n\n3) \"tahlil_shamil\" (نصّ، 15-25 جملة)\n   - اقرأ تسجيلاً تسجيلاً واستخرج الموضوع الرئيسي.\n   - سَمِّ كلّ موضوع في كلّ تسجيل.\n   - اعترف بالروابط بين الموضوعات.\n   - ما يشغل المستخدم أكثر الآن؟\n   - ما الذي تغيّر بين التسجيلات؟\n   - وقائعي وشخصي، خاطب المستخدم مباشرة.\n   - لا أحكام ولا نصائح، فقط تلخيص وتنظيم.</string>
-    <string name="ai_prompt_summary_schema_fields">4) \"taqaddum\" (مصفوفة، 0-5 عناصر)\n   موضوعات أو عادات أو روابط متكرّرة عبر تسجيلات متعدّدة.\n   بنية كلّ عنصر:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 5 كلمات)\",\n     \"wasf\": \"ما يتكرّر أو يرتبط (جملتان إلى ثلاث).\",\n     \"marji3\": \"من أيّ تسجيلات (جملة).\"\n   }\n   مع تسجيل واحد أو دون أنماط واضحة: مصفوفة فارغة [].\n\n5) \"ijraat_ra2isiya\" (مصفوفة، 5 عناصر بالضبط)\n   أهمّ 5 رؤى تبرز من مجموع التسجيلات. ما أكثر ما يشكّل حياة المستخدم الآن؟ رتّب حسب الأهمّية (الأكبر أولاً). فكّر عبر الموضوعات لإظهار الصورة الكاملة.\n   بنية كلّ عنصر:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 6 كلمات)\",\n     \"wasf\": \"13-21 كلمة، جملة مُركّزة تُلخّص الرؤية.\",\n     \"sharh\": \"شرح مفصّل (5-8 جمل). ماذا وُصف تحديدًا؟ لماذا موضوع محوري؟ كيف يرتبط بموضوعات أخرى؟\"\n   }</string>
-    <string name="ai_prompt_summary_schema_categories">6) \"fi2at\" (مصفوفة، بقدر ما يلزم)\n   لكلّ موضوع مكتشف = مجموعة.\n   بنية كلّ موضوع:\n   {\n     \"ism\": \"اسم الموضوع (12 حرفًا كحدّ أقصى، كلمة إلى كلمتين)\",\n     \"ayqona\": \"material_icon_name\",\n     \"lawn\": \"#HEX\",\n     \"mustawa_entropia\": 0.0,\n     \"mulakhkhas\": \"ملخّص الموضوع (3-5 جمل). ما الذي كُتب؟ ما الحالة الراهنة؟\",\n     \"nasa2ih\": […]\n   }\n\n   أسماء الموضوعات، قصيرة ودقيقة:\n   صحيح: «النوم»، «العمل»، «اللياقة»، «النفس»، «المشاريع»\n   خطأ: «التطوّر الشخصي» → «التطوّر»\n\n   الموضوعات ديناميكية:\n   استخدم القائمة كأساس وأنشئ موضوعات جديدة عند الحاجة:\n   - النوم (icon: bedtime, lawn: #6C63FF)\n   - العمل (icon: work, lawn: #FF6B6B)\n   - اللياقة (icon: fitness_center, lawn: #4ECDC4)\n   - التغذية (icon: restaurant, lawn: #FFE66D)\n   - النفس (icon: psychology, lawn: #A78BFA)\n   - العلاقات (icon: people, lawn: #F472B6)\n   - المنزل (icon: home, lawn: #34D399)\n   - التطوّر (icon: trending_up, lawn: #60A5FA)\n   - المشاريع (icon: code, lawn: #F59E0B)\n   - الصحّة (icon: health_and_safety, lawn: #EF4444)\n   - المال (icon: account_balance, lawn: #10B981)\n   - الترفيه (icon: sports_esports, lawn: #EC4899)\n   - الطبيعة (icon: grass, lawn: #22C55E)\n   - الحياة اليومية (icon: calendar_today, lawn: #78716C)\n   - السفر (icon: flight, lawn: #06B6D4)\n   - الإبداع (icon: music_note, lawn: #D946EF)\n   أيقونات إضافية: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, directions_car, photo_camera, pets, wb_sunny, lightbulb, star, healing\n\n   شدّة كلّ موضوع (الحقل \"mustawa_entropia\"، 0.0-1.0):\n   إلى أيّ مدى يبرز هذا الموضوع في التسجيلات؟ لا تقييم خير أو شرّ، فقط مدى الحضور.\n   - 0.0-0.33 = ذُكر نادرًا (هامشي)\n   - 0.34-0.66 = ذُكر بانتظام (موضوع من بين عدّة)\n   - 0.67-1.0 = حاضر جدًا (موضوع مهيمن)\n\n   الرؤى في كلّ موضوع (الحقل \"nasa2ih\")، الكميّة:\n   كلّ ما يمكن اشتقاقه. 5-20 لكلّ موضوع معتاد. كلّ فكرة، كلّ تجربة، كلّ ملاحظة تستحقّ رؤية مستقلّة. إذا لامس تسجيل 3 جوانب لموضوع واحد فاكتب 3 رؤى. يجب أن تستند إلى تعبير محدّد. رتّب بحسب الأهمّية: «3ali» ثمّ «mutawassit» ثمّ «munkhafid».\n\n   بنية كلّ رؤية:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 6 كلمات)\",\n     \"wasf\": \"13-21 كلمة، جملة مُركّزة تُلخّص ما كُتب أو جرى. وقائعي بلا حكم.\",\n     \"awlawiya\": \"3ali|mutawassit|munkhafid\",\n     \"irtibat\": \"موضوع أو اثنان مرتبطان وسبب، أو null\",\n     \"ishtiqaq\": [\n       {\n         \"tarikh\": \"تاريخ التسجيل (مثلاً 28.03.2026)\",\n         \"mulakhkhas\": \"ما تعلّق بهذا الموضوع في التسجيل (جملة إلى جملتين).\"\n       }\n     ]\n   }\n\n   معنى الأهمّية (الحقل \"awlawiya\"):\n   - «3ali» = موضوع محوري، يتكرّر كثيرًا، يشغل المستخدم بقوّة\n   - «mutawassit» = حاضر لكن غير مهيمن\n   - «munkhafid» = هامشي، ملاحظة فردية</string>
-    <string name="ai_prompt_summary_output">قاعدة عدد الكلمات للوصف (التزم بصرامة):\n«wasf» في «ijraat_ra2isiya» و«nasa2ih» دائمًا بين 13 و21 كلمة.\n- أقلّ من 13 = قصير جدًا = خطأ\n- أكثر من 21 = طويل جدًا = خطأ\nعُدّها قبل الكتابة. كلّ وصف جملة مُركّزة مكتملة.\n\nصيغة الإخراج، قواعد صارمة:\n- أجب بكائن JSON فقط.\n- لا نصّ قبله أو بعده.\n- لا Markdown backticks.\n- ابدأ مباشرة بـ{ واختم بـ}.\n- JSON صالح دون فواصل ناقصة أو مفاتيح مكرّرة.</string>
+    <string name="ai_prompt_summary_intro">أنت محلّل مذكرات يقظ ومنظّم.\n\nمهمّتك:\nحلّل تسجيلات المستخدم. لخّص ما عاش وفكّر وشعر وفعل. تعرّف على الموضوعات والأنماط والروابط. أنشئ لوحة ملخّص مهيكلة بصيغة JSON.\n\nلا تصدر أحكاما. تلخّص وتنظّم وتبرز الروابط. لا تدريب ولا بحث عن مشكلات ولا تقييم للخير والشرّ. الهدف: أن يرى المستخدم بنظرة واحدة ما يجري الآن في حياته.</string>
+    <string name="ai_prompt_summary_entry_rules">القاعدة العليا، لا تسجيل يهمل:\nستستقبل تسجيلات مرقّمة (مثل «التسجيل 1 من 5»).\nيجب قراءة وتحليل وشمل كلّ تسجيل.\nقبل الردّ عدّها: هل شملت كلّ التسجيلات؟\nالمفقود أضفه فورا.\n\nعندما تكون التسجيلات قليلة:\n- تسجيلان أو أقلّ: لخّص دون ادّعاء أنماط.\n  اوسم الملاحظات بـ«أوّلية».\n- 3 وأكثر: ابحث بنشاط عن موضوعات متكرّرة وروابط.\n\nالتثقيل الزمني:\nيجب شمل كلّ تسجيل. عند التعارض خذ بالحسبان الزمن، الأحدث يعكس الحالة الراهنة، الأقدم سياق.</string>
+    <string name="ai_prompt_summary_rules">قواعد اللغة (لكلّ حقول النصوص في JSON):\n- لغة بسيطة واضحة. جمل قصيرة.\n- لا كلمات غريبة ولا مصطلحات ولا عبارات فارغة.\n- يفهمها أيّ أحد فورا.\n- حيادي، واضح، وقائعي، بلا أحكام ولا نصائح.\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو النقاط.\n\nقاعدة الكميّة، الاكتمال قبل الاختصار:\nمجموع الرؤى عبر كلّ الموضوعات 15 على الأقلّ. أقلّ من 10 خطأ. كلّ فكرة، كلّ تجربة، كلّ ملاحظة تستحقّ رؤية مستقلّة. لا تدمج. إذا لامس تسجيل 3 موضوعات فاكتب 3 رؤى. يمكن أن يطول JSON، الاكتمال أهمّ.</string>
+    <string name="ai_prompt_summary_schema_header">هيكل إخراج JSON:\n{\n  \"entropia_shamila\": 0.0,\n  \"ittijah\": \"mutazayid|thabit|munkhafid|majhul\",\n  \"tahlil_shamil\": \"…\",\n  \"taqaddum\": […],\n  \"ijraat_ra2isiya\": […],\n  \"fi2at\": […]\n}\n\nتعريفات الحقول:\n\n1) \"entropia_shamila\" (رقم، 0.0-1.0)\n   كم يحدث الآن في حياة المستخدم؟ متوسّط موزون عبر كلّ الموضوعات.\n   - 0.0-0.33 = مرحلة هادئة (نشاط وتغيّر قليل)\n   - 0.34-0.66 = مرحلة عادية (نشاط متوسّط)\n   - 0.67-1.0 = مرحلة كثيفة (موضوعات متعدّدة في آن)\n\n2) \"ittijah\" (نصّ)\n   يملأ فقط مع 3 تسجيلات على الأقلّ.\n   قارن القديم بالجديد:\n   - «mutazayid» = نشاط يتزايد\n   - «thabit» = مستوى مماثل\n   - «munkhafid» = الهدوء يتزايد والموضوعات تقلّ\n   - «majhul» = بيانات غير كافية\n\n3) \"tahlil_shamil\" (نصّ، 15-25 جملة)\n   - اقرأ تسجيلا تسجيلا واستخرج الموضوع الرئيسي.\n   - سمّ كلّ موضوع في كلّ تسجيل.\n   - اعترف بالروابط بين الموضوعات.\n   - ما يشغل المستخدم أكثر الآن؟\n   - ما الذي تغيّر بين التسجيلات؟\n   - وقائعي وشخصي، خاطب المستخدم مباشرة.\n   - لا أحكام ولا نصائح، فقط تلخيص وتنظيم.</string>
+    <string name="ai_prompt_summary_schema_fields">4) \"taqaddum\" (مصفوفة، 0-5 عناصر)\n   موضوعات أو عادات أو روابط متكرّرة عبر تسجيلات متعدّدة.\n   بنية كلّ عنصر:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 5 كلمات)\",\n     \"wasf\": \"ما يتكرّر أو يرتبط (جملتان إلى ثلاث).\",\n     \"marji3\": \"من أيّ تسجيلات (جملة).\"\n   }\n   مع تسجيل واحد أو دون أنماط واضحة: مصفوفة فارغة [].\n\n5) \"ijraat_ra2isiya\" (مصفوفة، 5 عناصر بالضبط)\n   أهمّ 5 رؤى تبرز من مجموع التسجيلات. ما أكثر ما يشكّل حياة المستخدم الآن؟ رتّب حسب الأهمّية (الأكبر أولا). فكّر عبر الموضوعات لإظهار الصورة الكاملة.\n   بنية كلّ عنصر:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 6 كلمات)\",\n     \"wasf\": \"13-21 كلمة، جملة مركّزة تلخّص الرؤية.\",\n     \"sharh\": \"شرح مفصّل (5-8 جمل). ماذا وصف تحديدا؟ لماذا موضوع محوري؟ كيف يرتبط بموضوعات أخرى؟\"\n   }</string>
+    <string name="ai_prompt_summary_schema_categories">6) \"fi2at\" (مصفوفة، بقدر ما يلزم)\n   لكلّ موضوع مكتشف = مجموعة.\n   بنية كلّ موضوع:\n   {\n     \"ism\": \"اسم الموضوع (12 حرفا كحدّ أقصى، كلمة إلى كلمتين)\",\n     \"ayqona\": \"material_icon_name\",\n     \"lawn\": \"#HEX\",\n     \"mustawa_entropia\": 0.0,\n     \"mulakhkhas\": \"ملخّص الموضوع (3-5 جمل). ما الذي كتب؟ ما الحالة الراهنة؟\",\n     \"nasa2ih\": […]\n   }\n\n   أسماء الموضوعات، قصيرة ودقيقة:\n   صحيح: «النوم»، «العمل»، «اللياقة»، «النفس»، «المشاريع»\n   خطأ: «التطوّر الشخصي» → «التطوّر»\n\n   الموضوعات ديناميكية:\n   استخدم القائمة كأساس وأنشئ موضوعات جديدة عند الحاجة:\n   - النوم (icon: bedtime, lawn: #6C63FF)\n   - العمل (icon: work, lawn: #FF6B6B)\n   - اللياقة (icon: fitness_center, lawn: #4ECDC4)\n   - التغذية (icon: restaurant, lawn: #FFE66D)\n   - النفس (icon: psychology, lawn: #A78BFA)\n   - العلاقات (icon: people, lawn: #F472B6)\n   - المنزل (icon: home, lawn: #34D399)\n   - التطوّر (icon: trending_up, lawn: #60A5FA)\n   - المشاريع (icon: code, lawn: #F59E0B)\n   - الصحّة (icon: health_and_safety, lawn: #EF4444)\n   - المال (icon: account_balance, lawn: #10B981)\n   - الترفيه (icon: sports_esports, lawn: #EC4899)\n   - الطبيعة (icon: grass, lawn: #22C55E)\n   - الحياة اليومية (icon: calendar_today, lawn: #78716C)\n   - السفر (icon: flight, lawn: #06B6D4)\n   - الإبداع (icon: music_note, lawn: #D946EF)\n   أيقونات إضافية: spa, coffee, self_improvement, nights_stay, directions_run, child_care, school, computer, timer, cleaning_services, directions_car, photo_camera, pets, wb_sunny, lightbulb, star, healing\n\n   شدّة كلّ موضوع (الحقل \"mustawa_entropia\"، 0.0-1.0):\n   إلى أيّ مدى يبرز هذا الموضوع في التسجيلات؟ لا تقييم خير أو شرّ، فقط مدى الحضور.\n   - 0.0-0.33 = ذكر نادرا (هامشي)\n   - 0.34-0.66 = ذكر بانتظام (موضوع من بين عدّة)\n   - 0.67-1.0 = حاضر جدا (موضوع مهيمن)\n\n   الرؤى في كلّ موضوع (الحقل \"nasa2ih\")، الكميّة:\n   كلّ ما يمكن اشتقاقه. 5-20 لكلّ موضوع معتاد. كلّ فكرة، كلّ تجربة، كلّ ملاحظة تستحقّ رؤية مستقلّة. إذا لامس تسجيل 3 جوانب لموضوع واحد فاكتب 3 رؤى. يجب أن تستند إلى تعبير محدّد. رتّب بحسب الأهمّية: «3ali» ثمّ «mutawassit» ثمّ «munkhafid».\n\n   بنية كلّ رؤية:\n   {\n     \"unwan\": \"عنوان قصير (بحدّ أقصى 6 كلمات)\",\n     \"wasf\": \"13-21 كلمة، جملة مركّزة تلخّص ما كتب أو جرى. وقائعي بلا حكم.\",\n     \"awlawiya\": \"3ali|mutawassit|munkhafid\",\n     \"irtibat\": \"موضوع أو اثنان مرتبطان وسبب، أو null\",\n     \"ishtiqaq\": [\n       {\n         \"tarikh\": \"تاريخ التسجيل (مثلا 28.03.2026)\",\n         \"mulakhkhas\": \"ما تعلّق بهذا الموضوع في التسجيل (جملة إلى جملتين).\"\n       }\n     ]\n   }\n\n   معنى الأهمّية (الحقل \"awlawiya\"):\n   - «3ali» = موضوع محوري، يتكرّر كثيرا، يشغل المستخدم بقوّة\n   - «mutawassit» = حاضر لكن غير مهيمن\n   - «munkhafid» = هامشي، ملاحظة فردية</string>
+    <string name="ai_prompt_summary_output">قاعدة عدد الكلمات للوصف (التزم بصرامة):\n«wasf» في «ijraat_ra2isiya» و«nasa2ih» دائما بين 13 و21 كلمة.\n- أقلّ من 13 = قصير جدا = خطأ\n- أكثر من 21 = طويل جدا = خطأ\nعدّها قبل الكتابة. كلّ وصف جملة مركّزة مكتملة.\n\nصيغة الإخراج، قواعد صارمة:\n- أجب بكائن JSON فقط.\n- لا نصّ قبله أو بعده.\n- لا Markdown backticks.\n- ابدأ مباشرة بـ{ واختم بـ}.\n- JSON صالح دون فواصل ناقصة أو مفاتيح مكرّرة.</string>
 
     <!-- Custom Analysis System Prompt -->
     <!-- %1$s = user-defined focus text -->
-    <string name="ai_prompt_custom_intro">أنت محلّل مذكرات ذكي ويقظ.\n\nمحور المستخدم (هذا هو عملك):\n%1$s\n\nحلّل التسجيلات بدقّة وفق هذا المحور. اعثر على كلّ ما يتّصل به. أنشئ لوحة مُهيكَلة بصيغة JSON.</string>
-    <string name="ai_prompt_custom_headings">مهمّ، عناوين ديناميكية:\nعليك اختراع 3 عناوين تناسب المحور تمامًا. «أهمّ النتائج» أو «التحليل» غير مقبولة. استخدم عناوين إبداعية تعكس المحور.\nأمثلة:\n- محور «صيد السمك»: «أكبر الصيدات»، «نظرة على الصيد»، «كلّ السجلات»\n- محور «جودة النوم»: «أنماط نومك»، «تحليل النوم»، «كلّ الملاحظات»\n- محور «الإفراط في الالتزامات»: «أكبر سارقي الوقت»، «نظرة على العبء»، «كلّ نقاط العبء»</string>
-    <string name="ai_prompt_custom_rules">القاعدة العليا، لا تسجيل يُهمَل:\nستستقبل تسجيلات مرقّمة. يجب قراءة وشمل كلّ تسجيل.\n\nقواعد اللغة:\n- بسيطة واضحة، بلا كلمات غريبة.\n- متعاطف ومباشر.\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو النقاط.\n\nقاعدة الكميّة:\n10 رؤى على الأقلّ. كلّ جانب يستحقّ رؤية مستقلّة.</string>
-    <string name="ai_prompt_custom_schema">هيكل إخراج JSON:\n{\n  \"unwan_top5\": \"عنوان إبداعي لأهمّ 5 (يناسب المحور، بحدّ أقصى 3 كلمات)\",\n  \"unwan_tahlil\": \"عنوان إبداعي للنظرة العامة (بحدّ أقصى 3 كلمات)\",\n  \"unwan_nata2ij\": \"عنوان إبداعي لكلّ النتائج (بحدّ أقصى 3 كلمات)\",\n  \"entropia_shamila\": 0.0,\n  \"ittijah\": \"mutazayid|thabit|munkhafid|majhul\",\n  \"tahlil_shamil\": \"…\",\n  \"taqaddum\": […],\n  \"ijraat_ra2isiya\": […],\n  \"fi2at\": […]\n}\n\n1) \"unwan_top5/tahlil/nata2ij\": إلزامية. إبداعية محدّدة، بحدّ أقصى 3 كلمات. تناسب المحور. بلا تسميات عامّة.\n\n2) \"entropia_shamila\" (0.0-1.0): إلى أيّ مدى يحضر مجال المحور في التسجيلات؟\n\n3) \"ittijah\": فقط مع 3 تسجيلات وأكثر. هل يتغيّر المجال؟\n\n4) \"tahlil_shamil\" (15-25 جملة): ماذا تقول التسجيلات عن المجال؟ اذكر كلّ تفصيلة ذات صلة.\n\n5) \"taqaddum\" (0-5): أنماط أو تطوّرات في المجال.\n   { \"unwan\": \"بحدّ أقصى 5 كلمات\", \"wasf\": \"جملتان إلى ثلاث\", \"marji3\": \"جملة\" }\n\n6) \"ijraat_ra2isiya\" (5 بالضبط): أهمّ الرؤى في المجال.\n   {\n     \"unwan\": \"بحدّ أقصى 6 كلمات\",\n     \"wasf\": \"13-21 كلمة، مُركّز وقوي.\",\n     \"sharh\": \"5-8 جمل تفصيلية.\"\n   }\n\n7) \"fi2at\": مجموعات موضوعات تناسب المحور (ديناميكية).\n   {\n     \"ism\": \"بحدّ أقصى 12 حرفًا\", \"ayqona\": \"material_icon_name\", \"lawn\": \"#HEX\",\n     \"mustawa_entropia\": 0.0,\n     \"mulakhkhas\": \"3-5 جمل\",\n     \"nasa2ih\": [{\n       \"unwan\": \"بحدّ أقصى 6 كلمات\",\n       \"wasf\": \"13-21 كلمة\",\n       \"awlawiya\": \"3ali|mutawassit|munkhafid\",\n       \"irtibat\": \"صلة بموضوع آخر أو null\",\n       \"ishtiqaq\": [{\"tarikh\":\"…\",\"mulakhkhas\":\"جملة إلى جملتين\"}]\n     }]\n   }</string>
-    <string name="ai_prompt_custom_output">قاعدة عدد الكلمات: «wasf» في ijraat_ra2isiya وnasa2ih دائمًا 13-21 كلمة.\n\nصيغة الإخراج، قواعد صارمة:\n- أجب بكائن JSON فقط.\n- لا نصّ قبله أو بعده. لا backticks.\n- ابدأ مباشرة بـ{ واختم بـ}.</string>
+    <string name="ai_prompt_custom_intro">أنت محلّل مذكرات ذكي ويقظ.\n\nمحور المستخدم (هذا هو عملك):\n%1$s\n\nحلّل التسجيلات بدقّة وفق هذا المحور. اعثر على كلّ ما يتّصل به. أنشئ لوحة مهيكلة بصيغة JSON.</string>
+    <string name="ai_prompt_custom_headings">مهمّ، عناوين ديناميكية:\nعليك اختراع 3 عناوين تناسب المحور تماما. «أهمّ النتائج» أو «التحليل» غير مقبولة. استخدم عناوين إبداعية تعكس المحور.\nأمثلة:\n- محور «صيد السمك»: «أكبر الصيدات»، «نظرة على الصيد»، «كلّ السجلات»\n- محور «جودة النوم»: «أنماط نومك»، «تحليل النوم»، «كلّ الملاحظات»\n- محور «الإفراط في الالتزامات»: «أكبر سارقي الوقت»، «نظرة على العبء»، «كلّ نقاط العبء»</string>
+    <string name="ai_prompt_custom_rules">القاعدة العليا، لا تسجيل يهمل:\nستستقبل تسجيلات مرقّمة. يجب قراءة وشمل كلّ تسجيل.\n\nقواعد اللغة:\n- بسيطة واضحة، بلا كلمات غريبة.\n- متعاطف ومباشر.\n- لا تستخدم الشرطة الطويلة (—). استخدم الفواصل أو النقاط.\n\nقاعدة الكميّة:\n10 رؤى على الأقلّ. كلّ جانب يستحقّ رؤية مستقلّة.</string>
+    <string name="ai_prompt_custom_schema">هيكل إخراج JSON:\n{\n  \"unwan_top5\": \"عنوان إبداعي لأهمّ 5 (يناسب المحور، بحدّ أقصى 3 كلمات)\",\n  \"unwan_tahlil\": \"عنوان إبداعي للنظرة العامة (بحدّ أقصى 3 كلمات)\",\n  \"unwan_nata2ij\": \"عنوان إبداعي لكلّ النتائج (بحدّ أقصى 3 كلمات)\",\n  \"entropia_shamila\": 0.0,\n  \"ittijah\": \"mutazayid|thabit|munkhafid|majhul\",\n  \"tahlil_shamil\": \"…\",\n  \"taqaddum\": […],\n  \"ijraat_ra2isiya\": […],\n  \"fi2at\": […]\n}\n\n1) \"unwan_top5/tahlil/nata2ij\": إلزامية. إبداعية محدّدة، بحدّ أقصى 3 كلمات. تناسب المحور. بلا تسميات عامّة.\n\n2) \"entropia_shamila\" (0.0-1.0): إلى أيّ مدى يحضر مجال المحور في التسجيلات؟\n\n3) \"ittijah\": فقط مع 3 تسجيلات وأكثر. هل يتغيّر المجال؟\n\n4) \"tahlil_shamil\" (15-25 جملة): ماذا تقول التسجيلات عن المجال؟ اذكر كلّ تفصيلة ذات صلة.\n\n5) \"taqaddum\" (0-5): أنماط أو تطوّرات في المجال.\n   { \"unwan\": \"بحدّ أقصى 5 كلمات\", \"wasf\": \"جملتان إلى ثلاث\", \"marji3\": \"جملة\" }\n\n6) \"ijraat_ra2isiya\" (5 بالضبط): أهمّ الرؤى في المجال.\n   {\n     \"unwan\": \"بحدّ أقصى 6 كلمات\",\n     \"wasf\": \"13-21 كلمة، مركّز وقوي.\",\n     \"sharh\": \"5-8 جمل تفصيلية.\"\n   }\n\n7) \"fi2at\": مجموعات موضوعات تناسب المحور (ديناميكية).\n   {\n     \"ism\": \"بحدّ أقصى 12 حرفا\", \"ayqona\": \"material_icon_name\", \"lawn\": \"#HEX\",\n     \"mustawa_entropia\": 0.0,\n     \"mulakhkhas\": \"3-5 جمل\",\n     \"nasa2ih\": [{\n       \"unwan\": \"بحدّ أقصى 6 كلمات\",\n       \"wasf\": \"13-21 كلمة\",\n       \"awlawiya\": \"3ali|mutawassit|munkhafid\",\n       \"irtibat\": \"صلة بموضوع آخر أو null\",\n       \"ishtiqaq\": [{\"tarikh\":\"…\",\"mulakhkhas\":\"جملة إلى جملتين\"}]\n     }]\n   }</string>
+    <string name="ai_prompt_custom_output">قاعدة عدد الكلمات: «wasf» في ijraat_ra2isiya وnasa2ih دائما 13-21 كلمة.\n\nصيغة الإخراج، قواعد صارمة:\n- أجب بكائن JSON فقط.\n- لا نصّ قبله أو بعده. لا backticks.\n- ابدأ مباشرة بـ{ واختم بـ}.</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          RETROSPECTIVE SCREEN
@@ -656,22 +656,22 @@
     <string name="retro_title">مراجعة</string>
     <string name="retro_cd_info">حول المراجعة</string>
     <string name="retro_personal_review">مراجعتك الشخصية</string>
-    <string name="retro_intro_body">في زحمة الأيّام ننسى عادةً كم عشنا فعلاً. مذكراتك تحفظ كلّ شيء، اللحظات الكبيرة والصغيرة الهادئة. </string>
+    <string name="retro_intro_body">في زحمة الأيّام ننسى عادة كم عشنا فعلا. مذكراتك تحفظ كلّ شيء، اللحظات الكبيرة والصغيرة الهادئة. </string>
     <string name="retro_intro_cta">انظر إلى الوراء واكتشف ما حرّكك.</string>
     <string name="retro_please_wait">يرجى الانتظار</string>
-    <string name="retro_backup_loading">جارٍ تحميل النسخة الاحتياطية… تبدأ المراجعات تلقائيًا بعد ذلك.</string>
-    <string name="retro_profile_switching">تُحدَّث المراجعات تلقائيًا بعد تبديل الملف</string>
-    <string name="retro_generating">جارٍ إنشاء المراجعات…</string>
-    <string name="retro_ai_unavailable">الذكاء الاصطناعي غير متاح حاليًا، حاول لاحقًا.</string>
+    <string name="retro_backup_loading">جار تحميل النسخة الاحتياطية… تبدأ المراجعات تلقائيا بعد ذلك.</string>
+    <string name="retro_profile_switching">تحدّث المراجعات تلقائيا بعد تبديل الملف</string>
+    <string name="retro_generating">جار إنشاء المراجعات…</string>
+    <string name="retro_ai_unavailable">الذكاء الاصطناعي غير متاح حاليا، حاول لاحقا.</string>
     <string name="retro_weekly_title">المراجعة الأسبوعية</string>
     <string name="retro_weekly_subtitle">آخر 7 أيّام بنظرة واحدة</string>
     <string name="retro_weekly_empty">لا توجد مراجعات أسبوعية بعد.\nيلزم تسجيلان على الأقلّ في الأسبوع.</string>
     <string name="retro_monthly_title">المراجعة الشهرية</string>
     <string name="retro_monthly_subtitle">شهرك الماضي بنظرة واحدة</string>
-    <string name="retro_monthly_empty">لا توجد مراجعات شهرية بعد.\nتُنشأ من المراجعات الأسبوعية في آخر الشهر.</string>
+    <string name="retro_monthly_empty">لا توجد مراجعات شهرية بعد.\nتنشأ من المراجعات الأسبوعية في آخر الشهر.</string>
     <string name="retro_yearly_title">المراجعة السنوية</string>
     <string name="retro_yearly_subtitle">سنة كاملة من الذكريات</string>
-    <string name="retro_yearly_empty">لا توجد مراجعات سنوية بعد.\nتُنشأ من المراجعات الشهرية في آخر السنة.</string>
+    <string name="retro_yearly_empty">لا توجد مراجعات سنوية بعد.\nتنشأ من المراجعات الشهرية في آخر السنة.</string>
     <string name="retro_premium_unlock">افتح كلّ المراجعات مع المميّز</string>
     <string name="retro_at_a_glance">بنظرة واحدة</string>
     <string name="retro_cd_expand">توسيع</string>
@@ -692,7 +692,7 @@
     <string name="retro_enable_voices">فعّل الأصوات من الإعدادات</string>
     <string name="retro_tts_stop">إيقاف</string>
     <string name="retro_tts_read">قراءة</string>
-    <string name="retro_tts_wait">يرجى الانتظار، جارٍ توليد الصوت…</string>
+    <string name="retro_tts_wait">يرجى الانتظار، جار توليد الصوت…</string>
     <string name="retro_cd_share">مشاركة</string>
     <string name="retro_share_title">مشاركة المراجعة</string>
     <string name="retro_share_text_content">نصّ المراجعة</string>
@@ -707,22 +707,22 @@
     <string name="retro_your_ai_reviews">مراجعاتك بالذكاء الاصطناعي</string>
     <string name="retro_weekly_p1">الذكاء الاصطناعي يلخّص أسبوعك في قصّة شخصية</string>
     <string name="retro_weekly_p2">تظهر الأنماط العاطفية وأبرز اللحظات</string>
-    <string name="retro_weekly_p3">تُنشأ تلقائيًا كلّ أحد عند وجود تسجيلَيْن على الأقلّ</string>
-    <string name="retro_weekly_p4">أوّل أسبوعَيْن مجانًا</string>
+    <string name="retro_weekly_p3">تنشأ تلقائيا كلّ أحد عند وجود تسجيلين على الأقلّ</string>
+    <string name="retro_weekly_p4">أوّل أسبوعين مجانا</string>
     <string name="retro_monthly_p1">يربط مراجعاتك الأسبوعية في قصّة الشهر</string>
     <string name="retro_monthly_p2">تظهر الخيوط الرئيسية والتطوّرات عبر الشهر</string>
-    <string name="retro_monthly_p3">يُظهر تغيّرات لا تلاحظها في الحياة اليومية</string>
+    <string name="retro_monthly_p3">يظهر تغيّرات لا تلاحظها في الحياة اليومية</string>
     <string name="retro_yearly_p1">سنتك كلّها بنظرة واحدة</string>
     <string name="retro_yearly_p2">الذكاء الاصطناعي يتعرّف على الموضوعات الكبرى للسنة</string>
-    <string name="retro_yearly_p3">النموّ الشخصي يصبح مرئيًا وملموسًا</string>
+    <string name="retro_yearly_p3">النموّ الشخصي يصبح مرئيا وملموسا</string>
     <!-- Retro: Premium upsell sheet -->
     <string name="retro_your_reviews">مراجعاتك الشخصية</string>
-    <string name="retro_premium_reviews_desc">مع المميّز ينشئ الذكاء الاصطناعي مراجعات تلقائيًا من تسجيلاتك:</string>
-    <string name="retro_benefit_weekly">مراجعات أسبوعية لا محدودة، ليس فقط أوّل أسبوعَيْن</string>
-    <string name="retro_benefit_monthly">مراجعات شهرية تُظهر تقدّمك وتغيّراتك</string>
+    <string name="retro_premium_reviews_desc">مع المميّز ينشئ الذكاء الاصطناعي مراجعات تلقائيا من تسجيلاتك:</string>
+    <string name="retro_benefit_weekly">مراجعات أسبوعية لا محدودة، ليس فقط أوّل أسبوعين</string>
+    <string name="retro_benefit_monthly">مراجعات شهرية تظهر تقدّمك وتغيّراتك</string>
     <string name="retro_benefit_yearly">مراجعات سنوية تحوّل سنتك كاملة إلى قصّتك الشخصية</string>
     <string name="retro_start_sub">ابدأ الاشتراك</string>
-    <string name="retro_decide_later">قرّر لاحقًا</string>
+    <string name="retro_decide_later">قرّر لاحقا</string>
 
     <!-- Month names for retrospective grouping -->
     <string name="month_january">يناير</string>
@@ -741,7 +741,7 @@
     <!-- ════════════════════════════════════════════════════════════════════
          ONBOARDING
          ════════════════════════════════════════════════════════════════════ -->
-    <string name="onboarding_welcome">مرحبًا بك في\nBest Journal</string>
+    <string name="onboarding_welcome">مرحبا بك في\nBest Journal</string>
     <string name="onboarding_subtitle">مذكراتك الشخصية بالذكاء الاصطناعي\nمن أجل الوضوح والتغيير</string>
     <string name="onboarding_feature_speech">تكلّم أو اكتب، الذكاء الاصطناعي يفهم الاثنين</string>
     <string name="onboarding_feature_secure">بياناتك تبقى عندك، مشفّرة وآمنة</string>
@@ -751,26 +751,26 @@
     <string name="onboarding_goal_growth">نموّ شخصي</string>
     <string name="onboarding_goal_thoughts">توثيق أفكاري</string>
     <string name="onboarding_how_step1_title">تكلّم أو اكتب تسجيلك</string>
-    <string name="onboarding_how_step1_desc">سجّل أفكارك صوتيًا أو اكتبها، كما يحلو لك.</string>
+    <string name="onboarding_how_step1_desc">سجّل أفكارك صوتيا أو اكتبها، كما يحلو لك.</string>
     <string name="onboarding_how_step2_title">الذكاء الاصطناعي يحسّن ويحلّل</string>
-    <string name="onboarding_how_step2_desc">يُحسَّن نصّك تلقائيًا ويُحلَّل من زوايا متعدّدة.</string>
+    <string name="onboarding_how_step2_desc">يحسّن نصّك تلقائيا ويحلّل من زوايا متعدّدة.</string>
     <string name="onboarding_how_step3_desc">احفظ اللحظات المميّزة، يأخذها الذكاء الاصطناعي في حسبانه.</string>
     <string name="onboarding_how_step4_title">اكتشف الأنماط والرؤى</string>
-    <string name="onboarding_how_step4_desc">تُظهر لك لوحة التحكم روابط لا تنتبه لها في الحياة اليومية.</string>
+    <string name="onboarding_how_step4_desc">تظهر لك لوحة التحكم روابط لا تنتبه لها في الحياة اليومية.</string>
     <string name="onboarding_how_step5_title">مراجعات أسبوعية وشهرية وسنوية</string>
-    <string name="onboarding_how_step5_desc">مراجعات تلقائية تُظهر كيف تتطوّر عبر الزمن.</string>
-    <string name="onboarding_premium_feature_improve">تحسين نصّي بلا حدود بالذكاء الاصطناعي، كلّ تسجيل أوضح وأعمق تعبيرًا</string>
+    <string name="onboarding_how_step5_desc">مراجعات تلقائية تظهر كيف تتطوّر عبر الزمن.</string>
+    <string name="onboarding_premium_feature_improve">تحسين نصّي بلا حدود بالذكاء الاصطناعي، كلّ تسجيل أوضح وأعمق تعبيرا</string>
     <string name="onboarding_premium_feature_dashboard">تحديث تلقائي للوحة التحكم عند كلّ تسجيل جديد</string>
-    <string name="onboarding_premium_feature_retro">مراجعات أسبوعية وشهرية وسنوية تُظهر تطوّرك</string>
+    <string name="onboarding_premium_feature_retro">مراجعات أسبوعية وشهرية وسنوية تظهر تطوّرك</string>
     <string name="onboarding_premium_feature_patterns">اكتشاف أنماط شخصية، الذكاء الاصطناعي يجد أنماط تفكير ومشاعر خفيّة</string>
     <string name="onboarding_premium_feature_noads">بلا إعلانات، اكتب وتأمّل بهدوء</string>
     <string name="onboarding_free_trial">مجاني وبلا التزام</string>
-    <string name="onboarding_free_after_trial">تستمرّ في استخدام Best Journal بعد ذلك،\nمجانًا مع حدّ أسبوعي لاستخدام الذكاء الاصطناعي.</string>
-    <string name="onboarding_start_free">ابدأ مجانًا</string>
+    <string name="onboarding_free_after_trial">تستمرّ في استخدام Best Journal بعد ذلك،\nمجانا مع حدّ أسبوعي لاستخدام الذكاء الاصطناعي.</string>
+    <string name="onboarding_start_free">ابدأ مجانا</string>
     <string name="onboarding_without_premium">متابعة بدون المميّز</string>
     <string name="onboarding_feature_profiles">5 ملفّات تحليل ذكية لزوايا متعدّدة</string>
-    <string name="onboarding_goals_select">اختر هدفًا أو أكثر</string>
-    <string name="onboarding_how_step3_title">أضف صورًا</string>
+    <string name="onboarding_goals_select">اختر هدفا أو أكثر</string>
+    <string name="onboarding_how_step3_title">أضف صورا</string>
     <string name="onboarding_how_title">بهذه البساطة</string>
     <string name="onboarding_perspectives_title">5 زوايا\nلحياتك</string>
     <string name="onboarding_premium_feature_pdf">تصدير PDF مع الصور، احفظ تسجيلاتك كمستند</string>
@@ -780,23 +780,23 @@
     <!-- ════════════════════════════════════════════════════════════════════
          PAYWALL
          ════════════════════════════════════════════════════════════════════ -->
-    <string name="paywall_prices_loading">جارٍ تحميل الأسعار…</string>
-    <string name="paywall_sub_loading_toast">جارٍ تحميل الاشتراك، حاول مجددًا بعد لحظات.</string>
-    <string name="paywall_purchase_loading_toast">جارٍ تحميل عملية الشراء، حاول مجددًا بعد لحظات.</string>
+    <string name="paywall_prices_loading">جار تحميل الأسعار…</string>
+    <string name="paywall_sub_loading_toast">جار تحميل الاشتراك، حاول مجددا بعد لحظات.</string>
+    <string name="paywall_purchase_loading_toast">جار تحميل عملية الشراء، حاول مجددا بعد لحظات.</string>
     <string name="paywall_today">اليوم</string>
     <string name="paywall_full_access">وصول كامل</string>
     <string name="paywall_day7">اليوم 7</string>
     <string name="paywall_reminder">تذكير</string>
     <string name="paywall_day8">اليوم 8</string>
     <string name="paywall_first_payment">الدفعة الأولى</string>
-    <string name="paywall_yearly_note">ثمّ %1$s سنويًا\nيمكن الإلغاء أثناء التجربة</string>
-    <string name="paywall_most_popular">الأكثر اختيارًا</string>
-    <string name="paywall_monthly_plan">اشتراك شهري، %1$s شهريًا</string>
+    <string name="paywall_yearly_note">ثمّ %1$s سنويا\nيمكن الإلغاء أثناء التجربة</string>
+    <string name="paywall_most_popular">الأكثر اختيارا</string>
+    <string name="paywall_monthly_plan">اشتراك شهري، %1$s شهريا</string>
     <string name="paywall_yearly_savings">وفّر %1$d\u00A0%% مقارنة بالشهري، إلغاء في أيّ وقت</string>
     <string name="paywall_lifetime_title">شراء لمرّة واحدة</string>
     <string name="paywall_lifetime_desc">ادفع مرّة، استخدم كلّ شيء إلى الأبد</string>
     <string name="paywall_lifetime_note">لا اشتراك، لا تجديد</string>
-    <string name="paywall_free_note">التطبيق يعمل بدون اشتراك أيضًا،</string>
+    <string name="paywall_free_note">التطبيق يعمل بدون اشتراك أيضا،</string>
     <string name="paywall_cd_close">إغلاق</string>
 
     <!-- Paywall features -->
@@ -808,22 +808,22 @@
     <string name="paywall_feature_noads">تكلّم أو اكتب بهدوء، بلا إعلانات</string>
 
     <!-- Paywall personalized headlines -->
-    <string name="paywall_headline_stress">استعِد سكينتك</string>
-    <string name="paywall_headline_stress_sub">اكتشف ما يُثقلك قبل أن يتجاوزك</string>
+    <string name="paywall_headline_stress">استعد سكينتك</string>
+    <string name="paywall_headline_stress_sub">اكتشف ما يثقلك قبل أن يتجاوزك</string>
     <string name="paywall_headline_clarity">افهم نفسك أكثر</string>
     <string name="paywall_headline_clarity_sub">الذكاء الاصطناعي يكشف الأنماط التي تفوتك</string>
     <string name="paywall_headline_growth">اكتشف الجميل في كلّ يوم</string>
     <string name="paywall_headline_growth_sub">فضاؤك الشخصي للامتنان والنموّ</string>
     <string name="paywall_headline_thoughts">دع أفكارك تتدفّق</string>
     <string name="paywall_headline_thoughts_sub">رفيقك الإبداعي بلا حدود</string>
-    <string name="paywall_headline_default">اكتشف نفسك\nقليلاً كلّ يوم</string>
+    <string name="paywall_headline_default">اكتشف نفسك\nقليلا كلّ يوم</string>
     <string name="paywall_headline_default_sub">رفيقك الذكي الشخصي بلا حدود</string>
 
     <!-- Exit intent offer -->
     <string name="paywall_exit_wait">لحظة!</string>
-    <string name="paywall_exit_special_offer">لدينا عرضٌ خاصّ\nمن أجلك:</string>
+    <string name="paywall_exit_special_offer">لدينا عرض خاصّ\nمن أجلك:</string>
     <string name="paywall_exit_discount">خصم لمدّة %1$d أشهر</string>
-    <string name="paywall_exit_price_comparison">فقط %1$s بدلاً من %2$s شهريًا</string>
+    <string name="paywall_exit_price_comparison">فقط %1$s بدلا من %2$s شهريا</string>
     <string name="paywall_exit_start_discount">ابدأ الاشتراك الشهري بخصم 50\u00A0%%</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
@@ -836,12 +836,12 @@
     <string name="churn_price">السعر</string>
     <string name="churn_renewal">التجديد</string>
     <string name="churn_automatic">تلقائي</string>
-    <string name="churn_auto_renew_note">يتجدّد اشتراكك تلقائيًا عبر Google Play. يمكنك الإلغاء في أيّ وقت.</string>
+    <string name="churn_auto_renew_note">يتجدّد اشتراكك تلقائيا عبر Google Play. يمكنك الإلغاء في أيّ وقت.</string>
     <string name="churn_cancel_sub">إلغاء الاشتراك</string>
-    <string name="churn_reason_too_expensive">غالٍ جدًا</string>
-    <string name="churn_reason_unused">أستخدمه قليلاً</string>
-    <string name="churn_per_year">سنويًا</string>
-    <string name="churn_per_month">شهريًا</string>
+    <string name="churn_reason_too_expensive">غال جدا</string>
+    <string name="churn_reason_unused">أستخدمه قليلا</string>
+    <string name="churn_per_year">سنويا</string>
+    <string name="churn_per_month">شهريا</string>
     <string name="churn_reason_features">ليس فيه الميزات التي أحتاجها</string>
     <string name="churn_reason_other">سبب آخر</string>
     <string name="churn_sorry_title">يؤسفنا رحيلك</string>
@@ -851,10 +851,10 @@
     <string name="churn_offer_feature_ai">تحليلات ذكاء اصطناعي بلا حدود</string>
     <string name="churn_offer_feature_perspectives">كلّ الزوايا الخمس</string>
     <string name="churn_offer_feature_voice">تعرّف صوتي مميّز</string>
-    <string name="churn_offer_auto_renew">يتجدّد تلقائيًا، يمكن الإلغاء في أيّ وقت</string>
+    <string name="churn_offer_auto_renew">يتجدّد تلقائيا، يمكن الإلغاء في أيّ وقت</string>
     <string name="churn_accept_offer">قبول العرض</string>
     <string name="churn_switch_yearly">أو انتقل إلى الاشتراك السنوي ووفّر أكثر</string>
-    <string name="churn_pause_sub">أو أوقِف الاشتراك مؤقّتًا عبر Google Play</string>
+    <string name="churn_pause_sub">أو أوقف الاشتراك مؤقّتا عبر Google Play\u200E</string>
     <string name="churn_cancel_anyway">الإلغاء رغم ذلك</string>
     <string name="churn_are_you_sure">هل أنت متأكّد؟</string>
     <string name="churn_stay">أفضّل البقاء</string>
@@ -862,16 +862,16 @@
     <!-- ════════════════════════════════════════════════════════════════════
          AI LIMIT / COMPONENTS
          ════════════════════════════════════════════════════════════════════ -->
-    <string name="ai_limit_title">بلغتَ الحدّ الأسبوعي</string>
-    <string name="ai_limit_body">بدون اشتراك لديك 5\u00A0تحسينات نصّية و5\u00A0تحديثات للوحة التحكم أسبوعيًا.\nمع المميّز: حتى 150 يوميًا، بأعلى جودة.</string>
-    <string name="ai_limit_monthly">اشتراك شهري، %1$s شهريًا</string>
-    <string name="ai_limit_yearly">اشتراك سنوي، %1$s سنويًا (وفّر 37\u00A0%%)</string>
-    <string name="ai_limit_no_thanks">لا شكرًا، أتابع بدون ذكاء اصطناعي</string>
+    <string name="ai_limit_title">بلغت الحدّ الأسبوعي</string>
+    <string name="ai_limit_body">بدون اشتراك لديك 5\u00A0تحسينات نصّية و5\u00A0تحديثات للوحة التحكم أسبوعيا.\nمع المميّز: حتى 150 يوميا، بأعلى جودة.</string>
+    <string name="ai_limit_monthly">اشتراك شهري، %1$s شهريا</string>
+    <string name="ai_limit_yearly">اشتراك سنوي، %1$s سنويا (وفّر 37\u00A0%%)</string>
+    <string name="ai_limit_no_thanks">لا شكرا، أتابع بدون ذكاء اصطناعي</string>
     <string name="ai_banner_title">مذكراتك مدعومة بالذكاء الاصطناعي</string>
-    <string name="ai_banner_body">• تحسين تلقائي للنصوص المُملاة\n• ملخّص لكلّ تسجيل\n• نصائح حياتية ذكية من أنماطك\n• كلّ ذلك خلال التجربة المجانية</string>
+    <string name="ai_banner_body">• تحسين تلقائي للنصوص المملاة\n• ملخّص لكلّ تسجيل\n• نصائح حياتية ذكية من أنماطك\n• كلّ ذلك خلال التجربة المجانية</string>
     <string name="cd_mic_start">بدء التسجيل</string>
     <string name="cd_mic_stop">إيقاف التسجيل</string>
-    <string name="entry_improve_limit_daily">تمّ بلوغ الحدّ اليومي. نواصل غدًا!</string>
+    <string name="entry_improve_limit_daily">تمّ بلوغ الحدّ اليومي. نواصل غدا!</string>
     <string name="entry_improve_limit_cooldown">استراحة قصيرة: متبقّي %1$d دقيقة.</string>
     <string name="entry_improve_failed">فشل تحسين النصّ</string>
 
@@ -893,7 +893,7 @@
 
     <!-- Notification channel names -->
     <string name="notif_channel_daily_name">تذكير يومي</string>
-    <string name="notif_channel_daily_desc">يذكّرك يوميًا بكتابة مذكراتك</string>
+    <string name="notif_channel_daily_desc">يذكّرك يوميا بكتابة مذكراتك</string>
     <string name="notif_channel_weekly_name">مراجعة أسبوعية</string>
     <string name="notif_channel_weekly_desc">مراجعة أسبوعية كلّ أحد الساعة 15:00</string>
     <string name="notif_channel_monthly_name">مراجعة شهرية</string>
@@ -926,16 +926,16 @@
         <item quantity="one">قبل يوم واحد</item>
         <item quantity="two">قبل يومين</item>
         <item quantity="few">قبل %1$d أيّام</item>
-        <item quantity="many">قبل %1$d يومًا</item>
+        <item quantity="many">قبل %1$d يوما</item>
         <item quantity="other">قبل %1$d يوم</item>
     </plurals>
     <!-- Confirmation after PDF export. %1$d = number of entries included in the PDF. -->
     <plurals name="settings_export_success">
-        <item quantity="zero">لم يُصدَّر أيّ تسجيل</item>
+        <item quantity="zero">لم يصدّر أيّ تسجيل</item>
         <item quantity="one">تمّ تصدير تسجيل واحد</item>
         <item quantity="two">تمّ تصدير تسجيلين</item>
         <item quantity="few">تمّ تصدير %1$d تسجيلات</item>
-        <item quantity="many">تمّ تصدير %1$d تسجيلاً</item>
+        <item quantity="many">تمّ تصدير %1$d تسجيلا</item>
         <item quantity="other">تمّ تصدير %1$d تسجيل</item>
     </plurals>
     <string name="datetime_today">اليوم</string>
@@ -949,9 +949,9 @@
          ACHIEVEMENTS
          ════════════════════════════════════════════════════════════════════ -->
     <string name="achievement_nightowl_title">بومة الليل</string>
-    <string name="achievement_nightowl_desc">50 تسجيلاً بعد الساعة 22</string>
+    <string name="achievement_nightowl_desc">50 تسجيلا بعد الساعة 22</string>
     <string name="achievement_earlybird_title">الصبّاح المبكر</string>
-    <string name="achievement_earlybird_desc">20 تسجيلاً قبل الساعة 7</string>
+    <string name="achievement_earlybird_desc">20 تسجيلا قبل الساعة 7</string>
     <string name="achievement_confession_title">بوح</string>
     <string name="achievement_confession_desc">كتابة تسجيل يتجاوز 1000 كلمة</string>
     <string name="achievement_marathon_title">ماراثون الكتابة</string>
@@ -959,15 +959,15 @@
     <string name="achievement_wordartist_title">فنّان الكلمات</string>
     <string name="achievement_wordartist_desc">500 تسجيل في المذكرات</string>
     <string name="achievement_consistency_title">ثبات</string>
-    <string name="achievement_consistency_desc">سلسلة 30 يومًا</string>
+    <string name="achievement_consistency_desc">سلسلة 30 يوما</string>
     <string name="achievement_chronicler_title">مؤرّخ السنة</string>
-    <string name="achievement_chronicler_desc">365 تسجيلاً</string>
+    <string name="achievement_chronicler_desc">365 تسجيلا</string>
     <string name="achievement_photodiary_title">يوميّات الصور</string>
     <string name="achievement_photodiary_desc">إرفاق 50 صورة بالتسجيلات</string>
     <string name="achievement_voiceartist_title">فنّان الصوت</string>
-    <string name="achievement_voiceartist_desc">إنشاء 25 تسجيلاً صوتيًا</string>
+    <string name="achievement_voiceartist_desc">إنشاء 25 تسجيلا صوتيا</string>
     <string name="achievement_reflectionmaster_title">سيّد التأمّل</string>
-    <string name="achievement_reflectionmaster_desc">إجراء 50 تحليلاً للوحة التحكم</string>
+    <string name="achievement_reflectionmaster_desc">إجراء 50 تحليلا للوحة التحكم</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          DAILY PROMPTS
@@ -985,7 +985,7 @@
         <item>ماذا كنت ستفعل بشكل مختلف لو استطعت؟</item>
         <item>أيّ شعور رافقك أكثر اليوم؟</item>
         <item>ما الذي فاجأك اليوم؟</item>
-        <item>فيمَ فكّرت أطول مدّة اليوم؟</item>
+        <item>فيم فكّرت أطول مدّة اليوم؟</item>
         <item>ما الذي منحك طاقة اليوم؟</item>
         <item>ما الذي استنزف طاقتك اليوم؟</item>
         <item>أيّ عادة تودّ تغييرها؟</item>
@@ -993,25 +993,25 @@
         <item>أيّ خوف يقف في طريقك الآن؟</item>
         <item>ماذا ستقول ذاتك الأصغر عن حياتك اليوم؟</item>
         <item>أيّ نصيحة تعطيها لنفسك الآن؟</item>
-        <item>ما الذي يجعلك فريدًا؟</item>
+        <item>ما الذي يجعلك فريدا؟</item>
     </string-array>
 
     <string-array name="prompts_gratitude">
-        <item>علامَ تشعر بالامتنان اليوم؟</item>
-        <item>مَن أثرى يومك اليوم؟</item>
+        <item>علام تشعر بالامتنان اليوم؟</item>
+        <item>من أثرى يومك اليوم؟</item>
         <item>أيّ تفصيل صغير أسعدك اليوم؟</item>
-        <item>أيّ مهارة تمتلكها وتعدّها أمرًا مسلّمًا به؟</item>
+        <item>أيّ مهارة تمتلكها وتعدّها أمرا مسلّما به؟</item>
         <item>ما أجمل ما حصل لك هذا الأسبوع؟</item>
-        <item>مَن تودّ شكره، ولماذا؟</item>
+        <item>من تودّ شكره، ولماذا؟</item>
         <item>أيّ مكان يشعرك بأنّه بيتك؟</item>
-        <item>أيّ ذكرى تسعدك فورًا؟</item>
-        <item>أيّ جزء من جسدك يستحقّ تقديرًا أكبر؟</item>
+        <item>أيّ ذكرى تسعدك فورا؟</item>
+        <item>أيّ جزء من جسدك يستحقّ تقديرا أكبر؟</item>
         <item>أيّ وجبة أسعدتك اليوم؟</item>
-        <item>أيّ موسيقى لمستك مؤخّرًا؟</item>
-        <item>ما الأثمن الذي تملكه ولا يُشترى بمال؟</item>
+        <item>أيّ موسيقى لمستك مؤخّرا؟</item>
+        <item>ما الأثمن الذي تملكه ولا يشترى بمال؟</item>
         <item>أيّ تجربة من الماضي جعلتك أقوى؟</item>
         <item>أيّ شيء في يوميّاتك هو في الحقيقة امتياز؟</item>
-        <item>مَن بطلك الخفي في الحياة اليومية؟</item>
+        <item>من بطلك الخفي في الحياة اليومية؟</item>
         <item>أيّ فصل تستمتع به أكثر الآن، ولماذا؟</item>
     </string-array>
 
@@ -1019,11 +1019,11 @@
         <item>ماذا تودّ أن تحقّق بعد سنة؟</item>
         <item>كيف يبدو يومك المثالي بعد خمس سنوات؟</item>
         <item>أيّ هدف تسعى إليه الآن بأكبر حماسة؟</item>
-        <item>ماذا ستفعل لو ضمنتَ ألّا تفشل؟</item>
+        <item>ماذا ستفعل لو ضمنت ألّا تفشل؟</item>
         <item>أيّ مهارة جديدة تودّ تعلّمها؟</item>
         <item>إلى أين تودّ السفر بعد ذلك؟</item>
         <item>أيّ شخص تريد أن تكون بعد عشر سنين؟</item>
-        <item>أيّ حلم تخلّيتَ عنه يمكنك إحياؤه؟</item>
+        <item>أيّ حلم تخلّيت عنه يمكنك إحياؤه؟</item>
         <item>ما أجرأ خطوة يمكنك اتّخاذها الآن؟</item>
         <item>أيّ مشروع يتحمّسك ولم تبدأه بعد؟</item>
         <item>ماذا ينبغي أن يحدث حتى تقول: الآن اكتفيت؟</item>
@@ -1031,26 +1031,26 @@
         <item>ما أوّل ما على قائمة أمنياتك؟</item>
         <item>أيّ عادة سيّئة تودّ التخلّي عنها قبل الشهر القادم؟</item>
         <item>كيف تودّ أن يتذكّرك الآخرون؟</item>
-        <item>ما الخطوة الصغيرة التي يمكنك اتّخاذها غدًا؟</item>
+        <item>ما الخطوة الصغيرة التي يمكنك اتّخاذها غدا؟</item>
     </string-array>
 
     <string-array name="prompts_relationships">
         <item>لمن تودّ قول شيء لم تقله بعد؟</item>
-        <item>أيّ علاقة في حياتك تستحقّ انتباهًا أكبر؟</item>
+        <item>أيّ علاقة في حياتك تستحقّ انتباها أكبر؟</item>
         <item>ما أكثر ما تقدّره في صديقك المقرّب؟</item>
-        <item>متى شعرتَ آخر مرّة بأنّك مفهوم حقًا؟</item>
+        <item>متى شعرت آخر مرّة بأنّك مفهوم حقا؟</item>
         <item>ماذا تودّ أن تقول لشخص مهمّ في حياتك؟</item>
         <item>أيّ إنسان شكّل حياتك أكثر؟</item>
-        <item>كيف تُظهر للآخرين أنّك تحبّهم؟</item>
+        <item>كيف تظهر للآخرين أنّك تحبّهم؟</item>
         <item>أيّ خلاف تودّ حلّه؟</item>
         <item>ماذا تعني لك الصداقة؟</item>
-        <item>مَن علّمك مؤخّرًا شيئًا مهمًّا؟</item>
-        <item>أيّ صفة تُعجب بها في الآخرين أكثر؟</item>
-        <item>مع مَن تودّ قضاء يوم كامل؟</item>
-        <item>ما أجمل إطراء سمعتَه في حياتك؟</item>
+        <item>من علّمك مؤخّرا شيئا مهمّا؟</item>
+        <item>أيّ صفة تعجب بها في الآخرين أكثر؟</item>
+        <item>مع من تودّ قضاء يوم كامل؟</item>
+        <item>ما أجمل إطراء سمعته في حياتك؟</item>
         <item>أيّ حدود تودّ وضعها بشكل أفضل في علاقاتك؟</item>
         <item>كيف تغيّرت نظرتك للحبّ مع الزمن؟</item>
-        <item>مَن يستحقّ منك اتّصالاً أو رسالة اليوم؟</item>
+        <item>من يستحقّ منك اتّصالا أو رسالة اليوم؟</item>
     </string-array>
 
     <!-- ════════════════════════════════════════════════════════════════════
@@ -1065,10 +1065,10 @@
     <!-- ════════════════════════════════════════════════════════════════════
          ERRORS
          ════════════════════════════════════════════════════════════════════ -->
-    <string name="error_retro_all_failed">فشلت كلّ طلبات الذكاء الاصطناعي الـ%1$d. يُرجى التحقّق من اتّصال الإنترنت.</string>
+    <string name="error_retro_all_failed">فشلت كلّ طلبات الذكاء الاصطناعي الـ%1$d. يرجى التحقّق من اتّصال الإنترنت.</string>
     <string name="error_whisper_audio_empty">ملفّ الصوت فارغ</string>
-    <string name="error_whisper_no_text">لم يُكتشف نصّ</string>
-    <string name="error_sync_db_not_found">لم يُعثر على قاعدة البيانات</string>
+    <string name="error_whisper_no_text">لم يكتشف نصّ</string>
+    <string name="error_sync_db_not_found">لم يعثر على قاعدة البيانات</string>
     <string name="error_file_open_failed">خطأ: تعذّر فتح الملفّ</string>
     <string name="error_generic">خطأ: %1$s</string>
 
@@ -1076,7 +1076,7 @@
          AI PROFILE STYLE INSTRUCTIONS (for Gemini prompts)
          ════════════════════════════════════════════════════════════════════ -->
     <string name="profile_style_chronicler">\n- اكتب بأسلوب سردي تلخيصي، اجمع أهمّ الأحداث والمشاعر كما يفعل مؤرّخ شخصي</string>
-    <string name="profile_style_advisor">\n- اكتب بأسلوب مستشار حياة، أبرز ما سار جيّدًا وما يمكن تحسينه، وامنح القارئ شعور الوضوح والتنظيم</string>
+    <string name="profile_style_advisor">\n- اكتب بأسلوب مستشار حياة، أبرز ما سار جيّدا وما يمكن تحسينه، وامنح القارئ شعور الوضوح والتنظيم</string>
     <string name="profile_style_insight">\n- اكتب بأسلوب سرد عميق لمعرفة الذات، أظهر أنماط التفكير والمشاعر المتكرّرة ونقاط القوّة الخفيّة</string>
     <string name="profile_style_coach">\n- اكتب بأسلوب مدرّب هدف محفّز، أظهر التقدّم في الأهداف الشخصية وشجّع على الاستمرار</string>
     <string name="profile_style_custom">\n- اكتب المراجعة بهذا المحور الشخصي للمستخدم: \"%1$s\"</string>
