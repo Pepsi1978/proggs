@@ -1,15 +1,28 @@
 ---
 name: übersetzung
-description: Uebersetzt Android strings.xml in alle 26 Sprachen aus uebersetzung-global.md. Nutze diesen Skill IMMER wenn der Benutzer sagt "uebersetze die Strings", "Uebersetzung starten", "Strings uebersetzen", "starte den Uebersetzungsskill", "uebersetze fuer [App]", "neue Strings uebersetzen", "alle Strings uebersetzen", oder wenn eine App lokalisiert werden soll. Auch bei Varianten wie "mach die App mehrsprachig", "Lokalisierung", "i18n", "internationalisieren", "in andere Sprachen", "uebersetze das". Der Skill arbeitet Sprache fuer Sprache sequentiell, mit Verifikation nach jeder Sprache und Commit nach jedem Abschluss. Funktioniert fuer JEDE Android-App, nicht nur fuer eine bestimmte.
+description: Uebersetzt Android strings.xml in alle 26 Sprachen aus der mitgelieferten Referenzdatei übersetzung-global.md (im Skill-Ordner). Nutze diesen Skill IMMER wenn der Benutzer sagt "uebersetze die Strings", "Uebersetzung starten", "Strings uebersetzen", "starte den Uebersetzungsskill", "uebersetze fuer [App]", "neue Strings uebersetzen", "alle Strings uebersetzen", oder wenn eine App lokalisiert werden soll. Auch bei Varianten wie "mach die App mehrsprachig", "Lokalisierung", "i18n", "internationalisieren", "in andere Sprachen", "uebersetze das". Der Skill arbeitet Sprache fuer Sprache sequentiell, mit Verifikation nach jeder Sprache und Commit nach jedem Abschluss. Funktioniert fuer JEDE Android-App, nicht nur fuer eine bestimmte.
 ---
 
 # Uebersetzungs-Skill: Android strings.xml in 26 Sprachen
 
 Dieser Skill uebersetzt die strings.xml einer Android-App in alle 26 Sprachen, die in
-`~/proggs/uebersetzung-global.md` definiert sind. Er arbeitet Sprache fuer Sprache,
-verifiziert jede Uebersetzung im zweiten Durchlauf, und committet nach jeder fertigen
-Sprache. Das Ziel ist professionelle App-Store-Qualitaet — nicht "gut genug", sondern
-die bestmoegliche maschinelle Uebersetzung.
+der mitgelieferten Referenzdatei `übersetzung-global.md` definiert sind. Er arbeitet
+Sprache fuer Sprache, verifiziert jede Uebersetzung im zweiten Durchlauf, und committet
+nach jeder fertigen Sprache. Das Ziel ist professionelle App-Store-Qualitaet — nicht
+"gut genug", sondern die bestmoegliche maschinelle Uebersetzung.
+
+## Referenzdatei finden (KRITISCH — immer dieser Pfad)
+
+Die Referenzdatei `übersetzung-global.md` (mit Umlaut!) liegt direkt im Skill-Ordner:
+
+```
+/Users/frank/.claude/skills/übersetzung/übersetzung-global.md   (macOS)
+$env:USERPROFILE/.claude/skills/übersetzung/übersetzung-global.md   (Windows)
+```
+
+**NIEMALS** nach `~/proggs/uebersetzung-global.md` (ohne Umlaut) suchen — dieser Pfad
+existiert nicht. Die korrekte Datei heisst mit Umlaut und ist Teil des Skills. Fallback
+bei Nicht-Auffinden: `~/proggs/übersetzung-global.md` — das ist die Master-Kopie.
 
 ---
 
@@ -63,9 +76,13 @@ Wenn kein sinnvoller Diff: die letzten 1-3 Commits pruefen oder den Benutzer fra
 
 ### 1.4 Prompt-Referenz laden
 
-Die Datei `~/proggs/uebersetzung-global.md` lesen. Sie enthaelt:
+Die Datei `~/.claude/skills/übersetzung/übersetzung-global.md` lesen (mit Umlaut!).
+Sie wird mit dem Skill mitgeliefert und ist garantiert vorhanden. Sie enthaelt:
 - **Abschnitt 1**: Den Universal-Prompt mit Platzhaltern
 - **Abschnitt 2**: 26 sprach-spezifische Prompt-Bloecke
+
+Wenn die Datei im Skill-Ordner aus irgendeinem Grund fehlt, ist der Fallback
+`~/proggs/übersetzung-global.md` (Master-Kopie im Repo).
 
 ### 1.5 App-Informationen sammeln
 
@@ -172,7 +189,7 @@ die im ersten Durchlauf entstehen.
 1. **Prompt erneut laden**: Den sprach-spezifischen Prompt-Block NOCHMAL lesen.
    Nicht aus dem Gedaechtnis arbeiten — frisch laden, damit keine Warnung vergessen wird.
 
-2. **Systematische Pruefung (6 Checks):**
+2. **Systematische Pruefung (7 Checks):**
 
    | # | Check | Was geprueft wird | Wie pruefen |
    |---|-------|------------------|-------------|
@@ -182,6 +199,66 @@ die im ersten Durchlauf entstehen.
    | 4 | Plural-Formen | Alle erforderlichen `quantity`-Formen vorhanden | Gegen Prompt-Vorgabe pruefen |
    | 5 | Sprach-Warnungen | Spezifische LLM-Pitfalls aus dem Prompt | Gegen Warnung-Liste pruefen |
    | 6 | Konsistenz | Gleiche Begriffe fuer gleiche Konzepte | Stichprobe der Kern-Vokabeln |
+   | **7** | **Native-Ziffern (indische Sprachen PFLICHT)** | **Keine bengalischen/devanagari/tamilischen etc. Ziffern** | **Python-Regex pro Sprache (siehe unten)** |
+
+#### Check 7 — Native-Ziffern-Pflichtcheck fuer indische Sprachen
+
+Die Referenzdatei schreibt fuer ALLE indischen Sprachen explizit vor:
+**"Use Arabic numerals (0-9), NOT [native] digits."**
+
+LLMs ignorieren diese Regel haeufig und mischen native Ziffern in die Uebersetzung.
+Das ist ein systematischer Fehler — deshalb PFLICHT-Check via Python nach jeder
+indischen Uebersetzung:
+
+| Sprache | Native Ziffern (VERBOTEN) | Unicode-Range |
+|---------|---------------------------|---------------|
+| bn (Bengali) | ০১২৩৪৫৬৭৮৯ | U+09E6–U+09EF |
+| hi (Hindi) | ०१२३४५६७८९ | U+0966–U+096F |
+| mr (Marathi) | ०१२३४५६७८९ | U+0966–U+096F (Devanagari) |
+| te (Telugu) | ౦౧౨౩౪౫౬౭౮౯ | U+0C66–U+0C6F |
+| ta (Tamil) | ௦௧௨௩௪௫௬௭௮௯ | U+0BE6–U+0BEF |
+| gu (Gujarati) | ૦૧૨૩૪૫૬૭૮૯ | U+0AE6–U+0AEF |
+| kn (Kannada) | ೦೧೨೩೪೫೬೭೮೯ | U+0CE6–U+0CEF |
+| ml (Malayalam) | ൦൧൨൩൪൫൬൭൮൯ | U+0D66–U+0D6F |
+| ur (Urdu) | ۰۱۲۳۴۵۶۷۸۹ | U+06F0–U+06F9 (Extended Arabic-Indic) |
+
+**Pflicht-Script (nach jeder indischen Uebersetzung ausfuehren):**
+
+```python
+import re
+LANG_DIGITS = {
+    "bn": ("০১২৩৪৫৬৭৮৯", "Bengali"),
+    "hi": ("०१२३४५६७८९", "Devanagari"),
+    "mr": ("०१२३४५६७८९", "Devanagari"),
+    "te": ("౦౧౨౩౪౫౬౭౮౯", "Telugu"),
+    "ta": ("௦௧௨௩௪௫௬௭௮௯", "Tamil"),
+    "gu": ("૦૧૨૩૪૫૬૭૮૯", "Gujarati"),
+    "kn": ("೦೧೨೩೪೫೬೭೮೯", "Kannada"),
+    "ml": ("൦൧൨൩൪൫൬൭൮൯", "Malayalam"),
+    "ur": ("۰۱۲۳۴۵۶۷۸۹", "Extended Arabic-Indic"),
+}
+locale = "bn"  # anpassen pro Sprache
+native, label = LANG_DIGITS[locale]
+path = f"[APP_DIR]/app/src/main/res/values-{locale}/strings.xml"
+with open(path, "r", encoding="utf-8") as f:
+    content = f.read()
+count = sum(1 for c in content if c in native)
+if count > 0:
+    print(f"FEHLER: {count} {label}-Ziffern gefunden — MUESSEN zu 0-9 ersetzt werden")
+    fixed = content.translate(str.maketrans(native, "0123456789"))
+    import tempfile, os
+    with tempfile.NamedTemporaryFile("w", dir=os.path.dirname(path),
+                                      suffix=".tmp", delete=False, encoding="utf-8") as tmp:
+        tmp.write(fixed); tmp_path = tmp.name
+    os.replace(tmp_path, path)
+    print(f"Fixed: {count} Ziffern ersetzt")
+else:
+    print(f"OK: 0 {label}-Ziffern (Arabic-only)")
+```
+
+Dieser Check ist **nicht optional** fuer bn, hi, mr, te, ta, gu, kn, ml, ur. Er wird
+nach Schritt A (Uebersetzen) und vor Schritt C (Commit) ausgefuehrt. Bei >0 nativen
+Ziffern: automatisch ersetzen, in die Verbesserungs-Meldung aufnehmen.
 
 3. **Check 5 im Detail — Sprach-spezifische Warnungen:**
    Das ist der wichtigste Check. Fuer jede Sprache gibt es spezifische Gefahren:
