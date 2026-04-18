@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Débloqué le %1$s</string>
     <!-- About -->
     <string name="settings_about">À propos de l\'appli</string>
-    <string name="settings_about_version">Best Journal V0.12.24</string>
+    <string name="settings_about_version">Best Journal V0.12.25</string>
     <string name="settings_about_desc">Ton journal intime intelligent</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Se déconnecter\u202F?</string>

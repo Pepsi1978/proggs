@@ -1,7 +1,5 @@
 package com.bestjournal.app.ui.screens.settings
 
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.EaseInOutSine
@@ -84,7 +82,6 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -108,6 +105,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.GlassCard
 import com.bestjournal.app.ui.theme.FeatureAccentOrange
@@ -181,8 +179,21 @@ fun SettingsScreen(
                             android.media.AudioManager.AUDIO_SESSION_ID_GENERATE,
                         )
                     t.write(s, 0, n)
+                    // Release AudioTrack automatically after playback ends
+                    t.setNotificationMarkerPosition(n)
+                    t.setPlaybackPositionUpdateListener(
+                        object : android.media.AudioTrack.OnPlaybackPositionUpdateListener {
+                            override fun onMarkerReached(track: android.media.AudioTrack) {
+                                track.release()
+                            }
+
+                            override fun onPeriodicNotification(track: android.media.AudioTrack) {}
+                        }
+                    )
                     t.play()
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    android.util.Log.w("SettingsScreen", "playClick failed: ${e.message}")
+                }
             }
         }
     }
@@ -940,110 +951,114 @@ fun SettingsScreen(
                                     fallback
                                 }
                             val selectedVoice =
-                                voices.find { it.id == effectiveVoiceId } ?: voices.first()
+                                voices.find { it.id == effectiveVoiceId } ?: voices.firstOrNull()
                             var voiceExpanded by remember { mutableStateOf(false) }
 
-                            Text(
-                                stringResource(R.string.settings_voice_select),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            ExposedDropdownMenuBox(
-                                expanded = voiceExpanded,
-                                onExpandedChange = { voiceExpanded = it },
-                            ) {
-                                TextField(
-                                    value =
-                                        com.bestjournal.app.util.TtsVoiceRegistry.displayName(
-                                            selectedVoice,
-                                            localeVoices.localeCode,
-                                        ),
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    trailingIcon = {
-                                        Icon(
-                                            Icons.Rounded.KeyboardArrowDown,
-                                            stringResource(R.string.settings_voice_choose),
-                                        )
-                                    },
-                                    modifier =
-                                        Modifier.fillMaxWidth()
-                                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                                    colors =
-                                        TextFieldDefaults.colors(
-                                            focusedContainerColor =
-                                                MaterialTheme.colorScheme.surfaceVariant,
-                                            unfocusedContainerColor =
-                                                MaterialTheme.colorScheme.surfaceVariant,
-                                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                            unfocusedTextColor =
-                                                MaterialTheme.colorScheme.onSurface,
-                                            focusedIndicatorColor =
-                                                MaterialTheme.colorScheme.primary,
-                                            unfocusedIndicatorColor = Color.Transparent,
-                                        ),
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(12.dp),
+                            if (selectedVoice != null) {
+                                Text(
+                                    stringResource(R.string.settings_voice_select),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                ExposedDropdownMenu(
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                ExposedDropdownMenuBox(
                                     expanded = voiceExpanded,
-                                    onDismissRequest = { voiceExpanded = false },
-                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    onExpandedChange = { voiceExpanded = it },
                                 ) {
-                                    voices.forEach { voice ->
-                                        val label =
+                                    TextField(
+                                        value =
                                             com.bestjournal.app.util.TtsVoiceRegistry.displayName(
-                                                voice,
+                                                selectedVoice,
                                                 localeVoices.localeCode,
+                                            ),
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        trailingIcon = {
+                                            Icon(
+                                                Icons.Rounded.KeyboardArrowDown,
+                                                stringResource(R.string.settings_voice_choose),
                                             )
-                                        DropdownMenuItem(
-                                            text = {
-                                                val textColor =
-                                                    if (voice.id == effectiveVoiceId)
-                                                        MaterialTheme.colorScheme.primary
-                                                    else MaterialTheme.colorScheme.onSurface
-                                                if (label.startsWith("\u2605")) {
-                                                    Text(
-                                                        buildAnnotatedString {
-                                                            withStyle(
-                                                                SpanStyle(
-                                                                    color =
-                                                                        MaterialTheme.colorScheme
-                                                                            .onSurface
-                                                                )
-                                                            ) {
-                                                                append("\u2605 ")
+                                        },
+                                        modifier =
+                                            Modifier.fillMaxWidth()
+                                                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                                        colors =
+                                            TextFieldDefaults.colors(
+                                                focusedContainerColor =
+                                                    MaterialTheme.colorScheme.surfaceVariant,
+                                                unfocusedContainerColor =
+                                                    MaterialTheme.colorScheme.surfaceVariant,
+                                                focusedTextColor =
+                                                    MaterialTheme.colorScheme.onSurface,
+                                                unfocusedTextColor =
+                                                    MaterialTheme.colorScheme.onSurface,
+                                                focusedIndicatorColor =
+                                                    MaterialTheme.colorScheme.primary,
+                                                unfocusedIndicatorColor = Color.Transparent,
+                                            ),
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(12.dp),
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = voiceExpanded,
+                                        onDismissRequest = { voiceExpanded = false },
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                    ) {
+                                        voices.forEach { voice ->
+                                            val label =
+                                                com.bestjournal.app.util.TtsVoiceRegistry
+                                                    .displayName(voice, localeVoices.localeCode)
+                                            DropdownMenuItem(
+                                                text = {
+                                                    val textColor =
+                                                        if (voice.id == effectiveVoiceId)
+                                                            MaterialTheme.colorScheme.primary
+                                                        else MaterialTheme.colorScheme.onSurface
+                                                    if (label.startsWith("\u2605")) {
+                                                        Text(
+                                                            buildAnnotatedString {
+                                                                withStyle(
+                                                                    SpanStyle(
+                                                                        color =
+                                                                            MaterialTheme
+                                                                                .colorScheme
+                                                                                .onSurface
+                                                                    )
+                                                                ) {
+                                                                    append("\u2605 ")
+                                                                }
+                                                                withStyle(
+                                                                    SpanStyle(color = textColor)
+                                                                ) {
+                                                                    append(
+                                                                        label.removePrefix(
+                                                                            "\u2605 "
+                                                                        )
+                                                                    )
+                                                                }
                                                             }
-                                                            withStyle(
-                                                                SpanStyle(color = textColor)
-                                                            ) {
-                                                                append(
-                                                                    label.removePrefix("\u2605 ")
-                                                                )
-                                                            }
-                                                        }
-                                                    )
-                                                } else {
-                                                    Text(label, color = textColor)
-                                                }
-                                            },
-                                            onClick = {
-                                                selectedVoiceId = voice.id
-                                                soundsPrefs
-                                                    .edit()
-                                                    .putString(
-                                                        Constants.PREF_EDGE_TTS_VOICE,
-                                                        voice.id,
-                                                    )
-                                                    .commit()
-                                                voiceExpanded = false
-                                            },
-                                        )
+                                                        )
+                                                    } else {
+                                                        Text(label, color = textColor)
+                                                    }
+                                                },
+                                                onClick = {
+                                                    selectedVoiceId = voice.id
+                                                    soundsPrefs
+                                                        .edit()
+                                                        .putString(
+                                                            Constants.PREF_EDGE_TTS_VOICE,
+                                                            voice.id,
+                                                        )
+                                                        .commit()
+                                                    voiceExpanded = false
+                                                },
+                                            )
+                                        }
                                     }
                                 }
-                            }
+                            } // end if (selectedVoice != null)
                         }
                     }
                 }
@@ -2364,6 +2379,8 @@ fun SettingsScreen(
                             stringResource(R.string.settings_feedback_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
