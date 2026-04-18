@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">ٹوکن خرابی: %1$s</string>
     <string name="settings_feedback_unknown_error">نامعلوم خرابی</string>
     <string name="settings_feedback_confirm_subject">‏Best Journal کو آپ کا فیڈبیک</string>
-    <string name="settings_feedback_confirm_body">یہ پیغام آپ نے ڈیولپر کو بھیجا ہے۔\nوہ آپ سے رابطہ کریں گے۔\n\n--- آپ کا پیغام ---\n%1$s\n\nخلوص کے ساتھ\n‏DEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">تم نے یہ پیغام ڈیولپر کو بھیجا ہے۔\nوہ تمہیں ذاتی طور پر جواب دے گا۔\n\n--- تمہارا پیغام ---\n%1$s\n\nشکریہ،\nDEV.FRANK</string>
     <string name="settings_feedback_from">فیڈبیک از: %1$s</string>
     <string name="action_send">بھیجیں</string>
     <!-- Drive errors -->

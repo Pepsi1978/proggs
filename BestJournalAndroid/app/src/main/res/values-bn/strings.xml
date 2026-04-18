@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">টোকেন ত্রুটি: %1$s</string>
     <string name="settings_feedback_unknown_error">অজানা ত্রুটি</string>
     <string name="settings_feedback_confirm_subject">Best Journal এ তোমার ফিডব্যাক</string>
-    <string name="settings_feedback_confirm_body">এই বার্তাটি তুমি ডেভেলপারকে পাঠিয়েছো।\nসে তোমার সাথে যোগাযোগ করবে।\n\n--- তোমার বার্তা ---\n%1$s\n\nশুভকামনা সহ\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">এই বার্তাটি তুমি ডেভেলপারকে পাঠিয়েছ।\nসে তোমাকে ব্যক্তিগতভাবে উত্তর দেবে।\n\n--- তোমার বার্তা ---\n%1$s\n\nশুভেচ্ছা,\nDEV.FRANK</string>
     <string name="settings_feedback_from">ফিডব্যাক থেকে: %1$s</string>
     <string name="action_send">পাঠাও</string>
     <!-- Drive errors -->

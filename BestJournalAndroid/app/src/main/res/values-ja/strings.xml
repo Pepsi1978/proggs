@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">トークンエラー: %1$s</string>
     <string name="settings_feedback_unknown_error">不明なエラー</string>
     <string name="settings_feedback_confirm_subject">Best Journalへのフィードバック</string>
-    <string name="settings_feedback_confirm_body">このメッセージを開発者にお送りいただきました。\n後ほど開発者よりご連絡いたします。\n\n--- お送りいただいたメッセージ ---\n%1$s\n\n敬具\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">このメッセージを開発者に送信しました。\n開発者から個別に返信します。\n\n--- あなたのメッセージ ---\n%1$s\n\nよろしくお願いします、\nDEV.FRANK</string>
     <string name="settings_feedback_from">フィードバック送信元: %1$s</string>
     <string name="action_send">送信</string>
     <!-- Drive errors -->

@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">令牌错误: %1$s</string>
     <string name="settings_feedback_unknown_error">未知错误</string>
     <string name="settings_feedback_confirm_subject">你对 Best Journal 的反馈</string>
-    <string name="settings_feedback_confirm_body">您已将这条消息发送给开发者。\n开发者将亲自回复您。\n\n--- 您的消息 ---\n%1$s\n\n此致\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">你已将这条消息发送给开发者。\n开发者会亲自回复你。\n\n--- 你的消息 ---\n%1$s\n\n谢谢，\nDEV.FRANK</string>
     <string name="settings_feedback_from">反馈来自: %1$s</string>
     <string name="action_send">发送</string>
     <!-- Drive errors -->

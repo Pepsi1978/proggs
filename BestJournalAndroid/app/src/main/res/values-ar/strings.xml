@@ -32,15 +32,15 @@
     <!-- Accessibility label for the undo icon button on the dashboard. -->
     <string name="action_undo">تراجع</string>
     <string name="action_ok">موافق</string>
-    <string name="action_go_google_play">انتقل إلى Google Play\u200E</string>
-    <string name="journal_drive_backup_dialog">نسخة احتياطية على Google Drive\u200E</string>
+    <string name="action_go_google_play">إلى Google Play\u200E</string>
+    <string name="journal_drive_backup_dialog">نسخة احتياطية في Google Drive\u200E</string>
     <string name="journal_improve_text">✨ تحسين النص</string>
     <string name="journal_show_original">↩ عرض الأصلي</string>
     <string name="journal_show_improved">✨ عرض النسخة المحسّنة</string>
     <string name="journal_ai_improving">الذكاء الاصطناعي يحسّن النص، يرجى الانتظار</string>
     <string name="journal_later">لاحقا</string>
     <!-- Paywall missed strings -->
-    <string name="paywall_from_per_day">ابتداء من %1$s في اليوم</string>
+    <string name="paywall_from_per_day">من %1$s يوميا</string>
     <string name="paywall_instead_per_month">بدلا من %1$s في الشهر</string>
     <string name="paywall_or">أو</string>
     <string name="paywall_with_limited">مع حدود استخدام.</string>
@@ -137,7 +137,7 @@
     <string name="entry_saving">جار الحفظ…</string>
     <string name="entry_improving">جار التحسين…</string>
     <string name="entry_improve_with_ai">تحسين لاحقا بالذكاء الاصطناعي</string>
-    <string name="entry_photos_videos">الصور ومقاطع الفيديو</string>
+    <string name="entry_photos_videos">الصور والفيديو</string>
     <string name="entry_add">إضافة</string>
     <string name="entry_no_photos_yet">لم تضف صور أو مقاطع فيديو بعد</string>
     <string name="entry_cd_play_video">تشغيل الفيديو</string>
@@ -186,7 +186,7 @@
     <string name="dashboard_all_observations">كل الملاحظات</string>
     <string name="dashboard_inner_mirror">المرآة الداخلية</string>
     <string name="dashboard_all_insights">كل الرؤى</string>
-    <string name="dashboard_goal_overview">نظرة عامة على الأهداف</string>
+    <string name="dashboard_goal_overview">نظرة على الأهداف</string>
     <string name="dashboard_all_goals">كل الأهداف</string>
     <string name="dashboard_top_results_fallback">أهم النتائج</string>
     <string name="dashboard_analysis_fallback">التحليل</string>
@@ -333,7 +333,7 @@
     <string name="settings_last_sync">آخر مزامنة: %1$s</string>
     <string name="settings_entries_auto_loaded">تحمّل التسجيلات تلقائيا عند تسجيل الدخول</string>
     <string name="settings_backup_photos">نسخ الصور احتياطيا</string>
-    <string name="settings_backup_videos">نسخ مقاطع الفيديو احتياطيا</string>
+    <string name="settings_backup_videos">نسخ الفيديوهات احتياطيا</string>
     <string name="settings_syncing">جار النسخ الاحتياطي…</string>
     <!-- Shown briefly as a confirmation after a successful cloud backup. -->
     <string name="settings_sync_success">تمّ النسخ الاحتياطي بنجاح</string>
@@ -445,13 +445,13 @@
     <string name="settings_feedback_token_error">خطأ في الرمز: %1$s</string>
     <string name="settings_feedback_unknown_error">خطأ غير معروف</string>
     <string name="settings_feedback_confirm_subject">ملاحظاتك إلى Best Journal</string>
-    <string name="settings_feedback_confirm_body">لقد أرسلت هذه الرسالة إلى المطوّر.\nسيتواصل معك.\n\n--- رسالتك ---\n%1$s\n\nمع خالص التحيات\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">لقد أرسلتَ هذه الرسالة إلى المطوّر.\nسيردّ عليك شخصياً.\n\n--- رسالتك ---\n%1$s\n\nتحياتي،\nDEV.FRANK</string>
     <string name="settings_feedback_from">ملاحظات من: %1$s</string>
     <string name="action_send">إرسال</string>
     <!-- Drive errors -->
     <string name="drive_consent_needed">يلزم السماح بالوصول إلى Drive\u200E</string>
     <string name="drive_not_signed_in">لم يتم تسجيل الدخول</string>
-    <string name="drive_no_backup">لم يتم العثور على نسخة احتياطية</string>
+    <string name="drive_no_backup">لا توجد نسخة احتياطية</string>
     <!-- Achievements -->
     <string name="achievements_title">الإنجازات</string>
     <string name="achievements_counter">%1$d من %2$d مفتوحة</string>
@@ -684,7 +684,7 @@
     <string name="retro_fallback_year">مراجعة سنة %1$d</string>
     <string name="retro_period_label_week">الأسبوع %1$d (%2$s - %3$s)</string>
     <!-- Retro: Photos, TTS, Sharing -->
-    <string name="retro_photos_videos">الصور ومقاطع الفيديو</string>
+    <string name="retro_photos_videos">الصور والفيديو</string>
     <string name="retro_photos_videos_colon">الصور ومقاطع الفيديو:</string>
     <string name="retro_cd_video">فيديو</string>
     <string name="retro_cd_photo">صورة</string>
@@ -793,7 +793,7 @@
     <string name="paywall_most_popular">الأكثر اختيارا</string>
     <string name="paywall_monthly_plan">اشتراك شهري، %1$s شهريا</string>
     <string name="paywall_yearly_savings">وفّر %1$d\u00A0%% مقارنة بالشهري، إلغاء في أيّ وقت</string>
-    <string name="paywall_lifetime_title">شراء لمرّة واحدة</string>
+    <string name="paywall_lifetime_title">دفعة واحدة</string>
     <string name="paywall_lifetime_desc">ادفع مرّة، استخدم كلّ شيء إلى الأبد</string>
     <string name="paywall_lifetime_note">لا اشتراك، لا تجديد</string>
     <string name="paywall_free_note">التطبيق يعمل بدون اشتراك أيضا،</string>

@@ -420,7 +420,7 @@
     <string name="settings_feedback_token_error">ടോക്കൺ പിശക്: %1$s</string>
     <string name="settings_feedback_unknown_error">അജ്ഞാത പിശക്</string>
     <string name="settings_feedback_confirm_subject">Best Journal-ലേക്കുള്ള നിങ്ങളുടെ ഫീഡ്ബാക്ക്</string>
-    <string name="settings_feedback_confirm_body">ഈ സന്ദേശം നിങ്ങൾ ഡെവലപ്പർക്ക് അയച്ചു.\nഅദ്ദേഹം നിങ്ങളുമായി ബന്ധപ്പെടും.\n\n--- നിങ്ങളുടെ സന്ദേശം ---\n%1$s\n\nആദരവോടെ\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">ഈ സന്ദേശം നീ ഡെവലപ്പർക്ക് അയച്ചു.\nഅവൻ നിനക്ക് വ്യക്തിപരമായി മറുപടി നൽകും.\n\n--- നിന്റെ സന്ദേശം ---\n%1$s\n\nനന്ദി,\nDEV.FRANK</string>
     <string name="settings_feedback_from">ഫീഡ്ബാക്ക് ഇതിൽ നിന്ന്: %1$s</string>
     <string name="action_send">അയക്കുക</string>
     <!-- Drive errors -->

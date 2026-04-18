@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">ผิดพลาดที่โทเคน: %1$s</string>
     <string name="settings_feedback_unknown_error">ผิดพลาดไม่ทราบสาเหตุ</string>
     <string name="settings_feedback_confirm_subject">ความคิดเห็นถึง Best Journal</string>
-    <string name="settings_feedback_confirm_body">คุณได้ส่งข้อความนี้ไปยังนักพัฒนา\nเขาจะติดต่อคุณเป็นการส่วนตัว\n\n--- ข้อความของคุณ ---\n%1$s\n\nด้วยความนับถือ\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">คุณส่งข้อความนี้ถึงนักพัฒนาแล้ว\nเขาจะตอบกลับคุณเป็นการส่วนตัว\n\n--- ข้อความของคุณ ---\n%1$s\n\nขอบคุณ\nDEV.FRANK</string>
     <string name="settings_feedback_from">ความคิดเห็นจาก: %1$s</string>
     <string name="action_send">ส่ง</string>
     <!-- Drive errors -->

@@ -423,7 +423,7 @@
     <string name="settings_feedback_token_error">టోకెన్ దోషం: %1$s</string>
     <string name="settings_feedback_unknown_error">తెలియని దోషం</string>
     <string name="settings_feedback_confirm_subject">Best Journal కి మీ ఫీడ్‌బ్యాక్</string>
-    <string name="settings_feedback_confirm_body">ఈ సందేశాన్ని మీరు డెవలపర్‌కి పంపారు.\nఅతను మీకి సంప్రదిస్తాడు.\n\n--- మీ సందేశం ---\n%1$s\n\nశుభాకాంక్షలతో\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">ఈ సందేశాన్ని నువ్వు డెవలపర్‌కి పంపావు.\nఅతను నీకు వ్యక్తిగతంగా బదులిస్తాడు.\n\n--- నీ సందేశం ---\n%1$s\n\nధన్యవాదాలు,\nDEV.FRANK</string>
     <string name="settings_feedback_from">దీని నుండి ఫీడ్‌బ్యాక్: %1$s</string>
     <string name="action_send">పంపండి</string>
     <string name="drive_consent_needed">Drive ప్రవేశం అనుమతించాలి</string>

@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">Token त्रुटी: %1$s</string>
     <string name="settings_feedback_unknown_error">अज्ञात त्रुटी</string>
     <string name="settings_feedback_confirm_subject">Best Journal ला तुमचा अभिप्राय</string>
-    <string name="settings_feedback_confirm_body">हा संदेश तुम्ही विकसकाला पाठवला आहे.\nते तुम्हाला उत्तर देतील.\n\n--- तुमचा संदेश ---\n%1$s\n\nसादर,\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">हा संदेश तू विकसकाला पाठवलास.\nतो तुला वैयक्तिकरीत्या उत्तर देईल.\n\n--- तुझा संदेश ---\n%1$s\n\nधन्यवाद,\nDEV.FRANK</string>
     <string name="settings_feedback_from">अभिप्राय: %1$s</string>
     <string name="action_send">पाठवा</string>
     <!-- Drive errors -->

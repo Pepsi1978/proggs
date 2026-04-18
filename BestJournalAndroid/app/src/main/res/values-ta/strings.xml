@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">Token பிழை: %1$s</string>
     <string name="settings_feedback_unknown_error">தெரியாத பிழை</string>
     <string name="settings_feedback_confirm_subject">Best Journal-க்கு உங்கள் கருத்து</string>
-    <string name="settings_feedback_confirm_body">இந்த செய்தியை நீங்கள் டெவலப்பருக்கு அனுப்பினீர்கள்.\nஅவர் உங்களிடம் தொடர்பு கொள்வார்.\n\n--- உங்கள் செய்தி ---\n%1$s\n\nமரியாதையுடன்\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">இந்தச் செய்தியை நீ டெவலப்பருக்கு அனுப்பினாய்.\nஅவன் உனக்கு தனிப்பட்ட முறையில் பதிலளிப்பான்.\n\n--- உன் செய்தி ---\n%1$s\n\nநன்றி,\nDEV.FRANK</string>
     <string name="settings_feedback_from">இதிலிருந்து கருத்து: %1$s</string>
     <string name="action_send">அனுப்பு</string>
     <!-- Drive errors -->

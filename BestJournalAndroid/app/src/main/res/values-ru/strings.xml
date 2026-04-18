@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">Ошибка токена: %1$s</string>
     <string name="settings_feedback_unknown_error">Неизвестная ошибка</string>
     <string name="settings_feedback_confirm_subject">Ваш отзыв для Best Journal</string>
-    <string name="settings_feedback_confirm_body">Вы отправили это сообщение разработчику.\nОн ответит вам лично.\n\n--- Ваше сообщение ---\n%1$s\n\nС уважением,\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">Это сообщение ты отправил разработчику.\nОн ответит тебе лично.\n\n--- Твоё сообщение ---\n%1$s\n\nВсего хорошего,\nDEV.FRANK</string>
     <string name="settings_feedback_from">Отзыв от: %1$s</string>
     <string name="action_send">Отправить</string>
     <!-- Drive errors -->

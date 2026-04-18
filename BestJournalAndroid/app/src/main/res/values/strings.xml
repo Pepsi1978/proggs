@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">Token-Fehler: %1$s</string>
     <string name="settings_feedback_unknown_error">Unbekannter Fehler</string>
     <string name="settings_feedback_confirm_subject">Dein Feedback an Best Journal</string>
-    <string name="settings_feedback_confirm_body">Diese Nachricht haben Sie an den Entwickler geschickt.\nEr wird sich bei Ihnen melden.\n\n--- Ihre Nachricht ---\n%1$s\n\nMit freundlichen Grüßen\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">Diese Nachricht hast du an den Entwickler geschickt.\nEr wird sich bei dir melden.\n\n--- Deine Nachricht ---\n%1$s\n\nViele Grüße\nDEV.FRANK</string>
     <string name="settings_feedback_from">Feedback von: %1$s</string>
     <string name="action_send">Senden</string>
     <!-- Drive errors -->

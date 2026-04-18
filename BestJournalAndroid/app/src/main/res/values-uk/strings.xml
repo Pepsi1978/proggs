@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">Помилка токена: %1$s</string>
     <string name="settings_feedback_unknown_error">Невідома помилка</string>
     <string name="settings_feedback_confirm_subject">Ваш відгук для Best Journal</string>
-    <string name="settings_feedback_confirm_body">Ви надіслали це повідомлення розробнику.\nВін відповість вам особисто.\n\n--- Ваше повідомлення ---\n%1$s\n\nЗ повагою,\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">Ти надіслав це повідомлення розробнику.\nВін відповість тобі особисто.\n\n--- Твоє повідомлення ---\n%1$s\n\nУсього найкращого,\nDEV.FRANK</string>
     <string name="settings_feedback_from">Відгук від: %1$s</string>
     <string name="action_send">Надіслати</string>
     <!-- Drive errors -->

@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">Tokenfout: %1$s</string>
     <string name="settings_feedback_unknown_error">Onbekende fout</string>
     <string name="settings_feedback_confirm_subject">Jouw feedback aan Best Journal</string>
-    <string name="settings_feedback_confirm_body">U hebt dit bericht aan de ontwikkelaar gestuurd.\nHij zal u persoonlijk antwoorden.\n\n--- Uw bericht ---\n%1$s\n\nMet vriendelijke groet,\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">Je hebt dit bericht naar de ontwikkelaar gestuurd.\nHij neemt persoonlijk contact met je op.\n\n--- Jouw bericht ---\n%1$s\n\nGroetjes,\nDEV.FRANK</string>
     <string name="settings_feedback_from">Feedback van: %1$s</string>
     <string name="action_send">Verzenden</string>
     <!-- Drive errors -->

@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">Kesalahan token: %1$s</string>
     <string name="settings_feedback_unknown_error">Kesalahan tidak diketahui</string>
     <string name="settings_feedback_confirm_subject">Masukanmu untuk Best Journal</string>
-    <string name="settings_feedback_confirm_body">Anda telah mengirim pesan ini kepada pengembang.\nBeliau akan membalas secara pribadi.\n\n--- Pesan Anda ---\n%1$s\n\nHormat kami\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">Kamu telah mengirim pesan ini ke pengembang.\nDia akan membalasmu secara pribadi.\n\n--- Pesanmu ---\n%1$s\n\nSalam,\nDEV.FRANK</string>
     <string name="settings_feedback_from">Masukan dari: %1$s</string>
     <string name="action_send">Kirim</string>
     <!-- Drive errors -->

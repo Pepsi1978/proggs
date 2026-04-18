@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">Erreur de jeton : %1$s</string>
     <string name="settings_feedback_unknown_error">Erreur inconnue</string>
     <string name="settings_feedback_confirm_subject">Tes commentaires sur Best Journal</string>
-    <string name="settings_feedback_confirm_body">Vous avez envoyé ce message au développeur.\nIl vous répondra personnellement.\n\n--- Votre message ---\n%1$s\n\nCordialement,\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">Tu as envoyé ce message au développeur.\nIl te répondra personnellement.\n\n--- Ton message ---\n%1$s\n\nÀ bientôt,\nDEV.FRANK</string>
     <string name="settings_feedback_from">Commentaire de : %1$s</string>
     <string name="action_send">Envoyer</string>
     <!-- Drive errors -->

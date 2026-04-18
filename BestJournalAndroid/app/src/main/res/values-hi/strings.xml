@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">टोकन त्रुटि: %1$s</string>
     <string name="settings_feedback_unknown_error">अज्ञात त्रुटि</string>
     <string name="settings_feedback_confirm_subject">Best Journal के लिए आपका फीडबैक</string>
-    <string name="settings_feedback_confirm_body">आपने यह संदेश डेवलपर को भेजा है।\nवे आपको व्यक्तिगत जवाब देंगे।\n\n--- आपका संदेश ---\n%1$s\n\nसादर\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">यह संदेश तुमने डेवलपर को भेजा है।\nवह तुम्हें खुद जवाब देगा।\n\n--- तुम्हारा संदेश ---\n%1$s\n\nधन्यवाद,\nDEV.FRANK</string>
     <string name="settings_feedback_from">फीडबैक देने वाले: %1$s</string>
     <string name="action_send">भेजें</string>
     <!-- Drive errors -->

@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">Błąd tokenu: %1$s</string>
     <string name="settings_feedback_unknown_error">Nieznany błąd</string>
     <string name="settings_feedback_confirm_subject">Twoja opinia do Best Journal</string>
-    <string name="settings_feedback_confirm_body">Wysłał(a) Pan(i) tę wiadomość do dewelopera.\nDeweloper odpowie osobiście.\n\n--- Pana/Pani wiadomość ---\n%1$s\n\nZ poważaniem,\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">Twoja wiadomość trafiła do dewelopera.\nOdpowie Ci osobiście.\n\n--- Twoja wiadomość ---\n%1$s\n\nPozdrawiam,\nDEV.FRANK</string>
     <string name="settings_feedback_from">Opinia od: %1$s</string>
     <string name="action_send">Wyślij</string>
     <!-- Drive errors -->

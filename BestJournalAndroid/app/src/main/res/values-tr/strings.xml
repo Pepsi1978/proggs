@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">Belirteç hatası: %1$s</string>
     <string name="settings_feedback_unknown_error">Bilinmeyen hata</string>
     <string name="settings_feedback_confirm_subject">Best Journal\'a geri bildirimin</string>
-    <string name="settings_feedback_confirm_body">Bu mesajı geliştiriciye gönderdiniz.\nSize kişisel olarak dönüş yapacak.\n\n--- Mesajınız ---\n%1$s\n\nSaygılarımla,\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">Bu mesajı geliştiriciye sen gönderdin.\nSana kişisel olarak dönüş yapacak.\n\n--- Mesajın ---\n%1$s\n\nSelamlar,\nDEV.FRANK</string>
     <string name="settings_feedback_from">Geri bildirim kaynağı: %1$s</string>
     <string name="action_send">Gönder</string>
     <!-- Drive errors -->

@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">ಟೋಕನ್ ದೋಷ: %1$s</string>
     <string name="settings_feedback_unknown_error">ಅಪರಿಚಿತ ದೋಷ</string>
     <string name="settings_feedback_confirm_subject">Best Journal ಗೆ ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆ</string>
-    <string name="settings_feedback_confirm_body">ಈ ಸಂದೇಶವನ್ನು ನೀವು ಡೆವಲಪರ್‌ಗೆ ಕಳುಹಿಸಿದ್ದೀರಿ.\nಅವರು ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸುತ್ತಾರೆ.\n\n--- ನಿಮ್ಮ ಸಂದೇಶ ---\n%1$s\n\nಶುಭ ಹಾರೈಕೆಗಳೊಂದಿಗೆ\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">ಈ ಸಂದೇಶವನ್ನು ನೀನು ಡೆವಲಪರ್‌ಗೆ ಕಳುಹಿಸಿದೆ.\nಅವನು ನಿನಗೆ ವೈಯಕ್ತಿಕವಾಗಿ ಉತ್ತರಿಸುತ್ತಾನೆ.\n\n--- ನಿನ್ನ ಸಂದೇಶ ---\n%1$s\n\nಧನ್ಯವಾದಗಳು,\nDEV.FRANK</string>
     <string name="settings_feedback_from">ಇವರಿಂದ ಪ್ರತಿಕ್ರಿಯೆ: %1$s</string>
     <string name="action_send">ಕಳುಹಿಸಿ</string>
     <!-- Drive errors -->
