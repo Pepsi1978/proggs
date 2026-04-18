@@ -7,6 +7,9 @@ import java.io.FileOutputStream
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -22,16 +25,25 @@ class EdgeTtsPlayer(private val context: Context) {
     private var currentOutputStream: java.io.FileOutputStream? = null
     private var onDone: (() -> Unit)? = null
     private var onPlayStart: (() -> Unit)? = null
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .build()
+    private var watchdogJob: Job? = null
+    private val watchdogScope = MainScope()
+    private val client =
+        OkHttpClient.Builder()
+            .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
 
     private companion object {
         const val TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
         const val CHROMIUM_FULL_VERSION = "143.0.3650.75"
         const val CHROMIUM_MAJOR_VERSION = "143"
         const val WIN_EPOCH = 11644473600L
+
+        // Watchdog: abort if no audio bytes received within this window.
+        // Timer resets on every received audio chunk, so long streaming audio
+        // (40s+ generated speech) is NOT affected — only genuine silence triggers.
+        const val WATCHDOG_INITIAL_MS = 15_000L // from onOpen until first audio byte
+        const val WATCHDOG_IDLE_MS = 15_000L // gap between any two audio chunks
 
         fun generateSecMsGec(): String {
             var ticks = (System.currentTimeMillis() / 1000.0) + WIN_EPOCH
@@ -91,7 +103,9 @@ class EdgeTtsPlayer(private val context: Context) {
                 .build()
 
         val audioFile = File(context.cacheDir, "tts_audio.mp3")
-        try { currentOutputStream?.close() } catch (_: Exception) {}
+        try {
+            currentOutputStream?.close()
+        } catch (_: Exception) {}
         val outputStream = FileOutputStream(audioFile)
         currentOutputStream = outputStream
 
@@ -101,6 +115,7 @@ class EdgeTtsPlayer(private val context: Context) {
                 object : WebSocketListener() {
                     override fun onOpen(webSocket: WebSocket, response: Response) {
                         android.util.Log.d("EdgeTTS", "WebSocket connected")
+                        startWatchdog(webSocket, WATCHDOG_INITIAL_MS, initial = true)
                         val config =
                             "Content-Type:application/json; charset=utf-8\r\n" +
                                 "Path:speech.config\r\n\r\n" +
@@ -129,12 +144,16 @@ class EdgeTtsPlayer(private val context: Context) {
                             val audioStart = headerLen + 2
                             if (data.size > audioStart) {
                                 outputStream.write(data, audioStart, data.size - audioStart)
+                                // Reset watchdog: bytes flowed, server is alive
+                                startWatchdog(webSocket, WATCHDOG_IDLE_MS, initial = false)
                             }
                         }
                     }
 
                     override fun onMessage(webSocket: WebSocket, text: String) {
                         if (text.contains("Path:turn.end")) {
+                            watchdogJob?.cancel()
+                            watchdogJob = null
                             outputStream.close()
                             CoroutineScope(Dispatchers.Main).launch { playFile(audioFile) }
                         }
@@ -146,6 +165,8 @@ class EdgeTtsPlayer(private val context: Context) {
                         response: Response?,
                     ) {
                         android.util.Log.e("EdgeTTS", "WebSocket failure: ${t.message}", t)
+                        watchdogJob?.cancel()
+                        watchdogJob = null
                         try {
                             outputStream.close()
                         } catch (_: Exception) {}
@@ -153,6 +174,32 @@ class EdgeTtsPlayer(private val context: Context) {
                     }
                 },
             )
+    }
+
+    /**
+     * Starts or restarts the watchdog timer. If the timer expires before it is reset by incoming
+     * audio bytes or cancelled by turn.end/failure, the WebSocket is aborted and the UI is
+     * unblocked via onDone().
+     *
+     * This prevents the "eternal spinner" bug when Edge TTS silently stops responding (e.g. after a
+     * voice is deprecated server-side, or during transient Microsoft outages). Long audio
+     * generation (40s+) is NOT affected because the timer resets on every received chunk — only
+     * genuine silence triggers the abort.
+     */
+    private fun startWatchdog(ws: WebSocket, timeoutMs: Long, initial: Boolean) {
+        watchdogJob?.cancel()
+        watchdogJob = watchdogScope.launch {
+            delay(timeoutMs)
+            val reason =
+                if (initial) "no audio received within ${timeoutMs}ms after onOpen"
+                else "no audio bytes for ${timeoutMs}ms during streaming"
+            android.util.Log.w("EdgeTTS", "Watchdog fired: $reason — aborting")
+            ws.cancel()
+            try {
+                currentOutputStream?.close()
+            } catch (_: Exception) {}
+            onDone?.invoke()
+        }
     }
 
     private fun playFile(file: File) {
@@ -176,11 +223,17 @@ class EdgeTtsPlayer(private val context: Context) {
     }
 
     fun stop() {
+        watchdogJob?.cancel()
+        watchdogJob = null
         webSocket?.cancel()
         webSocket = null
-        try { currentOutputStream?.close() } catch (_: Exception) {}
+        try {
+            currentOutputStream?.close()
+        } catch (_: Exception) {}
         currentOutputStream = null
-        try { mediaPlayer?.stop() } catch (_: IllegalStateException) {}
+        try {
+            mediaPlayer?.stop()
+        } catch (_: IllegalStateException) {}
         mediaPlayer?.release()
         mediaPlayer = null
     }
