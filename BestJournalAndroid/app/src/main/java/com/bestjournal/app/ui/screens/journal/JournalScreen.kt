@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -51,22 +50,22 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -80,7 +79,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -89,11 +87,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import com.bestjournal.app.R
-import com.bestjournal.app.util.rememberHapticAction
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -102,6 +98,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.AnimatedMicButton
 import com.bestjournal.app.ui.components.EvolvingStreakIcon
 import com.bestjournal.app.ui.components.GlassCard
@@ -115,6 +112,7 @@ import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
 import com.bestjournal.app.util.DateTimeFormatter as DTFormatter
+import com.bestjournal.app.util.rememberHapticAction
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -242,7 +240,7 @@ fun JournalScreen(
                                 Icon(
                                     imageVector =
                                         when (uiState.syncStatus) {
-                                            SyncStatus.NOT_SIGNED_IN -> Icons.Rounded.Warning
+                                            SyncStatus.NOT_SIGNED_IN -> Icons.Rounded.CloudOff
                                             SyncStatus.ERROR -> Icons.Rounded.CloudOff
                                             SyncStatus.SYNCING -> Icons.Rounded.Cloud
                                             SyncStatus.UPLOADING -> Icons.Filled.CloudUpload
@@ -252,7 +250,7 @@ fun JournalScreen(
                                     contentDescription = stringResource(R.string.cd_sync_status),
                                     tint =
                                         when (uiState.syncStatus) {
-                                            SyncStatus.NOT_SIGNED_IN -> NeonAmber
+                                            SyncStatus.NOT_SIGNED_IN -> NeonRed
                                             SyncStatus.SYNCING -> NeonCyan
                                             SyncStatus.UPLOADING -> NeonCyan
                                             SyncStatus.DOWNLOADING -> NeonCyan
@@ -326,7 +324,10 @@ fun JournalScreen(
                                         streakColor.copy(alpha = 0.1f),
                                         RoundedCornerShape(12.dp),
                                     )
-                                    .clickable { doHaptic(HapticFeedbackType.LongPress); showStreakDialog = true }
+                                    .clickable {
+                                        doHaptic(HapticFeedbackType.LongPress)
+                                        showStreakDialog = true
+                                    }
                                     .padding(horizontal = 8.dp, vertical = 3.dp),
                         ) {
                             Icon(
@@ -337,7 +338,11 @@ fun JournalScreen(
                             )
                             Spacer(modifier = Modifier.width(3.dp))
                             Text(
-                                text = stringResource(R.string.journal_streak_days, uiState.currentStreak),
+                                text =
+                                    stringResource(
+                                        R.string.journal_streak_days,
+                                        uiState.currentStreak,
+                                    ),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = streakColor,
                             )
@@ -402,8 +407,7 @@ fun JournalScreen(
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
                                 .focusRequester(searchFocusRequester),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions =
-                            KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                        keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                         colors =
                             TextFieldDefaults.colors(
                                 focusedContainerColor = MaterialTheme.colorScheme.surface,
@@ -449,7 +453,10 @@ fun JournalScreen(
                     groupedEntries.forEach { (sectionLabel, sectionEntries) ->
                         // Section header
                         item(key = "header_$sectionLabel") {
-                            Column(modifier = Modifier.animateItem().padding(top = 12.dp, bottom = 4.dp)) {
+                            Column(
+                                modifier =
+                                    Modifier.animateItem().padding(top = 12.dp, bottom = 4.dp)
+                            ) {
                                 Text(
                                     text = sectionLabel,
                                     style = MaterialTheme.typography.titleSmall,
@@ -647,7 +654,10 @@ fun JournalScreen(
                 onDismissRequest = { showSyncLegend = false },
                 containerColor = MaterialTheme.colorScheme.surface,
                 title = {
-                    Text(stringResource(R.string.journal_drive_backup_dialog), color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        stringResource(R.string.journal_drive_backup_dialog),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                 },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -726,7 +736,10 @@ fun JournalScreen(
                                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                             )
                             Text(
-                                stringResource(R.string.journal_drive_last_sync, DTFormatter.formatFull(uiState.lastSyncTimestamp)),
+                                stringResource(
+                                    R.string.journal_drive_last_sync,
+                                    DTFormatter.formatFull(uiState.lastSyncTimestamp),
+                                ),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodySmall,
                             )
@@ -734,7 +747,9 @@ fun JournalScreen(
                     }
                 },
                 confirmButton = {
-                    OutlinedButton(onClick = { showSyncLegend = false }) { Text(stringResource(R.string.action_ok)) }
+                    OutlinedButton(onClick = { showSyncLegend = false }) {
+                        Text(stringResource(R.string.action_ok))
+                    }
                 },
             )
         }
@@ -842,14 +857,17 @@ private fun PreviewDialog(
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     Text(
-                        if (hasPrompt) stringResource(R.string.journal_new_entry_prompt) else stringResource(R.string.journal_new_entry),
+                        if (hasPrompt) stringResource(R.string.journal_new_entry_prompt)
+                        else stringResource(R.string.journal_new_entry),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (improvedText != null) {
                         Text(
-                            text = if (showingImproved) stringResource(R.string.label_improved) else stringResource(R.string.label_original),
+                            text =
+                                if (showingImproved) stringResource(R.string.label_improved)
+                                else stringResource(R.string.label_original),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -1064,7 +1082,11 @@ private fun PreviewDialog(
                     if (transcriptionModel.isNotBlank()) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = stringResource(R.string.journal_transcribed_with, transcriptionModel),
+                            text =
+                                stringResource(
+                                    R.string.journal_transcribed_with,
+                                    transcriptionModel,
+                                ),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline,
                         )
@@ -1141,7 +1163,8 @@ private fun PreviewDialog(
                                     }
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = stringResource(R.string.journal_text_upsell_title),
+                                            text =
+                                                stringResource(R.string.journal_text_upsell_title),
                                             style =
                                                 MaterialTheme.typography.labelLarge.copy(
                                                     fontWeight = FontWeight.Bold
@@ -1150,7 +1173,8 @@ private fun PreviewDialog(
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = stringResource(R.string.journal_text_upsell_body),
+                                            text =
+                                                stringResource(R.string.journal_text_upsell_body),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -1167,7 +1191,10 @@ private fun PreviewDialog(
                                                 modifier = Modifier.clickable { onUpsellDismiss() },
                                             )
                                             Text(
-                                                text = stringResource(R.string.journal_discover_premium),
+                                                text =
+                                                    stringResource(
+                                                        R.string.journal_discover_premium
+                                                    ),
                                                 style =
                                                     MaterialTheme.typography.labelMedium.copy(
                                                         fontWeight = FontWeight.Bold
@@ -1231,7 +1258,10 @@ private fun PreviewDialog(
                                 contentColor = MaterialTheme.colorScheme.onPrimary,
                             ),
                     ) {
-                        Text(if (showingImproved) stringResource(R.string.journal_save_improved) else stringResource(R.string.journal_save))
+                        Text(
+                            if (showingImproved) stringResource(R.string.journal_save_improved)
+                            else stringResource(R.string.journal_save)
+                        )
                     }
                 }
             }
@@ -1244,7 +1274,10 @@ private fun PreviewDialog(
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     ),
             ) {
-                Text(if (displayText.isBlank()) stringResource(R.string.action_cancel) else stringResource(R.string.action_discard))
+                Text(
+                    if (displayText.isBlank()) stringResource(R.string.action_cancel)
+                    else stringResource(R.string.action_discard)
+                )
             }
         },
     )
@@ -1296,9 +1329,7 @@ private fun StreakDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
-        icon = {
-            EvolvingStreakIcon(streakDays = currentStreak)
-        },
+        icon = { EvolvingStreakIcon(streakDays = currentStreak) },
         title = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
@@ -1541,7 +1572,10 @@ private fun WritingPromptBanner(
                 ) {
                     Icon(Icons.Rounded.Edit, null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.journal_write_about), style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        stringResource(R.string.journal_write_about),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
                 }
             }
         }

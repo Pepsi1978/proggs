@@ -2,11 +2,12 @@ package com.bestjournal.app.ui.screens.journal
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.bestjournal.app.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bestjournal.app.R
 import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.billing.SubscriptionState
+import com.bestjournal.app.data.remote.ai.TieredAccessResult
 import com.bestjournal.app.data.repository.JournalRepository
 import com.bestjournal.app.domain.model.JournalEntry
 import com.bestjournal.app.domain.usecase.AnalyzeEntropyUseCase
@@ -18,7 +19,6 @@ import com.bestjournal.app.domain.usecase.SyncWithDriveUseCase
 import com.bestjournal.app.domain.usecase.TranscribeAudioUseCase
 import com.bestjournal.app.util.AchievementStats
 import com.bestjournal.app.util.AchievementTracker
-import com.bestjournal.app.data.remote.ai.TieredAccessResult
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.DailyPromptProvider
@@ -55,7 +55,7 @@ data class JournalUiState(
     val searchQuery: String = "",
     val isSearchActive: Boolean = false,
     val errorMessage: String? = null,
-    val syncStatus: SyncStatus = SyncStatus.IDLE,
+    val syncStatus: SyncStatus = SyncStatus.NOT_SIGNED_IN,
     val downloadCurrent: Int = 0,
     val downloadTotal: Int = 0,
     val showAiLimitReached: Boolean = false,
@@ -136,19 +136,52 @@ constructor(
     private var syncDebounceJob: Job? = null
     private var analysisDebounceJob: Job? = null
 
-    init {
-        // Set initial sync status: check if signed in AND last backup timestamp exists
-        val isSignedIn =
-            encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")?.isNotBlank() == true
-        val lastSync = encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L)
-        if (!isSignedIn) {
-            _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.NOT_SIGNED_IN)
-        } else if (isSignedIn && lastSync > 0L) {
-            _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
-        } else if (isSignedIn) {
-            _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.IDLE)
+    /**
+     * Verify sign-in state: email pref AND Google account still exists on device. External account
+     * removal (system settings) is detected here and triggers local sign-out.
+     */
+    fun refreshSignInStatus() {
+        val signedInEmail = encryptedPrefs.getString(Constants.PREF_GOOGLE_ACCOUNT_EMAIL, "")
+        val hasEmailPref = !signedInEmail.isNullOrBlank()
+        val accountStillExists =
+            hasEmailPref &&
+                try {
+                    val am = android.accounts.AccountManager.get(context)
+                    am.getAccountsByType("com.google").any { it.name == signedInEmail }
+                } catch (e: SecurityException) {
+                    android.util.Log.w("JournalVM", "AccountManager check skipped: ${e.message}")
+                    true
+                }
+
+        if (hasEmailPref && !accountStillExists) {
+            android.util.Log.w(
+                "JournalVM",
+                "Google account removed externally — clearing local sign-in",
+            )
+            encryptedPrefs
+                .edit()
+                .remove(Constants.PREF_GOOGLE_ACCOUNT_EMAIL)
+                .remove(Constants.PREF_GOOGLE_ACCOUNT_NAME)
+                .remove(Constants.PREF_GOOGLE_AVATAR_URL)
+                .remove(Constants.PREF_LAST_SYNC_TIMESTAMP)
+                .apply()
         }
-        _uiState.value = _uiState.value.copy(lastSyncTimestamp = lastSync)
+
+        val isSignedIn = hasEmailPref && accountStillExists
+        val lastSync =
+            if (isSignedIn) encryptedPrefs.getLong(Constants.PREF_LAST_SYNC_TIMESTAMP, 0L) else 0L
+
+        val newStatus =
+            when {
+                !isSignedIn -> SyncStatus.NOT_SIGNED_IN
+                lastSync > 0L -> SyncStatus.SYNCED
+                else -> SyncStatus.IDLE
+            }
+        _uiState.value = _uiState.value.copy(syncStatus = newStatus, lastSyncTimestamp = lastSync)
+    }
+
+    init {
+        refreshSignInStatus()
 
         // Observe background download progress from SyncProgressHolder
         viewModelScope.launch {
@@ -322,7 +355,8 @@ constructor(
                 _uiState.value =
                     _uiState.value.copy(
                         recordingState = RecordingState.IDLE,
-                        errorMessage = context.getString(R.string.journal_recording_error, e.message ?: ""),
+                        errorMessage =
+                            context.getString(R.string.journal_recording_error, e.message ?: ""),
                     )
             }
         }
@@ -359,10 +393,7 @@ constructor(
 
                     // Auto-trigger AI text improvement if enabled in settings
                     val autoImprove =
-                        encryptedPrefs.getBoolean(
-                            Constants.PREF_TEXT_IMPROVEMENT_DEFAULT,
-                            false,
-                        )
+                        encryptedPrefs.getBoolean(Constants.PREF_TEXT_IMPROVEMENT_DEFAULT, false)
                     if (autoImprove) {
                         improveText()
                     }
@@ -371,7 +402,11 @@ constructor(
                     _uiState.value =
                         _uiState.value.copy(
                             recordingState = RecordingState.IDLE,
-                            errorMessage = context.getString(R.string.journal_transcription_error, error.message ?: ""),
+                            errorMessage =
+                                context.getString(
+                                    R.string.journal_transcription_error,
+                                    error.message ?: "",
+                                ),
                         )
                     audioFile.delete()
                 }
@@ -394,7 +429,13 @@ constructor(
                 }
                 is TieredAccessResult.Cooldown -> {
                     _uiState.update {
-                        it.copy(errorMessage = context.getString(R.string.journal_rate_limit, accessResult.minutesLeft))
+                        it.copy(
+                            errorMessage =
+                                context.getString(
+                                    R.string.journal_rate_limit,
+                                    accessResult.minutesLeft,
+                                )
+                        )
                     }
                     return@launch
                 }
@@ -403,7 +444,8 @@ constructor(
                 }
             }
 
-            val modelName = (accessResult as? TieredAccessResult.Allowed)?.modelName ?: return@launch
+            val modelName =
+                (accessResult as? TieredAccessResult.Allowed)?.modelName ?: return@launch
             _uiState.value = _uiState.value.copy(recordingState = RecordingState.IMPROVING)
 
             // Record attempt (daily + hourly counters) — errors are OK here
@@ -445,7 +487,11 @@ constructor(
                     _uiState.update {
                         it.copy(
                             recordingState = RecordingState.PREVIEW,
-                            errorMessage = context.getString(R.string.journal_improve_error, error.message ?: ""),
+                            errorMessage =
+                                context.getString(
+                                    R.string.journal_improve_error,
+                                    error.message ?: "",
+                                ),
                         )
                     }
                 }
@@ -565,21 +611,25 @@ constructor(
                     val editor = encryptedPrefs.edit()
                     if (isNight) editor.putInt("stat_night_entries", nightCount + 1)
                     if (isMorning) editor.putInt("stat_morning_entries", morningCount + 1)
-                    if (entry.audioDurationSeconds > 0) editor.putInt("stat_voice_entries", voiceCount + 1)
-                    if (wordCount > longestWords) editor.putInt("stat_longest_entry_words", wordCount)
+                    if (entry.audioDurationSeconds > 0)
+                        editor.putInt("stat_voice_entries", voiceCount + 1)
+                    if (wordCount > longestWords)
+                        editor.putInt("stat_longest_entry_words", wordCount)
                     editor.apply()
 
-                    val stats = AchievementStats(
-                        totalEntries = totalEntries,
-                        nightEntries = if (isNight) nightCount + 1 else nightCount,
-                        morningEntries = if (isMorning) morningCount + 1 else morningCount,
-                        longestEntryWords = maxOf(longestWords, wordCount),
-                        currentStreak = streakTracker.getCurrentStreak(),
-                        photoCount = photoCount,
-                        voiceEntries = if (entry.audioDurationSeconds > 0) voiceCount + 1 else voiceCount,
-                        // photoCount and dashboardRefreshes are incremented elsewhere
-                        dashboardRefreshes = dashCount,
-                    )
+                    val stats =
+                        AchievementStats(
+                            totalEntries = totalEntries,
+                            nightEntries = if (isNight) nightCount + 1 else nightCount,
+                            morningEntries = if (isMorning) morningCount + 1 else morningCount,
+                            longestEntryWords = maxOf(longestWords, wordCount),
+                            currentStreak = streakTracker.getCurrentStreak(),
+                            photoCount = photoCount,
+                            voiceEntries =
+                                if (entry.audioDurationSeconds > 0) voiceCount + 1 else voiceCount,
+                            // photoCount and dashboardRefreshes are incremented elsewhere
+                            dashboardRefreshes = dashCount,
+                        )
                     val newlyUnlocked = achievementTracker.checkAchievements(stats)
                     if (newlyUnlocked.isNotEmpty()) {
                         val title = achievementTracker.getTitle(context, newlyUnlocked.first())
@@ -603,7 +653,8 @@ constructor(
                     _uiState.value =
                         _uiState.value.copy(
                             recordingState = RecordingState.PREVIEW,
-                            errorMessage = context.getString(R.string.journal_save_error, e.message ?: ""),
+                            errorMessage =
+                                context.getString(R.string.journal_save_error, e.message ?: ""),
                         )
                 }
             }
@@ -724,10 +775,7 @@ constructor(
                         _uiState.value = _uiState.value.copy(syncStatus = SyncStatus.SYNCED)
                         encryptedPrefs
                             .edit()
-                            .putLong(
-                                Constants.PREF_LAST_SYNC_TIMESTAMP,
-                                System.currentTimeMillis(),
-                            )
+                            .putLong(Constants.PREF_LAST_SYNC_TIMESTAMP, System.currentTimeMillis())
                             .apply()
                     }
                     .onFailure {
@@ -742,8 +790,8 @@ constructor(
     }
 
     /**
-     * Count words using BreakIterator — works for all languages including CJK
-     * (Chinese, Japanese, Korean) where words are not separated by spaces.
+     * Count words using BreakIterator — works for all languages including CJK (Chinese, Japanese,
+     * Korean) where words are not separated by spaces.
      */
     private fun countWords(text: String): Int {
         if (text.isBlank()) return 0
