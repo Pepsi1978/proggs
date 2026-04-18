@@ -680,13 +680,6 @@ private fun CategoryButton(
                             modifier = Modifier.size(18.dp),
                             tint = FeatureAccentOrange,
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = stringResource(R.string.label_premium),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = FeatureAccentOrange,
-                        )
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -1694,12 +1687,6 @@ private fun BenefitSection(title: String, points: List<String>, isPremium: Boole
                     contentDescription = stringResource(R.string.label_premium),
                     modifier = Modifier.size(14.dp),
                     tint = FeatureAccentOrange,
-                )
-                Spacer(modifier = Modifier.width(2.dp))
-                Text(
-                    text = stringResource(R.string.label_premium),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = FeatureAccentOrange,
                 )
             }
         }
