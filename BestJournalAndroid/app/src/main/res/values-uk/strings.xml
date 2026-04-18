@@ -445,7 +445,7 @@
     <string name="settings_feedback_token_error">Помилка токена: %1$s</string>
     <string name="settings_feedback_unknown_error">Невідома помилка</string>
     <string name="settings_feedback_confirm_subject">Ваш відгук для Best Journal</string>
-    <string name="settings_feedback_confirm_body">Ти надіслав це повідомлення розробнику.\nВін відповість тобі особисто.\n\n--- Твоє повідомлення ---\n%1$s\n\nУсього найкращого,\nDEV.FRANK</string>
+    <string name="settings_feedback_confirm_body">Ви надіслали це повідомлення розробнику.\nВін відповість вам особисто.\n\n--- Ваше повідомлення ---\n%1$s\n\nУсього найкращого,\nDEV.FRANK</string>
     <string name="settings_feedback_from">Відгук від: %1$s</string>
     <string name="action_send">Надіслати</string>
     <!-- Drive errors -->
@@ -705,11 +705,11 @@
     <string name="retro_cd_premium_required">Потрібен Преміум</string>
     <!-- Retro: Benefits info dialog -->
     <string name="retro_your_ai_reviews">Ваші підсумки з ШІ</string>
-    <string name="retro_weekly_p1">ШІ стискає ваш тиждень в особистий рассказ</string>
+    <string name="retro_weekly_p1">ШІ стискає ваш тиждень в особисту розповідь</string>
     <string name="retro_weekly_p2">Емоційні закономірності та ключові моменти стають видимими</string>
     <string name="retro_weekly_p3">Створюються щонеділі автоматично, якщо у вас не менше 2 записів</string>
     <string name="retro_weekly_p4">Перші 2 тижні безкоштовно</string>
-    <string name="retro_monthly_p1">Пов\'язує ваші тижневі підсумки в рассказ місяця</string>
+    <string name="retro_monthly_p1">Пов\'язує ваші тижневі підсумки в розповідь місяця</string>
     <string name="retro_monthly_p2">Наскрізні лінії та розвиток місяця стають видимими</string>
     <string name="retro_monthly_p3">Показує зміни, що в буднях вислизають</string>
     <string name="retro_yearly_p1">Ваш цілий рік одним поглядом</string>
@@ -720,7 +720,7 @@
     <string name="retro_premium_reviews_desc">З Преміум ШІ автоматично створює підсумки з ваших записів:</string>
     <string name="retro_benefit_weekly">Безлімітні підсумки тижня, не лише перші 2 тижні</string>
     <string name="retro_benefit_monthly">Підсумки місяця, що показують ваш поступ і зміни</string>
-    <string name="retro_benefit_yearly">Підсумки року, цілий ваш рік як особистий рассказ</string>
+    <string name="retro_benefit_yearly">Підсумки року, цілий ваш рік як особиста розповідь</string>
     <string name="retro_start_sub">Оформити підписку</string>
     <string name="retro_decide_later">Вирішити пізніше</string>
 
