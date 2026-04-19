@@ -1,0 +1,62 @@
+# ============================================================================
+# Harness Forge — .gitignore
+# Swift Package Manager + macOS + Xcode + Projekt-Laufzeitdaten
+# ============================================================================
+
+# ----- Swift Package Manager -------------------------------------------------
+.build/
+.swiftpm/
+Package.resolved
+
+# ----- Xcode (falls jemand doch mal Xcode oeffnet) ---------------------------
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.hmap
+
+# ----- macOS ----------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# ----- IDE-spezifisch --------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ----- Harness Forge — Laufzeitdaten ----------------------------------------
+# Der verschachtelte Git-Kontext fuer Prompt-Versionen darf NICHT ins Haupt-Repo
+.forge/prompts.git/
+.forge/generated/
+.forge/cache/
+
+# Lokale Datenbanken
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Logs
+*.log
+logs/
+
+# ----- Build-Artefakte -------------------------------------------------------
+*.app
+*.dmg
+*.pkg
+
+# ----- Secrets (Doppel-Sicherung zusaetzlich zur Keychain) -------------------
+.env
+.env.local
+secrets.plist
+api-keys.json
