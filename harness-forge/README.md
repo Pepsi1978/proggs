@@ -7,8 +7,9 @@
 
 [![Plattform](https://img.shields.io/badge/Plattform-macOS%2014%2B-007AFF?style=flat-square)](https://www.apple.com/macos/)
 [![Swift](https://img.shields.io/badge/Swift-6.0-F05138?style=flat-square)](https://swift.org)
+[![Tests](https://img.shields.io/badge/Tests-146%2F146%20gruen-brightgreen?style=flat-square)](./Tests)
+[![Status](https://img.shields.io/badge/Status-Komplett%20%2814%2F14%29-success?style=flat-square)](./TODO.md)
 [![Lizenz](https://img.shields.io/badge/Lizenz-MIT-green?style=flat-square)](./LICENSE)
-[![Status](https://img.shields.io/badge/Status-In%20Entwicklung%20%28Step%201%2F14%29-yellow?style=flat-square)](./TODO.md)
 
 ---
 
@@ -16,12 +17,12 @@
 
 - [Worum es geht](#worum-es-geht)
 - [5-Minuten-Quickstart](#5-minuten-quickstart)
+- [CLI-Referenz](#cli-referenz)
 - [Architektur auf einen Blick](#architektur-auf-einen-blick)
 - [Projekt-Struktur](#projekt-struktur)
 - [Die fuenf Harness-Formen](#die-fuenf-harness-formen)
 - [Entwickeln und Testen](#entwickeln-und-testen)
-- [Roadmap](#roadmap)
-- [Warum Swift, warum SPM, warum macOS-only](#warum-swift-warum-spm-warum-macos-only)
+- [Was Harness Forge NICHT tut](#was-harness-forge-nicht-tut)
 
 ---
 
@@ -67,20 +68,39 @@ swift package resolve
 # Alles kompilieren
 swift build
 
-# Tests laufen lassen
+# 146 Tests laufen lassen
 swift test
 
-# CLI starten (aktuell nur Smoke-Test)
+# CLI
 swift run forge --help
+
+# SwiftUI-App
+swift run HarnessForgeApp
 ```
 
-### Ersten Harness erzeugen
+### Ersten Harness erzeugen (mit API-Key)
 
 ```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
 swift run forge new "Baue mir einen Reisebegleiter fuer Packrafting-Touren in Schweden"
 ```
 
-*(Funktioniert erst ab Step 5 — aktuell nur Geruest vorhanden.)*
+Ohne API-Key laeuft der Analyzer gegen LM Studio auf `localhost:1234`.
+
+---
+
+## CLI-Referenz
+
+| Kommando | Beschreibung |
+|----------|--------------|
+| `forge new "<task>"` | Volle Pipeline: analysiere → empfehle → baue |
+| `forge new "<task>" --analyzeOnly` | Trockenlauf ohne Bau |
+| `forge new "<task>" --type tauri_desktop` | Empfehlung ueberstimmen |
+| `forge analyze "<task>"` | Nur Entscheidungs-Matrix anzeigen |
+| `forge list` | Alle generierten Harnesse in `~/proggs/` listen |
+| `forge edit <slug>` | Prompt im `$EDITOR` oeffnen, auto-commit |
+| `forge rollback <slug> <hash>` | Prompt auf frueher gespeicherte Version zurueckrollen |
+| `forge rollback <slug>` | Verfuegbare Versionen listen |
 
 ---
 
@@ -148,62 +168,53 @@ flowchart TB
     class Android,Desktop,CLI,Prompt,Subagent output
 ```
 
-**Legende** — Farblich kodiert:
-*Orange* = Nutzereingabe, *Blau* = Harness Forge, *Gruen* = externe KI, *Violett* = erzeugte Artefakte.
-
 ---
 
 ## Projekt-Struktur
 
 ```
 harness-forge/
-├── Package.swift                    SPM-Manifest
-├── AGENTS.md                        Die Verfassung (deutsch)
-├── README.md                        Diese Datei
-├── TODO.md                          14-Schritte-Plan
-├── .gitignore
-├── .swift-version                   "6.0"
+├── Package.swift              SPM-Manifest (Swift 6, macOS 14+)
+├── AGENTS.md                  Projekt-Verfassung (deutsch, 6 Prinzipien)
+├── README.md                  Diese Datei
+├── TODO.md                    14-Schritte-Plan (alle erledigt)
 │
 ├── Sources/
-│   ├── HarnessForgeCore/            Kern: LLM-Abstraktion, Router, Persistenz
-│   │   ├── HarnessForgeCore.swift       Versions-Konstante + Public API
-│   │   ├── LLMClient.swift              ab Step 2
-│   │   ├── Router.swift                 ab Step 2
-│   │   ├── Backends/                    ab Step 2
-│   │   ├── Persistence/                 ab Step 3
-│   │   └── Reflection/                  ab Step 3
+│   ├── HarnessForgeCore/                 Kern: LLM + Persistenz + Versioning
+│   │   ├── LLMClient.swift, Router.swift, KeychainStorage.swift
+│   │   ├── Backends/                         4 Backends via URLSession
+│   │   ├── Persistence/                      SwiftData: Trajectory, Interaction, Lesson
+│   │   ├── PromptEditor/                     Git-basiertes Prompt-Versioning
+│   │   ├── Reflection/                       ReflectionLoop
+│   │   └── Models/                           Sendable-DTOs
 │   │
-│   ├── HarnessForgeLayers/          Die 6 Schichten als eigenes Modul
-│   │   ├── Constraint/                  L1 — ab Step 4
-│   │   ├── Context/                     L2 — ab Step 4
-│   │   ├── Execution/                   L3 — ab Step 4
-│   │   ├── Verification/                L4 — ab Step 4
-│   │   ├── Lifecycle/                   L5 — ab Step 4
-│   │   └── Meta/                        Meta — ab Step 4
+│   ├── HarnessForgeLayers/               Die 6 Schichten
+│   │   ├── Constraint/    Context/    Execution/
+│   │   └── Verification/  Lifecycle/  Meta/
 │   │
-│   ├── HarnessForgeBuilders/        5 Builder fuer die 5 Harness-Formen
-│   │   ├── TaskAnalyzer/                ab Step 5
-│   │   ├── PurePromptBuilder/           ab Step 6
-│   │   ├── PythonCLIBuilder/            ab Step 7
-│   │   ├── TauriDesktopBuilder/         ab Step 8
-│   │   ├── AndroidKotlinBuilder/        ab Step 9
-│   │   └── ClaudeSubagentBuilder/       ab Step 10
+│   ├── HarnessForgeBuilders/             Die 5 Builder
+│   │   ├── TaskAnalyzer/                     Herzstueck
+│   │   ├── PurePromptBuilder/                einfachster Builder
+│   │   ├── PythonCLIBuilder/                 Typer + Rich + httpx
+│   │   ├── TauriDesktopBuilder/              Rust + Svelte 5 + Tauri v2
+│   │   ├── AndroidKotlinBuilder/             Compose + Material 3
+│   │   └── ClaudeSubagentBuilder/            Agent + Skill + install.sh
 │   │
-│   ├── ForgeCLI/                    CLI-Frontend — `swift run forge …`
-│   │   └── ForgeApp.swift               ab Step 12
+│   ├── ForgeCLI/                         `swift run forge …`
+│   │   └── Commands/                         5 Subcommands
 │   │
-│   └── HarnessForgeApp/             SwiftUI-App — ab Step 13
-│       └── HarnessForgeApp.swift
+│   └── HarnessForgeApp/                  SwiftUI macOS-App
+│       └── Views/                            Root, Sidebar, Matrix, Settings
 │
-├── Tests/
-│   ├── HarnessForgeCoreTests/
-│   ├── HarnessForgeLayersTests/
-│   └── HarnessForgeBuildersTests/
+├── Tests/                     146 Tests, Swift-Testing-Framework
 │
-└── .forge/                          Lokale Laufzeit-Daten (gitignored)
-    ├── prompts.git/                     Git-Repo fuer Prompt-Versionen
-    ├── trajectories.sqlite              Interaktions-Logs
-    └── lessons.sqlite                   Gelernte Fehler-Regeln
+├── docs/
+│   └── first-harness.md       Ergebnis des ersten E2E-Dogfoodings
+│
+└── .forge/ (runtime)          Lokale Daten (gitignored)
+    ├── prompts.git/             Git-Repo fuer Prompt-Versionen
+    ├── trajectories.sqlite
+    └── lessons.sqlite
 ```
 
 ---
@@ -221,7 +232,7 @@ harness-forge/
 Welche Form du bekommst, entscheidet der `TaskAnalyzer` anhand einer sechs-
 dimensionalen Punktebewertung. Die Begruendung landet als Markdown-Dokument
 neben dem erzeugten Harness — du kannst die Entscheidung jederzeit nachlesen
-und ueberstimmen.
+und ueberstimmen (`forge new --type python_cli`).
 
 ---
 
@@ -233,13 +244,13 @@ und ueberstimmen.
 swift build
 ```
 
-### Tests laufen lassen
+### Alle Tests
 
 ```bash
 swift test
 ```
 
-Wir nutzen das neue **Swift-Testing-Framework** (nicht XCTest). Beispiel:
+Wir nutzen das **Swift-Testing-Framework** (nicht XCTest). Beispiel:
 
 ```swift
 import Testing
@@ -251,62 +262,29 @@ func versionIsSet() {
 }
 ```
 
-### Coverage pruefen
+### Coverage
 
 ```bash
 swift test --enable-code-coverage
-xcrun llvm-cov report .build/debug/HarnessForgePackageTests.xctest/Contents/MacOS/HarnessForgePackageTests \
-    -instr-profile=.build/debug/codecov/default.profdata \
-    -ignore-filename-regex="Tests|\.build"
 ```
 
-Ziel fuer Core + Layers: **≥ 80 % Coverage**.
-
 ---
 
-## Roadmap
+## Was Harness Forge NICHT tut
 
-Der detaillierte 14-Schritte-Plan liegt in [`TODO.md`](./TODO.md). Kurzversion:
-
-| Step | Inhalt | Status |
-|-----:|--------|:------:|
-| 1 | Projektstruktur + Doku | erledigt |
-| 2 | LLMClient-Protokoll + 4 Backends | offen |
-| 3 | Trajektorien- und Lessons-Persistenz | offen |
-| 4 | Die 6 Schichten | offen |
-| 5 | Task-Analyzer (Herzstueck) | offen |
-| 6–10 | Die 5 Builder | offen |
-| 11 | Prompt-Editor mit Git | offen |
-| 12 | CLI-Frontend | offen |
-| 13 | SwiftUI-App | offen |
-| 14 | End-to-End-Test | offen |
-
----
-
-## Warum Swift, warum SPM, warum macOS-only
-
-- **Swift**: Ein einziges Binary, keine Python-Runtime zu bundeln, nativer
-  Zugriff auf Keychain, Notifications und Dateisystem. Async/await-Concurrency
-  seit Swift 5.5, Strict Concurrency ab Swift 6 — genau das, was ein System
-  mit vielen HTTP-Calls braucht.
-- **Swift Package Manager (statt Xcode-Projekt)**: Das Manifest ist eine
-  lesbare Datei, kein XML-Binaerformat mit Merge-Konflikten. Modular
-  organisierbar, einfach auf CI (GitHub Actions) zu bauen. Der Verzicht auf
-  ein `.xcodeproj` bedeutet auch: keine Frage "welche Xcode-Version"
-  zwischen Team-Mitgliedern.
-- **macOS-only**: Deine Hardware ist ein Apple-Silicon-Rechner. Wenn Harness
-  Forge auch Windows/Linux beherrschen sollte, waere der Aufwand fuer
-  Entitlements, Code-Signing und UI-Adaption enorm — ohne dass du davon
-  profitierst. Die erzeugten Harnesse sind davon nicht betroffen: Ein
-  Android-Harness laeuft auf jedem Android-Geraet, ein Python-CLI auf jedem
-  System.
+- **Keine neuen GitHub-Repos anlegen.** Alles geht in `Pepsi1978/proggs` als
+  Unterordner mit sprechendem Namen.
+- **Keine Python-GUIs erzeugen.** Python ist fuer CLI-Builds OK, aber nicht
+  fuer visuelle Oberflaechen.
+- **Keine nackten API-Keys irgendwo ablegen.** Alles ueber macOS Keychain.
+- **Keine stillen Erfolgsmeldungen.** Wenn etwas korrigiert wird, siehst du es.
+- **Keine Magie.** Jede Entscheidung ist nachvollziehbar und begruendet.
 
 ---
 
 ## Lizenz
 
-MIT. Siehe [`LICENSE`](./LICENSE) (wird in Step 1b angelegt, sobald die
-Rechtslage geklaert ist).
+MIT.
 
 ---
 
