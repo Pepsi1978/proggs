@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Platform OAI V.1.4.7
+// @name         Platform OAI V.1.4.8
 // @namespace    https://www.platform.openai.com/
-// @version      1.4.7
+// @version      1.4.8
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf Google Search. Mic-Button fest unten rechts. Kein stilles Fallback. Mit Output-Preview.
 // @match        https://platform.openai.com/chat/*
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/platformopenai.user.js
@@ -1402,18 +1402,20 @@ Falls dir etwas zur Aufgabe nicht klar ist frage nochmal den Benutzer. ChatGPT s
 allumfassendes Bild für die Antwort einbezogen wird.
 
 Zielgruppe:
-Geschrieben für jedermann; verständlich für Lernende etwa auf Niveau 12. Klasse Gymnasium.
+Geschrieben für jedermann; verständlich für Lernende etwa auf Niveau 10 Klasse. Realschule
 
 Kontext:
 Kein weiterer Kontext außer dem Inhalt der Aufgabe. Keine zusätzlichen Kontextabfragen.
 
 Format:
-Strikte Ausgabestruktur „Einleitung – Hauptteil – Zusammenfassung“.
+Strikte Ausgabestruktur „Einleitung – Hauptteil – Erkenntnisse“.
 Fachbegriffe sofort kurz erklären (in Klammern).
 Abkürzungen bei erster Nennung ausschreiben.
 Logisch, faktenbasiert, umfassend, nachvollziehbar.
 Keine Stichpunkte; Tabellen nur, wenn sie die Verständlichkeit klar verbessern.
-Mindestwortanzahl: 2000, Maximale Wortanzalhl: 10000, Entscheidend ist, dass die Aufgabe/Frage sehr ausführlich erledigt/beantwortet wird.
+Der letzte Teil fasst alle Erkenntnisse aus dem Hauptteil der Wichtigkeit her nach
+zusammen, mit klaren Überschriften und pro Erkenntnis. Jede Erkenntnis selber hat minimal 2, maximal 5 Zeilen.  
+Mindestwortanzahl: 2000, Maximale Wortanzahl: 10000, Entscheidend ist, dass die Aufgabe sehr ausführlich erledigt/beantwortet wird.
 
 Ton:
 Wissenschaftlich-professionell, klar und präzise; sehr ausführlich, didaktisch verständlich ohne Floskeln.

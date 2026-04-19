@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         AI Studio V.1.6.7
+// @name         AI Studio V.1.6.8
 // @namespace    https://aistudio.google.com/prompts/new_chat
-// @version      1.6.7
+// @version      1.6.8
 // @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/GoogleAIStudio.user.js
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/GoogleAIStudio.user.js
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf ChatGPT. Mic-Button unten links. Zwei Prompt-Builder Buttons (Frank + für jedermann) über dem Mic. Kein stilles Fallback. Mit Output-Preview.
@@ -1449,18 +1449,20 @@ Falls dir etwas zur Aufgabe nicht klar ist frage nochmal den Benutzer. Gemeni so
 allumfassendes Bild für die Antwort einbezogen wird.
 
 Zielgruppe:
-Geschrieben für jedermann; verständlich für Lernende etwa auf Niveau 12. Klasse Gymnasium.
+Geschrieben für jedermann; verständlich für Lernende etwa auf Niveau 10 Klasse. Realschule
 
 Kontext:
 Kein weiterer Kontext außer dem Inhalt der Aufgabe. Keine zusätzlichen Kontextabfragen.
 
 Format:
-Strikte Ausgabestruktur „Einleitung – Hauptteil – Zusammenfassung“.
+Strikte Ausgabestruktur „Einleitung – Hauptteil – Erkenntnisse“.
 Fachbegriffe sofort kurz erklären (in Klammern).
 Abkürzungen bei erster Nennung ausschreiben.
 Logisch, faktenbasiert, umfassend, nachvollziehbar.
 Keine Stichpunkte; Tabellen nur, wenn sie die Verständlichkeit klar verbessern.
-Mindestwortanzahl: 2000, Maximale Wortanzalhl: 10000, Entscheidend ist, dass die Aufgabe/Frage sehr ausführlich erledigt/beantwortet wird.
+Der letzte Teil fasst alle Erkenntnisse aus dem Hauptteil der Wichtigkeit her nach
+zusammen, mit klaren Überschriften und pro Erkenntnis. Jede Erkenntnis selber hat minimal 2, maximal 5 Zeilen.  
+Mindestwortanzahl: 2000, Maximale Wortanzahl: 10000, Entscheidend ist, dass die Aufgabe sehr ausführlich erledigt/beantwortet wird.
 
 Ton:
 Wissenschaftlich-professionell, klar und präzise; sehr ausführlich, didaktisch verständlich ohne Floskeln.

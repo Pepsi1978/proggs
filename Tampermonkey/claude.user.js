@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Claude V.1.5.0
+// @name         Claude V.1.5.1
 // @namespace    https://claude.ai/
-// @version      1.5.0
+// @version      1.5.1
 // @description  Speech-to-Text + Gemini-„Diktat-Bereinigung“ (DE) auf Claude: entfernt Kauderwelsch/Doubletten + setzt Satzbau/Zeichensetzung. Dazu 2 Prompt-Builder Buttons. ProseMirror-kompatible Textübernahme + UI-Reinject (Buttons verschwinden nicht mehr). Debounced Observer (verhindert Lade-Freeze). Fix: strengere Prompt-Feld-Erkennung (kein Seitentext mehr).
 // @match        https://claude.ai/*
 // @match        https://www.claude.ai/*
@@ -1507,18 +1507,20 @@ Falls dir etwas zur Aufgabe nicht klar ist frage nochmal den Benutzer. Claude so
 allumfassendes Bild für die Antwort einbezogen wird.
 
 Zielgruppe:
-Geschrieben für jedermann; verständlich für Lernende etwa auf Niveau 12. Klasse Gymnasium.
+Geschrieben für jedermann; verständlich für Lernende etwa auf Niveau 10 Klasse. Realschule
 
 Kontext:
 Kein weiterer Kontext außer dem Inhalt der Aufgabe. Keine zusätzlichen Kontextabfragen.
 
 Format:
-Strikte Ausgabestruktur „Einleitung – Hauptteil – Zusammenfassung“.
+Strikte Ausgabestruktur „Einleitung – Hauptteil – Erkenntnisse“.
 Fachbegriffe sofort kurz erklären (in Klammern).
 Abkürzungen bei erster Nennung ausschreiben.
 Logisch, faktenbasiert, umfassend, nachvollziehbar.
 Keine Stichpunkte; Tabellen nur, wenn sie die Verständlichkeit klar verbessern.
-Mindestwortanzahl: 2000, Maximale Wortanzalhl: 10000, Entscheidend ist, dass die Aufgabe/Frage sehr ausführlich erledigt/beantwortet wird.
+Der letzte Teil fasst alle Erkenntnisse aus dem Hauptteil der Wichtigkeit her nach
+zusammen, mit klaren Überschriften und pro Erkenntnis. Jede Erkenntnis selber hat minimal 2, maximal 5 Zeilen.  
+Mindestwortanzahl: 2000, Maximale Wortanzahl: 10000, Entscheidend ist, dass die Aufgabe sehr ausführlich erledigt/beantwortet wird.
 
 Ton:
 Wissenschaftlich-professionell, klar und präzise; sehr ausführlich, didaktisch verständlich ohne Floskeln.
