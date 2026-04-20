@@ -424,16 +424,6 @@ fun ConsentScreen(
                         letterSpacing = 0.4.sp,
                     )
                 }
-
-                Spacer(Modifier.height(4.dp))
-
-                Text(
-                    text = stringResource(R.string.consent_footer_hint),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                    color = OnSurfaceMuted.copy(alpha = 0.6f * btnAlpha.value),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
         }
     }
