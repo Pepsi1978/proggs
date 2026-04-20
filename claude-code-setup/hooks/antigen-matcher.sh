@@ -6,6 +6,11 @@
 # Bei Match: Warnung auf stderr (non-blocking).
 #
 # Direktive #3 Conformance: Graceful Degradation, Non-blocking, Timeout-Schutz.
+#
+# Hinweis zur Cross-Platform-Paritaet (Audit 2026-04-20):
+# Das PowerShell-Gegenstueck hatte einen Bug wegen der Automatic-Variable $input.
+# Bash hat keine solche Automatic-Variable — wir parsen hier in Python und nennen
+# die Variable 'data'. Kein Fix noetig, nur dokumentiert.
 
 # Failsafe: Bei jedem Fehler still beenden
 set +e
@@ -26,18 +31,33 @@ except:
 " 2>/dev/null)
 
 case "$tool_name" in
-    Bash|Edit|Write|NotebookEdit) ;;
+    # NotebookEdit absichtlich NICHT: dessen Input-Shape passt nicht zum Haystack-Bau
+    Bash|Edit|Write) ;;
     *) exit 0 ;;
 esac
 
 bug_cases="$HOME/proggs/.claude/agent-memory/shared/bug-cases.jsonl"
 if [ ! -f "$bug_cases" ]; then exit 0; fi
 
-# Run the match in Python (faster + safer parsing), with 2s timeout
-result=$(timeout 2 python3 <<PYEOF 2>/dev/null
-import json, sys, re
+# Run the match in Python (faster + safer parsing), with 2s timeout.
+# Python writes warnings directly to stderr; we don't capture output.
+#
+# WICHTIG: <<'PYEOF' (quoted heredoc) — KEINE Shell-Expansion im Python-Code.
+# Daten kommen via Env-Variablen (sicher gegen Quoting-Angriffe) und via stdin.
+# Bug aus Loop 2 Audit 2026-04-20 gefixt: Vorher unquoted heredoc mit
+# '''$stdin_input''' interpolation -- brach bei Backslashes/Newlines im JSON.
+export STDIN_INPUT="$stdin_input"
+export BUG_CASES_PATH="$bug_cases"
+# WICHTIG: Kein '2>/dev/null' — das wuerde unsere deliberaten stderr-Warnungen
+# unterdruecken. Python-Code ist durch try/except abgesichert, sollte nie
+# selbst crashen. Timeout-Kill-Meldungen sind akzeptabler Noise.
+# Bug aus Loop 2 Audit 2026-04-20 gefixt.
+timeout 2 python3 <<'PYEOF' || true
+import os, json, sys, re
 
-stdin_input = '''$stdin_input'''
+stdin_input = os.environ.get('STDIN_INPUT', '')
+bug_cases_path = os.environ.get('BUG_CASES_PATH', '')
+
 try:
     data = json.loads(stdin_input)
 except Exception:
@@ -58,7 +78,7 @@ if not haystack.strip():
 
 matches = []
 try:
-    with open('$bug_cases', 'r', encoding='utf-8') as f:
+    with open(bug_cases_path, 'r', encoding='utf-8') as f:
         bugs = [json.loads(l) for l in list(f)[:100] if l.strip()]
 except Exception:
     sys.exit(0)
@@ -89,6 +109,5 @@ if matches:
     print(f"[antigen-matcher] Moeglicher Treffer ({top['score']}% Match, Severity: {top['severity']}): {top['symptom']}", file=sys.stderr)
     print(f"  Bekannter Fix: {top['fix']}", file=sys.stderr)
 PYEOF
-)
 
 exit 0

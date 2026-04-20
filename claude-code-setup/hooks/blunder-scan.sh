@@ -21,7 +21,7 @@ if [ -z "$repo_root" ]; then
     echo "[blunder-scan] Kein Git-Repository — uebersprungen."
     exit 0
 fi
-cd "$repo_root"
+cd "$repo_root" || { echo "[blunder-scan] cd zum Repo-Root fehlgeschlagen"; exit 0; }
 
 # 2. Staged Diff holen
 diff_stat=$(git diff --cached --stat 2>/dev/null)

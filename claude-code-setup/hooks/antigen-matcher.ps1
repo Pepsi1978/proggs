@@ -26,18 +26,25 @@ try { $stdin = [Console]::In.ReadToEnd() } catch { exit 0 }
 if (-not $stdin -or $stdin.Trim() -eq "") { exit 0 }
 
 try {
-    $input = $stdin | ConvertFrom-Json -ErrorAction Stop
+    # WICHTIG: Variable heisst $parsed — NICHT $input, da letzteres eine
+    # PowerShell-Automatic-Variable ist. Bei pwsh -File wird stdin
+    # automatisch in $input gepipt und das kollidiert mit der
+    # [Console]::In.ReadToEnd()-Logik oben (konsumiert den Pipe-Buffer).
+    # Bug aus Loop 2 Audit 2026-04-20 gefixt.
+    $parsed = $stdin | ConvertFrom-Json -ErrorAction Stop
 } catch {
     exit 0
 }
 
 # Extract tool command/path
-$toolName = $input.tool_name
-$toolInput = $input.tool_input
+$toolName = $parsed.tool_name
+$toolInput = $parsed.tool_input
 if (-not $toolName) { exit 0 }
 
-# Only scan risky tool types — Bash, Edit, Write (not Read/Grep/etc)
-$riskyTools = @('Bash', 'Edit', 'Write', 'NotebookEdit')
+# Only scan risky tool types — Bash, Edit, Write.
+# NotebookEdit absichtlich NICHT dabei: dessen Input-Shape (new_source, cell_type)
+# passt nicht zum Haystack-Bau und wuerde silent empty haystack produzieren.
+$riskyTools = @('Bash', 'Edit', 'Write')
 if ($toolName -notin $riskyTools) { exit 0 }
 
 # Find bug-cases.jsonl
@@ -53,8 +60,12 @@ if ($toolName -eq 'Bash') {
 }
 if ([string]::IsNullOrWhiteSpace($haystack)) { exit 0 }
 
-# Load bug-cases (first 100 entries for speed)
-$matches = @()
+# Load bug-cases (first 100 entries for speed).
+# WICHTIG: Variable heisst $foundBugs — NICHT $matches, da letzteres eine
+# PowerShell-Automatic-Variable ist die vom -match Operator ueberschrieben wird.
+# Bug aus Loop 2 Audit 2026-04-20 gefixt.
+# Zusatz: ArrayList statt += Array um O(n^2)-Performance zu vermeiden.
+$foundBugs = [System.Collections.ArrayList]::new()
 try {
     $bugs = Get-Content $bugCasesPath -ErrorAction Stop | Select-Object -First 100
     foreach ($line in $bugs) {
@@ -88,21 +99,21 @@ try {
             }
         }
 
-        # Match threshold: >= 60% of fingerprint hits
+        # Match threshold: >= 60% of fingerprint hits (min 3 fingerprint points)
         if ($fingerprintTotal -ge 3 -and ($fingerprintHits / $fingerprintTotal) -ge 0.6) {
-            $matches += @{
+            [void]$foundBugs.Add([pscustomobject]@{
                 symptom = $bug.symptom
                 fix = $bug.fix
                 severity = $bug.severity
                 score = [math]::Round(($fingerprintHits / $fingerprintTotal) * 100)
-            }
+            })
         }
     }
 } catch { exit 0 }
 
 # Report top match (at most 1 warning per invocation to avoid spam)
-if ($matches.Count -gt 0) {
-    $top = $matches | Sort-Object -Property score -Descending | Select-Object -First 1
+if ($foundBugs.Count -gt 0) {
+    $top = $foundBugs | Sort-Object -Property score -Descending | Select-Object -First 1
     $msg = "[antigen-matcher] Moeglicher Treffer ($($top.score)% Match, Severity: $($top.severity)): $($top.symptom)"
     $fixMsg = "  Bekannter Fix: $($top.fix)"
     [Console]::Error.WriteLine($msg)
