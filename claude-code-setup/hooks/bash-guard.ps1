@@ -58,6 +58,8 @@ foreach ($pattern in $dangerous) {
             $entry = "### $(Get-Date -Format 'yyyy-MM-dd HH:mm') — Hook: bash-guard.ps1 — Befehl blockiert: $pattern"
             Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
         } catch { }
+        $msg = "bash-guard: BLOCKIERT — gefaehrlicher Befehl erkannt (Pattern: $pattern). Bitte sichereren Befehl verwenden."
+        [Console]::Error.WriteLine($msg)
         @{ error = "BLOCKED: Dangerous command — $pattern" } | ConvertTo-Json -Compress | Write-Output
         exit 2
     }

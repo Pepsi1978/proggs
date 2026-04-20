@@ -132,6 +132,9 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-18 10:30 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
 ### [2026-04-18 10:44] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-04-18 10:49 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
+### 2026-04-20 09:42 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
+### 2026-04-20 09:42 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
+### 2026-04-20 09:52 — Hook: bash-guard.ps1 — Befehl blockiert: (?i)DROP\s+TABLE
 ---
 
 ## Systemzustand (aktuell)

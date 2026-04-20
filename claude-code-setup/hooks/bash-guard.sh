@@ -47,6 +47,7 @@ check_dangerous() {
 
     for pattern in "${patterns[@]}"; do
         if echo "$cmd" | grep -qiE "$pattern" 2>/dev/null; then
+            echo "bash-guard: BLOCKIERT — gefaehrlicher Befehl erkannt (Pattern: $pattern). Bitte sichereren Befehl verwenden." >&2
             echo "{\"error\":\"BLOCKED: Dangerous command — $pattern\"}"
             exit 2
         fi
