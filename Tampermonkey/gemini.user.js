@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gemini V.1.6.0
 // @namespace    https://gemini.google.com/
-// @version      1.6.0
+// @version      1.6.1
 // @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/gemini.user.js
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/gemini.user.js
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf Gemini Web. Mic-Button fest unten rechts. Auto-Restart bei Speech-Ende (auch bei Pausen). Schreibt ins zuletzt fokussierte Eingabefeld. Mit Output-Preview.
@@ -1423,9 +1423,10 @@ Nutze die über Frank gespeicherten Informationen und Erinnerungen (Bio, Ziele, 
 primären Bezugsrahmen für diese Aufgabe. Keine zusätzlichen Kontextabfragen; verwende vorhandenes Wissen.
 
 Format:
-Strikte Ausgabestruktur „Einleitung – Hauptteil – Zusammenfassung“. Fachbegriffe sofort kurz erklären (in Klammern); Erläutere alle Zusammenhänge sämtlicher Faktoren sehr genau, damit Frank alle Zusammenhänge (wie, warum etwas so ist) genaustens versteht.
-Abkürzungen bei erster Nennung ausschreiben; logisch, faktenbasiert, umfassend, nachvollziehbar. Benutze gegeben falls auch Symbole und Smilies, große Überschriften, Tabelle zu besseren optischen Gliederung.
-Mindestwortanzahl: 2000, Maximale Wortanzalhl: 10000, Entscheidend ist, dass die Aufgabe/Frage sehr ausführlich erledigt/beantwortet wird.
+Ausgabestruktur: „Einleitung – Hauptteil – Erkenntnisse“.
+Fachbegriffe/Fremdwörter bei Erstnennung sofort kurz erklären in (Klammern).
+Abkürzungen bei Erstnennung ausschreiben und kurz erklären in (Klammern) Der Textaufbau ist logisch, faktenbasiert, umfassend, nachvollziehbar. Keine Stichpunkte; Tabellen und andere stilistische Illustrationen, wenn sie die Verständlichkeit damit verbessern. Der letzte Teil fasst alle Erkenntnisse aus dem Hauptteil der Wichtigkeit her nach zusammen, mit klaren Überschriften. Jede Erkenntnis selber hat minimal 2, maximal 5 Zeilen.  
+Mindestwortanzahl: so viele wie nötig, um die Frage ausführlich zu beantworten, Maximale Wortanzahl: 10000, Entscheidend ist, dass die Frage sehr ausführlich beantwortet wird.
 
 Ton:
 Wissenschaftlich-professionell, präzise, didaktisch klar, ausführlich, ohne metasprachliche Hinweise oder Floskeln, leicht verständlich.
@@ -1458,14 +1459,10 @@ Kontext:
 Kein weiterer Kontext außer dem Inhalt der Aufgabe. Keine zusätzlichen Kontextabfragen.
 
 Format:
-Strikte Ausgabestruktur „Einleitung – Hauptteil – Erkenntnisse“.
-Fachbegriffe sofort kurz erklären (in Klammern).
-Abkürzungen bei erster Nennung ausschreiben.
-Logisch, faktenbasiert, umfassend, nachvollziehbar.
-Keine Stichpunkte; Tabellen nur, wenn sie die Verständlichkeit klar verbessern.
-Der letzte Teil fasst alle Erkenntnisse aus dem Hauptteil der Wichtigkeit her nach
-zusammen, mit klaren Überschriften und pro Erkenntnis. Jede Erkenntnis selber hat minimal 2, maximal 5 Zeilen.  
-Mindestwortanzahl: 2000, Maximale Wortanzahl: 10000, Entscheidend ist, dass die Aufgabe sehr ausführlich erledigt/beantwortet wird.
+Ausgabestruktur: „Einleitung – Hauptteil – Erkenntnisse“.
+Fachbegriffe/Fremdwörter bei Erstnennung sofort kurz erklären in (Klammern).
+Abkürzungen bei Erstnennung ausschreiben und kurz erklären in (Klammern) Der Textaufbau ist logisch, faktenbasiert, umfassend, nachvollziehbar. Keine Stichpunkte; Tabellen und andere stilistische Illustrationen, wenn sie die Verständlichkeit damit verbessern. Der letzte Teil fasst alle Erkenntnisse aus dem Hauptteil der Wichtigkeit her nach zusammen, mit klaren Überschriften. Jede Erkenntnis selber hat minimal 2, maximal 5 Zeilen.  
+Mindestwortanzahl: so viele wie nötig, um die Frage ausführlich zu beantworten, Maximale Wortanzahl: 10000, Entscheidend ist, dass die Frage sehr ausführlich beantwortet wird.
 
 Ton:
 Wissenschaftlich-professionell, klar und präzise; sehr ausführlich, didaktisch verständlich ohne Floskeln.
