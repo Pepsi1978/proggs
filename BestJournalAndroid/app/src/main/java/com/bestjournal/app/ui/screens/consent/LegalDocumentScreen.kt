@@ -86,7 +86,7 @@ fun LegalDocumentScreen(document: LegalDocument, onBack: () -> Unit) {
             IconButton(onClick = onBack) {
                 Icon(
                     Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Zurück",
+                    contentDescription = stringResource(com.bestjournal.app.R.string.action_back),
                     tint = LegalAccent,
                 )
             }
