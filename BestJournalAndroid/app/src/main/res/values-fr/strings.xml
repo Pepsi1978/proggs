@@ -1069,4 +1069,68 @@
     <string name="profile_style_coach">\n- Écris dans le style d\'un accompagnateur d\'objectifs motivant, montre les progrès sur les objectifs personnels et encourage à continuer</string>
     <string name="profile_style_custom">\n- Rédige la rétrospective avec le centre d\'intérêt personnel suivant de l\'utilisateur\u00A0: \"%1$s\"</string>
 
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">Confidentialité et consentement</string>
+    <string name="consent_intro">Ton journal intime est un espace personnel, et nous le respectons. Tu vois ici en toute transparence comment Best Journal gère tes données.</string>
+    <string name="consent_card1_title">Stockage local</string>
+    <string name="consent_card1_body">Tes entrées restent sur ton appareil.</string>
+    <string name="consent_card2_title">Fonctions IA (États-Unis)</string>
+    <string name="consent_card2_body">Tes textes peuvent être envoyés à Google Gemini, tes enregistrements vocaux à Groq et les textes à lire à Microsoft Edge aux États-Unis (cadre EU-US Data Privacy Framework + clauses contractuelles types).</string>
+    <string name="consent_card3_title">Statistiques anonymes</string>
+    <string name="consent_card3_body">Firebase Analytics, en option, modifiable à tout moment dans les paramètres.</string>
+    <string name="consent_links_header">Nos documents juridiques\u00A0:</string>
+    <string name="consent_accept_all">Accepter et commencer</string>
+    <string name="consent_disable_stats">Désactiver les statistiques et continuer</string>
+    <string name="consent_confirmation">En appuyant sur «\u00A0Accepter et commencer\u00A0», tu confirmes avoir lu la politique de confidentialité, les conditions d\'utilisation et les mentions légales, et tu acceptes le traitement des données décrit. Tu peux modifier ta décision à tout moment dans les paramètres.</string>
+
+    <string name="privacy_gate_groq_title">Envoyer l\'enregistrement vocal à Groq\u202F?</string>
+    <string name="privacy_gate_groq_body">Pour la transcription cloud, ton enregistrement vocal est envoyé chiffré à Groq, Inc. (Mountain View, États-Unis) et y est converti en texte. Le fichier audio est supprimé après traitement et n\'est pas utilisé pour l\'entraînement.\n\nAlternative\u00A0: utilise la transcription locale sur l\'appareil (hors ligne, aucun transfert de données), réglable dans Paramètres → IA.</string>
+    <string name="privacy_gate_groq_accept">Accepter et envoyer</string>
+    <string name="privacy_gate_groq_local">Transcrire localement à la place</string>
+
+    <string name="privacy_gate_gemini_title">Envoyer le texte à Google Gemini\u202F?</string>
+    <string name="privacy_gate_gemini_body">Pour les fonctions IA (tableau de bord, résumés, rétrospectives, amélioration de texte), des extraits de tes entrées sont envoyés chiffrés à Google Gemini (Firebase AI, États-Unis). Base juridique\u00A0: cadre EU-US Data Privacy Framework + clauses contractuelles types. Les requêtes sont supprimées après traitement et ne sont pas utilisées pour l\'entraînement.</string>
+    <string name="privacy_gate_gemini_accept">Accepter et envoyer</string>
+    <string name="privacy_gate_gemini_cancel">Annuler</string>
+
+    <string name="privacy_gate_tts_title">Envoyer le texte à Microsoft\u202F?</string>
+    <string name="privacy_gate_tts_body">Pour la lecture à voix haute, le texte à lire est envoyé chiffré à Microsoft Bing Speech (États-Unis) et renvoyé sous forme audio. Base juridique\u00A0: cadre EU-US Data Privacy Framework + clauses contractuelles types.\n\nAlternative\u00A0: utilise la synthèse vocale hors ligne native d\'Android.</string>
+    <string name="privacy_gate_tts_accept">Accepter et lire</string>
+    <string name="privacy_gate_tts_cancel">Annuler</string>
+
+    <string name="settings_privacy_header">Confidentialité</string>
+    <string name="settings_analytics_title">Statistiques anonymes</string>
+    <string name="settings_analytics_subtitle">Firebase Analytics pour l\'analyse des erreurs et l\'amélioration du produit</string>
+
+    <string name="settings_delete_account_title">Supprimer le compte et les données</string>
+    <string name="settings_delete_account_subtitle">Supprime définitivement toutes les données locales, ton compte Google et la sauvegarde Drive</string>
+    <string name="settings_delete_account_confirm_title">Supprimer définitivement le compte\u202F?</string>
+    <string name="settings_delete_account_confirm_body">Cette action est irréversible et supprime\u00A0:\n\n• Toutes les entrées, photos et vidéos locales\n• Ton compte Firebase\n• La sauvegarde Google Drive de l\'application\n\nL\'application redémarrera comme une nouvelle installation.</string>
+    <string name="settings_delete_account_cancel">Annuler</string>
+    <string name="settings_delete_account_confirm">Oui, tout supprimer</string>
+
+    <string name="settings_report_ai_title">Signaler une réponse IA</string>
+    <string name="settings_report_ai_subtitle">Sortie IA inappropriée ou erronée</string>
+    <string name="settings_report_ai_confirm_title">Ouvrir un e-mail au support\u202F?</string>
+    <string name="settings_report_ai_confirm_body">Ton application de messagerie s\'ouvre avec un message préparé pour dev.app.support@gmail.com. Tu peux compléter la description avant l\'envoi. Nous répondons sous 24 heures les jours ouvrés.\n\nMerci de signaler ici\u00A0: les sorties IA inappropriées, offensantes, fausses ou trompeuses provenant du tableau de bord, des résumés, des rétrospectives ou de l\'amélioration de texte.</string>
+    <string name="settings_report_ai_confirm">Créer le signalement</string>
+    <string name="settings_report_ai_cancel">Annuler</string>
+    <string name="settings_report_ai_no_email">Aucune application de messagerie trouvée. Merci d\'envoyer le signalement à dev.app.support@gmail.com.</string>
+    <string name="settings_report_ai_subject">Best Journal\u00A0: réponse IA inappropriée</string>
+    <string name="settings_report_ai_body">Bonjour,\n\nje souhaite signaler une réponse IA inappropriée ou erronée dans Best Journal.\n\nDescription du problème\u00A0:\n[À compléter]\n\nContexte (quelle fonction, quelle saisie)\u00A0:\n[À compléter]\n\nMerci.</string>
+
+    <string name="settings_revoke_title">Rétractation</string>
+    <string name="settings_revoke_subtitle">Achat Premium</string>
+    <string name="settings_revoke_confirm_title">Ouvrir un e-mail au support\u202F?</string>
+    <string name="settings_revoke_confirm_body">Ton application de messagerie s\'ouvre avec un message préparé pour dev.app.support@gmail.com. Nous répondons sous 24 heures les jours ouvrés.\n\nLes informations complètes sur le droit de rétractation (directive UE 2011/83) se trouvent dans les conditions d\'utilisation (§ 16). Pour les abonnements, résilie également via Google Play → Abonnements.</string>
+    <string name="settings_revoke_cancel">Annuler</string>
+    <string name="settings_revoke_confirm">Créer la rétractation</string>
+    <string name="settings_revoke_no_email">Aucune application de messagerie trouvée. Merci d\'envoyer la rétractation à dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_email_subject">Rétractation contrat Premium Best Journal</string>
+    <string name="settings_revoke_email_body">Bonjour,\n\nje notifie par la présente ma rétractation du contrat portant sur les fonctions Premium de Best Journal.\n\nCommandé le\u00A0: [à compléter]\nE-mail du compte Google\u00A0: [à compléter si différent de l\'expéditeur]\nNom\u00A0: [à compléter]\n\nDate\u00A0: [aujourd\'hui]</string>
+
+
 </resources>
