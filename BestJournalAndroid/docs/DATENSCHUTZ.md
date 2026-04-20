@@ -345,7 +345,7 @@ ungefähre Region (Land), Firebase Instance ID, **IP-Adresse (gekürzt)**,
 **Android Werbe-ID (AAID)**, Ereignisdaten (z. B. Eintrag erstellt, Dashboard geöffnet,
 Premium-Kauf, Fehler in der Sprachausgabe).
 
-**Rechtsgrundlage:** Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TTDSG).
+**Rechtsgrundlage:** Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG).
 
 **Wie die Einwilligung funktioniert:**
 - Beim **ersten App-Start** erscheint vor dem Onboarding ein Datenschutz-Bildschirm.

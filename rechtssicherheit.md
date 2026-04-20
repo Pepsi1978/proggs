@@ -1,0 +1,227 @@
+# rechtssicherheit.md — Wissensbasis fuer Android-App-Rechtsprüfungen
+
+**Letzte Recherche:** 2026-04-20
+**Naechste Pflicht-Pruefung:** 2026-07-20 (+90 Tage)
+
+---
+
+## Quick-Reference: Was sich 2024/2025 geändert hat
+
+| Altes Kuerzel | Neues Kuerzel | Seit |
+|--------------|---------------|------|
+| TTDSG | **TDDDG** (Telekommunikation-Digitale-Dienste-Datenschutz-Gesetz) | 14.05.2024 |
+| TMG | **DDG** (Digitale-Dienste-Gesetz) | 14.05.2024 |
+
+**Aktion:** Alle Rechtstexte muessen auf TDDDG/DDG umgestellt sein. Veraltete Verweise sind abmahnbar.
+
+---
+
+## Pflichtangaben-Matrix (Master)
+
+### Datenschutzerklaerung EU/DSGVO (Art. 13 DSGVO)
+
+Alle 14 Pflichtangaben (Abs. 1 + 2):
+1. Identitaet und Kontaktdaten des Verantwortlichen
+2. Datenschutzbeauftragter (oder Hinweis dass nicht erforderlich)
+3. Verarbeitungszwecke + Rechtsgrundlagen (Art. 6 Abs. 1 lit. a-f)
+4. Berechtigte Interessen + Interessenabwaegung (bei lit. f)
+5. Empfaenger/Kategorien von Empfaengern
+6. Drittlandubertragungen + Schutzgarantien (Art. 46 DSGVO)
+7. Speicherdauer oder Kriterien
+8. Betroffenenrechte (Auskunft, Berichtigung, Loeschung, Einschraenkung)
+9. Widerspruchsrecht + Datenportabilitaet
+10. Widerrufsrecht bei Einwilligung (Art. 7 Abs. 3)
+11. Beschwerderecht bei Aufsichtsbehoerde
+12. Pflicht zur Bereitstellung
+13. Folgen bei Nichtbereitstellung
+14. Automatisierte Entscheidungsfindung (Art. 22)
+
+**BGH 27.03.2025 (I ZR 222/19 + 223/19):** DSGVO-Verstoesse sind UWG-Verstoesse.
+Wettbewerber koennen ueber § 8 Abs. 3 Nr. 1 UWG abmahnen. Auch kleine Formfehler.
+
+### Impressum § 5 DDG
+
+| # | Angabe | Details |
+|---|--------|---------|
+| 1 | Vollstaendige ladungsfaehige Anschrift | Kein Postfach, Strasse + Hausnummer + PLZ + Ort |
+| 2 | Name/Firma | Bei juristischen Personen: Rechtsform + Vertretungsberechtigter |
+| 3 | E-Mail-Adresse | Pflicht |
+| 4 | Schnelle elektronische Kontaktmoeglichkeit | Telefon ODER Kontaktformular ODER Chat/Antwortzeit-Zusage |
+| 5 | Registereintragung | Handelsregister + Nummer (falls eingetragen) |
+| 6 | Umsatzsteuer-ID | Falls vorhanden, sonst Kleinunternehmer-Hinweis (§ 19 UStG) |
+| 7 | Wirtschafts-ID | Falls zugeteilt |
+| 8 | Aufsichtsbehoerde | Bei reglementierten Taetigkeiten |
+| 9 | Berufsrechtliche Angaben | Bei freien Berufen |
+
+**c/o-Adresse bei Impressumservice:** Rechtssicher, wenn Empfangsvollmacht existiert
+(BGH 07.07.2023, OLG Hamm 07.05.2015). Serioese Anbieter: Postflex, anschrift.net,
+deinimpressum.com.
+
+### DSA Kontaktstelle (Art. 11 DSA, seit 17.02.2024)
+
+Auch fuer einfache Apps mit User-Content empfohlen:
+- Kontaktstelle fuer Behoerden
+- Kontaktstelle fuer Nutzer
+- Kommunikationssprache angeben
+- Kleinstunternehmen (<10 MA, <2 Mio EUR) befreit von Transparenzbericht-Pflicht (Art. 15)
+
+### Widerrufsbelehrung (EU Verbrauchersachen)
+
+- Muster: **Anlage 1 zu Art. 246a § 1 Abs. 2 EGBGB**
+- Muster-Widerrufsformular: **Anlage 2**
+- Widerrufsfrist: 14 Tage ab Vertragsabschluss
+- Erloeschen bei digitalen Inhalten: § 356 Abs. 5 BGB (ausdrueckliche Zustimmung + Kenntnis des Erloeschens)
+- **Widerrufsbutton ab 19.06.2026 Pflicht** (§ 356a BGB neu) - zweistufig, sichtbar, dauerhaft zugaenglich
+- BGH 07.01.2026: AGB muessen zur Muster-Widerrufsbelehrung passen
+
+### AGB-Recht
+
+- **§ 307 BGB (Generalklausel)**: Unangemessene Benachteiligung unwirksam
+- **§ 308 Nr. 5 BGB (Aenderungsklauseln)**: Mind. 6 Wochen Widerspruchsfrist + Hinweis auf Zustimmungsfiktion
+- **§ 309 Nr. 7 BGB (Haftung)**: Kein Ausschluss bei Koerper/Gesundheit/Vorsatz/grobe Fahrlaessigkeit
+- **BGH III ZR 59/24 (10.07.2025)**: Dynamische AGB-Verweise ohne Versionsangabe unwirksam. AGB muessen fixiert oder statisch mit Version eingebunden sein.
+
+### TDDDG § 25 (Consent fuer Endgeraete-Speicherzugriff)
+
+Einwilligungspflichtig:
+- Android Advertising ID (AAID)
+- Firebase Installation IDs (FIDs)
+- Firebase Analytics App Instance IDs
+- Persistente Gerateidentifikatoren
+
+Nicht einwilligungspflichtig (technisch notwendig, § 25 Abs. 2):
+- Session-IDs fuer Grundfunktion
+- Sicherheitstoken ohne Tracking-Funktion
+
+**BGH Planet49 (I ZR 7/16):** Vorausgewaehlt Ankreuzfeld = keine Einwilligung.
+Aktive Opt-In Pflicht.
+
+---
+
+## Sprachmatrix (Landessprache-Pflicht bei Rechtstexten)
+
+| Markt | Pflichtsprache | Reicht DSGVO-DE? | Quelle |
+|-------|----------------|------------------|--------|
+| DE, AT, CH | Deutsch | Ja, Basis | nationales Recht |
+| EU gesamt | DSGVO-Landessprache empfohlen, Englisch meist OK | Ja | DSGVO |
+| UK | Englisch | Ja, mit ICO-Verweis | UK GDPR |
+| USA | Englisch | Ja, mit CCPA/State-Laws-Anhang | CCPA |
+| Brasilien | **Portugiesisch (Pflicht)** | Nein | LGPD |
+| Suedkorea | **Koreanisch (Pflicht)** | Nein | PIPA (DeepSeek-Urteil) |
+| Tuerkei | **Tuerkisch (faktisch Pflicht)** | Nein + VERBIS | KVKK Art. 10 |
+| Saudi-Arabien | **Arabisch (faktisch Pflicht)** | Nein + SDAIA | PDPL |
+| Mexiko | **Spanisch (Aviso de Privacidad Pflicht)** | Nein | LFPDPPP |
+| UAE | Arabisch (faktisch erwartet) | Weitgehend | Federal Decree-Law 45/2021 |
+| Japan | Japanisch (faktisch erwartet) | Nein (eigene APPI-Logik) | APPI |
+| Kanada | Englisch (Quebec: Franzoesisch!) | Ja + Quebec-Sonderheiten | PIPEDA/Law 25 |
+| Australien | Englisch | Ja | Privacy Act 1988 |
+| Indien | Englisch reicht (Hindi optional) | Uebergangsfrist bis 13.05.2027 | DPDP Act |
+
+**Fazit Solo-Entwickler:** Bei weltweitem Rollout sind mindestens Deutsch + Englisch
+faktisch Pflicht. Portugiesisch, Koreanisch, Tuerkisch, Arabisch, Spanisch sind harte
+Sprachanforderungen in den jeweiligen Laendern, was in der Praxis oft durch Lander-
+Ausschluss oder bewusste Akzeptanz des Restrisikos adressiert wird.
+
+---
+
+## Google Play Store Pflichten 2026
+
+1. **Data Safety Form** — vollstaendig, konsistent mit DSE
+2. **Privacy Policy URL** — oeffentlich, kein Login, ohne Fehler, App-spezifisch
+3. **Account Deletion** — In-App + Web-Link (beide Pflicht seit Mai 2024)
+4. **Target SDK 35 (Android 15)** — Pflicht fuer neue Apps und Updates seit August 2025
+5. **Developer-Verifikation** — Personalausweis/DUNS seit Sept. 2023
+6. **Permissions** — besondere Begruendung fuer CAMERA, RECORD_AUDIO, LOCATION, MEDIA
+7. **AI-Generated Content Policy** (2024+) — Moderation + Report-Button falls KI-generierter Output fuer Nutzer
+
+---
+
+## Aktuelle Abmahn-Hotspots (Stand April 2026)
+
+| Thema | Abmahnrisiko | Details |
+|-------|--------------|---------|
+| Veraltete Gesetzes-Kuerzel (TTDSG, TMG) | **Mittel** | Leicht zu beheben, aber klare Formulierung erwartet |
+| Fehlerhafte Cookie-Banner/Consent | **Sehr hoch** | § 25 TDDDG, seit BGH 03/2025 Mitbewerber-abmahnbar |
+| Unvollstaendige Art. 13 DSGVO | **Hoch** | Kleine Formfehler genuegen |
+| Fehlendes Impressum / fehlende Zweit-Kontaktmoeglichkeit | **Mittel** | § 5 DDG Art. 1 Nr. 2 |
+| Dynamische AGB-Verweise (BGH 07/2025) | **Neu, mittel** | Versionsfixierung Pflicht |
+| KI-Kennzeichnung (AI Act Art. 50) | **Steigend, ab 08/2026** | Erste Abmahnwellen Herbst 2026 erwartet |
+| Widerrufsbutton (ab 06/2026) | **Neu, aufkommend** | § 356a BGB |
+| Fehlerhafte Widerrufsbelehrung bei Abos | **Hoch** | Klassisches Abmahnthema |
+
+---
+
+## CCPA/Internationale Risiken fuer Solo-Entwickler
+
+| Gesetz | Schwellen | Risiko Solo-Entwickler |
+|--------|-----------|------------------------|
+| CCPA/CPRA (CA) | $26.6M Umsatz / 100K CA-Nutzer / 50% Umsatz aus Datenverkauf | **Sehr niedrig** (Schwellen nicht erreicht) |
+| Texas TDPSA | **Keine Schwelle** | **Mittel** - gilt bei jedem texanischen Nutzer |
+| Oregon OCPA | 100K OR-Nutzer | Niedrig |
+| UK GDPR | Alle UK-Nutzer | Niedrig (ICO-Beschwerde moeglich) |
+| Quebec Law 25 | Alle Quebec-Nutzer | Niedrig-Mittel (25 Mio CAD Strafe) |
+| PIPEDA (CA Bund) | Kommerzielle Aktivitaet | Niedrig |
+| Australian Privacy Act | Small Business Exemption bis 07/2026 | Steigend |
+| LGPD (BR) | Alle BR-Nutzer | Niedrig, Enforcement selten |
+| PIPA (KR) | Alle KR-Nutzer | Mittel (Koreanisch + Domestic Rep) |
+| APPI (JP) | Alle JP-Nutzer | Niedrig-Mittel |
+
+**Fuer deutsche Solo-Entwickler:** Hauptrisiko bleibt DSGVO + UWG-Abmahnung durch
+deutsche Wettbewerber. Internationale Enforcement-Aktionen gegen Solo-Entwickler ohne
+Praesenz im Zielland sind praktisch nahezu null.
+
+---
+
+## Geprufte Apps-Log
+
+| Datum | App | Gesamtstatus | Kritisch | Hoch | Befunde |
+|-------|-----|-------------|----------|------|---------|
+| 2026-04-20 | BestJournalAndroid | Release-faehig nach Fixes | 0 | 1 | TTDSG zu TDDDG (behoben), Zweit-Kontakt (behoben), DSA-Kontaktstelle (behoben) |
+
+---
+
+## Quellen-Register (Stand April 2026)
+
+| URL | Thema | Abrufdatum |
+|-----|-------|------------|
+| https://dsgvo-gesetz.de/art-13-dsgvo/ | Art. 13 DSGVO | 2026-04-20 |
+| https://www.gesetze-im-internet.de/ddg/__5.html | § 5 DDG Impressum | 2026-04-20 |
+| https://www.it-recht-kanzlei.de/tmg-ttdsg-ausser-kraft-impressum-datenschutz.html | DDG ersetzt TMG | 2026-04-20 |
+| https://www.bundesgerichtshof.de/SharedDocs/Pressemitteilungen/DE/2025/2025059.html | BGH DSGVO abmahnbar 03/2025 | 2026-04-20 |
+| https://www.anwalt.de/rechtstipps/verweis-auf-online-agb-laut-bgh-unzulaessig-bgh-urteil-vom-10-07-2025-iii-zr-59-24-257243.html | BGH dynamische AGB 07/2025 | 2026-04-20 |
+| https://www.btl-recht.de/blog/pflicht-zum-widerrufsbutton-ab-2026/ | § 356a BGB Widerrufsbutton | 2026-04-20 |
+| https://ki-kanzlei.de/kennzeichnungspflichten-fuer-ki-inhalte | AI Act Art. 50 | 2026-04-20 |
+| https://ico.org.uk | UK ICO | 2026-04-20 |
+| https://oag.ca.gov/privacy/ccpa | CCPA/CPRA | 2026-04-20 |
+| https://support.google.com/googleplay/android-developer/answer/10787469 | Google Play Data Safety | 2026-04-20 |
+
+---
+
+## Muster-Klauseln (Sammlung)
+
+### Drittlandubermittlung USA (EU-US DPF + SCC)
+
+> Verarbeitung erfolgt in den USA auf Grundlage des EU-US Data Privacy Framework
+> (Angemessenheitsbeschluss der EU-Kommission vom 10. Juli 2023) sowie von
+> EU-Standardvertragsklauseln (Art. 46 DSGVO).
+
+### Interessenabwaegung bei lit. f
+
+> Das berechtigte Interesse an [Zweck] ueberwiegt die minimale Beeintraechtigung
+> des Nutzers, da [kurze Begruendung]. Eine datenschutzschonendere Alternative
+> ist technisch nicht verfuegbar.
+
+### Zweit-Kontaktmoeglichkeit nach § 5 Abs. 1 Nr. 2 DDG
+
+> Schnelle elektronische Kontaktaufnahme: Zusaetzlich zur E-Mail bemuehen wir uns,
+> Anfragen innerhalb von 24 Stunden an Werktagen zu beantworten.
+
+### DSA-Kontaktstelle Art. 11
+
+> Fuer Behoerden und Nutzer-Anfragen nach dem Digital Services Act ist folgende
+> Kontaktstelle erreichbar: [E-Mail]. Kommunikationssprache: Deutsch und Englisch.
+
+---
+
+**Disclaimer:** Diese Wissensbasis ist keine anwaltliche Beratung. Sie sammelt oeffentlich
+verfuegbare Informationen. Vor dem Release: Fachanwalt konsultieren.

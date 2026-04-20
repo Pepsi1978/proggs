@@ -10,7 +10,19 @@ Deutschland
 
 ## Kontakt
 
-E-Mail: dev.app.support@gmail.com
+**E-Mail:** dev.app.support@gmail.com
+
+**Schnelle elektronische Kontaktaufnahme (§ 5 Abs. 1 Nr. 2 DDG):** Zusätzlich zur
+E-Mail bemühen wir uns, Anfragen innerhalb von 24 Stunden an Werktagen zu beantworten.
+Für dringende Anliegen empfehlen wir, die E-Mail im Betreff mit „DRINGEND" zu kennzeichnen.
+
+## Kontaktstelle nach Art. 11 Digital Services Act (DSA)
+
+Für Behörden und Nutzer-Anfragen nach dem Digital Services Act (Verordnung (EU)
+2022/2065) ist folgende Kontaktstelle erreichbar:
+
+**E-Mail:** dev.app.support@gmail.com
+**Kommunikationssprache:** Deutsch und Englisch
 
 ## Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV
 
