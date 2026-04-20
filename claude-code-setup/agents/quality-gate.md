@@ -32,10 +32,29 @@ Wenn mehr als 50 geaenderte Dateien zu pruefen sind:
 - Aufteilen: Jeder Sub-Agent bekommt max. 20 Dateien.
 - Ggf. mehrere Runden spawnen statt einen Agent mit 100+ Dateien zu ueberlasten.
 
+## Complexity Classification + When-To-Verify (PFLICHT — arXiv 2504.01005)
+
+Forschung (COLM 2026): Bei festem Token-Budget zahlt sich Verifikation bei SCHWIERIGEN Aufgaben
+mehr aus als zusaetzliche Loesungsversuche. Klassifiziere JEDE Aenderung VOR dem Spawnen:
+
+| Komplexitaet | Kriterien | Strategie |
+|--------------|-----------|-----------|
+| **LOW** | <5 Dateien geaendert, 0 neue Abhaengigkeiten, keine DB/API-Aenderung | 3 parallele Sub-Agents, Standard-Tiefe, KEIN MAR |
+| **MEDIUM** | 5-15 Dateien ODER 1 neue Abhaengigkeit ODER 1 Schema-Aenderung | 3 parallele Sub-Agents + 1 MAR-Runde (Standard) |
+| **HIGH** | 15+ Dateien ODER mehrere Module ODER DB-Migration ODER Security-Layer | **1 tiefer Verifikations-Agent** (statt 3 oberflaechlicher) mit VOLLEM Kontext + MAR-Runde + Judge-Phase mit expliziter Review |
+
+**Warum:** Bei HIGH-Aufgaben produzieren 3 parallele Agents drei oberflaechliche Reviews.
+EIN Agent mit vollem Kontext + Judge-Review produziert tiefere Einsichten bei gleichem Token-Budget.
+
+**Klassifikation melden:** Im ersten Output-Block IMMER die erkannte Komplexitaet + gewaehlte
+Strategie nennen. Wenn die Klassifikation unklar ist (z.B. 4 Dateien aber kritische Infrastruktur):
+auf HIGH eskalieren statt auf LOW absteigen.
+
 ## Your Process
 
 1. **Understand the change**: Read the recently modified files (use `git diff` or file list from your prompt)
-2. **Spawn 3 agents IN PARALLEL** (one message, three Agent tool calls):
+2. **Classify complexity** (siehe oben) — bei HIGH: abweichende Sub-Agent-Strategie waehlen
+3. **Spawn 3 agents IN PARALLEL** (one message, three Agent tool calls) — bei HIGH nur 1 Deep-Verify-Agent:
 
 ```
 Agent 1 (tester): "Build and test the following changes: [files]. Run the appropriate build command and test suite. Report: build status, test results, any failures."

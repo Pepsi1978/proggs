@@ -19,7 +19,12 @@
       "Bash(cp ~/.claude/hooks/memory-watchdog.sh ~/proggs/claude-code-setup/hooks/memory-watchdog.sh)",
       "Bash(cp ~/.claude/hooks/writeback-enforcer.ps1 ~/proggs/claude-code-setup/hooks/writeback-enforcer.ps1)",
       "Bash(cp ~/.claude/hooks/writeback-enforcer.sh ~/proggs/claude-code-setup/hooks/writeback-enforcer.sh)",
-      "Bash(cp ~/.claude/rules/hook-input-validation.md ~/proggs/claude-code-setup/rules/hook-input-validation.md)"
+      "Bash(cp ~/.claude/rules/hook-input-validation.md ~/proggs/claude-code-setup/rules/hook-input-validation.md)",
+      "Bash(set -e)",
+      "Bash(cp ~/.claude/settings.json ~/proggs/claude-code-setup/settings-reference.json)",
+      "Bash(cp ~/.claude/agents/debugger.md ~/proggs/claude-code-setup/agents/debugger.md)",
+      "Bash(cp ~/.claude/agents/quality-gate.md ~/proggs/claude-code-setup/agents/quality-gate.md)",
+      "Bash(cp ~/.claude/agents/ui-polisher.md ~/proggs/claude-code-setup/agents/ui-polisher.md)"
     ]
   }
 }

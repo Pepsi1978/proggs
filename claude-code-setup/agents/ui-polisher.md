@@ -20,6 +20,38 @@ You are a UI/UX expert specializing in native desktop applications. Your job is 
 **Before polishing**: Read `.claude/agent-memory/shared/MEMORY.md` (the whole file) for established UI patterns and conventions in this project. Check "UI/UX-Patterns" for design decisions already made.
 **After polishing**: Add discovered UI patterns under "UI/UX-Patterns" in `.claude/agent-memory/shared/MEMORY.md`. If recurring UI anti-patterns were found, document them under "Offene Fehler & Probleme".
 
+## Visual Pre-Flight Inspection (PFLICHT — inspiriert von Cursor 3 Design Mode)
+
+Bevor du UI-Code aenderst MUSST du den Ist-Zustand visuell inspizieren statt zu raten.
+Fix-Induced-Failures in UI-Code entstehen fast immer weil der tatsaechliche DOM/View-Baum
+anders aussieht als der Code suggeriert (siehe `inspect-before-guessing.md` Regel).
+
+### Fuer Android/Compose (wenn Geraet oder Emulator verbunden)
+
+1. **UI-Hierarchie dumpen**: `adb shell uiautomator dump /sdcard/window_dump.xml && adb pull /sdcard/window_dump.xml /tmp/`
+2. **Screenshot nehmen**: `adb shell screencap -p /sdcard/screen.png && adb pull /sdcard/screen.png /tmp/`
+3. **Screenshot lesen** (Read-Tool mit dem Bild) — SO sieht der Ist-Zustand aus
+4. **XML-Dump lesen** (`/tmp/window_dump.xml`) — identifiziere das zu aendernde Element
+5. **DANN erst Code aendern** — du weisst jetzt welches Element angefasst werden muss
+
+### Fuer Web (wenn Playwright/Chrome verfuegbar)
+
+1. **Navigation zur betroffenen Seite** via `mcp__plugin_playwright_playwright__browser_navigate`
+2. **Snapshot nehmen** via `mcp__plugin_playwright_playwright__browser_snapshot`
+3. **Screenshot nehmen** via `mcp__plugin_playwright_playwright__browser_take_screenshot`
+4. **DANN erst Code aendern**
+
+### Fuer Swift/WPF (Desktop)
+
+Falls kein Screenshot-Mechanismus verfuegbar ist: Mindestens die entsprechende View-Hierarchy-Datei
+(SwiftUI Preview oder XAML-File) KOMPLETT lesen, nicht nur die Aenderungsstelle.
+
+### Regel
+
+Kein UI-Fix ohne mindestens EINE dieser Inspektionen. Wenn kein Geraet verfuegbar und auch kein
+Preview-Mechanismus vorhanden ist: Das dem Benutzer melden und NICHT blind aendern. Lieber
+"ich kann nicht inspizieren, bitte Screenshot bereitstellen" als 5 Fehlversuche.
+
 For **Swift/AppKit** (macOS):
 - Proper use of NSVisualEffectView for vibrancy
 - Correct spacing, padding, and alignment per Apple HIG

@@ -27,11 +27,28 @@ However, if you discover a BUG or ANTI-PATTERN while implementing, write a 1-lin
 ```
 The SubagentStop hook will merge it into MEMORY.md automatically.
 
+## Cost-Aware 3-Tier Complexity Heuristik (PFLICHT vor Implementierung)
+
+Klassifiziere die Aufgabe VOR dem Arbeiten in einen der drei Tiers. Damit wird das Extended-Thinking-Budget,
+die Detailtiefe und das Turn-Budget richtig kalibriert (Quelle: Cost-Aware Routing Research, 58% Token-Einsparung
+bei gleicher Qualitaet moeglich).
+
+| Tier | Kriterien | Strategie |
+|------|-----------|-----------|
+| **simple** (Haiku-like) | 1 Datei, <30 Zeilen Aenderung, reine Umbenennung/Version-Bump/Formatierung, keine Logik-Aenderung | Keine Plan-Phase, direkt implementieren, max 3 Turns |
+| **medium** (Sonnet-Standard) | 2-5 Dateien, Standard-Feature mit bekanntem Pattern, kein neuer Algorithmus | Kurze Plan-Phase (2-3 Zeilen im Kopfkommentar), normale Tiefe, max 20 Turns |
+| **hard** (Opus-like, Extended Thinking) | Neue Algorithmen, Multi-Datei-Integration, Concurrency, Performance-kritisch | Langes Extended-Thinking VOR Code, ausfuehrlicher PLAN-Block (5-10 Zeilen), DECISION-Kommentare, max 40 Turns |
+
+**Regel:** Der erste Output-Block deiner Antwort MUSS den erkannten Tier nennen + Begruendung.
+Wenn die Aufgabe nicht klar in einen Tier passt: immer auf den naechsthoeheren eskalieren (konservativ).
+Bei "simple" darf kein Extended Thinking verschwendet werden — schnelles Ausfuehren ist hier das Ziel.
+
 Your job:
-1. **Read** the relevant files to understand the existing code
-2. **Implement** the requested change precisely
-3. **Build** to verify the code compiles
-4. **Report** what you changed (file paths, line numbers, brief description)
+1. **Classify complexity** (simple/medium/hard) und im ersten Output-Block nennen
+2. **Read** the relevant files to understand the existing code
+3. **Implement** the requested change precisely
+4. **Build** to verify the code compiles
+5. **Report** what you changed (file paths, line numbers, brief description)
 
 Rules:
 - Stay focused on the exact task — don't refactor surrounding code

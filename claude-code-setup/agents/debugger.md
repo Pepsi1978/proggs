@@ -55,6 +55,46 @@ Bevor du eine Loesung vorschlaegst, strukturiere dein Denken EXPLIZIT:
 
 Ohne dieses Protokoll: KEIN Code-Fix. Das verhindert vorschnelle Schlussfolgerungen.
 
+## Fault-Localization-Context (PFLICHT vor jedem Fix — arXiv 2604.05481)
+
+Empirische Studie April 2026: Die Qualitaet des Kontexts hat GROESSEREN Einfluss auf den
+Fix-Erfolg als das verwendete Modell. Vor JEDEM Fix-Versuch MUSS der folgende Kontext-Block
+im Reasoning mitgegeben werden — in dieser exakten Reihenfolge:
+
+1. **Call-Stack / Trace**: Woher kommt der Aufruf? (letzte 5-10 Frames, nicht mehr)
+2. **Letzter gruener Zustand**: Wann hat es zuletzt funktioniert? (Commit-SHA oder Testlauf)
+3. **Betroffene Funktion (function-level Lokalisierung)**: Nicht File-Level, nicht Line-Level —
+   die EINE Funktion mit der hoechsten Wahrscheinlichkeit (siehe arXiv 2604.00167).
+4. **Eingaben zur fehlerhaften Funktion**: Konkrete Werte der Parameter beim Fehlschlag
+5. **Erwarteter vs. tatsaechlicher Rueckgabewert**
+
+**Warum:** Ohne diesen Kontext-Block raet der Agent statt zu diagnostizieren. Mit dem Block
+wird die Trefferquote laut Studie signifikant hoeher.
+
+**Regel:** Fehlt auch nur EINER der 5 Punkte → erst den fehlenden Kontext beschaffen, DANN
+erst das Semi-Formal Reasoning Protocol starten. Lieber 5 Minuten Kontext-Sammlung als
+30 Minuten Rateversuche.
+
+## KGCompass Pre-Debug-Recherche (bei unklarer Bug-Lokalisierung)
+
+Wenn die betroffene Funktion NICHT offensichtlich aus der Fehlermeldung ablesbar ist (89.7%
+der schwierigen Bugs laut arXiv 2503.21710), MUSS eine Graph-Navigation durchgefuehrt werden
+BEVOR Code geaendert wird:
+
+1. **Issue-Text als Query**: Fehlermeldung oder Bug-Beschreibung als Ausgangspunkt
+2. **Semantische Suche** (`search_code` MCP): Finde Dateien die konzeptuell zum Fehler passen
+3. **Call-Graph-Navigation** (Grep auf Aufrufstellen): Wer ruft die verdaechtigen Funktionen auf?
+4. **Issue-PR-Datei-Traversierung**: `git log --all --grep="[Keyword]"` fuer frueher gefixte aehnliche Bugs
+5. **Top-20-Funktionen auswaehlen** — nur diese in den Kontext holen, nicht mehr
+
+**Warum:** Blindes Datei-fuer-Datei-Lesen verbraucht 3-5x mehr Token als strukturierte
+Graph-Navigation. Studie: 58.3% SWE-bench Lite bei 0.20 USD pro Reparatur mit dieser Methode.
+
+**Wann aktivieren:**
+- Fehlermeldung nennt KEINE Datei (haeufig bei Runtime-Errors in generischen Utilities)
+- Erste Hypothesen widerlegt, kein klarer Kandidat
+- Ueber 5 Dateien stehen unter Verdacht → erst Graph, dann tiefere Analyse
+
 ## Semantische Code-Suche (BEVORZUGT bei Ursachenforschung)
 
 Wenn du verwandten Code oder aehnliche Patterns im Repo finden musst:
