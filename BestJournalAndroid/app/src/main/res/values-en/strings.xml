@@ -1037,6 +1037,11 @@
     <!-- Report AI Content (Google Play AI Policy 04/2024, in Settings → Privacy) -->
     <string name="settings_report_ai_title">Report AI output</string>
     <string name="settings_report_ai_subtitle">Inappropriate or incorrect AI response</string>
+    <string name="settings_report_ai_confirm_title">Open email to support?</string>
+    <string name="settings_report_ai_confirm_body">Your email app will open with a prepared message to dev.app.support@gmail.com. You can add details before sending. We respond within 24 hours on business days.\n\nUse this to report: inappropriate, offensive, incorrect or misleading AI output from the dashboard, summaries, reviews, or text improvement.</string>
+    <string name="settings_report_ai_confirm">Create report</string>
+    <string name="settings_report_ai_cancel">Cancel</string>
+    <string name="settings_report_ai_no_email">No email app found. Please send the report to dev.app.support@gmail.com.</string>
     <string name="settings_report_ai_subject">Best Journal: Inappropriate AI response</string>
     <string name="settings_report_ai_body">Hello,\n\nI would like to report an inappropriate or incorrect AI response in Best Journal.\n\nDescription of the issue:\n[Please fill in]\n\nContext (which feature, which input):\n[Please fill in]\n\nThank you.</string>
 

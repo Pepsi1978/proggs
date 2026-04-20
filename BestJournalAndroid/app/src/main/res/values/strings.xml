@@ -541,6 +541,11 @@
     <!-- Report AI Content (Google Play AI Policy 04/2024, in Settings → Datenschutz) -->
     <string name="settings_report_ai_title">KI-Antwort melden</string>
     <string name="settings_report_ai_subtitle">Unangemessene oder fehlerhafte KI-Ausgabe</string>
+    <string name="settings_report_ai_confirm_title">E-Mail an Support öffnen?</string>
+    <string name="settings_report_ai_confirm_body">Es öffnet sich dein E-Mail-Programm mit einer vorbereiteten Nachricht an dev.app.support@gmail.com. Du kannst die Beschreibung noch ergänzen, bevor du absendest. Wir antworten innerhalb von 24 Stunden an Werktagen.\n\nBitte melde damit: unangemessene, anstößige, falsche oder irreführende KI-Ausgaben aus Dashboard, Zusammenfassungen, Rückblicken oder der Textverbesserung.</string>
+    <string name="settings_report_ai_confirm">Meldung erstellen</string>
+    <string name="settings_report_ai_cancel">Abbrechen</string>
+    <string name="settings_report_ai_no_email">Kein E-Mail-Programm gefunden. Bitte sende die Meldung an dev.app.support@gmail.com.</string>
     <string name="settings_report_ai_subject">Best Journal: Unangemessene KI-Antwort</string>
     <string name="settings_report_ai_body">Hallo,\n\nich möchte eine unangemessene oder fehlerhafte KI-Antwort in Best Journal melden.\n\nBeschreibung des Problems:\n[Bitte ausfüllen]\n\nKontext (welche Funktion, welche Eingabe):\n[Bitte ausfüllen]\n\nDanke.</string>
     <string name="consent_links_header">Unsere Rechtstexte:</string>
@@ -565,7 +570,7 @@
     <string name="settings_revoke_confirm_title">E-Mail an Support öffnen?</string>
     <string name="settings_revoke_confirm_body">Es öffnet sich dein E-Mail-Programm mit einer vorbereiteten Nachricht an dev.app.support@gmail.com. Wir antworten innerhalb von 24 Stunden an Werktagen.\n\nDie vollständige Widerrufsbelehrung nach § 355 BGB findest du in den Nutzungsbedingungen (§ 16). Abos bitte zusätzlich über Google Play → Abonnements kündigen.</string>
     <string name="settings_revoke_cancel">Abbrechen</string>
-    <string name="settings_revoke_confirm">Widerruf absenden</string>
+    <string name="settings_revoke_confirm">Widerruf erstellen</string>
     <string name="settings_revoke_email_subject">Widerruf Premium-Vertrag Best Journal</string>
     <string name="settings_revoke_email_body">Hiermit widerrufe ich den von mir abgeschlossenen Vertrag über die Premium-Funktionen von Best Journal.\n\nBestellt am: [bitte eintragen]\nGoogle-Konto-E-Mail: [bitte eintragen, falls abweichend vom Absender]\nName: [bitte eintragen]\n\nDatum: [heute]</string>
     <string name="settings_revoke_no_email">Kein E-Mail-Programm gefunden. Bitte sende den Widerruf an dev.app.support@gmail.com.</string>

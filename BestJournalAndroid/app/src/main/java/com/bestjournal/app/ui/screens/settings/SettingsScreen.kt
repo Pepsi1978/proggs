@@ -2538,11 +2538,11 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Report AI content (Google Play AI Policy 04/2024) — direct mailto.
-                        // Uses URL-encoded mailto so Gmail/Samsung Mail actually pick up the
-                        // subject + body. putExtra alone is silently ignored by many clients.
+                        // Report AI content (Google Play AI Policy 04/2024) — two-step via dialog.
+                        var showReportAiDialog by remember { mutableStateOf(false) }
                         val reportAiSubject = stringResource(R.string.settings_report_ai_subject)
                         val reportAiBody = stringResource(R.string.settings_report_ai_body)
+                        val reportAiNoEmail = stringResource(R.string.settings_report_ai_no_email)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center,
@@ -2550,39 +2550,72 @@ fun SettingsScreen(
                             OutlinedButton(
                                 onClick = {
                                     doHaptic(HapticFeedbackType.LongPress)
-                                    val mailtoUri =
-                                        android.net.Uri.parse(
-                                            "mailto:dev.app.support@gmail.com" +
-                                                "?subject=" +
-                                                android.net.Uri.encode(reportAiSubject) +
-                                                "&body=" +
-                                                android.net.Uri.encode(reportAiBody)
-                                        )
-                                    val intent =
-                                        android.content.Intent(
-                                                android.content.Intent.ACTION_SENDTO,
-                                                mailtoUri,
-                                            )
-                                            .apply {
-                                                // Belt-and-suspenders for clients that prefer extras
-                                                putExtra(
-                                                    android.content.Intent.EXTRA_SUBJECT,
-                                                    reportAiSubject,
-                                                )
-                                                putExtra(
-                                                    android.content.Intent.EXTRA_TEXT,
-                                                    reportAiBody,
-                                                )
-                                            }
-                                    try {
-                                        context.startActivity(intent)
-                                    } catch (_: android.content.ActivityNotFoundException) {
-                                        // Silent: no mail app installed
-                                    }
+                                    showReportAiDialog = true
                                 },
                             ) {
                                 Text(stringResource(R.string.settings_report_ai_title))
                             }
+                        }
+
+                        if (showReportAiDialog) {
+                            androidx.compose.material3.AlertDialog(
+                                onDismissRequest = { showReportAiDialog = false },
+                                title = {
+                                    Text(stringResource(R.string.settings_report_ai_confirm_title))
+                                },
+                                text = {
+                                    Text(stringResource(R.string.settings_report_ai_confirm_body))
+                                },
+                                confirmButton = {
+                                    androidx.compose.material3.TextButton(
+                                        onClick = {
+                                            showReportAiDialog = false
+                                            val mailtoUri =
+                                                android.net.Uri.parse(
+                                                    "mailto:dev.app.support@gmail.com" +
+                                                        "?subject=" +
+                                                        android.net.Uri.encode(reportAiSubject) +
+                                                        "&body=" +
+                                                        android.net.Uri.encode(reportAiBody)
+                                                )
+                                            val intent =
+                                                android.content.Intent(
+                                                        android.content.Intent.ACTION_SENDTO,
+                                                        mailtoUri,
+                                                    )
+                                                    .apply {
+                                                        putExtra(
+                                                            android.content.Intent.EXTRA_SUBJECT,
+                                                            reportAiSubject,
+                                                        )
+                                                        putExtra(
+                                                            android.content.Intent.EXTRA_TEXT,
+                                                            reportAiBody,
+                                                        )
+                                                    }
+                                            try {
+                                                context.startActivity(intent)
+                                            } catch (e: android.content.ActivityNotFoundException) {
+                                                android.widget.Toast.makeText(
+                                                        context,
+                                                        reportAiNoEmail,
+                                                        android.widget.Toast.LENGTH_LONG,
+                                                    )
+                                                    .show()
+                                            }
+                                        }
+                                    ) {
+                                        Text(stringResource(R.string.settings_report_ai_confirm))
+                                    }
+                                },
+                                dismissButton = {
+                                    androidx.compose.material3.TextButton(
+                                        onClick = { showReportAiDialog = false }
+                                    ) {
+                                        Text(stringResource(R.string.settings_report_ai_cancel))
+                                    }
+                                },
+                            )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -2635,15 +2668,22 @@ fun SettingsScreen(
                                     androidx.compose.material3.TextButton(
                                         onClick = {
                                             showRevokeDialog = false
+                                            // URL-encoded mailto so Gmail/Samsung Mail
+                                            // actually load subject + body.
+                                            val mailtoUri =
+                                                android.net.Uri.parse(
+                                                    "mailto:dev.app.support@gmail.com" +
+                                                        "?subject=" +
+                                                        android.net.Uri.encode(revokeSubject) +
+                                                        "&body=" +
+                                                        android.net.Uri.encode(revokeBody)
+                                                )
                                             val intent =
                                                 android.content.Intent(
-                                                        android.content.Intent.ACTION_SENDTO
+                                                        android.content.Intent.ACTION_SENDTO,
+                                                        mailtoUri,
                                                     )
                                                     .apply {
-                                                        data =
-                                                            android.net.Uri.parse(
-                                                                "mailto:dev.app.support@gmail.com"
-                                                            )
                                                         putExtra(
                                                             android.content.Intent.EXTRA_SUBJECT,
                                                             revokeSubject,
