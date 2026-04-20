@@ -177,6 +177,49 @@ Praesenz im Zielland sind praktisch nahezu null.
 | Datum | App | Gesamtstatus | Kritisch | Hoch | Befunde |
 |-------|-----|-------------|----------|------|---------|
 | 2026-04-20 | BestJournalAndroid | Release-faehig nach Fixes | 0 | 1 | TTDSG zu TDDDG (behoben), Zweit-Kontakt (behoben), DSA-Kontaktstelle (behoben) |
+| 2026-04-20 | BestJournalAndroid (Tiefpruefung) | **NICHT release-faehig** | **5** | **6** | K1 ODR-Links (aktive Abmahnwelle), K2 LegalDocumentScreen laedt falschen Pfad, K3 PRIVACY.en fehlt, K4 Consent nicht granular, K5 Laenderspezifische Rights-Sections. Vollbericht: `BestJournalAndroid/docs/audit/RECHTSSICHERHEIT-AUDIT-2026-04-20.md` |
+
+## Neue Hotspots-Erkenntnisse 2026-04-20
+
+### ODR-Plattform seit 20.07.2025 abgeschaltet — AKTIVE Abmahnwelle seit Q3/2025
+
+Alle Rechtsdokumente MUESSEN den Link zu `ec.europa.eu/consumers/odr/` entfernt haben.
+Toter Link = Irrefuehrung § 5 UWG. Quelle: WBS.legal, IT-Recht Kanzlei.
+VSBG-Klausel ("weder verpflichtet noch bereit") bleibt.
+
+### BIPA Illinois + Voice Recording
+
+Voice Recording mit Stimmprofil-Erstellung (Speaker-Diarization) = biometrische Daten
+nach BIPA. Groq Whisper Standard-Transkription erstellt keinen Voiceprint = kein
+BIPA-Trigger, ABER Retention-Klausel in englischer DSE empfohlen.
+
+### ANPD-SCCs Brasilien seit 23.08.2025 Pflicht
+
+EU-SCCs reichen NICHT fuer Brasilien. Separate ANPD-SCC-Form erforderlich plus
+portugiesische DSE auf oeffentlicher Website. Empfehlung Solo-Entwickler: BR
+ausschliessen.
+
+### Tuerkei VERBIS-Pflicht bei extraterritorialem Controller
+
+Selbst fuer Solo-Entwickler ohne Sitz in TR: VERBIS-Registrierung Pflicht wenn
+tuerkische Nutzer bedient werden. Strafen bis 17 Mio. TRY. Empfehlung: TR
+ausschliessen.
+
+### Suedkorea DeepSeek-Praezedenzfall (02/2025)
+
+PIPC hat fehlende koreanische DSE explizit als Grund fuer Corrective Order genannt.
+Empfaenger muessen namentlich gelistet sein (nicht nur "Cloud-Anbieter in USA").
+
+### Play Console Account-Deletion Web-URL (seit 31.05.2024)
+
+Zusaetzlich zu In-App-Loeschung MUSS eine oeffentliche Web-URL im Data-Safety-
+Formular angegeben werden. Reicht: github.io-Seite mit Mailto-Formular.
+
+### Play Console Material Information (Oktober 2025)
+
+Neue Clarifications: alle wesentlichen Abo-Konditionen (Preis, Laufzeit, auto-
+Verlaengerung) muessen VOR dem Kauf sichtbar sein. Play Billing haelt sich daran
+automatisch, aber App-eigene Premium-Screens pruefen.
 
 ---
 
