@@ -1065,4 +1065,68 @@
     <string name="profile_style_coach">\n- प्रेरक लक्ष्य साथी की शैली में लिखें, व्यक्तिगत लक्ष्यों की प्रगति दिखाएं और आगे बढ़ने को प्रोत्साहित करें</string>
     <string name="profile_style_custom">\n- यूज़र के निम्न व्यक्तिगत फोकस के साथ समीक्षा लिखें: \"%1$s\"</string>
 
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">गोपनीयता और सहमति</string>
+    <string name="consent_intro">आपकी डायरी एक निजी जगह है, और हम इसका सम्मान करते हैं। यहाँ आप पारदर्शी तरीके से देख सकते हैं कि Best Journal आपके डेटा को कैसे संभालता है।</string>
+    <string name="consent_card1_title">लोकल स्टोरेज</string>
+    <string name="consent_card1_body">आपकी एंट्रीज़ आपके डिवाइस पर रहती हैं।</string>
+    <string name="consent_card2_title">AI फ़ीचर्स (USA)</string>
+    <string name="consent_card2_body">वैकल्पिक रूप से टेक्स्ट Google Gemini को, वॉयस रिकॉर्डिंग Groq को और टेक्स्ट-टू-स्पीच के टेक्स्ट Microsoft Edge को USA में भेजे जाते हैं (EU-US Data Privacy Framework + Standard Contractual Clauses)।</string>
+    <string name="consent_card3_title">अनाम आँकड़े</string>
+    <string name="consent_card3_body">Firebase Analytics, वैकल्पिक, Settings में कभी भी बदल सकते हैं।</string>
+    <string name="consent_links_header">हमारे कानूनी दस्तावेज़:</string>
+    <string name="consent_accept_all">सहमत हूँ और शुरू करें</string>
+    <string name="consent_disable_stats">आँकड़े बंद करके जारी रखें</string>
+    <string name="consent_confirmation">\"सहमत हूँ और शुरू करें\" पर टैप करके आप पुष्टि करते हैं कि आपने Privacy Policy, Terms of Use और Imprint पढ़े हैं और बताए गए डेटा प्रोसेसिंग से सहमत हैं। आप अपना निर्णय Settings में कभी भी बदल सकते हैं।</string>
+
+    <string name="privacy_gate_groq_title">वॉयस रिकॉर्डिंग Groq को भेजें?</string>
+    <string name="privacy_gate_groq_body">क्लाउड ट्रांसक्रिप्शन के लिए आपकी वॉयस रिकॉर्डिंग एन्क्रिप्टेड रूप में Groq, Inc. (Mountain View, USA) को भेजी जाती है और वहाँ टेक्स्ट में बदली जाती है। ऑडियो फ़ाइल प्रोसेसिंग के बाद डिलीट हो जाती है और ट्रेनिंग में उपयोग नहीं होती।\n\nविकल्प: डिवाइस पर लोकल ट्रांसक्रिप्शन उपयोग करें (ऑफ़लाइन, कोई डेटा ट्रांसफ़र नहीं), Settings → AI में बदला जा सकता है।</string>
+    <string name="privacy_gate_groq_accept">सहमत हूँ, भेजें</string>
+    <string name="privacy_gate_groq_local">इसके बजाय लोकल ट्रांसक्राइब करें</string>
+
+    <string name="privacy_gate_gemini_title">टेक्स्ट Google Gemini को भेजें?</string>
+    <string name="privacy_gate_gemini_body">AI फ़ीचर्स (Dashboard, सारांश, Retrospective, Text Improvement) के लिए आपकी एंट्रीज़ के अंश एन्क्रिप्टेड रूप में Google Gemini (Firebase AI, USA) को भेजे जाते हैं। कानूनी आधार: EU-US Data Privacy Framework + Standard Contractual Clauses। अनुरोध प्रोसेसिंग के बाद डिलीट कर दिए जाते हैं और ट्रेनिंग में उपयोग नहीं होते।</string>
+    <string name="privacy_gate_gemini_accept">सहमत हूँ, भेजें</string>
+    <string name="privacy_gate_gemini_cancel">रद्द करें</string>
+
+    <string name="privacy_gate_tts_title">टेक्स्ट Microsoft को भेजें?</string>
+    <string name="privacy_gate_tts_body">पढ़कर सुनाने के लिए टेक्स्ट एन्क्रिप्टेड रूप में Microsoft Bing Speech (USA) को भेजा जाता है और ऑडियो के रूप में वापस आता है। कानूनी आधार: EU-US Data Privacy Framework + Standard Contractual Clauses।\n\nविकल्प: Android का बिल्ट-इन ऑफ़लाइन TTS उपयोग करें।</string>
+    <string name="privacy_gate_tts_accept">सहमत हूँ, पढ़कर सुनाएँ</string>
+    <string name="privacy_gate_tts_cancel">रद्द करें</string>
+
+    <string name="settings_privacy_header">गोपनीयता</string>
+    <string name="settings_analytics_title">अनाम आँकड़े</string>
+    <string name="settings_analytics_subtitle">त्रुटि विश्लेषण और उत्पाद सुधार के लिए Firebase Analytics</string>
+
+    <string name="settings_delete_account_title">अकाउंट और डेटा डिलीट करें</string>
+    <string name="settings_delete_account_subtitle">सभी लोकल डेटा, आपका Google अकाउंट और Drive बैकअप स्थायी रूप से हटा देता है</string>
+    <string name="settings_delete_account_confirm_title">अकाउंट स्थायी रूप से डिलीट करें?</string>
+    <string name="settings_delete_account_confirm_body">यह क्रिया अपरिवर्तनीय है और ये डिलीट करती है:\n\n• सभी लोकल डायरी एंट्रीज़, फ़ोटो और वीडियो\n• आपका Firebase अकाउंट\n• ऐप का Google Drive बैकअप\n\nऐप नई इंस्टॉलेशन की तरह फिर से शुरू होगा।</string>
+    <string name="settings_delete_account_cancel">रद्द करें</string>
+    <string name="settings_delete_account_confirm">हाँ, सब कुछ डिलीट करें</string>
+
+    <string name="settings_report_ai_title">AI जवाब रिपोर्ट करें</string>
+    <string name="settings_report_ai_subtitle">अनुचित या गलत AI आउटपुट</string>
+    <string name="settings_report_ai_confirm_title">Support को ईमेल खोलें?</string>
+    <string name="settings_report_ai_confirm_body">आपका ईमेल ऐप dev.app.support@gmail.com को तैयार संदेश के साथ खुलेगा। भेजने से पहले आप विवरण जोड़ सकते हैं। हम कार्यदिवसों में 24 घंटे के भीतर उत्तर देते हैं।\n\nयहाँ रिपोर्ट करें: Dashboard, सारांश, Retrospectives या Text Improvement से अनुचित, आपत्तिजनक, गलत या भ्रामक AI आउटपुट।</string>
+    <string name="settings_report_ai_confirm">रिपोर्ट बनाएँ</string>
+    <string name="settings_report_ai_cancel">रद्द करें</string>
+    <string name="settings_report_ai_no_email">कोई ईमेल ऐप नहीं मिला। कृपया रिपोर्ट dev.app.support@gmail.com पर भेजें।</string>
+    <string name="settings_report_ai_subject">Best Journal: अनुचित AI जवाब</string>
+    <string name="settings_report_ai_body">नमस्ते,\n\nमैं Best Journal में एक अनुचित या गलत AI जवाब की रिपोर्ट करना चाहता हूँ।\n\nसमस्या का विवरण:\n[कृपया भरें]\n\nसंदर्भ (कौन-सा फ़ीचर, कौन-सा इनपुट):\n[कृपया भरें]\n\nधन्यवाद।</string>
+
+    <string name="settings_revoke_title">अनुबंध रद्द</string>
+    <string name="settings_revoke_subtitle">Premium खरीद</string>
+    <string name="settings_revoke_confirm_title">Support को ईमेल खोलें?</string>
+    <string name="settings_revoke_confirm_body">आपका ईमेल ऐप dev.app.support@gmail.com को तैयार संदेश के साथ खुलेगा। हम कार्यदिवसों में 24 घंटे के भीतर उत्तर देते हैं।\n\nअनुबंध रद्द के अधिकार की पूरी जानकारी Terms of Use (§ 16) में मिलेगी। Subscriptions को अतिरिक्त रूप से Google Play → Subscriptions में रद्द करें।</string>
+    <string name="settings_revoke_cancel">रद्द करें</string>
+    <string name="settings_revoke_confirm">रद्द अनुरोध बनाएँ</string>
+    <string name="settings_revoke_no_email">कोई ईमेल ऐप नहीं मिला। कृपया रद्द अनुरोध dev.app.support@gmail.com पर भेजें।</string>
+    <string name="settings_revoke_email_subject">Best Journal Premium अनुबंध रद्द</string>
+    <string name="settings_revoke_email_body">नमस्ते,\n\nइसके द्वारा मैं Best Journal की Premium सुविधाओं के लिए अपने अनुबंध को रद्द करने की सूचना देता हूँ।\n\nऑर्डर की तारीख: [कृपया भरें]\nGoogle अकाउंट ईमेल: [यदि भेजने वाले से अलग हो तो भरें]\nनाम: [कृपया भरें]\n\nतारीख: [आज]</string>
+
+
 </resources>

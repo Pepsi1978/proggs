@@ -1081,4 +1081,68 @@
     <string name="profile_style_coach">\n- اكتب بأسلوب مدرّب هدف محفّز، أظهر التقدّم في الأهداف الشخصية وشجّع على الاستمرار</string>
     <string name="profile_style_custom">\n- اكتب المراجعة بهذا المحور الشخصي للمستخدم: \"%1$s\"</string>
 
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">الخصوصية والموافقة</string>
+    <string name="consent_intro">مذكراتك مساحة شخصية، ونحن نحترم ذلك. هنا ترى بشفافية كيف يتعامل Best Journal مع بياناتك.</string>
+    <string name="consent_card1_title">التخزين المحلي</string>
+    <string name="consent_card1_body">تبقى إدخالاتك على جهازك.</string>
+    <string name="consent_card2_title">ميزات الذكاء الاصطناعي (الولايات المتحدة)</string>
+    <string name="consent_card2_body">اختياريًا تُرسل النصوص إلى Google Gemini، والتسجيلات الصوتية إلى Groq، ونصوص القراءة بصوت عالٍ إلى Microsoft Edge في الولايات المتحدة (إطار EU-US Data Privacy Framework + الشروط التعاقدية النموذجية).</string>
+    <string name="consent_card3_title">إحصائيات مجهولة</string>
+    <string name="consent_card3_body">Firebase Analytics، اختياري، يمكن تغييره في أي وقت من الإعدادات.</string>
+    <string name="consent_links_header">نصوصنا القانونية:</string>
+    <string name="consent_accept_all">الموافقة والبدء</string>
+    <string name="consent_disable_stats">تعطيل الإحصائيات والمتابعة</string>
+    <string name="consent_confirmation">بالنقر على «الموافقة والبدء» تؤكد أنك قرأت سياسة الخصوصية وشروط الاستخدام والبيان القانوني، وتوافق على معالجة البيانات الموضحة. يمكنك تغيير قرارك في أي وقت من الإعدادات.</string>
+
+    <string name="privacy_gate_groq_title">إرسال التسجيل الصوتي إلى Groq؟</string>
+    <string name="privacy_gate_groq_body">لنسخ النص من الصوت عبر السحابة، يُرسل تسجيلك الصوتي مشفرًا إلى Groq, Inc. (ماونتن فيو، الولايات المتحدة) ويُحوَّل هناك إلى نص. يُحذف الملف الصوتي بعد المعالجة ولا يُستخدم للتدريب.\n\nبديل: استخدم النسخ المحلي على الجهاز (دون اتصال، بدون نقل بيانات)، قابل للتبديل في الإعدادات → الذكاء الاصطناعي.</string>
+    <string name="privacy_gate_groq_accept">الموافقة والإرسال</string>
+    <string name="privacy_gate_groq_local">النسخ محليًا بدلًا من ذلك</string>
+
+    <string name="privacy_gate_gemini_title">إرسال النص إلى Google Gemini؟</string>
+    <string name="privacy_gate_gemini_body">لميزات الذكاء الاصطناعي (لوحة التحكم، الملخصات، الاستعراضات، تحسين النص) تُرسل مقتطفات من إدخالاتك مشفرة إلى Google Gemini (Firebase AI، الولايات المتحدة). الأساس القانوني: إطار EU-US Data Privacy Framework + الشروط التعاقدية النموذجية. تُحذف الطلبات بعد المعالجة ولا تُستخدم للتدريب.</string>
+    <string name="privacy_gate_gemini_accept">الموافقة والإرسال</string>
+    <string name="privacy_gate_gemini_cancel">إلغاء</string>
+
+    <string name="privacy_gate_tts_title">إرسال النص إلى Microsoft؟</string>
+    <string name="privacy_gate_tts_body">للقراءة بصوت عالٍ، يُرسل النص مشفرًا إلى Microsoft Bing Speech (الولايات المتحدة) ويعود كملف صوتي. الأساس القانوني: إطار EU-US Data Privacy Framework + الشروط التعاقدية النموذجية.\n\nبديل: استخدم أداة تحويل النص إلى كلام المحلية المدمجة في Android.</string>
+    <string name="privacy_gate_tts_accept">الموافقة والقراءة</string>
+    <string name="privacy_gate_tts_cancel">إلغاء</string>
+
+    <string name="settings_privacy_header">الخصوصية</string>
+    <string name="settings_analytics_title">إحصائيات مجهولة</string>
+    <string name="settings_analytics_subtitle">Firebase Analytics لتحليل الأخطاء وتحسين المنتج</string>
+
+    <string name="settings_delete_account_title">حذف الحساب والبيانات</string>
+    <string name="settings_delete_account_subtitle">يحذف بشكل نهائي جميع البيانات المحلية وحسابك في Google والنسخة الاحتياطية في Drive</string>
+    <string name="settings_delete_account_confirm_title">هل تريد حذف الحساب نهائيًا؟</string>
+    <string name="settings_delete_account_confirm_body">هذا الإجراء لا يمكن التراجع عنه ويحذف:\n\n• جميع إدخالات المذكرات والصور ومقاطع الفيديو المحلية\n• حسابك في Firebase\n• النسخة الاحتياطية للتطبيق في Google Drive\n\nسيعيد التطبيق التشغيل كتثبيت جديد.</string>
+    <string name="settings_delete_account_cancel">إلغاء</string>
+    <string name="settings_delete_account_confirm">نعم، احذف كل شيء</string>
+
+    <string name="settings_report_ai_title">الإبلاغ عن رد الذكاء الاصطناعي</string>
+    <string name="settings_report_ai_subtitle">مخرجات ذكاء اصطناعي غير مناسبة أو خاطئة</string>
+    <string name="settings_report_ai_confirm_title">فتح بريد إلى الدعم؟</string>
+    <string name="settings_report_ai_confirm_body">سيفتح تطبيق البريد لديك برسالة معدة مسبقًا إلى dev.app.support@gmail.com. يمكنك إكمال الوصف قبل الإرسال. نرد خلال 24 ساعة في أيام العمل.\n\nأبلغ هنا عن: مخرجات ذكاء اصطناعي غير مناسبة أو مسيئة أو خاطئة أو مضللة من لوحة التحكم أو الملخصات أو الاستعراضات أو تحسين النص.</string>
+    <string name="settings_report_ai_confirm">إنشاء البلاغ</string>
+    <string name="settings_report_ai_cancel">إلغاء</string>
+    <string name="settings_report_ai_no_email">لم يتم العثور على تطبيق بريد. يرجى إرسال البلاغ إلى dev.app.support@gmail.com.</string>
+    <string name="settings_report_ai_subject">Best Journal: رد ذكاء اصطناعي غير مناسب</string>
+    <string name="settings_report_ai_body">مرحبًا،\n\nأرغب في الإبلاغ عن رد ذكاء اصطناعي غير مناسب أو خاطئ في Best Journal.\n\nوصف المشكلة:\n[يُرجى التعبئة]\n\nالسياق (الميزة والإدخال):\n[يُرجى التعبئة]\n\nشكرًا.</string>
+
+    <string name="settings_revoke_title">الرجوع عن العقد</string>
+    <string name="settings_revoke_subtitle">شراء Premium</string>
+    <string name="settings_revoke_confirm_title">فتح بريد إلى الدعم؟</string>
+    <string name="settings_revoke_confirm_body">سيفتح تطبيق البريد لديك برسالة معدة مسبقًا إلى dev.app.support@gmail.com. نرد خلال 24 ساعة في أيام العمل.\n\nتجد المعلومات الكاملة عن حق الرجوع في شروط الاستخدام (§ 16). ألغِ الاشتراكات أيضًا عبر Google Play ← الاشتراكات.</string>
+    <string name="settings_revoke_cancel">إلغاء</string>
+    <string name="settings_revoke_confirm">إنشاء الرجوع</string>
+    <string name="settings_revoke_no_email">لم يتم العثور على تطبيق بريد. يرجى إرسال الرجوع إلى dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_email_subject">الرجوع عن عقد Best Journal Premium</string>
+    <string name="settings_revoke_email_body">مرحبًا،\n\nأعلن بموجبه الرجوع عن العقد المبرم بشأن ميزات Premium في Best Journal.\n\nتاريخ الطلب: [يُرجى التعبئة]\nبريد حساب Google: [إن كان مختلفًا عن المرسل]\nالاسم: [يُرجى التعبئة]\n\nالتاريخ: [اليوم]</string>
+
+
 </resources>

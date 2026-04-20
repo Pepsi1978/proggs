@@ -1061,4 +1061,68 @@
     <string name="profile_style_coach">\n- 用激勵式的目標夥伴風格，呈現個人目標的進展並鼓勵繼續</string>
     <string name="profile_style_custom">\n- 根據使用者的以下個人焦點撰寫回顧：\"%1$s\"</string>
 
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">隱私與同意</string>
+    <string name="consent_intro">你的日記是一個私人空間，我們尊重這一點。在這裡你可以透明地看到 Best Journal 如何處理你的資料。</string>
+    <string name="consent_card1_title">本機儲存</string>
+    <string name="consent_card1_body">你的記錄會保留在你的裝置上。</string>
+    <string name="consent_card2_title">AI 功能（美國）</string>
+    <string name="consent_card2_body">可選擇將文字傳送到 Google Gemini、語音錄音傳送到 Groq、朗讀文字傳送到 Microsoft Edge 位於美國的伺服器（EU-US Data Privacy Framework + 標準契約條款）。</string>
+    <string name="consent_card3_title">匿名統計</string>
+    <string name="consent_card3_body">Firebase Analytics,選用，可隨時在設定中變更。</string>
+    <string name="consent_links_header">我們的法律文件：</string>
+    <string name="consent_accept_all">同意並開始</string>
+    <string name="consent_disable_stats">關閉統計並繼續</string>
+    <string name="consent_confirmation">點選「同意並開始」表示你已閱讀隱私權政策、使用條款和法律聲明，並同意所述的資料處理。你可以隨時在設定中變更決定。</string>
+
+    <string name="privacy_gate_groq_title">將語音錄音傳送到 Groq?</string>
+    <string name="privacy_gate_groq_body">為進行雲端轉錄，你的語音錄音會加密傳送到 Groq, Inc.(美國山景城),並在那裡轉換為文字。音訊檔在處理後刪除，不用於訓練。\n\n替代方案：使用裝置本機轉錄（離線，無資料傳輸）,可在 設定 → AI 中切換。</string>
+    <string name="privacy_gate_groq_accept">同意並傳送</string>
+    <string name="privacy_gate_groq_local">改為本機轉錄</string>
+
+    <string name="privacy_gate_gemini_title">將文字傳送到 Google Gemini?</string>
+    <string name="privacy_gate_gemini_body">為使用 AI 功能（儀表板、摘要、回顧、文字改善）,你的記錄片段會加密傳送到 Google Gemini(Firebase AI, 美國)。法律依據：EU-US Data Privacy Framework + 標準契約條款。請求在處理後刪除，不用於訓練。</string>
+    <string name="privacy_gate_gemini_accept">同意並傳送</string>
+    <string name="privacy_gate_gemini_cancel">取消</string>
+
+    <string name="privacy_gate_tts_title">將文字傳送到 Microsoft?</string>
+    <string name="privacy_gate_tts_body">為進行朗讀，文字會加密傳送到 Microsoft Bing Speech(美國),並以音訊形式回傳。法律依據：EU-US Data Privacy Framework + 標準契約條款。\n\n替代方案：使用 Android 內建的離線 TTS。</string>
+    <string name="privacy_gate_tts_accept">同意並朗讀</string>
+    <string name="privacy_gate_tts_cancel">取消</string>
+
+    <string name="settings_privacy_header">隱私</string>
+    <string name="settings_analytics_title">匿名統計</string>
+    <string name="settings_analytics_subtitle">用於錯誤分析與產品改善的 Firebase Analytics</string>
+
+    <string name="settings_delete_account_title">刪除帳戶與資料</string>
+    <string name="settings_delete_account_subtitle">不可復原地刪除所有本機資料、你的 Google 帳戶和 Drive 備份</string>
+    <string name="settings_delete_account_confirm_title">永久刪除帳戶？</string>
+    <string name="settings_delete_account_confirm_body">此操作不可復原，會刪除：\n\n• 所有本機日記記錄、照片和影片\n• 你的 Firebase 帳戶\n• 應用程式的 Google Drive 備份\n\n應用程式將以全新安裝狀態重新啟動。</string>
+    <string name="settings_delete_account_cancel">取消</string>
+    <string name="settings_delete_account_confirm">是的，全部刪除</string>
+
+    <string name="settings_report_ai_title">檢舉 AI 回覆</string>
+    <string name="settings_report_ai_subtitle">不當或錯誤的 AI 輸出</string>
+    <string name="settings_report_ai_confirm_title">開啟支援郵件？</string>
+    <string name="settings_report_ai_confirm_body">你的郵件應用程式會開啟一封寄給 dev.app.support@gmail.com 的預填郵件。你可以在寄出前補充說明。我們在工作日 24 小時內回覆。\n\n請檢舉：來自儀表板、摘要、回顧或文字改善的不當、冒犯、虛假或誤導性 AI 輸出。</string>
+    <string name="settings_report_ai_confirm">建立檢舉</string>
+    <string name="settings_report_ai_cancel">取消</string>
+    <string name="settings_report_ai_no_email">找不到郵件應用程式。請將檢舉寄到 dev.app.support@gmail.com。</string>
+    <string name="settings_report_ai_subject">Best Journal:不當 AI 回覆</string>
+    <string name="settings_report_ai_body">你好，\n\n我想檢舉 Best Journal 中的一則不當或錯誤的 AI 回覆。\n\n問題描述：\n[請填寫]\n\n情境（哪個功能、哪項輸入）:\n[請填寫]\n\n謝謝。</string>
+
+    <string name="settings_revoke_title">解除契約</string>
+    <string name="settings_revoke_subtitle">Premium 購買</string>
+    <string name="settings_revoke_confirm_title">開啟支援郵件？</string>
+    <string name="settings_revoke_confirm_body">你的郵件應用程式會開啟一封寄給 dev.app.support@gmail.com 的預填郵件。我們在工作日 24 小時內回覆。\n\n有關解除權的完整資訊，請參閱使用條款（§ 16）。訂閱請另外透過 Google Play → 訂閱 取消。</string>
+    <string name="settings_revoke_cancel">取消</string>
+    <string name="settings_revoke_confirm">建立解除</string>
+    <string name="settings_revoke_no_email">找不到郵件應用程式。請將解除通知寄到 dev.app.support@gmail.com。</string>
+    <string name="settings_revoke_email_subject">Best Journal Premium 契約解除</string>
+    <string name="settings_revoke_email_body">你好，\n\n我特此解除與 Best Journal Premium 功能相關的契約。\n\n訂購日期：[請填寫]\nGoogle 帳戶信箱：[如與寄件者不同，請填寫]\n姓名：[請填寫]\n\n日期：[今天]</string>
+
+
 </resources>

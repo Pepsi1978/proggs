@@ -1061,4 +1061,68 @@
     <string name="profile_style_coach">\n- 등을 밀어 주는 목표 동반자의 문체로 개인 목표의 진전을 보여 주고 계속해 나가도록 북돋아 주세요</string>
     <string name="profile_style_custom">\n- 사용자의 다음 개인 주제로 돌아보기를 써 주세요: \"%1$s\"</string>
 
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">개인정보와 동의</string>
+    <string name="consent_intro">일기는 당신의 개인적인 공간이며, 우리는 이를 존중해요. Best Journal이 데이터를 어떻게 처리하는지 여기서 투명하게 볼 수 있어요.</string>
+    <string name="consent_card1_title">로컬 저장</string>
+    <string name="consent_card1_body">기록은 기기에 남아 있어요.</string>
+    <string name="consent_card2_title">AI 기능 (미국)</string>
+    <string name="consent_card2_body">선택적으로 텍스트는 Google Gemini로, 음성 녹음은 Groq로, 읽어주기 텍스트는 Microsoft Edge로 미국에 전송돼요 (EU-US Data Privacy Framework + 표준 계약 조항).</string>
+    <string name="consent_card3_title">익명 통계</string>
+    <string name="consent_card3_body">Firebase Analytics, 선택, 설정에서 언제든 변경할 수 있어요.</string>
+    <string name="consent_links_header">법적 문서:</string>
+    <string name="consent_accept_all">동의하고 시작하기</string>
+    <string name="consent_disable_stats">통계 끄고 계속하기</string>
+    <string name="consent_confirmation">「동의하고 시작하기」를 누르면 개인정보 처리방침, 이용약관, 법적 고지를 읽었고 설명된 데이터 처리에 동의함을 확인해요. 설정에서 언제든 변경할 수 있어요.</string>
+
+    <string name="privacy_gate_groq_title">음성 녹음을 Groq에 보낼까요?</string>
+    <string name="privacy_gate_groq_body">클라우드 전사를 위해 음성 녹음이 암호화되어 Groq, Inc. (마운틴뷰, 미국)로 전송되어 텍스트로 변환돼요. 오디오 파일은 처리 후 삭제되며 학습에 사용되지 않아요.\n\n대안: 기기 내 로컬 전사(오프라인, 데이터 전송 없음)를 사용하세요. 설정 → AI 에서 전환할 수 있어요.</string>
+    <string name="privacy_gate_groq_accept">동의하고 전송</string>
+    <string name="privacy_gate_groq_local">로컬로 전사하기</string>
+
+    <string name="privacy_gate_gemini_title">텍스트를 Google Gemini에 보낼까요?</string>
+    <string name="privacy_gate_gemini_body">AI 기능(대시보드, 요약, 회고, 텍스트 개선)을 위해 기록의 일부가 암호화되어 Google Gemini(Firebase AI, 미국)로 전송돼요. 법적 근거: EU-US Data Privacy Framework + 표준 계약 조항. 요청은 처리 후 삭제되며 학습에 사용되지 않아요.</string>
+    <string name="privacy_gate_gemini_accept">동의하고 전송</string>
+    <string name="privacy_gate_gemini_cancel">취소</string>
+
+    <string name="privacy_gate_tts_title">텍스트를 Microsoft에 보낼까요?</string>
+    <string name="privacy_gate_tts_body">읽어주기를 위해 텍스트가 암호화되어 Microsoft Bing Speech(미국)로 전송되고 오디오로 반환돼요. 법적 근거: EU-US Data Privacy Framework + 표준 계약 조항.\n\n대안: Android 기본 오프라인 TTS를 사용하세요.</string>
+    <string name="privacy_gate_tts_accept">동의하고 읽어주기</string>
+    <string name="privacy_gate_tts_cancel">취소</string>
+
+    <string name="settings_privacy_header">개인정보</string>
+    <string name="settings_analytics_title">익명 통계</string>
+    <string name="settings_analytics_subtitle">오류 분석과 제품 개선을 위한 Firebase Analytics</string>
+
+    <string name="settings_delete_account_title">계정과 데이터 삭제</string>
+    <string name="settings_delete_account_subtitle">모든 로컬 데이터, Google 계정, Drive 백업을 되돌릴 수 없이 삭제해요</string>
+    <string name="settings_delete_account_confirm_title">계정을 영구 삭제할까요?</string>
+    <string name="settings_delete_account_confirm_body">이 작업은 되돌릴 수 없으며 다음을 삭제해요:\n\n• 모든 로컬 일기 기록, 사진, 동영상\n• Firebase 계정\n• 앱의 Google Drive 백업\n\n앱은 새 설치 상태로 다시 시작해요.</string>
+    <string name="settings_delete_account_cancel">취소</string>
+    <string name="settings_delete_account_confirm">예, 모두 삭제</string>
+
+    <string name="settings_report_ai_title">AI 응답 신고</string>
+    <string name="settings_report_ai_subtitle">부적절하거나 잘못된 AI 출력</string>
+    <string name="settings_report_ai_confirm_title">지원팀에 이메일을 열까요?</string>
+    <string name="settings_report_ai_confirm_body">이메일 앱이 dev.app.support@gmail.com 로 작성된 메시지와 함께 열려요. 보내기 전에 설명을 추가할 수 있어요. 영업일 기준 24시간 내에 답장해요.\n\n다음을 신고해 주세요: 대시보드, 요약, 회고, 텍스트 개선에서 나온 부적절하거나 공격적이거나 잘못된 AI 출력.</string>
+    <string name="settings_report_ai_confirm">신고 작성</string>
+    <string name="settings_report_ai_cancel">취소</string>
+    <string name="settings_report_ai_no_email">이메일 앱을 찾을 수 없어요. dev.app.support@gmail.com 로 신고를 보내주세요.</string>
+    <string name="settings_report_ai_subject">Best Journal: 부적절한 AI 응답</string>
+    <string name="settings_report_ai_body">안녕하세요,\n\nBest Journal에서 부적절하거나 잘못된 AI 응답을 신고하고자 합니다.\n\n문제 설명:\n[작성해 주세요]\n\n상황 (어떤 기능, 어떤 입력):\n[작성해 주세요]\n\n감사합니다.</string>
+
+    <string name="settings_revoke_title">청약 철회</string>
+    <string name="settings_revoke_subtitle">Premium 구매</string>
+    <string name="settings_revoke_confirm_title">지원팀에 이메일을 열까요?</string>
+    <string name="settings_revoke_confirm_body">이메일 앱이 dev.app.support@gmail.com 로 작성된 메시지와 함께 열려요. 영업일 기준 24시간 내에 답장해요.\n\n청약 철회 권리에 관한 자세한 정보는 이용약관(§ 16)에서 확인할 수 있어요. 구독은 Google Play → 정기 결제 에서도 취소해 주세요.</string>
+    <string name="settings_revoke_cancel">취소</string>
+    <string name="settings_revoke_confirm">철회 작성</string>
+    <string name="settings_revoke_no_email">이메일 앱을 찾을 수 없어요. 철회 요청을 dev.app.support@gmail.com 로 보내주세요.</string>
+    <string name="settings_revoke_email_subject">Best Journal Premium 계약 철회</string>
+    <string name="settings_revoke_email_body">안녕하세요,\n\nBest Journal의 Premium 기능에 관하여 체결한 계약의 철회를 이로써 통지합니다.\n\n주문일: [작성해 주세요]\nGoogle 계정 이메일: [발송자와 다를 경우 작성]\n이름: [작성해 주세요]\n\n날짜: [오늘]</string>
+
+
 </resources>
