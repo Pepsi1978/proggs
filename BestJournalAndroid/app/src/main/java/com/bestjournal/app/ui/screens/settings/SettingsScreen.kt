@@ -2088,21 +2088,6 @@ fun SettingsScreen(
                     }
                 }
 
-                // Achievements (direkt unter Premium)
-                val achievementsWithStatus = remember {
-                    com.bestjournal.app.util.AchievementTracker.ALL_ACHIEVEMENTS.map { a ->
-                        val ts = clickPrefs.getLong("achievement_unlocked_${a.id}", 0L)
-                        a.copy(unlockedAt = if (ts > 0L) ts else null)
-                    }
-                }
-                AchievementsSection(
-                    achievements = achievementsWithStatus,
-                    onSectionViewed = {
-                        com.google.firebase.analytics.FirebaseAnalytics.getInstance(context)
-                            .logEvent("achievements_viewed", null)
-                    },
-                )
-
                 // Daten exportieren (PDF-Export)
                 var showExportDialog by remember { mutableStateOf(false) }
                 var exportIncludeEntries by remember { mutableStateOf(true) }
@@ -2337,6 +2322,21 @@ fun SettingsScreen(
                         }
                     }
                 }
+
+                // Achievements (zwischen Daten exportieren und Feedback)
+                val achievementsWithStatus = remember {
+                    com.bestjournal.app.util.AchievementTracker.ALL_ACHIEVEMENTS.map { a ->
+                        val ts = clickPrefs.getLong("achievement_unlocked_${a.id}", 0L)
+                        a.copy(unlockedAt = if (ts > 0L) ts else null)
+                    }
+                }
+                AchievementsSection(
+                    achievements = achievementsWithStatus,
+                    onSectionViewed = {
+                        com.google.firebase.analytics.FirebaseAnalytics.getInstance(context)
+                            .logEvent("achievements_viewed", null)
+                    },
+                )
 
                 // 7. Feedback
                 var showFeedbackDialog by remember { mutableStateOf(false) }

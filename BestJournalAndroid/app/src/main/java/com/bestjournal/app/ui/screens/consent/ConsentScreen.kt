@@ -356,11 +356,11 @@ fun ConsentScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // Primary button
+                // Primary button (narrower than full width for visual balance)
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier =
-                        Modifier.fillMaxWidth().graphicsLayer {
+                        Modifier.width(240.dp).graphicsLayer {
                             alpha = btnAlpha.value
                             translationY = btnOffsetY.value * density
                             scaleX = btnBreathScale
