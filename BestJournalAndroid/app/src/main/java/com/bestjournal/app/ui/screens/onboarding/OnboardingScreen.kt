@@ -153,12 +153,16 @@ fun OnboardingScreen(
             state = pagerState,
             modifier = Modifier.fillMaxSize()
         ) { page ->
+            // isActive flips true only when the pager has settled on this page, so
+            // the page's entrance animations start fresh at the moment the user sees it.
+            val isActive = pagerState.settledPage == page
             when (page) {
-                0 -> WelcomePage()
-                1 -> PersonalizationPage(viewModel)
-                2 -> HowItWorksPage()
-                3 -> ProfilesPage()
+                0 -> WelcomePage(isActive = isActive)
+                1 -> PersonalizationPage(viewModel = viewModel, isActive = isActive)
+                2 -> HowItWorksPage(isActive = isActive)
+                3 -> ProfilesPage(isActive = isActive)
                 4 -> TrialPage(
+                    isActive = isActive,
                     onStartTrial = {
                         viewModel.analyticsTracker.trackTrialStartedOnboarding()
                         viewModel.saveGoals()
@@ -232,9 +236,18 @@ fun OnboardingScreen(
 // ─── Page 1: Willkommen ─────────────────────────────────────
 
 @Composable
-private fun WelcomePage() {
+private fun WelcomePage(isActive: Boolean) {
     val visible = remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { visible.value = true }
+    // Reset + replay entrance animation every time this page becomes the settled page
+    LaunchedEffect(isActive) {
+        if (isActive) {
+            visible.value = false
+            kotlinx.coroutines.delay(30)
+            visible.value = true
+        } else {
+            visible.value = false
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -312,9 +325,17 @@ private fun WelcomePage() {
 // ─── Page 2: Personalisierung ───────────────────────────────
 
 @Composable
-private fun PersonalizationPage(viewModel: OnboardingViewModel) {
+private fun PersonalizationPage(viewModel: OnboardingViewModel, isActive: Boolean) {
     val visible = remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { visible.value = true }
+    LaunchedEffect(isActive) {
+        if (isActive) {
+            visible.value = false
+            kotlinx.coroutines.delay(30)
+            visible.value = true
+        } else {
+            visible.value = false
+        }
+    }
 
     val selectedGoals by viewModel.selectedGoals.collectAsStateWithLifecycle()
 
@@ -470,9 +491,17 @@ private fun GoalChip(text: String, selected: Boolean, onClick: () -> Unit) {
 // ─── Page 3: So funktioniert es ─────────────────────────────
 
 @Composable
-private fun HowItWorksPage() {
+private fun HowItWorksPage(isActive: Boolean) {
     val visible = remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { visible.value = true }
+    LaunchedEffect(isActive) {
+        if (isActive) {
+            visible.value = false
+            kotlinx.coroutines.delay(30)
+            visible.value = true
+        } else {
+            visible.value = false
+        }
+    }
 
     data class Step(
         val icon: ImageVector,
@@ -627,9 +656,17 @@ private data class ProfileInfo(
 )
 
 @Composable
-private fun ProfilesPage() {
+private fun ProfilesPage(isActive: Boolean) {
     val visible = remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { visible.value = true }
+    LaunchedEffect(isActive) {
+        if (isActive) {
+            visible.value = false
+            kotlinx.coroutines.delay(30)
+            visible.value = true
+        } else {
+            visible.value = false
+        }
+    }
 
     val profiles = listOf(
         ProfileInfo(stringResource(R.string.profile_summary), stringResource(R.string.profile_summary_desc), Icons.Rounded.AutoStories, SummaryPalette.accent),
@@ -742,9 +779,17 @@ private fun ProfileCard(profile: ProfileInfo) {
 // ─── Page 5: Trial CTA ─────────────────────────────────────
 
 @Composable
-private fun TrialPage(onStartTrial: () -> Unit, onSkip: () -> Unit) {
+private fun TrialPage(isActive: Boolean, onStartTrial: () -> Unit, onSkip: () -> Unit) {
     val visible = remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { visible.value = true }
+    LaunchedEffect(isActive) {
+        if (isActive) {
+            visible.value = false
+            kotlinx.coroutines.delay(30)
+            visible.value = true
+        } else {
+            visible.value = false
+        }
+    }
 
     val benefits = listOf(
         stringResource(R.string.onboarding_premium_feature_improve),
