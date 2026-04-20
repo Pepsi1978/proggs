@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Mistral V.1.5.2
+// @name         Mistral V.1.5.3
 // @namespace    https://chat.mistral.ai/chat
-// @version      1.5.2
+// @version      1.5.3
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf Google Search. Mic-Button fest unten rechts. Kein stilles Fallback. Mit Output-Preview.
 // @match        https://chat.mistral.ai/chat*
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/mistral.user.js
@@ -1461,10 +1461,7 @@ Nutze die über Frank gespeicherten Informationen und Erinnerungen (Bio, Ziele, 
 primären Bezugsrahmen für diese Aufgabe. Keine zusätzlichen Kontextabfragen; verwende vorhandenes Wissen.
 
 Format:
-Ausgabestruktur: „Einleitung – Hauptteil – Erkenntnisse“.
-Fachbegriffe/Fremdwörter bei Erstnennung sofort kurz erklären in (Klammern).
-Abkürzungen bei Erstnennung ausschreiben und kurz erklären in (Klammern) Der Textaufbau ist logisch, faktenbasiert, umfassend, nachvollziehbar. Keine Stichpunkte; Tabellen und andere stilistische Illustrationen, wenn sie die Verständlichkeit damit verbessern. Der letzte Teil fasst alle Erkenntnisse aus dem Hauptteil der Wichtigkeit her nach zusammen, mit klaren Überschriften. Jede Erkenntnis selber hat minimal 2, maximal 5 Zeilen.  
-Mindestwortanzahl: so viele wie nötig, um die Frage ausführlich zu beantworten, Maximale Wortanzahl: 10000, Entscheidend ist, dass die Frage sehr ausführlich beantwortet wird.
+Ausgabestruktur: „Einleitung – Hauptteil – Erkenntnisse". Fachbegriffe/Fremdwörter bei Erstnennung sofort kurz erklären in (Klammern). Abkürzungen bei Erstnennung ausschreiben und kurz erklären in (Klammern) Der Textaufbau ist logisch, faktenbasiert, umfassend, nachvollziehbar. Keine Stichpunkte; Tabellen und andere stilistische Illustrationen, wenn sie die Verständlichkeit damit verbessern. Der letzte Teil fasst alle Erkenntnisse aus dem Hauptteil der Wichtigkeit nach sortiert, ausführlich zusammen, mit klaren Überschriften und erkennbarer Priorität. Jede Erkenntnis selber hat minimal 2, maximal 13 Zeilen. Mindestwortanzahl der gesamten Ausgabe: so viele wie nötig, um die Frage ausführlich zu beantworten, Maximale Wortanzahl: 10000, Entscheidend ist, dass die Frage sehr ausführlich beantwortet wird.
 
 Ton:
 Wissenschaftlich-professionell, präzise, didaktisch klar, ausführlich, ohne metasprachliche Hinweise oder Floskeln, leicht verständlich.
@@ -1497,10 +1494,7 @@ Kontext:
 Kein weiterer Kontext außer dem Inhalt der Aufgabe. Keine zusätzlichen Kontextabfragen.
 
 Format:
-Ausgabestruktur: „Einleitung – Hauptteil – Erkenntnisse“.
-Fachbegriffe/Fremdwörter bei Erstnennung sofort kurz erklären in (Klammern).
-Abkürzungen bei Erstnennung ausschreiben und kurz erklären in (Klammern) Der Textaufbau ist logisch, faktenbasiert, umfassend, nachvollziehbar. Keine Stichpunkte; Tabellen und andere stilistische Illustrationen, wenn sie die Verständlichkeit damit verbessern. Der letzte Teil fasst alle Erkenntnisse aus dem Hauptteil der Wichtigkeit her nach zusammen, mit klaren Überschriften. Jede Erkenntnis selber hat minimal 2, maximal 5 Zeilen.  
-Mindestwortanzahl: so viele wie nötig, um die Frage ausführlich zu beantworten, Maximale Wortanzahl: 10000, Entscheidend ist, dass die Frage sehr ausführlich beantwortet wird.
+Ausgabestruktur: „Einleitung – Hauptteil – Erkenntnisse". Fachbegriffe/Fremdwörter bei Erstnennung sofort kurz erklären in (Klammern). Abkürzungen bei Erstnennung ausschreiben und kurz erklären in (Klammern) Der Textaufbau ist logisch, faktenbasiert, umfassend, nachvollziehbar. Keine Stichpunkte; Tabellen und andere stilistische Illustrationen, wenn sie die Verständlichkeit damit verbessern. Der letzte Teil fasst alle Erkenntnisse aus dem Hauptteil der Wichtigkeit nach sortiert, ausführlich zusammen, mit klaren Überschriften und erkennbarer Priorität. Jede Erkenntnis selber hat minimal 2, maximal 13 Zeilen. Mindestwortanzahl der gesamten Ausgabe: so viele wie nötig, um die Frage ausführlich zu beantworten, Maximale Wortanzahl: 10000, Entscheidend ist, dass die Frage sehr ausführlich beantwortet wird.
 
 Ton:
 Wissenschaftlich-professionell, klar und präzise; sehr ausführlich, didaktisch verständlich ohne Floskeln.
