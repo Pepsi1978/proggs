@@ -560,7 +560,7 @@
 
     <!-- Widerruf (§ 355 BGB). Knappe, sachliche Bezeichnung. -->
     <string name="settings_revoke_title">Widerruf</string>
-    <string name="settings_revoke_subtitle">Premium-Kauf</string>
+    <string name="settings_revoke_subtitle">Nach § 355 BGB</string>
     <string name="settings_revoke_confirm_title">E-Mail an Support öffnen?</string>
     <string name="settings_revoke_confirm_body">Es öffnet sich dein E-Mail-Programm mit einer vorbereiteten Nachricht an dev.app.support@gmail.com. Wir antworten innerhalb von 24 Stunden an Werktagen.\n\nDie vollständige Widerrufsbelehrung nach § 355 BGB findest du in den Nutzungsbedingungen (§ 16). Abos bitte zusätzlich über Google Play → Abonnements kündigen.</string>
     <string name="settings_revoke_cancel">Abbrechen</string>

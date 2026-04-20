@@ -1024,4 +1024,14 @@
     <string name="profile_style_coach">\n- Write in the style of a motivating goal companion, showing progress on personal goals and encouraging to keep going</string>
     <string name="profile_style_custom">\n- Write the review with the following personal focus from the user: \"%1$s\"</string>
 
+    <!-- ════════════════════════════════════════════════════════════════════
+         WITHDRAWAL (EU consumer right under Directive 2011/83/EU + national laws)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="settings_revoke_title">Withdrawal</string>
+    <string name="settings_revoke_subtitle">Premium purchase</string>
+    <string name="settings_revoke_confirm_title">Open email to support?</string>
+    <string name="settings_revoke_confirm_body">Your email app will open with a prepared message to dev.app.support@gmail.com. We respond within 24 hours on business days.\n\nThe full withdrawal instructions (for EU and UK consumers) are in the Terms of Use, Section 16. Subscriptions must also be cancelled through Google Play → Subscriptions.</string>
+    <string name="settings_revoke_email_subject">Withdrawal Premium contract Best Journal</string>
+    <string name="settings_revoke_email_body">Hello,\n\nI hereby give notice of withdrawal from my Best Journal Premium contract.\n\nPurchase: [please specify]\nDate of purchase: [please specify]\nGoogle account email: [please specify]\n\nThank you.</string>
+
 </resources>
