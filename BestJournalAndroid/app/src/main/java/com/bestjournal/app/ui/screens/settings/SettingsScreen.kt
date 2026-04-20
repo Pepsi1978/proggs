@@ -481,7 +481,8 @@ fun SettingsScreen(
                                 modifier = Modifier.weight(1f),
                             ) {
                                 SettingsSunMoonIcon(
-                                    isDark = com.bestjournal.app.ui.theme.LocalIsDarkTheme.current
+                                    isDark = com.bestjournal.app.ui.theme.LocalIsDarkTheme.current,
+                                    isActive = !uiState.followSystem && !uiState.followSun,
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
@@ -525,7 +526,8 @@ fun SettingsScreen(
                                 modifier = Modifier.weight(1f),
                             ) {
                                 SettingsPhoneIcon(
-                                    isDark = com.bestjournal.app.ui.theme.LocalIsDarkTheme.current
+                                    isDark = com.bestjournal.app.ui.theme.LocalIsDarkTheme.current,
+                                    isActive = uiState.followSystem,
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
@@ -596,7 +598,8 @@ fun SettingsScreen(
                                 modifier = Modifier.weight(1f),
                             ) {
                                 SettingsSunMoonIcon(
-                                    isDark = com.bestjournal.app.ui.theme.LocalIsDarkTheme.current
+                                    isDark = com.bestjournal.app.ui.theme.LocalIsDarkTheme.current,
+                                    isActive = uiState.followSun,
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
@@ -2535,7 +2538,9 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Report AI content (Google Play AI Policy 04/2024) — direct mailto
+                        // Report AI content (Google Play AI Policy 04/2024) — direct mailto.
+                        // Uses URL-encoded mailto so Gmail/Samsung Mail actually pick up the
+                        // subject + body. putExtra alone is silently ignored by many clients.
                         val reportAiSubject = stringResource(R.string.settings_report_ai_subject)
                         val reportAiBody = stringResource(R.string.settings_report_ai_body)
                         Row(
@@ -2545,15 +2550,21 @@ fun SettingsScreen(
                             OutlinedButton(
                                 onClick = {
                                     doHaptic(HapticFeedbackType.LongPress)
+                                    val mailtoUri =
+                                        android.net.Uri.parse(
+                                            "mailto:dev.app.support@gmail.com" +
+                                                "?subject=" +
+                                                android.net.Uri.encode(reportAiSubject) +
+                                                "&body=" +
+                                                android.net.Uri.encode(reportAiBody)
+                                        )
                                     val intent =
                                         android.content.Intent(
-                                                android.content.Intent.ACTION_SENDTO
+                                                android.content.Intent.ACTION_SENDTO,
+                                                mailtoUri,
                                             )
                                             .apply {
-                                                data =
-                                                    android.net.Uri.parse(
-                                                        "mailto:dev.app.support@gmail.com"
-                                                    )
+                                                // Belt-and-suspenders for clients that prefer extras
                                                 putExtra(
                                                     android.content.Intent.EXTRA_SUBJECT,
                                                     reportAiSubject,
@@ -2870,21 +2881,23 @@ private fun GoogleLogo(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun SettingsPhoneIcon(isDark: Boolean) {
+private fun SettingsPhoneIcon(isDark: Boolean, isActive: Boolean = true) {
     val glowYellow = Color(0xFFFFD54F)
     val mutedGray = Color(0xFF666666)
     val lightPhoneSize by
         animateDpAsState(
-            targetValue = if (!isDark) 22.dp else 14.dp,
+            targetValue = if (isActive && !isDark) 22.dp else if (!isActive) 18.dp else 14.dp,
             animationSpec = tween(300),
             label = "lightPhoneSize",
         )
     val darkPhoneSize by
         animateDpAsState(
-            targetValue = if (isDark) 22.dp else 14.dp,
+            targetValue = if (isActive && isDark) 22.dp else if (!isActive) 18.dp else 14.dp,
             animationSpec = tween(300),
             label = "darkPhoneSize",
         )
+    val lightTint = if (isActive && !isDark) glowYellow else mutedGray
+    val darkTint = if (isActive && isDark) glowYellow else mutedGray
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -2898,13 +2911,13 @@ private fun SettingsPhoneIcon(isDark: Boolean) {
             Icon(
                 Icons.Rounded.PhoneAndroid,
                 stringResource(R.string.toggle_light),
-                tint = if (!isDark) glowYellow else mutedGray,
+                tint = lightTint,
                 modifier = Modifier.size(lightPhoneSize),
             )
             Icon(
                 Icons.Rounded.LightMode,
                 null,
-                tint = if (!isDark) glowYellow else mutedGray,
+                tint = lightTint,
                 modifier = Modifier.size(lightPhoneSize * 0.35f),
             )
         }
@@ -2920,13 +2933,13 @@ private fun SettingsPhoneIcon(isDark: Boolean) {
             Icon(
                 Icons.Rounded.PhoneAndroid,
                 stringResource(R.string.toggle_dark),
-                tint = if (isDark) glowYellow else mutedGray,
+                tint = darkTint,
                 modifier = Modifier.size(darkPhoneSize),
             )
             Icon(
                 Icons.Rounded.DarkMode,
                 null,
-                tint = if (isDark) glowYellow else mutedGray,
+                tint = darkTint,
                 modifier = Modifier.size(darkPhoneSize * 0.35f),
             )
         }
@@ -3081,21 +3094,24 @@ private fun SettingsTtsIcon(isEnabled: Boolean) {
 }
 
 @Composable
-private fun SettingsSunMoonIcon(isDark: Boolean) {
+private fun SettingsSunMoonIcon(isDark: Boolean, isActive: Boolean = true) {
     val glowYellow = Color(0xFFFFD54F)
     val mutedGray = Color(0xFF666666)
+    // When inactive both icons stay small and gray (no highlight in this row).
     val sunSize by
         animateDpAsState(
-            targetValue = if (!isDark) 22.dp else 14.dp,
+            targetValue = if (isActive && !isDark) 22.dp else if (!isActive) 18.dp else 14.dp,
             animationSpec = tween(300),
             label = "settingSunSize",
         )
     val moonSize by
         animateDpAsState(
-            targetValue = if (isDark) 22.dp else 14.dp,
+            targetValue = if (isActive && isDark) 22.dp else if (!isActive) 18.dp else 14.dp,
             animationSpec = tween(300),
             label = "settingMoonSize",
         )
+    val sunTint = if (isActive && !isDark) glowYellow else mutedGray
+    val moonTint = if (isActive && isDark) glowYellow else mutedGray
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -3108,7 +3124,7 @@ private fun SettingsSunMoonIcon(isDark: Boolean) {
             Icon(
                 Icons.Rounded.LightMode,
                 stringResource(R.string.toggle_sun),
-                tint = if (!isDark) glowYellow else mutedGray,
+                tint = sunTint,
                 modifier = Modifier.size(sunSize),
             )
         }
@@ -3123,7 +3139,7 @@ private fun SettingsSunMoonIcon(isDark: Boolean) {
             Icon(
                 Icons.Rounded.DarkMode,
                 stringResource(R.string.toggle_moon),
-                tint = if (isDark) glowYellow else mutedGray,
+                tint = moonTint,
                 modifier = Modifier.size(moonSize),
             )
         }
