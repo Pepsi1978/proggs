@@ -17,69 +17,82 @@ import androidx.compose.ui.graphics.Color
 import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonMagenta
 import com.bestjournal.app.ui.theme.NeonViolet
-import kotlin.math.cos
-import kotlin.math.sin
 import kotlin.random.Random
 
 private data class Particle(
-    val x: Float,
-    val y: Float,
+    val startX: Float,
+    val startY: Float,
     val radius: Float,
-    val color: Color,
-    val speedX: Float,
-    val speedY: Float,
-    val phase: Float
+    val baseColor: Color,
+    val phaseOffset: Float,
+    val speedMultiplier: Float,
 )
 
 @Composable
-fun ParticleBackground(
-    modifier: Modifier = Modifier,
-    particleCount: Int = 15
-) {
-    val colors = remember {
-        listOf(
-            NeonCyan.copy(alpha = 0.12f),
-            NeonViolet.copy(alpha = 0.10f),
-            NeonMagenta.copy(alpha = 0.08f)
-        )
-    }
+fun ParticleBackground(modifier: Modifier = Modifier, particleCount: Int = 15) {
+    // Base colors without pre-applied alpha — alpha is now driven by lifecycle curve.
+    val colors = remember { listOf(NeonCyan, NeonViolet, NeonMagenta) }
 
     val particles = remember {
         List(particleCount) {
             Particle(
-                x = Random.nextFloat(),
-                y = Random.nextFloat(),
+                startX = Random.nextFloat(),
+                startY = Random.nextFloat(),
                 radius = Random.nextFloat() * 2f + 1.5f,
-                color = colors[it % colors.size],
-                speedX = (Random.nextFloat() - 0.5f) * 0.3f,
-                speedY = (Random.nextFloat() - 0.5f) * 0.3f,
-                phase = Random.nextFloat() * 6.28f
+                baseColor = colors[it % colors.size],
+                phaseOffset = Random.nextFloat() * 1000f,
+                speedMultiplier = Random.nextFloat() * 0.5f + 0.75f,
             )
         }
     }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "particles")
-    val time by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 6.28f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(20000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "time"
-    )
+    // Long overall cycle so restarts are not visually perceptible.
+    val transition = rememberInfiniteTransition(label = "particles")
+    val time by
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1000f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(60000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart,
+                ),
+            label = "particleTime",
+        )
 
     Canvas(modifier = modifier.fillMaxSize()) {
         particles.forEach { particle ->
-            val offsetX = sin(time + particle.phase) * particle.speedX * size.width * 0.1f
-            val offsetY = cos(time + particle.phase * 1.3f) * particle.speedY * size.height * 0.1f
-            val x = (particle.x * size.width + offsetX) % size.width
-            val y = (particle.y * size.height + offsetY) % size.height
-            drawCircle(
-                color = particle.color,
-                radius = particle.radius * density,
-                center = Offset(x.coerceIn(0f, size.width), y.coerceIn(0f, size.height))
-            )
+            val t = (time + particle.phaseOffset) * particle.speedMultiplier
+            // 0..1 within this particle's personal cycle of 100 time units.
+            val phase = (t % 100f) / 100f
+
+            // Bell curve: particle is visible only in the middle ~35% of its cycle
+            // phase 0.0-0.35: invisible, 0.35-0.5: fade-in, 0.5-0.65: fade-out, 0.65-1.0: invisible
+            val lifecycle =
+                when {
+                    phase < 0.35f -> 0f
+                    phase < 0.5f -> (phase - 0.35f) / 0.15f
+                    phase < 0.65f -> 1f - (phase - 0.5f) / 0.15f
+                    else -> 0f
+                }
+
+            if (lifecycle > 0.01f) {
+                // Re-seed position per cycle using integer cycle index as noise input,
+                // so every time a particle respawns it appears in a new random location.
+                val cycleIndex = (t / 100f).toInt()
+                val seed = particle.phaseOffset.toInt() + cycleIndex * 31
+                val rng = Random(seed)
+                val cx = rng.nextFloat() * size.width
+                val cy = rng.nextFloat() * size.height
+
+                // Peak alpha 0.12 (matches original look); lifecycle drives fade-in/out.
+                val alpha = lifecycle * 0.12f
+                drawCircle(
+                    color = particle.baseColor.copy(alpha = alpha),
+                    radius = particle.radius * density,
+                    center = Offset(cx, cy),
+                )
+            }
         }
     }
 }
