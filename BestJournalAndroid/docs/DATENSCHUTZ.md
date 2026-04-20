@@ -45,7 +45,7 @@ Die App verarbeitet folgende Datenkategorien:
 | Sprachaufnahmen (Cloud-Transkription) | Groq, Inc. (USA) | Umwandlung Sprache → Text | **Optional** |
 | Tagebuchdaten (Backup) | Google Drive (App-Data-Ordner) | Wiederherstellung, Geräteübergang | **Optional** |
 | Textausschnitte (Vorlesen) | Microsoft Bing Speech (USA) | Umwandlung Text → Sprache | **Optional** |
-| KI-Anfragen | Firebase AI / Google Gemini (USA) | KI-Funktionen | **Optional** |
+| KI-Anfragen (manuell + automatisch) | Firebase AI / Google Gemini (USA) | Dashboard, Wochen-/Monats-/Jahresrückblicke | **Optional** |
 | E-Mail, Anmelde-ID | Google / Firebase Authentication | Account | **Optional** |
 | Geräteinfo, IP-Adresse, Werbe-ID | Firebase Analytics | Nutzungsstatistik | **Opt-In** |
 | Kaufdaten | Google Play Billing | In-App-Käufe | Nur bei Kauf |
@@ -255,36 +255,73 @@ anmeldest.
 **Erhobene Daten:** E-Mail-Adresse, Anmelde-ID, IP-Adresse, Zeitstempel.
 **Rechtsgrundlage:** Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO).
 
-### 5.6 Firebase AI / Google Gemini (optional)
+### 5.6 Firebase AI / Google Gemini — Manuelle und automatische KI-Verarbeitung
 
 **Anbieter:** Google Ireland Limited / Google LLC
 **KI-Modell:** Google Gemini (Firebase AI Logic SDK)
-**Zweck:** KI-gestützte Funktionen (z. B. Zusammenfassungen, Verbesserungsvorschläge,
-Textverbesserung, Rückfragen zu Einträgen).
-**Ablauf der Datenübertragung:**
-1. Du löst aktiv eine KI-Funktion aus (z. B. „Text verbessern" oder „Zusammenfassen").
-2. Der relevante Textausschnitt wird an Google-Server in den **USA** übermittelt und
-   vom Gemini-Modell verarbeitet.
-3. Das Ergebnis (z. B. der verbesserte Text) wird an dein Gerät zurückgesendet und
-   dir zur Übernahme angezeigt.
-**Erhobene Daten:** Der Textausschnitt deiner Anfrage, Modellparameter, technische
-Metadaten (IP-Adresse, Zeitstempel).
-**Keine automatische Übermittlung:** Tagebucheinträge werden **nicht** automatisch an
-Google übertragen, sondern ausschließlich, wenn du eine KI-Funktion auslöst.
-**Rechtsgrundlage:** Einwilligung (Art. 6 Abs. 1 lit. a DSGVO) durch aktives
-Auslösen der Funktion.
+**Serverstandort:** USA
+
+Die App nutzt Google Gemini sowohl für **manuelle** als auch für **automatische**
+KI-Funktionen. Beide führen zu einer Übermittlung von Textausschnitten an
+Google-Server in den USA.
+
+#### 5.6.1 Manuell ausgelöste KI-Funktionen
+
+Wenn du aktiv eine KI-Funktion startest (z. B. „Text verbessern", „Zusammenfassen",
+„Rückfrage"):
+1. Der relevante Textausschnitt wird an Google Gemini in den **USA** übermittelt.
+2. Das Ergebnis wird an dein Gerät zurückgesendet und dir zur Übernahme angezeigt.
+
+#### 5.6.2 Automatisch ausgelöste KI-Funktionen
+
+Die App erzeugt **automatisch** bestimmte KI-generierte Inhalte, sobald bestimmte
+Ereignisse eintreten. Dabei werden deine relevanten Tagebuchdaten **automatisch** an
+Google Gemini in den USA gesendet:
+
+| Trigger | Was passiert |
+|---------|-------------|
+| **Neuer Tagebucheintrag** | Dashboard-Aktualisierung (KI-gestützte Zusammenfassung der letzten Einträge) |
+| **Ende der Woche** | Wöchentlicher Rückblick (Wochenrückblick) |
+| **Ende des Monats** | Monatlicher Rückblick (Monatsrückblick) |
+| **Ende des Jahres** (geplant) | Jahresrückblick |
+
+Das bedeutet: Wenn du einen Eintrag hinzufügst oder die App am Wochen-/Monatsende
+öffnest, werden die für den jeweiligen Rückblick relevanten Einträge (oder Auszüge
+daraus) ohne zusätzliche Bestätigung an Google-Server in den USA übermittelt.
+
+**Erhobene Daten:** Textausschnitte deiner Tagebucheinträge (nie Fotos, nie
+Audioaufnahmen), Zeitraum, Modellparameter, technische Metadaten (IP-Adresse,
+Zeitstempel).
+
+**Deaktivierung der automatischen KI-Funktionen:**
+Unter **„Einstellungen → KI-Funktionen"** kannst du einzeln deaktivieren:
+- Automatische Dashboard-Aktualisierung
+- Wöchentliche Rückblicke
+- Monatliche Rückblicke
+- Jährliche Rückblicke (sobald verfügbar)
+
+Nach dem Deaktivieren findet für die jeweilige Funktion **keine Übermittlung an
+Google Gemini mehr statt**. Die App bleibt voll nutzbar — du verzichtest nur auf die
+KI-generierten Zusammenfassungen und Rückblicke.
+
+**Rechtsgrundlage:** Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Die Einwilligung
+wird beim ersten App-Start mit einem deutlich erkennbaren Hinweis eingeholt und
+umfasst sowohl manuelle als auch automatische KI-Verarbeitung. Sie kann jederzeit
+in den Einstellungen widerrufen werden (Art. 7 Abs. 3 DSGVO).
+
 **Drittlandübermittlung:** Verarbeitung erfolgt in den USA auf Grundlage des
 **EU-US Data Privacy Framework** (Angemessenheitsbeschluss der EU-Kommission) sowie
 von **EU-Standardvertragsklauseln** (Art. 46 DSGVO).
-**Speicherdauer bei Google:** Laut Firebase-AI-Richtlinien werden Anfragen nicht zu
-Trainingszwecken verwendet und nach der Verarbeitung gelöscht (Details:
-https://firebase.google.com/support/privacy).
-**Widerruf:** Nutze einfach keine KI-Funktionen mehr — es erfolgt dann keinerlei
-Übermittlung an Google-KI-Systeme.
 
-> **Wichtig:** Sende über KI-Funktionen keine besonders sensiblen personenbezogenen
-> Daten Dritter (z. B. Gesundheitsdaten anderer Personen, Namen dritter Personen ohne
-> deren Einwilligung).
+**Speicherdauer bei Google:** Laut Firebase-AI-Richtlinien werden Anfragen nicht zu
+Trainingszwecken verwendet und nach der Verarbeitung gelöscht. Details:
+https://firebase.google.com/support/privacy
+
+> **Wichtig:** Sende über manuelle KI-Funktionen keine besonders sensiblen
+> personenbezogenen Daten Dritter (z. B. Gesundheitsdaten anderer Personen, Namen
+> dritter Personen ohne deren Einwilligung). Auch für die automatischen Rückblicke
+> gilt: Schreibe keine Inhalte ins Tagebuch, die du nicht an Google Gemini
+> übermitteln willst — oder deaktiviere die automatischen KI-Funktionen.
 
 ### 5.7 Firebase Analytics (Opt-In)
 
@@ -416,10 +453,27 @@ Du kannst dich auch an die für deinen Wohnsitz zuständige Aufsichtsbehörde we
 - Verschlüsselte Übertragung (HTTPS/TLS 1.2+) bei allen Netzwerkverbindungen
 - Google Drive Backup nur im geschützten App-Data-Ordner (kein Zugriff durch andere Apps)
 - Firebase App Check zum Schutz vor Missbrauch
-- Optional: App-Sperre durch PIN oder Biometrie (Fingerabdruck, Gesichtserkennung)
 - Lokale Verschlüsselung sensibler Daten (AndroidX Security Crypto)
 - Keine Speicherung unverschlüsselter Zugangsdaten
 - Automatische Sicherheitsupdates über den Google Play Store
+
+### 9.1 Biometrische App-Sperre (optional)
+
+Du kannst die App optional durch eine **biometrische Authentifizierung** (Fingerabdruck,
+Gesichtserkennung) oder alternativ durch einen **Geräte-PIN** schützen
+(AndroidX Biometric Library).
+
+**Wichtig:** Biometrische Daten (z. B. Fingerabdruck-Muster oder Gesichtsmerkmale)
+werden **ausschließlich vom Android-Betriebssystem in der gesicherten Hardware-Enklave
+deines Geräts** (Trusted Execution Environment / Secure Element) verarbeitet. Sie
+verlassen dein Gerät **niemals** und werden der App **nicht zugänglich** gemacht. Die
+App erhält vom System lediglich die Information „Authentifizierung erfolgreich" oder
+„Authentifizierung fehlgeschlagen" — keine biometrischen Merkmale selbst.
+
+**Rechtsgrundlage:** Einwilligung durch Aktivierung der Sperre (Art. 6 Abs. 1 lit. a
+DSGVO).
+**Widerruf:** Deaktiviere die Sperre in den App-Einstellungen oder entferne deine
+Biometrie aus den Android-Systemeinstellungen.
 
 ---
 
