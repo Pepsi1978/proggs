@@ -48,7 +48,7 @@ Mit der Nutzung versicherst du, das erforderliche Mindestalter zu haben.
 
 ---
 
-## 4. KI-generierte Inhalte — Haftungsausschluss
+## 4. KI-generierte Inhalte, Haftungsausschluss
 
 Die App nutzt KI-Modelle (u. a. Google Gemini, Whisper von Groq) zur Erstellung von
 Zusammenfassungen, Rückblicken, Textverbesserungen und Transkriptionen.

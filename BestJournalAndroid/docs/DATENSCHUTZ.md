@@ -25,7 +25,7 @@ Ein Datenschutzbeauftragter ist gesetzlich nicht erforderlich (Art. 37 DSGVO, §
 
 ## 2. Überblick: Welche Daten verarbeitet die App?
 
-Best Journal ist eine Tagebuch-App. Der Grundzustand ist **lokal auf deinem Gerät** —
+Best Journal ist eine Tagebuch-App. Der Grundzustand ist **lokal auf deinem Gerät**,
 Tagebucheinträge werden in einer geschützten SQLite-Datenbank gespeichert und verlassen
 dein Gerät nur, wenn du aktiv eine der folgenden optionalen Funktionen nutzt:
 
@@ -61,7 +61,7 @@ widerrufen werden.
 ### 3.1 Internet (`INTERNET`) und Netzwerkstatus (`ACCESS_NETWORK_STATE`)
 **Zweck:** Cloud-Transkription (Groq), Cloud-Backup (Google Drive), KI-Funktionen,
 In-App-Käufe, Firebase-Dienste.
-**Hinweis:** Ohne Internet funktioniert die App weiterhin — nur Cloud- und
+**Hinweis:** Ohne Internet funktioniert die App weiterhin, nur Cloud- und
 Online-KI-Funktionen sind dann deaktiviert. Die lokale Spracherkennung (siehe 5.2)
 funktioniert auch offline.
 
@@ -106,7 +106,7 @@ Russisch, Chinesisch, Japanisch, Koreanisch, Arabisch, Hindi und weitere)
 im Google Play Store verfügbar. Die Sprache wird automatisch auf Basis deiner
 Android-Systemsprache gewählt (`Locale.getDefault()`), die Zeitzone aus der
 Android-Systemeinstellung (`TimeZone.getDefault()`). Beides erfolgt ausschließlich
-**auf dem Gerät** — **es findet keine zusätzliche Standort-, Sprach- oder
+**auf dem Gerät**, **es findet keine zusätzliche Standort-, Sprach- oder
 Zeitzonen-Abfrage bei Servern statt**.
 
 Weitere Sprachen und Länder werden fortlaufend ergänzt, damit die App in immer mehr
@@ -148,7 +148,7 @@ eigenen Datenschutzbestimmungen.
 Die folgenden Dienste werden **nur verwendet, wenn du sie aktiv nutzt oder aktivierst**.
 Die App ist auch ohne diese Dienste vollständig nutzbar.
 
-### 5.1 Groq, Inc. — Cloud-Transkription (optional)
+### 5.1 Groq, Inc. | Cloud-Transkription (optional)
 
 **Anbieter:** Groq, Inc., 400 Castro Street, Mountain View, CA 94041, USA
 **Zweck:** Umwandlung deiner Sprachaufnahmen in Text (Whisper-Transkription).
@@ -163,7 +163,7 @@ Angaben nach dem **EU-US Data Privacy Framework** zertifiziert. Zusätzlich werd
 Standardvertragsklauseln (Art. 46 DSGVO) angewendet.
 **Speicherdauer bei Groq:** Anfragen werden laut Anbieter nicht zu Trainingszwecken
 verwendet und nach der Verarbeitung gelöscht.
-**Widerruf:** Wechsle in den App-Einstellungen auf **„Lokale Transkription"** — dann
+**Widerruf:** Wechsle in den App-Einstellungen auf **„Lokale Transkription"**, dann
 werden keine Audiodaten mehr an Groq übermittelt.
 **Datenschutzerklärung Groq:** https://groq.com/privacy-policy/
 
@@ -195,10 +195,10 @@ technische Metadaten (IP-Adresse, Zeitstempel).
 **Übermittlung:** Nur wenn du aktiv die Vorlesefunktion nutzt. Ohne Nutzung erfolgt
 keine Datenübermittlung an Microsoft.
 **Rechtsgrundlage:** Einwilligung (Art. 6 Abs. 1 lit. a DSGVO) durch aktives Auslösen.
-**Drittlandübermittlung:** USA — auf Grundlage des
+**Drittlandübermittlung:** USA, auf Grundlage des
 **EU-US Data Privacy Framework** (Microsoft ist zertifiziert) sowie von
 **EU-Standardvertragsklauseln** (Art. 46 DSGVO).
-**Widerruf:** Nutze die Vorlesefunktion einfach nicht — oder deaktiviere sie in den
+**Widerruf:** Nutze die Vorlesefunktion einfach nicht, oder deaktiviere sie in den
 Einstellungen. Android bietet zusätzlich eine systemeigene On-Device-TTS als
 Alternative.
 **Datenschutzerklärung Microsoft:**
@@ -207,7 +207,7 @@ https://privacy.microsoft.com/de-de/privacystatement
 > **Hinweis:** Übergib der Vorlesefunktion keine besonders sensiblen
 > personenbezogenen Daten Dritter.
 
-### 5.3 Google Drive — Cloud-Backup (optional)
+### 5.3 Google Drive | Cloud-Backup (optional)
 
 **Anbieter:** Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland
 **Zweck:** Verschlüsseltes Backup deiner Tagebuchdaten zur Wiederherstellung auf einem
@@ -216,7 +216,7 @@ neuen Gerät oder nach Deinstallation.
 Bilder, Einstellungen) als einzelne Datei.
 **Speicherort:** **App-Data-Ordner deines persönlichen Google-Drive-Kontos** (Scope:
 `DRIVE_APPDATA`). Dieser Ordner ist von Google geschützt und ausschließlich für
-Best Journal zugänglich — andere Apps und selbst du über die normale Drive-Oberfläche
+Best Journal zugänglich, andere Apps und selbst du über die normale Drive-Oberfläche
 kannst darauf nicht zugreifen.
 **Aktivierung:** Nur wenn du in den Einstellungen **„Google-Drive-Backup"** aktivierst
 und der Zugriffsberechtigung explizit zustimmst.
@@ -237,11 +237,11 @@ automatisch im Google-Drive-Speicher deines Kontos gesichert (verschlüsselt, ma
 **Was ausgeschlossen ist:** Die Backup-Regeln (`backup_rules.xml` /
 `data_extraction_rules.xml`) schließen die Dashboard-Datenbank, die Rückblick-Datenbank
 und die verschlüsselten Zugangsdaten (EncryptedSharedPreferences mit Google-Tokens)
-vom Android-System-Backup aus — diese sensiblen Daten landen also nicht im System-Backup.
+vom Android-System-Backup aus, diese sensiblen Daten landen also nicht im System-Backup.
 
 **Was mitgesichert wird:** Tagebuchtexte, Stimmungs-Tags und normale App-Einstellungen.
 Fotos und Videos werden vom Android-System-Backup wegen der Größenbeschränkung (25 MB)
-in der Regel nicht erfasst — für Medien brauchst du das separate Google-Drive-Backup
+in der Regel nicht erfasst, für Medien brauchst du das separate Google-Drive-Backup
 aus der App (5.3).
 
 **Deaktivierung:** In den Android-Systemeinstellungen unter „Google → Sicherung".
@@ -265,7 +265,7 @@ anmeldest.
 **Erhobene Daten:** E-Mail-Adresse, Anmelde-ID, IP-Adresse, Zeitstempel.
 **Rechtsgrundlage:** Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO).
 
-### 5.6 Firebase AI / Google Gemini — Manuelle und automatische KI-Verarbeitung
+### 5.6 Firebase AI / Google Gemini, Manuelle und automatische KI-Verarbeitung
 
 **Anbieter:** Google Ireland Limited / Google LLC
 **KI-Modell:** Google Gemini (Firebase AI Logic SDK)
@@ -290,11 +290,11 @@ Google Gemini in den USA gesendet:
 
 | Trigger | Was passiert |
 |---------|-------------|
-| **Neuer Tagebucheintrag** | Dashboard-Aktualisierung — die relevanten Einträge werden automatisch an Gemini gesendet, um eine neue Dashboard-Zusammenfassung zu erzeugen (nur wenn unter „Einstellungen → KI-Automatisierungen → Auto-Dashboard-Update" aktiviert) |
+| **Neuer Tagebucheintrag** | Dashboard-Aktualisierung, die relevanten Einträge werden automatisch an Gemini gesendet, um eine neue Dashboard-Zusammenfassung zu erzeugen (nur wenn unter „Einstellungen → KI-Automatisierungen → Auto-Dashboard-Update" aktiviert) |
 | **Neue Sprach-Transkription** (bei aktivierter Auto-Textverbesserung) | Der transkribierte Text wird automatisch durch Gemini stilistisch/grammatikalisch verbessert |
 | **Profil-Wechsel im Dashboard** | Dashboard wird neu generiert mit dem neuen Profil-Prompt |
 
-**Nicht automatisch — nur auf deinen Anstoß:**
+**Nicht automatisch, nur auf deinen Anstoß:**
 - **Wöchentliche, monatliche und jährliche Rückblicke** werden *nicht* automatisch im
   Hintergrund erzeugt. Am Ende der jeweiligen Periode bekommst du eine lokale
   Benachrichtigung. Der Rückblick selbst wird erst generiert, wenn du die App öffnest
@@ -314,7 +314,7 @@ Jahresrückblicke eine Benachrichtigung bekommst (Standard: aktiv). Unabhängig 
 wird der Rückblick erst beim Öffnen durch dich erzeugt.
 
 Nach dem Deaktivieren findet für die jeweilige Funktion **keine Übermittlung an
-Google Gemini mehr statt**. Die App bleibt voll nutzbar — du verzichtest nur auf die
+Google Gemini mehr statt**. Die App bleibt voll nutzbar, du verzichtest nur auf die
 KI-generierten Zusammenfassungen und Rückblicke.
 
 **Rechtsgrundlage:** Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Die Einwilligung
@@ -334,7 +334,7 @@ https://firebase.google.com/support/privacy
 > personenbezogenen Daten Dritter (z. B. Gesundheitsdaten anderer Personen, Namen
 > dritter Personen ohne deren Einwilligung). Auch für die automatischen Rückblicke
 > gilt: Schreibe keine Inhalte ins Tagebuch, die du nicht an Google Gemini
-> übermitteln willst — oder deaktiviere die automatischen KI-Funktionen.
+> übermitteln willst, oder deaktiviere die automatischen KI-Funktionen.
 
 ### 5.7 Firebase Analytics (Opt-In beim ersten Start)
 
@@ -350,7 +350,7 @@ Premium-Kauf, Fehler in der Sprachausgabe).
 **Wie die Einwilligung funktioniert:**
 - Beim **ersten App-Start** erscheint vor dem Onboarding ein Datenschutz-Bildschirm.
 - Wählst du „Loslegen", willigst du in die anonyme Nutzungsstatistik ein.
-- Wählst du „Statistiken deaktivieren", bleibt Firebase Analytics ausgeschaltet —
+- Wählst du „Statistiken deaktivieren", bleibt Firebase Analytics ausgeschaltet,
   technisch via `setAnalyticsCollectionEnabled(false)`.
 - Du kannst deine Entscheidung jederzeit unter **„Einstellungen → Datenschutz →
   Anonyme Statistik"** umschalten.
@@ -383,7 +383,7 @@ schicken.
    (Gmail-API-Scope `https://www.googleapis.com/auth/gmail.send`).
 3. Nach deiner Zustimmung werden **zwei E-Mails über dein eigenes Google-Konto**
    via Gmail-API versendet:
-   - **E-Mail 1 an uns:** `dev.app.support@gmail.com` — enthält deinen Feedback-Text
+   - **E-Mail 1 an uns:** `dev.app.support@gmail.com`, enthält deinen Feedback-Text
      und deine Google-Konto-E-Mail-Adresse als Absender.
    - **E-Mail 2 an dich selbst:** Bestätigung mit dem Feedback-Text, den du
      abgeschickt hast, damit du eine Kopie für dich hast.
@@ -408,7 +408,7 @@ schicken.
 
 **Speicherdauer bei uns:** Deine Feedback-E-Mail bleibt maximal 24 Monate in unserem
 Postfach gespeichert, danach wird sie gelöscht. Bei konkretem Bezug zu einem
-Bugfix oder Feature kann die Speicherung auch länger erfolgen — du kannst jederzeit
+Bugfix oder Feature kann die Speicherung auch länger erfolgen, du kannst jederzeit
 per E-Mail Löschung verlangen.
 
 **Widerruf der Gmail-Berechtigung:** Du kannst den Gmail-Send-Zugriff jederzeit
@@ -417,7 +417,7 @@ Nach Entzug funktioniert die Feedback-Funktion nicht mehr, die App ist sonst
 uneingeschränkt nutzbar.
 
 **Alternative:** Du kannst uns auch direkt per E-Mail erreichen unter
-**dev.app.support@gmail.com** — ganz ohne App-Berechtigungen.
+**dev.app.support@gmail.com**, ganz ohne App-Berechtigungen.
 
 ### 5.10 Google Play In-App Review API
 
@@ -437,8 +437,8 @@ Bei aktivierten Cloud-Diensten (Groq, Firebase/Gemini, Google Drive, Microsoft
 Edge TTS) werden Daten in den USA verarbeitet. Die Übermittlung erfolgt auf Grundlage:
 
 - **EU-US Data Privacy Framework** (Angemessenheitsbeschluss der EU-Kommission vom
-  10. Juli 2023) — für Google/Firebase/Gemini und Microsoft
-- **EU-Standardvertragsklauseln** (Art. 46 DSGVO) — für Groq
+  10. Juli 2023), für Google/Firebase/Gemini und Microsoft
+- **EU-Standardvertragsklauseln** (Art. 46 DSGVO), für Groq
 
 ---
 
@@ -449,7 +449,7 @@ Billing**.
 
 - **Anbieter:** Google Ireland Limited
 - **Erhobene Daten:** Transaktions-ID, Kauf-Token, gekauftes Produkt, Zeitstempel
-- **Zahlungsdaten:** Werden **ausschließlich von Google** verarbeitet — wir erhalten
+- **Zahlungsdaten:** Werden **ausschließlich von Google** verarbeitet, wir erhalten
   keine Kreditkartennummern, PayPal-Zugänge oder Kontodaten
 - **Rechtsgrundlage:** Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO)
 - **Datenschutzerklärung Google Play:** https://play.google.com/about/play-terms/
@@ -472,7 +472,7 @@ Beim Löschen werden unwiderruflich entfernt:
 - Google-Drive-App-Data-Backup (wird aus Drive entfernt)
 
 Nach Abschluss startet die App neu und verhält sich wie eine frische Installation.
-Das Android-System-Backup wird durch diesen Vorgang **nicht** gelöscht — dieses kannst
+Das Android-System-Backup wird durch diesen Vorgang **nicht** gelöscht, dieses kannst
 du separat in deinem Google-Konto unter
 **myaccount.google.com → Daten und Datenschutz → Sicherungen** entfernen.
 
@@ -486,7 +486,7 @@ App-Deinstallation kannst du den App-Data-Ordner in deinem Google-Konto unter
 **myaccount.google.com → Daten und Datenschutz → Apps mit Kontozugriff** löschen.
 
 ### 7.4 Löschung per E-Mail anfordern
-Falls du keinen Zugriff mehr auf die App hast: **dev.app.support@gmail.com** —
+Falls du keinen Zugriff mehr auf die App hast: **dev.app.support@gmail.com**,
 Betreff: „Kontolöschung Best Journal". Bearbeitungsfrist: 30 Tage.
 
 ---
@@ -542,7 +542,7 @@ werden **ausschließlich vom Android-Betriebssystem in der gesicherten Hardware-
 deines Geräts** (Trusted Execution Environment / Secure Element) verarbeitet. Sie
 verlassen dein Gerät **niemals** und werden der App **nicht zugänglich** gemacht. Die
 App erhält vom System lediglich die Information „Authentifizierung erfolgreich" oder
-„Authentifizierung fehlgeschlagen" — keine biometrischen Merkmale selbst.
+„Authentifizierung fehlgeschlagen", keine biometrischen Merkmale selbst.
 
 **Rechtsgrundlage:** Einwilligung durch Aktivierung der Sperre (Art. 6 Abs. 1 lit. a
 DSGVO).
