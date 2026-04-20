@@ -2526,6 +2526,91 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             textAlign = TextAlign.Center,
                         )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Widerrufsbutton (§ 355 BGB) - zweistufig via mailto-Intent
+                        var showRevokeDialog by remember { mutableStateOf(false) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    showRevokeDialog = true
+                                },
+                            ) {
+                                Text(stringResource(R.string.settings_revoke_title))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.settings_revoke_subtitle),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                        )
+
+                        if (showRevokeDialog) {
+                            val revokeSubject = stringResource(R.string.settings_revoke_email_subject)
+                            val revokeBody = stringResource(R.string.settings_revoke_email_body)
+                            val revokeNoEmail = stringResource(R.string.settings_revoke_no_email)
+                            androidx.compose.material3.AlertDialog(
+                                onDismissRequest = { showRevokeDialog = false },
+                                title = {
+                                    Text(stringResource(R.string.settings_revoke_confirm_title))
+                                },
+                                text = {
+                                    Text(stringResource(R.string.settings_revoke_confirm_body))
+                                },
+                                confirmButton = {
+                                    androidx.compose.material3.TextButton(
+                                        onClick = {
+                                            showRevokeDialog = false
+                                            val intent =
+                                                android.content.Intent(
+                                                        android.content.Intent.ACTION_SENDTO
+                                                    )
+                                                    .apply {
+                                                        data =
+                                                            android.net.Uri.parse(
+                                                                "mailto:dev.app.support@gmail.com"
+                                                            )
+                                                        putExtra(
+                                                            android.content.Intent.EXTRA_SUBJECT,
+                                                            revokeSubject,
+                                                        )
+                                                        putExtra(
+                                                            android.content.Intent.EXTRA_TEXT,
+                                                            revokeBody,
+                                                        )
+                                                    }
+                                            try {
+                                                context.startActivity(intent)
+                                            } catch (e: android.content.ActivityNotFoundException) {
+                                                android.widget.Toast.makeText(
+                                                        context,
+                                                        revokeNoEmail,
+                                                        android.widget.Toast.LENGTH_LONG,
+                                                    )
+                                                    .show()
+                                            }
+                                        }
+                                    ) {
+                                        Text(stringResource(R.string.settings_revoke_confirm))
+                                    }
+                                },
+                                dismissButton = {
+                                    androidx.compose.material3.TextButton(
+                                        onClick = { showRevokeDialog = false }
+                                    ) {
+                                        Text(stringResource(R.string.settings_revoke_cancel))
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
 
