@@ -127,6 +127,7 @@ fun AchievementsSection(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                 ) {
+                    // Left trophy
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -156,8 +157,24 @@ fun AchievementsSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    // Invisible counterbalance so the text is visually centered
-                    Spacer(modifier = Modifier.width(46.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
+                    // Right trophy (mirrors the left one for symmetry)
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                            ),
+                    ) {
+                        Icon(
+                            Icons.Rounded.EmojiEvents,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                 }
                 // Chevron pinned to the right edge
                 Icon(
