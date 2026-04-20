@@ -18,15 +18,16 @@
   h2 { font-size: 1.35rem; margin-top: 2.25rem; padding-bottom: 0.35rem; border-bottom: 2px solid #e5e7eb; color: #111; }
   h3 { font-size: 1.1rem; margin-top: 1.5rem; color: #222; }
   p, li { font-size: 1rem; }
-  ul { padding-left: 1.25rem; }
+  ul, ol { padding-left: 1.25rem; }
   table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.95rem; }
   th, td { border: 1px solid #d1d5db; padding: 0.6rem 0.75rem; text-align: left; vertical-align: top; }
   th { background: #f3f4f6; font-weight: 600; }
   code { background: #f3f4f6; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.92em; }
-  a { color: #2563eb; text-decoration: none; }
+  a { color: #2563eb; text-decoration: none; word-break: break-all; }
   a:hover { text-decoration: underline; }
   .meta { color: #6b7280; font-size: 0.95rem; margin-bottom: 1.5rem; }
   .address { background: #f9fafb; border-left: 4px solid #2563eb; padding: 0.75rem 1rem; margin: 1rem 0; }
+  .warning { background: #fef3c7; border-left: 4px solid #d97706; padding: 0.75rem 1rem; margin: 1rem 0; }
   hr { border: none; border-top: 1px solid #e5e7eb; margin: 2.5rem 0; }
   .footer { color: #6b7280; font-size: 0.9rem; margin-top: 3rem; text-align: center; }
 </style>
@@ -49,129 +50,227 @@
 <p>Ein Datenschutzbeauftragter ist gesetzlich nicht erforderlich (Art. 37 DSGVO, § 38 BDSG).</p>
 
 <h2>2. Überblick: Welche Daten verarbeitet die App?</h2>
-<p>Best Journal ist eine Tagebuch-App, die in erster Linie <strong>lokal auf deinem Gerät</strong> arbeitet. Deine Tagebucheinträge werden standardmäßig <strong>nicht in eine Cloud übertragen</strong> und <strong>nicht auf unseren Servern gespeichert</strong>.</p>
+<p>Best Journal ist eine Tagebuch-App. Der Grundzustand ist <strong>lokal auf deinem Gerät</strong> — Tagebucheinträge werden in einer geschützten SQLite-Datenbank gespeichert und verlassen dein Gerät nur, wenn du aktiv eine der folgenden optionalen Funktionen nutzt:</p>
+<ul>
+  <li>Cloud-Transkription (Groq) von Sprachaufnahmen</li>
+  <li>Cloud-Backup (Google Drive)</li>
+  <li>KI-Funktionen (Firebase AI / Google Gemini)</li>
+  <li>Vorlesefunktion (Microsoft Edge TTS)</li>
+  <li>Anmeldung (Google Sign-In / Firebase Authentication)</li>
+  <li>Nutzungsstatistiken (Firebase Analytics, nur mit Einwilligung)</li>
+</ul>
 <table>
-  <tr><th>Datenkategorie</th><th>Wo gespeichert</th><th>Zweck</th></tr>
-  <tr><td>Tagebucheinträge (Text, Audio, Bilder)</td><td>Ausschließlich auf deinem Gerät</td><td>Kernfunktion der App</td></tr>
-  <tr><td>Einstellungen und Präferenzen</td><td>Ausschließlich auf deinem Gerät</td><td>App-Konfiguration</td></tr>
-  <tr><td>Geräteinformationen (Modell, OS-Version, App-Version)</td><td>Google-Server (Firebase)</td><td>Fehleranalyse, Stabilität</td></tr>
-  <tr><td>IP-Adresse</td><td>Google-Server (Firebase) — gekürzt/anonymisiert</td><td>Technisch erforderlich</td></tr>
-  <tr><td>Android Werbe-ID (AAID)</td><td>Google-Server (Firebase Analytics)</td><td>Nur bei Einwilligung</td></tr>
-  <tr><td>Authentifizierungsdaten (optional)</td><td>Firebase Authentication</td><td>Account-Verwaltung</td></tr>
-  <tr><td>KI-Anfragen (optional)</td><td>Firebase AI / Google</td><td>KI-gestützte Funktionen</td></tr>
-  <tr><td>Kaufdaten (Google Play)</td><td>Google Play Billing</td><td>In-App-Käufe</td></tr>
+  <tr><th>Datenkategorie</th><th>Wo gespeichert</th><th>Zweck</th><th>Optional?</th></tr>
+  <tr><td>Tagebucheinträge (Text, Audio, Bilder)</td><td>Lokal auf deinem Gerät</td><td>Kernfunktion</td><td>Kern</td></tr>
+  <tr><td>Einstellungen und Präferenzen</td><td>Lokal auf deinem Gerät</td><td>App-Konfiguration</td><td>Kern</td></tr>
+  <tr><td>Sprachaufnahmen (Cloud-Transkription)</td><td>Groq, Inc. (USA)</td><td>Umwandlung Sprache → Text</td><td><strong>Optional</strong></td></tr>
+  <tr><td>Tagebuchdaten (Backup)</td><td>Google Drive (App-Data-Ordner)</td><td>Wiederherstellung, Geräteübergang</td><td><strong>Optional</strong></td></tr>
+  <tr><td>Textausschnitte (Vorlesen)</td><td>Microsoft Bing Speech (USA)</td><td>Umwandlung Text → Sprache</td><td><strong>Optional</strong></td></tr>
+  <tr><td>KI-Anfragen</td><td>Firebase AI / Google Gemini (USA)</td><td>KI-Funktionen</td><td><strong>Optional</strong></td></tr>
+  <tr><td>E-Mail, Anmelde-ID</td><td>Google / Firebase Authentication</td><td>Account</td><td><strong>Optional</strong></td></tr>
+  <tr><td>Geräteinfo, IP-Adresse, Werbe-ID</td><td>Firebase Analytics</td><td>Nutzungsstatistik</td><td><strong>Opt-In</strong></td></tr>
+  <tr><td>Kaufdaten</td><td>Google Play Billing</td><td>In-App-Käufe</td><td>Nur bei Kauf</td></tr>
 </table>
 
 <h2>3. Berechtigungen der App und ihre Verwendung</h2>
 <p>Die App fordert folgende Android-Berechtigungen an. Jede Berechtigung wird <strong>nur für die angegebene Funktion</strong> verwendet und kann in den Android-Systemeinstellungen jederzeit widerrufen werden.</p>
 
 <h3>3.1 Internet (<code>INTERNET</code>) und Netzwerkstatus (<code>ACCESS_NETWORK_STATE</code>)</h3>
-<p><strong>Zweck:</strong> Synchronisation (optional), KI-Funktionen (optional), In-App-Käufe, Firebase-Dienste, Absturzberichte.<br>
-<strong>Hinweis:</strong> Ohne Internet funktioniert die App weiterhin — nur Cloud- und KI-Funktionen sind dann deaktiviert.</p>
+<p><strong>Zweck:</strong> Cloud-Transkription (Groq), Cloud-Backup (Google Drive), KI-Funktionen, In-App-Käufe, Firebase-Dienste.<br>
+<strong>Hinweis:</strong> Ohne Internet funktioniert die App weiterhin — nur Cloud- und Online-KI-Funktionen sind dann deaktiviert. Die lokale Spracherkennung (siehe 5.2) funktioniert auch offline.</p>
 
 <h3>3.2 Mikrofon (<code>RECORD_AUDIO</code>)</h3>
 <p><strong>Zweck:</strong> Sprachaufnahmen für Tagebucheinträge (Diktierfunktion, Sprachnotizen).<br>
-<strong>Verarbeitung:</strong> Aufnahmen werden standardmäßig <strong>lokal</strong> auf deinem Gerät gespeichert. Nur wenn du aktiv die Transkriptionsfunktion nutzt, werden Audiodaten zur Transkription an den jeweiligen KI-Dienst übermittelt.<br>
+<strong>Verarbeitung:</strong> Aufnahmen werden standardmäßig <strong>lokal</strong> auf deinem Gerät gespeichert. Zur Transkription hast du die Wahl zwischen <strong>lokaler</strong> Erkennung (siehe 5.2) und <strong>Cloud-Transkription</strong> (siehe 5.1).<br>
 <strong>Rechtsgrundlage:</strong> Einwilligung (Art. 6 Abs. 1 lit. a DSGVO).</p>
 
 <h3>3.3 Kamera (<code>CAMERA</code>)</h3>
 <p><strong>Zweck:</strong> Foto-Anhänge zu Tagebucheinträgen.<br>
-<strong>Verarbeitung:</strong> Fotos werden ausschließlich lokal gespeichert und nicht automatisch hochgeladen.</p>
+<strong>Verarbeitung:</strong> Fotos werden ausschließlich lokal gespeichert und nicht automatisch hochgeladen. Bei aktivem Google-Drive-Backup werden sie — wie die übrigen Tagebuchdaten — als Teil des Backups verschlüsselt in den Drive-App-Data-Ordner übertragen.</p>
 
 <h3>3.4 Ungefährer Standort (<code>ACCESS_COARSE_LOCATION</code>)</h3>
 <p><strong>Zweck:</strong> Optionale Anzeige des ungefähren Ortes (Stadt/Region) bei einem Tagebucheintrag.<br>
-<strong>Verarbeitung:</strong> Der Standort wird <strong>nur auf Anfrage</strong> ermittelt, lokal beim Eintrag gespeichert und <strong>nicht</strong> an externe Dienste übermittelt.</p>
+<strong>Verarbeitung:</strong> Nur auf Anfrage ermittelt, lokal beim Eintrag gespeichert und nicht an externe Dienste übermittelt.</p>
 
 <h3>3.5 Benachrichtigungen (<code>POST_NOTIFICATIONS</code>)</h3>
-<p><strong>Zweck:</strong> Erinnerungen an das Schreiben von Einträgen (wenn du Reminder aktivierst).<br>
+<p><strong>Zweck:</strong> Erinnerungen an das Schreiben von Einträgen.<br>
 <strong>Verarbeitung:</strong> Ausschließlich lokal vom Gerät erzeugt.</p>
 
 <h3>3.6 Autostart nach Neustart (<code>RECEIVE_BOOT_COMPLETED</code>)</h3>
 <p><strong>Zweck:</strong> Reaktivierung geplanter Erinnerungen nach einem Geräte-Neustart.<br>
 <strong>Verarbeitung:</strong> Ausschließlich lokal, keine Datenübertragung.</p>
 
+<h2>3a. Geltungsbereich und internationale Verfügbarkeit</h2>
+<p>Die App ist in <strong>mehr als 25 Sprachen</strong> (u. a. Deutsch, Englisch, Französisch, Spanisch, Italienisch, Niederländisch, Portugiesisch, Polnisch, Tschechisch, Türkisch, Russisch, Chinesisch, Japanisch, Koreanisch, Arabisch, Hindi und weitere) im Google Play Store verfügbar. Die Sprache wird automatisch auf Basis deiner Android-Systemsprache gewählt (<code>Locale.getDefault()</code>), die Zeitzone aus der Android-Systemeinstellung (<code>TimeZone.getDefault()</code>). Beides erfolgt ausschließlich <strong>auf dem Gerät</strong> — <strong>es findet keine zusätzliche Standort-, Sprach- oder Zeitzonen-Abfrage bei Servern statt</strong>.</p>
+<p>Weitere Sprachen und Länder werden fortlaufend ergänzt, damit die App in immer mehr lokalen Play-Store-Regionen in der jeweiligen Landessprache verfügbar ist.</p>
+<p>Diese Datenschutzerklärung gilt unabhängig von deinem Wohnsitz. Für Nutzer innerhalb der <strong>Europäischen Union</strong> und des <strong>EWR</strong> kommt die DSGVO zur Anwendung; für Nutzer außerhalb gelten die hier genannten Schutzstandards freiwillig als Selbstverpflichtung des Verantwortlichen.</p>
+
 <h2>4. Lokale Datenspeicherung</h2>
 <p>Alle Tagebuchinhalte (Texte, Sprachaufnahmen, Bilder, Stimmungen, Tags) werden in einer lokalen SQLite-Datenbank (Android Room) ausschließlich auf deinem Gerät gespeichert.</p>
 <ul>
   <li><strong>Speicherort:</strong> Interner App-Speicher (vom Betriebssystem geschützt)</li>
   <li><strong>Zugriff:</strong> Nur die Best-Journal-App selbst</li>
-  <li><strong>Löschung:</strong> Durch Deinstallation der App oder über die Einstellungen („Alle Daten löschen")</li>
+  <li><strong>Löschung:</strong> Durch Deinstallation oder über „Alle Daten löschen"</li>
 </ul>
 
-<h2>5. Verarbeitung durch Drittanbieter (Firebase / Google)</h2>
-<p>Die App nutzt Dienste der <strong>Google Ireland Limited</strong> (Gordon House, Barrow Street, Dublin 4, Irland) sowie deren Muttergesellschaft <strong>Google LLC</strong> (1600 Amphitheatre Parkway, Mountain View, CA 94043, USA).</p>
+<h3>4.1 PDF-Export (lokal)</h3>
+<p>Die App bietet einen <strong>PDF-Export</strong> für Tagebucheinträge inklusive eingebetteter Fotos. Die Umwandlung findet <strong>vollständig auf deinem Gerät</strong> statt. Die erzeugte PDF-Datei wird im lokalen App- oder Download-Ordner abgelegt. Es findet <strong>keine Datenübermittlung an Dritte</strong> durch den Export selbst statt.</p>
+<p>Wenn du die PDF anschließend über das Android-Teilen-Menü an eine andere App oder einen Cloud-Dienst sendest (z. B. E-Mail, WhatsApp, Google Drive), ist das deine eigene Entscheidung. Der Empfänger-Dienst verarbeitet die Daten dann nach seinen eigenen Datenschutzbestimmungen.</p>
 
-<h3>5.1 Firebase Analytics</h3>
-<p><strong>Zweck:</strong> Anonyme Nutzungsstatistiken zur Fehleranalyse und Produktverbesserung.<br>
-<strong>Erhobene Daten:</strong> Gerätetyp, Betriebssystemversion, App-Version, Nutzungshäufigkeit, ungefähre Region (Land), anonymisierte Geräte-ID (Firebase Instance ID), <strong>IP-Adresse (gekürzt)</strong>, <strong>Android Werbe-ID (AAID)</strong>, Ereignisdaten (z. B. App geöffnet, Funktion genutzt).<br>
-<strong>Rechtsgrundlage:</strong> Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TTDSG). Analytics ist beim ersten Start <strong>standardmäßig deaktiviert</strong> und wird erst nach ausdrücklicher Zustimmung aktiviert. Du kannst die Einwilligung jederzeit unter <strong>„Einstellungen → Datenschutz → Analytics"</strong> widerrufen.<br>
-<strong>Werbe-ID zurücksetzen:</strong> In den Android-Systemeinstellungen unter <strong>„Einstellungen → Datenschutz → Werbung"</strong> kannst du die Werbe-ID jederzeit zurücksetzen oder deaktivieren.</p>
+<h2>5. Optionale Cloud-Dienste und Drittanbieter</h2>
+<p>Die folgenden Dienste werden <strong>nur verwendet, wenn du sie aktiv nutzt oder aktivierst</strong>. Die App ist auch ohne diese Dienste vollständig nutzbar.</p>
 
-<h3>5.2 Firebase Authentication (optional)</h3>
-<p><strong>Zweck:</strong> Optionale Anmeldung (z. B. für geräteübergreifende Nutzung).<br>
+<h3>5.1 Groq, Inc. — Cloud-Transkription (optional)</h3>
+<p><strong>Anbieter:</strong> Groq, Inc., 400 Castro Street, Mountain View, CA 94041, USA<br>
+<strong>Zweck:</strong> Umwandlung deiner Sprachaufnahmen in Text (Whisper-Transkription).<br>
+<strong>Erhobene Daten:</strong> Die konkrete Audiodatei, die du zur Transkription hochlädst. Metadaten: Dateigröße, Format, Sprache, IP-Adresse.<br>
+<strong>Übermittlung:</strong> Nur wenn du in den Einstellungen <strong>„Cloud-Transkription"</strong> aktiviert hast oder explizit die Cloud-Variante bei einer Aufnahme wählst. Standard ist die <strong>lokale On-Device-Transkription</strong> (siehe 5.2).<br>
+<strong>Rechtsgrundlage:</strong> Einwilligung (Art. 6 Abs. 1 lit. a DSGVO).<br>
+<strong>Drittlandübermittlung:</strong> USA — Groq ist nach eigenen Angaben nach dem <strong>EU-US Data Privacy Framework</strong> zertifiziert. Zusätzlich werden Standardvertragsklauseln (Art. 46 DSGVO) angewendet.<br>
+<strong>Speicherdauer bei Groq:</strong> Anfragen werden laut Anbieter nicht zu Trainingszwecken verwendet und nach der Verarbeitung gelöscht.<br>
+<strong>Widerruf:</strong> Wechsle in den App-Einstellungen auf <strong>„Lokale Transkription"</strong>.<br>
+<strong>Datenschutzerklärung Groq:</strong> <a href="https://groq.com/privacy-policy/">https://groq.com/privacy-policy/</a></p>
+<div class="warning"><strong>Wichtiger Hinweis:</strong> Sprachaufnahmen können besonders sensible personenbezogene Daten enthalten (Art. 9 DSGVO). Nutze die Cloud-Transkription nur, wenn du mit der Übermittlung deiner Aufnahme an Groq in die USA einverstanden bist. Die lokale Transkription ist die datenschutzfreundlichere Alternative.</div>
+
+<h3>5.2 Lokale Spracherkennung (On-Device)</h3>
+<p>Die App enthält eine <strong>lokale Offline-Spracherkennung</strong> auf Basis des Open-Source-Projekts <strong>sherpa-onnx</strong>. Die Transkription findet vollständig auf deinem Gerät statt.<br>
+<strong>Datenübertragung:</strong> Keine. Kein Server ist beteiligt.<br>
+<strong>Voraussetzung:</strong> Einmaliger Download des Sprachmodells (~100 MB).</p>
+
+<h3>5.2a Microsoft Edge Text-to-Speech (optional)</h3>
+<p><strong>Anbieter:</strong> Microsoft Corporation, One Microsoft Way, Redmond, WA 98052, USA<br>
+<strong>Dienst:</strong> Bing Speech Service (Endpoint: <code>speech.platform.bing.com</code>)<br>
+<strong>Zweck:</strong> Umwandlung von Text in natürliche Sprachausgabe („Vorlesefunktion"), z. B. zum Anhören deiner Einträge oder Retrospektiven.</p>
+<p><strong>Ablauf der Datenübertragung:</strong></p>
+<ol>
+  <li>Du löst die Vorlesefunktion aus (z. B. auf dem Dashboard oder im Eintrag).</li>
+  <li>Der zu sprechende Text wird über eine verschlüsselte WebSocket-Verbindung an Microsoft-Server in den <strong>USA</strong> übermittelt.</li>
+  <li>Die erzeugte Audiodatei wird zurückgesendet und lokal auf deinem Gerät abgespielt.</li>
+</ol>
+<p><strong>Erhobene Daten:</strong> Der an den Dienst übermittelte Text, ausgewählte Sprachstimme, technische Metadaten (IP-Adresse, Zeitstempel).<br>
+<strong>Übermittlung:</strong> Nur wenn du aktiv die Vorlesefunktion nutzt.<br>
+<strong>Rechtsgrundlage:</strong> Einwilligung (Art. 6 Abs. 1 lit. a DSGVO) durch aktives Auslösen.<br>
+<strong>Drittlandübermittlung:</strong> USA — <strong>EU-US Data Privacy Framework</strong> (Microsoft zertifiziert) und <strong>Standardvertragsklauseln</strong> (Art. 46 DSGVO).<br>
+<strong>Widerruf:</strong> Nutze die Vorlesefunktion einfach nicht — oder deaktiviere sie in den Einstellungen. Android bietet zusätzlich eine systemeigene On-Device-TTS als Alternative.<br>
+<strong>Datenschutzerklärung Microsoft:</strong> <a href="https://privacy.microsoft.com/de-de/privacystatement">privacy.microsoft.com/de-de/privacystatement</a></p>
+<div class="warning"><strong>Hinweis:</strong> Übergib der Vorlesefunktion keine besonders sensiblen personenbezogenen Daten Dritter.</div>
+
+<h3>5.3 Google Drive — Cloud-Backup (optional)</h3>
+<p><strong>Anbieter:</strong> Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland<br>
+<strong>Zweck:</strong> Verschlüsseltes Backup deiner Tagebuchdaten zur Wiederherstellung auf einem neuen Gerät oder nach Deinstallation.<br>
+<strong>Erhobene Daten:</strong> Komplettes Backup deiner Tagebuchdatenbank (Einträge, Audios, Bilder, Einstellungen) als einzelne Datei.<br>
+<strong>Speicherort:</strong> <strong>App-Data-Ordner deines persönlichen Google-Drive-Kontos</strong> (Scope: <code>DRIVE_APPDATA</code>). Dieser Ordner ist von Google geschützt und ausschließlich für Best Journal zugänglich — andere Apps und selbst du über die normale Drive-Oberfläche können darauf nicht zugreifen.<br>
+<strong>Aktivierung:</strong> Nur wenn du in den Einstellungen <strong>„Google-Drive-Backup"</strong> aktivierst und der Zugriffsberechtigung explizit zustimmst.<br>
+<strong>Rechtsgrundlage:</strong> Einwilligung (Art. 6 Abs. 1 lit. a DSGVO).<br>
+<strong>Widerruf:</strong> Deaktiviere das Backup in den App-Einstellungen. Zusätzlich kannst du in deinem Google-Konto unter <strong>„Apps mit Kontozugriff"</strong> die Verbindung komplett aufheben.<br>
+<strong>Löschung des Backups:</strong> Über <strong>„Einstellungen → Backup → Cloud-Backup löschen"</strong>.</p>
+
+<h3>5.3a Android-System-Backup (automatisch)</h3>
+<p>Zusätzlich zum App-internen Drive-Backup unterstützt die App das <strong>Android-System-Backup</strong> (<code>allowBackup="true"</code>). Ist bei dir unter <strong>Android-Einstellungen → Google → Sicherung</strong> die automatische Sicherung aktiviert, werden App-Einstellungen und bestimmte Dateien automatisch im Google-Drive-Speicher deines Kontos gesichert (verschlüsselt, max. 25 MB).</p>
+<p><strong>Welche Daten ausgeschlossen sind:</strong> Sprachaufnahmen und Medien sind in den Backup-Regeln (<code>backup_rules.xml</code>, <code>data_extraction_rules.xml</code>) von der automatischen Sicherung <strong>ausgenommen</strong>, damit keine ungewollten Daten in der Cloud landen.<br>
+<strong>Deaktivierung:</strong> In den Android-Systemeinstellungen unter „Google → Sicherung".<br>
+<strong>Rechtsgrundlage:</strong> Einwilligung durch Google-Kontoeinstellungen (Art. 6 Abs. 1 lit. a DSGVO).</p>
+
+<h3>5.4 Google Sign-In (optional)</h3>
+<p><strong>Anbieter:</strong> Google Ireland Limited<br>
+<strong>Zweck:</strong> Komfortable Anmeldung mit deinem Google-Konto (über Android Credential Manager).<br>
+<strong>Erhobene Daten:</strong> E-Mail-Adresse, Google-Konto-ID, öffentlicher Name, Profilbild-URL.<br>
+<strong>Rechtsgrundlage:</strong> Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO), sofern du dich anmeldest.<br>
+<strong>Hinweis:</strong> Die Anmeldung ist <strong>nicht erforderlich</strong>, um die App zu nutzen.</p>
+
+<h3>5.5 Firebase Authentication (optional)</h3>
+<p><strong>Anbieter:</strong> Google Ireland Limited<br>
+<strong>Zweck:</strong> Benutzerkonto-Verwaltung (verknüpft Google-Sign-In mit der App).<br>
 <strong>Erhobene Daten:</strong> E-Mail-Adresse, Anmelde-ID, IP-Adresse, Zeitstempel.<br>
-<strong>Rechtsgrundlage:</strong> Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO), sofern du einen Account anlegst.<br>
-<strong>Hinweis:</strong> Eine Anmeldung ist <strong>nicht erforderlich</strong>, um die App zu nutzen.</p>
+<strong>Rechtsgrundlage:</strong> Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO).</p>
 
-<h3>5.3 Firebase AI / Generative AI</h3>
-<p><strong>Zweck:</strong> KI-gestützte Funktionen (z. B. Zusammenfassungen, Verbesserungsvorschläge, Transkription).<br>
-<strong>Erhobene Daten:</strong> Nur die konkrete Anfrage, die du durch aktive Nutzung einer KI-Funktion auslöst. Keine automatische Übermittlung deiner Tagebucheinträge.<br>
+<h3>5.6 Firebase AI / Google Gemini (optional)</h3>
+<p><strong>Anbieter:</strong> Google Ireland Limited / Google LLC<br>
+<strong>KI-Modell:</strong> Google Gemini (Firebase AI Logic SDK)<br>
+<strong>Zweck:</strong> KI-gestützte Funktionen (z. B. Zusammenfassungen, Verbesserungsvorschläge, Textverbesserung, Rückfragen zu Einträgen).</p>
+<p><strong>Ablauf der Datenübertragung:</strong></p>
+<ol>
+  <li>Du löst aktiv eine KI-Funktion aus (z. B. „Text verbessern" oder „Zusammenfassen").</li>
+  <li>Der relevante Textausschnitt wird an Google-Server in den <strong>USA</strong> übermittelt und vom Gemini-Modell verarbeitet.</li>
+  <li>Das Ergebnis (z. B. der verbesserte Text) wird an dein Gerät zurückgesendet und dir zur Übernahme angezeigt.</li>
+</ol>
+<p><strong>Erhobene Daten:</strong> Der Textausschnitt deiner Anfrage, Modellparameter, technische Metadaten (IP-Adresse, Zeitstempel).<br>
+<strong>Keine automatische Übermittlung:</strong> Tagebucheinträge werden <strong>nicht</strong> automatisch an Google übertragen, sondern ausschließlich, wenn du eine KI-Funktion auslöst.<br>
 <strong>Rechtsgrundlage:</strong> Einwilligung (Art. 6 Abs. 1 lit. a DSGVO) durch aktives Auslösen der Funktion.<br>
-<strong>Wichtig:</strong> Sende über KI-Funktionen keine besonders sensiblen personenbezogenen Daten Dritter.</p>
+<strong>Drittlandübermittlung:</strong> Verarbeitung erfolgt in den USA auf Grundlage des <strong>EU-US Data Privacy Framework</strong> sowie von <strong>EU-Standardvertragsklauseln</strong> (Art. 46 DSGVO).<br>
+<strong>Speicherdauer bei Google:</strong> Laut Firebase-AI-Richtlinien werden Anfragen nicht zu Trainingszwecken verwendet und nach der Verarbeitung gelöscht.<br>
+<strong>Widerruf:</strong> Nutze einfach keine KI-Funktionen mehr — es erfolgt dann keinerlei Übermittlung an Google-KI-Systeme.</p>
+<div class="warning"><strong>Wichtig:</strong> Sende über KI-Funktionen keine besonders sensiblen personenbezogenen Daten Dritter (z. B. Gesundheitsdaten anderer Personen, Namen dritter Personen ohne deren Einwilligung).</div>
 
-<h3>5.4 Firebase App Check (Play Integrity)</h3>
+<h3>5.7 Firebase Analytics (Opt-In)</h3>
+<p><strong>Anbieter:</strong> Google Ireland Limited / Google LLC<br>
+<strong>Zweck:</strong> Anonyme Nutzungsstatistiken zur Fehleranalyse und Produktverbesserung.<br>
+<strong>Erhobene Daten:</strong> Gerätetyp, Betriebssystemversion, App-Version, Nutzungshäufigkeit, ungefähre Region (Land), Firebase Instance ID, <strong>IP-Adresse (gekürzt)</strong>, <strong>Android Werbe-ID (AAID)</strong>, Ereignisdaten.<br>
+<strong>Rechtsgrundlage:</strong> Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TTDSG). Analytics ist <strong>standardmäßig deaktiviert</strong>. Widerruf jederzeit unter <strong>„Einstellungen → Datenschutz → Analytics"</strong>.<br>
+<strong>Werbe-ID zurücksetzen:</strong> Android-Systemeinstellungen → <strong>„Datenschutz → Werbung"</strong>.</p>
+
+<h3>5.8 Firebase App Check (Play Integrity)</h3>
 <p><strong>Zweck:</strong> Schutz vor Missbrauch und automatisierten Anfragen.<br>
 <strong>Erhobene Daten:</strong> Geräteintegritäts-Token von Google Play, App-Signatur.<br>
 <strong>Rechtsgrundlage:</strong> Berechtigtes Interesse an Missbrauchsschutz (Art. 6 Abs. 1 lit. f DSGVO).</p>
 
-<h3>5.5 Firebase Remote Config</h3>
-<p><strong>Zweck:</strong> Ferngesteuerte Konfiguration (z. B. Feature-Flags, Texte).<br>
+<h3>5.9 Firebase Remote Config</h3>
+<p><strong>Zweck:</strong> Ferngesteuerte Konfiguration (Feature-Flags, Texte).<br>
 <strong>Erhobene Daten:</strong> Anonymisierte App-Instanz-ID, App-Version.<br>
-<strong>Rechtsgrundlage:</strong> Berechtigtes Interesse am ordnungsgemäßen Betrieb (Art. 6 Abs. 1 lit. f DSGVO).</p>
+<strong>Rechtsgrundlage:</strong> Berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO).</p>
 
-<p><strong>Weitere Informationen:</strong></p>
+<h3>5.10 Google Play In-App Review API</h3>
+<p><strong>Zweck:</strong> Anzeige des Bewertungsdialogs im Google Play Store.<br>
+<strong>Erhobene Daten:</strong> Technische Metadaten (App-Version, Paketname). Keine Erfassung der Bewertung selbst durch die App.<br>
+<strong>Rechtsgrundlage:</strong> Berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO).</p>
+
+<p><strong>Weitere Informationen zu Google-Diensten:</strong></p>
 <ul>
-  <li>Datenschutzerklärung Google: <a href="https://policies.google.com/privacy">https://policies.google.com/privacy</a></li>
-  <li>Firebase-Datenschutz: <a href="https://firebase.google.com/support/privacy">https://firebase.google.com/support/privacy</a></li>
-  <li>Play Integrity: <a href="https://developer.android.com/google/play/integrity">https://developer.android.com/google/play/integrity</a></li>
+  <li><a href="https://policies.google.com/privacy">Google-Datenschutzerklärung</a></li>
+  <li><a href="https://firebase.google.com/support/privacy">Firebase-Datenschutz</a></li>
 </ul>
 
-<h3>5.6 Übermittlung in Drittländer (USA)</h3>
-<p>Google kann Daten in den USA verarbeiten. Die Übermittlung erfolgt auf Grundlage der <strong>EU-Standardvertragsklauseln</strong> (Art. 46 DSGVO) sowie des <strong>EU-US Data Privacy Framework</strong> (Angemessenheitsbeschluss der EU-Kommission vom 10. Juli 2023).</p>
+<h3>5.11 Übermittlung in Drittländer (USA)</h3>
+<p>Bei aktivierten Cloud-Diensten (Groq, Firebase/Gemini, Google Drive, Microsoft Edge TTS) werden Daten in den USA verarbeitet. Die Übermittlung erfolgt auf Grundlage:</p>
+<ul>
+  <li><strong>EU-US Data Privacy Framework</strong> (Angemessenheitsbeschluss der EU-Kommission vom 10. Juli 2023) — für Google/Firebase/Gemini und Microsoft</li>
+  <li><strong>EU-Standardvertragsklauseln</strong> (Art. 46 DSGVO) — für Groq</li>
+</ul>
 
 <h2>6. In-App-Käufe (Google Play Billing)</h2>
-<p>Für optionale Premium-Funktionen nutzt die App die Zahlungsabwicklung <strong>Google Play Billing</strong>.</p>
 <ul>
   <li><strong>Anbieter:</strong> Google Ireland Limited</li>
   <li><strong>Erhobene Daten:</strong> Transaktions-ID, Kauf-Token, gekauftes Produkt, Zeitstempel</li>
-  <li><strong>Zahlungsdaten:</strong> Werden <strong>ausschließlich von Google</strong> verarbeitet — wir erhalten keine Kreditkartennummern, PayPal-Zugänge oder Kontodaten</li>
+  <li><strong>Zahlungsdaten:</strong> Ausschließlich von Google verarbeitet — wir erhalten keine Kreditkartennummern, PayPal-Zugänge oder Kontodaten</li>
   <li><strong>Rechtsgrundlage:</strong> Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO)</li>
   <li><strong>Datenschutzerklärung Google Play:</strong> <a href="https://play.google.com/about/play-terms/">https://play.google.com/about/play-terms/</a></li>
 </ul>
 
 <h2>7. Kontolöschung und Datenlöschung</h2>
 
-<h3>7.1 Konto in der App löschen</h3>
+<h3>7.1 Konto und Cloud-Daten löschen</h3>
 <p><strong>Einstellungen → Konto → Konto löschen</strong></p>
-<p>Beim Löschen werden unwiderruflich entfernt: Authentifizierungsdaten (Firebase Auth), alle mit dem Konto verknüpften Cloud-Inhalte, E-Mail-Adresse und Profilinformationen.</p>
+<p>Beim Löschen werden unwiderruflich entfernt: Authentifizierungsdaten (Firebase Auth), Google-Drive-Backup (falls vorhanden), alle mit dem Konto verknüpften Cloud-Inhalte, E-Mail-Adresse und Profilinformationen.</p>
 
 <h3>7.2 Lokale Tagebuchdaten löschen</h3>
 <p><strong>Einstellungen → Daten → Alle Daten löschen</strong> oder <strong>App deinstallieren</strong></p>
 
-<h3>7.3 Löschung per E-Mail anfordern</h3>
-<p>Falls du keinen Zugriff mehr auf die App hast, kannst du die Löschung schriftlich anfordern: <a href="mailto:dev.app.support@gmail.com">dev.app.support@gmail.com</a> — Betreff: „Kontolöschung Best Journal". Bearbeitungsfrist: 30 Tage.</p>
+<h3>7.3 Drive-Backup manuell löschen</h3>
+<p>Über <strong>„Einstellungen → Backup → Cloud-Backup löschen"</strong>. Nach App-Deinstallation unter <a href="https://myaccount.google.com">myaccount.google.com</a> → „Daten und Datenschutz → Apps mit Kontozugriff".</p>
+
+<h3>7.4 Löschung per E-Mail anfordern</h3>
+<p>Falls du keinen Zugriff mehr auf die App hast: <a href="mailto:dev.app.support@gmail.com">dev.app.support@gmail.com</a> — Betreff: „Kontolöschung Best Journal". Bearbeitungsfrist: 30 Tage.</p>
 
 <h2>8. Deine Rechte nach DSGVO</h2>
-<p>Du hast jederzeit folgende Rechte:</p>
 <table>
   <tr><th>Recht</th><th>Artikel</th><th>Wie ausüben</th></tr>
   <tr><td>Auskunft</td><td>Art. 15 DSGVO</td><td>E-Mail an dev.app.support@gmail.com</td></tr>
   <tr><td>Berichtigung</td><td>Art. 16 DSGVO</td><td>E-Mail oder direkt in der App</td></tr>
-  <tr><td>Löschung („Recht auf Vergessen")</td><td>Art. 17 DSGVO</td><td>In der App unter „Daten löschen" oder App deinstallieren</td></tr>
-  <tr><td>Einschränkung der Verarbeitung</td><td>Art. 18 DSGVO</td><td>E-Mail an dev.app.support@gmail.com</td></tr>
-  <tr><td>Datenübertragbarkeit</td><td>Art. 20 DSGVO</td><td>Export-Funktion in der App oder E-Mail</td></tr>
+  <tr><td>Löschung</td><td>Art. 17 DSGVO</td><td>In der App oder App deinstallieren</td></tr>
+  <tr><td>Einschränkung</td><td>Art. 18 DSGVO</td><td>E-Mail an dev.app.support@gmail.com</td></tr>
+  <tr><td>Datenübertragbarkeit</td><td>Art. 20 DSGVO</td><td>Export-Funktion in der App</td></tr>
   <tr><td>Widerspruch</td><td>Art. 21 DSGVO</td><td>E-Mail an dev.app.support@gmail.com</td></tr>
-  <tr><td>Widerruf der Einwilligung</td><td>Art. 7 Abs. 3 DSGVO</td><td>In den App-Einstellungen unter „Datenschutz"</td></tr>
+  <tr><td>Widerruf der Einwilligung</td><td>Art. 7 Abs. 3 DSGVO</td><td>App-Einstellungen → Datenschutz</td></tr>
   <tr><td>Beschwerde bei Aufsichtsbehörde</td><td>Art. 77 DSGVO</td><td>Siehe unten</td></tr>
 </table>
 
@@ -184,46 +283,49 @@
   E-Mail: <a href="mailto:poststelle@datenschutz.hessen.de">poststelle@datenschutz.hessen.de</a><br>
   Website: <a href="https://datenschutz.hessen.de">https://datenschutz.hessen.de</a>
 </div>
-<p>(Zuständig, da Sitz des Verantwortlichen in Hessen)</p>
-<p>Du kannst dich auch an die für deinen Wohnsitz zuständige Aufsichtsbehörde wenden. Übersicht: <a href="https://www.bfdi.bund.de/DE/Service/Anschriften/Laender/Laender-node.html">bfdi.bund.de</a></p>
 
 <h2>9. Datensicherheit</h2>
 <ul>
-  <li>Lokale Datenbank im geschützten App-Speicherbereich (durch Android-Sandboxing)</li>
-  <li>Verschlüsselte Übertragung (HTTPS/TLS 1.2+) bei allen Netzwerkverbindungen</li>
+  <li>Lokale Datenbank im geschützten App-Speicherbereich (Android-Sandboxing)</li>
+  <li>Verschlüsselte Übertragung (HTTPS/TLS 1.2+)</li>
+  <li>Google Drive Backup nur im geschützten App-Data-Ordner</li>
   <li>Firebase App Check zum Schutz vor Missbrauch</li>
-  <li>Optional: App-Sperre durch PIN oder Biometrie (Fingerabdruck, Gesichtserkennung)</li>
+  <li>Optional: App-Sperre durch PIN oder Biometrie</li>
+  <li>Lokale Verschlüsselung sensibler Daten (AndroidX Security Crypto)</li>
   <li>Keine Speicherung unverschlüsselter Zugangsdaten</li>
-  <li>Automatische Sicherheitsupdates über den Google Play Store</li>
 </ul>
 
 <h2>10. Kinder und Jugendliche</h2>
-<p>Die App richtet sich an Nutzer <strong>ab 13 Jahren</strong>. Für Kinder unter 16 Jahren ist eine Einwilligung der Erziehungsberechtigten erforderlich (Art. 8 DSGVO), sofern eine Anmeldung erfolgt oder KI-Funktionen genutzt werden. Die App erhebt wissentlich keine Daten von Kindern unter 13 Jahren.</p>
+<p>Die App richtet sich an Nutzer <strong>ab 13 Jahren</strong>. Für Kinder unter 16 Jahren ist eine Einwilligung der Erziehungsberechtigten erforderlich (Art. 8 DSGVO), sofern eine Anmeldung erfolgt oder Cloud-Dienste (Groq, Drive, Gemini) genutzt werden. Die App erhebt wissentlich keine Daten von Kindern unter 13 Jahren.</p>
 
 <h2>11. Speicherdauer</h2>
 <table>
   <tr><th>Daten</th><th>Dauer</th></tr>
-  <tr><td>Lokale Tagebucheinträge</td><td>Bis zur Löschung durch dich oder Deinstallation der App</td></tr>
-  <tr><td>Firebase Analytics</td><td>14 Monate (Google-Standard), danach automatische Löschung</td></tr>
+  <tr><td>Lokale Tagebucheinträge</td><td>Bis zur Löschung durch dich oder Deinstallation</td></tr>
+  <tr><td>Google-Drive-Backup</td><td>Bis zur Löschung oder Widerruf der Drive-Berechtigung</td></tr>
+  <tr><td>Android-System-Backup</td><td>Nach Google-Richtlinien (bis zur Deaktivierung der Systemsicherung)</td></tr>
+  <tr><td>Microsoft Edge TTS</td><td>Nach Verarbeitung gelöscht (laut Microsoft-Richtlinien)</td></tr>
+  <tr><td>Groq-Transkriptionsanfragen</td><td>Nach Verarbeitung gelöscht (laut Groq-Richtlinien)</td></tr>
+  <tr><td>Firebase AI / Gemini</td><td>Nach Verarbeitung gelöscht, kein Training</td></tr>
+  <tr><td>Firebase Analytics</td><td>14 Monate (Google-Standard)</td></tr>
   <tr><td>Firebase Authentication</td><td>Bis zur Löschung des Kontos</td></tr>
-  <tr><td>KI-Anfragen</td><td>Werden gemäß Google-Richtlinien nicht dauerhaft gespeichert</td></tr>
-  <tr><td>Kaufdaten</td><td>Gemäß gesetzlicher Aufbewahrungsfristen (bis zu 10 Jahre, § 147 AO)</td></tr>
-  <tr><td>Serverlogs (IP-Adressen)</td><td>Maximal 30 Tage, danach automatische Löschung</td></tr>
+  <tr><td>Kaufdaten</td><td>Gesetzliche Aufbewahrungsfristen (bis zu 10 Jahre, § 147 AO)</td></tr>
+  <tr><td>Serverlogs (IP-Adressen)</td><td>Maximal 30 Tage</td></tr>
 </table>
 
 <h2>12. Keine automatisierte Entscheidungsfindung</h2>
-<p>Es findet <strong>keine automatisierte Entscheidungsfindung</strong> im Sinne von Art. 22 DSGVO statt, die dir gegenüber rechtliche Wirkung entfaltet oder dich erheblich beeinträchtigt.</p>
+<p>Es findet <strong>keine automatisierte Entscheidungsfindung</strong> im Sinne von Art. 22 DSGVO statt. KI-Funktionen erstellen lediglich Texte oder Zusammenfassungen, die dich in keiner Weise rechtlich binden.</p>
 
 <h2>13. Pflicht zur Bereitstellung personenbezogener Daten</h2>
-<p>Du bist nicht verpflichtet, uns personenbezogene Daten bereitzustellen. Die App ist auch ohne Anmeldung und ohne Analytics vollständig nutzbar.</p>
+<p>Du bist nicht verpflichtet, uns personenbezogene Daten bereitzustellen. Die App ist auch ohne Anmeldung, ohne Cloud-Dienste und ohne Analytics vollständig nutzbar. Ohne die optionalen Cloud-Funktionen stehen dir lediglich die entsprechenden Komfortfunktionen (Cloud-Transkription, Cloud-Backup, geräteübergreifende Nutzung, KI-Funktionen) nicht zur Verfügung.</p>
 
 <h2>14. Änderungen dieser Datenschutzerklärung</h2>
-<p>Diese Datenschutzerklärung kann bei Änderungen der App oder der gesetzlichen Grundlagen angepasst werden. Die jeweils aktuelle Version ist in der App unter <strong>Einstellungen → Datenschutz</strong> sowie im Google Play Store abrufbar. Bei wesentlichen Änderungen wirst du in der App darauf hingewiesen.</p>
+<p>Die aktuelle Version ist in der App unter <strong>Einstellungen → Datenschutz</strong> sowie im Google Play Store abrufbar. Bei wesentlichen Änderungen wirst du in der App darauf hingewiesen.</p>
 <p><strong>Letzte Aktualisierung:</strong> 20. April 2026</p>
 
 <h2>15. Kontakt</h2>
 <p><strong>E-Mail:</strong> <a href="mailto:dev.app.support@gmail.com">dev.app.support@gmail.com</a><br>
-<strong>Postanschrift:</strong> Siehe Abschnitt 1 (Verantwortlicher)</p>
+<strong>Postanschrift:</strong> Siehe Abschnitt 1</p>
 
 <hr>
 <p class="footer">© 2026 Frank Barwandt · Best Journal</p>
