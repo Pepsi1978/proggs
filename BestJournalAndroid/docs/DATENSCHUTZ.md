@@ -522,18 +522,93 @@ Du hast jederzeit folgende Rechte:
 | Widerruf der Einwilligung | Art. 7 Abs. 3 DSGVO | In den App-Einstellungen unter „Datenschutz" |
 | Beschwerde bei Aufsichtsbehörde | Art. 77 DSGVO | Siehe unten |
 
-### Zuständige Aufsichtsbehörde
+### Zuständige Aufsichtsbehörden
 
-**Der Hessische Beauftragte für Datenschutz und Informationsfreiheit**
-Gustav-Stresemann-Ring 1
-65189 Wiesbaden
+**Deutschland / EU / EWR (Haupt-Aufsichtsbehörde):**
+
+Der Hessische Beauftragte für Datenschutz und Informationsfreiheit
+Gustav-Stresemann-Ring 1, 65189 Wiesbaden
 Telefon: +49 611 1408-0
 E-Mail: poststelle@datenschutz.hessen.de
 Website: https://datenschutz.hessen.de
 
-(Zuständig, da Sitz des Verantwortlichen in Hessen)
+(Zuständig, da Sitz des Verantwortlichen in Hessen.)
 
-Du kannst dich auch an die für deinen Wohnsitz zuständige Aufsichtsbehörde wenden.
+EU-/EWR-Nutzer können sich auch an die für ihren Wohnsitz zuständige Aufsichtsbehörde
+wenden.
+
+**Vereinigtes Königreich (UK):**
+
+Information Commissioner's Office (ICO)
+Wycliffe House, Water Lane, Wilmslow, Cheshire SK9 5AF
+Telefon: +44 303 123 1113
+Website: https://ico.org.uk
+
+Nutzer im UK haben nach UK GDPR und Data Protection Act 2018 dieselben
+Betroffenenrechte wie unter der EU-DSGVO.
+
+---
+
+## 8a. Internationale Nutzer, zusätzliche Rechte nach lokalem Recht
+
+Best Journal wird weltweit über den Google Play Store angeboten. Die oben genannten
+Betroffenenrechte nach DSGVO gelten für Nutzer in allen Ländern. Für Nutzer aus
+bestimmten Jurisdiktionen gelten **zusätzliche** oder **abweichende** Rechte nach
+lokalem Recht:
+
+### Kalifornien, USA (CCPA / CPRA)
+
+Nutzer mit Wohnsitz in Kalifornien haben nach dem California Consumer Privacy Act
+(CCPA) in der Fassung des California Privacy Rights Act (CPRA) folgende zusätzliche
+Rechte:
+
+- **Right to Know:** Welche personenbezogenen Daten wir erhoben, verwendet und geteilt haben
+- **Right to Delete:** Löschung deiner Daten
+- **Right to Correct:** Berichtigung unrichtiger Daten
+- **Right to Opt-Out of Sale/Sharing:** Wir verkaufen und teilen keine personenbezogenen
+  Daten im Sinne des CCPA. Es findet insoweit kein Opt-Out statt, weil kein Verkauf erfolgt.
+- **Right to Limit Use of Sensitive Personal Information:** Einschränkung der Verarbeitung
+  sensibler Daten (z. B. Inhalte deiner Tagebucheinträge)
+- **Right to Non-Discrimination:** Keine Benachteiligung bei Ausübung der Rechte
+
+Ausübung per E-Mail an dev.app.support@gmail.com mit Betreff „CCPA Request".
+
+### Weitere US-Bundesstaaten (VCDPA, CPA, CTDPA, UCPA, OCPA, MCDPA, IACDPA, TDPSA, ...)
+
+Nutzer aus Virginia, Colorado, Connecticut, Utah, Oregon, Montana, Iowa, Texas und
+weiteren US-Bundesstaaten mit eigenem Datenschutzgesetz haben vergleichbare Rechte
+(Auskunft, Löschung, Berichtigung, Opt-Out von Targeted Advertising). Diese Rechte
+werden in gleicher Weise wie unter CCPA respektiert.
+
+### Brasilien (LGPD)
+
+Nutzer in Brasilien haben nach der Lei Geral de Proteção de Dados (LGPD, Lei Nr.
+13.709/2018) Rechte auf Auskunft, Berichtigung, Anonymisierung, Sperrung oder
+Löschung, Datenportabilität und Widerspruch. Diese werden entsprechend der DSGVO-Rechte
+behandelt. Aufsichtsbehörde: ANPD (Autoridade Nacional de Proteção de Dados).
+
+### Kanada (PIPEDA)
+
+Nutzer in Kanada haben nach dem Personal Information Protection and Electronic
+Documents Act (PIPEDA) Rechte auf Zugang und Korrektur. Beschwerdestelle: Office of
+the Privacy Commissioner of Canada (OPC), https://www.priv.gc.ca.
+
+### Australien (Australian Privacy Principles)
+
+Nutzer in Australien haben nach dem Privacy Act 1988 und den Australian Privacy
+Principles (APPs) Rechte auf Zugang, Berichtigung und Beschwerde bei der Office of
+the Australian Information Commissioner (OAIC), https://www.oaic.gov.au.
+
+### Andere Jurisdiktionen
+
+Für Nutzer aus Ländern ohne speziell benannten Abschnitt gelten die oben
+aufgeführten DSGVO-konformen Rechte als freiwillige Selbstverpflichtung, sowie alle
+zwingenden Rechte nach dem jeweiligen lokalen Recht.
+
+Bei Unklarheiten oder Wünschen zur Ausübung lokaler Rechte schreibe bitte an
+dev.app.support@gmail.com.
+
+---
 
 ---
 

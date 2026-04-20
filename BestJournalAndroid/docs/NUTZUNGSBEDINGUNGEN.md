@@ -205,11 +205,22 @@ sechs Wochen nach Zugang der Änderungsmitteilung, gelten sie als angenommen.
 ## 12. Anwendbares Recht und Gerichtsstand
 
 Es gilt das Recht der **Bundesrepublik Deutschland** unter Ausschluss des
-UN-Kaufrechts. Bei Verbrauchern gelten die zwingenden Verbraucherschutzregelungen
-des Landes, in dem sie ihren gewöhnlichen Aufenthalt haben.
+UN-Kaufrechts.
+
+**Zwingendes Verbraucherschutzrecht bleibt unberührt:** Bei Verbrauchern gelten
+ergänzend die zwingenden Verbraucherschutzvorschriften des Landes, in dem sie
+ihren gewöhnlichen Aufenthalt haben. Dies umfasst insbesondere:
+- den **UK Consumer Rights Act 2015** für Verbraucher im Vereinigten Königreich,
+- die **Consumer Protection Acts** und Bundesstaatsgesetze für Verbraucher in den USA,
+- die **Código de Defesa do Consumidor** für Verbraucher in Brasilien,
+- die **Australian Consumer Law** (Schedule 2 Competition and Consumer Act 2010) für
+  Verbraucher in Australien,
+- sowie alle sonstigen zwingenden Verbraucherschutzvorschriften des Wohnsitzlandes
+  des Nutzers.
 
 Gerichtsstand für Streitigkeiten aus diesen Nutzungsbedingungen ist, soweit
-gesetzlich zulässig, Hungen (Hessen).
+gesetzlich zulässig, Hungen (Hessen). Verbraucher können stets auch an ihrem
+eigenen Wohnsitz klagen, soweit dies nach dem dort geltenden Recht vorgesehen ist.
 
 ---
 
