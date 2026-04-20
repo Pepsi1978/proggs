@@ -66,13 +66,17 @@ fun ParticleBackground(modifier: Modifier = Modifier, particleCount: Int = 15) {
             // 0..1 within this particle's personal cycle of 100 time units.
             val phase = (t % 100f) / 100f
 
-            // Bell curve: particle is visible only in the middle ~35% of its cycle
-            // phase 0.0-0.35: invisible, 0.35-0.5: fade-in, 0.5-0.65: fade-out, 0.65-1.0: invisible
+            // Trapezoid lifecycle: fade-in, long plateau, fade-out.
+            // Particle is at least partially visible for ~70% of the cycle,
+            // more than twice as long as the stars' bell-curve (~30%).
+            // phase 0.00-0.15: invisible, 0.15-0.30: fade-in, 0.30-0.70: plateau (full),
+            // 0.70-0.85: fade-out, 0.85-1.00: invisible.
             val lifecycle =
                 when {
-                    phase < 0.35f -> 0f
-                    phase < 0.5f -> (phase - 0.35f) / 0.15f
-                    phase < 0.65f -> 1f - (phase - 0.5f) / 0.15f
+                    phase < 0.15f -> 0f
+                    phase < 0.30f -> (phase - 0.15f) / 0.15f
+                    phase < 0.70f -> 1f
+                    phase < 0.85f -> 1f - (phase - 0.70f) / 0.15f
                     else -> 0f
                 }
 
