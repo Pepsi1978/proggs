@@ -2535,6 +2535,55 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        // Report AI content (Google Play AI Policy 04/2024) — direct mailto
+                        val reportAiSubject = stringResource(R.string.settings_report_ai_subject)
+                        val reportAiBody = stringResource(R.string.settings_report_ai_body)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    val intent =
+                                        android.content.Intent(
+                                                android.content.Intent.ACTION_SENDTO
+                                            )
+                                            .apply {
+                                                data =
+                                                    android.net.Uri.parse(
+                                                        "mailto:dev.app.support@gmail.com"
+                                                    )
+                                                putExtra(
+                                                    android.content.Intent.EXTRA_SUBJECT,
+                                                    reportAiSubject,
+                                                )
+                                                putExtra(
+                                                    android.content.Intent.EXTRA_TEXT,
+                                                    reportAiBody,
+                                                )
+                                            }
+                                    try {
+                                        context.startActivity(intent)
+                                    } catch (_: android.content.ActivityNotFoundException) {
+                                        // Silent: no mail app installed
+                                    }
+                                },
+                            ) {
+                                Text(stringResource(R.string.settings_report_ai_title))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.settings_report_ai_subtitle),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         // Widerrufsbutton (§ 355 BGB) - zweistufig via mailto-Intent
                         var showRevokeDialog by remember { mutableStateOf(false) }
                         Row(

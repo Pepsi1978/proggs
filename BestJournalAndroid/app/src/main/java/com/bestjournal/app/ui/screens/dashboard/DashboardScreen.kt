@@ -34,7 +34,6 @@ import androidx.compose.material.icons.rounded.Eco
 import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.HourglassEmpty
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LockOpen
@@ -188,34 +187,6 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                             Icon(
                                 Icons.Rounded.Info,
                                 stringResource(R.string.dashboard_legend),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        // M1: Report inappropriate AI content (Google Play AI policy 04/2024)
-                        IconButton(
-                            onClick = {
-                                doHaptic(HapticFeedbackType.LongPress)
-                                val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                    data = android.net.Uri.parse(
-                                        "mailto:dev.app.support@gmail.com" +
-                                            "?subject=" + android.net.Uri.encode(
-                                                context.getString(R.string.dashboard_report_ai_subject)
-                                            ) +
-                                            "&body=" + android.net.Uri.encode(
-                                                context.getString(R.string.dashboard_report_ai_body)
-                                            )
-                                    )
-                                }
-                                try {
-                                    context.startActivity(intent)
-                                } catch (_: android.content.ActivityNotFoundException) {
-                                    // No mail app installed: silently ignore
-                                }
-                            }
-                        ) {
-                            Icon(
-                                Icons.Rounded.Flag,
-                                stringResource(R.string.dashboard_report_ai_title),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }

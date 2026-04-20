@@ -538,10 +538,11 @@
     <string name="privacy_gate_tts_accept">Einverstanden, vorlesen</string>
     <string name="privacy_gate_tts_cancel">Abbrechen</string>
 
-    <!-- M1 Report AI Content -->
-    <string name="dashboard_report_ai_title">Unangemessene KI-Antwort melden</string>
-    <string name="dashboard_report_ai_subject">Best Journal: Unangemessene KI-Antwort</string>
-    <string name="dashboard_report_ai_body">Hallo,\n\nich möchte eine unangemessene oder fehlerhafte KI-Antwort in Best Journal melden.\n\nBeschreibung des Problems:\n[Bitte ausfüllen]\n\nKontext (welche Funktion, welche Eingabe):\n[Bitte ausfüllen]\n\nDanke.</string>
+    <!-- Report AI Content (Google Play AI Policy 04/2024, in Settings → Datenschutz) -->
+    <string name="settings_report_ai_title">KI-Antwort melden</string>
+    <string name="settings_report_ai_subtitle">Unangemessene oder fehlerhafte KI-Ausgabe</string>
+    <string name="settings_report_ai_subject">Best Journal: Unangemessene KI-Antwort</string>
+    <string name="settings_report_ai_body">Hallo,\n\nich möchte eine unangemessene oder fehlerhafte KI-Antwort in Best Journal melden.\n\nBeschreibung des Problems:\n[Bitte ausfüllen]\n\nKontext (welche Funktion, welche Eingabe):\n[Bitte ausfüllen]\n\nDanke.</string>
     <string name="consent_links_header">Unsere Rechtstexte:</string>
     <string name="consent_accept_all">Einverstanden und loslegen</string>
     <string name="consent_disable_stats">Statistiken deaktivieren und fortfahren</string>

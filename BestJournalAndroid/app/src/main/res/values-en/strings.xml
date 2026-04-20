@@ -1034,4 +1034,10 @@
     <string name="settings_revoke_email_subject">Withdrawal Premium contract Best Journal</string>
     <string name="settings_revoke_email_body">Hello,\n\nI hereby give notice of withdrawal from my Best Journal Premium contract.\n\nPurchase: [please specify]\nDate of purchase: [please specify]\nGoogle account email: [please specify]\n\nThank you.</string>
 
+    <!-- Report AI Content (Google Play AI Policy 04/2024, in Settings → Privacy) -->
+    <string name="settings_report_ai_title">Report AI output</string>
+    <string name="settings_report_ai_subtitle">Inappropriate or incorrect AI response</string>
+    <string name="settings_report_ai_subject">Best Journal: Inappropriate AI response</string>
+    <string name="settings_report_ai_body">Hello,\n\nI would like to report an inappropriate or incorrect AI response in Best Journal.\n\nDescription of the issue:\n[Please fill in]\n\nContext (which feature, which input):\n[Please fill in]\n\nThank you.</string>
+
 </resources>
