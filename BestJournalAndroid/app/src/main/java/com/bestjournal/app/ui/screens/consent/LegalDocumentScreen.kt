@@ -30,19 +30,47 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import java.util.Locale
 
 // Matches the SplashScreen palette for visual consistency
 private val LegalBg = Color(0xFF131313)
 private val LegalAccent = Color(0xFFFFB689)
 private val LegalOnSurface = Color(0xFFE5E2E1)
 
-enum class LegalDocument(val fileName: String, val titleRes: Int) {
-    Datenschutz("DATENSCHUTZ.html", com.bestjournal.app.R.string.legal_title_datenschutz),
+enum class LegalDocument(
+    val deFileName: String,
+    val enFileName: String,
+    val titleRes: Int,
+) {
+    Datenschutz(
+        "DATENSCHUTZ.html",
+        "PRIVACY.html",
+        com.bestjournal.app.R.string.legal_title_datenschutz,
+    ),
     Nutzungsbedingungen(
         "NUTZUNGSBEDINGUNGEN.html",
+        "TERMS.html",
         com.bestjournal.app.R.string.legal_title_nutzungsbedingungen,
     ),
-    Impressum("IMPRESSUM.html", com.bestjournal.app.R.string.legal_title_impressum),
+    Impressum(
+        "IMPRESSUM.html",
+        "IMPRINT.html",
+        com.bestjournal.app.R.string.legal_title_impressum,
+    );
+
+    /**
+     * Picks the locale-appropriate asset path. German is the only non-English
+     * locale with dedicated legal translations, for every other system language
+     * we fall back to the English set which covers CCPA, UK GDPR, Quebec, APPs etc.
+     */
+    fun assetPath(): String {
+        val lang = Locale.getDefault().language
+        return if (lang == "de") {
+            "legal/de/$deFileName"
+        } else {
+            "legal/en/$enFileName"
+        }
+    }
 }
 
 @Composable
@@ -105,7 +133,7 @@ fun LegalDocumentScreen(document: LegalDocument, onBack: () -> Unit) {
                                 }
                             }
                         }
-                    loadUrl("file:///android_asset/legal/${document.fileName}")
+                    loadUrl("file:///android_asset/${document.assetPath()}")
                 }
             },
             modifier = Modifier.fillMaxWidth().weight(1f),
