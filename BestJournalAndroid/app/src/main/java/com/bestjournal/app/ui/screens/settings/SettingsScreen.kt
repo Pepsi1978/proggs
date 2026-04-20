@@ -2088,6 +2088,21 @@ fun SettingsScreen(
                     }
                 }
 
+                // Achievements (direkt unter Premium)
+                val achievementsWithStatus = remember {
+                    com.bestjournal.app.util.AchievementTracker.ALL_ACHIEVEMENTS.map { a ->
+                        val ts = clickPrefs.getLong("achievement_unlocked_${a.id}", 0L)
+                        a.copy(unlockedAt = if (ts > 0L) ts else null)
+                    }
+                }
+                AchievementsSection(
+                    achievements = achievementsWithStatus,
+                    onSectionViewed = {
+                        com.google.firebase.analytics.FirebaseAnalytics.getInstance(context)
+                            .logEvent("achievements_viewed", null)
+                    },
+                )
+
                 // Daten exportieren (PDF-Export)
                 var showExportDialog by remember { mutableStateOf(false) }
                 var exportIncludeEntries by remember { mutableStateOf(true) }
@@ -2323,6 +2338,93 @@ fun SettingsScreen(
                     }
                 }
 
+                // 7. Feedback
+                var showFeedbackDialog by remember { mutableStateOf(false) }
+                var feedbackSent by remember { mutableStateOf(false) }
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Icon(
+                                Icons.Rounded.Email,
+                                null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                stringResource(R.string.settings_feedback),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            // Invisible counterbalance for icon+spacer so text is visually centered
+                            Spacer(modifier = Modifier.width(28.dp))
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.settings_feedback_desc),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Button(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    showFeedbackDialog = true
+                                    feedbackSent = false
+                                },
+                                colors =
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    ),
+                            ) {
+                                Icon(Icons.Rounded.Feedback, null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.settings_feedback_send))
+                            }
+                        }
+                        if (feedbackSent) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                stringResource(R.string.settings_feedback_sent),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                }
+
+                if (feedbackSent) {
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        kotlinx.coroutines.delay(3000)
+                        feedbackSent = false
+                    }
+                }
+
+                if (showFeedbackDialog) {
+                    FeedbackDialog(
+                        userEmail = uiState.userProfile?.email,
+                        onDismiss = { showFeedbackDialog = false },
+                        onSent = {
+                            showFeedbackDialog = false
+                            feedbackSent = true
+                        },
+                        context = context,
+                    )
+                }
+
                 // Datenschutz (Analytics-Toggle + Konto löschen)
                 val privacyPrefs = remember {
                     com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
@@ -2458,108 +2560,6 @@ fun SettingsScreen(
                         },
                     )
                 }
-
-                // 7. Feedback
-                var showFeedbackDialog by remember { mutableStateOf(false) }
-                var feedbackSent by remember { mutableStateOf(false) }
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            Icon(
-                                Icons.Rounded.Email,
-                                null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                stringResource(R.string.settings_feedback),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                            // Invisible counterbalance for icon+spacer so text is visually centered
-                            Spacer(modifier = Modifier.width(28.dp))
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            stringResource(R.string.settings_feedback_desc),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            Button(
-                                onClick = {
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    showFeedbackDialog = true
-                                    feedbackSent = false
-                                },
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    ),
-                            ) {
-                                Icon(Icons.Rounded.Feedback, null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.settings_feedback_send))
-                            }
-                        }
-                        if (feedbackSent) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                stringResource(R.string.settings_feedback_sent),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
-                }
-
-                if (feedbackSent) {
-                    androidx.compose.runtime.LaunchedEffect(Unit) {
-                        kotlinx.coroutines.delay(3000)
-                        feedbackSent = false
-                    }
-                }
-
-                if (showFeedbackDialog) {
-                    FeedbackDialog(
-                        userEmail = uiState.userProfile?.email,
-                        onDismiss = { showFeedbackDialog = false },
-                        onSent = {
-                            showFeedbackDialog = false
-                            feedbackSent = true
-                        },
-                        context = context,
-                    )
-                }
-
-                // 8. Achievements
-                val achievementsWithStatus = remember {
-                    com.bestjournal.app.util.AchievementTracker.ALL_ACHIEVEMENTS.map { a ->
-                        val ts = clickPrefs.getLong("achievement_unlocked_${a.id}", 0L)
-                        a.copy(unlockedAt = if (ts > 0L) ts else null)
-                    }
-                }
-                AchievementsSection(
-                    achievements = achievementsWithStatus,
-                    onSectionViewed = {
-                        com.google.firebase.analytics.FirebaseAnalytics.getInstance(context)
-                            .logEvent("achievements_viewed", null)
-                    },
-                )
 
                 // 9. Ueber die App
                 GlassCard(

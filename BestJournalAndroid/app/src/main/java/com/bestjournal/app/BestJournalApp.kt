@@ -43,6 +43,20 @@ class BestJournalApp : Application() {
         // user accepts on the consent screen (ConsentScreen sets PREF_ANALYTICS_ENABLED=true).
         val analyticsEnabled = prefs.getBoolean(Constants.PREF_ANALYTICS_ENABLED, false)
         FirebaseAnalytics.getInstance(this).setAnalyticsCollectionEnabled(analyticsEnabled)
+
+        // First-launch theme enforcement: guarantee light mode on fresh install.
+        // We detect "first launch" via PREF_CONSENT_SHOWN — if consent has not been
+        // shown yet, the user has never interacted with this install. Write the
+        // theme preferences explicitly so no leftover state (e.g. from Android
+        // auto-backup or device-level dark mode defaults) can flip the UI to dark.
+        if (!prefs.contains(Constants.PREF_CONSENT_SHOWN)) {
+            prefs
+                .edit()
+                .putBoolean(Constants.PREF_DARK_THEME, false)
+                .putBoolean(Constants.PREF_THEME_FOLLOW_SYSTEM, false)
+                .putBoolean(Constants.PREF_THEME_FOLLOW_SUN, false)
+                .apply()
+        }
         // Debug builds use DebugAppCheckProvider (no Play Integrity needed).
         // Release builds use Play Integrity for production App Check.
         // DebugAppCheckProviderFactory is only available as debugImplementation,
