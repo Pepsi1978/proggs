@@ -678,6 +678,26 @@ dich in keiner Weise rechtlich binden.
 
 ---
 
+## 12a. Hinweis auf KI-Systeme (Art. 50 KI-Verordnung)
+
+Diese App verwendet KI-Systeme zur Verarbeitung deiner Eingaben:
+
+- **Google Gemini** (Firebase AI): KI-gestützte Textanalyse, Zusammenfassungen, Dashboard,
+  Rückblicke, Texterkennung (OCR)
+- **Groq Whisper**: Sprach-zu-Text-Transkription
+- **Microsoft Edge Text-to-Speech**: Text-zu-Sprache-Vorlesefunktion
+
+Gemäß Art. 50 der Verordnung (EU) 2024/1689 (KI-Verordnung) weisen wir darauf hin,
+dass die genannten Funktionen auf künstlicher Intelligenz basieren. KI-Systeme können
+**ungenaue, unvollständige oder irreführende Ausgaben** erzeugen ("Halluzinationen").
+Prüfe wichtige Aussagen selbstständig und verlasse dich bei gesundheitlichen,
+rechtlichen oder finanziellen Fragen auf qualifizierte Fachkräfte.
+
+Die KI-Ausgaben sind **keine verbindlichen Aussagen**, sondern Vorschläge und
+Zusammenfassungen zur Unterstützung deiner eigenen Reflexion.
+
+---
+
 ## 13. Pflicht zur Bereitstellung personenbezogener Daten
 
 Du bist nicht verpflichtet, uns personenbezogene Daten bereitzustellen. Die App ist

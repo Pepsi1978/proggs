@@ -226,11 +226,8 @@ eigenen Wohnsitz klagen, soweit dies nach dem dort geltenden Recht vorgesehen is
 
 ## 13. Streitbeilegung
 
-Die Europäische Kommission stellt eine Online-Plattform zur Streitbeilegung
-bereit: https://ec.europa.eu/consumers/odr/
-
 Ich bin nicht bereit und nicht verpflichtet, an Streitbeilegungsverfahren vor
-einer Verbraucherschlichtungsstelle teilzunehmen.
+einer Verbraucherschlichtungsstelle teilzunehmen (§ 36 VSBG).
 
 ---
 

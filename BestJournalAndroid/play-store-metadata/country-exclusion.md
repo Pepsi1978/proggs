@@ -1,0 +1,88 @@
+# Google Play Console — Länderausschluss-Liste für BestJournalAndroid
+
+**Stand:** 2026-04-20
+**App-Version:** 0.12.29 (versionCode 139)
+
+---
+
+## Beim Upload in der Play Console: Diese Länder DEAKTIVIEREN
+
+### Automatisch durch Google ausgeschlossen (keine Aktion nötig)
+Google Play ist in diesen Ländern nicht verfügbar — Apps werden automatisch nicht ausgeliefert:
+
+- Iran (IR)
+- Nordkorea (KP)
+- Kuba (CU)
+- Syrien (SY)
+- Sudan (SD)
+
+### Manuell ausschließen (DDA-Pflicht oder Rechtsrisiko)
+
+| Land | Code | Grund | Risiko bei Nicht-Ausschluss |
+|------|------|-------|----------------------------|
+| **China** | CN | Play Store in CN nicht verfügbar, separater Markt | — |
+| **Russland** | RU | Google Play Billing pausiert seit 10.03.2022, Seller Services suspendiert seit 12/2024 | Keine Zahlungsabwicklung |
+| **Belarus** | BY | Entsprechend RU-Sanktionen | Keine Zahlungsabwicklung |
+| **Türkei** | TR | VERBIS-Registrierungspflicht (Strafen bis 17 Mio. TRY), KVKK-SCCs seit 09/2024 | Ermessens-Bussgeld KVKK |
+| **Südkorea** | KR | Koreanische DSE Pflicht (DeepSeek-Präzedenz 02/2025), PIPC namentliche Empfängerliste | PIPC Corrective Order |
+| **Vietnam** | VN | Impact-Assessment-Dossier beim MPS binnen 60 Tagen, neues PDP-Gesetz ab 01.01.2026 | MPS-Ermittlung |
+| **Saudi-Arabien** | SA | Arabische DSE + SDAIA-PDPL-Konformität, Voice als biometrisch | SDAIA bis 5 Mio. SAR |
+| **Brasilien** | BR | Portugiesische DSE + ANPD-SCCs (seit 23.08.2025 Pflicht, EU-SCCs reichen nicht) | ANPD bis 2% Umsatz |
+
+---
+
+## Freigegeben (nach Fix der Kritischen Audit-Punkte K1–K5)
+
+### DACH + EU (FREI)
+DE, AT, CH, NL, FR, IT, ES, PL, BE, SE, DK, FI, NO, IS, LU, IE, PT (nur pt-PT, nicht pt-BR), GR, CZ, SK, HU, RO, BG, HR, SI, EE, LV, LT, MT, CY
+
+### Englischsprachiger Raum (FREI nach PRIVACY.en + Länder-Rights-Sections)
+US, UK, CA (exkl. Quebec bis Französisch-Version vorhanden), AU, NZ, IE, ZA, IN, SG, PH, MY, HK, JP (bedingt — Japanisch empfohlen)
+
+### Bedingt freigeben (Englisch reicht weitgehend)
+MX (Spanisch empfohlen), AR, CL, CO, PE, KE, NG, EG, MA, AE, IL, ID (Bahasa empfohlen), TH (Thai empfohlen)
+
+---
+
+## Play-Console-Upload-Checkliste
+
+### Data Safety Form
+- [x] Alle erhobenen Daten deklariert (Personal info, App activity, Photos/Videos, Audio files, Financial, Device identifiers)
+- [x] Alle geteilten Daten deklariert (Groq, Google Gemini, Microsoft Edge, Google Drive)
+- [x] Encryption in transit: JA
+- [x] Users can request data deletion: JA
+- [x] Account-Deletion-Web-URL: `https://pepsi1978.github.io/bestjournal-deletion/` (H6, siehe docs/account-deletion.html)
+- [x] In-App-Account-Deletion: JA (Settings → Datenschutz → Konto löschen)
+
+### App-Inhaltsbewertung
+- [x] Zielgruppe: 13+ (COPPA)
+- [x] Mental Health / Mood: Disclaimer vorhanden, Kategorie "Lifestyle" (nicht "Medical")
+
+### Target API
+- [x] Target SDK 35 (Android 15) — Pflicht seit 31.08.2025 ✅
+- [x] compileSdk 35 ✅
+- [x] minSdk 26 ✅
+
+### Privacy Policy URL
+- [x] Play Store Listing: URL zu PRIVACY.en.html Public Hosting
+- [x] In-App: Settings → Datenschutz → WebView
+- [x] Consent-Screen pre-onboarding: Link vorhanden
+
+### Subscription Policy
+- [x] Free Trial klar kommuniziert (8 Tage)
+- [x] Preise vor Kauf sichtbar (Google Play Billing handhabt)
+- [x] Kündigung via Play Store Abos
+
+### AI-Generated Content Policy
+- [x] Report-Mechanismus für KI-Antworten (mailto-Intent in Dashboard)
+- [x] AI-Safeguards: Gemini Content-Filter aktiv
+- [x] KI-Hinweis in DSE (§ 12a)
+
+---
+
+## Empfohlene Rollout-Strategie (phased)
+
+1. **Woche 1:** Nur DACH (DE, AT, CH) — deutsche Nutzer, deutsche Rechtstexte, niedriges Risiko
+2. **Woche 2–3:** EU-weit — englische Rechtstexte werden bei Locale-Switch automatisch geladen
+3. **Woche 4+:** USA, UK, CA (exkl. Quebec), AU, NZ — erfordert PRIVACY.en mit CCPA/UK ICO Sections
+4. **Nach Monitoring:** Rest der Welt (außer ausgeschlossene Länder)
