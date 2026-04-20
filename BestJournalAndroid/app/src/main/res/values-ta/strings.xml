@@ -1074,4 +1074,68 @@
     <string name="profile_style_insight">\n- ஆழமான சுய அறிவு கதை நடையில் எழுதவும், சிந்தனை வடிவங்கள், திரும்பி வரும் உணர்வுகள் மற்றும் மறைந்த பலங்களை வெளிப்படுத்துங்கள்</string>
     <string name="profile_style_coach">\n- ஊக்கமளிக்கும் இலக்கு துணையாளரின் நடையில் எழுதவும், தனிப்பட்ட இலக்குகளில் முன்னேற்றங்களை காட்டுங்கள் மற்றும் தொடர்ந்து செல்ல ஊக்குவியுங்கள்</string>
     <string name="profile_style_custom">\n- பயனரின் பின்வரும் தனிப்பட்ட கவனத்துடன் மீள்பார்வையை எழுதவும்: \"%1$s\"</string>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">தனியுரிமை மற்றும் ஒப்புதல்</string>
+    <string name="consent_intro">உங்கள் நாட்குறிப்பு ஒரு தனிப்பட்ட இடம், அதை நாங்கள் மதிக்கிறோம். Best Journal உங்கள் தரவை எப்படிக் கையாள்கிறது என்பதை இங்கு வெளிப்படையாகப் பார்க்கலாம்.</string>
+    <string name="consent_card1_title">உள்ளமை சேமிப்பு</string>
+    <string name="consent_card1_body">உங்கள் பதிவுகள் உங்கள் சாதனத்திலேயே இருக்கும்.</string>
+    <string name="consent_card2_title">AI அம்சங்கள் (USA)</string>
+    <string name="consent_card2_body">விருப்பமாக, உரை Google Gemini-க்கும், குரல் பதிவுகள் Groq-க்கும், உரை-வாசிப்பு Microsoft Edge-க்கும் USA-வில் அனுப்பப்படும் (EU-US Data Privacy Framework + Standard Contractual Clauses).</string>
+    <string name="consent_card3_title">அடையாளமற்ற புள்ளிவிவரங்கள்</string>
+    <string name="consent_card3_body">Firebase Analytics, விருப்பத்தேர்வு, அமைப்புகளில் எப்போது வேண்டுமானாலும் மாற்றலாம்.</string>
+    <string name="consent_links_header">எங்கள் சட்டப்பூர்வ ஆவணங்கள்:</string>
+    <string name="consent_accept_all">ஒப்புக்கொண்டு தொடங்கு</string>
+    <string name="consent_disable_stats">புள்ளிவிவரங்களை முடக்கித் தொடரு</string>
+    <string name="consent_confirmation">\"ஒப்புக்கொண்டு தொடங்கு\" என்பதைத் தட்டுவதன் மூலம் நீங்கள் தனியுரிமைக் கொள்கை, பயன்பாட்டு விதிமுறைகள் மற்றும் சட்டப்பூர்வ தகவலைப் படித்ததாகவும், விவரித்த தரவு செயலாக்கத்திற்கு ஒப்புக்கொள்கிறீர்கள் என்றும் உறுதிப்படுத்துகிறீர்கள். உங்கள் முடிவை அமைப்புகளில் எப்போது வேண்டுமானாலும் மாற்றலாம்.</string>
+
+    <string name="privacy_gate_groq_title">Groq-க்கு குரல் பதிவை அனுப்பவா?</string>
+    <string name="privacy_gate_groq_body">கிளவுட் டிரான்ஸ்கிரிப்ஷனுக்காக உங்கள் குரல் பதிவு குறியாக்கப்பட்டு Groq, Inc.-க்கு (Mountain View, USA) அனுப்பப்பட்டு அங்கு உரையாக மாற்றப்படும். ஆடியோ கோப்பு செயலாக்கத்திற்குப் பிறகு அழிக்கப்படும், பயிற்சிக்குப் பயன்படுத்தப்படாது.\n\nமாற்று: சாதனத்தில் உள்ளமை டிரான்ஸ்கிரிப்ஷனைப் பயன்படுத்துங்கள் (ஆஃப்லைன், தரவு பரிமாற்றம் இல்லை), Settings → AI-ல் மாற்றலாம்.</string>
+    <string name="privacy_gate_groq_accept">ஒப்புக்கொண்டு அனுப்பு</string>
+    <string name="privacy_gate_groq_local">அதற்குப் பதிலாக உள்ளமையில் டிரான்ஸ்கிரைப் செய்</string>
+
+    <string name="privacy_gate_gemini_title">Google Gemini-க்கு உரையை அனுப்பவா?</string>
+    <string name="privacy_gate_gemini_body">AI அம்சங்களுக்காக (டாஷ்போர்டு, சுருக்கங்கள், பின்னோக்கம், உரை மேம்பாடு) உங்கள் பதிவுகளின் பகுதிகள் குறியாக்கப்பட்டு Google Gemini-க்கு (Firebase AI, USA) அனுப்பப்படும். சட்ட அடிப்படை: EU-US Data Privacy Framework + Standard Contractual Clauses. கோரிக்கைகள் செயலாக்கத்திற்குப் பிறகு அழிக்கப்படும், பயிற்சிக்குப் பயன்படுத்தப்படாது.</string>
+    <string name="privacy_gate_gemini_accept">ஒப்புக்கொண்டு அனுப்பு</string>
+    <string name="privacy_gate_gemini_cancel">ரத்து</string>
+
+    <string name="privacy_gate_tts_title">Microsoft-க்கு உரையை அனுப்பவா?</string>
+    <string name="privacy_gate_tts_body">வாசித்துக் காட்ட, உரை குறியாக்கப்பட்டு Microsoft Bing Speech-க்கு (USA) அனுப்பப்பட்டு ஆடியோவாகத் திரும்பி வரும். சட்ட அடிப்படை: EU-US Data Privacy Framework + Standard Contractual Clauses.\n\nமாற்று: Android-ன் உள்ளமைந்த ஆஃப்லைன் TTS-ஐப் பயன்படுத்துங்கள்.</string>
+    <string name="privacy_gate_tts_accept">ஒப்புக்கொண்டு வாசி</string>
+    <string name="privacy_gate_tts_cancel">ரத்து</string>
+
+    <string name="settings_privacy_header">தனியுரிமை</string>
+    <string name="settings_analytics_title">அடையாளமற்ற புள்ளிவிவரங்கள்</string>
+    <string name="settings_analytics_subtitle">பிழை பகுப்பாய்வு மற்றும் தயாரிப்பு மேம்பாட்டிற்கான Firebase Analytics</string>
+
+    <string name="settings_delete_account_title">கணக்கையும் தரவையும் நீக்கு</string>
+    <string name="settings_delete_account_subtitle">அனைத்து உள்ளமை தரவு, Google கணக்கு மற்றும் Drive காப்புப்பிரதியை நிரந்தரமாக நீக்குகிறது</string>
+    <string name="settings_delete_account_confirm_title">கணக்கை நிரந்தரமாக நீக்கவா?</string>
+    <string name="settings_delete_account_confirm_body">இந்தச் செயலை மீட்க முடியாது மற்றும் நீக்குவது:\n\n• அனைத்து உள்ளமை நாட்குறிப்புப் பதிவுகள், புகைப்படங்கள் மற்றும் வீடியோக்கள்\n• உங்கள் Firebase கணக்கு\n• பயன்பாட்டின் Google Drive காப்புப்பிரதி\n\nஅதன்பிறகு பயன்பாடு புதிய நிறுவலாக மீண்டும் தொடங்கும்.</string>
+    <string name="settings_delete_account_cancel">ரத்து</string>
+    <string name="settings_delete_account_confirm">ஆம், அனைத்தையும் நீக்கு</string>
+
+    <string name="settings_report_ai_title">AI பதிலைப் புகாரளி</string>
+    <string name="settings_report_ai_subtitle">தகாத அல்லது தவறான AI வெளியீடு</string>
+    <string name="settings_report_ai_confirm_title">Support-க்கு மின்னஞ்சலைத் திறக்கவா?</string>
+    <string name="settings_report_ai_confirm_body">உங்கள் மின்னஞ்சல் பயன்பாடு dev.app.support@gmail.com-க்கு தயார் செய்யப்பட்ட செய்தியுடன் திறக்கும். அனுப்புவதற்கு முன் விளக்கத்தை சேர்க்கலாம். வேலை நாட்களில் 24 மணி நேரத்திற்குள் பதிலளிப்போம்.\n\nதயவுசெய்து இங்கு புகாரளிக்கவும்: டாஷ்போர்டு, சுருக்கங்கள், பின்னோக்கம் அல்லது உரை மேம்பாட்டிலிருந்து தகாத, புண்படுத்தும், தவறான அல்லது தவறாக வழிநடத்தும் AI வெளியீடுகள்.</string>
+    <string name="settings_report_ai_confirm">புகார் உருவாக்கு</string>
+    <string name="settings_report_ai_cancel">ரத்து</string>
+    <string name="settings_report_ai_no_email">மின்னஞ்சல் பயன்பாடு கிடைக்கவில்லை. தயவுசெய்து புகாரை dev.app.support@gmail.com-க்கு அனுப்பவும்.</string>
+    <string name="settings_report_ai_subject">Best Journal: தகாத AI பதில்</string>
+    <string name="settings_report_ai_body">வணக்கம்,\n\nBest Journal-ல் ஒரு தகாத அல்லது தவறான AI பதிலைப் புகாரளிக்க விரும்புகிறேன்.\n\nபிரச்சனையின் விளக்கம்:\n[தயவுசெய்து நிரப்பவும்]\n\nசூழல் (எந்த அம்சம், எந்த உள்ளீடு):\n[தயவுசெய்து நிரப்பவும்]\n\nநன்றி.</string>
+
+    <string name="settings_revoke_title">ஒப்பந்த ரத்து</string>
+    <string name="settings_revoke_subtitle">Premium வாங்குதல்</string>
+    <string name="settings_revoke_confirm_title">Support-க்கு மின்னஞ்சலைத் திறக்கவா?</string>
+    <string name="settings_revoke_confirm_body">உங்கள் மின்னஞ்சல் பயன்பாடு dev.app.support@gmail.com-க்கு தயார் செய்யப்பட்ட செய்தியுடன் திறக்கும். வேலை நாட்களில் 24 மணி நேரத்திற்குள் பதிலளிப்போம்.\n\nரத்து உரிமை பற்றிய முழுமையான தகவல் பயன்பாட்டு விதிமுறைகளில் (§ 16) உள்ளது. சந்தாக்களுக்கு Google Play → Subscriptions மூலமாகவும் ரத்து செய்யுங்கள்.</string>
+    <string name="settings_revoke_cancel">ரத்து</string>
+    <string name="settings_revoke_confirm">ரத்து உருவாக்கு</string>
+    <string name="settings_revoke_no_email">மின்னஞ்சல் பயன்பாடு கிடைக்கவில்லை. தயவுசெய்து ரத்தை dev.app.support@gmail.com-க்கு அனுப்பவும்.</string>
+    <string name="settings_revoke_email_subject">Best Journal Premium ஒப்பந்த ரத்து</string>
+    <string name="settings_revoke_email_body">வணக்கம்,\n\nஇதன் மூலம் Best Journal-ன் Premium அம்சங்கள் தொடர்பான ஒப்பந்தத்தை நான் ரத்து செய்கிறேன்.\n\nஆர்டர் செய்த தேதி: [தயவுசெய்து நிரப்பவும்]\nGoogle கணக்கு மின்னஞ்சல்: [அனுப்புநரிடமிருந்து வேறுபட்டிருந்தால் நிரப்பவும்]\nபெயர்: [தயவுசெய்து நிரப்பவும்]\n\nதேதி: [இன்று]</string>
+
+
 </resources>

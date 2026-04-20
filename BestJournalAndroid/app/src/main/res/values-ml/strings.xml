@@ -1000,4 +1000,68 @@
     <string name="profile_style_coach">\n- ഒരു പ്രചോദിപ്പിക്കുന്ന ലക്ഷ്യ-ഗൈഡ് ശൈലിൽ എഴുതൂ, വ്യക്തിഗത ലക്ഷ്യങ്ങളിൽ പ്രഗതി കാണിക്കൂ, തുടരാൻ ആഹ്വാനം ചെയ്യൂ</string>
     <string name="profile_style_custom">\n- ഉപഭോക്താവിന്റെ ഈ വ്യക്തിഗത ഫോക്കസ് ഉപയോഗിച്ച് അവലോകനം എഴുതൂ: \"%1$s\"</string>
 
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">സ്വകാര്യതയും സമ്മതവും</string>
+    <string name="consent_intro">നിങ്ങളുടെ ഡയറി ഒരു വ്യക്തിഗത സ്ഥലമാണ്, അത് ഞങ്ങൾ മാനിക്കുന്നു. Best Journal നിങ്ങളുടെ ഡാറ്റയെ എങ്ങനെ കൈകാര്യം ചെയ്യുന്നു എന്നത് ഇവിടെ സുതാര്യമായി കാണാം.</string>
+    <string name="consent_card1_title">ലോക്കൽ സ്റ്റോറേജ്</string>
+    <string name="consent_card1_body">നിങ്ങളുടെ എൻട്രികൾ നിങ്ങളുടെ ഉപകരണത്തിൽ തന്നെ നിലനിൽക്കും.</string>
+    <string name="consent_card2_title">AI ഫീച്ചറുകൾ (USA)</string>
+    <string name="consent_card2_body">ഓപ്ഷണലായി ടെക്സ്റ്റ് Google Gemini-യിലേക്കും, വോയ്സ് റെക്കോർഡിംഗുകൾ Groq-ലേക്കും, വായിച്ചു കേൾപ്പിക്കാനുള്ള ടെക്സ്റ്റ് Microsoft Edge-ലേക്കും USA-യിൽ അയയ്ക്കുന്നു (EU-US Data Privacy Framework + Standard Contractual Clauses).</string>
+    <string name="consent_card3_title">അജ്ഞാത സ്ഥിതിവിവരക്കണക്കുകൾ</string>
+    <string name="consent_card3_body">Firebase Analytics, ഓപ്ഷണൽ, സെറ്റിംഗ്സിൽ എപ്പോൾ വേണമെങ്കിലും മാറ്റാം.</string>
+    <string name="consent_links_header">ഞങ്ങളുടെ നിയമ രേഖകൾ:</string>
+    <string name="consent_accept_all">സമ്മതിച്ച് തുടങ്ങാം</string>
+    <string name="consent_disable_stats">സ്ഥിതിവിവരക്കണക്കുകൾ ഓഫ് ചെയ്ത് തുടരുക</string>
+    <string name="consent_confirmation">\"സമ്മതിച്ച് തുടങ്ങാം\" അമർത്തുന്നത് വഴി സ്വകാര്യതാ നയം, ഉപയോഗ നിബന്ധനകൾ, നിയമ വിവരം എന്നിവ വായിച്ചുവെന്നും വിവരിച്ചിട്ടുള്ള ഡാറ്റ പ്രോസസിംഗിന് നിങ്ങൾ സമ്മതിക്കുന്നു എന്നും സ്ഥിരീകരിക്കുന്നു. തീരുമാനം സെറ്റിംഗ്സിൽ എപ്പോൾ വേണമെങ്കിലും മാറ്റാം.</string>
+
+    <string name="privacy_gate_groq_title">വോയ്സ് റെക്കോർഡിംഗ് Groq-ലേക്ക് അയയ്ക്കണോ?</string>
+    <string name="privacy_gate_groq_body">ക്ലൗഡ് ട്രാൻസ്ക്രിപ്ഷനു വേണ്ടി നിങ്ങളുടെ വോയ്സ് റെക്കോർഡിംഗ് എൻക്രിപ്റ്റ് ചെയ്ത് Groq, Inc.-ലേക്ക് (Mountain View, USA) അയക്കുകയും അവിടെ ടെക്സ്റ്റ് ആയി മാറ്റുകയും ചെയ്യുന്നു. ഓഡിയോ ഫയൽ പ്രോസസിംഗിനു ശേഷം നീക്കം ചെയ്യും, പരിശീലനത്തിന് ഉപയോഗിക്കില്ല.\n\nബദൽ: ഉപകരണത്തിൽ ലോക്കൽ ട്രാൻസ്ക്രിപ്ഷൻ ഉപയോഗിക്കുക (ഓഫ്‌ലൈൻ, ഡാറ്റ കൈമാറ്റം ഇല്ല), Settings → AI-യിൽ മാറ്റാം.</string>
+    <string name="privacy_gate_groq_accept">സമ്മതിച്ച് അയയ്ക്കുക</string>
+    <string name="privacy_gate_groq_local">പകരം ലോക്കലായി ട്രാൻസ്ക്രൈബ് ചെയ്യുക</string>
+
+    <string name="privacy_gate_gemini_title">ടെക്സ്റ്റ് Google Gemini-ലേക്ക് അയയ്ക്കണോ?</string>
+    <string name="privacy_gate_gemini_body">AI ഫീച്ചറുകൾക്ക് (ഡാഷ്ബോർഡ്, സംഗ്രഹങ്ങൾ, പുനരവലോകനം, ടെക്സ്റ്റ് മെച്ചപ്പെടുത്തൽ) നിങ്ങളുടെ എൻട്രികളുടെ ഭാഗങ്ങൾ എൻക്രിപ്റ്റ് ചെയ്ത് Google Gemini (Firebase AI, USA)-ലേക്ക് അയയ്ക്കുന്നു. നിയമപരമായ അടിസ്ഥാനം: EU-US Data Privacy Framework + Standard Contractual Clauses. അഭ്യർത്ഥനകൾ പ്രോസസിംഗിനു ശേഷം നീക്കം ചെയ്യും, പരിശീലനത്തിന് ഉപയോഗിക്കില്ല.</string>
+    <string name="privacy_gate_gemini_accept">സമ്മതിച്ച് അയയ്ക്കുക</string>
+    <string name="privacy_gate_gemini_cancel">റദ്ദാക്കുക</string>
+
+    <string name="privacy_gate_tts_title">ടെക്സ്റ്റ് Microsoft-ലേക്ക് അയയ്ക്കണോ?</string>
+    <string name="privacy_gate_tts_body">വായിച്ചു കേൾപ്പിക്കാനായി ടെക്സ്റ്റ് എൻക്രിപ്റ്റ് ചെയ്ത് Microsoft Bing Speech (USA)-ലേക്ക് അയച്ച് ഓഡിയോ ആയി തിരികെ ലഭിക്കുന്നു. നിയമപരമായ അടിസ്ഥാനം: EU-US Data Privacy Framework + Standard Contractual Clauses.\n\nബദൽ: Android-ന്റെ ബിൽറ്റ്-ഇൻ ഓഫ്‌ലൈൻ TTS ഉപയോഗിക്കുക.</string>
+    <string name="privacy_gate_tts_accept">സമ്മതിച്ച് വായിക്കുക</string>
+    <string name="privacy_gate_tts_cancel">റദ്ദാക്കുക</string>
+
+    <string name="settings_privacy_header">സ്വകാര്യത</string>
+    <string name="settings_analytics_title">അജ്ഞാത സ്ഥിതിവിവരക്കണക്കുകൾ</string>
+    <string name="settings_analytics_subtitle">പിശക് വിശകലനത്തിനും ഉൽപ്പന്ന മെച്ചപ്പെടുത്തലിനും ഉള്ള Firebase Analytics</string>
+
+    <string name="settings_delete_account_title">അക്കൗണ്ടും ഡാറ്റയും നീക്കം ചെയ്യുക</string>
+    <string name="settings_delete_account_subtitle">എല്ലാ ലോക്കൽ ഡാറ്റ, Google അക്കൗണ്ട്, Drive ബാക്കപ്പ് എന്നിവ ശാശ്വതമായി നീക്കം ചെയ്യുന്നു</string>
+    <string name="settings_delete_account_confirm_title">അക്കൗണ്ട് ശാശ്വതമായി നീക്കം ചെയ്യണോ?</string>
+    <string name="settings_delete_account_confirm_body">ഈ പ്രവർത്തനം തിരിച്ചെടുക്കാൻ കഴിയില്ല, ഇത് നീക്കം ചെയ്യുന്നു:\n\n• എല്ലാ ലോക്കൽ ഡയറി എൻട്രികൾ, ഫോട്ടോകൾ, വീഡിയോകൾ\n• നിങ്ങളുടെ Firebase അക്കൗണ്ട്\n• ആപ്പിന്റെ Google Drive ബാക്കപ്പ്\n\nആപ്പ് പുതിയ ഇൻസ്റ്റാളേഷൻ പോലെ വീണ്ടും ആരംഭിക്കും.</string>
+    <string name="settings_delete_account_cancel">റദ്ദാക്കുക</string>
+    <string name="settings_delete_account_confirm">അതെ, എല്ലാം നീക്കം ചെയ്യുക</string>
+
+    <string name="settings_report_ai_title">AI പ്രതികരണം റിപ്പോർട്ട് ചെയ്യുക</string>
+    <string name="settings_report_ai_subtitle">അനുചിതമോ തെറ്റായതോ ആയ AI ഔട്ട്പുട്ട്</string>
+    <string name="settings_report_ai_confirm_title">Support-ന് ഇമെയിൽ തുറക്കണോ?</string>
+    <string name="settings_report_ai_confirm_body">നിങ്ങളുടെ ഇമെയിൽ ആപ്പ് dev.app.support@gmail.com-ന് തയ്യാറായ സന്ദേശത്തോടൊപ്പം തുറക്കും. അയയ്ക്കുന്നതിനു മുമ്പ് വിവരണം ചേർക്കാം. പ്രവൃത്തി ദിവസങ്ങളിൽ 24 മണിക്കൂറിനുള്ളിൽ ഞങ്ങൾ മറുപടി നൽകും.\n\nദയവായി ഇവിടെ റിപ്പോർട്ട് ചെയ്യുക: ഡാഷ്ബോർഡ്, സംഗ്രഹങ്ങൾ, പുനരവലോകനം, ടെക്സ്റ്റ് മെച്ചപ്പെടുത്തൽ എന്നിവയിൽ നിന്നുള്ള അനുചിത, ആക്ഷേപകര, തെറ്റായ അല്ലെങ്കിൽ തെറ്റിദ്ധാരണ ഉണ്ടാക്കുന്ന AI ഔട്ട്പുട്ടുകൾ.</string>
+    <string name="settings_report_ai_confirm">റിപ്പോർട്ട് സൃഷ്ടിക്കുക</string>
+    <string name="settings_report_ai_cancel">റദ്ദാക്കുക</string>
+    <string name="settings_report_ai_no_email">ഇമെയിൽ ആപ്പ് കണ്ടെത്തിയില്ല. ദയവായി റിപ്പോർട്ട് dev.app.support@gmail.com-ലേക്ക് അയയ്ക്കുക.</string>
+    <string name="settings_report_ai_subject">Best Journal: അനുചിത AI പ്രതികരണം</string>
+    <string name="settings_report_ai_body">നമസ്കാരം,\n\nBest Journal-ൽ ഒരു അനുചിതമോ തെറ്റായതോ ആയ AI പ്രതികരണം റിപ്പോർട്ട് ചെയ്യാൻ ഞാൻ ആഗ്രഹിക്കുന്നു.\n\nപ്രശ്നത്തിന്റെ വിവരണം:\n[ദയവായി പൂരിപ്പിക്കുക]\n\nസന്ദർഭം (ഏത് ഫീച്ചർ, ഏത് ഇൻപുട്ട്):\n[ദയവായി പൂരിപ്പിക്കുക]\n\nനന്ദി.</string>
+
+    <string name="settings_revoke_title">കരാർ റദ്ദാക്കൽ</string>
+    <string name="settings_revoke_subtitle">Premium വാങ്ങൽ</string>
+    <string name="settings_revoke_confirm_title">Support-ന് ഇമെയിൽ തുറക്കണോ?</string>
+    <string name="settings_revoke_confirm_body">നിങ്ങളുടെ ഇമെയിൽ ആപ്പ് dev.app.support@gmail.com-ന് തയ്യാറായ സന്ദേശത്തോടൊപ്പം തുറക്കും. പ്രവൃത്തി ദിവസങ്ങളിൽ 24 മണിക്കൂറിനുള്ളിൽ ഞങ്ങൾ മറുപടി നൽകും.\n\nറദ്ദാക്കൽ അവകാശത്തെക്കുറിച്ചുള്ള പൂർണ്ണ വിവരങ്ങൾ ഉപയോഗ നിബന്ധനകളിൽ (§ 16) ഉണ്ട്. സബ്സ്ക്രിപ്ഷനുകൾക്കായി Google Play → Subscriptions വഴിയും റദ്ദാക്കുക.</string>
+    <string name="settings_revoke_cancel">റദ്ദാക്കുക</string>
+    <string name="settings_revoke_confirm">റദ്ദാക്കൽ സൃഷ്ടിക്കുക</string>
+    <string name="settings_revoke_no_email">ഇമെയിൽ ആപ്പ് കണ്ടെത്തിയില്ല. ദയവായി റദ്ദാക്കൽ dev.app.support@gmail.com-ലേക്ക് അയയ്ക്കുക.</string>
+    <string name="settings_revoke_email_subject">Best Journal Premium കരാർ റദ്ദാക്കൽ</string>
+    <string name="settings_revoke_email_body">നമസ്കാരം,\n\nഇതിനാൽ Best Journal-ന്റെ Premium ഫീച്ചറുകൾ സംബന്ധിച്ച കരാർ ഞാൻ റദ്ദാക്കുന്നു എന്ന് അറിയിക്കുന്നു.\n\nഓർഡർ ചെയ്ത തീയതി: [ദയവായി പൂരിപ്പിക്കുക]\nGoogle അക്കൗണ്ട് ഇമെയിൽ: [അയയ്ക്കുന്നയാളിൽ നിന്ന് വ്യത്യസ്തമാണെങ്കിൽ പൂരിപ്പിക്കുക]\nപേര്: [ദയവായി പൂരിപ്പിക്കുക]\n\nതീയതി: [ഇന്ന്]</string>
+
+
 </resources>

@@ -1022,4 +1022,68 @@
     <string name="profile_style_coach">\n- ♻</string>
     <string name="profile_style_custom">\n- ♻ \"%1$s\"</string>
 
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">ગોપનીયતા અને સંમતિ</string>
+    <string name="consent_intro">તમારી ડાયરી એ એક ખાનગી જગ્યા છે અને અમે તેનો આદર કરીએ છીએ. અહીં તમે પારદર્શક રીતે જોઈ શકો છો કે Best Journal તમારા ડેટાનું કેવી રીતે સંચાલન કરે છે.</string>
+    <string name="consent_card1_title">સ્થાનિક સ્ટોરેજ</string>
+    <string name="consent_card1_body">તમારી એન્ટ્રીઓ તમારા ઉપકરણ પર જ રહે છે.</string>
+    <string name="consent_card2_title">AI ફીચર્સ (USA)</string>
+    <string name="consent_card2_body">વૈકલ્પિક રીતે, ટેક્સ્ટ Google Gemini ને, વૉઇસ રેકોર્ડિંગ Groq ને અને વાંચીને સંભળાવવાનો ટેક્સ્ટ Microsoft Edge ને USA માં મોકલવામાં આવે છે (EU-US Data Privacy Framework + Standard Contractual Clauses).</string>
+    <string name="consent_card3_title">અજ્ઞાત આંકડા</string>
+    <string name="consent_card3_body">Firebase Analytics, વૈકલ્પિક, સેટિંગ્સમાં ગમે ત્યારે બદલી શકાય છે.</string>
+    <string name="consent_links_header">અમારા કાયદેસર દસ્તાવેજો:</string>
+    <string name="consent_accept_all">સંમત અને શરૂ કરો</string>
+    <string name="consent_disable_stats">આંકડા બંધ કરીને ચાલુ રાખો</string>
+    <string name="consent_confirmation">\"સંમત અને શરૂ કરો\" પર ટેપ કરીને તમે પુષ્ટિ કરો છો કે તમે ગોપનીયતા નીતિ, ઉપયોગની શરતો અને કાનૂની સૂચના વાંચી છે અને વર્ણવેલ ડેટા પ્રોસેસિંગ સાથે સંમત છો. તમે તમારો નિર્ણય સેટિંગ્સમાં ગમે ત્યારે બદલી શકો છો.</string>
+
+    <string name="privacy_gate_groq_title">વૉઇસ રેકોર્ડિંગ Groq ને મોકલવું?</string>
+    <string name="privacy_gate_groq_body">ક્લાઉડ ટ્રાન્સક્રિપ્શન માટે તમારું વૉઇસ રેકોર્ડિંગ એન્ક્રિપ્ટેડ સ્વરૂપમાં Groq, Inc. (Mountain View, USA) ને મોકલવામાં આવે છે અને ત્યાં ટેક્સ્ટમાં રૂપાંતરિત થાય છે. ઑડિઓ ફાઇલ પ્રક્રિયા પછી કાઢી નાખવામાં આવે છે અને તાલીમ માટે ઉપયોગમાં લેવાતી નથી.\n\nવિકલ્પ: ઉપકરણ પર સ્થાનિક ટ્રાન્સક્રિપ્શનનો ઉપયોગ કરો (ઑફલાઇન, કોઈ ડેટા ટ્રાન્સફર નહીં), Settings → AI માં બદલી શકાય છે.</string>
+    <string name="privacy_gate_groq_accept">સંમત અને મોકલો</string>
+    <string name="privacy_gate_groq_local">તેના બદલે સ્થાનિક રીતે ટ્રાન્સક્રાઇબ કરો</string>
+
+    <string name="privacy_gate_gemini_title">ટેક્સ્ટ Google Gemini ને મોકલવો?</string>
+    <string name="privacy_gate_gemini_body">AI ફીચર્સ (ડેશબોર્ડ, સારાંશ, રેટ્રોસ્પેક્ટિવ, ટેક્સ્ટ સુધારો) માટે તમારી એન્ટ્રીઓના અંશો એન્ક્રિપ્ટેડ સ્વરૂપમાં Google Gemini (Firebase AI, USA) ને મોકલવામાં આવે છે. કાનૂની આધાર: EU-US Data Privacy Framework + Standard Contractual Clauses. વિનંતીઓ પ્રક્રિયા પછી કાઢી નાખવામાં આવે છે અને તાલીમ માટે ઉપયોગમાં લેવાતી નથી.</string>
+    <string name="privacy_gate_gemini_accept">સંમત અને મોકલો</string>
+    <string name="privacy_gate_gemini_cancel">રદ કરો</string>
+
+    <string name="privacy_gate_tts_title">ટેક્સ્ટ Microsoft ને મોકલવો?</string>
+    <string name="privacy_gate_tts_body">વાંચીને સંભળાવવા માટે ટેક્સ્ટ એન્ક્રિપ્ટેડ સ્વરૂપમાં Microsoft Bing Speech (USA) ને મોકલવામાં આવે છે અને ઑડિઓ તરીકે પાછો આવે છે. કાનૂની આધાર: EU-US Data Privacy Framework + Standard Contractual Clauses.\n\nવિકલ્પ: Android નું બિલ્ટ-ઇન ઑફલાઇન TTS વાપરો.</string>
+    <string name="privacy_gate_tts_accept">સંમત અને વાંચો</string>
+    <string name="privacy_gate_tts_cancel">રદ કરો</string>
+
+    <string name="settings_privacy_header">ગોપનીયતા</string>
+    <string name="settings_analytics_title">અજ્ઞાત આંકડા</string>
+    <string name="settings_analytics_subtitle">ભૂલ વિશ્લેષણ અને ઉત્પાદન સુધારણા માટે Firebase Analytics</string>
+
+    <string name="settings_delete_account_title">એકાઉન્ટ અને ડેટા કાઢી નાખો</string>
+    <string name="settings_delete_account_subtitle">બધા સ્થાનિક ડેટા, Google એકાઉન્ટ અને Drive બેકઅપને કાયમી રૂપે કાઢી નાખે છે</string>
+    <string name="settings_delete_account_confirm_title">એકાઉન્ટ કાયમી રીતે કાઢવું?</string>
+    <string name="settings_delete_account_confirm_body">આ ક્રિયા પાછી મેળવી શકાતી નથી અને આ કાઢી નાખે છે:\n\n• બધી સ્થાનિક ડાયરી એન્ટ્રીઓ, ફોટા અને વીડિયો\n• તમારું Firebase એકાઉન્ટ\n• ઍપનો Google Drive બેકઅપ\n\nઍપ નવા ઇન્સ્ટોલેશન તરીકે ફરીથી શરૂ થશે.</string>
+    <string name="settings_delete_account_cancel">રદ કરો</string>
+    <string name="settings_delete_account_confirm">હા, બધું કાઢો</string>
+
+    <string name="settings_report_ai_title">AI જવાબની જાણ કરો</string>
+    <string name="settings_report_ai_subtitle">અયોગ્ય અથવા ખોટું AI આઉટપુટ</string>
+    <string name="settings_report_ai_confirm_title">Support ને ઇમેઇલ ખોલવો?</string>
+    <string name="settings_report_ai_confirm_body">તમારી ઇમેઇલ ઍપ dev.app.support@gmail.com ને તૈયાર સંદેશ સાથે ખુલશે. મોકલતા પહેલા વર્ણન ઉમેરી શકો છો. અમે કાર્ય દિવસોમાં 24 કલાકમાં જવાબ આપીએ છીએ.\n\nકૃપા કરીને અહીં જાણ કરો: ડેશબોર્ડ, સારાંશ, રેટ્રોસ્પેક્ટિવ અથવા ટેક્સ્ટ સુધારામાંથી અયોગ્ય, આક્રમક, ખોટા અથવા ગેરમાર્ગે દોરતા AI આઉટપુટ.</string>
+    <string name="settings_report_ai_confirm">જાણ બનાવો</string>
+    <string name="settings_report_ai_cancel">રદ કરો</string>
+    <string name="settings_report_ai_no_email">કોઈ ઇમેઇલ ઍપ મળી નથી. કૃપા કરીને જાણ dev.app.support@gmail.com પર મોકલો.</string>
+    <string name="settings_report_ai_subject">Best Journal: અયોગ્ય AI જવાબ</string>
+    <string name="settings_report_ai_body">નમસ્તે,\n\nહું Best Journal માં એક અયોગ્ય અથવા ખોટા AI જવાબની જાણ કરવા માંગું છું.\n\nસમસ્યાનું વર્ણન:\n[કૃપા કરીને ભરો]\n\nસંદર્ભ (કઈ સુવિધા, કયું ઇનપુટ):\n[કૃપા કરીને ભરો]\n\nઆભાર.</string>
+
+    <string name="settings_revoke_title">કરાર રદ કરો</string>
+    <string name="settings_revoke_subtitle">Premium ખરીદી</string>
+    <string name="settings_revoke_confirm_title">Support ને ઇમેઇલ ખોલવો?</string>
+    <string name="settings_revoke_confirm_body">તમારી ઇમેઇલ ઍપ dev.app.support@gmail.com ને તૈયાર સંદેશ સાથે ખુલશે. અમે કાર્ય દિવસોમાં 24 કલાકમાં જવાબ આપીએ છીએ.\n\nરદ કરવાના અધિકારની સંપૂર્ણ માહિતી ઉપયોગની શરતોમાં (§ 16) છે. સબ્સ્ક્રિપ્શન માટે વધુમાં Google Play → Subscriptions માંથી પણ રદ કરો.</string>
+    <string name="settings_revoke_cancel">રદ કરો</string>
+    <string name="settings_revoke_confirm">રદ બનાવો</string>
+    <string name="settings_revoke_no_email">કોઈ ઇમેઇલ ઍપ મળી નથી. કૃપા કરીને રદ dev.app.support@gmail.com પર મોકલો.</string>
+    <string name="settings_revoke_email_subject">Best Journal Premium કરાર રદ</string>
+    <string name="settings_revoke_email_body">નમસ્તે,\n\nઆ દ્વારા હું Best Journal ની Premium સુવિધાઓ અંગેના કરારને રદ કરવાની સૂચના આપું છું.\n\nઓર્ડર તારીખ: [કૃપા કરીને ભરો]\nGoogle એકાઉન્ટ ઇમેઇલ: [જો મોકલનાર કરતાં અલગ હોય તો ભરો]\nનામ: [કૃપા કરીને ભરો]\n\nતારીખ: [આજે]</string>
+
+
 </resources>
