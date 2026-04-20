@@ -13,6 +13,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -112,16 +113,19 @@ fun AchievementsSection(
 
     GlassCard {
         Column {
-            // Header row — trophy + title/counter centered; chevron on the right
+            // Header row — title treated as "visually centered" regardless of
+            // the trophy icon on the left (same pattern as Feedback, Sicherheit,
+            // Premium etc.). Invisible counterbalance spacer on the right equals
+            // icon-circle (36) + spacer (10) = 46 dp.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { expanded = !expanded },
             ) {
-                // Centered group: trophy icon + title/counter
                 Row(
                     modifier = Modifier.align(Alignment.Center),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,
@@ -152,6 +156,8 @@ fun AchievementsSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    // Invisible counterbalance so the text is visually centered
+                    Spacer(modifier = Modifier.width(46.dp))
                 }
                 // Chevron pinned to the right edge
                 Icon(
