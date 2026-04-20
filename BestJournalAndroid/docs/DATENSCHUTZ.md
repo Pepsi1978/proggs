@@ -16,7 +16,7 @@ Stettiner Straße 41
 35410 Hungen
 Deutschland
 
-E-Mail: barwandt@gmail.com
+E-Mail: dev.app.support@gmail.com
 
 > Diese Adresse wird vom Dienst „Dein Impressum" bereitgestellt und dient als
 > ladungsfähige Anschrift gemäß § 5 TMG und Art. 13 DSGVO.
@@ -155,12 +155,12 @@ Du hast jederzeit folgende Rechte:
 
 | Recht | Artikel | Wie |
 |-------|---------|-----|
-| Auskunft | Art. 15 DSGVO | E-Mail an barwandt@gmail.com |
+| Auskunft | Art. 15 DSGVO | E-Mail an dev.app.support@gmail.com |
 | Berichtigung | Art. 16 DSGVO | E-Mail oder in der App |
 | Löschung | Art. 17 DSGVO | Daten in der App löschen oder App deinstallieren |
-| Einschränkung | Art. 18 DSGVO | E-Mail an barwandt@gmail.com |
+| Einschränkung | Art. 18 DSGVO | E-Mail an dev.app.support@gmail.com |
 | Datenübertragbarkeit | Art. 20 DSGVO | Export-Funktion in der App |
-| Widerspruch | Art. 21 DSGVO | E-Mail an barwandt@gmail.com |
+| Widerspruch | Art. 21 DSGVO | E-Mail an dev.app.support@gmail.com |
 | Widerruf der Einwilligung | Art. 7 Abs. 3 DSGVO | In den App-Einstellungen |
 | Beschwerde | Art. 77 DSGVO | Bei der zuständigen Datenschutzaufsichtsbehörde |
 
@@ -220,5 +220,5 @@ Grundlagen angepasst werden. Die jeweils aktuelle Version ist in der App unter
 
 Bei Fragen zum Datenschutz oder zur Ausübung deiner Rechte:
 
-**E-Mail:** barwandt@gmail.com
+**E-Mail:** dev.app.support@gmail.com
 **Postanschrift:** Siehe Abschnitt 1 (Impressum)

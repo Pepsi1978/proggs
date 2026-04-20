@@ -10,7 +10,7 @@ Deutschland
 
 ## Kontakt
 
-E-Mail: barwandt@gmail.com
+E-Mail: dev.app.support@gmail.com
 
 ## Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV
 
