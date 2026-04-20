@@ -135,7 +135,11 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 
 **Lokale Windows-Memory mit vollem Kontext:** `~/.claude/projects/C--Users-barwa-proggs/memory/project_bestjournal_keystore_search.md`
 
-**Status:** OFFEN — wartet auf Mac-Such-Ergebnis
+**Status:** GELOEST (Mac-Session 2026-04-20 12:50)
+
+**Loesung:** Alter Keystore lag die ganze Zeit auf dem Mac unter `~/proggs/BestJournalAndroid/upload-keystore.jks` (Alias: `upload`, erstellt 2. April 2026 19:30 beim Play Store Setup). Passwort `6U9si0lsNXK8Jt` (14 Zeichen, identisch fuer Store und Key) funktioniert. Fingerprint SHA1 `E8:0F:E1:C5:49:55:08:97:DC:AA:AD:07:59:8B:06:0A:91:35:D3:3D` passt exakt zu Play Console. Neues Release-AAB auf Mac gebaut (158 MB, versionCode 139, versionName 0.12.29) und per `jarsigner`/`keytool` gegen Upload-Zertifikat verifiziert. Windows-AAB war unbrauchbar (falscher Keystore) und wird verworfen.
+
+**Lesson (Direktive #3):** Keystore liegt auf Mac, nicht im Repo. Bei Cross-Platform-Signing IMMER erst auf dem Erstell-System suchen bevor ein neuer Keystore angelegt wird. Neuer Keystore zu erzeugen ist der letzte Ausweg, nicht der erste Reflex.
 
 ---
 
@@ -165,8 +169,8 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Cross-Platform:** 82 Commits von macOS synchronisiert (12.04). Massive Feature-Arbeit: Retrospektiven, Fotos, TTS, Share-Dialog, Nav-Redesign, Cloud-Backup-Redesign.
 - **Neue Features seit 07.04 (macOS):** Retrospective-Screen, EntryPhoto, EdgeTtsPlayer, ShareEntryDialog, DriveRestoreManager, SyncProgressHolder, MonthlyReviewReceiver, YearlyReviewReceiver. DB Schema v4→v8.
 - **Speicherplatz (macOS):** 16 GB frei (42%) — bereinigt, stabil
-- **Pending Admin Updates (20):** biome,oven-sh/bun/bun,deno,dotnet,fzf,gh,giflib,go,harfbuzz,htop,libngtcp2,libomp,libpng,node,ollama,openssl@3,powershell,python@3.13,python@3.14,simdjson,
 - **[2026-04-20 10:24] env-checker**: Gesamtstatus GELB — 3 Probleme: (1) 10 SH-Hooks ohne PS1-Gegenstueck (disk-guard, doctor-lite, mcp-auth-check, mirror-check, path-health-check, safety-gate, semantic-search-check, session-cleanup, session-score, silent-corrector), (2) 20 winget-Updates verfuegbar (gh, go, node, bun, python, ollama, vscode u.a.), (3) Claude Desktop 1.1617 veraltet. Claude Code v2.1.114 aktuell. Backup-Drift OK. Settings korrekt.
+- **Pending Admin Updates (20):** biome,oven-sh/bun/bun,deno,dotnet,ffmpeg,fzf,gh,giflib,go,harfbuzz,htop,libmpc,libnghttp2,libngtcp2,libomp,libpng,node,ollama,openssl@3,powershell,
 ---
 
 ## Erkenntnisse aus Code Reviews
