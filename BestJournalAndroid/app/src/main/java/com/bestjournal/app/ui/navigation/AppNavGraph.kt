@@ -30,6 +30,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.bestjournal.app.ui.screens.consent.ConsentScreen
+import com.bestjournal.app.ui.screens.consent.LegalDocument
+import com.bestjournal.app.ui.screens.consent.LegalDocumentScreen
 import com.bestjournal.app.ui.screens.dashboard.DashboardScreen
 import com.bestjournal.app.ui.screens.entrydetail.EntryDetailScreen
 import com.bestjournal.app.ui.screens.journal.JournalScreen
@@ -37,6 +40,7 @@ import com.bestjournal.app.ui.screens.onboarding.OnboardingScreen
 import com.bestjournal.app.ui.screens.paywall.PaywallScreen
 import com.bestjournal.app.ui.screens.retrospective.RetrospectiveScreen
 import com.bestjournal.app.ui.screens.settings.SettingsScreen
+import com.bestjournal.app.ui.screens.splash.SplashDestination
 import com.bestjournal.app.ui.screens.splash.SplashScreen
 import kotlinx.coroutines.launch
 
@@ -56,10 +60,72 @@ fun AppNavGraph(navController: NavHostController = rememberNavController(), init
         composable("splash", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
             SplashScreen(
                 viewModel = hiltViewModel(),
-                onSplashFinished = { isOnboardingDone ->
-                    val destination = if (isOnboardingDone) "main" else "onboarding"
-                    navController.navigate(destination) { popUpTo("splash") { inclusive = true } }
+                onSplashFinished = { destination ->
+                    val route =
+                        when (destination) {
+                            SplashDestination.Consent -> "consent"
+                            SplashDestination.Onboarding -> "onboarding"
+                            SplashDestination.Main -> "main"
+                        }
+                    navController.navigate(route) { popUpTo("splash") { inclusive = true } }
                 },
+            )
+        }
+
+        composable(
+            "consent",
+            enterTransition = { fadeIn(tween(600)) },
+            exitTransition = { fadeOut(tween(400)) },
+        ) {
+            ConsentScreen(
+                viewModel = hiltViewModel(),
+                onOpenDocument = { doc ->
+                    val route =
+                        when (doc) {
+                            LegalDocument.Datenschutz -> "legal/datenschutz"
+                            LegalDocument.Nutzungsbedingungen -> "legal/nutzungsbedingungen"
+                            LegalDocument.Impressum -> "legal/impressum"
+                        }
+                    navController.navigate(route) { launchSingleTop = true }
+                },
+                onContinue = {
+                    navController.navigate("onboarding") {
+                        popUpTo("consent") { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        composable(
+            "legal/datenschutz",
+            enterTransition = { slideInHorizontally { it } + fadeIn() },
+            exitTransition = { slideOutHorizontally { it } + fadeOut() },
+        ) {
+            LegalDocumentScreen(
+                document = LegalDocument.Datenschutz,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(
+            "legal/nutzungsbedingungen",
+            enterTransition = { slideInHorizontally { it } + fadeIn() },
+            exitTransition = { slideOutHorizontally { it } + fadeOut() },
+        ) {
+            LegalDocumentScreen(
+                document = LegalDocument.Nutzungsbedingungen,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(
+            "legal/impressum",
+            enterTransition = { slideInHorizontally { it } + fadeIn() },
+            exitTransition = { slideOutHorizontally { it } + fadeOut() },
+        ) {
+            LegalDocumentScreen(
+                document = LegalDocument.Impressum,
+                onBack = { navController.popBackStack() },
             )
         }
 

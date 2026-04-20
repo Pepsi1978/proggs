@@ -142,6 +142,14 @@ object Constants {
     const val EXIT_INTENT_TRIAL_BONUS_DAYS = 2
     const val PREF_EXIT_INTENT_TRIAL_EXTENDED = "exit_intent_trial_extended"
 
+    // DSGVO consent (shown once before onboarding on fresh install)
+    const val PREF_CONSENT_SHOWN = "consent_shown"
+    // Firebase Analytics opt-in — default false.
+    // Set to true when user taps "Loslegen" on consent screen.
+    // Stays false when user taps "Statistiken deaktivieren".
+    // Toggle in Settings → Datenschutz switches it at runtime.
+    const val PREF_ANALYTICS_ENABLED = "analytics_enabled"
+
     // Spam protection
     const val SPAM_HOURLY_AI_LIMIT = 30
     const val SPAM_HOURLY_AI_LIMIT_PREMIUM = 50

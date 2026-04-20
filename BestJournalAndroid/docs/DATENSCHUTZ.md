@@ -73,17 +73,20 @@ gespeichert. Zur Transkription hast du die Wahl zwischen **lokaler** Erkennung
 **Rechtsgrundlage:** Einwilligung (Art. 6 Abs. 1 lit. a DSGVO).
 
 ### 3.3 Kamera (`CAMERA`)
-**Zweck:** Foto-Anhänge zu Tagebucheinträgen.
-**Verarbeitung:** Fotos werden ausschließlich lokal gespeichert und nicht automatisch
-hochgeladen. Bei aktivem Google-Drive-Backup werden sie — wie die übrigen
-Tagebuchdaten — als Teil des Backups verschlüsselt in den Drive-App-Data-Ordner
-übertragen.
+**Zweck:** Foto- und Video-Anhänge zu Tagebucheinträgen.
+**Verarbeitung:** Fotos und Videos werden ausschließlich lokal gespeichert (App-privater
+Ordner `filesDir/photos/`) und nicht automatisch hochgeladen. Bei aktivem
+Google-Drive-Backup werden sie als Teil des Backups verschlüsselt in den
+Drive-App-Data-Ordner übertragen.
 
 ### 3.4 Ungefährer Standort (`ACCESS_COARSE_LOCATION`)
-**Zweck:** Optionale Anzeige des ungefähren Ortes (Stadt/Region) bei einem
-Tagebucheintrag.
-**Verarbeitung:** Der Standort wird **nur auf Anfrage** ermittelt, lokal beim Eintrag
-gespeichert und **nicht** an externe Dienste übermittelt.
+**Zweck:** Ausschließlich für das optionale Design-Feature **„Sonnenauf-/-untergang"**
+in den Einstellungen (Dunkelmodus passt sich automatisch an den lokalen
+Sonnenstand an).
+**Verarbeitung:** Der Standort wird **einmalig** beim Aktivieren des Schalters
+ermittelt, lokal in den App-Einstellungen gespeichert und **niemals** an externe
+Dienste übermittelt. Sonnenauf- und -untergangszeiten werden rein rechnerisch auf
+deinem Gerät bestimmt.
 
 ### 3.5 Benachrichtigungen (`POST_NOTIFICATIONS`)
 **Zweck:** Erinnerungen an das Schreiben von Einträgen (wenn du Reminder aktivierst).
@@ -228,12 +231,19 @@ der App.
 Zusätzlich zum App-internen Drive-Backup unterstützt die App das **Android-System-
 Backup** (`allowBackup="true"` im Manifest). Ist bei dir unter
 **Android-Einstellungen → Google → Sicherung** die automatische Sicherung aktiviert,
-werden App-Einstellungen und bestimmte Dateien automatisch im Google-Drive-Speicher
-deines Kontos gesichert (verschlüsselt, max. 25 MB).
+werden die Haupt-Tagebuchdatenbank (`entropy_journal_db`) und normale App-Einstellungen
+automatisch im Google-Drive-Speicher deines Kontos gesichert (verschlüsselt, max. 25 MB).
 
-**Welche Daten ausgeschlossen sind:** Sprachaufnahmen und Medien sind in den
-Backup-Regeln (`backup_rules.xml` / `data_extraction_rules.xml`) von der automatischen
-Sicherung **ausgenommen**, damit keine ungewollten Daten in der Cloud landen.
+**Was ausgeschlossen ist:** Die Backup-Regeln (`backup_rules.xml` /
+`data_extraction_rules.xml`) schließen die Dashboard-Datenbank, die Rückblick-Datenbank
+und die verschlüsselten Zugangsdaten (EncryptedSharedPreferences mit Google-Tokens)
+vom Android-System-Backup aus — diese sensiblen Daten landen also nicht im System-Backup.
+
+**Was mitgesichert wird:** Tagebuchtexte, Stimmungs-Tags und normale App-Einstellungen.
+Fotos und Videos werden vom Android-System-Backup wegen der Größenbeschränkung (25 MB)
+in der Regel nicht erfasst — für Medien brauchst du das separate Google-Drive-Backup
+aus der App (5.3).
+
 **Deaktivierung:** In den Android-Systemeinstellungen unter „Google → Sicherung".
 **Rechtsgrundlage:** Einwilligung durch Google-Kontoeinstellungen (Art. 6 Abs. 1 lit. a
 DSGVO).
@@ -280,27 +290,28 @@ Google Gemini in den USA gesendet:
 
 | Trigger | Was passiert |
 |---------|-------------|
-| **Neuer Tagebucheintrag** | Dashboard-Aktualisierung (KI-gestützte Zusammenfassung der letzten Einträge) |
+| **Neuer Tagebucheintrag** | Dashboard-Aktualisierung — die relevanten Einträge werden automatisch an Gemini gesendet, um eine neue Dashboard-Zusammenfassung zu erzeugen (nur wenn unter „Einstellungen → KI-Automatisierungen → Auto-Dashboard-Update" aktiviert) |
 | **Neue Sprach-Transkription** (bei aktivierter Auto-Textverbesserung) | Der transkribierte Text wird automatisch durch Gemini stilistisch/grammatikalisch verbessert |
-| **Ende der Woche** | Wöchentlicher Rückblick (Wochenrückblick) |
-| **Ende des Monats** | Monatlicher Rückblick (Monatsrückblick) |
-| **Ende des Jahres** (geplant) | Jahresrückblick |
+| **Profil-Wechsel im Dashboard** | Dashboard wird neu generiert mit dem neuen Profil-Prompt |
 
-Das bedeutet: Wenn du einen Eintrag hinzufügst oder die App am Wochen-/Monatsende
-öffnest, werden die für den jeweiligen Rückblick relevanten Einträge (oder Auszüge
-daraus) ohne zusätzliche Bestätigung an Google-Server in den USA übermittelt.
+**Nicht automatisch — nur auf deinen Anstoß:**
+- **Wöchentliche, monatliche und jährliche Rückblicke** werden *nicht* automatisch im
+  Hintergrund erzeugt. Am Ende der jeweiligen Periode bekommst du eine lokale
+  Benachrichtigung. Der Rückblick selbst wird erst generiert, wenn du die App öffnest
+  und die Rückblick-Ansicht aufrufst. Ohne dein Handeln findet keine Übermittlung statt.
 
 **Erhobene Daten:** Textausschnitte deiner Tagebucheinträge (nie Fotos, nie
 Audioaufnahmen), Zeitraum, Modellparameter, technische Metadaten (IP-Adresse,
 Zeitstempel).
 
 **Deaktivierung der automatischen KI-Funktionen:**
-Unter **„Einstellungen → KI-Funktionen"** kannst du einzeln deaktivieren:
-- Automatische Dashboard-Aktualisierung
-- Automatische Textverbesserung nach Transkription
-- Wöchentliche Rückblicke
-- Monatliche Rückblicke
-- Jährliche Rückblicke (sobald verfügbar)
+Unter **„Einstellungen → KI-Automatisierungen"** kannst du einzeln deaktivieren:
+- Automatische Dashboard-Aktualisierung (Standard: aktiv)
+- Automatische Textverbesserung nach Transkription (Standard: aus)
+
+Unter **„Einstellungen → Erinnerungen"** steuerst du, ob du für Wochen-/Monats-/
+Jahresrückblicke eine Benachrichtigung bekommst (Standard: aktiv). Unabhängig davon
+wird der Rückblick erst beim Öffnen durch dich erzeugt.
 
 Nach dem Deaktivieren findet für die jeweilige Funktion **keine Übermittlung an
 Google Gemini mehr statt**. Die App bleibt voll nutzbar — du verzichtest nur auf die
@@ -325,17 +336,25 @@ https://firebase.google.com/support/privacy
 > gilt: Schreibe keine Inhalte ins Tagebuch, die du nicht an Google Gemini
 > übermitteln willst — oder deaktiviere die automatischen KI-Funktionen.
 
-### 5.7 Firebase Analytics (Opt-In)
+### 5.7 Firebase Analytics (Opt-In beim ersten Start)
 
 **Anbieter:** Google Ireland Limited / Google LLC
 **Zweck:** Anonyme Nutzungsstatistiken zur Fehleranalyse und Produktverbesserung.
 **Erhobene Daten:** Gerätetyp, Betriebssystemversion, App-Version, Nutzungshäufigkeit,
 ungefähre Region (Land), Firebase Instance ID, **IP-Adresse (gekürzt)**,
-**Android Werbe-ID (AAID)**, Ereignisdaten.
+**Android Werbe-ID (AAID)**, Ereignisdaten (z. B. Eintrag erstellt, Dashboard geöffnet,
+Premium-Kauf, Fehler in der Sprachausgabe).
+
 **Rechtsgrundlage:** Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TTDSG).
-Analytics ist **standardmäßig deaktiviert** und wird erst nach ausdrücklicher
-Zustimmung aktiviert. Widerruf jederzeit unter **„Einstellungen → Datenschutz →
-Analytics"**.
+
+**Wie die Einwilligung funktioniert:**
+- Beim **ersten App-Start** erscheint vor dem Onboarding ein Datenschutz-Bildschirm.
+- Wählst du „Loslegen", willigst du in die anonyme Nutzungsstatistik ein.
+- Wählst du „Statistiken deaktivieren", bleibt Firebase Analytics ausgeschaltet —
+  technisch via `setAnalyticsCollectionEnabled(false)`.
+- Du kannst deine Entscheidung jederzeit unter **„Einstellungen → Datenschutz →
+  Anonyme Statistik"** umschalten.
+
 **Werbe-ID zurücksetzen:** In den Android-Systemeinstellungen unter
 **„Einstellungen → Datenschutz → Werbung"**.
 
@@ -446,10 +465,16 @@ deine Daten löschen zu lassen.
 **Einstellungen → Konto → Konto löschen**
 
 Beim Löschen werden unwiderruflich entfernt:
-- Authentifizierungsdaten (Firebase Auth)
-- Google-Drive-Backup (falls vorhanden)
-- Alle mit dem Konto verknüpften Cloud-Inhalte
-- E-Mail-Adresse und Profilinformationen
+- Lokale Tagebuchdatenbanken (Haupt-DB, Dashboard-DB, Rückblick-DB)
+- Lokale Fotos und Videos der Einträge
+- Verschlüsselte App-Einstellungen und gespeicherte Google-Tokens
+- Firebase-Authentifizierungs-Konto (`FirebaseAuth.currentUser.delete()`)
+- Google-Drive-App-Data-Backup (wird aus Drive entfernt)
+
+Nach Abschluss startet die App neu und verhält sich wie eine frische Installation.
+Das Android-System-Backup wird durch diesen Vorgang **nicht** gelöscht — dieses kannst
+du separat in deinem Google-Konto unter
+**myaccount.google.com → Daten und Datenschutz → Sicherungen** entfernen.
 
 ### 7.2 Lokale Tagebuchdaten löschen
 **Einstellungen → Daten → Alle Daten löschen** oder **App deinstallieren**

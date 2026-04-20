@@ -511,6 +511,25 @@
     <string name="paywall_exit_bonus_days">+ %1$d Tage extra Testzeit</string>
     <!-- Splash screen start button -->
     <string name="splash_start">Start</string>
+
+    <!-- ── Consent Screen (DSGVO first-start dialog) ──────────────────── -->
+    <string name="consent_title">Datenschutz &amp; Einwilligung</string>
+    <string name="consent_intro">Bevor du loslegst — hier kurz, wie Best Journal mit deinen Daten umgeht.</string>
+    <string name="consent_card1_title">Lokale Speicherung</string>
+    <string name="consent_card1_body">Deine Tagebucheinträge werden auf deinem Gerät gespeichert — nicht auf unseren Servern.</string>
+    <string name="consent_card2_title">KI-Funktionen</string>
+    <string name="consent_card2_body">Für Rückblicke, Dashboard-Zusammenfassungen, Textverbesserung, Cloud-Transkription und Vorlesen werden relevante Textausschnitte an externe Cloud-Partner außerhalb der EU übertragen, dort verarbeitet und das Ergebnis an dein Gerät zurückgesendet.</string>
+    <string name="consent_card3_title">Anonyme Statistiken</string>
+    <string name="consent_card3_body">Helfen uns bei der Weiterentwicklung. Du kannst sie hier direkt aktivieren oder ablehnen — und später in den Einstellungen jederzeit umschalten.</string>
+    <string name="consent_links_header">Unsere Rechtstexte:</string>
+    <string name="consent_accept_all">Loslegen</string>
+    <string name="consent_disable_stats">Statistiken deaktivieren und fortfahren</string>
+    <string name="consent_footer_hint">Du kannst deine Entscheidung jederzeit in den Einstellungen ändern.</string>
+
+    <!-- Legal document titles (in-app viewer top bar) -->
+    <string name="legal_title_datenschutz">Datenschutzerklärung</string>
+    <string name="legal_title_nutzungsbedingungen">Nutzungsbedingungen</string>
+    <string name="legal_title_impressum">Impressum</string>
     <!-- FreeLimitIndicator: remaining uses counter -->
     <!-- %1$d = number of remaining AI uses this week -->
     <string name="limit_remaining"><xliff:g id="count" example="3">%1$d</xliff:g> verbleibend</string>

@@ -59,6 +59,8 @@ import kotlinx.coroutines.launch
 // Cinematic hero image + warm copper/gold entrance animations
 // ═══════════════════════════════════════════════════════════════════
 
+enum class SplashDestination { Consent, Onboarding, Main }
+
 // Splash-specific colors from the Stitch "Gilded Sanctum" design system
 private val SplashBg = Color(0xFF131313)
 private val CopperLight = Color(0xFFFFB689)
@@ -75,7 +77,7 @@ private const val PARTICLE_COUNT = 200
 
 @Composable
 fun SplashScreen(
-    onSplashFinished: (isOnboardingDone: Boolean) -> Unit,
+    onSplashFinished: (destination: SplashDestination) -> Unit,
     viewModel: SplashViewModel,
 ) {
     // ── Exit state: when Start is pressed, fade everything out first ──
@@ -86,7 +88,13 @@ fun SplashScreen(
         if (isExiting.value) {
             exitAlpha.animateTo(0f, tween(500, easing = FastOutSlowInEasing))
             delay(50)
-            onSplashFinished(viewModel.isOnboardingCompleted())
+            val destination =
+                when {
+                    !viewModel.isConsentShown() -> SplashDestination.Consent
+                    !viewModel.isOnboardingCompleted() -> SplashDestination.Onboarding
+                    else -> SplashDestination.Main
+                }
+            onSplashFinished(destination)
         }
     }
 

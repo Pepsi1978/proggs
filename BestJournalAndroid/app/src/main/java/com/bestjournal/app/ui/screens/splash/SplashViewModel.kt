@@ -9,6 +9,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SplashViewModel @Inject constructor(private val prefs: SharedPreferences) : ViewModel() {
 
+    fun isConsentShown(): Boolean = prefs.getBoolean(Constants.PREF_CONSENT_SHOWN, false)
+
     fun isOnboardingCompleted(): Boolean =
         prefs.getBoolean(Constants.PREF_ONBOARDING_COMPLETED, false)
 }

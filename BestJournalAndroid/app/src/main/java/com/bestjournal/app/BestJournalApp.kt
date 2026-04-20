@@ -7,16 +7,21 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import android.os.LocaleList
+import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.ReminderReceiver
 import com.bestjournal.app.util.WeeklyReviewReceiver
 import com.google.firebase.FirebaseApp
+import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.appcheck.AppCheckProviderFactory
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
 @HiltAndroidApp
 class BestJournalApp : Application() {
+
+    @Inject lateinit var prefs: android.content.SharedPreferences
 
     override fun onCreate() {
         super.onCreate()
@@ -32,6 +37,12 @@ class BestJournalApp : Application() {
             }
         }
         FirebaseApp.initializeApp(this)
+
+        // DSGVO: Apply analytics opt-in state BEFORE any other Firebase call.
+        // Default is false — so on first launch analytics stays off until the
+        // user accepts on the consent screen (ConsentScreen sets PREF_ANALYTICS_ENABLED=true).
+        val analyticsEnabled = prefs.getBoolean(Constants.PREF_ANALYTICS_ENABLED, false)
+        FirebaseAnalytics.getInstance(this).setAnalyticsCollectionEnabled(analyticsEnabled)
         // Debug builds use DebugAppCheckProvider (no Play Integrity needed).
         // Release builds use Play Integrity for production App Check.
         // DebugAppCheckProviderFactory is only available as debugImplementation,
