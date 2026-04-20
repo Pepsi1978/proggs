@@ -317,17 +317,24 @@ fun ConsentScreen(
 
                 Spacer(Modifier.height(14.dp))
 
-                // Document links stacked vertically so long labels stay readable
+                // Document links: Datenschutz + Nutzungsbedingungen side by side, Impressum centered below
                 Column(
-                    modifier = Modifier.graphicsLayer { alpha = linksAlpha.value },
+                    modifier = Modifier.graphicsLayer { alpha = linksAlpha.value }.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    DocLinkChip(label = stringResource(R.string.legal_title_datenschutz)) {
-                        onOpenDocument(LegalDocument.Datenschutz)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement =
+                            Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        DocLinkChip(label = stringResource(R.string.legal_title_datenschutz)) {
+                            onOpenDocument(LegalDocument.Datenschutz)
+                        }
+                        DocLinkChip(
+                            label = stringResource(R.string.legal_title_nutzungsbedingungen)
+                        ) { onOpenDocument(LegalDocument.Nutzungsbedingungen) }
                     }
-                    DocLinkChip(
-                        label = stringResource(R.string.legal_title_nutzungsbedingungen)
-                    ) { onOpenDocument(LegalDocument.Nutzungsbedingungen) }
                     DocLinkChip(label = stringResource(R.string.legal_title_impressum)) {
                         onOpenDocument(LegalDocument.Impressum)
                     }
