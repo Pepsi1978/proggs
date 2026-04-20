@@ -28,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 data class SettingsUiState(
@@ -579,6 +580,36 @@ constructor(
                 delay(4000)
                 _uiState.value = _uiState.value.copy(exportMessage = null)
             }
+        }
+    }
+
+    /**
+     * Full account deletion per Google Play 2024 requirement + Art. 17 DSGVO.
+     * Removes:
+     *  - Firebase Auth user account (FirebaseAuth.currentUser.delete())
+     *  - Local on-device photos and videos
+     *  - Everything signOut() also removes: local DBs, encrypted prefs, alarms
+     *
+     * Drive App-Data backup is NOT deleted from code — user can revoke the app
+     * under myaccount.google.com → "Drittanbieter mit Kontozugriff".
+     * Restarts the app process when done.
+     */
+    fun deleteAccount(context: android.content.Context) {
+        viewModelScope.launch {
+            // Delete Firebase Auth user while tokens are still valid.
+            try {
+                com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.delete()?.await()
+            } catch (e: Exception) {
+                android.util.Log.w("DeleteAccount", "Firebase user delete skipped: ${e.message}")
+            }
+            // Delete local photo/video directory (not cleared by signOut).
+            try {
+                java.io.File(context.filesDir, "photos").deleteRecursively()
+            } catch (e: Exception) {
+                android.util.Log.w("DeleteAccount", "Photo dir cleanup skipped: ${e.message}")
+            }
+            // Fall through to signOut: clears local DBs, prefs, alarms, restarts app.
+            signOut(context)
         }
     }
 

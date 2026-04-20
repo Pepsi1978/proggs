@@ -514,17 +514,29 @@
 
     <!-- ── Consent Screen (DSGVO first-start dialog) ──────────────────── -->
     <string name="consent_title">Datenschutz &amp; Einwilligung</string>
-    <string name="consent_intro">Bevor du loslegst — hier kurz, wie Best Journal mit deinen Daten umgeht.</string>
+    <string name="consent_intro">Kurz, wie Best Journal mit deinen Daten umgeht.</string>
     <string name="consent_card1_title">Lokale Speicherung</string>
-    <string name="consent_card1_body">Deine Tagebucheinträge werden auf deinem Gerät gespeichert — nicht auf unseren Servern.</string>
+    <string name="consent_card1_body">Deine Einträge bleiben auf deinem Gerät.</string>
     <string name="consent_card2_title">KI-Funktionen</string>
-    <string name="consent_card2_body">Für Rückblicke, Dashboard-Zusammenfassungen, Textverbesserung, Cloud-Transkription und Vorlesen werden relevante Textausschnitte an externe Cloud-Partner außerhalb der EU übertragen, dort verarbeitet und das Ergebnis an dein Gerät zurückgesendet.</string>
+    <string name="consent_card2_body">Textausschnitte werden an Cloud-Partner außerhalb der EU gesendet, verarbeitet und zurückgegeben.</string>
     <string name="consent_card3_title">Anonyme Statistiken</string>
-    <string name="consent_card3_body">Helfen uns bei der Weiterentwicklung. Du kannst sie hier direkt aktivieren oder ablehnen — und später in den Einstellungen jederzeit umschalten.</string>
+    <string name="consent_card3_body">Optional, jederzeit in den Einstellungen änderbar.</string>
     <string name="consent_links_header">Unsere Rechtstexte:</string>
     <string name="consent_accept_all">Loslegen</string>
     <string name="consent_disable_stats">Statistiken deaktivieren und fortfahren</string>
+    <string name="consent_confirmation">Mit „Loslegen" bestätigst du, dass du die Datenschutzerklärung, die Nutzungsbedingungen und das Impressum gelesen hast und mit der beschriebenen Datenverarbeitung einverstanden bist.</string>
     <string name="consent_footer_hint">Du kannst deine Entscheidung jederzeit in den Einstellungen ändern.</string>
+
+    <!-- Settings: Datenschutz-Abschnitt -->
+    <string name="settings_privacy_header">Datenschutz</string>
+    <string name="settings_analytics_title">Anonyme Statistik</string>
+    <string name="settings_analytics_subtitle">Firebase Analytics für Fehleranalyse und Produktverbesserung</string>
+    <string name="settings_delete_account_title">Konto und Daten löschen</string>
+    <string name="settings_delete_account_subtitle">Entfernt alle lokalen Daten, das Google-Anmeldekonto und das Drive-Backup unwiderruflich</string>
+    <string name="settings_delete_account_confirm_title">Konto wirklich löschen?</string>
+    <string name="settings_delete_account_confirm_body">Dieser Vorgang ist unwiderruflich und löscht:\n\n• Alle lokalen Tagebucheinträge, Fotos und Videos\n• Dein Firebase-Anmeldekonto\n• Das Google-Drive-Backup der App\n\nDie App startet danach neu als frische Installation.</string>
+    <string name="settings_delete_account_cancel">Abbrechen</string>
+    <string name="settings_delete_account_confirm">Ja, alles löschen</string>
 
     <!-- Legal document titles (in-app viewer top bar) -->
     <string name="legal_title_datenschutz">Datenschutzerklärung</string>

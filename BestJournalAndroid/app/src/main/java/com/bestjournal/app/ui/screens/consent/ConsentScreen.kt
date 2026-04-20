@@ -239,13 +239,13 @@ fun ConsentScreen(
                 }
             }
 
-            // Content
+            // Content — compact layout, no scrolling needed on typical phones
             Column(
                 modifier =
                     Modifier.fillMaxSize()
                         .statusBarsPadding()
-                        .padding(horizontal = 24.dp)
-                        .padding(top = 32.dp, bottom = 32.dp)
+                        .padding(horizontal = 22.dp)
+                        .padding(top = 18.dp, bottom = 18.dp)
                         .widthIn(max = 520.dp)
                         .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -256,38 +256,38 @@ fun ConsentScreen(
                     style =
                         MaterialTheme.typography.displaySmall.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 34.sp,
-                            lineHeight = 40.sp,
-                            letterSpacing = (-0.5).sp,
+                            fontSize = 28.sp,
+                            lineHeight = 32.sp,
+                            letterSpacing = (-0.4).sp,
                         ),
                     color = OnSurface.copy(alpha = titleAlpha.value),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.graphicsLayer { translationY = titleOffsetY.value * density },
                 )
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(10.dp))
 
                 // Copper accent divider
                 Box(
                     modifier =
-                        Modifier.width(56.dp)
-                            .height(3.dp)
+                        Modifier.width(48.dp)
+                            .height(2.dp)
                             .clip(RoundedCornerShape(50))
                             .background(CopperLight.copy(alpha = 0.45f * accentAlpha.value))
                 )
 
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(12.dp))
 
                 Text(
                     text = stringResource(R.string.consent_intro),
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 22.sp),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp),
                     color = OnSurfaceMuted.copy(alpha = accentAlpha.value),
                     textAlign = TextAlign.Center,
                 )
 
-                Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.height(16.dp))
 
-                // Info card 1 — local storage
+                // Info card 1 — local storage (compact)
                 InfoCard(
                     icon = Icons.Rounded.Lock,
                     title = stringResource(R.string.consent_card1_title),
@@ -295,9 +295,9 @@ fun ConsentScreen(
                     alpha = card1Alpha.value,
                 )
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
 
-                // Info card 2 — AI processing
+                // Info card 2 — AI processing (compact)
                 InfoCard(
                     icon = Icons.Rounded.AutoAwesome,
                     title = stringResource(R.string.consent_card2_title),
@@ -305,9 +305,9 @@ fun ConsentScreen(
                     alpha = card2Alpha.value,
                 )
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
 
-                // Info card 3 — analytics
+                // Info card 3 — analytics (compact)
                 InfoCard(
                     icon = Icons.Rounded.InsertChart,
                     title = stringResource(R.string.consent_card3_title),
@@ -315,39 +315,41 @@ fun ConsentScreen(
                     alpha = card3Alpha.value,
                 )
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(14.dp))
 
-                // Document links row
+                // Document links stacked vertically so long labels stay readable
                 Column(
                     modifier = Modifier.graphicsLayer { alpha = linksAlpha.value },
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(
-                        text = stringResource(R.string.consent_links_header),
-                        style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.5.sp),
-                        color = OnSurfaceMuted,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        DocLinkChip(
-                            label = stringResource(R.string.legal_title_datenschutz),
-                        ) { onOpenDocument(LegalDocument.Datenschutz) }
-                        DocLinkChip(
-                            label = stringResource(R.string.legal_title_nutzungsbedingungen),
-                        ) { onOpenDocument(LegalDocument.Nutzungsbedingungen) }
-                        DocLinkChip(label = stringResource(R.string.legal_title_impressum)) {
-                            onOpenDocument(LegalDocument.Impressum)
-                        }
+                    DocLinkChip(label = stringResource(R.string.legal_title_datenschutz)) {
+                        onOpenDocument(LegalDocument.Datenschutz)
+                    }
+                    DocLinkChip(
+                        label = stringResource(R.string.legal_title_nutzungsbedingungen)
+                    ) { onOpenDocument(LegalDocument.Nutzungsbedingungen) }
+                    DocLinkChip(label = stringResource(R.string.legal_title_impressum)) {
+                        onOpenDocument(LegalDocument.Impressum)
                     }
                 }
 
-                Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.height(14.dp))
 
-                // Primary button — "Loslegen"
+                // Confirmation / agreement text
+                Text(
+                    text = stringResource(R.string.consent_confirmation),
+                    style =
+                        MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 11.5.sp,
+                            lineHeight = 16.sp,
+                        ),
+                    color = OnSurfaceMuted.copy(alpha = 0.9f * linksAlpha.value),
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                // Primary button
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier =
@@ -368,7 +370,7 @@ fun ConsentScreen(
                     )
                     Button(
                         onClick = { if (isExiting.value == null) isExiting.value = ExitMode.AcceptAll },
-                        modifier = Modifier.fillMaxWidth().height(58.dp),
+                        modifier = Modifier.fillMaxWidth().height(54.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                         contentPadding = PaddingValues(0.dp),
@@ -400,7 +402,7 @@ fun ConsentScreen(
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
 
                 TextButton(
                     onClick = {
@@ -411,17 +413,17 @@ fun ConsentScreen(
                     Text(
                         text = stringResource(R.string.consent_disable_stats),
                         color = OnSurfaceMuted,
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         letterSpacing = 0.4.sp,
                     )
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(4.dp))
 
                 Text(
                     text = stringResource(R.string.consent_footer_hint),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = OnSurfaceMuted.copy(alpha = 0.7f * btnAlpha.value),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                    color = OnSurfaceMuted.copy(alpha = 0.6f * btnAlpha.value),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )

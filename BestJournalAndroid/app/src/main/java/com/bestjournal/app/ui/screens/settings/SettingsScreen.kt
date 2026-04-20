@@ -2323,6 +2323,142 @@ fun SettingsScreen(
                     }
                 }
 
+                // Datenschutz (Analytics-Toggle + Konto löschen)
+                val privacyPrefs = remember {
+                    com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
+                }
+                var analyticsEnabled by remember {
+                    mutableStateOf(
+                        privacyPrefs.getBoolean(Constants.PREF_ANALYTICS_ENABLED, false)
+                    )
+                }
+                var showDeleteDialog by remember { mutableStateOf(false) }
+
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Icon(
+                                Icons.Rounded.Security,
+                                null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                stringResource(R.string.settings_privacy_header),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(modifier = Modifier.width(28.dp))
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Analytics toggle
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text(
+                                    stringResource(R.string.settings_analytics_title),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    stringResource(R.string.settings_analytics_subtitle),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = analyticsEnabled,
+                                onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    analyticsEnabled = enabled
+                                    privacyPrefs
+                                        .edit()
+                                        .putBoolean(Constants.PREF_ANALYTICS_ENABLED, enabled)
+                                        .apply()
+                                    com.google.firebase.analytics.FirebaseAnalytics.getInstance(
+                                            context
+                                        )
+                                        .setAnalyticsCollectionEnabled(enabled)
+                                },
+                                colors =
+                                    SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    ),
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Delete account button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    showDeleteDialog = true
+                                },
+                                colors =
+                                    ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error
+                                    ),
+                            ) {
+                                Text(stringResource(R.string.settings_delete_account_title))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.settings_delete_account_subtitle),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+
+                if (showDeleteDialog) {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { showDeleteDialog = false },
+                        title = {
+                            Text(stringResource(R.string.settings_delete_account_confirm_title))
+                        },
+                        text = {
+                            Text(stringResource(R.string.settings_delete_account_confirm_body))
+                        },
+                        confirmButton = {
+                            androidx.compose.material3.TextButton(
+                                onClick = {
+                                    showDeleteDialog = false
+                                    viewModel.deleteAccount(context)
+                                }
+                            ) {
+                                Text(
+                                    stringResource(R.string.settings_delete_account_confirm),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        },
+                        dismissButton = {
+                            androidx.compose.material3.TextButton(
+                                onClick = { showDeleteDialog = false }
+                            ) {
+                                Text(stringResource(R.string.settings_delete_account_cancel))
+                            }
+                        },
+                    )
+                }
+
                 // 7. Feedback
                 var showFeedbackDialog by remember { mutableStateOf(false) }
                 var feedbackSent by remember { mutableStateOf(false) }
