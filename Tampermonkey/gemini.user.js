@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Gemini V.1.6.0
+// @name         Gemini V.1.6.2
 // @namespace    https://gemini.google.com/
-// @version      1.6.1
+// @version      1.6.2
 // @updateURL    https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/gemini.user.js
 // @downloadURL  https://raw.githubusercontent.com/Pepsi1978/proggs/main/Tampermonkey/gemini.user.js
 // @description  Speech-to-Text + Gemini-Korrektur (DE) auf Gemini Web. Mic-Button fest unten rechts. Auto-Restart bei Speech-Ende (auch bei Pausen). Schreibt ins zuletzt fokussierte Eingabefeld. Mit Output-Preview.
