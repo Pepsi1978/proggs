@@ -997,4 +997,68 @@
     <string name="profile_style_coach">\n- ప్రేరేపించే లక్ష్య సహచరుడి శైలిలో రాయండి, వ్యక్తిగత లక్ష్యాల ప్రగతిని చూపించండి మరియు కొనసాగించడానికి ప్రోత్సహించండి</string>
     <string name="profile_style_custom">\n- ఈ క్రింది వినియోగదారు వ్యక్తిగత ఫోకస్‌తో అవలోకనాన్ని రాయండి: \"%1$s\"</string>
 
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">గోప్యత మరియు సమ్మతి</string>
+    <string name="consent_intro">మీ డైరీ ఒక వ్యక్తిగత స్థలం, దీన్ని మేము గౌరవిస్తాము. Best Journal మీ డేటాను ఎలా నిర్వహిస్తుందో ఇక్కడ పారదర్శకంగా చూడవచ్చు.</string>
+    <string name="consent_card1_title">స్థానిక నిల్వ</string>
+    <string name="consent_card1_body">మీ ఎంట్రీలు మీ పరికరంలోనే ఉంటాయి.</string>
+    <string name="consent_card2_title">AI ఫీచర్లు (USA)</string>
+    <string name="consent_card2_body">ఐచ్ఛికంగా, టెక్స్ట్ Google Gemini-కి, వాయిస్ రికార్డింగ్‌లు Groq-కి మరియు పఠన టెక్స్ట్ Microsoft Edge-కి USA లో పంపబడతాయి (EU-US Data Privacy Framework + Standard Contractual Clauses).</string>
+    <string name="consent_card3_title">అనామక గణాంకాలు</string>
+    <string name="consent_card3_body">Firebase Analytics, ఐచ్ఛికం, సెట్టింగ్స్‌లో ఎప్పుడైనా మార్చవచ్చు.</string>
+    <string name="consent_links_header">మా చట్టపరమైన పత్రాలు:</string>
+    <string name="consent_accept_all">అంగీకరించి ప్రారంభించండి</string>
+    <string name="consent_disable_stats">గణాంకాలను ఆపి కొనసాగించండి</string>
+    <string name="consent_confirmation">\"అంగీకరించి ప్రారంభించండి\"ని నొక్కడం ద్వారా మీరు గోప్యతా విధానం, ఉపయోగ నిబంధనలు మరియు చట్టపరమైన సమాచారం చదివారని మరియు వివరించిన డేటా ప్రాసెసింగ్‌కు అంగీకరిస్తున్నారని నిర్ధారిస్తున్నారు. మీ నిర్ణయాన్ని సెట్టింగ్స్‌లో ఎప్పుడైనా మార్చవచ్చు.</string>
+
+    <string name="privacy_gate_groq_title">Groq-కి వాయిస్ రికార్డింగ్ పంపాలా?</string>
+    <string name="privacy_gate_groq_body">క్లౌడ్ ట్రాన్స్‌క్రిప్షన్ కోసం మీ వాయిస్ రికార్డింగ్ ఎన్‌క్రిప్ట్ చేయబడి Groq, Inc.-కి (Mountain View, USA) పంపబడి అక్కడ టెక్స్ట్‌గా మార్చబడుతుంది. ఆడియో ఫైల్ ప్రాసెసింగ్ తర్వాత తొలగించబడుతుంది మరియు శిక్షణ కోసం ఉపయోగించబడదు.\n\nప్రత్యామ్నాయం: పరికరంలో స్థానిక ట్రాన్స్‌క్రిప్షన్ ఉపయోగించండి (ఆఫ్‌లైన్, డేటా బదిలీ లేదు), Settings → AI లో మార్చవచ్చు.</string>
+    <string name="privacy_gate_groq_accept">అంగీకరించి పంపండి</string>
+    <string name="privacy_gate_groq_local">బదులుగా స్థానికంగా లిప్యంతరీకరించండి</string>
+
+    <string name="privacy_gate_gemini_title">Google Gemini-కి టెక్స్ట్ పంపాలా?</string>
+    <string name="privacy_gate_gemini_body">AI ఫీచర్ల కోసం (డాష్‌బోర్డ్, సారాంశాలు, రెట్రోస్పెక్టివ్‌లు, టెక్స్ట్ మెరుగుదల) మీ ఎంట్రీల భాగాలు ఎన్‌క్రిప్ట్ చేయబడి Google Gemini-కి (Firebase AI, USA) పంపబడతాయి. చట్టపరమైన ఆధారం: EU-US Data Privacy Framework + Standard Contractual Clauses. అభ్యర్థనలు ప్రాసెసింగ్ తర్వాత తొలగించబడతాయి మరియు శిక్షణ కోసం ఉపయోగించబడవు.</string>
+    <string name="privacy_gate_gemini_accept">అంగీకరించి పంపండి</string>
+    <string name="privacy_gate_gemini_cancel">రద్దు</string>
+
+    <string name="privacy_gate_tts_title">Microsoft-కి టెక్స్ట్ పంపాలా?</string>
+    <string name="privacy_gate_tts_body">చదివి వినిపించడానికి టెక్స్ట్ ఎన్‌క్రిప్ట్ చేయబడి Microsoft Bing Speech-కి (USA) పంపబడి ఆడియోగా తిరిగి ఇవ్వబడుతుంది. చట్టపరమైన ఆధారం: EU-US Data Privacy Framework + Standard Contractual Clauses.\n\nప్రత్యామ్నాయం: Android యొక్క అంతర్నిర్మిత ఆఫ్‌లైన్ TTS ఉపయోగించండి.</string>
+    <string name="privacy_gate_tts_accept">అంగీకరించి చదవండి</string>
+    <string name="privacy_gate_tts_cancel">రద్దు</string>
+
+    <string name="settings_privacy_header">గోప్యత</string>
+    <string name="settings_analytics_title">అనామక గణాంకాలు</string>
+    <string name="settings_analytics_subtitle">లోప విశ్లేషణ మరియు ఉత్పత్తి మెరుగుదల కోసం Firebase Analytics</string>
+
+    <string name="settings_delete_account_title">ఖాతా మరియు డేటా తొలగించండి</string>
+    <string name="settings_delete_account_subtitle">అన్ని స్థానిక డేటా, Google ఖాతా మరియు Drive బ్యాకప్‌ను శాశ్వతంగా తొలగిస్తుంది</string>
+    <string name="settings_delete_account_confirm_title">ఖాతాను శాశ్వతంగా తొలగించాలా?</string>
+    <string name="settings_delete_account_confirm_body">ఈ చర్య తిరిగి పొందలేనిది మరియు వీటిని తొలగిస్తుంది:\n\n• అన్ని స్థానిక డైరీ ఎంట్రీలు, ఫోటోలు మరియు వీడియోలు\n• మీ Firebase ఖాతా\n• యాప్ యొక్క Google Drive బ్యాకప్\n\nయాప్ కొత్త ఇన్‌స్టాలేషన్‌గా మళ్లీ ప్రారంభమవుతుంది.</string>
+    <string name="settings_delete_account_cancel">రద్దు</string>
+    <string name="settings_delete_account_confirm">అవును, అన్నీ తొలగించండి</string>
+
+    <string name="settings_report_ai_title">AI ప్రతిస్పందనను నివేదించండి</string>
+    <string name="settings_report_ai_subtitle">అనుచిత లేదా తప్పు AI అవుట్‌పుట్</string>
+    <string name="settings_report_ai_confirm_title">Support-కి ఇమెయిల్ తెరవాలా?</string>
+    <string name="settings_report_ai_confirm_body">మీ ఇమెయిల్ యాప్ dev.app.support@gmail.com-కి సిద్ధమైన సందేశంతో తెరవబడుతుంది. పంపే ముందు మీరు వివరణను జోడించవచ్చు. మేము పని దినాల్లో 24 గంటల లోపు ప్రతిస్పందిస్తాము.\n\nదయచేసి ఇక్కడ నివేదించండి: డాష్‌బోర్డ్, సారాంశాలు, రెట్రోస్పెక్టివ్‌లు లేదా టెక్స్ట్ మెరుగుదల నుండి అనుచిత, అనుచితమైన, తప్పు లేదా తప్పుదారి పట్టించే AI అవుట్‌పుట్‌లు.</string>
+    <string name="settings_report_ai_confirm">నివేదిక సృష్టించండి</string>
+    <string name="settings_report_ai_cancel">రద్దు</string>
+    <string name="settings_report_ai_no_email">ఇమెయిల్ యాప్ కనుగొనబడలేదు. దయచేసి నివేదికను dev.app.support@gmail.com-కి పంపండి.</string>
+    <string name="settings_report_ai_subject">Best Journal: అనుచిత AI ప్రతిస్పందన</string>
+    <string name="settings_report_ai_body">నమస్కారం,\n\nనేను Best Journal లో ఒక అనుచిత లేదా తప్పు AI ప్రతిస్పందనను నివేదించాలనుకుంటున్నాను.\n\nసమస్య వివరణ:\n[దయచేసి పూరించండి]\n\nసందర్భం (ఏ ఫీచర్, ఏ ఇన్‌పుట్):\n[దయచేసి పూరించండి]\n\nధన్యవాదాలు.</string>
+
+    <string name="settings_revoke_title">ఒప్పందం ఉపసంహరణ</string>
+    <string name="settings_revoke_subtitle">Premium కొనుగోలు</string>
+    <string name="settings_revoke_confirm_title">Support-కి ఇమెయిల్ తెరవాలా?</string>
+    <string name="settings_revoke_confirm_body">మీ ఇమెయిల్ యాప్ dev.app.support@gmail.com-కి సిద్ధమైన సందేశంతో తెరవబడుతుంది. మేము పని దినాల్లో 24 గంటల లోపు ప్రతిస్పందిస్తాము.\n\nఉపసంహరణ హక్కుపై పూర్తి సమాచారం ఉపయోగ నిబంధనలలో (§ 16) ఉంది. సభ్యత్వాల కోసం అదనంగా Google Play → Subscriptions లో కూడా రద్దు చేయండి.</string>
+    <string name="settings_revoke_cancel">రద్దు</string>
+    <string name="settings_revoke_confirm">ఉపసంహరణ సృష్టించండి</string>
+    <string name="settings_revoke_no_email">ఇమెయిల్ యాప్ కనుగొనబడలేదు. దయచేసి ఉపసంహరణను dev.app.support@gmail.com-కి పంపండి.</string>
+    <string name="settings_revoke_email_subject">Best Journal Premium ఒప్పందం ఉపసంహరణ</string>
+    <string name="settings_revoke_email_body">నమస్కారం,\n\nదీని ద్వారా Best Journal యొక్క Premium ఫీచర్లపై కుదుర్చుకున్న ఒప్పందాన్ని ఉపసంహరిస్తున్నానని తెలియజేస్తున్నాను.\n\nఆర్డర్ తేదీ: [దయచేసి పూరించండి]\nGoogle ఖాతా ఇమెయిల్: [పంపినవారి నుండి భిన్నంగా ఉంటే పూరించండి]\nపేరు: [దయచేసి పూరించండి]\n\nతేదీ: [నేడు]</string>
+
+
 </resources>

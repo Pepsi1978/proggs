@@ -1061,4 +1061,68 @@
     <string name="profile_style_coach">\n- Tulis dalam gaya pendamping target yang memotivasi, tunjukkan kemajuan target pribadi dan dorong untuk terus</string>
     <string name="profile_style_custom">\n- Tulis tinjauan dengan fokus pribadi pengguna berikut: \"%1$s\"</string>
 
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">Privasi dan persetujuan</string>
+    <string name="consent_intro">Jurnalmu adalah ruang pribadi, dan kami menghormatinya. Di sini kamu melihat secara transparan bagaimana Best Journal menangani datamu.</string>
+    <string name="consent_card1_title">Penyimpanan lokal</string>
+    <string name="consent_card1_body">Catatanmu tetap di perangkatmu.</string>
+    <string name="consent_card2_title">Fitur AI (AS)</string>
+    <string name="consent_card2_body">Secara opsional, teks dikirim ke Google Gemini, rekaman suara ke Groq, dan teks pembacaan ke Microsoft Edge di AS (EU-US Data Privacy Framework + klausul kontrak standar).</string>
+    <string name="consent_card3_title">Statistik anonim</string>
+    <string name="consent_card3_body">Firebase Analytics, opsional, bisa diubah kapan saja di pengaturan.</string>
+    <string name="consent_links_header">Dokumen hukum kami:</string>
+    <string name="consent_accept_all">Setuju dan mulai</string>
+    <string name="consent_disable_stats">Matikan statistik dan lanjut</string>
+    <string name="consent_confirmation">Dengan menekan \"Setuju dan mulai\" kamu mengonfirmasi telah membaca kebijakan privasi, syarat penggunaan, dan keterangan hukum, dan menyetujui pemrosesan data yang dijelaskan. Kamu bisa mengubah keputusanmu kapan saja di pengaturan.</string>
+
+    <string name="privacy_gate_groq_title">Kirim rekaman suara ke Groq?</string>
+    <string name="privacy_gate_groq_body">Untuk transkripsi cloud, rekaman suaramu dikirim terenkripsi ke Groq, Inc. (Mountain View, AS) dan diubah menjadi teks di sana. File audio dihapus setelah pemrosesan dan tidak dipakai untuk pelatihan.\n\nAlternatif: gunakan transkripsi lokal di perangkat (offline, tanpa transfer data), bisa diatur di Pengaturan → AI.</string>
+    <string name="privacy_gate_groq_accept">Setuju dan kirim</string>
+    <string name="privacy_gate_groq_local">Transkripsi lokal saja</string>
+
+    <string name="privacy_gate_gemini_title">Kirim teks ke Google Gemini?</string>
+    <string name="privacy_gate_gemini_body">Untuk fitur AI (dasbor, ringkasan, retrospeksi, penyempurnaan teks), kutipan catatanmu dikirim terenkripsi ke Google Gemini (Firebase AI, AS). Dasar hukum: EU-US Data Privacy Framework + klausul kontrak standar. Permintaan dihapus setelah pemrosesan dan tidak dipakai untuk pelatihan.</string>
+    <string name="privacy_gate_gemini_accept">Setuju dan kirim</string>
+    <string name="privacy_gate_gemini_cancel">Batal</string>
+
+    <string name="privacy_gate_tts_title">Kirim teks ke Microsoft?</string>
+    <string name="privacy_gate_tts_body">Untuk pembacaan suara, teks dikirim terenkripsi ke Microsoft Bing Speech (AS) dan dikembalikan sebagai audio. Dasar hukum: EU-US Data Privacy Framework + klausul kontrak standar.\n\nAlternatif: gunakan TTS offline bawaan Android.</string>
+    <string name="privacy_gate_tts_accept">Setuju dan bacakan</string>
+    <string name="privacy_gate_tts_cancel">Batal</string>
+
+    <string name="settings_privacy_header">Privasi</string>
+    <string name="settings_analytics_title">Statistik anonim</string>
+    <string name="settings_analytics_subtitle">Firebase Analytics untuk analisis kesalahan dan peningkatan produk</string>
+
+    <string name="settings_delete_account_title">Hapus akun dan data</string>
+    <string name="settings_delete_account_subtitle">Menghapus semua data lokal, akun Google, dan cadangan Drive secara permanen</string>
+    <string name="settings_delete_account_confirm_title">Hapus akun secara permanen?</string>
+    <string name="settings_delete_account_confirm_body">Tindakan ini tidak bisa dibatalkan dan menghapus:\n\n• Semua catatan jurnal, foto, dan video lokal\n• Akun Firebase-mu\n• Cadangan aplikasi di Google Drive\n\nAplikasi akan memulai ulang sebagai instalasi baru.</string>
+    <string name="settings_delete_account_cancel">Batal</string>
+    <string name="settings_delete_account_confirm">Ya, hapus semua</string>
+
+    <string name="settings_report_ai_title">Laporkan jawaban AI</string>
+    <string name="settings_report_ai_subtitle">Keluaran AI yang tidak pantas atau salah</string>
+    <string name="settings_report_ai_confirm_title">Buka email ke dukungan?</string>
+    <string name="settings_report_ai_confirm_body">Aplikasi emailmu terbuka dengan pesan siap kirim ke dev.app.support@gmail.com. Kamu bisa menambahkan deskripsi sebelum mengirim. Kami membalas dalam 24 jam pada hari kerja.\n\nLaporkan di sini: keluaran AI yang tidak pantas, menyinggung, salah, atau menyesatkan dari dasbor, ringkasan, retrospeksi, atau penyempurnaan teks.</string>
+    <string name="settings_report_ai_confirm">Buat laporan</string>
+    <string name="settings_report_ai_cancel">Batal</string>
+    <string name="settings_report_ai_no_email">Aplikasi email tidak ditemukan. Kirim laporan ke dev.app.support@gmail.com.</string>
+    <string name="settings_report_ai_subject">Best Journal: jawaban AI tidak pantas</string>
+    <string name="settings_report_ai_body">Halo,\n\nsaya ingin melaporkan jawaban AI yang tidak pantas atau salah di Best Journal.\n\nDeskripsi masalah:\n[Isi]\n\nKonteks (fitur yang mana, input apa):\n[Isi]\n\nTerima kasih.</string>
+
+    <string name="settings_revoke_title">Pembatalan kontrak</string>
+    <string name="settings_revoke_subtitle">Pembelian Premium</string>
+    <string name="settings_revoke_confirm_title">Buka email ke dukungan?</string>
+    <string name="settings_revoke_confirm_body">Aplikasi emailmu terbuka dengan pesan siap kirim ke dev.app.support@gmail.com. Kami membalas dalam 24 jam pada hari kerja.\n\nInformasi lengkap tentang hak pembatalan ada di syarat penggunaan (§ 16). Untuk langganan, batalkan juga lewat Google Play → Langganan.</string>
+    <string name="settings_revoke_cancel">Batal</string>
+    <string name="settings_revoke_confirm">Buat pembatalan</string>
+    <string name="settings_revoke_no_email">Aplikasi email tidak ditemukan. Kirim pembatalan ke dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_email_subject">Pembatalan kontrak Best Journal Premium</string>
+    <string name="settings_revoke_email_body">Halo,\n\ndengan ini saya memberitahukan pembatalan kontrak atas fitur Premium Best Journal.\n\nDipesan pada: [isi]\nEmail akun Google: [isi jika berbeda dari pengirim]\nNama: [isi]\n\nTanggal: [hari ini]</string>
+
+
 </resources>

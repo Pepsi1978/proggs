@@ -1061,4 +1061,68 @@
     <string name="profile_style_coach">\n- เขียนในสไตล์เพื่อนคู่เป้าหมายที่ให้กำลังใจ แสดงความก้าวหน้าในเป้าหมายส่วนตัวและสนับสนุนให้ไปต่อ</string>
     <string name="profile_style_custom">\n- เขียนการทบทวนด้วยจุดโฟกัสส่วนตัวของผู้ใช้: \"%1$s\"</string>
 
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">ความเป็นส่วนตัวและการยินยอม</string>
+    <string name="consent_intro">สมุดบันทึกคือพื้นที่ส่วนตัวของคุณ และเราเคารพสิ่งนี้ ที่นี่คุณเห็นได้อย่างโปร่งใสว่า Best Journal จัดการกับข้อมูลของคุณอย่างไร</string>
+    <string name="consent_card1_title">การจัดเก็บในเครื่อง</string>
+    <string name="consent_card1_body">บันทึกของคุณยังอยู่ในอุปกรณ์</string>
+    <string name="consent_card2_title">ฟีเจอร์ AI (สหรัฐอเมริกา)</string>
+    <string name="consent_card2_body">โดยเลือกได้ ข้อความจะถูกส่งไปยัง Google Gemini การบันทึกเสียงไปยัง Groq และข้อความอ่านออกเสียงไปยัง Microsoft Edge ในสหรัฐอเมริกา (EU-US Data Privacy Framework + ข้อสัญญามาตรฐาน)</string>
+    <string name="consent_card3_title">สถิติแบบไม่ระบุตัวตน</string>
+    <string name="consent_card3_body">Firebase Analytics แบบเลือกใช้ เปลี่ยนได้ตลอดในการตั้งค่า</string>
+    <string name="consent_links_header">เอกสารทางกฎหมายของเรา:</string>
+    <string name="consent_accept_all">ยอมรับและเริ่มต้น</string>
+    <string name="consent_disable_stats">ปิดสถิติและดำเนินการต่อ</string>
+    <string name="consent_confirmation">การแตะ \"ยอมรับและเริ่มต้น\" ยืนยันว่าคุณได้อ่านนโยบายความเป็นส่วนตัว เงื่อนไขการใช้งาน และประกาศทางกฎหมายแล้ว และยอมรับการประมวลผลข้อมูลตามที่อธิบายไว้ คุณสามารถเปลี่ยนการตัดสินใจได้ตลอดในการตั้งค่า</string>
+
+    <string name="privacy_gate_groq_title">ส่งการบันทึกเสียงไปยัง Groq หรือไม่</string>
+    <string name="privacy_gate_groq_body">สำหรับการถอดเสียงบนคลาวด์ การบันทึกเสียงของคุณจะถูกส่งแบบเข้ารหัสไปยัง Groq, Inc. (เมาน์เทนวิว สหรัฐอเมริกา) และแปลงเป็นข้อความที่นั่น ไฟล์เสียงจะถูกลบหลังการประมวลผลและไม่ใช้ในการฝึกโมเดล\n\nทางเลือก: ใช้การถอดเสียงในเครื่อง (ออฟไลน์ ไม่มีการส่งข้อมูล) ตั้งค่าได้ใน การตั้งค่า → AI</string>
+    <string name="privacy_gate_groq_accept">ยอมรับและส่ง</string>
+    <string name="privacy_gate_groq_local">ถอดเสียงในเครื่องแทน</string>
+
+    <string name="privacy_gate_gemini_title">ส่งข้อความไปยัง Google Gemini หรือไม่</string>
+    <string name="privacy_gate_gemini_body">สำหรับฟีเจอร์ AI (แดชบอร์ด สรุป ทบทวน ปรับปรุงข้อความ) ส่วนหนึ่งของบันทึกจะถูกส่งแบบเข้ารหัสไปยัง Google Gemini (Firebase AI สหรัฐอเมริกา) ฐานทางกฎหมาย: EU-US Data Privacy Framework + ข้อสัญญามาตรฐาน คำขอจะถูกลบหลังการประมวลผลและไม่ใช้ในการฝึกโมเดล</string>
+    <string name="privacy_gate_gemini_accept">ยอมรับและส่ง</string>
+    <string name="privacy_gate_gemini_cancel">ยกเลิก</string>
+
+    <string name="privacy_gate_tts_title">ส่งข้อความไปยัง Microsoft หรือไม่</string>
+    <string name="privacy_gate_tts_body">สำหรับการอ่านออกเสียง ข้อความจะถูกส่งแบบเข้ารหัสไปยัง Microsoft Bing Speech (สหรัฐอเมริกา) และส่งกลับเป็นเสียง ฐานทางกฎหมาย: EU-US Data Privacy Framework + ข้อสัญญามาตรฐาน\n\nทางเลือก: ใช้ TTS ออฟไลน์ในตัวของ Android</string>
+    <string name="privacy_gate_tts_accept">ยอมรับและอ่าน</string>
+    <string name="privacy_gate_tts_cancel">ยกเลิก</string>
+
+    <string name="settings_privacy_header">ความเป็นส่วนตัว</string>
+    <string name="settings_analytics_title">สถิติแบบไม่ระบุตัวตน</string>
+    <string name="settings_analytics_subtitle">Firebase Analytics สำหรับการวิเคราะห์ข้อผิดพลาดและการปรับปรุงผลิตภัณฑ์</string>
+
+    <string name="settings_delete_account_title">ลบบัญชีและข้อมูล</string>
+    <string name="settings_delete_account_subtitle">ลบข้อมูลทั้งหมดในเครื่อง บัญชี Google และข้อมูลสำรองใน Drive อย่างถาวร</string>
+    <string name="settings_delete_account_confirm_title">ลบบัญชีอย่างถาวรหรือไม่</string>
+    <string name="settings_delete_account_confirm_body">การกระทำนี้ย้อนกลับไม่ได้ และจะลบ:\n\n• บันทึกไดอารี่ ภาพถ่าย และวิดีโอในเครื่องทั้งหมด\n• บัญชี Firebase ของคุณ\n• ข้อมูลสำรองของแอปใน Google Drive\n\nแอปจะเริ่มใหม่เสมือนเป็นการติดตั้งใหม่</string>
+    <string name="settings_delete_account_cancel">ยกเลิก</string>
+    <string name="settings_delete_account_confirm">ใช่ ลบทั้งหมด</string>
+
+    <string name="settings_report_ai_title">รายงานคำตอบของ AI</string>
+    <string name="settings_report_ai_subtitle">ผลลัพธ์ AI ที่ไม่เหมาะสมหรือผิดพลาด</string>
+    <string name="settings_report_ai_confirm_title">เปิดอีเมลถึงฝ่ายสนับสนุนหรือไม่</string>
+    <string name="settings_report_ai_confirm_body">แอปอีเมลจะเปิดพร้อมข้อความที่เตรียมไว้ถึง dev.app.support@gmail.com คุณสามารถเพิ่มคำอธิบายก่อนส่งได้ เราตอบกลับภายใน 24 ชั่วโมงในวันทำการ\n\nกรุณารายงานที่นี่: ผลลัพธ์ AI ที่ไม่เหมาะสม ก้าวร้าว ผิดพลาด หรือชี้นำผิดทางจากแดชบอร์ด สรุป ทบทวน หรือปรับปรุงข้อความ</string>
+    <string name="settings_report_ai_confirm">สร้างรายงาน</string>
+    <string name="settings_report_ai_cancel">ยกเลิก</string>
+    <string name="settings_report_ai_no_email">ไม่พบแอปอีเมล โปรดส่งรายงานไปที่ dev.app.support@gmail.com</string>
+    <string name="settings_report_ai_subject">Best Journal: คำตอบ AI ที่ไม่เหมาะสม</string>
+    <string name="settings_report_ai_body">สวัสดี,\n\nฉันต้องการรายงานคำตอบ AI ที่ไม่เหมาะสมหรือผิดพลาดใน Best Journal\n\nคำอธิบายปัญหา:\n[กรุณากรอก]\n\nบริบท (ฟีเจอร์ใด อินพุตใด):\n[กรุณากรอก]\n\nขอบคุณ</string>
+
+    <string name="settings_revoke_title">การเพิกถอน</string>
+    <string name="settings_revoke_subtitle">การซื้อ Premium</string>
+    <string name="settings_revoke_confirm_title">เปิดอีเมลถึงฝ่ายสนับสนุนหรือไม่</string>
+    <string name="settings_revoke_confirm_body">แอปอีเมลจะเปิดพร้อมข้อความที่เตรียมไว้ถึง dev.app.support@gmail.com เราตอบกลับภายใน 24 ชั่วโมงในวันทำการ\n\nข้อมูลฉบับเต็มเกี่ยวกับสิทธิ์ในการเพิกถอนอยู่ในเงื่อนไขการใช้งาน (§ 16) สำหรับการสมัครสมาชิก กรุณายกเลิกเพิ่มเติมที่ Google Play → การสมัครสมาชิก</string>
+    <string name="settings_revoke_cancel">ยกเลิก</string>
+    <string name="settings_revoke_confirm">สร้างการเพิกถอน</string>
+    <string name="settings_revoke_no_email">ไม่พบแอปอีเมล โปรดส่งการเพิกถอนไปที่ dev.app.support@gmail.com</string>
+    <string name="settings_revoke_email_subject">เพิกถอนสัญญา Best Journal Premium</string>
+    <string name="settings_revoke_email_body">สวัสดี,\n\nโดยหนังสือนี้ ฉันขอเพิกถอนสัญญาเกี่ยวกับฟีเจอร์ Premium ของ Best Journal\n\nวันที่สั่งซื้อ: [กรุณากรอก]\nอีเมลบัญชี Google: [กรอกหากแตกต่างจากผู้ส่ง]\nชื่อ: [กรุณากรอก]\n\nวันที่: [วันนี้]</string>
+
+
 </resources>
