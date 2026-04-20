@@ -409,7 +409,7 @@ fun ConsentScreen(
                     }
                 }
 
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(12.dp))
 
                 androidx.compose.material3.OutlinedButton(
                     onClick = {
