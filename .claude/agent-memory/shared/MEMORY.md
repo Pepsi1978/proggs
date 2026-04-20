@@ -103,6 +103,42 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Status:** OFFEN
 ---
 
+### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
+
+**Kontext:** Benutzer wechselt zum Mac um nach dem alten Release-Keystore fuer BestJournalAndroid zu suchen.
+
+**Was bereits geschah (Windows-Session 2026-04-20 12:00-12:45):**
+- Erster Play Store Release aufgesetzt, Internal Testing Track erstellt
+- Neuen Release-Keystore erstellt: `~/proggs/BestJournalAndroid/app/release.keystore` (Alias: `bestjournal`, SHA1: `C1:3A:92:60:2D:D6:06:F8:EC:01:65:45:AD:DF:50:61:81:9A:44:68`)
+- `local.properties` konfiguriert mit Release-Signing
+- AAB gebaut (151 MB): `app/build/outputs/bundle/release/app-release.aab`
+- Upload-Zertifikat exportiert: `app/upload_certificate.pem`
+- AAB-Upload zu Play Console fehlgeschlagen: Play Console erwartet Fingerprint `E8:0F:E1:C5:49:55:08:97:DC:AA:AD:07:59:8B:06:0A:91:35:D3:3D` (anderer Keystore wurde am 2. April bei App-Erstellung registriert)
+
+**Was der Benutzer weiss:**
+- Hat fuer den alten Keystore ein Passwort im Passwort-Manager gefunden (14 Zeichen, anders als der neue)
+- Weiss NICHT wo/wann er ihn erstellt hat
+
+**Auf Windows alles durchsucht, nichts gefunden** (ausser Debug-Keystores und dem neu erstellten).
+
+**Aufgabe fuer Mac-Session:**
+1. `find ~ -type f \( -name "*.jks" -o -name "*.keystore" \) 2>/dev/null | grep -v debug` ausfuehren
+2. Fuer jede gefundene Datei pruefen: `keytool -list -v -keystore PFAD -storepass "PASSWORT-AUS-PASSWORT-MANAGER"`
+3. Der richtige Keystore zeigt SHA1 `E8:0F:E1:C5:49:55:08:97:DC:AA:AD:07:59:8B:06:0A:91:35:D3:3D`
+4. Zusaetzlich pruefen: iCloud Drive, externe Festplatten, Time Machine Backups
+
+**Falls Mac-Suche auch leer:**
+- Upload-Key-Reset bei Google Play beantragen
+- Play Console → BestJournal → App-Integritaet → Signaturschluessel aendern
+- Neues Zertifikat hochladen: `~/proggs/BestJournalAndroid/app/upload_certificate.pem` (ist via Git auch auf Mac verfuegbar)
+- Google aktiviert neuen Key binnen 1-48 Stunden
+
+**Lokale Windows-Memory mit vollem Kontext:** `~/.claude/projects/C--Users-barwa-proggs/memory/project_bestjournal_keystore_search.md`
+
+**Status:** OFFEN — wartet auf Mac-Such-Ergebnis
+
+---
+
 ## Systemzustand (aktuell)
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
