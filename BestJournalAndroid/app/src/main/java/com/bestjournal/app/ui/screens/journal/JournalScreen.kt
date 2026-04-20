@@ -102,6 +102,7 @@ import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.AnimatedMicButton
 import com.bestjournal.app.ui.components.EvolvingStreakIcon
 import com.bestjournal.app.ui.components.GlassCard
+import com.bestjournal.app.ui.components.PrivacyGateDialog
 import com.bestjournal.app.ui.components.ShimmerLoadingEffect
 import com.bestjournal.app.ui.components.SuccessAnimation
 import com.bestjournal.app.ui.components.SunMoonToggle
@@ -112,6 +113,7 @@ import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
 import com.bestjournal.app.util.DateTimeFormatter as DTFormatter
+import com.bestjournal.app.util.PrivacyGateHelper
 import com.bestjournal.app.util.rememberHapticAction
 import kotlinx.coroutines.delay
 
@@ -176,20 +178,51 @@ fun JournalScreen(
         }
     }
 
+    var showGroqPrivacyGate by remember { mutableStateOf(false) }
+
+    val startRecordingIfAllowed: () -> Unit = {
+        val hasPermission =
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+        if (hasPermission) {
+            viewModel.toggleRecording()
+        } else {
+            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
     val onMicClick: () -> Unit = {
         doHaptic(HapticFeedbackType.LongPress)
         if (uiState.recordingState == RecordingState.RECORDING) {
             viewModel.toggleRecording()
+        } else if (!PrivacyGateHelper.hasConsented(context, PrivacyGateHelper.CloudService.Groq)) {
+            // K4: First-use consent for USA transfer (Groq Whisper). TDDDG/EDSA 03/2023.
+            showGroqPrivacyGate = true
         } else {
-            val hasPermission =
-                ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
-                    PackageManager.PERMISSION_GRANTED
-            if (hasPermission) {
-                viewModel.toggleRecording()
-            } else {
-                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-            }
+            startRecordingIfAllowed()
         }
+    }
+
+    if (showGroqPrivacyGate) {
+        PrivacyGateDialog(
+            titleRes = R.string.privacy_gate_groq_title,
+            bodyRes = R.string.privacy_gate_groq_body,
+            acceptRes = R.string.privacy_gate_groq_accept,
+            declineRes = R.string.privacy_gate_groq_local,
+            onAccept = {
+                PrivacyGateHelper.setConsent(context, PrivacyGateHelper.CloudService.Groq, true)
+                showGroqPrivacyGate = false
+                startRecordingIfAllowed()
+            },
+            onDecline = {
+                // User chose local transcription: still allow recording, TranscriptionRepository
+                // falls back to local sherpa-onnx if Groq is unavailable. We do NOT persist
+                // a "declined" state so the dialog reappears on next tap (explicit decision each time
+                // until accepted).
+                showGroqPrivacyGate = false
+                startRecordingIfAllowed()
+            },
+        )
     }
 
     var showSyncLegend by remember { mutableStateOf(false) }

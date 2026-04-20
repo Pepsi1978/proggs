@@ -517,10 +517,31 @@
     <string name="consent_intro">Dein Tagebuch ist ein persönlicher Raum, und das respektieren wir. Hier siehst du transparent, wie Best Journal mit deinen Daten umgeht.</string>
     <string name="consent_card1_title">Lokale Speicherung</string>
     <string name="consent_card1_body">Deine Einträge bleiben auf deinem Gerät.</string>
-    <string name="consent_card2_title">KI-Funktionen</string>
-    <string name="consent_card2_body">Textausschnitte werden an Cloud-Partner außerhalb der EU gesendet, verarbeitet und zurückgegeben.</string>
+    <string name="consent_card2_title">KI-Funktionen (USA)</string>
+    <string name="consent_card2_body">Optional werden Texte an Google Gemini, Sprachaufnahmen an Groq und Vorlese-Texte an Microsoft Edge in den USA gesendet (EU-US Data Privacy Framework + Standardvertragsklauseln).</string>
     <string name="consent_card3_title">Anonyme Statistiken</string>
-    <string name="consent_card3_body">Optional, jederzeit in den Einstellungen änderbar.</string>
+    <string name="consent_card3_body">Firebase Analytics, optional, jederzeit in den Einstellungen änderbar.</string>
+
+    <!-- Pre-Usage Consent Dialog (K4 fix, TDDDG/EDSA Guideline 03/2023) -->
+    <string name="privacy_gate_groq_title">Sprachaufnahme an Groq senden?</string>
+    <string name="privacy_gate_groq_body">Für die Cloud-Transkription wird deine Sprachaufnahme verschlüsselt an Groq, Inc. (Mountain View, USA) gesendet und dort in Text umgewandelt. Die Audiodatei wird nach der Verarbeitung gelöscht und nicht zum Training verwendet.\n\nAlternative: Nutze die lokale On-Device-Transkription (offline, keine Datenübertragung) — einstellbar unter Einstellungen → KI.</string>
+    <string name="privacy_gate_groq_accept">Einverstanden, senden</string>
+    <string name="privacy_gate_groq_local">Stattdessen lokal transkribieren</string>
+
+    <string name="privacy_gate_gemini_title">Text an Google Gemini senden?</string>
+    <string name="privacy_gate_gemini_body">Für KI-Funktionen (Dashboard, Zusammenfassungen, Rückblicke, Textverbesserung) werden Textausschnitte deiner Einträge verschlüsselt an Google Gemini (Firebase AI, USA) gesendet. Rechtsgrundlage: EU-US Data Privacy Framework + Standardvertragsklauseln. Anfragen werden nach Verarbeitung gelöscht und nicht zum Training verwendet.</string>
+    <string name="privacy_gate_gemini_accept">Einverstanden, senden</string>
+    <string name="privacy_gate_gemini_cancel">Abbrechen</string>
+
+    <string name="privacy_gate_tts_title">Text an Microsoft senden?</string>
+    <string name="privacy_gate_tts_body">Für die Vorlesefunktion wird der zu sprechende Text verschlüsselt an Microsoft Bing Speech (USA) gesendet und als Audio zurückgegeben. Rechtsgrundlage: EU-US Data Privacy Framework + Standardvertragsklauseln.\n\nAlternative: Nutze die Android-systemeigene Offline-TTS.</string>
+    <string name="privacy_gate_tts_accept">Einverstanden, vorlesen</string>
+    <string name="privacy_gate_tts_cancel">Abbrechen</string>
+
+    <!-- M1 Report AI Content -->
+    <string name="dashboard_report_ai_title">Unangemessene KI-Antwort melden</string>
+    <string name="dashboard_report_ai_subject">Best Journal: Unangemessene KI-Antwort</string>
+    <string name="dashboard_report_ai_body">Hallo,\n\nich möchte eine unangemessene oder fehlerhafte KI-Antwort in Best Journal melden.\n\nBeschreibung des Problems:\n[Bitte ausfüllen]\n\nKontext (welche Funktion, welche Eingabe):\n[Bitte ausfüllen]\n\nDanke.</string>
     <string name="consent_links_header">Unsere Rechtstexte:</string>
     <string name="consent_accept_all">Einverstanden und loslegen</string>
     <string name="consent_disable_stats">Statistiken deaktivieren und fortfahren</string>
@@ -536,6 +557,17 @@
     <string name="settings_delete_account_confirm_body">Dieser Vorgang ist unwiderruflich und löscht:\n\n• Alle lokalen Tagebucheinträge, Fotos und Videos\n• Dein Firebase-Anmeldekonto\n• Das Google-Drive-Backup der App\n\nDie App startet danach neu als frische Installation.</string>
     <string name="settings_delete_account_cancel">Abbrechen</string>
     <string name="settings_delete_account_confirm">Ja, alles löschen</string>
+
+    <!-- Widerrufsbutton (§ 356a BGB) -->
+    <string name="settings_revoke_title">Vertrag widerrufen</string>
+    <string name="settings_revoke_subtitle">14-tägiges Widerrufsrecht für Verbraucher bei Premium-Käufen</string>
+    <string name="settings_revoke_confirm_title">Widerruf bestätigen?</string>
+    <string name="settings_revoke_confirm_body">Du widerrufst hiermit deinen Vertrag über Premium-Funktionen. Nach Bestätigung öffnet sich dein E-Mail-Programm mit einer fertigen Widerrufserklärung an dev.app.support@gmail.com. Du erhältst eine Eingangsbestätigung per E-Mail.\n\nHinweis: Bei sofortiger Aktivierung von Premium-Funktionen kann das Widerrufsrecht nach § 356 Abs. 5 BGB erlöschen. Abos bitte zusätzlich über Google Play → Abos kündigen.</string>
+    <string name="settings_revoke_cancel">Abbrechen</string>
+    <string name="settings_revoke_confirm">Widerruf absenden</string>
+    <string name="settings_revoke_email_subject">Widerruf Premium-Vertrag Best Journal</string>
+    <string name="settings_revoke_email_body">Hiermit widerrufe ich den von mir abgeschlossenen Vertrag über die Premium-Funktionen von Best Journal.\n\nBestellt am: [bitte eintragen]\nGoogle-Konto-E-Mail: [bitte eintragen, falls abweichend vom Absender]\nName: [bitte eintragen]\n\nDatum: [heute]</string>
+    <string name="settings_revoke_no_email">Kein E-Mail-Programm gefunden. Bitte sende den Widerruf an dev.app.support@gmail.com.</string>
 
     <!-- Legal document titles (in-app viewer top bar) -->
     <string name="legal_title_datenschutz">Datenschutzerklärung</string>
