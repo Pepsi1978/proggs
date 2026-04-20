@@ -1027,10 +1027,27 @@
     <!-- ════════════════════════════════════════════════════════════════════
          WITHDRAWAL (EU consumer right under Directive 2011/83/EU + national laws)
          ════════════════════════════════════════════════════════════════════ -->
+    <!-- Settings → Privacy section -->
+    <string name="settings_privacy_header">Privacy</string>
+    <string name="settings_analytics_title">Anonymous statistics</string>
+    <string name="settings_analytics_subtitle">Firebase Analytics for crash analysis and product improvement</string>
+
+    <!-- Settings → Privacy → Delete account -->
+    <string name="settings_delete_account_title">Delete account and data</string>
+    <string name="settings_delete_account_subtitle">Permanently removes all local data, your Google sign-in and the Drive backup</string>
+    <string name="settings_delete_account_confirm_title">Delete account permanently?</string>
+    <string name="settings_delete_account_confirm_body">This action cannot be undone and will delete:\n\n• All local journal entries, photos and videos\n• Your Firebase sign-in account\n• The app\'s Google Drive backup\n\nThe app will restart as a fresh installation.</string>
+    <string name="settings_delete_account_cancel">Cancel</string>
+    <string name="settings_delete_account_confirm">Yes, delete everything</string>
+
+    <!-- Settings → Privacy → Withdrawal (§ 355 BGB for DE, Directive 2011/83/EU for EU) -->
     <string name="settings_revoke_title">Withdrawal</string>
     <string name="settings_revoke_subtitle">Premium purchase</string>
     <string name="settings_revoke_confirm_title">Open email to support?</string>
     <string name="settings_revoke_confirm_body">Your email app will open with a prepared message to dev.app.support@gmail.com. We respond within 24 hours on business days.\n\nThe full withdrawal instructions (for EU and UK consumers) are in the Terms of Use, Section 16. Subscriptions must also be cancelled through Google Play → Subscriptions.</string>
+    <string name="settings_revoke_cancel">Cancel</string>
+    <string name="settings_revoke_confirm">Create withdrawal</string>
+    <string name="settings_revoke_no_email">No email app found. Please send the withdrawal to dev.app.support@gmail.com.</string>
     <string name="settings_revoke_email_subject">Withdrawal Premium contract Best Journal</string>
     <string name="settings_revoke_email_body">Hello,\n\nI hereby give notice of withdrawal from my Best Journal Premium contract.\n\nPurchase: [please specify]\nDate of purchase: [please specify]\nGoogle account email: [please specify]\n\nThank you.</string>
 
