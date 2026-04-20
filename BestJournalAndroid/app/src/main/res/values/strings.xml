@@ -558,11 +558,11 @@
     <string name="settings_delete_account_cancel">Abbrechen</string>
     <string name="settings_delete_account_confirm">Ja, alles löschen</string>
 
-    <!-- Kauf-Support (enthaelt auch Widerrufs-Option nach § 356a BGB) -->
-    <string name="settings_revoke_title">Rückerstattung anfragen</string>
-    <string name="settings_revoke_subtitle">Fragen oder Probleme mit einem Premium-Kauf? Kontaktiere den Support.</string>
-    <string name="settings_revoke_confirm_title">Anfrage an Support senden?</string>
-    <string name="settings_revoke_confirm_body">Es öffnet sich dein E-Mail-Programm mit einer vorbereiteten Nachricht an unseren Support (dev.app.support@gmail.com). Wir antworten innerhalb von 24 Stunden an Werktagen.\n\nDiese Anfrage gilt rechtlich auch als Widerrufserklärung nach § 355 BGB, falls du einen Premium-Kauf innerhalb von 14 Tagen rückabwickeln möchtest. Die vollständige Widerrufsbelehrung findest du in den Nutzungsbedingungen (§ 16).\n\nHinweis: Abos bitte zusätzlich über Google Play → Abonnements kündigen.</string>
+    <!-- Widerruf (§ 355 BGB). Knappe, sachliche Bezeichnung. -->
+    <string name="settings_revoke_title">Widerruf</string>
+    <string name="settings_revoke_subtitle">Bei Fragen oder Problemen mit einem Premium-Kauf</string>
+    <string name="settings_revoke_confirm_title">E-Mail an Support öffnen?</string>
+    <string name="settings_revoke_confirm_body">Es öffnet sich dein E-Mail-Programm mit einer vorbereiteten Nachricht an dev.app.support@gmail.com. Wir antworten innerhalb von 24 Stunden an Werktagen.\n\nDie vollständige Widerrufsbelehrung nach § 355 BGB findest du in den Nutzungsbedingungen (§ 16). Abos bitte zusätzlich über Google Play → Abonnements kündigen.</string>
     <string name="settings_revoke_cancel">Abbrechen</string>
     <string name="settings_revoke_confirm">Widerruf absenden</string>
     <string name="settings_revoke_email_subject">Widerruf Premium-Vertrag Best Journal</string>
