@@ -364,6 +364,12 @@ Premium-Kauf, Fehler in der Sprachausgabe).
 **Erhobene Daten:** Geräteintegritäts-Token von Google Play, App-Signatur.
 **Rechtsgrundlage:** Berechtigtes Interesse an Missbrauchsschutz (Art. 6 Abs. 1 lit. f
 DSGVO).
+**Abwägung:** Das berechtigte Interesse am Schutz der Firebase-Endpunkte vor
+automatisierten Angriffen überwiegt die minimale Beeinträchtigung des Nutzers, da
+das Integritäts-Token geräteunabhängig ist und keine persönliche Identifikation
+ermöglicht. Eine datenschutzschonendere Alternative ist technisch nicht verfügbar.
+**Drittlandübermittlung:** Verarbeitung in den USA auf Grundlage des EU-US Data
+Privacy Framework und Standardvertragsklauseln (Art. 46 DSGVO).
 
 ### 5.9 Firebase Remote Config
 
@@ -371,6 +377,11 @@ DSGVO).
 **Erhobene Daten:** Anonymisierte App-Instanz-ID, App-Version.
 **Rechtsgrundlage:** Berechtigtes Interesse am ordnungsgemäßen Betrieb (Art. 6 Abs. 1
 lit. f DSGVO).
+**Abwägung:** Das berechtigte Interesse an reibungsloser App-Konfiguration überwiegt,
+da nur anonymisierte Instanz-IDs übertragen werden und keine Rückverfolgung auf
+Einzelpersonen möglich ist.
+**Drittlandübermittlung:** Verarbeitung in den USA auf Grundlage des EU-US Data
+Privacy Framework und Standardvertragsklauseln (Art. 46 DSGVO).
 
 ### 5.9a Feedback-Funktion (Gmail-API, optional)
 
@@ -425,6 +436,11 @@ uneingeschränkt nutzbar.
 **Erhobene Daten:** Technische Metadaten (App-Version, Paketname) zur Anzeige des
 Dialogs. Keine Erfassung der Bewertung selbst durch die App.
 **Rechtsgrundlage:** Berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO).
+**Abwägung:** Das berechtigte Interesse an Nutzerfeedback überwiegt, da nur
+technische Metadaten ohne Personenbezug verarbeitet werden und die eigentliche
+Bewertung ausschließlich in deinem Google-Play-Konto erfolgt.
+**Drittlandübermittlung:** Verarbeitung in den USA auf Grundlage des EU-US Data
+Privacy Framework und Standardvertragsklauseln (Art. 46 DSGVO).
 
 **Weitere Informationen zu Google-Diensten:**
 - Google-Datenschutzerklärung: https://policies.google.com/privacy

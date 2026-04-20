@@ -106,8 +106,8 @@ nicht anders vorgeschrieben.
 
 ### 5.5 Widerrufsrecht
 Als Verbraucher hast du grundsätzlich ein 14-tägiges Widerrufsrecht bei
-Fernabsatzverträgen (§ 355 BGB). Durch die Aktivierung der Premium-Funktionen
-(sofortige Leistungserbringung) kann dieses Recht nach § 356 Abs. 5 BGB erlöschen.
+Fernabsatzverträgen (§ 355 BGB). Die vollständige Widerrufsbelehrung und das
+Muster-Widerrufsformular findest du in Abschnitt 16 dieser Nutzungsbedingungen.
 
 ### 5.6 Preisänderungen
 Preisänderungen werden rechtzeitig über Google Play angekündigt. Bestehende Abos
@@ -196,8 +196,9 @@ Website.
 
 Wir behalten uns vor, diese Nutzungsbedingungen bei Änderungen der App, der
 Rechtslage oder des Geschäftsmodells anzupassen. Über wesentliche Änderungen
-informieren wir dich rechtzeitig in der App. Widersprichst du den Änderungen
-nicht innerhalb von 30 Tagen, gelten sie als angenommen.
+informieren wir dich rechtzeitig in der App und weisen dabei ausdrücklich auf
+die Zustimmungsfiktion hin. Widersprichst du den Änderungen nicht innerhalb von
+sechs Wochen nach Zugang der Änderungsmitteilung, gelten sie als angenommen.
 
 ---
 
@@ -236,3 +237,102 @@ Bei Fragen zu diesen Nutzungsbedingungen:
 
 **E-Mail:** dev.app.support@gmail.com
 **Postanschrift:** Siehe Abschnitt 1
+
+---
+
+## 16. Widerrufsbelehrung (für Verbraucher)
+
+### Widerrufsrecht
+
+Sie haben das Recht, binnen **vierzehn Tagen** ohne Angabe von Gründen diesen
+Vertrag zu widerrufen.
+
+Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag des Vertragsabschlusses
+(bei In-App-Käufen der Zeitpunkt der Bestätigung durch Google Play).
+
+Um Ihr Widerrufsrecht auszuüben, müssen Sie uns
+
+**Frank Barwandt**
+c/o Impressumservice Dein-Impressum
+Stettiner Straße 41
+35410 Hungen
+Deutschland
+E-Mail: dev.app.support@gmail.com
+
+mittels einer eindeutigen Erklärung (z. B. ein mit der Post versandter Brief oder
+eine E-Mail) über Ihren Entschluss, diesen Vertrag zu widerrufen, informieren.
+Sie können dafür das unten stehende Muster-Widerrufsformular verwenden, das jedoch
+nicht vorgeschrieben ist.
+
+Zur Wahrung der Widerrufsfrist reicht es aus, dass Sie die Mitteilung über die
+Ausübung des Widerrufsrechts vor Ablauf der Widerrufsfrist absenden.
+
+### Folgen des Widerrufs
+
+Wenn Sie diesen Vertrag widerrufen, haben wir Ihnen alle Zahlungen, die wir von
+Ihnen erhalten haben, unverzüglich und spätestens binnen **vierzehn Tagen** ab
+dem Tag zurückzuzahlen, an dem die Mitteilung über Ihren Widerruf dieses
+Vertrags bei uns eingegangen ist. Für diese Rückzahlung verwenden wir dasselbe
+Zahlungsmittel, das Sie bei der ursprünglichen Transaktion eingesetzt haben, es
+sei denn, mit Ihnen wurde ausdrücklich etwas anderes vereinbart; in keinem Fall
+werden Ihnen wegen dieser Rückzahlung Entgelte berechnet.
+
+Da In-App-Käufe über Google Play abgewickelt werden, kann die Rückzahlung
+technisch über Google Play erfolgen. Wir koordinieren das bei Bedarf mit Google.
+
+### Vorzeitiges Erlöschen des Widerrufsrechts
+
+Das Widerrufsrecht erlischt bei einem Vertrag zur Bereitstellung von nicht auf
+einem körperlichen Datenträger befindlichen **digitalen Inhalten** (z. B.
+Freischaltung von Premium-Funktionen innerhalb der App), wenn wir mit der
+Ausführung des Vertrags begonnen haben, nachdem Sie
+
+1. ausdrücklich zugestimmt haben, dass wir mit der Ausführung des Vertrags vor
+   Ablauf der Widerrufsfrist beginnen, und
+2. Ihre Kenntnis davon bestätigt haben, dass Sie durch Ihre Zustimmung mit
+   Beginn der Ausführung des Vertrags Ihr Widerrufsrecht verlieren.
+
+Wenn Sie im Kaufprozess (Google Play) der sofortigen Aktivierung der
+Premium-Funktionen zustimmen, erlischt Ihr Widerrufsrecht nach § 356 Abs. 5 BGB.
+
+### Muster-Widerrufsformular
+
+> *(Wenn Sie den Vertrag widerrufen wollen, dann füllen Sie bitte dieses
+> Formular aus und senden Sie es zurück.)*
+
+---
+
+An:
+
+Frank Barwandt
+c/o Impressumservice Dein-Impressum
+Stettiner Straße 41
+35410 Hungen
+E-Mail: dev.app.support@gmail.com
+
+Hiermit widerrufe(n) ich/wir (\*) den von mir/uns (\*) abgeschlossenen Vertrag
+über die Erbringung der folgenden Dienstleistung:
+
+__________________________________________________________________
+
+Bestellt am (\*) / erhalten am (\*):
+
+__________________________________________________________________
+
+Name des/der Verbraucher(s):
+
+__________________________________________________________________
+
+Anschrift des/der Verbraucher(s):
+
+__________________________________________________________________
+
+Unterschrift des/der Verbraucher(s) (nur bei Mitteilung auf Papier):
+
+__________________________________________________________________
+
+Datum:
+
+__________________________________________________________________
+
+(\*) Unzutreffendes streichen.

@@ -411,17 +411,32 @@ fun ConsentScreen(
 
                 Spacer(Modifier.height(6.dp))
 
-                TextButton(
+                androidx.compose.material3.OutlinedButton(
                     onClick = {
                         if (isExiting.value == null) isExiting.value = ExitMode.OnlyRequired
                     },
-                    modifier = Modifier.graphicsLayer { alpha = btnAlpha.value }.fillMaxWidth(),
+                    modifier =
+                        Modifier.graphicsLayer { alpha = btnAlpha.value }
+                            .width(240.dp)
+                            .height(46.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    border =
+                        androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            CopperLight.copy(alpha = 0.55f),
+                        ),
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = OnSurface,
+                        ),
+                    contentPadding = PaddingValues(horizontal = 12.dp),
                 ) {
                     Text(
                         text = stringResource(R.string.consent_disable_stats),
-                        color = OnSurfaceMuted,
                         fontSize = 13.sp,
                         letterSpacing = 0.4.sp,
+                        fontWeight = FontWeight.Medium,
                     )
                 }
             }
