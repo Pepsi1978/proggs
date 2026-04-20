@@ -95,7 +95,9 @@ import coil3.compose.AsyncImage
 import com.bestjournal.app.R
 import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.local.entity.RetrospectiveSummaryEntity
+import com.bestjournal.app.ui.components.ParticleBackground
 import com.bestjournal.app.ui.components.SunMoonToggle
+import com.bestjournal.app.ui.components.TwinklingStars
 import com.bestjournal.app.ui.theme.FeatureAccentOrange
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.util.EdgeTtsPlayer
@@ -224,6 +226,10 @@ fun RetrospectiveScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        if (LocalIsDarkTheme.current) {
+            ParticleBackground()
+            TwinklingStars()
+        }
         Column(modifier = Modifier.fillMaxSize()) {
             Spacer(modifier = Modifier.height(10.dp))
             // Fixed title bar (does not scroll)

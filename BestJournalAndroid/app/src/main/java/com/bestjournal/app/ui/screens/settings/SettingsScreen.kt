@@ -108,6 +108,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.GlassCard
+import com.bestjournal.app.ui.components.ParticleBackground
+import com.bestjournal.app.ui.components.TwinklingStars
 import com.bestjournal.app.ui.theme.FeatureAccentOrange
 import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.NeonRed
@@ -210,6 +212,10 @@ fun SettingsScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        if (LocalIsDarkTheme.current) {
+            ParticleBackground()
+            TwinklingStars()
+        }
         Column(modifier = Modifier.fillMaxSize()) {
             Spacer(modifier = Modifier.height(10.dp))
             // Fixed title bar (does not scroll)

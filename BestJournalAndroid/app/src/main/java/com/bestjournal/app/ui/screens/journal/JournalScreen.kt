@@ -102,12 +102,15 @@ import com.bestjournal.app.R
 import com.bestjournal.app.ui.components.AnimatedMicButton
 import com.bestjournal.app.ui.components.EvolvingStreakIcon
 import com.bestjournal.app.ui.components.GlassCard
+import com.bestjournal.app.ui.components.ParticleBackground
 import com.bestjournal.app.ui.components.PrivacyGateDialog
 import com.bestjournal.app.ui.components.ShimmerLoadingEffect
 import com.bestjournal.app.ui.components.SuccessAnimation
 import com.bestjournal.app.ui.components.SunMoonToggle
 import com.bestjournal.app.ui.components.TimelineItem
 import com.bestjournal.app.ui.components.TimelinePosition
+import com.bestjournal.app.ui.components.TwinklingStars
+import com.bestjournal.app.ui.theme.LocalIsDarkTheme
 import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonEmerald
@@ -239,6 +242,10 @@ fun JournalScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        if (LocalIsDarkTheme.current) {
+            ParticleBackground()
+            TwinklingStars()
+        }
         Column(modifier = Modifier.fillMaxSize()) {
             // Fixed title bar (does not scroll) — same pattern as DashboardScreen
             Column(
