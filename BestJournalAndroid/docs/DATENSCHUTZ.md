@@ -281,6 +281,7 @@ Google Gemini in den USA gesendet:
 | Trigger | Was passiert |
 |---------|-------------|
 | **Neuer Tagebucheintrag** | Dashboard-Aktualisierung (KI-gestützte Zusammenfassung der letzten Einträge) |
+| **Neue Sprach-Transkription** (bei aktivierter Auto-Textverbesserung) | Der transkribierte Text wird automatisch durch Gemini stilistisch/grammatikalisch verbessert |
 | **Ende der Woche** | Wöchentlicher Rückblick (Wochenrückblick) |
 | **Ende des Monats** | Monatlicher Rückblick (Monatsrückblick) |
 | **Ende des Jahres** (geplant) | Jahresrückblick |
@@ -296,6 +297,7 @@ Zeitstempel).
 **Deaktivierung der automatischen KI-Funktionen:**
 Unter **„Einstellungen → KI-Funktionen"** kannst du einzeln deaktivieren:
 - Automatische Dashboard-Aktualisierung
+- Automatische Textverbesserung nach Transkription
 - Wöchentliche Rückblicke
 - Monatliche Rückblicke
 - Jährliche Rückblicke (sobald verfügbar)
@@ -350,6 +352,53 @@ DSGVO).
 **Erhobene Daten:** Anonymisierte App-Instanz-ID, App-Version.
 **Rechtsgrundlage:** Berechtigtes Interesse am ordnungsgemäßen Betrieb (Art. 6 Abs. 1
 lit. f DSGVO).
+
+### 5.9a Feedback-Funktion (Gmail-API, optional)
+
+Unter **„Einstellungen → Feedback senden"** kannst du uns deine Rückmeldung zur App
+schicken.
+
+**Technischer Ablauf:**
+1. Du gibst deinen Feedback-Text in der App ein und bestätigst das Senden.
+2. Die App bittet dich einmalig um die Google-Berechtigung **„E-Mails senden"**
+   (Gmail-API-Scope `https://www.googleapis.com/auth/gmail.send`).
+3. Nach deiner Zustimmung werden **zwei E-Mails über dein eigenes Google-Konto**
+   via Gmail-API versendet:
+   - **E-Mail 1 an uns:** `dev.app.support@gmail.com` — enthält deinen Feedback-Text
+     und deine Google-Konto-E-Mail-Adresse als Absender.
+   - **E-Mail 2 an dich selbst:** Bestätigung mit dem Feedback-Text, den du
+     abgeschickt hast, damit du eine Kopie für dich hast.
+
+**Wer verarbeitet was:**
+- **Google** (Gmail-Infrastruktur): transportiert beide E-Mails über seine
+  Mailserver.
+- **Wir** (Frank Barwandt, Kontaktadresse siehe Abschnitt 1): empfangen die erste
+  E-Mail in unserem `dev.app.support@gmail.com`-Postfach und speichern sie zur
+  Bearbeitung deiner Rückmeldung.
+
+**Erhobene/übermittelte Daten:**
+- Deine Google-Konto-E-Mail-Adresse (als Absender beider E-Mails)
+- Der von dir eingegebene Feedback-Text
+- Zeitstempel der Versendung
+
+**Rechtsgrundlage:**
+- Für die Übermittlung an uns: Einwilligung (Art. 6 Abs. 1 lit. a DSGVO) durch
+  aktives Versenden des Feedbacks.
+- Für die Bearbeitung deiner Anfrage: Berechtigtes Interesse an der Verbesserung
+  der App (Art. 6 Abs. 1 lit. f DSGVO).
+
+**Speicherdauer bei uns:** Deine Feedback-E-Mail bleibt maximal 24 Monate in unserem
+Postfach gespeichert, danach wird sie gelöscht. Bei konkretem Bezug zu einem
+Bugfix oder Feature kann die Speicherung auch länger erfolgen — du kannst jederzeit
+per E-Mail Löschung verlangen.
+
+**Widerruf der Gmail-Berechtigung:** Du kannst den Gmail-Send-Zugriff jederzeit
+aufheben unter **https://myaccount.google.com/permissions** → Best Journal entfernen.
+Nach Entzug funktioniert die Feedback-Funktion nicht mehr, die App ist sonst
+uneingeschränkt nutzbar.
+
+**Alternative:** Du kannst uns auch direkt per E-Mail erreichen unter
+**dev.app.support@gmail.com** — ganz ohne App-Berechtigungen.
 
 ### 5.10 Google Play In-App Review API
 
@@ -499,6 +548,7 @@ wissentlich keine Daten von Kindern unter 13 Jahren.
 | Firebase Authentication | Bis zur Löschung des Kontos |
 | KI-Anfragen (Firebase AI) | Werden gemäß Google-Richtlinien nicht dauerhaft gespeichert |
 | Kaufdaten | Gemäß gesetzlicher Aufbewahrungsfristen (bis zu 10 Jahre, § 147 AO) |
+| Feedback-E-Mails | Maximal 24 Monate in unserem Postfach, danach Löschung |
 | Serverlogs (IP-Adressen) | Maximal 30 Tage, danach automatische Löschung |
 
 ---

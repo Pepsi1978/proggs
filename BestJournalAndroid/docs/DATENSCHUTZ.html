@@ -202,6 +202,7 @@
 <table>
   <tr><th>Trigger</th><th>Was passiert</th></tr>
   <tr><td><strong>Neuer Tagebucheintrag</strong></td><td>Dashboard-Aktualisierung (KI-gestützte Zusammenfassung der letzten Einträge)</td></tr>
+  <tr><td><strong>Neue Sprach-Transkription</strong> (bei aktivierter Auto-Textverbesserung)</td><td>Der transkribierte Text wird automatisch durch Gemini stilistisch/grammatikalisch verbessert</td></tr>
   <tr><td><strong>Ende der Woche</strong></td><td>Wöchentlicher Rückblick (Wochenrückblick)</td></tr>
   <tr><td><strong>Ende des Monats</strong></td><td>Monatlicher Rückblick (Monatsrückblick)</td></tr>
   <tr><td><strong>Ende des Jahres</strong> (geplant)</td><td>Jahresrückblick</td></tr>
@@ -213,6 +214,7 @@
 Unter <strong>„Einstellungen → KI-Funktionen"</strong> kannst du einzeln deaktivieren:</p>
 <ul>
   <li>Automatische Dashboard-Aktualisierung</li>
+  <li>Automatische Textverbesserung nach Transkription</li>
   <li>Wöchentliche Rückblicke</li>
   <li>Monatliche Rückblicke</li>
   <li>Jährliche Rückblicke (sobald verfügbar)</li>
@@ -240,6 +242,30 @@ Unter <strong>„Einstellungen → KI-Funktionen"</strong> kannst du einzeln dea
 <p><strong>Zweck:</strong> Ferngesteuerte Konfiguration (Feature-Flags, Texte).<br>
 <strong>Erhobene Daten:</strong> Anonymisierte App-Instanz-ID, App-Version.<br>
 <strong>Rechtsgrundlage:</strong> Berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO).</p>
+
+<h3>5.9a Feedback-Funktion (Gmail-API, optional)</h3>
+<p>Unter <strong>„Einstellungen → Feedback senden"</strong> kannst du uns deine Rückmeldung zur App schicken.</p>
+<p><strong>Technischer Ablauf:</strong></p>
+<ol>
+  <li>Du gibst deinen Feedback-Text in der App ein und bestätigst das Senden.</li>
+  <li>Die App bittet dich einmalig um die Google-Berechtigung <strong>„E-Mails senden"</strong> (Gmail-API-Scope <code>gmail.send</code>).</li>
+  <li>Nach deiner Zustimmung werden <strong>zwei E-Mails über dein eigenes Google-Konto</strong> via Gmail-API versendet:
+    <ul>
+      <li><strong>E-Mail 1 an uns:</strong> <code>dev.app.support@gmail.com</code> — enthält deinen Feedback-Text und deine Google-Konto-E-Mail-Adresse als Absender.</li>
+      <li><strong>E-Mail 2 an dich selbst:</strong> Bestätigung mit dem Feedback-Text, damit du eine Kopie für dich hast.</li>
+    </ul>
+  </li>
+</ol>
+<p><strong>Wer verarbeitet was:</strong></p>
+<ul>
+  <li><strong>Google</strong> (Gmail-Infrastruktur): transportiert beide E-Mails über seine Mailserver.</li>
+  <li><strong>Wir</strong> (Frank Barwandt, Kontaktadresse siehe Abschnitt 1): empfangen die erste E-Mail in unserem <code>dev.app.support@gmail.com</code>-Postfach und speichern sie zur Bearbeitung deiner Rückmeldung.</li>
+</ul>
+<p><strong>Erhobene/übermittelte Daten:</strong> Google-Konto-E-Mail-Adresse (Absender), Feedback-Text, Zeitstempel der Versendung.<br>
+<strong>Rechtsgrundlage:</strong> Einwilligung (Art. 6 Abs. 1 lit. a DSGVO) durch aktives Versenden; berechtigtes Interesse an App-Verbesserung (Art. 6 Abs. 1 lit. f DSGVO) für die Bearbeitung.<br>
+<strong>Speicherdauer bei uns:</strong> Maximal 24 Monate in unserem Postfach, danach Löschung. Auf Wunsch jederzeit früher löschbar.<br>
+<strong>Widerruf der Gmail-Berechtigung:</strong> Unter <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a> kannst du „Best Journal" entfernen. Nach Entzug funktioniert die Feedback-Funktion nicht mehr — die App bleibt sonst uneingeschränkt nutzbar.<br>
+<strong>Alternative:</strong> Du kannst uns auch direkt per E-Mail erreichen unter <a href="mailto:dev.app.support@gmail.com">dev.app.support@gmail.com</a> — ohne App-Berechtigungen.</p>
 
 <h3>5.10 Google Play In-App Review API</h3>
 <p><strong>Zweck:</strong> Anzeige des Bewertungsdialogs im Google Play Store.<br>
@@ -338,6 +364,7 @@ Unter <strong>„Einstellungen → KI-Funktionen"</strong> kannst du einzeln dea
   <tr><td>Firebase Analytics</td><td>14 Monate (Google-Standard)</td></tr>
   <tr><td>Firebase Authentication</td><td>Bis zur Löschung des Kontos</td></tr>
   <tr><td>Kaufdaten</td><td>Gesetzliche Aufbewahrungsfristen (bis zu 10 Jahre, § 147 AO)</td></tr>
+  <tr><td>Feedback-E-Mails</td><td>Maximal 24 Monate in unserem Postfach, danach Löschung</td></tr>
   <tr><td>Serverlogs (IP-Adressen)</td><td>Maximal 30 Tage</td></tr>
 </table>
 
