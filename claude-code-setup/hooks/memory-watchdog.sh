@@ -50,19 +50,36 @@ fi
 
 miss_count=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
 
-# Alert after 3+ consecutive misses (was 5, briefly 2 — 3 avoids false positives
-# from parallel coder/researcher agents while still catching failures 40% faster)
-if [ "$miss_count" -ge 3 ]; then
-    ts=$(date +"%Y-%m-%d %H:%M")
-    entry="### [$ts] Agent: Write-Back nicht erfolgt ($miss_count aufeinanderfolgende Agents) — Status: AUTO-LOGGED"
-    insert_whiteboard_entry "Offene Fehler & Probleme" "$entry" || true
-    # Reset counter after logging
-    echo "0" > "$COUNTER_FILE"
-    hook_log "$miss_count consecutive misses — logged to MEMORY.md"
-    echo "MEMORY_WATCHDOG: $miss_count consecutive misses — logged to MEMORY.md"
+# Alert after 5+ consecutive misses (was 3 — raised to 5 to reduce log-spam when
+# parallel coder/researcher agents run in batches without needing to write MEMORY.md)
+# Deduplication: skip logging if the last entry of this kind is less than 60 minutes old.
+LAST_LOG_FILE="/tmp/claude-writeback-last-log.txt"
+if [ "$miss_count" -ge 5 ]; then
+    should_log=true
+    if [ -f "$LAST_LOG_FILE" ]; then
+        last_log_ts=$(cat "$LAST_LOG_FILE" 2>/dev/null || echo 0)
+        now_ts=$(date +%s)
+        diff_sec=$((now_ts - last_log_ts))
+        if [ "$diff_sec" -lt 3600 ]; then
+            should_log=false
+        fi
+    fi
+    if [ "$should_log" = true ]; then
+        ts=$(date +"%Y-%m-%d %H:%M")
+        entry="### [$ts] Agent: Write-Back nicht erfolgt ($miss_count aufeinanderfolgende Agents) — Status: AUTO-LOGGED"
+        insert_whiteboard_entry "Offene Fehler & Probleme" "$entry" 2>/dev/null || true
+        date +%s > "$LAST_LOG_FILE" 2>/dev/null || true
+        hook_log "$miss_count consecutive misses — logged to MEMORY.md"
+        echo "MEMORY_WATCHDOG: $miss_count consecutive misses — logged to MEMORY.md"
+    else
+        hook_log "$miss_count consecutive misses — dedup (last log <60min)"
+        echo "MEMORY_WATCHDOG: $miss_count consecutive misses — dedup (last log <60min)"
+    fi
+    # Reset counter whether logged or deduped
+    echo "0" > "$COUNTER_FILE" 2>/dev/null || true
 else
-    hook_log "no write-back ($miss_count/3 misses)"
-    echo "MEMORY_WATCHDOG: No write-back ($miss_count/3 misses)"
+    hook_log "no write-back ($miss_count/5 misses)"
+    echo "MEMORY_WATCHDOG: No write-back ($miss_count/5 misses)"
 fi
 
 exit 0

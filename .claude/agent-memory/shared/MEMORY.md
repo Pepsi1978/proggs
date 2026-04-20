@@ -93,9 +93,9 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-12 16:51 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
 ### 2026-04-12 16:58 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
 ### 2026-04-12 17:34 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
-### 2026-04-13 13:50 — StopFailure: API/Rate-Limit Error — Status: OFFEN
-### 2026-04-15 16:42 — StopFailure: API/Rate-Limit Error — Status: OFFEN
-### 2026-04-15 19:24 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+### 2026-04-13 13:50 — StopFailure: API/Rate-Limit Error — Status: ARCHIVIERT (macOS rate-limit, transient — 2026-04-20)
+### 2026-04-15 16:42 — StopFailure: API/Rate-Limit Error — Status: ARCHIVIERT (macOS rate-limit, transient — 2026-04-20)
+### 2026-04-15 19:24 — StopFailure: API/Rate-Limit Error — Status: ARCHIVIERT (macOS rate-limit, transient — 2026-04-20)
 ### 2026-04-15 20:59 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-04-15 22:10 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-04-15 22:17 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
@@ -110,7 +110,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-17 07:41 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
 ### [2026-04-17 07:51] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 ### 2026-04-18 07:58 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-18 07:58 — Hook: auto-sync.sh — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: OFFEN
+### 2026-04-18 07:58 — Hook: auto-sync.sh — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: ARCHIVIERT (Einzelvorfall 2026-04-18, kein Rezidiv — 2026-04-20)
 ### 2026-04-18 08:07 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
 ### 2026-04-18 08:08 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
 ### 2026-04-18 08:11 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
@@ -119,7 +119,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-18 08:24 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
 ### 2026-04-18 08:37 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
 
-### 2026-04-18 08:59 — StopFailure: API/Rate-Limit Error — Status: OFFEN
+### 2026-04-18 08:59 — StopFailure: API/Rate-Limit Error — Status: ARCHIVIERT (macOS rate-limit, transient — 2026-04-20)
 **Quelle:** Hook: StopFailure (command-type, no API dependency)
 **Symptom:** Session-Turn endete durch API-Fehler
 **Details:** {"session_id":"b6155c28-60d1-4e2d-a1fa-a8e4aa724d85","transcript_path":"/Users/frank/.claude/projects/-Users-frank-proggs/b6155c28-60d1-4e2d-a1fa-a8e4aa724d85.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"rate_limit","last_assistant_message":"You've hit your limit · resets 10am (Europe/Berlin)"}
@@ -135,6 +135,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 ### 2026-04-20 09:42 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
 ### 2026-04-20 09:42 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
 ### 2026-04-20 09:52 — Hook: bash-guard.ps1 — Befehl blockiert: (?i)DROP\s+TABLE
+### 2026-04-20 09:58 — Hook: session-guard.ps1 — Auto-Reparatur: model hinzugefuegt: opus[1m] (war: nicht gesetzt) — Status: AUTO-GEFIXT
 ---
 
 ## Systemzustand (aktuell)

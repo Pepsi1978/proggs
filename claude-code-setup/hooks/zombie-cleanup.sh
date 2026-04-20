@@ -45,4 +45,24 @@ if [[ "$ZOMBIE_COUNT" -gt 0 ]]; then
     echo "Zombie-Cleanup: $ZOMBIE_COUNT zombie processes killed"
 fi
 
+# --- Plugin-Cache Cleanup (Poka-Yoke Stufe 3) ---
+# Remove temp_git_* directories from plugin installs older than 7 days.
+# Root cause: plugin installer creates temp_git_<ts>_<hash> clones but does not clean up on failure.
+# Without cleanup these accumulate silently. Non-destructive: only touches temp_git_* names.
+PLUGIN_CACHE="$HOME/.claude/plugins/cache"
+if [[ -d "$PLUGIN_CACHE" ]]; then
+    REMOVED=0
+    # -mindepth 1 -maxdepth 1 restricts to direct children only
+    # -mtime +7 = last modified more than 7 days ago
+    while IFS= read -r dir; do
+        [[ -z "$dir" ]] && continue
+        if rm -rf "$dir" 2>/dev/null; then
+            REMOVED=$((REMOVED + 1))
+        fi
+    done < <(find "$PLUGIN_CACHE" -mindepth 1 -maxdepth 1 -type d -name 'temp_git_*' -mtime +7 2>/dev/null)
+    if [[ "$REMOVED" -gt 0 ]]; then
+        echo "Plugin-Cache-Cleanup: $REMOVED stale temp_git_* directories removed"
+    fi
+fi
+
 exit 0

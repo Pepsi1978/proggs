@@ -59,19 +59,33 @@ try {
     $missCount++
     Set-Content -Path $counterFile -Value "$missCount" -Force
 
-    # Alert after 3+ consecutive misses (was 5, briefly 2 — 3 avoids false positives
-    # from parallel coder/researcher agents while still catching failures 40% faster)
-    if ($missCount -ge 3) {
+    # Alert after 5+ consecutive misses (was 3 — raised to 5 to reduce log-spam on Windows
+    # when parallel coder/researcher agents run in batches without needing to write MEMORY.md)
+    # Deduplication: skip logging if the last entry of this kind is less than 60 minutes old.
+    if ($missCount -ge 5) {
         $date = Get-Date -Format "yyyy-MM-dd HH:mm"
-        # Use section-based insertion (Add-Content to file-end is FORBIDDEN)
-        # Standard format: ### date — Hook: name — message
-        $entry = "### $date — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt ($missCount aufeinanderfolgende Agents) — Status: AUTO-LOGGED"
-        Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry
-        # Reset counter after logging
-        Set-Content -Path $counterFile -Value "0" -Force
-        Write-Output "MEMORY_WATCHDOG: $missCount consecutive misses — logged to MEMORY.md"
+        $lastLogFile = Join-Path $env:TEMP "claude-writeback-last-log.txt"
+        $shouldLog = $true
+        if (Test-Path $lastLogFile) {
+            try {
+                $lastLog = [DateTime](Get-Content $lastLogFile -ErrorAction SilentlyContinue)
+                if ((Get-Date) - $lastLog -lt (New-TimeSpan -Minutes 60)) {
+                    $shouldLog = $false
+                }
+            } catch { }
+        }
+        if ($shouldLog) {
+            $entry = "### $date — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt ($missCount aufeinanderfolgende Agents) — Status: AUTO-LOGGED"
+            try { Insert-WhiteboardEntry -Section "Offene Fehler & Probleme" -Entry $entry } catch { }
+            try { Set-Content -Path $lastLogFile -Value (Get-Date).ToString('o') -Force -ErrorAction Stop } catch { }
+            Write-Output "MEMORY_WATCHDOG: $missCount consecutive misses — logged to MEMORY.md"
+        } else {
+            Write-Output "MEMORY_WATCHDOG: $missCount consecutive misses — dedup (last log <60min)"
+        }
+        # Reset counter whether logged or deduped
+        try { Set-Content -Path $counterFile -Value "0" -Force -ErrorAction Stop } catch { }
     } else {
-        Write-Output "MEMORY_WATCHDOG: No write-back ($missCount/3 misses)"
+        Write-Output "MEMORY_WATCHDOG: No write-back ($missCount/5 misses)"
     }
 } finally {
     # Always release the lock — even on crash or early exit

@@ -58,4 +58,29 @@ try {
     # Never block session start
 }
 
+# --- Plugin-Cache Cleanup (Poka-Yoke Stufe 3) ---
+# Remove temp_git_* directories from plugin installs older than 7 days.
+# Root cause: plugin installer creates temp_git_<ts>_<hash> clones but does not clean up on failure.
+# Without cleanup these accumulate silently. Non-destructive: only touches temp_git_* names.
+try {
+    $pluginCache = Join-Path $env:USERPROFILE ".claude\plugins\cache"
+    if (Test-Path $pluginCache) {
+        $cutoff = (Get-Date).AddDays(-7)
+        $stale = Get-ChildItem -Path $pluginCache -Directory -Filter "temp_git_*" -ErrorAction SilentlyContinue |
+                 Where-Object { $_.LastWriteTime -lt $cutoff }
+        $removed = 0
+        foreach ($d in $stale) {
+            try {
+                Remove-Item -Path $d.FullName -Recurse -Force -ErrorAction Stop
+                $removed++
+            } catch { }
+        }
+        if ($removed -gt 0) {
+            Write-Host "Plugin-Cache-Cleanup: $removed stale temp_git_* directories removed"
+        }
+    }
+} catch {
+    # Never block session start
+}
+
 exit 0
