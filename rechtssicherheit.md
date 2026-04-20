@@ -1,7 +1,8 @@
 # rechtssicherheit.md — Wissensbasis fuer Android-App-Rechtsprüfungen
 
-**Letzte Recherche:** 2026-04-20
+**Letzte Recherche:** 2026-04-20 (v2 — nach Fixes, 5 parallele Researcher)
 **Naechste Pflicht-Pruefung:** 2026-07-20 (+90 Tage)
+**Status BestJournalAndroid:** Bedingt release-faehig (1 KRIT-Rest + 2 HOCH)
 
 ---
 
@@ -178,6 +179,7 @@ Praesenz im Zielland sind praktisch nahezu null.
 |-------|-----|-------------|----------|------|---------|
 | 2026-04-20 | BestJournalAndroid | Release-faehig nach Fixes | 0 | 1 | TTDSG zu TDDDG (behoben), Zweit-Kontakt (behoben), DSA-Kontaktstelle (behoben) |
 | 2026-04-20 | BestJournalAndroid (Tiefpruefung) | **NICHT release-faehig** | **5** | **6** | K1 ODR-Links (aktive Abmahnwelle), K2 LegalDocumentScreen laedt falschen Pfad, K3 PRIVACY.en fehlt, K4 Consent nicht granular, K5 Laenderspezifische Rights-Sections. Vollbericht: `BestJournalAndroid/docs/audit/RECHTSSICHERHEIT-AUDIT-2026-04-20.md` |
+| 2026-04-20 | BestJournalAndroid (v2 nach Fixes) | **BEDINGT release-faehig** | **1** | **2** | K1-K5 + H6 + M1 + M2 gefixt. Rest: NK1 Gemini+Edge-TTS Gate fehlt, NH1 Sprachdeckung (TR/KR/SA/BR/VN/CN ausschliessen), NH2 CCPA-2026 Opt-Out-Bestaetigung. Vollbericht: `BestJournalAndroid/docs/audit/RECHTSSICHERHEIT-AUDIT-2026-04-20-v2.md` |
 
 ## Neue Hotspots-Erkenntnisse 2026-04-20
 
@@ -220,6 +222,97 @@ Formular angegeben werden. Reicht: github.io-Seite mit Mailto-Formular.
 Neue Clarifications: alle wesentlichen Abo-Konditionen (Preis, Laufzeit, auto-
 Verlaengerung) muessen VOR dem Kauf sichtbar sein. Play Billing haelt sich daran
 automatisch, aber App-eigene Premium-Screens pruefen.
+
+---
+
+## Neue Erkenntnisse v2-Recherche (2026-04-20)
+
+### CCPA 2026-Novelle seit 01.01.2026 — Opt-Out-Bestaetigungspflicht
+
+Nach einem Opt-Out muss die App eine Bestaetigung zeigen ("Opt-Out Request Honored").
+Privacy Policy MUSS aus den App-Settings verlinkt sein. GPC-Signale muessen anerkannt werden.
+Quelle: consentmo.com/ccpa-2026-update-opt-out-confirmation-mandatory, gtlaw.com 2026.
+
+### California SB 243 Companion Chatbot Law seit 01.01.2026
+
+KI mit natuerlicher Sprachschnittstelle die soziale/emotionale Beduerfnisse adressiert muss
+beim ersten Kontakt als KI gekennzeichnet sein. Ein KI-Tagebuchassistent fallt moeglicherweise
+darunter — zusaetzlich zu Art. 50 AI Act (EU) separaten US-Disclaimer einbauen.
+Quelle: troutmanprivacy.com SB 243 (01/2026).
+
+### Quebec Loi 96 Franzoesisch-Pflicht fuer Apps seit 06/2025
+
+Loi 96 (Charter of the French Language Reform) ist seit Juni 2025 voll in Kraft. Websites und
+mobile Apps die Quebec-Nutzer ansprechen MUESSEN auf Franzoesisch verfuegbar sein. Die
+franzoesische Version muss in Qualitaet und Zugaenglichkeit gleichwertig zur englischen sein.
+**Praktische Konsequenz:** Quebec separat ausschliessen oder vollstaendige fr-rCA-Version bereitstellen.
+Quelle: DLA Piper 2025-06.
+
+### Vietnam PDPL 2026 seit 01.01.2026 in Kraft
+
+Das neue Personal Data Protection Law (verabschiedet 26.06.2025) ersetzt Decree 13/2023. Neu:
+- Extraterritoriale Anwendung
+- Data Localization fuer "wichtige" personenbezogene Daten (Kategorienliste in Folge-Verordnungen)
+- Cross-Border-Transfers mit expliziter Einwilligung + Behoerdenmeldung
+- Strafen: bis 5% Jahresumsatz fuer unzulaessige Cross-Border-Transfers
+Quelle: EY Vietnam 2025-07, Mori Hamada.
+
+### UK DUAA 2025 — Royal Assent 06/2025
+
+Data (Use and Access) Act 2025 aendert Teile von UK-GDPR und ePrivacy. Flexiblere DPIA,
+keine DPO-Pflicht fuer alle Unternehmen. ICO erwartet "just-in-time"-Datenschutzinformationen
+bei App-Datenerfassung. TCF v2.3 + Google Consent Mode v2 sind 2026-Standards.
+Quelle: Secure Privacy 2026, ICO 2024.
+
+### Korea PIPA 10% Umsatz-Bussgelder ab 11.09.2026 + CEO-Haftung ab 03/2026
+
+Neue Schwelle: bis zu 10% des Gesamtumsatzes bei vorsaetzlichen/grobfahrlaessigen
+Wiederholungsverloetzungen oder 10+ Mio. Betroffenen. Praezedenzfaelle 2024-2025:
+AliExpress (englischsprachige Loeschseiten), KakaoPay+Apple, Temu, Golfzon (5,47 Mio USD).
+Quelle: Hunton Privacy Blog, Loeb Koreas PIPA Dec 2025.
+
+### IDO Verband Aktivlegitimation entzogen — LG Wiesbaden 10/2025
+
+IDO ist nicht mehr in der qualifizierten Verbandsliste nach § 8 Abs. 3 Nr. 2 UWG. Abmahnungen
+abwehrbar, bestehende Unterlassungserklaerungen kuendbar. Entlastung fuer Solo-Entwickler.
+Quelle: cornea-franz.de, wbs.legal, exali.de.
+
+### BGH Google Fonts EuGH-Vorlage 08/2025
+
+BGH VI ZR 258/24 legt EuGH drei Kernfragen vor (IP-Adressen als PII, Rechtsmissbrauch bei
+provoziertem Verstoss, Schadensersatz). Massenabmahnungen 2025/2026 derzeit ausgesetzt bis
+EuGH-Entscheidung. Altfaelle aus 2022-Welle verjaehrten 31.12.2025.
+Quelle: IT-Recht Kanzlei, dr-bahr.com.
+
+### Meta-Tracking-Schadensersatz 3000-5000 EUR
+
+LG Luebeck 27.11.2025: 5.000 EUR pro Fall. LG Jena 02.03.2026: 3.000 EUR pro Klaeger.
+BestJournal betrifft das nicht (kein Meta-SDK eingebunden). Aber Warnung fuer andere Apps.
+Quelle: sbs-legal.de, mueller.legal, ra-plutte.de.
+
+### BGH Facebook Scraping VI ZR 10/24 (18.11.2024)
+
+Richtwert 100 EUR pro Fall fuer immateriellen Schaden schon bei blossem kurzzeitigem
+Datenkontrollverlust — kein Nachweis von konkretem Schaden noetig.
+Quelle: BRAK-Pressemitteilung.
+
+### Google Play Data Safety Service Provider vs. Third Party
+
+Ein Dritter gilt nur dann als Service Provider (kein "shared"), wenn DPA/DPIA existiert die
+Training auf Nutzerdaten verbietet. Ohne DPA = shared = Pflichtangabe. OpenAI/Anthropic haben
+Enterprise-DPAs verfuegbar.
+
+### California SB 942 AI Transparency Act — verzoegert bis 02.08.2026
+
+Gilt nur fuer "Covered Provider" > 1 Mio monatliche CA-Nutzer. Pflicht: kostenloses
+Content-Detection-Tool + Wasserzeichen-Option. Fuer Solo-Entwickler irrelevant bis zu diesem Scale.
+
+### Australien Privacy Act 2024-Reform + Statutory Privacy Tort seit 06/2025
+
+Klagbares Recht fuer Einzelpersonen bei Privacy-Verletzungen. MFA + Verschluesselung verstaerkt
+unter APP 11. Children's Online Privacy Code bis 12/2026 erwartet. Bussgelder bis 50 Mio AUD
+oder 30% des Umsatzes im Tatzeitraum.
+Quelle: Norton Rose Fulbright 2024, Recording Law 2026.
 
 ---
 
