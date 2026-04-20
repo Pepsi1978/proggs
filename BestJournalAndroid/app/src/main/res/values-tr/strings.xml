@@ -1065,4 +1065,68 @@
     <string name="profile_style_coach">\n- Motive edici bir hedef yoldaşı üslubunda yaz, kişisel hedeflerdeki ilerlemeyi göster ve devam etmeye cesaret ver</string>
     <string name="profile_style_custom">\n- Geri bakışı kullanıcının şu kişisel odağıyla yaz: \"%1$s\"</string>
 
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">Gizlilik ve onay</string>
+    <string name="consent_intro">Günlüğün kişisel bir alandır ve buna saygı duyuyoruz. Best Journal verilerini nasıl işlediğini burada şeffaf bir şekilde görebilirsin.</string>
+    <string name="consent_card1_title">Yerel depolama</string>
+    <string name="consent_card1_body">Girişlerin cihazında kalır.</string>
+    <string name="consent_card2_title">Yapay zekâ özellikleri (ABD)</string>
+    <string name="consent_card2_body">Opsiyonel olarak metinler Google Gemini\'ye, ses kayıtları Groq\'a ve sesli okuma metinleri Microsoft Edge\'e ABD\'de gönderilir (EU-US Data Privacy Framework + standart sözleşme hükümleri).</string>
+    <string name="consent_card3_title">Anonim istatistikler</string>
+    <string name="consent_card3_body">Firebase Analytics, isteğe bağlı, ayarlardan istediğin zaman değiştirebilirsin.</string>
+    <string name="consent_links_header">Yasal metinlerimiz:</string>
+    <string name="consent_accept_all">Kabul et ve başla</string>
+    <string name="consent_disable_stats">İstatistikleri devre dışı bırak ve devam et</string>
+    <string name="consent_confirmation">«Kabul et ve başla»ya dokunarak gizlilik politikasını, kullanım koşullarını ve yasal bilgileri okuduğunu ve açıklanan veri işleme faaliyetlerini kabul ettiğini onaylarsın. Kararını istediğin zaman ayarlardan değiştirebilirsin.</string>
+
+    <string name="privacy_gate_groq_title">Ses kaydı Groq\'a gönderilsin mi?</string>
+    <string name="privacy_gate_groq_body">Bulut transkripsiyonu için ses kaydın şifrelenmiş olarak Groq, Inc.\'e (Mountain View, ABD) gönderilir ve orada metne dönüştürülür. Ses dosyası işlendikten sonra silinir ve eğitim için kullanılmaz.\n\nAlternatif: cihazda yerel transkripsiyonu kullan (çevrimdışı, veri aktarımı yok), Ayarlar → Yapay zekâ bölümünden ayarlanabilir.</string>
+    <string name="privacy_gate_groq_accept">Kabul et ve gönder</string>
+    <string name="privacy_gate_groq_local">Yerel olarak transkribe et</string>
+
+    <string name="privacy_gate_gemini_title">Metin Google Gemini\'ye gönderilsin mi?</string>
+    <string name="privacy_gate_gemini_body">Yapay zekâ özellikleri (pano, özetler, retrospektifler, metin iyileştirme) için girişlerinin parçaları şifrelenmiş olarak Google Gemini\'ye (Firebase AI, ABD) gönderilir. Yasal dayanak: EU-US Data Privacy Framework + standart sözleşme hükümleri. Talepler işlendikten sonra silinir ve eğitim için kullanılmaz.</string>
+    <string name="privacy_gate_gemini_accept">Kabul et ve gönder</string>
+    <string name="privacy_gate_gemini_cancel">İptal</string>
+
+    <string name="privacy_gate_tts_title">Metin Microsoft\'a gönderilsin mi?</string>
+    <string name="privacy_gate_tts_body">Sesli okuma için metin şifrelenmiş olarak Microsoft Bing Speech\'e (ABD) gönderilir ve ses olarak geri döner. Yasal dayanak: EU-US Data Privacy Framework + standart sözleşme hükümleri.\n\nAlternatif: Android\'in yerleşik çevrimdışı sesli okuma özelliğini kullan.</string>
+    <string name="privacy_gate_tts_accept">Kabul et ve oku</string>
+    <string name="privacy_gate_tts_cancel">İptal</string>
+
+    <string name="settings_privacy_header">Gizlilik</string>
+    <string name="settings_analytics_title">Anonim istatistikler</string>
+    <string name="settings_analytics_subtitle">Hata analizi ve ürün iyileştirme için Firebase Analytics</string>
+
+    <string name="settings_delete_account_title">Hesabı ve verileri sil</string>
+    <string name="settings_delete_account_subtitle">Tüm yerel verileri, Google hesabını ve Drive yedeğini geri dönüşü olmadan siler</string>
+    <string name="settings_delete_account_confirm_title">Hesap kalıcı olarak silinsin mi?</string>
+    <string name="settings_delete_account_confirm_body">Bu işlem geri alınamaz ve şunları siler:\n\n• Tüm yerel günlük girişleri, fotoğraflar ve videolar\n• Firebase hesabın\n• Uygulamanın Google Drive yedeği\n\nUygulama, yeni bir kurulum gibi yeniden başlar.</string>
+    <string name="settings_delete_account_cancel">İptal</string>
+    <string name="settings_delete_account_confirm">Evet, her şeyi sil</string>
+
+    <string name="settings_report_ai_title">Yapay zekâ yanıtını bildir</string>
+    <string name="settings_report_ai_subtitle">Uygunsuz veya hatalı yapay zekâ çıktısı</string>
+    <string name="settings_report_ai_confirm_title">Destek ekibine e-posta açılsın mı?</string>
+    <string name="settings_report_ai_confirm_body">E-posta uygulaman dev.app.support@gmail.com için hazırlanmış bir mesajla açılır. Göndermeden önce açıklamayı tamamlayabilirsin. İş günlerinde 24 saat içinde yanıt veririz.\n\nŞunları buradan bildir: panodan, özetlerden, retrospektiflerden veya metin iyileştirmeden kaynaklanan uygunsuz, saldırgan, yanlış veya yanıltıcı yapay zekâ çıktıları.</string>
+    <string name="settings_report_ai_confirm">Bildirim oluştur</string>
+    <string name="settings_report_ai_cancel">İptal</string>
+    <string name="settings_report_ai_no_email">E-posta uygulaması bulunamadı. Bildirimi dev.app.support@gmail.com adresine gönder.</string>
+    <string name="settings_report_ai_subject">Best Journal: uygunsuz yapay zekâ yanıtı</string>
+    <string name="settings_report_ai_body">Merhaba,\n\nBest Journal\'da uygunsuz veya hatalı bir yapay zekâ yanıtını bildirmek istiyorum.\n\nSorunun açıklaması:\n[Doldurulacak]\n\nBağlam (hangi özellik, hangi giriş):\n[Doldurulacak]\n\nTeşekkürler.</string>
+
+    <string name="settings_revoke_title">Cayma hakkı</string>
+    <string name="settings_revoke_subtitle">Premium satın alma</string>
+    <string name="settings_revoke_confirm_title">Destek ekibine e-posta açılsın mı?</string>
+    <string name="settings_revoke_confirm_body">E-posta uygulaman dev.app.support@gmail.com için hazırlanmış bir mesajla açılır. İş günlerinde 24 saat içinde yanıt veririz.\n\nCayma hakkına ilişkin tam bilgiyi (yürürlükteki tüketici koruma mevzuatı) kullanım koşullarında (§ 16) bulabilirsin. Abonelikler için ayrıca Google Play → Abonelikler üzerinden iptal et.</string>
+    <string name="settings_revoke_cancel">İptal</string>
+    <string name="settings_revoke_confirm">Cayma oluştur</string>
+    <string name="settings_revoke_no_email">E-posta uygulaması bulunamadı. Cayma bildirimini dev.app.support@gmail.com adresine gönder.</string>
+    <string name="settings_revoke_email_subject">Best Journal Premium sözleşme cayması</string>
+    <string name="settings_revoke_email_body">Merhaba,\n\nişbu yazıyla Best Journal\'ın Premium özelliklerine ilişkin sözleşmeden caydığımı bildiririm.\n\nSipariş tarihi: [doldurulacak]\nGoogle hesap e-postası: [gönderenden farklıysa doldurulacak]\nAd Soyad: [doldurulacak]\n\nTarih: [bugün]</string>
+
+
 </resources>

@@ -1065,4 +1065,68 @@
     <string name="profile_style_coach">\n- Schrijf in de stijl van een motiverende doelbegeleider, laat voortgang bij persoonlijke doelen zien en moedig aan door te gaan</string>
     <string name="profile_style_custom">\n- Schrijf de terugblik met de volgende persoonlijke focus van de gebruiker: \"%1$s\"</string>
 
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">Privacy en toestemming</string>
+    <string name="consent_intro">Je dagboek is een persoonlijke ruimte, en dat respecteren we. Hier zie je transparant hoe Best Journal met je gegevens omgaat.</string>
+    <string name="consent_card1_title">Lokale opslag</string>
+    <string name="consent_card1_body">Je invoer blijft op je apparaat.</string>
+    <string name="consent_card2_title">AI-functies (VS)</string>
+    <string name="consent_card2_body">Optioneel worden teksten naar Google Gemini, spraakopnames naar Groq en voorleesteksten naar Microsoft Edge in de VS gestuurd (EU-US Data Privacy Framework + standaard contractbepalingen).</string>
+    <string name="consent_card3_title">Anonieme statistieken</string>
+    <string name="consent_card3_body">Firebase Analytics, optioneel, op elk moment aan te passen in de instellingen.</string>
+    <string name="consent_links_header">Onze juridische teksten:</string>
+    <string name="consent_accept_all">Akkoord en beginnen</string>
+    <string name="consent_disable_stats">Statistieken uitschakelen en doorgaan</string>
+    <string name="consent_confirmation">Door op \"Akkoord en beginnen\" te tikken bevestig je dat je het privacybeleid, de gebruiksvoorwaarden en het impressum hebt gelezen en akkoord gaat met de beschreven gegevensverwerking. Je kunt je beslissing op elk moment aanpassen in de instellingen.</string>
+
+    <string name="privacy_gate_groq_title">Spraakopname naar Groq sturen?</string>
+    <string name="privacy_gate_groq_body">Voor cloud-transcriptie wordt je spraakopname versleuteld naar Groq, Inc. (Mountain View, VS) verzonden en daar naar tekst omgezet. Het audiobestand wordt na verwerking verwijderd en niet voor training gebruikt.\n\nAlternatief: gebruik lokale transcriptie op het apparaat (offline, geen gegevensoverdracht), instelbaar bij Instellingen → AI.</string>
+    <string name="privacy_gate_groq_accept">Akkoord en verzenden</string>
+    <string name="privacy_gate_groq_local">In plaats daarvan lokaal transcriberen</string>
+
+    <string name="privacy_gate_gemini_title">Tekst naar Google Gemini sturen?</string>
+    <string name="privacy_gate_gemini_body">Voor AI-functies (dashboard, samenvattingen, terugblikken, tekstverbetering) worden fragmenten van je invoer versleuteld naar Google Gemini (Firebase AI, VS) gestuurd. Rechtsgrond: EU-US Data Privacy Framework + standaard contractbepalingen. Verzoeken worden na verwerking verwijderd en niet voor training gebruikt.</string>
+    <string name="privacy_gate_gemini_accept">Akkoord en verzenden</string>
+    <string name="privacy_gate_gemini_cancel">Annuleren</string>
+
+    <string name="privacy_gate_tts_title">Tekst naar Microsoft sturen?</string>
+    <string name="privacy_gate_tts_body">Voor voorlezen wordt de tekst versleuteld naar Microsoft Bing Speech (VS) verzonden en als audio teruggegeven. Rechtsgrond: EU-US Data Privacy Framework + standaard contractbepalingen.\n\nAlternatief: gebruik de ingebouwde offline-TTS van Android.</string>
+    <string name="privacy_gate_tts_accept">Akkoord en voorlezen</string>
+    <string name="privacy_gate_tts_cancel">Annuleren</string>
+
+    <string name="settings_privacy_header">Privacy</string>
+    <string name="settings_analytics_title">Anonieme statistieken</string>
+    <string name="settings_analytics_subtitle">Firebase Analytics voor foutanalyse en productverbetering</string>
+
+    <string name="settings_delete_account_title">Account en gegevens verwijderen</string>
+    <string name="settings_delete_account_subtitle">Verwijdert onomkeerbaar alle lokale gegevens, je Google-account en de Drive-back-up</string>
+    <string name="settings_delete_account_confirm_title">Account definitief verwijderen?</string>
+    <string name="settings_delete_account_confirm_body">Deze actie is onomkeerbaar en verwijdert:\n\n• Alle lokale dagboekinvoer, foto\'s en video\'s\n• Je Firebase-account\n• De Google Drive-back-up van de app\n\nDe app start daarna opnieuw op als verse installatie.</string>
+    <string name="settings_delete_account_cancel">Annuleren</string>
+    <string name="settings_delete_account_confirm">Ja, alles verwijderen</string>
+
+    <string name="settings_report_ai_title">AI-antwoord melden</string>
+    <string name="settings_report_ai_subtitle">Ongepaste of foutieve AI-uitvoer</string>
+    <string name="settings_report_ai_confirm_title">E-mail naar support openen?</string>
+    <string name="settings_report_ai_confirm_body">Je e-mailapp opent met een voorbereid bericht aan dev.app.support@gmail.com. Je kunt de beschrijving aanvullen voordat je verzendt. We reageren binnen 24 uur op werkdagen.\n\nMeld hier: ongepaste, aanstootgevende, onjuiste of misleidende AI-uitvoer uit het dashboard, samenvattingen, terugblikken of tekstverbetering.</string>
+    <string name="settings_report_ai_confirm">Melding aanmaken</string>
+    <string name="settings_report_ai_cancel">Annuleren</string>
+    <string name="settings_report_ai_no_email">Geen e-mailapp gevonden. Stuur de melding naar dev.app.support@gmail.com.</string>
+    <string name="settings_report_ai_subject">Best Journal: ongepast AI-antwoord</string>
+    <string name="settings_report_ai_body">Hallo,\n\nik wil een ongepast of foutief AI-antwoord in Best Journal melden.\n\nBeschrijving van het probleem:\n[In te vullen]\n\nContext (welke functie, welke invoer):\n[In te vullen]\n\nBedankt.</string>
+
+    <string name="settings_revoke_title">Herroeping</string>
+    <string name="settings_revoke_subtitle">Premium-aankoop</string>
+    <string name="settings_revoke_confirm_title">E-mail naar support openen?</string>
+    <string name="settings_revoke_confirm_body">Je e-mailapp opent met een voorbereid bericht aan dev.app.support@gmail.com. We reageren binnen 24 uur op werkdagen.\n\nVolledige informatie over het herroepingsrecht (EU-richtlijn 2011/83) vind je in de gebruiksvoorwaarden (§ 16). Zeg abonnementen ook op via Google Play → Abonnementen.</string>
+    <string name="settings_revoke_cancel">Annuleren</string>
+    <string name="settings_revoke_confirm">Herroeping aanmaken</string>
+    <string name="settings_revoke_no_email">Geen e-mailapp gevonden. Stuur de herroeping naar dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_email_subject">Herroeping Premium-contract Best Journal</string>
+    <string name="settings_revoke_email_body">Hallo,\n\nhierbij herroep ik het door mij afgesloten contract over de Premium-functies van Best Journal.\n\nBesteld op: [in te vullen]\nGoogle-account-e-mail: [in te vullen indien afwijkend]\nNaam: [in te vullen]\n\nDatum: [vandaag]</string>
+
+
 </resources>

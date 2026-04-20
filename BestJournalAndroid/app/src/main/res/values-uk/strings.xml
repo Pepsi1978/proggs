@@ -1073,4 +1073,68 @@
     <string name="profile_style_coach">\n- Пиши в стилі мотивуючого супутника цілей, показуй поступ у особистих цілях і підбадьорюй продовжувати</string>
     <string name="profile_style_custom">\n- Напиши підсумки з такою особистою темою користувача: \"%1$s\"</string>
 
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         CONSENT SCREEN + PRIVACY GATES + PRIVACY SECTION (April 2026)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="consent_title">Конфіденційність і згода</string>
+    <string name="consent_intro">Ваш щоденник — це особистий простір, і ми це поважаємо. Тут Ви прозоро бачите, як Best Journal поводиться з Вашими даними.</string>
+    <string name="consent_card1_title">Локальне зберігання</string>
+    <string name="consent_card1_body">Ваші записи залишаються на Вашому пристрої.</string>
+    <string name="consent_card2_title">Функції ШІ (США)</string>
+    <string name="consent_card2_body">За бажанням тексти надсилаються до Google Gemini, голосові записи — до Groq, а тексти для озвучення — до Microsoft Edge у США (EU-US Data Privacy Framework + стандартні договірні положення).</string>
+    <string name="consent_card3_title">Анонімна статистика</string>
+    <string name="consent_card3_body">Firebase Analytics, за бажанням, можна змінити будь-коли в налаштуваннях.</string>
+    <string name="consent_links_header">Наші правові документи:</string>
+    <string name="consent_accept_all">Погоджуюсь і починаю</string>
+    <string name="consent_disable_stats">Вимкнути статистику та продовжити</string>
+    <string name="consent_confirmation">Натискаючи «Погоджуюсь і починаю», Ви підтверджуєте, що ознайомилися з політикою конфіденційності, умовами використання та правовою інформацією, і погоджуєтесь з описаною обробкою даних. Ви можете змінити своє рішення будь-коли в налаштуваннях.</string>
+
+    <string name="privacy_gate_groq_title">Надіслати голосовий запис до Groq?</string>
+    <string name="privacy_gate_groq_body">Для хмарної транскрипції Ваш голосовий запис надсилається зашифрованим до Groq, Inc. (Маунтін-В\'ю, США) і перетворюється там на текст. Аудіофайл видаляється після обробки і не використовується для навчання.\n\nАльтернатива: скористайтесь локальною транскрипцією на пристрої (офлайн, без передачі даних), доступна в Налаштування → ШІ.</string>
+    <string name="privacy_gate_groq_accept">Погоджуюсь і надсилаю</string>
+    <string name="privacy_gate_groq_local">Транскрибувати локально</string>
+
+    <string name="privacy_gate_gemini_title">Надіслати текст до Google Gemini?</string>
+    <string name="privacy_gate_gemini_body">Для функцій ШІ (панель, підсумки, ретроспективи, покращення тексту) фрагменти Ваших записів надсилаються зашифрованими до Google Gemini (Firebase AI, США). Правова підстава: EU-US Data Privacy Framework + стандартні договірні положення. Запити видаляються після обробки і не використовуються для навчання.</string>
+    <string name="privacy_gate_gemini_accept">Погоджуюсь і надсилаю</string>
+    <string name="privacy_gate_gemini_cancel">Скасувати</string>
+
+    <string name="privacy_gate_tts_title">Надіслати текст до Microsoft?</string>
+    <string name="privacy_gate_tts_body">Для озвучення текст надсилається зашифрованим до Microsoft Bing Speech (США) і повертається як аудіо. Правова підстава: EU-US Data Privacy Framework + стандартні договірні положення.\n\nАльтернатива: скористайтесь вбудованим офлайн-синтезатором мовлення Android.</string>
+    <string name="privacy_gate_tts_accept">Погоджуюсь і озвучити</string>
+    <string name="privacy_gate_tts_cancel">Скасувати</string>
+
+    <string name="settings_privacy_header">Конфіденційність</string>
+    <string name="settings_analytics_title">Анонімна статистика</string>
+    <string name="settings_analytics_subtitle">Firebase Analytics для аналізу помилок і покращення продукту</string>
+
+    <string name="settings_delete_account_title">Видалити обліковий запис і дані</string>
+    <string name="settings_delete_account_subtitle">Безповоротно видаляє всі локальні дані, Ваш обліковий запис Google та резервну копію Drive</string>
+    <string name="settings_delete_account_confirm_title">Видалити обліковий запис остаточно?</string>
+    <string name="settings_delete_account_confirm_body">Ця дія незворотна і видаляє:\n\n• Усі локальні записи, фото й відео\n• Ваш обліковий запис Firebase\n• Резервну копію застосунку в Google Drive\n\nПісля цього застосунок запуститься як нова інсталяція.</string>
+    <string name="settings_delete_account_cancel">Скасувати</string>
+    <string name="settings_delete_account_confirm">Так, видалити все</string>
+
+    <string name="settings_report_ai_title">Поскаржитись на відповідь ШІ</string>
+    <string name="settings_report_ai_subtitle">Недоречна або помилкова відповідь ШІ</string>
+    <string name="settings_report_ai_confirm_title">Відкрити електронний лист до підтримки?</string>
+    <string name="settings_report_ai_confirm_body">Ваш поштовий застосунок відкриється з підготовленим листом до dev.app.support@gmail.com. Ви можете доповнити опис перед відправленням. Ми відповідаємо протягом 24 годин у робочі дні.\n\nПовідомте тут про: недоречні, образливі, неправдиві або оманливі відповіді ШІ з панелі, підсумків, ретроспектив або покращення тексту.</string>
+    <string name="settings_report_ai_confirm">Створити скаргу</string>
+    <string name="settings_report_ai_cancel">Скасувати</string>
+    <string name="settings_report_ai_no_email">Поштовий застосунок не знайдено. Надішліть скаргу на dev.app.support@gmail.com.</string>
+    <string name="settings_report_ai_subject">Best Journal: недоречна відповідь ШІ</string>
+    <string name="settings_report_ai_body">Доброго дня,\n\nхочу повідомити про недоречну або помилкову відповідь ШІ в Best Journal.\n\nОпис проблеми:\n[Заповнити]\n\nКонтекст (яка функція, який ввід):\n[Заповнити]\n\nДякую.</string>
+
+    <string name="settings_revoke_title">Відкликання</string>
+    <string name="settings_revoke_subtitle">Купівля Premium</string>
+    <string name="settings_revoke_confirm_title">Відкрити електронний лист до підтримки?</string>
+    <string name="settings_revoke_confirm_body">Ваш поштовий застосунок відкриється з підготовленим листом до dev.app.support@gmail.com. Ми відповідаємо протягом 24 годин у робочі дні.\n\nПовна інформація про право на відкликання (Директива ЄС 2011/83) міститься в умовах використання (§ 16). Підписки додатково скасовуйте через Google Play → Підписки.</string>
+    <string name="settings_revoke_cancel">Скасувати</string>
+    <string name="settings_revoke_confirm">Створити відкликання</string>
+    <string name="settings_revoke_no_email">Поштовий застосунок не знайдено. Надішліть відкликання на dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_email_subject">Відкликання контракту Premium Best Journal</string>
+    <string name="settings_revoke_email_body">Доброго дня,\n\nцим повідомляю про відкликання укладеного мною договору щодо функцій Premium у Best Journal.\n\nЗамовлено: [заповнити]\nE-mail облікового запису Google: [заповнити, якщо відрізняється від відправника]\nІм\'я: [заповнити]\n\nДата: [сьогодні]</string>
+
+
 </resources>
