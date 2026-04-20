@@ -97,6 +97,36 @@ Wird von /self-improve Stufe 0b und Stufe 5C gelesen und ausgewertet.
 - **Beschreibung:** Neues Schwierigkeits-Level ueber SWE-Bench Verified. Testet langfristige Softwareentwicklung. Claude fuehrt mit 45-48%.
 - **Status:** EVALUIERT — Als Benchmark-Referenz behalten
 
+### [2026-04-20] KGCompass — Repository-Wissensgraph fuer Bug-Lokalisierung (arXiv 2503.21710)
+- **Quelle:** arxiv.org/abs/2503.21710
+- **Beschreibung:** Baut Wissensgraph ueber Repository (Issues, PRs, Dateien, Funktionen) und nutzt Multi-Hop-Traversierung fuer Bug-Lokalisierung. 58.3% SWE-bench Lite, 89.7% der Lokalisierungen ohne expliziten Ortshinweis in der Fehlermeldung. Kosten: 0.20 USD pro Reparatur.
+- **Status:** UMZUSETZEN — Im debugger-Agent als Pre-Debug-Recherche-Schritt integrieren (1 Tag)
+
+### [2026-04-20] When-To-Verify — Optimale Compute-Aufteilung (arXiv 2504.01005, COLM 2026)
+- **Quelle:** arxiv.org/abs/2504.01005
+- **Beschreibung:** Bei festem Token-Budget: Mehr Loesungen generieren (Self-Consistency) vs. weniger Loesungen aber intensiver verifizieren. Bei schwierigen Aufgaben zahlt sich Verifikation deutlich mehr aus als weitere Loesungsversuche.
+- **Status:** UMZUSETZEN — Heuristik im quality-gate Agent (30 Minuten)
+
+### [2026-04-20] Cursor 3 — Design Mode + Cloud Agents
+- **Quelle:** cursor.com/blog/cursor-3 (02.04.2026)
+- **Beschreibung:** Design Mode fuer visuelle UI-Inspektion statt Selektoren raten. Cloud Agents via Slack/GitHub. Uebertragbar: Pre-UI-Fix Screenshot + adb uiautomator dump als strukturierte Inspektion im ui-polisher.
+- **Status:** GEPLANT — Screenshot-Pre-Flight fuer ui-polisher Agent (1 Std)
+
+### [2026-04-20] Swarm-SuperBrain — Alignment-Schicht fuer Agent-Schwarm (arXiv 2509.00510)
+- **Quelle:** arxiv.org/html/2509.00510v1
+- **Beschreibung:** Subclass Brains unter Swarm Alignment Layer koordiniert. Emergente Intelligenz aus lokalen Agent-Interaktionen ohne zentrale Kontrolle. Biologisch inspiriert (Ameisen, Bienen).
+- **Status:** EVALUIERT — Grundlage fuer den offenen Debate-Loop (Stronger-MAS) im Whiteboard
+
+### [2026-04-20] Fault-Localization-Context > Modellgroesse (arXiv 2604.05481)
+- **Quelle:** arxiv.org/abs/2604.05481
+- **Beschreibung:** Empirische Studie April 2026: Kontext-Qualitaet hat groesseren Einfluss auf Repair als Modell-Auswahl. Call-Stack + letzter gruener Test + betroffene Funktion als Pflicht-Kontext-Block.
+- **Status:** UMZUSETZEN — Prompt-Erweiterung im debugger-Agent (30 Min)
+
+### [2026-04-20] Cursor 3 Cost-Aware 3-Tier Routing
+- **Quelle:** R3 Parallel-Orchestration Recherche
+- **Beschreibung:** Aufgaben-Klassifikation simple (Haiku) / medium (Sonnet) / hard (Opus). Datenbasiert statt statisch. Laut Forschung: 58% Kostenersparnis bei kaum Qualitaetsverlust.
+- **Status:** EVALUIERT — Erweiterung der Speed-Tiers in CLAUDE.md (Prompt-Anpassung in coder-Agent)
+
 ## Abgeleitete Intelligenz-Vorschlaege
 <!-- Konkrete Aktionen die aus der Forschung abgeleitet wurden -->
 
@@ -124,3 +154,6 @@ Kette: Evolution-Analyst bemerkt 9-Tage-Stagnation → R8 findet Cursor-Pattern 
 
 ### [2026-04-02] Meta-Intelligence-Kollaps → Bug-Fix → Fehlerklasse eliminiert
 Kette: Evolution-Analyst findet Meta-Intelligence-Abfall (50%→10%) → hyperagent-stop.sh Code inspiziert → Stale-Goal-Bug gefunden (exit 0 statt goal="") → Fix + Schwellen angepasst → Alle Sessions bekommen metacognitiven Prompt.
+
+### [2026-04-20] SubagentStop-Endlosschleife → Input-Validation-Regel → Fehlerklasse eliminiert
+Kette: Evolution-Analyst identifiziert strukturelle Schwaeche "fehlende Hook-Input-Validation" → R7 Focus-Researcher findet exakte Doku zu `agent_id`-Feld → 4 Hooks gefixt (memory-watchdog.ps1/.sh + writeback-enforcer.ps1/.sh mit agent_id Guard) → Neue Regel `hook-input-validation.md` dokumentiert das Muster fuer ALLE zukuenftigen Hooks → Poka-Yoke Stufe 3: Der Phantom-Fire-Fehler kann konzeptionell nicht mehr auftreten wenn die Regel eingehalten wird.

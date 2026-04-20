@@ -14,7 +14,12 @@
       "Bash(cp \"C:/Users/barwa/.claude/hooks/subagent-stop-summarizer.ps1\" \"C:/Users/barwa/proggs/claude-code-setup/hooks/subagent-stop-summarizer.ps1\")",
       "Bash(cp \"C:/Users/barwa/.claude/hooks/subagent-stop-summarizer.sh\" \"C:/Users/barwa/proggs/claude-code-setup/hooks/subagent-stop-summarizer.sh\")",
       "Bash(cp /Users/frank/.claude/skills/übersetzung/SKILL.md claude-code-setup/skills/übersetzung/SKILL.md)",
-      "Read(//Users/frank/.claude/skills/übersetzung/**)"
+      "Read(//Users/frank/.claude/skills/übersetzung/**)",
+      "Bash(cp ~/.claude/hooks/memory-watchdog.ps1 ~/proggs/claude-code-setup/hooks/memory-watchdog.ps1)",
+      "Bash(cp ~/.claude/hooks/memory-watchdog.sh ~/proggs/claude-code-setup/hooks/memory-watchdog.sh)",
+      "Bash(cp ~/.claude/hooks/writeback-enforcer.ps1 ~/proggs/claude-code-setup/hooks/writeback-enforcer.ps1)",
+      "Bash(cp ~/.claude/hooks/writeback-enforcer.sh ~/proggs/claude-code-setup/hooks/writeback-enforcer.sh)",
+      "Bash(cp ~/.claude/rules/hook-input-validation.md ~/proggs/claude-code-setup/rules/hook-input-validation.md)"
     ]
   }
 }

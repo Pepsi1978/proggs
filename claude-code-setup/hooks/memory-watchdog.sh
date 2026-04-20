@@ -7,6 +7,20 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/hook-log.sh"
 source "$SCRIPT_DIR/whiteboard-insert.sh"
 
+# Input guard — only run on REAL SubagentStop events that have an agent_id.
+# Prevents the 2026-04-15/18 endless-loop bug (50+ spurious fires per session).
+# NEVER dot-sourced — exit 0 is safe.
+stdin_input=$(cat)
+if [ -z "$stdin_input" ]; then exit 0; fi
+agent_id=$(echo "$stdin_input" | python3 -c "import sys,json
+try:
+    d=json.load(sys.stdin)
+    print(d.get('agent_id','') or '')
+except Exception:
+    print('')
+" 2>/dev/null)
+if [ -z "$agent_id" ]; then exit 0; fi
+
 MEMORY_FILE="$HOME/proggs/.claude/agent-memory/shared/MEMORY.md"
 COUNTER_FILE="/tmp/claude-writeback-counter.txt"
 

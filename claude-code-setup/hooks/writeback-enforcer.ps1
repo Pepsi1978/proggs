@@ -11,6 +11,22 @@
 
 . "$PSScriptRoot/hook-log.ps1"
 
+# Input guard — only run on REAL SubagentStop events that have an agent_id.
+# Prevents the 2026-04-15/18 endless-loop bug. NEVER dot-sourced — exit 0 is safe.
+try {
+    $stdin = [Console]::In.ReadToEnd()
+    if ($stdin -and $stdin.Trim() -ne "") {
+        $parsed = $stdin | ConvertFrom-Json -ErrorAction Stop
+        if (-not $parsed.agent_id -or [string]::IsNullOrWhiteSpace($parsed.agent_id)) {
+            exit 0
+        }
+    } else {
+        exit 0
+    }
+} catch {
+    exit 0
+}
+
 $sentinelDir = $env:TEMP
 $sentinelPattern = "agent-writeback-*.json"
 # Write to the REPO copy (~/proggs/.claude/) — authoritative whiteboard

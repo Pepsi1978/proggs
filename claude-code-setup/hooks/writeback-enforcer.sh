@@ -8,6 +8,19 @@
 # Source hook-log.sh for structured logging
 source "$(dirname "$0")/hook-log.sh"
 
+# Input guard — only run on REAL SubagentStop events that have an agent_id.
+# Prevents the 2026-04-15/18 endless-loop bug. NEVER dot-sourced — exit 0 is safe.
+stdin_input=$(cat)
+if [ -z "$stdin_input" ]; then exit 0; fi
+agent_id=$(echo "$stdin_input" | python3 -c "import sys,json
+try:
+    d=json.load(sys.stdin)
+    print(d.get('agent_id','') or '')
+except Exception:
+    print('')
+" 2>/dev/null)
+if [ -z "$agent_id" ]; then exit 0; fi
+
 SENTINEL_DIR="${TMPDIR:-/tmp}"
 MEMORY_FILE="$HOME/proggs/.claude/agent-memory/shared/MEMORY.md"
 LOCK_FILE="/tmp/claude-whiteboard.lock"

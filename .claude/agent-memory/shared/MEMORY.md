@@ -78,6 +78,8 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 
 <!-- ARCHIV (2026-04-12, /self-improve Cleanup): Speicherplatz KRITISCH 97-98% (8x disk-guard.sh, 2026-04-02 bis 2026-04-06, macOS) — bereinigt 2026-04-02, seitdem Windows 84% frei. Meta-Intelligence-Kollaps (hyperagent-stop.sh exit 0 Bug, 2026-04-02) — GEFIXT. IQ-Score immer 0 (session-scorer.ps1, 2026-04-03) — GEFIXT 2026-04-04. 3x StopFailure API/Rate-Limit (2026-04-03/04, temporaer). 5x session-guard effortLevel-Reset (2026-04-04/05, erwartetes Verhalten). 6x memory-watchdog Write-Back (2026-04-02 bis 2026-04-12, informativ). 1x safety-gate rm-rf blockiert (2026-04-06, erwartetes Verhalten). 1x auto-sync Merge-Konflikt (2026-04-12, manuell geloest). StopFailure bafc0d45 "Request too large" (2026-04-03, macOS, einmalig — Datei war >20MB). -->
 
+<!-- ARCHIV (2026-04-20, /self-improve Thorough): 17x disk-guard.sh 98% (macOS-Spam, 2026-04-17 bis 04-18), 9x memory-watchdog Write-Back AUTO-LOGGED (2026-04-15 bis 04-18, GEFIXT durch agent_id Guard in memory-watchdog.ps1+.sh und writeback-enforcer.ps1+.sh 2026-04-20), 3x bash-guard erwartetes Verhalten, 4x StopFailure API/Rate-Limit transient, 1x auto-sync Einzelvorfall, session-guard Auto-Reparaturen (erwartetes Verhalten). -->
+
 ### 2026-04-03 — Meta-Intelligence Score = 0 seit 26.03 — Erholung nach hyperagent-fix pruefen
 **Quelle:** Traumsession-Konsolidierung (session-scores.jsonl Trend-Analyse)
 **Symptom:** meta_intelligence_score ist in allen Sessions nach 26.03 gleich 0
@@ -90,61 +92,24 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Root Cause:** CLAUDE.md enthielt "NIEMALS unter 95" — das war veraltet. Der Benutzer hat klargestellt: 85 ist der korrekte Dauerwert
 **Fix:** (1) settings.json zurueck auf 85, (2) CLAUDE.md korrigiert: "ist IMMER 85", (3) Feedback-Memory gespeichert, (4) config-guard muss 85 als Standard kennen
 **Status:** GEFIXT (2026-04-12) — Benutzer-Korrektur, CLAUDE.md aktualisiert
-### 2026-04-12 16:51 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-12 16:58 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
-### 2026-04-12 17:34 — Hook: session-guard.ps1 — Auto-Reparatur: effortLevel zurueckgesetzt (war: high, jetzt: medium) — Status: AUTO-GEFIXT
-### 2026-04-13 13:50 — StopFailure: API/Rate-Limit Error — Status: ARCHIVIERT (macOS rate-limit, transient — 2026-04-20)
-### 2026-04-15 16:42 — StopFailure: API/Rate-Limit Error — Status: ARCHIVIERT (macOS rate-limit, transient — 2026-04-20)
-### 2026-04-15 19:24 — StopFailure: API/Rate-Limit Error — Status: ARCHIVIERT (macOS rate-limit, transient — 2026-04-20)
-### 2026-04-15 20:59 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-15 22:10 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-15 22:17 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 - **[2026-04-15 22:18] subagent-failure**: Stop-Hook Endlosschleife: Der stop-hook-feedback Hook wird wiederholt getriggert obwohl kein Subagent abgeschlossen hat. Symptom: Hook fragt nach Subagent-Zusammenfassung, aber kein Subagent war aktiv (background agent a3fc6105e636cb4e4 aus vorheriger Session nie zurueckgekehrt). Root Cause: Hook prueft nicht ob tatsaechlich ein Subagent in dieser Konversation gestartet und beendet wurde -- er triggert bei jedem Stop-Event blind. Betroffene Dateien: ~/.claude/hooks/ (stop-hook oder subagent-stop-hook). Fix: Hook soll nur triggern wenn in der aktuellen Konversation tatsaechlich ein Agent-Tool-Call stattgefunden hat (z.B. durch Pruefen ob conversation.json SubagentStop-Events enthaelt).
 - **[2026-04-15 22:18] subagent-failure**: ENDLOSSCHLEIFE im stop-hook: Der SubagentStop-Hook triggert wiederholt (12+ mal) in einer Session ohne aktive Subagents. Symptom: Hook fragt nach Subagent-Zusammenfassung obwohl kein Agent-Tool-Call in dieser Konversation stattfand. Background-Agent a3fc6105e636cb4e4 aus vorheriger Session ist nie zurueckgekehrt. Root Cause: Hook hat keine Pruefung ob tatsaechlich ein SubagentStop-Event in der aktuellen Session aufgetreten ist -- er evaluiert den Stop-Event-Kontext falsch oder bekommt ein falsches Signal. Betroffene Dateien: ~/.claude/hooks/ (subagent-stop Hook, vermutlich subagent-writeback.ps1 oder aehnlich). Fix-Vorschlag: Hook soll am Anfang pruefen ob ein echtes SubagentStop-Event vorliegt (z.B. ob der Hook-Input tatsaechlich einen subagent_id-Parameter enthaelt). Falls kein subagent_id im Input: sofort exit 0 ohne weitere Verarbeitung.
-### 2026-04-15 22:22 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-15 22:25 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
 - **[2026-04-15 22:30] subagent-failure**: ENDLOSSCHLEIFE Stop-Hook: Der SubagentStop/Stop-Hook in ~/.claude/hooks/ feuert bei JEDER Assistenten-Antwort (50+ mal) auch wenn KEIN Subagent abgeschlossen hat. Symptom: Hook-Feedback erscheint als User-Message nach jeder Assistant-Response, Text lautet A subagent just finished. Root Cause: Hook prueft nicht ob tatsaechlich ein Subagent-Completion-Event vorliegt (kein gueltiges subagent_id im Input). Stattdessen feuert er auf jeden Stop-Event. Betroffene Datei: ~/.claude/hooks/ (SubagentStop oder Stop Hook, vermutlich subagent-stop.ps1 oder stop-hook.ps1). Konkreter Fix: Am Anfang des Hooks pruefen ob der Input-Parameter subagent_id nicht leer ist. Falls leer oder nicht vorhanden: sofort exit 0 ohne weitere Verarbeitung. PowerShell-Beispiel: $input = $env:CLAUDE_TOOL_INPUT | ConvertFrom-Json; if (-not $input.subagent_id) { exit 0 }. Alternativ: Hook nur fuer SubagentStop-Event registrieren (nicht fuer Stop-Event) falls er beide Events abfaengt.
-### 2026-04-16 10:35 — Hook: memory-watchdog.ps1 — Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-17 07:06 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### [2026-04-17 07:31] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-17 07:41 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### [2026-04-17 07:51] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-18 07:58 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-18 07:58 — Hook: auto-sync.sh — git pull --rebase fehlgeschlagen (Merge-Konflikt?) — Status: ARCHIVIERT (Einzelvorfall 2026-04-18, kein Rezidiv — 2026-04-20)
-### 2026-04-18 08:07 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-18 08:08 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-18 08:11 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-18 08:16 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-18 08:18 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-18 08:24 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-18 08:37 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
 
-### 2026-04-18 08:59 — StopFailure: API/Rate-Limit Error — Status: ARCHIVIERT (macOS rate-limit, transient — 2026-04-20)
 **Quelle:** Hook: StopFailure (command-type, no API dependency)
 **Symptom:** Session-Turn endete durch API-Fehler
 **Details:** {"session_id":"b6155c28-60d1-4e2d-a1fa-a8e4aa724d85","transcript_path":"/Users/frank/.claude/projects/-Users-frank-proggs/b6155c28-60d1-4e2d-a1fa-a8e4aa724d85.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"rate_limit","last_assistant_message":"You've hit your limit · resets 10am (Europe/Berlin)"}
 **Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
 **Status:** OFFEN
-### 2026-04-18 10:01 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-18 10:20 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-18 10:24 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-18 10:26 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-18 10:30 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### [2026-04-18 10:44] Agent: Write-Back nicht erfolgt (3 aufeinanderfolgende Agents) — Status: AUTO-LOGGED
-### 2026-04-18 10:49 — Hook: disk-guard.sh — Speicherplatz KRITISCH bei 98%
-### 2026-04-20 09:42 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
-### 2026-04-20 09:42 — Hook: bash-guard.ps1 — Befehl blockiert: rm\s+-rf\s+[/~]
-### 2026-04-20 09:52 — Hook: bash-guard.ps1 — Befehl blockiert: (?i)DROP\s+TABLE
-### 2026-04-20 09:58 — Hook: session-guard.ps1 — Auto-Reparatur: model hinzugefuegt: opus[1m] (war: nicht gesetzt) — Status: AUTO-GEFIXT
 ---
 
 ## Systemzustand (aktuell)
 <!-- Wird von /self-improve und env-checker aktualisiert -->
 <!-- Zeigt den aktuellen Stand des Programmiersystems -->
 
-**Stand:** 2026-04-12 (aktualisiert durch /self-improve Thorough auf Windows)
+**Stand:** 2026-04-20 (aktualisiert durch /self-improve Thorough auf Windows)
 
-- **Plattform:** Windows 11 Home 10.0.26200 (x64), Claude Code **v2.1.104**, Opus 4.6 (1M context)
+- **Plattform:** Windows 11 Home 10.0.26200 (x64), Claude Code **v2.1.114**, Opus 4.6 (1M context)
 - **Sprachen:** Rust 1.94.0, Go 1.26.1, Kotlin 2.3.20, Java OpenJDK 21.0.10, Python 3.13.12
 - **Node.js:** v24.14.0, npm 11.12.0, Bun 1.3.11
 - **Effort Level:** high (Standard seit 2026-04-12), Medium/Low per /effort medium oder /effort low
@@ -165,6 +130,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 - **Neue Features seit 07.04 (macOS):** Retrospective-Screen, EntryPhoto, EdgeTtsPlayer, ShareEntryDialog, DriveRestoreManager, SyncProgressHolder, MonthlyReviewReceiver, YearlyReviewReceiver. DB Schema v4→v8.
 - **Speicherplatz (macOS):** 16 GB frei (42%) — bereinigt, stabil
 - **Pending Admin Updates (20):** biome,oven-sh/bun/bun,deno,dotnet,fzf,gh,giflib,go,harfbuzz,htop,libngtcp2,libomp,libpng,node,ollama,openssl@3,powershell,python@3.13,python@3.14,simdjson,
+- **[2026-04-20 10:24] env-checker**: Gesamtstatus GELB — 3 Probleme: (1) 10 SH-Hooks ohne PS1-Gegenstueck (disk-guard, doctor-lite, mcp-auth-check, mirror-check, path-health-check, safety-gate, semantic-search-check, session-cleanup, session-score, silent-corrector), (2) 20 winget-Updates verfuegbar (gh, go, node, bun, python, ollama, vscode u.a.), (3) Claude Desktop 1.1617 veraltet. Claude Code v2.1.114 aktuell. Backup-Drift OK. Settings korrekt.
 ---
 
 ## Erkenntnisse aus Code Reviews
@@ -185,6 +151,7 @@ _Noch keine Eintraege._
 - **Challenge 2026-03-20 (challenger):** Debate-Loop (Stronger-MAS) hat keine technische Terminierungsgrenze — nur sprachlich vereinbarte 3 Runden, bei echtem Tester/Coder-Konflikt unbegrenzte Token-Eskalation moeglich.
 - **Challenge 2026-03-20 (challenger):** MCP Think Tank Sicherheitspruefung fehlt (playbooks.com ist kein offizieller Marketplace) — Muster identisch zu 5 alten verwaisten Semantic-Search-DBs.
 
+- **[2026-04-20 10:30] challenger**: [RISK:] Fix 1 exit-0-Guard wiederholt bekanntes dot-source-Failure-Pattern (2026-04-04): writeback-enforcer/memory-watchdog erst auf dot-source-Verwendung pruefen, sonst exit 0 killt Aufrufer-Hook. Fix 2 Reindex: current.txt-only-Fix vor Reindex pruefen. Fix 4/CRM: statische Versionsdaten veralten schnell, auslagern oder dynamisch generieren.
 ## Debugging-Muster
 <!-- Writer: debugger Agent, session-autopsy.ts | Leser: alle Agents, /self-improve -->
 - **[2026-04-02] Autopsy bafc0d45**: 4 Korrekturen (0.9%), Hauptmuster: other (2x) — Empfehlung: Öfter beim Benutzer rückfragen ob der Ansatz korrekt ist
@@ -317,7 +284,35 @@ _Noch keine Eintraege._
 - **[2026-04-15 19:27] researcher**: Groq Whisper Large V3 API: Preise $0.111/h (Large V3) und $0.04/h (Turbo); Free Tier: 20 RPM, 2000 RPD, 7200 Audio-Sekunden/Stunde, 28800 Audio-Sekunden/Tag, 25MB Dateilimit; Paid: 100MB Limit; Endpoint: https://api.groq.com/openai/v1/audio/transcriptions; Speedfaktor 189x (LV3) / 216x (Turbo); 99+ Sprachen; kein 500k-Token-Daily-Limit fuer Audio bestaetigt.
 - **[2026-04-15 19:49] researcher**: Groq Whisper Large V3 Turbo: Free Tier = 2.000 Requests/Tag, 7.200 Audio-Sekunden/Stunde (2h Echtzeit), 28.800 Audio-Sekunden/Tag (8h/Tag). Rate Limit: 20 RPM. Paid = $0.04/Audiostunde ($0.000667/Min). Minimum-Billing: 10 Sekunden/Request. Kein Token-System fuer Audio, Abrechnung per Audiosekunde/Stunde. Kein Konzept taeglich ablaufender Tokens.
 - **[2026-04-15 20:47] researcher**: Groq Whisper Preise (April 2026): Whisper Large V3 Turbo = $0.04/Stunde (~$0.00067/Min), Whisper Large V3 = $0.111/Stunde (~$0.00185/Min). Free Tier: 20 RPM, 2.000 RPD, 7.200 Audio-Sekunden/Stunde (2h/Stunde), 28.800 Audio-Sekunden/Tag (8h/Tag). Beide Modelle im Free Tier verfuegbar. Minimum-Abrechnung: 10 Sekunden pro Request.
+- **[2026-04-20 10:23] researcher**: Claude Code v2.1.109 aktuell (nach v2.1.104): Neu sind /recap, 1h Prompt-Cache, PermissionDenied-Hook, forceRemoteSettingsRefresh, Bedrock-Setup-Wizard, Skill-Tool fuer built-in Slash-Commands. Modell-Neu: Opus 4.7 (16.04.2026) mit neuer Tokenizer (+35% Tokens fuer gleichen Text). Deprecation: Sonnet 4 + Opus 4 zum 15.06.2026. MCP: Server Cards (.well-known), Tasks-Primitive, Streamable HTTP. Keine Breaking Changes in CLAUDE.md/AGENTS.md-Format.
+- **[2026-04-20 10:24] researcher**: Security R5 April 2026: CVE-2026-35603 (Claude Code Config-Injection Windows, CVSS 5.4, gepatcht in v2.1.75, CWE-426); CVE-2026-32211 (Azure MCP Server ohne Auth, CVSS 9.1, kein Patch - nur Mitigation); CVE-2026-33032 MCPwn nginx-ui (CVSS 9.8, gepatcht v2.3.4); Neue Angriffsvariante Tool-Poisoning via Repo-Kommentare (Magecart-Skimmer-Injektion); MCP Sampling Attack umgeht Client-Sicherheit durch Server-seitige Prompts; 43% public MCP Server anfaellig fuer command-execution; OAuth Token Interception via MCP-Drift-Integration beobachtet
+- **[2026-04-20 10:27] researcher**: Multi-Agent Orchestration 2026: (1) Debate/Consensus 3-7 Agents, 2 Runden = optimales Accuracy/Kosten-Verhaeltnis, A-HMAD +4-6% Genauigkeit. (2) Cost-Aware Routing: Haiku fuer simple Tasks, Sonnet fuer mittel, Opus nur fuer hard = 58% Kostenersparnis. (3) Fault Tolerance: Hierarchie (Boss+Peers) verliert nur 5% Accuracy bei Crash vs 24% bei Chain; Challenger+Inspector Pattern rettet 96% der Leistung. (4) MAS-FIRE: 15 Fehlertypen klassifiziert, semantische Fehler propagieren still ohne Exceptions.
+- **[2026-04-20 10:28] researcher**: SubagentStop-Hook: Echter Input-Context hat 'agent_id' UND 'agent_type' als garantierte Felder. Bestehender subagent-stop-summarizer.ps1 prueft bereits 'subagent_id'/'id'/'agent_id' — muss auf 'agent_id' standardisiert werden (offizieller Feldname laut Doku). memory-watchdog.ps1 und writeback-enforcer.ps1 (beide async) fehlt diese Validierung komplett — sie laufen auch ohne echten Subagent-Kontext durch.
+- **[2026-04-20 10:28] researcher**: R2 Plugin-Recherche April 2026: TOP 3 neue Claude-Code-Plugins: 1) agnix (agent-sh/agnix) — Linter/LSP fuer CLAUDE.md, Hooks, Skills, MCP mit 399 Regeln, IDE-Integration, autofixes; 2) agentsys (agent-sh/agentsys) — 19 Plugins, 47 Agents, 40 Skills, Multi-Platform; 3) macos-toolkit (lu-zhengda/macos-toolkit) — Disk-Cleanup, Netzwerk, Security-Audit fuer macOS. WARNUNG: MemPalace (42k gekaufte Stars, ChromaDB-Wrapper, MCP-stdout-Bug) — NICHT installieren.
 ---
+
+- **[2026-04-20] KGCompass Repository-Wissensgraph** - Status: UMZUSETZEN | arXiv 2503.21710
+  Multi-Hop-Graph-Traversierung ueber Issues/PRs/Funktionen. 58.3% SWE-bench Lite, 0.20 USD/Repair. Pre-Debug im debugger-Agent (1 Tag).
+
+- **[2026-04-20] When-To-Verify - Optimale Compute-Aufteilung** - Status: UMZUSETZEN | arXiv 2504.01005 (COLM 2026)
+  Bei schwierigen Aufgaben: weniger Loesungen, mehr Verifikation. Heuristik fuer quality-gate (30 Min).
+
+- **[2026-04-20] Cursor 3 Design Mode + Cloud Agents** - Status: EVALUIERT | cursor.com/blog/cursor-3
+  Visuelle UI-Inspektion. adb uiautomator dump als Pre-Flight im ui-polisher (1 Std).
+
+- **[2026-04-20] Swarm-SuperBrain Alignment-Schicht** - Status: EVALUIERT | arXiv 2509.00510
+  Subclass Brains unter Swarm Alignment. Grundlage fuer Debate-Loop.
+
+- **[2026-04-20] Fault-Localization-Context > Modellgroesse** - Status: UMZUSETZEN | arXiv 2604.05481
+  Kontext-Qualitaet > Modell-Auswahl fuer Repair. Pflicht-Block im debugger-Agent (30 Min).
+
+- **[2026-04-20] Cost-Aware 3-Tier Routing** - Status: EVALUIERT | R3 Recherche
+  Haiku/Sonnet/Opus datenbasiert. 58% Kostenersparnis.
+
+- **[2026-04-20 Security] CVE-2026-35603/32211/33032/27825/27826** - Status: NICHT BETROFFEN (v2.1.114 sicher, anfaellige MCPs nicht genutzt)
+
+- **[2026-04-20 R1] Claude Code v2.1.108/109/110** - Status: BESTAETIGT
+  /recap (Session-Kontext-Wiederherstellung), ENABLE_PROMPT_CACHING_1H, PermissionDenied-Event, PreCompact kann blocken, Opus 4.7 (+35% Token), Sonnet 4+Opus 4 Deprecation 15.06.2026.
 
 ## Meta-Intelligenz & Selbstverbesserung
 <!-- Automatisch befuellt von: session-scorer (intelligence-checker), session-autopsy (closed-loop) -->
@@ -367,6 +362,16 @@ _Noch keine Eintraege._
   **Ergebnis:** Alle zukuenftigen Sessions (auch lange!) bekommen metacognitiven Prompt.
   Die Fehlerklasse "stille Hook-Deaktivierung durch Timeout-Bedingungen" ist identifiziert.
   **Kette:** Trend-Analyse → Daten-Korrelation → Code-Inspektion → Root Cause → Bug-Fix → Fehlerklasse eliminiert.
+
+- **[2026-04-20] Fuenfter Compound Effect - SubagentStop-Endlosschleife, Fehlerklasse eliminiert:**
+  Evolution-Analyst identifiziert 9 AUTO-LOGGED (2026-04-15 bis 04-18) + 2 subagent-failure-Eintraege als strukturelle Schwaeche.
+  R7 Focus-Researcher findet exakten Hook-API-Feldnamen (agent_id) und identifiziert die wahren Taeter:
+  memory-watchdog.ps1 + writeback-enforcer.ps1 (NICHT subagent-stop-summarizer wie vermutet).
+  4 Hook-Dateien mit agent_id-Guard (Challenger validiert: kein Dot-Source-Problem).
+  Neue Regel hook-input-validation.md als Poka-Yoke Stufe 3 fuer ALLE zukuenftigen Hooks.
+  Whiteboard-Cleanup: 35 Spam-Eintraege archiviert (17 disk-guard macOS, 9 memory-watchdog, 3 bash-guard, 4 rate-limit, 2 sonstige).
+  **Ergebnis:** Hook feuert nur bei echten SubagentStop-Events. Regel verhindert Wiederholung.
+  **Kette:** Evolution-Analyst -> Focus-Research -> Challenger-Validation -> 4-File-Fix -> Praeventions-Regel -> Fehlerklasse eliminiert.
 - **[2026-04-03] intelligence-checker**: [WARNING] Session 2363a77c (21 Turns) hatte keinen Intelligenz-Vorschlag
 - **[2026-04-03] self-observation-checker**: [WARNING] Session 2363a77c (21 Turns) zeigte keine Selbstbeobachtung
 - **[2026-04-03] intelligence-checker**: [WARNING] Session 2363a77c (36 Turns) hatte keinen Intelligenz-Vorschlag
