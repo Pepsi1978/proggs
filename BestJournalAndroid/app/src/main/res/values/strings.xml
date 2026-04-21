@@ -523,20 +523,20 @@
     <string name="consent_card3_body">Firebase Analytics, optional, jederzeit in den Einstellungen änderbar.</string>
 
     <!-- Pre-Usage Consent Dialog (K4 fix, TDDDG/EDSA Guideline 03/2023) -->
-    <string name="privacy_gate_groq_title">Sprachaufnahme an Groq senden?</string>
-    <string name="privacy_gate_groq_body">Für die Cloud-Transkription wird deine Sprachaufnahme verschlüsselt an Groq, Inc. (Mountain View, USA) gesendet und dort in Text umgewandelt. Die Audiodatei wird nach der Verarbeitung gelöscht und nicht zum Training verwendet.\n\nAlternative: Nutze die lokale On-Device-Transkription (offline, keine Datenübertragung) — einstellbar unter Einstellungen → KI.</string>
-    <string name="privacy_gate_groq_accept">Einverstanden, senden</string>
-    <string name="privacy_gate_groq_local">Stattdessen lokal transkribieren</string>
+    <string name="privacy_gate_groq_title">Cloud-Spracherkennung aktivieren</string>
+    <string name="privacy_gate_groq_body">Diese Funktion schickt deine Sprachaufnahme verschlüsselt an Groq (USA) und wandelt sie dort in Text um — schneller und genauer als die lokale Erkennung.\n\n✓ Aufnahme wird nach der Umwandlung sofort gelöscht\n✓ Kein KI-Training mit deinen Aufnahmen\n✓ Verschlüsselt nach EU-US Data Privacy Framework\n\nAlternative: Lokale Offline-Erkennung in den Einstellungen.</string>
+    <string name="privacy_gate_groq_accept">Aktivieren</string>
+    <string name="privacy_gate_groq_local">Lieber lokal</string>
 
-    <string name="privacy_gate_gemini_title">Text an Google Gemini senden?</string>
-    <string name="privacy_gate_gemini_body">Für KI-Funktionen (Dashboard, Zusammenfassungen, Rückblicke, Textverbesserung) werden Textausschnitte deiner Einträge verschlüsselt an Google Gemini (Firebase AI, USA) gesendet. Rechtsgrundlage: EU-US Data Privacy Framework + Standardvertragsklauseln. Anfragen werden nach Verarbeitung gelöscht und nicht zum Training verwendet.</string>
-    <string name="privacy_gate_gemini_accept">Einverstanden, senden</string>
-    <string name="privacy_gate_gemini_cancel">Abbrechen</string>
+    <string name="privacy_gate_gemini_title">KI-Funktion aktivieren</string>
+    <string name="privacy_gate_gemini_body">Schön, dass du die intelligenten Funktionen von Best Journal nutzen möchtest! Für Zusammenfassungen, Rückblicke, Dashboard-Einblicke und Textverbesserungen werden deine Texte verschlüsselt an Google Gemini gesendet.\n\n✓ Kein KI-Training mit deinen Daten\n✓ Anfragen werden sofort nach Verarbeitung gelöscht\n✓ Verschlüsselt nach EU-US Data Privacy Framework\n\nDu kannst das jederzeit in den Einstellungen ändern.</string>
+    <string name="privacy_gate_gemini_accept">Aktivieren</string>
+    <string name="privacy_gate_gemini_cancel">Später</string>
 
-    <string name="privacy_gate_tts_title">Text an Microsoft senden?</string>
-    <string name="privacy_gate_tts_body">Für die Vorlesefunktion wird der zu sprechende Text verschlüsselt an Microsoft Bing Speech (USA) gesendet und als Audio zurückgegeben. Rechtsgrundlage: EU-US Data Privacy Framework + Standardvertragsklauseln.\n\nAlternative: Nutze die Android-systemeigene Offline-TTS.</string>
-    <string name="privacy_gate_tts_accept">Einverstanden, vorlesen</string>
-    <string name="privacy_gate_tts_cancel">Abbrechen</string>
+    <string name="privacy_gate_tts_title">Premium-Stimmen aktivieren</string>
+    <string name="privacy_gate_tts_body">Mit den Premium-Stimmen klingt das Vorlesen natürlicher und angenehmer. Dein Text wird verschlüsselt an Microsoft gesendet und als Audio zurückgegeben.\n\n✓ Kein KI-Training mit deinen Texten\n✓ Verschlüsselt nach EU-US Data Privacy Framework\n\nAlternative: Android-Offline-Stimmen in den Einstellungen.</string>
+    <string name="privacy_gate_tts_accept">Aktivieren</string>
+    <string name="privacy_gate_tts_cancel">Später</string>
 
     <!-- Report AI Content (Google Play AI Policy 04/2024, in Settings → Datenschutz) -->
     <string name="settings_report_ai_title">KI-Antwort melden</string>
@@ -579,8 +579,8 @@
     <string name="consent_toggle_tts_body">Liest Einträge mit natürlicher Stimme vor. Sendet den Text an Microsoft (USA). Alternative: System-TTS offline.</string>
     <string name="consent_toggle_drive_title">Google Drive Backup</string>
     <string name="consent_toggle_drive_body">Sichert Einträge verschlüsselt in deinem eigenen Google Drive. Du behältst die volle Kontrolle — die Datei liegt in deinem Konto, nicht bei uns.</string>
-    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="consent_toggle_do_not_sell_body">Kalifornien-Opt-Out (CCPA/CPRA 2026). Wenn aktiv, werden alle optionalen Datenverarbeitungen deaktiviert — nur lokale Funktionen bleiben.</string>
+    <string name="consent_toggle_do_not_sell_title">Datenschutz-Wahlrechte (Kalifornien)</string>
+    <string name="consent_toggle_do_not_sell_body">Dieser Schalter ist nur für Einwohner des US-Bundesstaats Kalifornien gedacht. Das kalifornische Datenschutzgesetz (CCPA/CPRA) räumt Einwohnern ein Widerspruchsrecht ein. Bei Aktivierung werden alle optionalen Cloud-Funktionen (KI, Backup, Spracherkennung, Analyse) deaktiviert — nur lokale Funktionen bleiben aktiv.\n\nWohnst du außerhalb Kaliforniens, kannst du diesen Schalter ignorieren: Best Journal verkauft oder vermarktet deine Daten nirgendwo auf der Welt.</string>
     <string name="consent_btn_accept_all">Alle akzeptieren</string>
     <string name="consent_btn_save_selection">Meine Auswahl speichern</string>
     <string name="consent_btn_minimum_only">Alle ablehnen</string>
@@ -605,10 +605,10 @@
 
     <!-- CCPA 2026: Opt-Out confirmation + Do-Not-Sell (California) -->
     <string name="consent_optout_confirmation">Opt-Out gespeichert — Analytics ist deaktiviert.</string>
-    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="settings_ccpa_do_not_sell_subtitle">For California residents (CCPA/CPRA 2026). When active, all cloud AI features are disabled and no analytics are collected.</string>
-    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell aktiviert — alle Cloud-Dienste sind deaktiviert.</string>
-    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell deaktiviert.</string>
+    <string name="settings_ccpa_do_not_sell_title">Datenschutz-Wahlrechte (Kalifornien)</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">Nur relevant für Einwohner des US-Bundesstaats Kalifornien. Bei Aktivierung werden alle optionalen Cloud-Funktionen deaktiviert — nur lokale Features bleiben aktiv.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Kalifornien-Datenschutzoption aktiviert — alle Cloud-Dienste sind deaktiviert.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Kalifornien-Datenschutzoption deaktiviert.</string>
 
     <!-- Settings: Datenschutz-Abschnitt -->
     <string name="settings_privacy_header">Datenschutz</string>

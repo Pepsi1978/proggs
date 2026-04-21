@@ -1101,8 +1101,8 @@
     <string name="consent_toggle_tts_body">Reads entries with a natural voice. Sends the text to Microsoft (USA). Alternative: offline system TTS.</string>
     <string name="consent_toggle_drive_title">Google Drive backup</string>
     <string name="consent_toggle_drive_body">Saves entries encrypted to your own Google Drive. You retain full control — the file lives in your account, not with us.</string>
-    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="consent_toggle_do_not_sell_body">California opt-out (CCPA/CPRA 2026). When active, all optional data processing is disabled — only local features remain.</string>
+    <string name="consent_toggle_do_not_sell_title">Your California Privacy Choices</string>
+    <string name="consent_toggle_do_not_sell_body">This switch is only relevant if you live in the US state of California. California privacy law (CCPA/CPRA) gives residents the right to opt out of the sharing of their personal information. When active, all optional cloud features (AI, backup, transcription, analytics) are disabled — only local features remain active.\n\nIf you live outside California, you can safely ignore this switch: Best Journal does not sell or market your data anywhere in the world.</string>
     <string name="consent_btn_accept_all">Accept all</string>
     <string name="consent_btn_save_selection">Save my selection</string>
     <string name="consent_btn_minimum_only">Reject all</string>
@@ -1127,30 +1127,30 @@
 
     <!-- CCPA 2026: Opt-Out confirmation + Do-Not-Sell (California) -->
     <string name="consent_optout_confirmation">Opt-Out saved — analytics is disabled.</string>
-    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="settings_ccpa_do_not_sell_subtitle">For California residents (CCPA/CPRA 2026). When active, all cloud AI features are disabled and no analytics are collected.</string>
-    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell enabled — all cloud services are disabled.</string>
-    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell disabled.</string>
+    <string name="settings_ccpa_do_not_sell_title">Your California Privacy Choices</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">Only relevant for residents of California, USA. When active, all optional cloud features are disabled — only local features remain active.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">California privacy option enabled — all cloud services are disabled.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">California privacy option disabled.</string>
 
     <string name="legal_title_datenschutz">Privacy Policy</string>
     <string name="legal_title_nutzungsbedingungen">Terms of Use</string>
     <string name="legal_title_impressum">Imprint</string>
 
     <!-- Pre-Usage Consent Dialog (K4, TDDDG/EDSA Guideline 03/2023) -->
-    <string name="privacy_gate_groq_title">Send voice recording to Groq?</string>
-    <string name="privacy_gate_groq_body">For cloud transcription, your voice recording is sent encrypted to Groq, Inc. (Mountain View, USA) and converted to text there. The audio file is deleted after processing and not used for training.\n\nAlternative: use on-device transcription (offline, no data transfer), switchable under Settings → AI.</string>
-    <string name="privacy_gate_groq_accept">Agree and send</string>
-    <string name="privacy_gate_groq_local">Use local transcription instead</string>
+    <string name="privacy_gate_groq_title">Enable cloud speech recognition</string>
+    <string name="privacy_gate_groq_body">This feature sends your voice recording encrypted to Groq (USA) and converts it to text — faster and more accurate than on-device recognition.\n\n✓ Recording is deleted immediately after conversion\n✓ Never used to train AI models\n✓ Encrypted under EU-US Data Privacy Framework\n\nAlternative: on-device offline recognition in Settings.</string>
+    <string name="privacy_gate_groq_accept">Enable</string>
+    <string name="privacy_gate_groq_local">Use local instead</string>
 
-    <string name="privacy_gate_gemini_title">Send text to Google Gemini?</string>
-    <string name="privacy_gate_gemini_body">For AI features (dashboard, summaries, reviews, text improvement) excerpts of your entries are sent encrypted to Google Gemini (Firebase AI, USA). Legal basis: EU-US Data Privacy Framework + Standard Contractual Clauses. Requests are deleted after processing and not used for training.</string>
-    <string name="privacy_gate_gemini_accept">Agree and send</string>
-    <string name="privacy_gate_gemini_cancel">Cancel</string>
+    <string name="privacy_gate_gemini_title">Enable AI feature</string>
+    <string name="privacy_gate_gemini_body">Great that you want to use Best Journal\'s intelligent features! For summaries, reviews, dashboard insights, and text improvements, your text is sent encrypted to Google Gemini.\n\n✓ Never used to train AI models\n✓ Requests are deleted immediately after processing\n✓ Encrypted under EU-US Data Privacy Framework\n\nYou can change this any time in Settings.</string>
+    <string name="privacy_gate_gemini_accept">Enable</string>
+    <string name="privacy_gate_gemini_cancel">Later</string>
 
-    <string name="privacy_gate_tts_title">Send text to Microsoft?</string>
-    <string name="privacy_gate_tts_body">For read-aloud, the text to be spoken is sent encrypted to Microsoft Bing Speech (USA) and returned as audio. Legal basis: EU-US Data Privacy Framework + Standard Contractual Clauses.\n\nAlternative: use the Android built-in offline TTS.</string>
-    <string name="privacy_gate_tts_accept">Agree and read aloud</string>
-    <string name="privacy_gate_tts_cancel">Cancel</string>
+    <string name="privacy_gate_tts_title">Enable premium voices</string>
+    <string name="privacy_gate_tts_body">Premium voices sound more natural and pleasant when reading aloud. Your text is sent encrypted to Microsoft and returned as audio.\n\n✓ Never used to train AI models\n✓ Encrypted under EU-US Data Privacy Framework\n\nAlternative: Android offline voices in Settings.</string>
+    <string name="privacy_gate_tts_accept">Enable</string>
+    <string name="privacy_gate_tts_cancel">Later</string>
 
     <!-- Report AI Content (Google Play AI Policy 04/2024, in Settings → Privacy) -->
     <string name="settings_report_ai_title">Report AI output</string>
