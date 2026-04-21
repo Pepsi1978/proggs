@@ -1146,4 +1146,46 @@
     <string name="legal_title_datenschutz">プライバシーポリシー</string>
     <string name="legal_title_nutzungsbedingungen">利用規約</string>
     <string name="legal_title_impressum">法的情報</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Best Journalへようこそ</string>
+    <string name="consent_welcome_intro">始める前に、ここでプライバシー設定をすばやく決めましょう。</string>
+    <string name="consent_promise_local">プライバシー法があなたの同意を必要としています。</string>
+    <string name="consent_promise_no_training">どの機能を有効にするかはここで決められます。</string>
+    <string name="consent_promise_optional_ai">いつでも設定から変更できます。</string>
+    <string name="consent_btn_manual_selection">手動で選択</string>
+    <string name="privacy_sheet_title">プライバシーをカスタマイズ</string>
+    <string name="privacy_sheet_subtitle">お好みに合わせて個別の機能を有効にできます。すべていつでも変更可能です。</string>
+    <string name="privacy_sheet_save">選択を保存</string>
+    <string name="privacy_sheet_all_on">すべてオン</string>
+    <string name="privacy_sheet_all_off">すべてオフ</string>
+    <string name="consent_toggle_analytics_title">匿名の利用状況分析</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — アプリの改善に役立てます。個人的な内容は一切なく、匿名のタップ数のみです。データ転送：Google米国（Data Privacy Framework）。</string>
+    <string name="consent_toggle_groq_title">音声からテキスト（Groq Whisper）</string>
+    <string name="consent_toggle_groq_body">エントリーの口述入力を可能にします。音声録音は暗号化されてGroq（米国）に送信され、テキストに変換された後削除されます。あなたの録音は学習には使用されません。</string>
+    <string name="consent_toggle_gemini_title">AI振り返り（Google Gemini）</string>
+    <string name="consent_toggle_gemini_body">ダッシュボードAI、要約、振り返り、テキスト改善を行います。テキストの抜粋をGoogle Gemini（米国）に送信します。あなたのエントリーは学習には使用されません。</string>
+    <string name="consent_toggle_tts_title">読み上げ（Microsoft Edge TTS）</string>
+    <string name="consent_toggle_tts_body">自然な音声でエントリーを読み上げます。テキストをMicrosoft（米国）に送信します。代替：オフラインのシステムTTS。</string>
+    <string name="consent_toggle_drive_title">Google Driveバックアップ</string>
+    <string name="consent_toggle_drive_body">エントリーを暗号化してあなた自身のGoogle Driveに保存します。あなたが完全に管理できます — ファイルはあなたのアカウントにあり、私たちの元にはありません。</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">カリフォルニア州のオプトアウト（CCPA/CPRA 2026）。有効にすると、すべての任意のデータ処理が無効になり — ローカル機能のみが残ります。</string>
+    <string name="consent_btn_accept_all">すべて承認</string>
+    <string name="consent_btn_save_selection">選択を保存</string>
+    <string name="consent_btn_minimum_only">すべて拒否</string>
+    <string name="consent_saved_snackbar">設定を保存しました</string>
+    <string name="consent_revoke_snackbar">同意を取り消しました</string>
+    <string name="consent_footer_version">選択はいつでも設定から変更できます。</string>
+    <string name="consent_details_expand">詳細</string>
+    <string name="settings_open_privacy_sheet">プライバシー設定をカスタマイズ</string>
+    <string name="settings_privacy_section_header">プライバシーと同意</string>
+    <string name="settings_ai_groq_title">音声からテキスト（Groq）</string>
+    <string name="settings_ai_groq_subtitle">音声録音をGroq米国に送信して文字起こし</string>
+    <string name="settings_ai_gemini_title">AI振り返り（Gemini）</string>
+    <string name="settings_ai_gemini_subtitle">AI要約のためにテキストをGoogle米国に送信</string>
+    <string name="settings_ai_tts_title">読み上げ（Edge TTS）</string>
+    <string name="settings_ai_tts_subtitle">音声出力のためにテキストをMicrosoft米国に送信</string>
+    <string name="settings_drive_backup_title">Google Driveバックアップ</string>
+    <string name="settings_drive_backup_subtitle">エントリーを暗号化してDriveに保存</string>
 </resources>
