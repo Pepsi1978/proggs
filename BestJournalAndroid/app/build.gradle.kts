@@ -37,8 +37,8 @@ android {
         applicationId = "com.bestjournal.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 157
-        versionName = "0.12.47"
+        versionCode = 158
+        versionName = "0.12.48"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

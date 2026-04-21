@@ -2957,6 +2957,34 @@ fun SettingsScreen(
                             com.bestjournal.app.util.PrivacyGateHelper.CloudService.EdgeTts,
                             prefs.tts,
                         )
+
+                        // Mirror the TTS Datenschutz toggle into the Sounds switch — same
+                        // direction as ConsentViewModel.persist() (#1694). Datenschutz is
+                        // the master; flipping it here updates the Sounds/Haptik "Stimmen"
+                        // switch and seeds the locale default voice when turning on.
+                        try {
+                            val encPrefs =
+                                com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
+                            encPrefs
+                                .edit()
+                                .putBoolean(Constants.PREF_TTS_ENABLED, prefs.tts)
+                                .apply()
+                            if (prefs.tts &&
+                                encPrefs.getString(Constants.PREF_EDGE_TTS_VOICE, null)
+                                    .isNullOrBlank()
+                            ) {
+                                val defaultVoice =
+                                    com.bestjournal.app.util.TtsVoiceRegistry
+                                        .getLocaleVoices()
+                                        .defaultVoiceId
+                                encPrefs
+                                    .edit()
+                                    .putString(Constants.PREF_EDGE_TTS_VOICE, defaultVoice)
+                                    .apply()
+                            }
+                        } catch (_: Exception) {
+                            // Silent fallback — user can still flip the Sounds switch later.
+                        }
                     },
                     showDoNotSell = run {
                         val loc =
