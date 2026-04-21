@@ -1085,4 +1085,46 @@
     <string name="legal_title_datenschutz">സ്വകാര്യതാ നയം</string>
     <string name="legal_title_nutzungsbedingungen">ഉപയോഗ നിബന്ധനകൾ</string>
     <string name="legal_title_impressum">നിയമ വിവരം</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Best Journal-ലേക്ക് സ്വാഗതം</string>
+    <string name="consent_welcome_intro">തുടങ്ങുന്നതിന് മുമ്പ്, ഇവിടെ വേഗത്തിൽ നിങ്ങളുടെ സ്വകാര്യതാ മുൻഗണനകൾ സജ്ജീകരിക്കാം.</string>
+    <string name="consent_promise_local">സ്വകാര്യതാ നിയമങ്ങൾക്ക് നിങ്ങളുടെ സമ്മതം ആവശ്യമാണ്.</string>
+    <string name="consent_promise_no_training">ഏതൊക്കെ സവിശേഷതകൾ സജീവമാകും എന്ന് നിങ്ങൾ ഇവിടെ തീരുമാനിക്കുന്നു.</string>
+    <string name="consent_promise_optional_ai">ക്രമീകരണങ്ങളിൽ എപ്പോൾ വേണമെങ്കിലും മാറ്റാം.</string>
+    <string name="consent_btn_manual_selection">മാനുവൽ തിരഞ്ഞെടുപ്പ്</string>
+    <string name="privacy_sheet_title">സ്വകാര്യത ഇഷ്ടാനുസൃതമാക്കുക</string>
+    <string name="privacy_sheet_subtitle">നിങ്ങൾക്ക് അനുയോജ്യമായ രീതിയിൽ വ്യക്തിഗത സവിശേഷതകൾ പ്രാപ്തമാക്കുക. എല്ലാം എപ്പോൾ വേണമെങ്കിലും മാറ്റാം.</string>
+    <string name="privacy_sheet_save">തിരഞ്ഞെടുപ്പ് സംരക്ഷിക്കുക</string>
+    <string name="privacy_sheet_all_on">എല്ലാം ഓണാക്കുക</string>
+    <string name="privacy_sheet_all_off">എല്ലാം ഓഫാക്കുക</string>
+    <string name="consent_toggle_analytics_title">അജ്ഞാത ഉപയോഗ വിശകലനം</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — ആപ്പ് മെച്ചപ്പെടുത്താൻ ഞങ്ങളെ സഹായിക്കുന്നു. വ്യക്തിഗത ഉള്ളടക്കമില്ല, അജ്ഞാത ടാപ്പ് എണ്ണങ്ങൾ മാത്രം. ഡാറ്റ കൈമാറ്റം: Google USA (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">സംഭാഷണം മുതൽ ടെക്സ്റ്റ് വരെ (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">എൻട്രികൾ ഡിക്റ്റേറ്റ് ചെയ്യാൻ അനുവദിക്കുന്നു. നിങ്ങളുടെ വോയ്സ് റെക്കോർഡിംഗ് എൻക്രിപ്റ്റ് ചെയ്ത് Groq (USA)-ലേക്ക് അയയ്ക്കുന്നു, ടെക്സ്റ്റിലേക്ക് പരിവർത്തനം ചെയ്യുന്നു, തുടർന്ന് ഇല്ലാതാക്കുന്നു. നിങ്ങളുടെ റെക്കോർഡിംഗുകൾ പരിശീലനത്തിനായി ഉപയോഗിക്കില്ല.</string>
+    <string name="consent_toggle_gemini_title">AI പ്രതിഫലനങ്ങൾ (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">ഡാഷ്‌ബോർഡ് AI, സംഗ്രഹങ്ങൾ, അവലോകനങ്ങൾ, ടെക്സ്റ്റ് മെച്ചപ്പെടുത്തൽ. ടെക്സ്റ്റ് ഭാഗങ്ങൾ Google Gemini (USA)-ലേക്ക് അയയ്ക്കുന്നു. നിങ്ങളുടെ എൻട്രികൾ പരിശീലനത്തിനായി ഉപയോഗിക്കില്ല.</string>
+    <string name="consent_toggle_tts_title">ഉറക്കെ വായിക്കൽ (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">സ്വാഭാവിക ശബ്ദത്തിൽ എൻട്രികൾ വായിക്കുന്നു. ടെക്സ്റ്റ് Microsoft (USA)-ലേക്ക് അയയ്ക്കുന്നു. ബദൽ: ഓഫ്‌ലൈൻ സിസ്റ്റം TTS.</string>
+    <string name="consent_toggle_drive_title">Google Drive ബാക്കപ്പ്</string>
+    <string name="consent_toggle_drive_body">എൻട്രികൾ എൻക്രിപ്റ്റ് ചെയ്ത് നിങ്ങളുടെ സ്വന്തം Google Drive-ൽ സംരക്ഷിക്കുന്നു. നിങ്ങൾ പൂർണ്ണ നിയന്ത്രണം നിലനിർത്തുന്നു — ഫയൽ നിങ്ങളുടെ അക്കൗണ്ടിലാണ്, ഞങ്ങളുടെ അടുത്തല്ല.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">കാലിഫോർണിയ ഓപ്റ്റ്-ഔട്ട് (CCPA/CPRA 2026). സജീവമായിരിക്കുമ്പോൾ, എല്ലാ ഓപ്ഷണൽ ഡാറ്റ പ്രോസസ്സിംഗും പ്രവർത്തനരഹിതമാക്കുന്നു — പ്രാദേശിക സവിശേഷതകൾ മാത്രം അവശേഷിക്കുന്നു.</string>
+    <string name="consent_btn_accept_all">എല്ലാം സ്വീകരിക്കുക</string>
+    <string name="consent_btn_save_selection">എന്റെ തിരഞ്ഞെടുപ്പ് സംരക്ഷിക്കുക</string>
+    <string name="consent_btn_minimum_only">എല്ലാം നിരസിക്കുക</string>
+    <string name="consent_saved_snackbar">ക്രമീകരണം സംരക്ഷിച്ചു</string>
+    <string name="consent_revoke_snackbar">സമ്മതം പിൻവലിച്ചു</string>
+    <string name="consent_footer_version">നിങ്ങളുടെ തിരഞ്ഞെടുപ്പ് ക്രമീകരണങ്ങളിൽ എപ്പോൾ വേണമെങ്കിലും മാറ്റാം.</string>
+    <string name="consent_details_expand">വിശദാംശങ്ങൾ</string>
+    <string name="settings_open_privacy_sheet">സ്വകാര്യതാ ക്രമീകരണങ്ങൾ ഇഷ്ടാനുസൃതമാക്കുക</string>
+    <string name="settings_privacy_section_header">സ്വകാര്യതയും സമ്മതങ്ങളും</string>
+    <string name="settings_ai_groq_title">സംഭാഷണം മുതൽ ടെക്സ്റ്റ് വരെ (Groq)</string>
+    <string name="settings_ai_groq_subtitle">ട്രാൻസ്ക്രിപ്ഷനായി Groq USA-ലേക്ക് വോയ്സ് റെക്കോർഡിംഗുകൾ അയയ്ക്കുക</string>
+    <string name="settings_ai_gemini_title">AI പ്രതിഫലനങ്ങൾ (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">AI സംഗ്രഹങ്ങൾക്കായി Google USA-ലേക്ക് ടെക്സ്റ്റുകൾ അയയ്ക്കുക</string>
+    <string name="settings_ai_tts_title">ഉറക്കെ വായിക്കൽ (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">വോയ്സ് ഔട്ട്പുട്ടിനായി Microsoft USA-ലേക്ക് ടെക്സ്റ്റുകൾ അയയ്ക്കുക</string>
+    <string name="settings_drive_backup_title">Google Drive ബാക്കപ്പ്</string>
+    <string name="settings_drive_backup_subtitle">നിങ്ങളുടെ Drive-ൽ എൻക്രിപ്റ്റ് ചെയ്ത എൻട്രികൾ സംരക്ഷിക്കുക</string>
 </resources>
