@@ -362,6 +362,71 @@ constructor(
             }
         }
 
+    /**
+     * DSGVO Art. 17 (Recht auf Loeschung) / CCPA Right to Delete: deletes ALL files the app has
+     * placed in the Drive appDataFolder — the journal backup, photo backups, and any retrospective
+     * archives. Only touches the appDataFolder scope; never touches user documents on Drive.
+     *
+     * MUST be called BEFORE signOut() clears the Google account email from prefs, otherwise we
+     * lose the session needed to authenticate the Drive API.
+     *
+     * Returns the number of deleted files. On failure, returns 0 and logs — we do NOT block the
+     * account deletion because the user has already confirmed the action and expects it to finish.
+     */
+    suspend fun deleteAllAppData(): Int =
+        withContext(Dispatchers.IO) {
+            try {
+                val driveService = getSessionDriveService()
+                val allFiles = mutableListOf<com.google.api.services.drive.model.File>()
+                var pageToken: String? = null
+                do {
+                    val request =
+                        driveService
+                            .files()
+                            .list()
+                            .setSpaces("appDataFolder")
+                            .setFields("nextPageToken, files(id, name, size)")
+                            .setPageSize(1000)
+                    if (pageToken != null) request.pageToken = pageToken
+                    val result = request.execute()
+                    result.files?.let { allFiles.addAll(it) }
+                    pageToken = result.nextPageToken
+                } while (pageToken != null)
+
+                if (allFiles.isEmpty()) {
+                    android.util.Log.d("DriveBackup", "deleteAllAppData: nothing on Drive")
+                    return@withContext 0
+                }
+                val totalBytes = allFiles.sumOf { it.getSize() ?: 0L }
+                android.util.Log.d(
+                    "DriveBackup",
+                    "deleteAllAppData: deleting ${allFiles.size} files (${totalBytes / 1024 / 1024} MB)",
+                )
+
+                var deleted = 0
+                for (file in allFiles) {
+                    try {
+                        driveService.files().delete(file.id).execute()
+                        deleted++
+                    } catch (e: Exception) {
+                        android.util.Log.w(
+                            "DriveBackup",
+                            "deleteAllAppData: failed to delete ${file.name}: ${e.message}",
+                        )
+                    }
+                }
+                android.util.Log.d("DriveBackup", "deleteAllAppData: removed $deleted files")
+                deleted
+            } catch (e: Exception) {
+                android.util.Log.e(
+                    "DriveBackup",
+                    "deleteAllAppData FAILED: ${e.message}",
+                    e,
+                )
+                0
+            }
+        }
+
     private fun uploadFile(driveService: Drive, localFile: File, remoteName: String) {
         val existingFiles =
             driveService

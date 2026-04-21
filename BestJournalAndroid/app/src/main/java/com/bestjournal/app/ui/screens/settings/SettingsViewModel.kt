@@ -12,6 +12,7 @@ import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.billing.SubscriptionState
 import com.bestjournal.app.data.local.dao.EntryPhotoDao
 import com.bestjournal.app.data.local.dao.JournalEntryDao
+import com.bestjournal.app.data.remote.googledrive.DriveBackupManager
 import com.bestjournal.app.data.remote.googledrive.NeedConsentException
 import com.bestjournal.app.domain.model.UserProfile
 import com.bestjournal.app.domain.usecase.SignInWithGoogleUseCase
@@ -79,6 +80,7 @@ constructor(
     private val entryPhotoDao: EntryPhotoDao,
     val analyticsTracker: AnalyticsTracker,
     private val profileChangeBus: com.bestjournal.app.util.ProfileChangeBus,
+    private val driveBackupManager: DriveBackupManager,
 ) : ViewModel() {
 
     /** Call this whenever the user switches the dashboard scenario / profile. */
@@ -588,14 +590,30 @@ constructor(
      * Removes:
      *  - Firebase Auth user account (FirebaseAuth.currentUser.delete())
      *  - Local on-device photos and videos
+     *  - Drive appDataFolder backup (DSGVO Art. 17, CCPA Right to Delete) — journal DB,
+     *    photo backups, retrospective archives. Must happen BEFORE signOut() because the
+     *    Drive API needs the Google account email from encryptedPrefs to authenticate.
      *  - Everything signOut() also removes: local DBs, encrypted prefs, alarms
      *
-     * Drive App-Data backup is NOT deleted from code — user can revoke the app
-     * under myaccount.google.com → "Drittanbieter mit Kontozugriff".
      * Restarts the app process when done.
      */
     fun deleteAccount(context: android.content.Context) {
         viewModelScope.launch {
+            // Delete Drive appDataFolder backup FIRST — requires signed-in session.
+            // Runs best-effort: on network failure we still continue with local deletion
+            // since the user has confirmed and expects the action to complete.
+            try {
+                val deleted = driveBackupManager.deleteAllAppData()
+                android.util.Log.d(
+                    "DeleteAccount",
+                    "Drive appDataFolder cleanup: $deleted files removed",
+                )
+            } catch (e: Exception) {
+                android.util.Log.w(
+                    "DeleteAccount",
+                    "Drive appDataFolder cleanup skipped: ${e.message}",
+                )
+            }
             // Delete Firebase Auth user while tokens are still valid.
             try {
                 com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.delete()?.await()
