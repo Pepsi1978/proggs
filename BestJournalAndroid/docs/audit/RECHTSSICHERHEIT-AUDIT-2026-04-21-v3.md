@@ -319,3 +319,76 @@ veröffentlicht wurden.
 **Abschließender Disclaimer:** Diese Prüfung ist eine technische Prüfhilfe, kein Rechtsrat.
 Vor dem produktiven Release wird die Konsultation eines spezialisierten IT-Recht-Anwalts
 empfohlen. Geschätzte Anwaltskosten: 100-500 EUR für einmalige Prüfung von DSE/AGB/Impressum.
+
+---
+
+# Deep Audit v3.1 — Iterative Re-Prüfung (nachgelagert)
+
+**Datum:** 2026-04-21 (5 iterative Läufe nach Audit v3)
+**Abbruchkriterium:** 2 Läufe in Folge ohne KRIT/HOCH/MITTEL-Befunde
+
+## Zusammenfassung der 5 Läufe
+
+| Lauf | Fokus | Neue Befunde |
+|------|-------|--------------|
+| 1 | App-Funktions-Inventur (Permissions × SDKs × HTTP-Endpoints × DSE-Abdeckung) | 1 HOCH: OCR-Attrappe |
+| 2 | Fixes für Lauf 1 | — (4 Dateien angepasst) |
+| 3 | Re-Check + Auto-AI-Features | 0 |
+| 4 | Data-Safety + Toggle-zu-SDK-Mapping + Sensible-Daten | 1 NIEDRIG: 13 tote Strings |
+| 5 | Final Deep-Check nach Cleanup | 0 |
+
+**Abbruchkriterium erreicht** (Lauf 3 + Lauf 5 beide 0 Befunde).
+
+## Neuer KRIT/HOCH-Befund gefixt
+
+### BEFUND DEEP-1 (HOCH): OCR in DSE § 12a erwähnt, aber nicht implementiert
+
+**Symptom:**
+- DATENSCHUTZ.md:686 + PRIVACY.en.md:794 + assets/legal/de/DATENSCHUTZ.html:423 + assets/legal/en/PRIVACY.html:902 erwähnten "Texterkennung (OCR)" als Gemini-Feature
+- Code: kein `TextRecognizer`, kein `mlkit`, kein `vision`-SDK, kein Gemini-Image-Upload — OCR-Funktionalität existiert NICHT
+- **Zusätzlicher innerer Widerspruch:** § 5.6 garantiert explizit "nie Fotos, nie Audioaufnahmen" an Gemini, aber § 12a behauptete Bilderverarbeitung
+
+**Risiko:** Identisch zum Crashlytics-Fall aus v3 — § 5 UWG irreführende Aussage, BGH 27.03.2025 DSGVO+UWG-Abmahnkette.
+
+**Fix:** "Texterkennung (OCR)" in allen 4 Dateien durch "stilistische Textverbesserung" ersetzt — reflektiert den tatsächlichen Code (`AdviceRepository`, `GenerateRetrospectiveUseCase`).
+
+## Aufräum-Arbeiten (NIEDRIG)
+
+### BEFUND DEEP-2 (NIEDRIG): 13 tote Strings nach v4-Umbau
+
+Strings die durch das Layered-Consent-Design obsolet wurden und nie mehr durch
+`stringResource(R.string.xxx)` referenziert werden:
+
+- `consent_sensitive_note`
+- `consent_no_training_badge`
+- `consent_section_essential`, `consent_section_optional`
+- `consent_toggle_local_title`, `consent_toggle_local_body`
+- `settings_privacy_revoke_all`, `settings_privacy_revoke_confirm_title/body/yes/done`
+- `settings_privacy_last_changed`, `settings_privacy_policy_version`
+
+Entfernt aus `values/strings.xml` und `values-en/strings.xml` (26 Strings total,
+13 Keys × 2 Sprachen). Erspart bei der kommenden 25-Locale-Übersetzung ~325
+unnötige Übersetzungen.
+
+## Verifikation — alle 5 Deep-Checks grün
+
+| Check | Erwartet | Ergebnis |
+|-------|----------|----------|
+| Keine Funktions-Attrappen in Docs (Crashlytics/OCR/Texterkennung) | 0 Treffer in docs + 0 Treffer im Code | ✅ (0/0) |
+| DE- und EN-DSE strukturidentisch | Gleiche Top-Level-Sections + gleiche §5-Subsections | ✅ 18/18 + 11/11 |
+| Alle Toggles → SDK-Steuerung | setAnalyticsCollectionEnabled: 4 Aufrufe, generateContent: 16 Stellen (alle durch PrivacyGate) | ✅ |
+| Alle Manifest-Permissions → DSE-Erwähnung | 7/7 (INTERNET, ACCESS_NETWORK_STATE, RECORD_AUDIO, CAMERA, ACCESS_COARSE_LOCATION, POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED) | ✅ |
+| Groq-API-Key sicher (nicht im Code) | Via Firebase Remote Config geladen | ✅ |
+
+## Gesamtfazit nach Deep Audit
+
+**Rechtssicherheits-Status: RELEASE-FÄHIG** (unter Länder-Ausschluss der Risiko-Länder).
+
+Keine offenen KRIT/HOCH/MITTEL-Befunde. Alle erkannten Risiken aus v1, v2, v3 und
+Deep-Audit 3.1 sind vollständig behoben. Das Layered-Consent-Design (EDSA 03/2023)
+ist sowohl UX-freundlich als auch DSGVO-konform. Rechtsdokumente sind konsistent,
+vollständig und spiegeln den tatsächlichen App-Code exakt wider.
+
+**Abschließender Disclaimer:** Technische Prüfhilfe, kein Rechtsrat. Vor dem
+produktiven Release wird die Konsultation eines spezialisierten IT-Recht-Anwalts
+empfohlen.

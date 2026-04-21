@@ -682,8 +682,8 @@ dich in keiner Weise rechtlich binden.
 
 Diese App verwendet KI-Systeme zur Verarbeitung deiner Eingaben:
 
-- **Google Gemini** (Firebase AI): KI-gestützte Textanalyse, Zusammenfassungen, Dashboard,
-  Rückblicke, Texterkennung (OCR)
+- **Google Gemini** (Firebase AI): KI-gestützte Textanalyse, Zusammenfassungen,
+  Dashboard, Rückblicke und stilistische Textverbesserung
 - **Groq Whisper**: Sprach-zu-Text-Transkription
 - **Microsoft Edge Text-to-Speech**: Text-zu-Sprache-Vorlesefunktion
 

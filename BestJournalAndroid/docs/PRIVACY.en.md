@@ -791,7 +791,7 @@ summaries that are not legally binding for you.
 This app uses AI systems to process your input:
 
 - **Google Gemini** (Firebase AI): AI-powered text analysis, summaries, dashboard,
-  reviews, text recognition (OCR)
+  reviews and stylistic text improvement
 - **Groq Whisper**: Speech-to-text transcription
 - **Microsoft Edge Text-to-Speech**: Text-to-speech read-aloud
 
