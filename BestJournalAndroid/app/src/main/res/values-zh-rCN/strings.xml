@@ -1149,7 +1149,7 @@
 
     <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
     <string name="consent_welcome_title">欢迎使用 Best Journal</string>
-    <string name="consent_welcome_intro">开始，我们先在这里快速设置你的隐私偏好。</string>
+    <string name="consent_welcome_intro">开始，我们先在这里快速设置你的隐私偏好。</string>
     <string name="consent_promise_local">隐私法规要求获得你的同意。</string>
     <string name="consent_promise_no_training">你在这里决定哪些功能处于活动状态。</string>
     <string name="consent_promise_optional_ai">可随时在设置中更改。</string>
@@ -1160,17 +1160,17 @@
     <string name="privacy_sheet_all_on">全部开启</string>
     <string name="privacy_sheet_all_off">全部关闭</string>
     <string name="consent_toggle_analytics_title">匿名使用分析</string>
-    <string name="consent_toggle_analytics_body">Firebase Analytics — 帮助我们改进应用。没有个人内，只有匿名点击次数。数据传：Google 美国(Data Privacy Framework)。</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — 帮助我们改进应用。没有个人内，只有匿名点击次数。数据传：Google 美国(Data Privacy Framework)。</string>
     <string name="consent_toggle_groq_title">语音转文本(Groq Whisper)</string>
     <string name="consent_toggle_groq_body">支持口述条目。你的语音录音会加密发送到 Groq(美国),转换为文本后删除。你的录音不会用于训练。</string>
     <string name="consent_toggle_gemini_title">AI 反思(Google Gemini)</string>
     <string name="consent_toggle_gemini_body">仪表板 AI、摘要、回顾和文本优化。将文本片段发送到 Google Gemini(美国)。你的条目不会用于训练。</string>
     <string name="consent_toggle_tts_title">朗读(Microsoft Edge TTS)</string>
-    <string name="consent_toggle_tts_body">以自然声音朗读条目。将文本发送到 Microsoft(美国)。替代方：离线系统 TTS。</string>
+    <string name="consent_toggle_tts_body">以自然声音朗读条目。将文本发送到 Microsoft(美国)。替代方：离线系统 TTS。</string>
     <string name="consent_toggle_drive_title">Google Drive 备份</string>
-    <string name="consent_toggle_drive_body">将条目加密保存到你自己的 Google Drive。你保留完全控制权 — 文件在你的账户，不在我们这里。</string>
+    <string name="consent_toggle_drive_body">将条目加密保存到你自己的 Google Drive。你保留完全控制权 — 文件在你的账户，不在我们这里。</string>
     <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="consent_toggle_do_not_sell_body">加利福尼亚选择退出(CCPA/CPRA 2026)。激活，所有可选数据处理均被禁用 — 仅保留本地功能。</string>
+    <string name="consent_toggle_do_not_sell_body">加利福尼亚选择退出(CCPA/CPRA 2026)。激活，所有可选数据处理均被禁用 — 仅保留本地功能。</string>
     <string name="consent_btn_accept_all">全部接受</string>
     <string name="consent_btn_save_selection">保存我的选择</string>
     <string name="consent_btn_minimum_only">全部拒绝</string>
