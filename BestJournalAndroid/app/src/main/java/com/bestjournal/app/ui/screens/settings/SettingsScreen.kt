@@ -2528,91 +2528,11 @@ fun SettingsScreen(
                             }
                         }
 
-                        // NH2: CCPA/CPRA 2026 "Do Not Sell My Personal Information" toggle.
-                        // Only shown for California residents (English US locale). When active,
-                        // all per-service cloud consents are revoked and analytics is disabled.
-                        val currentLocale =
-                            androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
-                        val isUsEnglish =
-                            currentLocale.language == "en" && currentLocale.country == "US"
-                        if (isUsEnglish) {
-                            var doNotSell by remember {
-                                mutableStateOf(
-                                    privacyPrefs.getBoolean(Constants.PREF_DO_NOT_SELL, false)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                                    Text(
-                                        stringResource(R.string.settings_ccpa_do_not_sell_title),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                    Text(
-                                        stringResource(R.string.settings_ccpa_do_not_sell_subtitle),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = doNotSell,
-                                    onCheckedChange = { enabled ->
-                                        doHaptic(HapticFeedbackType.LongPress)
-                                        doNotSell = enabled
-                                        privacyPrefs
-                                            .edit()
-                                            .putBoolean(Constants.PREF_DO_NOT_SELL, enabled)
-                                            .apply()
-                                        if (enabled) {
-                                            // Revoke all per-service cloud consents.
-                                            com.bestjournal.app.util.PrivacyGateHelper.revokeAll(
-                                                context
-                                            )
-                                            // Force analytics off.
-                                            privacyPrefs
-                                                .edit()
-                                                .putBoolean(
-                                                    Constants.PREF_ANALYTICS_ENABLED,
-                                                    false,
-                                                )
-                                                .apply()
-                                            analyticsEnabled = false
-                                            com.google.firebase.analytics.FirebaseAnalytics
-                                                .getInstance(context)
-                                                .setAnalyticsCollectionEnabled(false)
-                                            android.widget.Toast.makeText(
-                                                    context,
-                                                    context.getString(
-                                                        R.string
-                                                            .settings_ccpa_do_not_sell_confirmation
-                                                    ),
-                                                    android.widget.Toast.LENGTH_LONG,
-                                                )
-                                                .show()
-                                        } else {
-                                            android.widget.Toast.makeText(
-                                                    context,
-                                                    context.getString(
-                                                        R.string
-                                                            .settings_ccpa_do_not_sell_off_confirmation
-                                                    ),
-                                                    android.widget.Toast.LENGTH_SHORT,
-                                                )
-                                                .show()
-                                        }
-                                    },
-                                    colors =
-                                        SwitchDefaults.colors(
-                                            checkedTrackColor = MaterialTheme.colorScheme.primary
-                                        ),
-                                )
-                            }
-                        }
+                        // NH2: CCPA/CPRA 2026 "Do Not Sell My Personal Information" toggle
+                        // is shown inside the "Customized Privacy Settings" sheet (see
+                        // PrivacyPreferencesSheet, gated by showDoNotSell=true for en-US).
+                        // The separate standalone entry that used to live here has been
+                        // removed to avoid a duplicate row under Privacy on American English.
 
                         Spacer(modifier = Modifier.height(16.dp))
 
