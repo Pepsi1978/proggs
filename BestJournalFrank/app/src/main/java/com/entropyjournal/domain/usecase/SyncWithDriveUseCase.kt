@@ -221,8 +221,47 @@ constructor(
         context.deleteDatabase("dashboard_db")
         Log.d("SyncDebug", "Cleared dashboard_db for fresh generation after restore")
 
+        // Restore TTS favorites from Drive if available
+        try {
+            val favoritesFile = File(context.cacheDir, "tts_favorites_restore.tmp")
+            val restoreResult = driveRestoreManager.restoreFile("tts_favorites.txt", favoritesFile)
+            if (restoreResult.isSuccess && favoritesFile.exists()) {
+                val favoritesContent = favoritesFile.readText().trim()
+                if (favoritesContent.isNotEmpty()) {
+                    encryptedPrefs.edit()
+                        .putString(Constants.PREF_TTS_FAVORITES, favoritesContent)
+                        .commit()
+                    Log.d("SyncDebug", "Restored TTS favorites from Drive: $favoritesContent")
+                }
+                favoritesFile.delete()
+            } else {
+                Log.d("SyncDebug", "No TTS favorites backup found on Drive — skipping restore")
+            }
+        } catch (e: Exception) {
+            Log.e("SyncDebug", "TTS favorites restore failed (non-critical): ${e.message}")
+        }
+
         // Photos are downloaded AFTER app restart via downloadMissingPhotos()
         return Result.success(Unit)
+    }
+
+    /** Immediately backs up TTS voice favorites to Drive as a plain text file. */
+    suspend fun backupFavorites(favoritesString: String): Result<Unit> {
+        return try {
+            val tmpFile = File(context.cacheDir, "tts_favorites_backup.tmp")
+            tmpFile.writeText(favoritesString)
+            val result = driveBackupManager.backupFile(tmpFile, "tts_favorites.txt")
+            tmpFile.delete()
+            if (result.isSuccess) {
+                Log.d("SyncDebug", "TTS favorites backed up to Drive: $favoritesString")
+            } else {
+                Log.e("SyncDebug", "TTS favorites backup failed: ${result.exceptionOrNull()?.message}")
+            }
+            result
+        } catch (e: Exception) {
+            Log.e("SyncDebug", "TTS favorites backup exception: ${e.message}")
+            Result.failure(e)
+        }
     }
 
     /**

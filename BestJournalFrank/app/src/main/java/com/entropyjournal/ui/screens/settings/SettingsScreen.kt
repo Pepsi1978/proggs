@@ -1044,6 +1044,7 @@ fun SettingsScreen(
                                             soundsPrefs.edit()
                                                 .putString(Constants.PREF_TTS_FAVORITES, newFavs.joinToString(","))
                                                 .commit()
+                                            viewModel.backupFavoritesToDrive(newFavs)
                                             showFavDialog = false
                                         }) {
                                             Text(if (isFav) "Entfernen" else "★ Favorit setzen")

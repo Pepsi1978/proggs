@@ -258,4 +258,37 @@ constructor(
                 0
             }
         }
+
+    /** Downloads a single named file from Drive appDataFolder. Returns failure if not found. */
+    suspend fun restoreFile(remoteName: String, targetFile: File): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                val driveService =
+                    getDriveService()
+                        ?: return@withContext Result.failure(
+                            IllegalStateException("Nicht angemeldet")
+                        )
+
+                val files =
+                    driveService
+                        .files()
+                        .list()
+                        .setSpaces("appDataFolder")
+                        .setQ("name = '$remoteName'")
+                        .setFields("files(id)")
+                        .execute()
+
+                val driveFile =
+                    files.files?.firstOrNull()
+                        ?: return@withContext Result.failure(Exception("Datei nicht gefunden: $remoteName"))
+
+                FileOutputStream(targetFile).use { outputStream ->
+                    driveService.files().get(driveFile.id).executeMediaAndDownloadTo(outputStream)
+                }
+
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
 }

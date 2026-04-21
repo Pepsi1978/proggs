@@ -543,6 +543,7 @@ constructor(
                 ) ?: Constants.DEFAULT_GEMINI_MODEL
             val isDark = encryptedPrefs.getBoolean(Constants.PREF_DARK_THEME, true)
             val biometricLock = encryptedPrefs.getBoolean(Constants.PREF_BIOMETRIC_LOCK, false)
+            val ttsFavorites = encryptedPrefs.getString(Constants.PREF_TTS_FAVORITES, "") ?: ""
 
             // Clear ALL prefs, then restore only device-specific ones — single atomic operation
             encryptedPrefs
@@ -559,10 +560,12 @@ constructor(
                 .putString(Constants.PREF_GEMINI_MODEL, selectedModel)
                 .putBoolean(Constants.PREF_DARK_THEME, isDark)
                 .putBoolean(Constants.PREF_BIOMETRIC_LOCK, biometricLock)
+                .putString(Constants.PREF_TTS_FAVORITES, ttsFavorites)
                 .commit() // commit() is synchronous — guarantees write before restart
 
             reminderManager.cancelReminder()
             reminderManager.cancelWeeklyReview()
+            // Favorites survive logout — backed up to Drive and restored to this device's prefs
 
             // Delete local databases — data belongs to the account
             context.deleteDatabase("entropy_journal_db")
@@ -585,5 +588,11 @@ constructor(
         )
         context.startActivity(intent)
         Runtime.getRuntime().exit(0)
+    }
+
+    fun backupFavoritesToDrive(favorites: Set<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            syncUseCase.backupFavorites(favorites.joinToString(","))
+        }
     }
 }
