@@ -1158,4 +1158,46 @@
     <string name="legal_title_datenschutz">Політика конфіденційності</string>
     <string name="legal_title_nutzungsbedingungen">Умови використання</string>
     <string name="legal_title_impressum">Правова інформація</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Ласкаво просимо до Best Journal</string>
+    <string name="consent_welcome_intro">Перш ніж почати, швидко налаштуймо тут ваші параметри конфіденційності.</string>
+    <string name="consent_promise_local">Закони про конфіденційність вимагають вашої згоди.</string>
+    <string name="consent_promise_no_training">Ви тут вирішуєте, які функції активні.</string>
+    <string name="consent_promise_optional_ai">Можна змінити будь-коли в Налаштуваннях.</string>
+    <string name="consent_btn_manual_selection">Вибір вручну</string>
+    <string name="privacy_sheet_title">Налаштувати конфіденційність</string>
+    <string name="privacy_sheet_subtitle">Увімкніть окремі функції так, як вам зручно. Усе можна змінити будь-коли.</string>
+    <string name="privacy_sheet_save">Зберегти вибір</string>
+    <string name="privacy_sheet_all_on">Увімкнути все</string>
+    <string name="privacy_sheet_all_off">Вимкнути все</string>
+    <string name="consent_toggle_analytics_title">Анонімна аналітика використання</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — допомагає нам покращувати застосунок. Жодного особистого вмісту, лише анонімна кількість натискань. Передавання даних: Google США (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">Мовлення в текст (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">Дозволяє диктувати записи. Ваш голосовий запис надсилається зашифрованим до Groq (США), перетворюється на текст, а потім видаляється. Ваші записи НЕ використовуються для навчання.</string>
+    <string name="consent_toggle_gemini_title">Роздуми від ШІ (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">ШІ панелі, підсумки, огляди та покращення тексту. Надсилає фрагменти тексту до Google Gemini (США). Ваші записи НЕ використовуються для навчання.</string>
+    <string name="consent_toggle_tts_title">Читання вголос (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">Читає записи природним голосом. Надсилає текст до Microsoft (США). Альтернатива: системний TTS офлайн.</string>
+    <string name="consent_toggle_drive_title">Резервна копія Google Drive</string>
+    <string name="consent_toggle_drive_body">Зберігає записи зашифрованими у вашому власному Google Drive. Ви зберігаєте повний контроль — файл знаходиться у вашому обліковому записі, не в нас.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">Каліфорнійська відмова (CCPA/CPRA 2026). Якщо активно, усі необов’язкові обробки даних вимикаються — залишаються лише локальні функції.</string>
+    <string name="consent_btn_accept_all">Прийняти все</string>
+    <string name="consent_btn_save_selection">Зберегти мій вибір</string>
+    <string name="consent_btn_minimum_only">Відхилити все</string>
+    <string name="consent_saved_snackbar">Налаштування збережено</string>
+    <string name="consent_revoke_snackbar">Згоду відкликано</string>
+    <string name="consent_footer_version">Ваш вибір можна змінити будь-коли в Налаштуваннях.</string>
+    <string name="consent_details_expand">Докладніше</string>
+    <string name="settings_open_privacy_sheet">Налаштувати параметри конфіденційності</string>
+    <string name="settings_privacy_section_header">Конфіденційність і згоди</string>
+    <string name="settings_ai_groq_title">Мовлення в текст (Groq)</string>
+    <string name="settings_ai_groq_subtitle">Надсилати голосові записи до Groq США для транскрипції</string>
+    <string name="settings_ai_gemini_title">Роздуми від ШІ (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">Надсилати тексти до Google США для підсумків ШІ</string>
+    <string name="settings_ai_tts_title">Читання вголос (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">Надсилати тексти до Microsoft США для голосового відтворення</string>
+    <string name="settings_drive_backup_title">Резервна копія Google Drive</string>
+    <string name="settings_drive_backup_subtitle">Зберігати записи зашифрованими у вашому Drive</string>
 </resources>
