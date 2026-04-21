@@ -365,7 +365,7 @@
     <string name="settings_voice_choose">কণ্ঠস্বর বেছে নাও</string>
     <string name="settings_reminder_section">রিমাইন্ডার / পর্যালোচনা</string>
     <string name="settings_daily_reminder">দৈনিক রিমাইন্ডার</string>
-    <string name="settings_reminder_time">সময়: %02d:%02d</string>
+    <string name="settings_reminder_time" formatted="false">সময়: %02d:%02d</string>
     <string name="settings_reminder_desc">তোমাকে দিনলিপি লেখার কথা মনে করিয়ে দেয়</string>
     <string name="settings_weekly_review">সাপ্তাহিক পর্যালোচনা</string>
     <string name="settings_weekly_review_on">রিমাইন্ডার চালু</string>
@@ -1132,17 +1132,21 @@
 
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
-    <string name="consent_optout_confirmation">Opt-Out saved — analytics is disabled.</string>
+    <string name="consent_optout_confirmation">অপ্ট-আউট সংরক্ষিত হয়েছে — পরিসংখ্যান বন্ধ আছে।</string>
     <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="settings_ccpa_do_not_sell_subtitle">For California residents (CCPA/CPRA 2026). When active, all cloud AI features are disabled and no analytics are collected.</string>
-    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell enabled — all cloud services are disabled.</string>
-    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell disabled.</string>
-    <string name="settings_delete_account_in_progress">Deleting account and data…</string>
-    <string name="settings_delete_account_drive_error_title">Drive backup could not be deleted</string>
-    <string name="settings_delete_account_drive_error_body">The Google Drive backup could not be reliably removed (reason: %1$s).\n\nWithout complete deletion, the claim \"permanently removed\" would not be accurate.\n\nWhat would you like to do?</string>
-    <string name="settings_delete_account_retry">Try again</string>
-    <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
-    <string name="settings_delete_account_abort">Cancel operation</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">ক্যালিফোর্নিয়ার বাসিন্দাদের জন্য (CCPA/CPRA 2026)। সক্রিয় হলে সমস্ত ক্লাউড AI বৈশিষ্ট্য বন্ধ করা হয় এবং কোনো পরিসংখ্যান সংগ্রহ করা হয় না।</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell চালু — সমস্ত ক্লাউড পরিষেবা বন্ধ।</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell বন্ধ করা হয়েছে।</string>
+    <string name="settings_delete_account_in_progress">অ্যাকাউন্ট ও ডেটা মুছে ফেলা হচ্ছে…</string>
+    <string name="settings_delete_account_drive_error_title">Drive ব্যাকআপ মুছে ফেলা যায়নি</string>
+    <string name="settings_delete_account_drive_error_body">Google Drive ব্যাকআপ নির্ভরযোগ্যভাবে মুছে ফেলা যায়নি (কারণ: %1$s)।
+
+সম্পূর্ণ মুছে ফেলা ছাড়া \"স্থায়ীভাবে মুছে ফেলা হয়েছে\" বার্তাটি সঠিক হবে না।
+
+আপনি কী করতে চান?</string>
+    <string name="settings_delete_account_retry">আবার চেষ্টা করুন</string>
+    <string name="settings_delete_account_force_local">শুধু স্থানীয়ভাবে মুছুন (Drive ব্যাকআপ আপাতত থাকবে)</string>
+    <string name="settings_delete_account_abort">কাজ বাতিল করুন</string>
 
     <string name="legal_title_datenschutz">গোপনীয়তা নীতি</string>
     <string name="legal_title_nutzungsbedingungen">ব্যবহারের শর্তাবলী</string>

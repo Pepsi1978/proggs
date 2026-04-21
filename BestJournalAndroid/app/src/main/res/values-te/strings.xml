@@ -349,7 +349,7 @@
     <string name="settings_voice_choose">వాయిస్ ఎంపిక</string>
     <string name="settings_reminder_section">జ్ఞాపిక / అవలోకనం</string>
     <string name="settings_daily_reminder">రోజువారీ జ్ఞాపిక</string>
-    <string name="settings_reminder_time">సమయం: %02d:%02d గంటలు</string>
+    <string name="settings_reminder_time" formatted="false">సమయం: %02d:%02d గంటలు</string>
     <string name="settings_reminder_desc">డైరీ రాయడానికి మీకు గుర్తు చేస్తుంది</string>
     <string name="settings_weekly_review">వారపు అవలోకనం</string>
     <string name="settings_weekly_review_on">జ్ఞాపిక ఆన్</string>
@@ -1063,17 +1063,21 @@
 
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
-    <string name="consent_optout_confirmation">Opt-Out saved — analytics is disabled.</string>
+    <string name="consent_optout_confirmation">ఆప్ట్-అవుట్ సేవ్ చేశాం — గణాంకాలు ఆఫ్‌లో ఉన్నాయి.</string>
     <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="settings_ccpa_do_not_sell_subtitle">For California residents (CCPA/CPRA 2026). When active, all cloud AI features are disabled and no analytics are collected.</string>
-    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell enabled — all cloud services are disabled.</string>
-    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell disabled.</string>
-    <string name="settings_delete_account_in_progress">Deleting account and data…</string>
-    <string name="settings_delete_account_drive_error_title">Drive backup could not be deleted</string>
-    <string name="settings_delete_account_drive_error_body">The Google Drive backup could not be reliably removed (reason: %1$s).\n\nWithout complete deletion, the claim \"permanently removed\" would not be accurate.\n\nWhat would you like to do?</string>
-    <string name="settings_delete_account_retry">Try again</string>
-    <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
-    <string name="settings_delete_account_abort">Cancel operation</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">కాలిఫోర్నియా నివాసితులకు (CCPA/CPRA 2026). ఆన్ చేస్తే అన్ని క్లౌడ్ AI ఫీచర్లు ఆఫ్ అవుతాయి మరియు ఎలాంటి గణాంకాలు సేకరించబడవు.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell ఆన్ — అన్ని క్లౌడ్ సేవలు ఆఫ్‌లో ఉన్నాయి.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell ఆఫ్ చేశాం.</string>
+    <string name="settings_delete_account_in_progress">ఖాతా మరియు డేటాను తొలగిస్తున్నాం…</string>
+    <string name="settings_delete_account_drive_error_title">Drive బ్యాకప్‌ను తొలగించలేకపోయాం</string>
+    <string name="settings_delete_account_drive_error_body">Google Drive బ్యాకప్‌ను నమ్మకంగా తొలగించలేకపోయాం (కారణం: %1$s).
+
+పూర్తిగా తొలగించకుండా \"శాశ్వతంగా తొలగించబడింది\" అనే సందేశం సరికాదు.
+
+మీరు ఏం చేయాలనుకుంటున్నారు?</string>
+    <string name="settings_delete_account_retry">మళ్లీ ప్రయత్నించండి</string>
+    <string name="settings_delete_account_force_local">స్థానికంగా మాత్రమే తొలగించండి (Drive బ్యాకప్ ప్రస్తుతం ఉంటుంది)</string>
+    <string name="settings_delete_account_abort">ప్రక్రియను రద్దు చేయండి</string>
 
     <string name="legal_title_datenschutz">గోప్యతా విధానం</string>
     <string name="legal_title_nutzungsbedingungen">వినియోగ నిబంధనలు</string>

@@ -365,7 +365,7 @@
     <string name="settings_voice_choose">เลือกเสียง</string>
     <string name="settings_reminder_section">เตือน/ทบทวน</string>
     <string name="settings_daily_reminder">เตือนรายวัน</string>
-    <string name="settings_reminder_time">เวลา: %02d:%02d</string>
+    <string name="settings_reminder_time" formatted="false">เวลา: %02d:%02d</string>
     <string name="settings_reminder_desc">เตือนให้เขียนบันทึก</string>
     <string name="settings_weekly_review">ทบทวนรายสัปดาห์</string>
     <string name="settings_weekly_review_on">การเตือนเปิดอยู่</string>
@@ -1127,17 +1127,21 @@
 
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
-    <string name="consent_optout_confirmation">Opt-Out saved — analytics is disabled.</string>
+    <string name="consent_optout_confirmation">บันทึกการไม่ยินยอมแล้ว — ปิดสถิติไว้</string>
     <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="settings_ccpa_do_not_sell_subtitle">For California residents (CCPA/CPRA 2026). When active, all cloud AI features are disabled and no analytics are collected.</string>
-    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell enabled — all cloud services are disabled.</string>
-    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell disabled.</string>
-    <string name="settings_delete_account_in_progress">Deleting account and data…</string>
-    <string name="settings_delete_account_drive_error_title">Drive backup could not be deleted</string>
-    <string name="settings_delete_account_drive_error_body">The Google Drive backup could not be reliably removed (reason: %1$s).\n\nWithout complete deletion, the claim \"permanently removed\" would not be accurate.\n\nWhat would you like to do?</string>
-    <string name="settings_delete_account_retry">Try again</string>
-    <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
-    <string name="settings_delete_account_abort">Cancel operation</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">สำหรับผู้อยู่อาศัยในแคลิฟอร์เนีย (CCPA/CPRA 2026) เมื่อเปิดใช้งาน ฟีเจอร์ AI บนคลาวด์ทั้งหมดจะถูกปิด และจะไม่เก็บสถิติใด ๆ</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">เปิดใช้ Do-Not-Sell แล้ว — บริการคลาวด์ทั้งหมดถูกปิด</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">ปิด Do-Not-Sell แล้ว</string>
+    <string name="settings_delete_account_in_progress">กำลังลบบัญชีและข้อมูล…</string>
+    <string name="settings_delete_account_drive_error_title">ไม่สามารถลบข้อมูลสำรองบน Drive</string>
+    <string name="settings_delete_account_drive_error_body">ไม่สามารถลบข้อมูลสำรองบน Google Drive ได้อย่างน่าเชื่อถือ (เหตุผล: %1$s)
+
+หากไม่ได้ลบครบถ้วน ข้อความ \"ลบออกถาวรแล้ว\" จะไม่ถูกต้อง
+
+คุณต้องการทำอะไร?</string>
+    <string name="settings_delete_account_retry">ลองอีกครั้ง</string>
+    <string name="settings_delete_account_force_local">ลบเฉพาะในเครื่อง (ข้อมูลสำรองบน Drive จะยังอยู่ก่อน)</string>
+    <string name="settings_delete_account_abort">ยกเลิกการดำเนินการ</string>
 
     <string name="legal_title_datenschutz">นโยบายความเป็นส่วนตัว</string>
     <string name="legal_title_nutzungsbedingungen">เงื่อนไขการใช้งาน</string>

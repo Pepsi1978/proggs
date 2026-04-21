@@ -344,7 +344,7 @@
     <string name="settings_voice_choose">ശബ്ദം തിരഞ്ഞെടുക്കൂ</string>
     <string name="settings_reminder_section">ഓർമ്മപ്പെടുത്തൽ / അവലോകനം</string>
     <string name="settings_daily_reminder">ദൈനംദിന ഓർമ്മപ്പെടുത്തൽ</string>
-    <string name="settings_reminder_time">സമയം: %02d:%02d</string>
+    <string name="settings_reminder_time" formatted="false">സമയം: %02d:%02d</string>
     <string name="settings_reminder_desc">ഡയറി എഴുതാൻ ഓർമ്മിപ്പിക്കുന്നു</string>
     <string name="settings_weekly_review">ആഴ്ച അവലോകനം</string>
     <string name="settings_weekly_review_on">ഓർമ്മപ്പെടുത്തൽ ഓൺ</string>
@@ -1066,17 +1066,21 @@
 
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
-    <string name="consent_optout_confirmation">Opt-Out saved — analytics is disabled.</string>
+    <string name="consent_optout_confirmation">ഓപ്റ്റ്-ഔട്ട് സംരക്ഷിച്ചു — സ്ഥിതിവിവരക്കണക്ക് ഓഫാണ്.</string>
     <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="settings_ccpa_do_not_sell_subtitle">For California residents (CCPA/CPRA 2026). When active, all cloud AI features are disabled and no analytics are collected.</string>
-    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell enabled — all cloud services are disabled.</string>
-    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell disabled.</string>
-    <string name="settings_delete_account_in_progress">Deleting account and data…</string>
-    <string name="settings_delete_account_drive_error_title">Drive backup could not be deleted</string>
-    <string name="settings_delete_account_drive_error_body">The Google Drive backup could not be reliably removed (reason: %1$s).\n\nWithout complete deletion, the claim \"permanently removed\" would not be accurate.\n\nWhat would you like to do?</string>
-    <string name="settings_delete_account_retry">Try again</string>
-    <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
-    <string name="settings_delete_account_abort">Cancel operation</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">കാലിഫോർണിയ നിവാസികൾക്ക് (CCPA/CPRA 2026). സജീവമാകുമ്പോൾ എല്ലാ ക്ലൗഡ് AI സവിശേഷതകളും ഓഫാകും, ഒരു സ്ഥിതിവിവരക്കണക്കും ശേഖരിക്കില്ല.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell ഓണാണ് — എല്ലാ ക്ലൗഡ് സേവനങ്ങളും ഓഫാണ്.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell ഓഫാക്കി.</string>
+    <string name="settings_delete_account_in_progress">അക്കൗണ്ടും ഡാറ്റയും ഇല്ലാതാക്കുന്നു…</string>
+    <string name="settings_delete_account_drive_error_title">Drive ബാക്കപ്പ് ഇല്ലാതാക്കാൻ കഴിഞ്ഞില്ല</string>
+    <string name="settings_delete_account_drive_error_body">Google Drive ബാക്കപ്പ് വിശ്വസനീയമായി നീക്കം ചെയ്യാൻ കഴിഞ്ഞില്ല (കാരണം: %1$s).
+
+പൂർണമായി ഇല്ലാതാക്കാതെ \"സ്ഥിരമായി ഇല്ലാതാക്കി\" എന്ന സന്ദേശം ശരിയാവില്ല.
+
+നിങ്ങൾക്ക് എന്തുചെയ്യണം?</string>
+    <string name="settings_delete_account_retry">വീണ്ടും ശ്രമിക്കുക</string>
+    <string name="settings_delete_account_force_local">പ്രാദേശികമായി മാത്രം ഇല്ലാതാക്കുക (Drive ബാക്കപ്പ് തൽക്കാലം നിലനിൽക്കും)</string>
+    <string name="settings_delete_account_abort">പ്രവർത്തനം റദ്ദാക്കുക</string>
 
     <string name="legal_title_datenschutz">സ്വകാര്യതാ നയം</string>
     <string name="legal_title_nutzungsbedingungen">ഉപയോഗ നിബന്ധനകൾ</string>

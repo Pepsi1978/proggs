@@ -365,7 +365,7 @@
     <string name="settings_voice_choose">Вибрати голос</string>
     <string name="settings_reminder_section">Нагадування та підсумки</string>
     <string name="settings_daily_reminder">Щоденне нагадування</string>
-    <string name="settings_reminder_time">Час: %02d:%02d</string>
+    <string name="settings_reminder_time" formatted="false">Час: %02d:%02d</string>
     <string name="settings_reminder_desc">Нагадує писати у щоденник</string>
     <string name="settings_weekly_review">Підсумки тижня</string>
     <string name="settings_weekly_review_on">Нагадування активне</string>
@@ -1139,17 +1139,21 @@
 
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
-    <string name="consent_optout_confirmation">Opt-Out saved — analytics is disabled.</string>
+    <string name="consent_optout_confirmation">Відмову збережено — статистику вимкнено.</string>
     <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="settings_ccpa_do_not_sell_subtitle">For California residents (CCPA/CPRA 2026). When active, all cloud AI features are disabled and no analytics are collected.</string>
-    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell enabled — all cloud services are disabled.</string>
-    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell disabled.</string>
-    <string name="settings_delete_account_in_progress">Deleting account and data…</string>
-    <string name="settings_delete_account_drive_error_title">Drive backup could not be deleted</string>
-    <string name="settings_delete_account_drive_error_body">The Google Drive backup could not be reliably removed (reason: %1$s).\n\nWithout complete deletion, the claim \"permanently removed\" would not be accurate.\n\nWhat would you like to do?</string>
-    <string name="settings_delete_account_retry">Try again</string>
-    <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
-    <string name="settings_delete_account_abort">Cancel operation</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">Для мешканців Каліфорнії (CCPA/CPRA 2026). Коли активовано, усі хмарні функції ШІ вимкнено й жодну статистику не збирається.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell увімкнено — усі хмарні сервіси вимкнено.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell вимкнено.</string>
+    <string name="settings_delete_account_in_progress">Видалення облікового запису й даних…</string>
+    <string name="settings_delete_account_drive_error_title">Не вдалося видалити резервну копію Drive</string>
+    <string name="settings_delete_account_drive_error_body">Резервну копію в Google Drive не вдалося надійно видалити (причина: %1$s).
+
+Без повного видалення повідомлення «остаточно видалено» було б некоректним.
+
+Що ти хочеш зробити?</string>
+    <string name="settings_delete_account_retry">Спробувати ще раз</string>
+    <string name="settings_delete_account_force_local">Видалити лише локально (резервна копія в Drive поки що залишиться)</string>
+    <string name="settings_delete_account_abort">Скасувати операцію</string>
 
     <string name="legal_title_datenschutz">Політика конфіденційності</string>
     <string name="legal_title_nutzungsbedingungen">Умови використання</string>

@@ -365,7 +365,7 @@
     <string name="settings_voice_choose">Escolher voz</string>
     <string name="settings_reminder_section">Lembrete / Retrospetiva</string>
     <string name="settings_daily_reminder">Lembrete diário</string>
-    <string name="settings_reminder_time">Horário: %02d:%02d</string>
+    <string name="settings_reminder_time" formatted="false">Horário: %02d:%02d</string>
     <string name="settings_reminder_desc">Lembra-te de escrever no diário</string>
     <string name="settings_weekly_review">Retrospetiva semanal</string>
     <string name="settings_weekly_review_on">Lembrete ativo</string>
@@ -1131,17 +1131,21 @@
 
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
-    <string name="consent_optout_confirmation">Opt-Out saved — analytics is disabled.</string>
+    <string name="consent_optout_confirmation">Opt-Out guardado — as estatísticas estão desativadas.</string>
     <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="settings_ccpa_do_not_sell_subtitle">For California residents (CCPA/CPRA 2026). When active, all cloud AI features are disabled and no analytics are collected.</string>
-    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell enabled — all cloud services are disabled.</string>
-    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell disabled.</string>
-    <string name="settings_delete_account_in_progress">Deleting account and data…</string>
-    <string name="settings_delete_account_drive_error_title">Drive backup could not be deleted</string>
-    <string name="settings_delete_account_drive_error_body">The Google Drive backup could not be reliably removed (reason: %1$s).\n\nWithout complete deletion, the claim \"permanently removed\" would not be accurate.\n\nWhat would you like to do?</string>
-    <string name="settings_delete_account_retry">Try again</string>
-    <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
-    <string name="settings_delete_account_abort">Cancel operation</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">Para residentes da Califórnia (CCPA/CPRA 2026). Quando ativado, todas as funcionalidades de IA na nuvem são desativadas e nenhuma estatística é recolhida.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell ativado — todos os serviços na nuvem estão desativados.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell desativado.</string>
+    <string name="settings_delete_account_in_progress">A eliminar conta e dados…</string>
+    <string name="settings_delete_account_drive_error_title">Não foi possível eliminar a cópia de segurança do Drive</string>
+    <string name="settings_delete_account_drive_error_body">A cópia de segurança do Google Drive não pôde ser removida de forma fiável (motivo: %1$s).
+
+Sem uma eliminação completa, a mensagem «removido definitivamente» não seria exata.
+
+O que queres fazer?</string>
+    <string name="settings_delete_account_retry">Tentar novamente</string>
+    <string name="settings_delete_account_force_local">Eliminar apenas localmente (a cópia do Drive mantém-se por agora)</string>
+    <string name="settings_delete_account_abort">Cancelar operação</string>
 
     <string name="legal_title_datenschutz">Política de Privacidade</string>
     <string name="legal_title_nutzungsbedingungen">Termos de Utilização</string>

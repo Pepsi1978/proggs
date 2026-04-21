@@ -354,7 +354,7 @@
     <string name="settings_voice_choose">Choose voice</string>
     <string name="settings_reminder_section">Reminders / Reviews</string>
     <string name="settings_daily_reminder">Daily reminder</string>
-    <string name="settings_reminder_time">Time: %02d:%02d</string>
+    <string name="settings_reminder_time" formatted="false">Time: %02d:%02d</string>
     <string name="settings_reminder_desc">Reminds you to write in your journal</string>
     <string name="settings_weekly_review">Weekly review</string>
     <string name="settings_weekly_review_on">Reminder on</string>

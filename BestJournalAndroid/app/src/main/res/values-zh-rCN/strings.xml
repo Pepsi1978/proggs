@@ -365,7 +365,7 @@
     <string name="settings_voice_choose">选择声音</string>
     <string name="settings_reminder_section">提醒/回顾</string>
     <string name="settings_daily_reminder">每日提醒</string>
-    <string name="settings_reminder_time">时间：%02d:%02d</string>
+    <string name="settings_reminder_time" formatted="false">时间：%02d:%02d</string>
     <string name="settings_reminder_desc">提醒你写日记</string>
     <string name="settings_weekly_review">每周回顾</string>
     <string name="settings_weekly_review_on">提醒已开</string>
@@ -1127,17 +1127,21 @@
 
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
-    <string name="consent_optout_confirmation">Opt-Out saved — analytics is disabled.</string>
+    <string name="consent_optout_confirmation">已保存退出选项——统计已停用。</string>
     <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="settings_ccpa_do_not_sell_subtitle">For California residents (CCPA/CPRA 2026). When active, all cloud AI features are disabled and no analytics are collected.</string>
-    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell enabled — all cloud services are disabled.</string>
-    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell disabled.</string>
-    <string name="settings_delete_account_in_progress">Deleting account and data…</string>
-    <string name="settings_delete_account_drive_error_title">Drive backup could not be deleted</string>
-    <string name="settings_delete_account_drive_error_body">The Google Drive backup could not be reliably removed (reason: %1$s).\n\nWithout complete deletion, the claim \"permanently removed\" would not be accurate.\n\nWhat would you like to do?</string>
-    <string name="settings_delete_account_retry">Try again</string>
-    <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
-    <string name="settings_delete_account_abort">Cancel operation</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">适用于加州居民（CCPA/CPRA 2026）。启用后，所有云端AI功能都会停用，且不会收集任何统计数据。</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell已启用——所有云端服务均已停用。</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell已停用。</string>
+    <string name="settings_delete_account_in_progress">正在删除账户和数据…</string>
+    <string name="settings_delete_account_drive_error_title">无法删除云端硬盘备份</string>
+    <string name="settings_delete_account_drive_error_body">Google 云端硬盘备份无法可靠地删除（原因： %1$s）。
+
+若未完全删除，\"已永久删除\"的提示就不准确。
+
+你想怎么做？</string>
+    <string name="settings_delete_account_retry">重试</string>
+    <string name="settings_delete_account_force_local">仅删除本地数据（云端硬盘备份暂时保留）</string>
+    <string name="settings_delete_account_abort">取消操作</string>
 
     <string name="legal_title_datenschutz">隐私政策</string>
     <string name="legal_title_nutzungsbedingungen">使用条款</string>

@@ -365,7 +365,7 @@
     <string name="settings_voice_choose">목소리 고르기</string>
     <string name="settings_reminder_section">알림/돌아보기</string>
     <string name="settings_daily_reminder">매일 알림</string>
-    <string name="settings_reminder_time">시간: %02d:%02d</string>
+    <string name="settings_reminder_time" formatted="false">시간: %02d:%02d</string>
     <string name="settings_reminder_desc">일기를 쓰도록 알려 줘요</string>
     <string name="settings_weekly_review">주간 돌아보기</string>
     <string name="settings_weekly_review_on">알림 켜짐</string>
@@ -1127,17 +1127,21 @@
 
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
-    <string name="consent_optout_confirmation">Opt-Out saved — analytics is disabled.</string>
+    <string name="consent_optout_confirmation">옵트아웃을 저장했어요. 통계는 비활성화됐어요.</string>
     <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="settings_ccpa_do_not_sell_subtitle">For California residents (CCPA/CPRA 2026). When active, all cloud AI features are disabled and no analytics are collected.</string>
-    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell enabled — all cloud services are disabled.</string>
-    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell disabled.</string>
-    <string name="settings_delete_account_in_progress">Deleting account and data…</string>
-    <string name="settings_delete_account_drive_error_title">Drive backup could not be deleted</string>
-    <string name="settings_delete_account_drive_error_body">The Google Drive backup could not be reliably removed (reason: %1$s).\n\nWithout complete deletion, the claim \"permanently removed\" would not be accurate.\n\nWhat would you like to do?</string>
-    <string name="settings_delete_account_retry">Try again</string>
-    <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
-    <string name="settings_delete_account_abort">Cancel operation</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">캘리포니아 거주자용(CCPA/CPRA 2026). 사용 설정하면 모든 클라우드 AI 기능이 비활성화되고 통계도 수집되지 않아요.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell을 켰어요. 모든 클라우드 서비스가 꺼졌어요.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell을 껐어요.</string>
+    <string name="settings_delete_account_in_progress">계정과 데이터를 삭제하는 중…</string>
+    <string name="settings_delete_account_drive_error_title">Drive 백업을 삭제하지 못했어요</string>
+    <string name="settings_delete_account_drive_error_body">Google Drive 백업을 확실하게 제거하지 못했어요(이유: %1$s).
+
+완전히 삭제되지 않으면 \"영구적으로 삭제됨\"이라는 안내가 정확하지 않아요.
+
+어떻게 할까요?</string>
+    <string name="settings_delete_account_retry">다시 시도</string>
+    <string name="settings_delete_account_force_local">로컬에서만 삭제(Drive 백업은 당분간 유지)</string>
+    <string name="settings_delete_account_abort">작업 취소</string>
 
     <string name="legal_title_datenschutz">개인정보 처리방침</string>
     <string name="legal_title_nutzungsbedingungen">이용 약관</string>

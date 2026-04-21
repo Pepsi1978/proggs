@@ -365,7 +365,7 @@
     <string name="settings_voice_choose">Pilih suara</string>
     <string name="settings_reminder_section">Pengingat/Tinjauan</string>
     <string name="settings_daily_reminder">Pengingat harian</string>
-    <string name="settings_reminder_time">Waktu: %02d:%02d</string>
+    <string name="settings_reminder_time" formatted="false">Waktu: %02d:%02d</string>
     <string name="settings_reminder_desc">Mengingatkanmu menulis jurnal</string>
     <string name="settings_weekly_review">Tinjauan mingguan</string>
     <string name="settings_weekly_review_on">Pengingat aktif</string>
@@ -1127,17 +1127,21 @@
 
 
     <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
-    <string name="consent_optout_confirmation">Opt-Out saved — analytics is disabled.</string>
+    <string name="consent_optout_confirmation">Opt-out disimpan — statistik dinonaktifkan.</string>
     <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
-    <string name="settings_ccpa_do_not_sell_subtitle">For California residents (CCPA/CPRA 2026). When active, all cloud AI features are disabled and no analytics are collected.</string>
-    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell enabled — all cloud services are disabled.</string>
-    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell disabled.</string>
-    <string name="settings_delete_account_in_progress">Deleting account and data…</string>
-    <string name="settings_delete_account_drive_error_title">Drive backup could not be deleted</string>
-    <string name="settings_delete_account_drive_error_body">The Google Drive backup could not be reliably removed (reason: %1$s).\n\nWithout complete deletion, the claim \"permanently removed\" would not be accurate.\n\nWhat would you like to do?</string>
-    <string name="settings_delete_account_retry">Try again</string>
-    <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
-    <string name="settings_delete_account_abort">Cancel operation</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">Untuk penduduk California (CCPA/CPRA 2026). Jika aktif, semua fitur AI cloud dinonaktifkan dan tidak ada statistik yang dikumpulkan.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell aktif — semua layanan cloud dinonaktifkan.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell dinonaktifkan.</string>
+    <string name="settings_delete_account_in_progress">Menghapus akun dan data…</string>
+    <string name="settings_delete_account_drive_error_title">Gagal menghapus cadangan Drive</string>
+    <string name="settings_delete_account_drive_error_body">Cadangan Google Drive tidak berhasil dihapus dengan andal (alasan: %1$s).
+
+Tanpa penghapusan menyeluruh, pesan \"dihapus permanen\" tidak akurat.
+
+Apa yang ingin kamu lakukan?</string>
+    <string name="settings_delete_account_retry">Coba lagi</string>
+    <string name="settings_delete_account_force_local">Hapus lokal saja (cadangan Drive tetap untuk sementara)</string>
+    <string name="settings_delete_account_abort">Batalkan operasi</string>
 
     <string name="legal_title_datenschutz">Kebijakan Privasi</string>
     <string name="legal_title_nutzungsbedingungen">Ketentuan Penggunaan</string>
