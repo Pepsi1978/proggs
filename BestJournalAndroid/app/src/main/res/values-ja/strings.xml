@@ -1138,4 +1138,8 @@
     <string name="settings_delete_account_retry">Try again</string>
     <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
     <string name="settings_delete_account_abort">Cancel operation</string>
+
+    <string name="legal_title_datenschutz">プライバシーポリシー</string>
+    <string name="legal_title_nutzungsbedingungen">利用規約</string>
+    <string name="legal_title_impressum">法的情報</string>
 </resources>

@@ -429,6 +429,8 @@ constructor(
             signInUseCase(activityContext)
                 .onSuccess { profile ->
                     _uiState.value = _uiState.value.copy(userProfile = profile, syncMessage = null)
+                    // Auto-enable TTS after login (last selected voice + favorites stay intact)
+                    encryptedPrefs.edit().putBoolean(Constants.PREF_TTS_ENABLED, true).apply()
                     // Auto-restore backup
                     try {
                         if (syncUseCase.hasBackup()) {

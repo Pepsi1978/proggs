@@ -872,7 +872,7 @@ fun SettingsScreen(
 
                         // ── Stimmen (TTS) ──
                         var ttsEnabled by remember {
-                            mutableStateOf(soundsPrefs.getBoolean(Constants.PREF_TTS_ENABLED, true))
+                            mutableStateOf(soundsPrefs.getBoolean(Constants.PREF_TTS_ENABLED, false))
                         }
 
                         Row(

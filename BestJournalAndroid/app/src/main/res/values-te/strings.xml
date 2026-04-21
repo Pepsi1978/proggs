@@ -1074,4 +1074,8 @@
     <string name="settings_delete_account_retry">Try again</string>
     <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
     <string name="settings_delete_account_abort">Cancel operation</string>
+
+    <string name="legal_title_datenschutz">గోప్యతా విధానం</string>
+    <string name="legal_title_nutzungsbedingungen">వినియోగ నిబంధనలు</string>
+    <string name="legal_title_impressum">చట్టపరమైన సమాచారం</string>
 </resources>
