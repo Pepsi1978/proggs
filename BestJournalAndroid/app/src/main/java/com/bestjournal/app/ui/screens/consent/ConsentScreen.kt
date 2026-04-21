@@ -314,7 +314,7 @@ fun ConsentScreen(
                         translationY = btnOffsetY.value * density
                     },
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(40.dp),
                 ) {
                     // Accept all
                     ConsentFilledButton(
