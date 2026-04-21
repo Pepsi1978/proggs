@@ -1150,4 +1150,46 @@ Cosa vuoi fare?</string>
     <string name="legal_title_datenschutz">Informativa sulla privacy</string>
     <string name="legal_title_nutzungsbedingungen">Termini di utilizzo</string>
     <string name="legal_title_impressum">Note legali</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Benvenuto in Best Journal</string>
+    <string name="consent_welcome_intro">Prima di iniziare, impostiamo qui rapidamente le tue preferenze sulla privacy.</string>
+    <string name="consent_promise_local">Le leggi sulla privacy richiedono il tuo consenso.</string>
+    <string name="consent_promise_no_training">Qui decidi tu quali funzioni sono attive.</string>
+    <string name="consent_promise_optional_ai">Modificabile in qualsiasi momento nelle Impostazioni.</string>
+    <string name="consent_btn_manual_selection">Selezione manuale</string>
+    <string name="privacy_sheet_title">Personalizza privacy</string>
+    <string name="privacy_sheet_subtitle">Attiva le singole funzioni come preferisci. Tutto può essere modificato in qualsiasi momento.</string>
+    <string name="privacy_sheet_save">Salva selezione</string>
+    <string name="privacy_sheet_all_on">Attiva tutto</string>
+    <string name="privacy_sheet_all_off">Disattiva tutto</string>
+    <string name="consent_toggle_analytics_title">Analisi d’uso anonima</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — ci aiuta a migliorare l’app. Nessun contenuto personale, solo conteggi di tocchi anonimi. Trasferimento dati: Google USA (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">Voce in testo (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">Permette di dettare le voci. La tua registrazione vocale viene inviata cifrata a Groq (USA), convertita in testo e poi eliminata. Le tue registrazioni NON vengono utilizzate per l’addestramento.</string>
+    <string name="consent_toggle_gemini_title">Riflessioni IA (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">IA della dashboard, riassunti, retrospettive e miglioramento del testo. Invia frammenti di testo a Google Gemini (USA). Le tue voci NON vengono utilizzate per l’addestramento.</string>
+    <string name="consent_toggle_tts_title">Lettura ad alta voce (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">Legge le voci con voce naturale. Invia il testo a Microsoft (USA). Alternativa: TTS di sistema offline.</string>
+    <string name="consent_toggle_drive_title">Backup Google Drive</string>
+    <string name="consent_toggle_drive_body">Salva le voci cifrate nel tuo Google Drive. Mantieni il pieno controllo — il file è nel tuo account, non presso di noi.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">Opt-out California (CCPA/CPRA 2026). Se attivo, tutti i trattamenti dati opzionali sono disattivati — restano solo le funzioni locali.</string>
+    <string name="consent_btn_accept_all">Accetta tutto</string>
+    <string name="consent_btn_save_selection">Salva la mia selezione</string>
+    <string name="consent_btn_minimum_only">Rifiuta tutto</string>
+    <string name="consent_saved_snackbar">Impostazione salvata</string>
+    <string name="consent_revoke_snackbar">Consenso revocato</string>
+    <string name="consent_footer_version">La tua selezione è modificabile in qualsiasi momento nelle Impostazioni.</string>
+    <string name="consent_details_expand">Dettagli</string>
+    <string name="settings_open_privacy_sheet">Personalizza impostazioni privacy</string>
+    <string name="settings_privacy_section_header">Privacy &amp; Consensi</string>
+    <string name="settings_ai_groq_title">Voce in testo (Groq)</string>
+    <string name="settings_ai_groq_subtitle">Invia registrazioni vocali a Groq USA per la trascrizione</string>
+    <string name="settings_ai_gemini_title">Riflessioni IA (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">Invia testi a Google USA per i riassunti IA</string>
+    <string name="settings_ai_tts_title">Lettura ad alta voce (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">Invia testi a Microsoft USA per la sintesi vocale</string>
+    <string name="settings_drive_backup_title">Backup Google Drive</string>
+    <string name="settings_drive_backup_subtitle">Salva le voci cifrate nel tuo Drive</string>
 </resources>
