@@ -369,7 +369,10 @@ constructor(
                         error,
                     )
                     manualRefreshActive = false
-                    val msg = "${error.javaClass.simpleName}: ${error.message ?: "null"}"
+                    val msg = if (error is com.bestjournal.app.domain.NoEntriesException)
+                        context.getString(com.bestjournal.app.R.string.journal_no_entries)
+                    else
+                        error.message ?: context.getString(com.bestjournal.app.R.string.dashboard_gemini_unavailable)
                     _uiState.value =
                         _uiState.value.copy(
                             isLoading = false,

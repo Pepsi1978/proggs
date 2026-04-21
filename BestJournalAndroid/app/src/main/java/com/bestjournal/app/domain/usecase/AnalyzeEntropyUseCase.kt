@@ -19,7 +19,7 @@ constructor(
     ): Result<Unit> {
         val allEntries = journalRepository.getAllEntries().first()
         if (allEntries.isEmpty())
-            return Result.failure(Exception("Keine Tagebucheinträge vorhanden"))
+            return Result.failure(com.bestjournal.app.domain.NoEntriesException())
 
         // M-4 fix: Apply MAX_ENTRIES limit based on subscription tier to control API costs
         val maxEntries =
