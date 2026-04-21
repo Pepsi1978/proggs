@@ -256,8 +256,7 @@ fun RetrospectiveScreen(
             TwinklingStars()
         }
         Column(modifier = Modifier.fillMaxSize()) {
-            Spacer(modifier = Modifier.height(10.dp))
-            // Fixed title bar (does not scroll)
+            // Fixed title bar (does not scroll) — same top alignment as Dashboard/Journal/Settings
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
