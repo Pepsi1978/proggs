@@ -150,5 +150,31 @@ constructor(
             PrivacyGateHelper.CloudService.EdgeTts,
             _ttsEnabled.value,
         )
+
+        // Mirror the TTS consent into Settings → Töne & Haptik → Stimmen so a user
+        // who ticked "Vorlesen" in the consent sheet finds the switch already on
+        // with a locale-matching default voice pre-selected. Opposite direction:
+        // if the consent toggle is off we also turn the settings switch off so
+        // the two views stay in sync.
+        try {
+            val encPrefs = com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
+            val ttsOn = _ttsEnabled.value
+            encPrefs.edit()
+                .putBoolean(Constants.PREF_TTS_ENABLED, ttsOn)
+                .apply()
+            if (ttsOn &&
+                encPrefs.getString(Constants.PREF_EDGE_TTS_VOICE, null).isNullOrBlank()
+            ) {
+                val defaultVoice = com.bestjournal.app.util.TtsVoiceRegistry
+                    .getLocaleVoices()
+                    .defaultVoiceId
+                encPrefs.edit()
+                    .putString(Constants.PREF_EDGE_TTS_VOICE, defaultVoice)
+                    .apply()
+            }
+        } catch (_: Exception) {
+            // EncryptedPrefsProvider very rarely fails on first-install edge cases;
+            // silent fallback — the user can still flip the toggle manually later.
+        }
     }
 }
