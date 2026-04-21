@@ -149,6 +149,7 @@ enum class LegalDocument(
         private val TRANSLATED_SUMMARIES = setOf(
             "fr",
             "es",
+            "pt-BR",
         )
 
         private fun String.onlyIfTranslated(): String? =
