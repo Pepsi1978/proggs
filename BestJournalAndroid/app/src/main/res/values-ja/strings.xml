@@ -1125,4 +1125,17 @@
     <string name="settings_revoke_email_body">こんにちは、\n\n本通知により、Best Journal のプレミアム機能に関する契約の解除を通知します。\n\n注文日：[記入してください]\nGoogleアカウントのメール：[送信者と異なる場合は記入してください]\n氏名：[記入してください]\n\n日付：[今日]</string>
 
 
+
+    <!-- AUTO-ADDED FALLBACK (English) for missing keys — replace with proper translations later -->
+    <string name="consent_optout_confirmation">Opt-Out saved — analytics is disabled.</string>
+    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">For California residents (CCPA/CPRA 2026). When active, all cloud AI features are disabled and no analytics are collected.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell enabled — all cloud services are disabled.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell disabled.</string>
+    <string name="settings_delete_account_in_progress">Deleting account and data…</string>
+    <string name="settings_delete_account_drive_error_title">Drive backup could not be deleted</string>
+    <string name="settings_delete_account_drive_error_body">The Google Drive backup could not be reliably removed (reason: %1$s).\n\nWithout complete deletion, the claim \"permanently removed\" would not be accurate.\n\nWhat would you like to do?</string>
+    <string name="settings_delete_account_retry">Try again</string>
+    <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
+    <string name="settings_delete_account_abort">Cancel operation</string>
 </resources>

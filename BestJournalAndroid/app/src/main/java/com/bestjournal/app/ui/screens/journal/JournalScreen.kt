@@ -233,11 +233,39 @@ fun JournalScreen(
     val searchFocusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
-    // Auto-focus search field when search opens (opens keyboard)
+    // Auto-focus search field when search opens (opens keyboard).
+    // Robust against "FocusRequester is not initialized" — this crash hit users in
+    // some locales (e.g. nl-NL) because layout timing shifts when UI strings differ
+    // in length and the FocusRequester may not be attached to its TextField yet
+    // when the 100ms delay elapses. We retry up to 3 times with exponential backoff
+    // and silently give up (the user can still tap the field manually).
     LaunchedEffect(uiState.isSearchActive) {
         if (uiState.isSearchActive) {
-            delay(100) // Wait for AnimatedVisibility to render
-            searchFocusRequester.requestFocus()
+            var attempt = 0
+            var delayMs = 100L
+            while (attempt < 3) {
+                delay(delayMs)
+                try {
+                    searchFocusRequester.requestFocus()
+                    break
+                } catch (e: IllegalStateException) {
+                    // FocusRequester not yet attached — TextField still animating in.
+                    android.util.Log.w(
+                        "JournalSearch",
+                        "FocusRequester attempt ${attempt + 1} failed: ${e.message}",
+                    )
+                    attempt++
+                    delayMs *= 2 // 100ms, 200ms, 400ms
+                } catch (e: Exception) {
+                    // Any other failure: log and give up — do NOT crash the app.
+                    android.util.Log.e(
+                        "JournalSearch",
+                        "FocusRequester unexpected failure",
+                        e,
+                    )
+                    break
+                }
+            }
         }
     }
 
