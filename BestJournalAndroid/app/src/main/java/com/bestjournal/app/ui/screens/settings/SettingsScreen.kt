@@ -875,6 +875,27 @@ fun SettingsScreen(
                             mutableStateOf(soundsPrefs.getBoolean(Constants.PREF_TTS_ENABLED, false))
                         }
 
+                        // Keep the Sounds switch in sync with external changes to
+                        // PREF_TTS_ENABLED (specifically: when the user toggles TTS inside
+                        // Datenschutz → Angepasste Datenschutzeinstellungen, which writes
+                        // the same key). Without this listener the switch would remain
+                        // stuck at the value loaded at initial composition.
+                        androidx.compose.runtime.DisposableEffect(soundsPrefs) {
+                            val listener =
+                                android.content.SharedPreferences.OnSharedPreferenceChangeListener {
+                                    prefs,
+                                    key ->
+                                    if (key == Constants.PREF_TTS_ENABLED) {
+                                        ttsEnabled =
+                                            prefs.getBoolean(Constants.PREF_TTS_ENABLED, false)
+                                    }
+                                }
+                            soundsPrefs.registerOnSharedPreferenceChangeListener(listener)
+                            onDispose {
+                                soundsPrefs.unregisterOnSharedPreferenceChangeListener(listener)
+                            }
+                        }
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
