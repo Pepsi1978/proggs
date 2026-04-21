@@ -164,6 +164,7 @@ enum class LegalDocument(
             "hi",
             "th",
             "id",
+            "bn",
         )
 
         private fun String.onlyIfTranslated(): String? =
