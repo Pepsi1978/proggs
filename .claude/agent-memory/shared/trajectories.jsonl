@@ -39,3 +39,4 @@
 {"date": "2026-04-18", "task_description": "session-auto-logged", "tool_sequence": [], "errors": [], "corrections": 0, "duration_minutes": 0, "success": true, "tags": ["auto-logged"], "utility_score": 0.6, "near_miss": false}
 {"date": "2026-04-20", "task_description": "session-auto-logged", "tool_sequence": [], "errors": [], "corrections": 0, "duration_minutes": 0, "success": true, "tags": ["auto-logged"], "utility_score": 0.6, "near_miss": false}
 {"duration_minutes":0,"errors":[],"task_description":"session-auto-logged","tool_sequence":null,"utility_score":0.8,"date":"2026-04-21","tags":["auto-logged"],"success":true,"near_miss":false,"corrections":0}
+{"corrections":0,"utility_score":0.8,"near_miss":false,"tool_sequence":null,"success":true,"tags":["auto-logged"],"date":"2026-04-21","errors":[],"task_description":"session-auto-logged","duration_minutes":0}
