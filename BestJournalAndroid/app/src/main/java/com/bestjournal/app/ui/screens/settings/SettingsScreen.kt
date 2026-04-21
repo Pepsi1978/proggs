@@ -2443,7 +2443,49 @@ fun SettingsScreen(
                         privacyPrefs.getBoolean(Constants.PREF_ANALYTICS_ENABLED, false)
                     )
                 }
+                var crashlyticsEnabled by remember {
+                    mutableStateOf(
+                        privacyPrefs.getBoolean(Constants.PREF_CRASHLYTICS_ENABLED, false)
+                    )
+                }
+                var driveBackupEnabled by remember {
+                    mutableStateOf(
+                        privacyPrefs.getBoolean(Constants.PREF_DRIVE_BACKUP_ENABLED, false)
+                    )
+                }
+                var groqConsented by remember {
+                    mutableStateOf(
+                        com.bestjournal.app.util.PrivacyGateHelper.hasConsented(
+                            context,
+                            com.bestjournal.app.util.PrivacyGateHelper.CloudService.Groq,
+                        )
+                    )
+                }
+                var geminiConsented by remember {
+                    mutableStateOf(
+                        com.bestjournal.app.util.PrivacyGateHelper.hasConsented(
+                            context,
+                            com.bestjournal.app.util.PrivacyGateHelper.CloudService.Gemini,
+                        )
+                    )
+                }
+                var ttsConsented by remember {
+                    mutableStateOf(
+                        com.bestjournal.app.util.PrivacyGateHelper.hasConsented(
+                            context,
+                            com.bestjournal.app.util.PrivacyGateHelper.CloudService.EdgeTts,
+                        )
+                    )
+                }
                 var showDeleteDialog by remember { mutableStateOf(false) }
+                var showRevokeAllDialog by remember { mutableStateOf(false) }
+                val consentTimestamp =
+                    privacyPrefs.getLong(Constants.PREF_CONSENT_TIMESTAMP, 0L)
+                val consentPolicyVersion =
+                    privacyPrefs.getString(
+                        Constants.PREF_CONSENT_POLICY_VERSION,
+                        Constants.CURRENT_POLICY_VERSION,
+                    )
 
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
@@ -2494,6 +2536,10 @@ fun SettingsScreen(
                                     privacyPrefs
                                         .edit()
                                         .putBoolean(Constants.PREF_ANALYTICS_ENABLED, enabled)
+                                        .putLong(
+                                            Constants.PREF_CONSENT_TIMESTAMP,
+                                            System.currentTimeMillis(),
+                                        )
                                         .apply()
                                     com.google.firebase.analytics.FirebaseAnalytics.getInstance(
                                             context
@@ -2506,6 +2552,272 @@ fun SettingsScreen(
                                     ),
                             )
                         }
+
+                        // Crashlytics toggle
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text(
+                                    stringResource(R.string.settings_crashlytics_title),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    stringResource(R.string.settings_crashlytics_subtitle),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = crashlyticsEnabled,
+                                onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    crashlyticsEnabled = enabled
+                                    privacyPrefs
+                                        .edit()
+                                        .putBoolean(Constants.PREF_CRASHLYTICS_ENABLED, enabled)
+                                        .putLong(
+                                            Constants.PREF_CONSENT_TIMESTAMP,
+                                            System.currentTimeMillis(),
+                                        )
+                                        .apply()
+                                },
+                                colors =
+                                    SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    ),
+                            )
+                        }
+
+                        // Groq Speech-to-Text toggle
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text(
+                                    stringResource(R.string.settings_ai_groq_title),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    stringResource(R.string.settings_ai_groq_subtitle),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = groqConsented,
+                                onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    groqConsented = enabled
+                                    com.bestjournal.app.util.PrivacyGateHelper.setConsent(
+                                        context,
+                                        com.bestjournal.app.util.PrivacyGateHelper.CloudService
+                                            .Groq,
+                                        enabled,
+                                    )
+                                    privacyPrefs
+                                        .edit()
+                                        .putLong(
+                                            Constants.PREF_CONSENT_TIMESTAMP,
+                                            System.currentTimeMillis(),
+                                        )
+                                        .apply()
+                                },
+                                colors =
+                                    SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    ),
+                            )
+                        }
+
+                        // Gemini AI toggle
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text(
+                                    stringResource(R.string.settings_ai_gemini_title),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    stringResource(R.string.settings_ai_gemini_subtitle),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = geminiConsented,
+                                onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    geminiConsented = enabled
+                                    com.bestjournal.app.util.PrivacyGateHelper.setConsent(
+                                        context,
+                                        com.bestjournal.app.util.PrivacyGateHelper.CloudService
+                                            .Gemini,
+                                        enabled,
+                                    )
+                                    privacyPrefs
+                                        .edit()
+                                        .putLong(
+                                            Constants.PREF_CONSENT_TIMESTAMP,
+                                            System.currentTimeMillis(),
+                                        )
+                                        .apply()
+                                },
+                                colors =
+                                    SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    ),
+                            )
+                        }
+
+                        // Edge TTS toggle
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text(
+                                    stringResource(R.string.settings_ai_tts_title),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    stringResource(R.string.settings_ai_tts_subtitle),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = ttsConsented,
+                                onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    ttsConsented = enabled
+                                    com.bestjournal.app.util.PrivacyGateHelper.setConsent(
+                                        context,
+                                        com.bestjournal.app.util.PrivacyGateHelper.CloudService
+                                            .EdgeTts,
+                                        enabled,
+                                    )
+                                    privacyPrefs
+                                        .edit()
+                                        .putLong(
+                                            Constants.PREF_CONSENT_TIMESTAMP,
+                                            System.currentTimeMillis(),
+                                        )
+                                        .apply()
+                                },
+                                colors =
+                                    SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    ),
+                            )
+                        }
+
+                        // Drive backup toggle
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text(
+                                    stringResource(R.string.settings_drive_backup_title),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    stringResource(R.string.settings_drive_backup_subtitle),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = driveBackupEnabled,
+                                onCheckedChange = { enabled ->
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    driveBackupEnabled = enabled
+                                    privacyPrefs
+                                        .edit()
+                                        .putBoolean(
+                                            Constants.PREF_DRIVE_BACKUP_ENABLED,
+                                            enabled,
+                                        )
+                                        .putLong(
+                                            Constants.PREF_CONSENT_TIMESTAMP,
+                                            System.currentTimeMillis(),
+                                        )
+                                        .apply()
+                                },
+                                colors =
+                                    SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                                    ),
+                            )
+                        }
+
+                        // Revoke all + metadata footer
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    showRevokeAllDialog = true
+                                },
+                                colors =
+                                    ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.secondary
+                                    ),
+                            ) {
+                                Text(stringResource(R.string.settings_privacy_revoke_all))
+                            }
+                        }
+                        if (consentTimestamp > 0L) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            val formatted =
+                                java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
+                                    .format(java.util.Date(consentTimestamp))
+                            Text(
+                                text =
+                                    stringResource(
+                                        R.string.settings_privacy_last_changed,
+                                        formatted,
+                                    ),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                        Text(
+                            text =
+                                stringResource(
+                                    R.string.settings_privacy_policy_version,
+                                    consentPolicyVersion ?: Constants.CURRENT_POLICY_VERSION,
+                                ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                        )
 
                         // NH2: CCPA/CPRA 2026 "Do Not Sell My Personal Information" toggle.
                         // Only shown for California residents (English US locale). When active,
@@ -2804,6 +3116,67 @@ fun SettingsScreen(
                             )
                         }
                     }
+                }
+
+                if (showRevokeAllDialog) {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { showRevokeAllDialog = false },
+                        title = {
+                            Text(stringResource(R.string.settings_privacy_revoke_confirm_title))
+                        },
+                        text = {
+                            Text(stringResource(R.string.settings_privacy_revoke_confirm_body))
+                        },
+                        confirmButton = {
+                            androidx.compose.material3.TextButton(
+                                onClick = {
+                                    // Revoke every optional data flow in one tap.
+                                    privacyPrefs
+                                        .edit()
+                                        .putBoolean(Constants.PREF_ANALYTICS_ENABLED, false)
+                                        .putBoolean(Constants.PREF_CRASHLYTICS_ENABLED, false)
+                                        .putBoolean(Constants.PREF_DRIVE_BACKUP_ENABLED, false)
+                                        .putLong(
+                                            Constants.PREF_CONSENT_TIMESTAMP,
+                                            System.currentTimeMillis(),
+                                        )
+                                        .apply()
+                                    com.bestjournal.app.util.PrivacyGateHelper.revokeAll(context)
+                                    com.google.firebase.analytics.FirebaseAnalytics.getInstance(
+                                            context
+                                        )
+                                        .setAnalyticsCollectionEnabled(false)
+                                    analyticsEnabled = false
+                                    crashlyticsEnabled = false
+                                    driveBackupEnabled = false
+                                    groqConsented = false
+                                    geminiConsented = false
+                                    ttsConsented = false
+                                    android.widget.Toast.makeText(
+                                            context,
+                                            context.getString(
+                                                R.string.settings_privacy_revoke_done
+                                            ),
+                                            android.widget.Toast.LENGTH_SHORT,
+                                        )
+                                        .show()
+                                    showRevokeAllDialog = false
+                                }
+                            ) {
+                                Text(
+                                    stringResource(R.string.settings_privacy_revoke_confirm_yes),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        },
+                        dismissButton = {
+                            androidx.compose.material3.TextButton(
+                                onClick = { showRevokeAllDialog = false }
+                            ) {
+                                Text(stringResource(R.string.settings_delete_account_cancel))
+                            }
+                        },
+                    )
                 }
 
                 if (showDeleteDialog) {

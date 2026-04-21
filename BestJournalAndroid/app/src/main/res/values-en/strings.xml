@@ -1075,6 +1075,55 @@
     <string name="consent_disable_stats">Disable statistics and continue</string>
     <string name="consent_confirmation">By tapping \"Agree and get started\" you confirm that you have read the Privacy Policy, the Terms of Use and the Imprint, and that you agree to the data processing described. You can change your decision at any time in settings.</string>
 
+    <!-- Consent-Screen v3: granular toggles (Phase A) -->
+    <string name="consent_section_essential">Required (always on)</string>
+    <string name="consent_section_optional">Optional features — your choice</string>
+    <string name="consent_toggle_local_title">Local storage</string>
+    <string name="consent_toggle_local_body">All entries stay on your device. This core function is always on and cannot be disabled.</string>
+    <string name="consent_toggle_analytics_title">Anonymous usage analytics</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — helps us improve the app. No personal content, just anonymous tap counts. Data transfer: Google USA (Data Privacy Framework).</string>
+    <string name="consent_toggle_crashlytics_title">Crash reports</string>
+    <string name="consent_toggle_crashlytics_body">Firebase Crashlytics — sends anonymous crash reports to Google so bugs get fixed faster. Data transfer: Google USA.</string>
+    <string name="consent_toggle_groq_title">Speech-to-text (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">Allows dictating entries. Your voice recording is sent encrypted to Groq (USA), converted to text, then deleted. Your recordings are NOT used for training.</string>
+    <string name="consent_toggle_gemini_title">AI reflections (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">Dashboard AI, summaries, reviews and text improvement. Sends text snippets to Google Gemini (USA). Your entries are NOT used for training.</string>
+    <string name="consent_toggle_tts_title">Read-aloud (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">Reads entries with a natural voice. Sends the text to Microsoft (USA). Alternative: offline system TTS.</string>
+    <string name="consent_toggle_drive_title">Google Drive backup</string>
+    <string name="consent_toggle_drive_body">Saves entries encrypted to your own Google Drive. You retain full control — the file lives in your account, not with us.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">California opt-out (CCPA/CPRA 2026). When active, all optional data processing is disabled — only local features remain.</string>
+    <string name="consent_sensitive_note">Note: If your entries contain sensitive topics (health, religion, political views), they qualify as special category data (Art. 9 GDPR). Your consent above covers these categories.</string>
+    <string name="consent_no_training_badge">Your data is NOT used to train AI models</string>
+    <string name="consent_btn_accept_all">Accept all</string>
+    <string name="consent_btn_save_selection">Save my selection</string>
+    <string name="consent_btn_minimum_only">Required only</string>
+    <string name="consent_saved_snackbar">Setting saved</string>
+    <string name="consent_revoke_snackbar">Consent revoked</string>
+    <string name="consent_footer_version">Privacy policy v%1$s · All settings changeable any time in Settings.</string>
+    <string name="consent_details_expand">Details</string>
+
+    <!-- Settings-Screen v3: granular toggles + revoke button -->
+    <string name="settings_privacy_section_header">Privacy &amp; Consents</string>
+    <string name="settings_privacy_revoke_all">Revoke all consents</string>
+    <string name="settings_privacy_revoke_confirm_title">Revoke all consents?</string>
+    <string name="settings_privacy_revoke_confirm_body">After this, all cloud AI services, analytics, crash reports and Drive backup will be disabled. You can re-enable individual services any time.</string>
+    <string name="settings_privacy_revoke_confirm_yes">Revoke all</string>
+    <string name="settings_privacy_revoke_done">All consents revoked.</string>
+    <string name="settings_privacy_last_changed">Last changed: %1$s</string>
+    <string name="settings_privacy_policy_version">Privacy policy v%1$s</string>
+    <string name="settings_crashlytics_title">Crash reports</string>
+    <string name="settings_crashlytics_subtitle">Firebase Crashlytics (anonymous crash reports to Google USA)</string>
+    <string name="settings_ai_groq_title">Speech-to-text (Groq)</string>
+    <string name="settings_ai_groq_subtitle">Send voice recordings to Groq USA for transcription</string>
+    <string name="settings_ai_gemini_title">AI reflections (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">Send texts to Google USA for AI summaries</string>
+    <string name="settings_ai_tts_title">Read-aloud (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">Send texts to Microsoft USA for speech output</string>
+    <string name="settings_drive_backup_title">Google Drive backup</string>
+    <string name="settings_drive_backup_subtitle">Save entries encrypted to your Drive</string>
+
     <!-- CCPA 2026: Opt-Out confirmation + Do-Not-Sell (California) -->
     <string name="consent_optout_confirmation">Opt-Out saved — analytics is disabled.</string>
     <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>

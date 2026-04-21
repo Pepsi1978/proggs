@@ -144,11 +144,21 @@ object Constants {
 
     // DSGVO consent (shown once before onboarding on fresh install)
     const val PREF_CONSENT_SHOWN = "consent_shown"
+    // Policy version acknowledged at last consent. Used to trigger re-consent
+    // when privacy policy / SDK surface changes materially (Art. 7 Abs. 1 DSGVO).
+    const val PREF_CONSENT_POLICY_VERSION = "consent_policy_version"
+    // Epoch millis when consent record was last written (audit trail).
+    const val PREF_CONSENT_TIMESTAMP = "consent_timestamp"
+    // Current policy version — bump on material DSE/SDK changes to force re-consent.
+    const val CURRENT_POLICY_VERSION = "3.0"
+
     // Firebase Analytics opt-in — default false.
-    // Set to true when user taps "Loslegen" on consent screen.
-    // Stays false when user taps "Statistiken deaktivieren".
-    // Toggle in Settings → Datenschutz switches it at runtime.
+    // Toggle in ConsentScreen AND Settings → Datenschutz switches it at runtime.
     const val PREF_ANALYTICS_ENABLED = "analytics_enabled"
+    // Firebase Crashlytics opt-in — default false (sends anonymous crash reports to Google USA).
+    const val PREF_CRASHLYTICS_ENABLED = "crashlytics_enabled"
+    // Google Drive backup opt-in — default false.
+    const val PREF_DRIVE_BACKUP_ENABLED = "drive_backup_enabled"
 
     // CCPA/CPRA 2026 (California): "Do Not Sell My Personal Information" toggle.
     // When true: all cloud AI services (Groq, Gemini, Edge-TTS) per-service consents

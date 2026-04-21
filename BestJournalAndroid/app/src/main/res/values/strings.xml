@@ -553,6 +553,55 @@
     <string name="consent_disable_stats">Statistiken deaktivieren und fortfahren</string>
     <string name="consent_confirmation">Mit „Loslegen" bestätigst du, dass du die Datenschutzerklärung, die Nutzungsbedingungen und das Impressum gelesen hast und mit der beschriebenen Datenverarbeitung einverstanden bist. Du kannst deine Entscheidung jederzeit in den Einstellungen ändern.</string>
 
+    <!-- Consent-Screen v3: granulare Toggles (Phase A) -->
+    <string name="consent_section_essential">Notwendig (immer aktiv)</string>
+    <string name="consent_section_optional">Optionale Funktionen — deine Wahl</string>
+    <string name="consent_toggle_local_title">Lokale Speicherung</string>
+    <string name="consent_toggle_local_body">Alle Einträge bleiben auf deinem Gerät. Diese Grundfunktion ist immer aktiv und kann nicht deaktiviert werden.</string>
+    <string name="consent_toggle_analytics_title">Anonyme Nutzungsanalyse</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — hilft uns die App zu verbessern. Keine persönlichen Inhalte, nur anonyme Klick-Zahlen. Datenübertragung: Google USA (Data Privacy Framework).</string>
+    <string name="consent_toggle_crashlytics_title">Fehlerberichte</string>
+    <string name="consent_toggle_crashlytics_body">Firebase Crashlytics — sendet anonyme Absturzberichte an Google, damit Fehler schneller gefixt werden. Datenübertragung: Google USA.</string>
+    <string name="consent_toggle_groq_title">Sprache-zu-Text (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">Erlaubt das Diktieren von Einträgen. Die Sprachaufnahme wird verschlüsselt an Groq (USA) gesendet, in Text umgewandelt und anschließend gelöscht. Deine Aufnahmen werden NICHT zum Training verwendet.</string>
+    <string name="consent_toggle_gemini_title">KI-Reflexionen (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">Dashboard-KI, Zusammenfassungen, Rückblicke und Textverbesserung. Sendet Textausschnitte an Google Gemini (USA). Deine Einträge werden NICHT zum Training verwendet.</string>
+    <string name="consent_toggle_tts_title">Vorlesen (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">Liest Einträge mit natürlicher Stimme vor. Sendet den Text an Microsoft (USA). Alternative: System-TTS offline.</string>
+    <string name="consent_toggle_drive_title">Google Drive Backup</string>
+    <string name="consent_toggle_drive_body">Sichert Einträge verschlüsselt in deinem eigenen Google Drive. Du behältst die volle Kontrolle — die Datei liegt in deinem Konto, nicht bei uns.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">Kalifornien-Opt-Out (CCPA/CPRA 2026). Wenn aktiv, werden alle optionalen Datenverarbeitungen deaktiviert — nur lokale Funktionen bleiben.</string>
+    <string name="consent_sensitive_note">Hinweis: Wenn deine Einträge sensible Themen (Gesundheit, Religion, politische Ansichten) enthalten, gelten diese als Sonderkategorie (Art. 9 DSGVO). Deine Einwilligung oben umfasst auch diese Kategorien.</string>
+    <string name="consent_no_training_badge">KI-Modelle werden mit deinen Daten NICHT trainiert</string>
+    <string name="consent_btn_accept_all">Alle akzeptieren</string>
+    <string name="consent_btn_save_selection">Meine Auswahl speichern</string>
+    <string name="consent_btn_minimum_only">Nur Erforderliches</string>
+    <string name="consent_saved_snackbar">Einstellung gespeichert</string>
+    <string name="consent_revoke_snackbar">Einwilligung widerrufen</string>
+    <string name="consent_footer_version">Datenschutzerklärung v%1$s · Alle Einstellungen jederzeit in den Einstellungen änderbar.</string>
+    <string name="consent_details_expand">Details</string>
+
+    <!-- Settings-Screen v3: granulare Toggles + Widerruf-Button -->
+    <string name="settings_privacy_section_header">Datenschutz &amp; Einwilligungen</string>
+    <string name="settings_privacy_revoke_all">Alle Einwilligungen widerrufen</string>
+    <string name="settings_privacy_revoke_confirm_title">Alle Einwilligungen widerrufen?</string>
+    <string name="settings_privacy_revoke_confirm_body">Danach sind alle Cloud-KI-Dienste, Analytics, Crashlytics und Drive-Backup deaktiviert. Du kannst einzelne Dienste jederzeit wieder aktivieren.</string>
+    <string name="settings_privacy_revoke_confirm_yes">Alle widerrufen</string>
+    <string name="settings_privacy_revoke_done">Alle Einwilligungen widerrufen.</string>
+    <string name="settings_privacy_last_changed">Zuletzt geändert: %1$s</string>
+    <string name="settings_privacy_policy_version">Datenschutzerklärung v%1$s</string>
+    <string name="settings_crashlytics_title">Fehlerberichte</string>
+    <string name="settings_crashlytics_subtitle">Firebase Crashlytics (anonyme Absturzberichte an Google USA)</string>
+    <string name="settings_ai_groq_title">Sprache-zu-Text (Groq)</string>
+    <string name="settings_ai_groq_subtitle">Sprachaufnahmen zur Transkription an Groq USA senden</string>
+    <string name="settings_ai_gemini_title">KI-Reflexionen (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">Texte für KI-Zusammenfassungen an Google USA senden</string>
+    <string name="settings_ai_tts_title">Vorlesen (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">Texte zur Sprachausgabe an Microsoft USA senden</string>
+    <string name="settings_drive_backup_title">Google Drive Backup</string>
+    <string name="settings_drive_backup_subtitle">Einträge verschlüsselt in deinem Drive sichern</string>
+
     <!-- CCPA 2026: Opt-Out confirmation + Do-Not-Sell (California) -->
     <string name="consent_optout_confirmation">Opt-Out gespeichert — Analytics ist deaktiviert.</string>
     <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
