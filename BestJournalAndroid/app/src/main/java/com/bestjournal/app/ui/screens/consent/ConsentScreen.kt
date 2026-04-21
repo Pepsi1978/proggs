@@ -314,7 +314,7 @@ fun ConsentScreen(
                         translationY = btnOffsetY.value * density
                     },
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(40.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     // Accept all
                     ConsentFilledButton(
@@ -322,6 +322,8 @@ fun ConsentScreen(
                         onClick = {
                             if (isExiting.value == null) isExiting.value = ExitMode.AcceptAll
                         },
+                        glowAlpha = glowAlpha,
+                        breathScale = btnBreathScale,
                     )
 
                     // Required only
@@ -330,6 +332,8 @@ fun ConsentScreen(
                         onClick = {
                             if (isExiting.value == null) isExiting.value = ExitMode.MinimumOnly
                         },
+                        glowAlpha = glowAlpha,
+                        breathScale = btnBreathScale,
                     )
 
                     // Manual selection (opens bottom sheet)
@@ -337,6 +341,8 @@ fun ConsentScreen(
                         label = stringResource(R.string.consent_btn_manual_selection),
                         leadingIcon = Icons.Rounded.Tune,
                         onClick = { showSheet = true },
+                        glowAlpha = glowAlpha,
+                        breathScale = btnBreathScale,
                     )
                 }
 
@@ -410,56 +416,79 @@ private enum class ExitMode { AcceptAll, MinimumOnly, SaveSelection }
 /**
  * Visually-identical copper-filled button used for all three consent options.
  *
- * Same gradient, same height, same text style, same optional leading icon slot —
- * no breathing animation, no glow halo, no elevation highlight for any single option.
- * This keeps the three choices equally prominent (EDSA Guideline 03/2023 §3.1.2 and
- * § 5 Abs. 6 UWG / UWG EmpCo-RL).
+ * All three buttons share the SAME gradient fill, the SAME breathing scale animation,
+ * the SAME glow halo, the SAME elevation, the SAME size and text style. Because the
+ * styling is literally the same for every button, none is visually more prominent than
+ * the others — EDSA Guideline 03/2023 §3.1.2 and UWG EmpCo-RL compliant.
+ *
+ * [glowAlpha] and [breathScale] are driven by a shared InfiniteTransition at the call
+ * site, so all buttons pulse and glow in sync.
  */
 @Composable
 private fun ConsentFilledButton(
     label: String,
     onClick: () -> Unit,
+    glowAlpha: Float,
+    breathScale: Float,
     leadingIcon: ImageVector? = null,
 ) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier.width(280.dp).height(54.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-        contentPadding = PaddingValues(0.dp),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.width(280.dp).graphicsLayer {
+            scaleX = breathScale
+            scaleY = breathScale
+        },
     ) {
+        // Glow halo (same alpha animation for every button)
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.horizontalGradient(listOf(CopperLight, CopperDeep)),
-                    shape = RoundedCornerShape(16.dp),
-                ),
-            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxWidth()
+                .height(54.dp)
+                .graphicsLayer { alpha = glowAlpha }
+                .clip(RoundedCornerShape(16.dp))
+                .background(CopperDeep)
+        )
+        Button(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth().height(54.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+            contentPadding = PaddingValues(0.dp),
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 10.dp,
+                pressedElevation = 2.dp,
+            ),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                if (leadingIcon != null) {
-                    Icon(
-                        imageVector = leadingIcon,
-                        contentDescription = null,
-                        tint = OnPrimaryDark,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.4.sp,
-                        fontSize = 15.sp,
+            Box(
+                modifier = Modifier.fillMaxSize()
+                    .background(
+                        brush = Brush.horizontalGradient(listOf(CopperLight, CopperDeep)),
+                        shape = RoundedCornerShape(16.dp),
                     ),
-                    color = OnPrimaryDark,
-                )
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    if (leadingIcon != null) {
+                        Icon(
+                            imageVector = leadingIcon,
+                            contentDescription = null,
+                            tint = OnPrimaryDark,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.4.sp,
+                            fontSize = 15.sp,
+                        ),
+                        color = OnPrimaryDark,
+                    )
+                }
             }
         }
     }
