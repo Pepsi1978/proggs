@@ -62,12 +62,14 @@ enum class LegalDocument(
      * Picks the locale-appropriate asset path.
      *
      * Three tiers of legal coverage:
-     *  1. German (de) — full legally binding versions (DATENSCHUTZ / NUTZUNGSBEDINGUNGEN / IMPRESSUM)
-     *  2. English (en) — full legally binding versions covering CCPA, UK GDPR, APPs, LGPD, PIPL etc.
-     *  3. Other supported UI languages — a localized *summary* (LEGAL_SUMMARY.html) that links
-     *     prominently to the full English and German versions. This satisfies the GDPR Art. 12
-     *     transparency requirement ("clear and plain language the data subject understands")
-     *     while keeping the legally binding text in the professionally drafted EN/DE originals.
+     *  1. German (de) — full legally binding versions (DATENSCHUTZ / NUTZUNGSBEDINGUNGEN / IMPRESSUM).
+     *  2. English (en) — full legally binding versions covering CCPA, UK GDPR, APPs, LGPD, PIPL, etc.
+     *  3. Other supported UI languages — three localized *summaries* (PRIVACY.html /
+     *     TERMS.html / IMPRINT.html in the language-specific folder). Each summary links
+     *     prominently to its corresponding full English and German version at the top.
+     *     This satisfies GDPR Art. 12 transparency ("clear and plain language the data
+     *     subject understands") while keeping the legally binding text in the
+     *     professionally drafted EN/DE originals.
      *  4. Any other language — falls back to the English full versions.
      */
     fun assetPath(): String {
@@ -81,9 +83,10 @@ enum class LegalDocument(
         // Tier 2: English — separate full documents
         if (lang == "en") return "legal/en/$enFileName"
 
-        // Tier 3: Other supported UI languages — single localized summary (all 3 buttons open it)
+        // Tier 3: Other supported UI languages — three separate localized summaries per folder,
+        // filenames identical to the English versions (PRIVACY.html / TERMS.html / IMPRINT.html)
         val summaryFolder = summaryFolderFor(lang, country)
-        if (summaryFolder != null) return "legal/$summaryFolder/LEGAL_SUMMARY.html"
+        if (summaryFolder != null) return "legal/$summaryFolder/$enFileName"
 
         // Tier 4: Fallback to English full documents
         return "legal/en/$enFileName"
