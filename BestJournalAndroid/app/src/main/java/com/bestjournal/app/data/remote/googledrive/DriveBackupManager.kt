@@ -363,69 +363,111 @@ constructor(
         }
 
     /**
+     * Result of [deleteAllAppData]. Used by UI to distinguish success, empty, and hard failure so
+     * we can show an honest error dialog instead of silently claiming "unwiderruflich geloescht".
+     */
+    sealed class DeleteAllResult {
+        /** Drive appDataFolder is verifiably empty after the operation. [deleted] may be 0. */
+        data class Success(val deleted: Int) : DeleteAllResult()
+        /** Operation could not complete (no session, network error, timeout, or verify mismatch). */
+        data class Failed(val reason: String, val cause: Throwable? = null) : DeleteAllResult()
+    }
+
+    /**
      * DSGVO Art. 17 (Recht auf Loeschung) / CCPA Right to Delete: deletes ALL files the app has
      * placed in the Drive appDataFolder — the journal backup, photo backups, and any retrospective
-     * archives. Only touches the appDataFolder scope; never touches user documents on Drive.
+     * archives. Only touches the appDataFolder scope; never touches user documents on Drive and
+     * NEVER the Google account itself.
      *
      * MUST be called BEFORE signOut() clears the Google account email from prefs, otherwise we
      * lose the session needed to authenticate the Drive API.
      *
-     * Returns the number of deleted files. On failure, returns 0 and logs — we do NOT block the
-     * account deletion because the user has already confirmed the action and expects it to finish.
+     * Bombensicher-Semantik:
+     *  - Hard timeout of 60s per attempt (prevents indefinite hang on bad networks).
+     *  - Two delete passes, followed by a verify list call. If verify still returns files,
+     *    the result is Failed — the caller MUST show an error to the user (no silent lie).
+     *  - Never throws: always returns a result.
      */
-    suspend fun deleteAllAppData(): Int =
+    suspend fun deleteAllAppData(): DeleteAllResult =
         withContext(Dispatchers.IO) {
             try {
-                val driveService = getSessionDriveService()
-                val allFiles = mutableListOf<com.google.api.services.drive.model.File>()
-                var pageToken: String? = null
-                do {
-                    val request =
-                        driveService
-                            .files()
-                            .list()
-                            .setSpaces("appDataFolder")
-                            .setFields("nextPageToken, files(id, name, size)")
-                            .setPageSize(1000)
-                    if (pageToken != null) request.pageToken = pageToken
-                    val result = request.execute()
-                    result.files?.let { allFiles.addAll(it) }
-                    pageToken = result.nextPageToken
-                } while (pageToken != null)
+                kotlinx.coroutines.withTimeout(60_000) {
+                    val driveService = getSessionDriveService()
+                    var totalDeleted = 0
 
-                if (allFiles.isEmpty()) {
-                    android.util.Log.d("DriveBackup", "deleteAllAppData: nothing on Drive")
-                    return@withContext 0
-                }
-                val totalBytes = allFiles.sumOf { it.getSize() ?: 0L }
-                android.util.Log.d(
-                    "DriveBackup",
-                    "deleteAllAppData: deleting ${allFiles.size} files (${totalBytes / 1024 / 1024} MB)",
-                )
-
-                var deleted = 0
-                for (file in allFiles) {
-                    try {
-                        driveService.files().delete(file.id).execute()
-                        deleted++
-                    } catch (e: Exception) {
-                        android.util.Log.w(
+                    // Two passes: handles race conditions where uploads finish mid-delete.
+                    repeat(2) { pass ->
+                        val files = listAllAppData(driveService)
+                        if (files.isEmpty()) return@repeat
+                        android.util.Log.d(
                             "DriveBackup",
-                            "deleteAllAppData: failed to delete ${file.name}: ${e.message}",
+                            "deleteAllAppData pass ${pass + 1}: deleting ${files.size} files",
                         )
+                        for (file in files) {
+                            try {
+                                driveService.files().delete(file.id).execute()
+                                totalDeleted++
+                            } catch (e: Exception) {
+                                android.util.Log.w(
+                                    "DriveBackup",
+                                    "deleteAllAppData: failed to delete ${file.name}: ${e.message}",
+                                )
+                            }
+                        }
+                    }
+
+                    // Verify: appDataFolder must be empty.
+                    val remaining = listAllAppData(driveService)
+                    if (remaining.isNotEmpty()) {
+                        val names = remaining.take(5).joinToString { it.name ?: "?" }
+                        android.util.Log.e(
+                            "DriveBackup",
+                            "deleteAllAppData verify FAILED: ${remaining.size} files still present ($names)",
+                        )
+                        DeleteAllResult.Failed(
+                            reason = "verify_remaining:${remaining.size}",
+                        )
+                    } else {
+                        android.util.Log.d(
+                            "DriveBackup",
+                            "deleteAllAppData verify OK: $totalDeleted files removed",
+                        )
+                        DeleteAllResult.Success(totalDeleted)
                     }
                 }
-                android.util.Log.d("DriveBackup", "deleteAllAppData: removed $deleted files")
-                deleted
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                android.util.Log.e("DriveBackup", "deleteAllAppData TIMEOUT")
+                DeleteAllResult.Failed(reason = "timeout", cause = e)
+            } catch (e: IllegalStateException) {
+                // Not signed in — nothing on Drive to delete for this session.
+                android.util.Log.w("DriveBackup", "deleteAllAppData skipped: ${e.message}")
+                DeleteAllResult.Success(0)
             } catch (e: Exception) {
-                android.util.Log.e(
-                    "DriveBackup",
-                    "deleteAllAppData FAILED: ${e.message}",
-                    e,
-                )
-                0
+                android.util.Log.e("DriveBackup", "deleteAllAppData FAILED: ${e.message}", e)
+                DeleteAllResult.Failed(reason = "error:${e.javaClass.simpleName}", cause = e)
             }
         }
+
+    private fun listAllAppData(
+        driveService: Drive
+    ): List<com.google.api.services.drive.model.File> {
+        val out = mutableListOf<com.google.api.services.drive.model.File>()
+        var pageToken: String? = null
+        do {
+            val request =
+                driveService
+                    .files()
+                    .list()
+                    .setSpaces("appDataFolder")
+                    .setFields("nextPageToken, files(id, name, size)")
+                    .setPageSize(1000)
+            if (pageToken != null) request.pageToken = pageToken
+            val result = request.execute()
+            result.files?.let { out.addAll(it) }
+            pageToken = result.nextPageToken
+        } while (pageToken != null)
+        return out
+    }
 
     private fun uploadFile(driveService: Drive, localFile: File, remoteName: String) {
         val existingFiles =

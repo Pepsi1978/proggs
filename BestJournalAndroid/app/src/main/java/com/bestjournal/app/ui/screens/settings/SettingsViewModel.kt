@@ -64,6 +64,10 @@ data class SettingsUiState(
     // Locale-safe way to color the export message red vs green — replaces
     // the former `msg.startsWith("Fehler")` check which only worked in German.
     val exportIsError: Boolean = false,
+    // Account-deletion state (DSGVO Art. 17 / CCPA Right to Delete).
+    val deleteAccountInProgress: Boolean = false,
+    // null = no error; non-null reason string triggers the error dialog in the screen.
+    val deleteAccountDriveError: String? = null,
 )
 
 @HiltViewModel
@@ -586,49 +590,90 @@ constructor(
     }
 
     /**
-     * Full account deletion per Google Play 2024 requirement + Art. 17 DSGVO.
+     * Full account deletion per Google Play 2024 requirement + Art. 17 DSGVO / CCPA Right to Delete.
      * Removes:
-     *  - Firebase Auth user account (FirebaseAuth.currentUser.delete())
-     *  - Local on-device photos and videos
-     *  - Drive appDataFolder backup (DSGVO Art. 17, CCPA Right to Delete) — journal DB,
-     *    photo backups, retrospective archives. Must happen BEFORE signOut() because the
-     *    Drive API needs the Google account email from encryptedPrefs to authenticate.
-     *  - Everything signOut() also removes: local DBs, encrypted prefs, alarms
+     *  - Drive appDataFolder backup (verified empty afterwards — see [DriveBackupManager.deleteAllAppData])
+     *  - Firebase Auth user record (app-specific sign-in only — does NOT delete the Google account itself)
+     *  - Local on-device photos and videos (filesDir/photos)
+     *  - Cached audio recordings and temp DB snapshots from cacheDir — these can contain journal content
+     *  - Everything signOut() also removes: local Room DBs, encrypted prefs, reminder alarms
      *
-     * Restarts the app process when done.
+     * Bombensicher-Semantik:
+     *  - Drive deletion is verified and runs FIRST. On hard failure (timeout/network/verify mismatch),
+     *    we STOP and expose the error via [SettingsUiState.deleteAccountDriveError] so the UI can
+     *    show an honest dialog instead of pretending deletion succeeded.
+     *  - The user can then retry or explicitly choose "delete locally anyway" via [forceLocalDelete].
+     *  - Restarts the app process only when local deletion completes.
      */
-    fun deleteAccount(context: android.content.Context) {
+    fun deleteAccount(context: android.content.Context, forceLocalDelete: Boolean = false) {
         viewModelScope.launch {
-            // Delete Drive appDataFolder backup FIRST — requires signed-in session.
-            // Runs best-effort: on network failure we still continue with local deletion
-            // since the user has confirmed and expects the action to complete.
-            try {
-                val deleted = driveBackupManager.deleteAllAppData()
+            _uiState.value =
+                _uiState.value.copy(
+                    deleteAccountInProgress = true,
+                    deleteAccountDriveError = null,
+                )
+
+            // 1) Drive appDataFolder — verified delete. Runs FIRST because signOut() clears the
+            //    Google account email needed to authenticate the Drive API.
+            if (!forceLocalDelete) {
+                val driveResult = driveBackupManager.deleteAllAppData()
+                if (driveResult is com.bestjournal.app.data.remote.googledrive.DriveBackupManager
+                        .DeleteAllResult
+                        .Failed) {
+                    android.util.Log.w(
+                        "DeleteAccount",
+                        "Drive deletion failed: ${driveResult.reason} — stopping for user confirmation",
+                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            deleteAccountInProgress = false,
+                            deleteAccountDriveError = driveResult.reason,
+                        )
+                    return@launch
+                }
                 android.util.Log.d(
                     "DeleteAccount",
-                    "Drive appDataFolder cleanup: $deleted files removed",
+                    "Drive appDataFolder cleanup OK: $driveResult",
                 )
-            } catch (e: Exception) {
+            } else {
                 android.util.Log.w(
                     "DeleteAccount",
-                    "Drive appDataFolder cleanup skipped: ${e.message}",
+                    "User chose to skip Drive deletion — proceeding with local-only wipe",
                 )
             }
-            // Delete Firebase Auth user while tokens are still valid.
+
+            // 2) Firebase Auth user (app sign-in only — NOT the Google account itself).
             try {
                 com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.delete()?.await()
             } catch (e: Exception) {
                 android.util.Log.w("DeleteAccount", "Firebase user delete skipped: ${e.message}")
             }
-            // Delete local photo/video directory (not cleared by signOut).
+
+            // 3) Local photo/video directory — not cleared by signOut().
             try {
                 java.io.File(context.filesDir, "photos").deleteRecursively()
             } catch (e: Exception) {
                 android.util.Log.w("DeleteAccount", "Photo dir cleanup skipped: ${e.message}")
             }
-            // Fall through to signOut: clears local DBs, prefs, alarms, restarts app.
+
+            // 4) cacheDir — contains audio recordings (recording_*.wav), Edge-TTS cache
+            //    (tts_audio.mp3), and — CRITICALLY — drive_merge_temp.db which holds a FULL
+            //    copy of the journal database during sync. Wiping the whole cache is safe
+            //    because cache content is by definition regenerable.
+            try {
+                context.cacheDir.listFiles()?.forEach { it.deleteRecursively() }
+            } catch (e: Exception) {
+                android.util.Log.w("DeleteAccount", "Cache cleanup skipped: ${e.message}")
+            }
+
+            // 5) Fall through to signOut: clears Room DBs, encrypted prefs, alarms, restarts app.
             signOut(context)
         }
+    }
+
+    /** Dismiss the Drive-delete error dialog without retrying or forcing local delete. */
+    fun dismissDeleteAccountError() {
+        _uiState.value = _uiState.value.copy(deleteAccountDriveError = null)
     }
 
     fun signOut(context: android.content.Context) {

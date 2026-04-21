@@ -565,11 +565,19 @@
     <string name="settings_analytics_title">Anonyme Statistik</string>
     <string name="settings_analytics_subtitle">Firebase Analytics für Fehleranalyse und Produktverbesserung</string>
     <string name="settings_delete_account_title">Konto und Daten löschen</string>
-    <string name="settings_delete_account_subtitle">Entfernt alle lokalen Daten, das Google-Anmeldekonto und das Drive-Backup unwiderruflich</string>
+    <string name="settings_delete_account_subtitle">Entfernt alle lokalen Daten und das Drive-Backup unwiderruflich. Dein Google-Konto selbst bleibt bestehen.</string>
     <string name="settings_delete_account_confirm_title">Konto wirklich löschen?</string>
-    <string name="settings_delete_account_confirm_body">Dieser Vorgang ist unwiderruflich und löscht:\n\n• Alle lokalen Tagebucheinträge, Fotos und Videos\n• Dein Firebase-Anmeldekonto\n• Das Google-Drive-Backup der App\n\nDie App startet danach neu als frische Installation.</string>
+    <string name="settings_delete_account_confirm_body">Dieser Vorgang ist unwiderruflich und löscht:\n\n• Alle lokalen Tagebucheinträge, Fotos, Videos und Audio-Aufnahmen\n• Das Google-Drive-Backup der App (nur die App-Daten, nicht dein Google-Konto)\n• Deine App-Anmeldung\n\nDein Google-Konto selbst bleibt bestehen. Die App startet danach neu als frische Installation.</string>
     <string name="settings_delete_account_cancel">Abbrechen</string>
     <string name="settings_delete_account_confirm">Ja, alles löschen</string>
+
+    <!-- Delete-Account error states (DSGVO Art. 17 / CCPA Right to Delete) -->
+    <string name="settings_delete_account_in_progress">Konto und Daten werden gelöscht…</string>
+    <string name="settings_delete_account_drive_error_title">Drive-Backup konnte nicht gelöscht werden</string>
+    <string name="settings_delete_account_drive_error_body">Das Google-Drive-Backup konnte nicht verlässlich entfernt werden (Grund: %1$s).\n\nOhne vollständige Löschung wäre die Meldung „unwiderruflich entfernt" nicht korrekt.\n\nWas möchtest du tun?</string>
+    <string name="settings_delete_account_retry">Erneut versuchen</string>
+    <string name="settings_delete_account_force_local">Nur lokal löschen (Drive-Backup bleibt vorerst)</string>
+    <string name="settings_delete_account_abort">Vorgang abbrechen</string>
 
     <!-- Widerruf (§ 355 BGB). Knappe, sachliche Bezeichnung. -->
     <string name="settings_revoke_title">Widerruf</string>

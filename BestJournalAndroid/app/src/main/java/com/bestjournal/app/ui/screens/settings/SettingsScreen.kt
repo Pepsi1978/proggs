@@ -2838,6 +2838,84 @@ fun SettingsScreen(
                     )
                 }
 
+                // Progress dialog while account deletion is running (non-dismissible — the
+                // app will restart itself when done).
+                if (uiState.deleteAccountInProgress) {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = {},
+                        title = {},
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    stringResource(R.string.settings_delete_account_in_progress)
+                                )
+                            }
+                        },
+                        confirmButton = {},
+                    )
+                }
+
+                // Honest error dialog when Drive deletion failed. User must actively choose
+                // retry, local-only wipe, or abort — we never silently claim "unwiderruflich".
+                uiState.deleteAccountDriveError?.let { reason ->
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { viewModel.dismissDeleteAccountError() },
+                        title = {
+                            Text(
+                                stringResource(
+                                    R.string.settings_delete_account_drive_error_title
+                                )
+                            )
+                        },
+                        text = {
+                            Text(
+                                stringResource(
+                                    R.string.settings_delete_account_drive_error_body,
+                                    reason,
+                                )
+                            )
+                        },
+                        confirmButton = {
+                            androidx.compose.material3.TextButton(
+                                onClick = { viewModel.deleteAccount(context) }
+                            ) {
+                                Text(stringResource(R.string.settings_delete_account_retry))
+                            }
+                        },
+                        dismissButton = {
+                            Column {
+                                androidx.compose.material3.TextButton(
+                                    onClick = {
+                                        viewModel.deleteAccount(
+                                            context,
+                                            forceLocalDelete = true,
+                                        )
+                                    }
+                                ) {
+                                    Text(
+                                        stringResource(
+                                            R.string.settings_delete_account_force_local
+                                        ),
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                                androidx.compose.material3.TextButton(
+                                    onClick = { viewModel.dismissDeleteAccountError() }
+                                ) {
+                                    Text(
+                                        stringResource(R.string.settings_delete_account_abort)
+                                    )
+                                }
+                            }
+                        },
+                    )
+                }
+
                 // 9. Ueber die App
                 GlassCard(
                     modifier = Modifier.wrapContentWidth().align(Alignment.CenterHorizontally)

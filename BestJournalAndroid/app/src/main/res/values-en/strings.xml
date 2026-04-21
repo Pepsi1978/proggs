@@ -1034,11 +1034,19 @@
 
     <!-- Settings → Privacy → Delete account -->
     <string name="settings_delete_account_title">Delete account and data</string>
-    <string name="settings_delete_account_subtitle">Permanently removes all local data, your Google sign-in and the Drive backup</string>
+    <string name="settings_delete_account_subtitle">Permanently removes all local data and the Drive backup. Your Google account itself is not affected.</string>
     <string name="settings_delete_account_confirm_title">Delete account permanently?</string>
-    <string name="settings_delete_account_confirm_body">This action cannot be undone and will delete:\n\n• All local journal entries, photos and videos\n• Your Firebase sign-in account\n• The app\'s Google Drive backup\n\nThe app will restart as a fresh installation.</string>
+    <string name="settings_delete_account_confirm_body">This action cannot be undone and will delete:\n\n• All local journal entries, photos, videos and audio recordings\n• The app\'s Google Drive backup (only the app\'s data, not your Google account)\n• Your app sign-in\n\nYour Google account itself remains. The app will restart as a fresh installation.</string>
     <string name="settings_delete_account_cancel">Cancel</string>
     <string name="settings_delete_account_confirm">Yes, delete everything</string>
+
+    <!-- Delete-Account error states (GDPR Art. 17 / CCPA Right to Delete) -->
+    <string name="settings_delete_account_in_progress">Deleting account and data…</string>
+    <string name="settings_delete_account_drive_error_title">Drive backup could not be deleted</string>
+    <string name="settings_delete_account_drive_error_body">The Google Drive backup could not be reliably removed (reason: %1$s).\n\nWithout complete deletion, the claim \"permanently removed\" would not be accurate.\n\nWhat would you like to do?</string>
+    <string name="settings_delete_account_retry">Try again</string>
+    <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
+    <string name="settings_delete_account_abort">Cancel operation</string>
 
     <!-- Settings → Privacy → Withdrawal (§ 355 BGB for DE, Directive 2011/83/EU for EU) -->
     <string name="settings_revoke_title">Withdrawal</string>
