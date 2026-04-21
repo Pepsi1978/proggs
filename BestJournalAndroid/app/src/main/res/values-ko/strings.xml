@@ -1146,4 +1146,46 @@
     <string name="legal_title_datenschutz">개인정보 처리방침</string>
     <string name="legal_title_nutzungsbedingungen">이용 약관</string>
     <string name="legal_title_impressum">법적 고지</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Best Journal에 오신 것을 환영합니다</string>
+    <string name="consent_welcome_intro">시작하기 전에, 여기서 개인정보 설정을 빠르게 설정해 봅시다.</string>
+    <string name="consent_promise_local">개인정보 보호법은 귀하의 동의를 요구합니다.</string>
+    <string name="consent_promise_no_training">어떤 기능이 활성화될지 여기서 결정하세요.</string>
+    <string name="consent_promise_optional_ai">설정에서 언제든지 변경할 수 있습니다.</string>
+    <string name="consent_btn_manual_selection">수동 선택</string>
+    <string name="privacy_sheet_title">개인정보 맞춤 설정</string>
+    <string name="privacy_sheet_subtitle">원하는 방식으로 개별 기능을 활성화하세요. 모든 것은 언제든지 변경할 수 있습니다.</string>
+    <string name="privacy_sheet_save">선택 저장</string>
+    <string name="privacy_sheet_all_on">모두 켜기</string>
+    <string name="privacy_sheet_all_off">모두 끄기</string>
+    <string name="consent_toggle_analytics_title">익명 사용 분석</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — 앱 개선에 도움이 됩니다. 개인 콘텐츠 없이 익명 탭 횟수만 수집합니다. 데이터 전송: Google 미국 (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">음성-텍스트 변환 (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">항목 받아쓰기를 허용합니다. 음성 녹음은 암호화되어 Groq (미국)에 전송되고, 텍스트로 변환된 후 삭제됩니다. 귀하의 녹음은 학습에 사용되지 않습니다.</string>
+    <string name="consent_toggle_gemini_title">AI 성찰 (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">대시보드 AI, 요약, 회고 및 텍스트 개선. 텍스트 일부를 Google Gemini (미국)에 전송합니다. 귀하의 항목은 학습에 사용되지 않습니다.</string>
+    <string name="consent_toggle_tts_title">소리내어 읽기 (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">자연스러운 음성으로 항목을 읽어줍니다. 텍스트를 Microsoft (미국)에 전송합니다. 대안: 오프라인 시스템 TTS.</string>
+    <string name="consent_toggle_drive_title">Google 드라이브 백업</string>
+    <string name="consent_toggle_drive_body">항목을 암호화하여 귀하의 Google 드라이브에 저장합니다. 완전한 제어권을 유지합니다 — 파일은 귀하의 계정에 있으며, 저희에게 있지 않습니다.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">캘리포니아 옵트아웃 (CCPA/CPRA 2026). 활성화되면 모든 선택적 데이터 처리가 비활성화되고 — 로컬 기능만 남습니다.</string>
+    <string name="consent_btn_accept_all">모두 수락</string>
+    <string name="consent_btn_save_selection">내 선택 저장</string>
+    <string name="consent_btn_minimum_only">모두 거부</string>
+    <string name="consent_saved_snackbar">설정이 저장되었습니다</string>
+    <string name="consent_revoke_snackbar">동의가 철회되었습니다</string>
+    <string name="consent_footer_version">선택은 설정에서 언제든지 변경할 수 있습니다.</string>
+    <string name="consent_details_expand">자세히</string>
+    <string name="settings_open_privacy_sheet">개인정보 설정 맞춤 설정</string>
+    <string name="settings_privacy_section_header">개인정보 및 동의</string>
+    <string name="settings_ai_groq_title">음성-텍스트 변환 (Groq)</string>
+    <string name="settings_ai_groq_subtitle">전사를 위해 음성 녹음을 Groq 미국에 전송</string>
+    <string name="settings_ai_gemini_title">AI 성찰 (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">AI 요약을 위해 텍스트를 Google 미국에 전송</string>
+    <string name="settings_ai_tts_title">소리내어 읽기 (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">음성 출력을 위해 텍스트를 Microsoft 미국에 전송</string>
+    <string name="settings_drive_backup_title">Google 드라이브 백업</string>
+    <string name="settings_drive_backup_subtitle">항목을 암호화하여 드라이브에 저장</string>
 </resources>
