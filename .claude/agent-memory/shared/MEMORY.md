@@ -101,6 +101,7 @@ und maschinenspezifisch (session-scores, cache, etc. — werden NICHT ueber Git 
 **Details:** {"session_id":"b6155c28-60d1-4e2d-a1fa-a8e4aa724d85","transcript_path":"/Users/frank/.claude/projects/-Users-frank-proggs/b6155c28-60d1-4e2d-a1fa-a8e4aa724d85.jsonl","cwd":"/Users/frank/proggs","hook_event_name":"StopFailure","error":"rate_limit","last_assistant_message":"You've hit your limit · resets 10am (Europe/Berlin)"}
 **Fix-Vorschlag:** Pruefen ob Rate-Limit temporaer oder dauerhaft. Bei dauerhaftem Fehler: API-Key pruefen.
 **Status:** OFFEN
+### 2026-04-21 10:24 — Hook: session-guard.ps1 — Auto-Reparatur: model repariert (war: sonnet, jetzt: opus[1m]) — Status: AUTO-GEFIXT
 ---
 
 ### 2026-04-20 — CROSS-PLATFORM HANDOVER: BestJournalAndroid Keystore-Suche (Windows → macOS)
