@@ -150,6 +150,12 @@ object Constants {
     // Toggle in Settings → Datenschutz switches it at runtime.
     const val PREF_ANALYTICS_ENABLED = "analytics_enabled"
 
+    // CCPA/CPRA 2026 (California): "Do Not Sell My Personal Information" toggle.
+    // When true: all cloud AI services (Groq, Gemini, Edge-TTS) per-service consents
+    // are revoked and Firebase Analytics is disabled. User must explicitly re-consent
+    // per service to re-enable any cloud feature.
+    const val PREF_DO_NOT_SELL = "ccpa_do_not_sell"
+
     // Spam protection
     const val SPAM_HOURLY_AI_LIMIT = 30
     const val SPAM_HOURLY_AI_LIMIT_PREMIUM = 50

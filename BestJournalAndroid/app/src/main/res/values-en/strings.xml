@@ -1067,6 +1067,13 @@
     <string name="consent_disable_stats">Disable statistics and continue</string>
     <string name="consent_confirmation">By tapping \"Agree and get started\" you confirm that you have read the Privacy Policy, the Terms of Use and the Imprint, and that you agree to the data processing described. You can change your decision at any time in settings.</string>
 
+    <!-- CCPA 2026: Opt-Out confirmation + Do-Not-Sell (California) -->
+    <string name="consent_optout_confirmation">Opt-Out saved — analytics is disabled.</string>
+    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">For California residents (CCPA/CPRA 2026). When active, all cloud AI features are disabled and no analytics are collected.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell enabled — all cloud services are disabled.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell disabled.</string>
+
     <string name="legal_title_datenschutz">Privacy Policy</string>
     <string name="legal_title_nutzungsbedingungen">Terms of Use</string>
     <string name="legal_title_impressum">Imprint</string>

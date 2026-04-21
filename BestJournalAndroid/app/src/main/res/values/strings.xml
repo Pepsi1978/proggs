@@ -458,7 +458,7 @@
     <string name="achievements_unlocked_at">Freigeschaltet am %1$s</string>
     <!-- About -->
     <string name="settings_about">Über die App</string>
-    <string name="settings_about_version">Best Journal V0.12.29</string>
+    <string name="settings_about_version">Best Journal V0.12.30</string>
     <string name="settings_about_desc">Dein persönliches KI-Tagebuch</string>
     <!-- Sign-out dialog -->
     <string name="settings_sign_out_confirm">Abmelden?</string>
@@ -552,6 +552,13 @@
     <string name="consent_accept_all">Einverstanden und loslegen</string>
     <string name="consent_disable_stats">Statistiken deaktivieren und fortfahren</string>
     <string name="consent_confirmation">Mit „Loslegen" bestätigst du, dass du die Datenschutzerklärung, die Nutzungsbedingungen und das Impressum gelesen hast und mit der beschriebenen Datenverarbeitung einverstanden bist. Du kannst deine Entscheidung jederzeit in den Einstellungen ändern.</string>
+
+    <!-- CCPA 2026: Opt-Out confirmation + Do-Not-Sell (California) -->
+    <string name="consent_optout_confirmation">Opt-Out gespeichert — Analytics ist deaktiviert.</string>
+    <string name="settings_ccpa_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="settings_ccpa_do_not_sell_subtitle">For California residents (CCPA/CPRA 2026). When active, all cloud AI features are disabled and no analytics are collected.</string>
+    <string name="settings_ccpa_do_not_sell_confirmation">Do-Not-Sell aktiviert — alle Cloud-Dienste sind deaktiviert.</string>
+    <string name="settings_ccpa_do_not_sell_off_confirmation">Do-Not-Sell deaktiviert.</string>
 
     <!-- Settings: Datenschutz-Abschnitt -->
     <string name="settings_privacy_header">Datenschutz</string>

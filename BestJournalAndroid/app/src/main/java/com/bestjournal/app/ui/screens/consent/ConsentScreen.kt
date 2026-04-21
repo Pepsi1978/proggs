@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -93,6 +94,7 @@ fun ConsentScreen(
     onOpenDocument: (LegalDocument) -> Unit,
     onContinue: () -> Unit,
 ) {
+    val context = LocalContext.current
     // Exit animation shared by both buttons
     val isExiting = remember { mutableStateOf<ExitMode?>(null) }
     val exitAlpha = remember { Animatable(1f) }
@@ -101,7 +103,17 @@ fun ConsentScreen(
         val mode = isExiting.value ?: return@LaunchedEffect
         when (mode) {
             ExitMode.AcceptAll -> viewModel.acceptAll()
-            ExitMode.OnlyRequired -> viewModel.acceptWithoutAnalytics()
+            ExitMode.OnlyRequired -> {
+                viewModel.acceptWithoutAnalytics()
+                // CCPA 2026: show explicit "Opt-Out Request Honored" confirmation.
+                // Toast persists across screen transition and is visible on the next screen.
+                android.widget.Toast.makeText(
+                        context,
+                        context.getString(R.string.consent_optout_confirmation),
+                        android.widget.Toast.LENGTH_LONG,
+                    )
+                    .show()
+            }
         }
         exitAlpha.animateTo(0f, tween(500, easing = FastOutSlowInEasing))
         delay(50)

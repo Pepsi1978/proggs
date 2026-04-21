@@ -113,7 +113,10 @@ import com.bestjournal.app.ui.theme.NeonCyan
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
 import com.bestjournal.app.ui.theme.SummaryPalette
+import com.bestjournal.app.ui.components.PrivacyGateHost
+import com.bestjournal.app.ui.components.rememberPrivacyGateState
 import com.bestjournal.app.util.EdgeTtsPlayer
+import com.bestjournal.app.util.PrivacyGateHelper
 import com.bestjournal.app.util.rememberHapticAction
 
 @Composable
@@ -134,6 +137,24 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
     var isDashboardSpeaking by remember { mutableStateOf(false) }
     var isDashboardTtsLoading by remember { mutableStateOf(false) }
     val dashboardTts = remember { EdgeTtsPlayer(context) }
+    // NK1: Per-service pre-usage consent gates (EDSA 03/2023, BGH Planet49).
+    // Groq-Gate is in JournalScreen (voice recording). Gemini + Edge-TTS gates here.
+    val geminiGate = rememberPrivacyGateState(PrivacyGateHelper.CloudService.Gemini)
+    val edgeTtsGate = rememberPrivacyGateState(PrivacyGateHelper.CloudService.EdgeTts)
+    PrivacyGateHost(
+        state = geminiGate,
+        titleRes = R.string.privacy_gate_gemini_title,
+        bodyRes = R.string.privacy_gate_gemini_body,
+        acceptRes = R.string.privacy_gate_gemini_accept,
+        declineRes = R.string.privacy_gate_gemini_cancel,
+    )
+    PrivacyGateHost(
+        state = edgeTtsGate,
+        titleRes = R.string.privacy_gate_tts_title,
+        bodyRes = R.string.privacy_gate_tts_body,
+        acceptRes = R.string.privacy_gate_tts_accept,
+        declineRes = R.string.privacy_gate_tts_cancel,
+    )
     val dashboardTtsPrefs = remember {
         try {
             com.bestjournal.app.util.EncryptedPrefsProvider.get(context)
@@ -207,7 +228,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                         IconButton(
                             onClick = {
                                 doHaptic(HapticFeedbackType.LongPress)
-                                viewModel.refreshDashboard()
+                                geminiGate.run { viewModel.refreshDashboard() }
                             }
                         ) {
                             Icon(
@@ -455,7 +476,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                 Button(
                                     onClick = {
                                         viewModel.clearError()
-                                        viewModel.refreshDashboard()
+                                        geminiGate.run { viewModel.refreshDashboard() }
                                     },
                                     colors =
                                         ButtonDefaults.buttonColors(
@@ -716,6 +737,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     AnalysisTtsShareRow(
                                         text = overallAnalysis,
                                         tts = dashboardTts,
+                                        edgeTtsGate = edgeTtsGate,
                                         isSpeaking = isDashboardSpeaking,
                                         isTtsLoading = isDashboardTtsLoading,
                                         onSpeakingChange = { isDashboardSpeaking = it },
@@ -883,6 +905,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     AnalysisTtsShareRow(
                                         text = overallAnalysis,
                                         tts = dashboardTts,
+                                        edgeTtsGate = edgeTtsGate,
                                         isSpeaking = isDashboardSpeaking,
                                         isTtsLoading = isDashboardTtsLoading,
                                         onSpeakingChange = { isDashboardSpeaking = it },
@@ -1044,6 +1067,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     AnalysisTtsShareRow(
                                         text = overallAnalysis,
                                         tts = dashboardTts,
+                                        edgeTtsGate = edgeTtsGate,
                                         isSpeaking = isDashboardSpeaking,
                                         isTtsLoading = isDashboardTtsLoading,
                                         onSpeakingChange = { isDashboardSpeaking = it },
@@ -1213,6 +1237,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     AnalysisTtsShareRow(
                                         text = overallAnalysis,
                                         tts = dashboardTts,
+                                        edgeTtsGate = edgeTtsGate,
                                         isSpeaking = isDashboardSpeaking,
                                         isTtsLoading = isDashboardTtsLoading,
                                         onSpeakingChange = { isDashboardSpeaking = it },
@@ -1356,6 +1381,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                                     AnalysisTtsShareRow(
                                         text = overallAnalysis,
                                         tts = dashboardTts,
+                                        edgeTtsGate = edgeTtsGate,
                                         isSpeaking = isDashboardSpeaking,
                                         isTtsLoading = isDashboardTtsLoading,
                                         onSpeakingChange = { isDashboardSpeaking = it },
@@ -3731,6 +3757,7 @@ private fun CustomResultCard(advice: Advice, categoryName: String = "", onClick:
 private fun AnalysisTtsShareRow(
     text: String,
     tts: EdgeTtsPlayer,
+    edgeTtsGate: com.bestjournal.app.ui.components.PrivacyGateState,
     isSpeaking: Boolean,
     isTtsLoading: Boolean,
     onSpeakingChange: (Boolean) -> Unit,
@@ -3769,23 +3796,25 @@ private fun AnalysisTtsShareRow(
                             )
                             .show()
                     } else {
-                        onTtsLoadingChange(true)
-                        onSpeakingChange(true)
-                        val voice =
-                            ttsPrefs?.getString(
-                                com.bestjournal.app.util.Constants.PREF_EDGE_TTS_VOICE,
-                                com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices()
-                                    .defaultVoiceId,
-                            )
-                                ?: com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices()
-                                    .defaultVoiceId
-                        tts.speak(
-                            text,
-                            voice = voice,
-                            onPlaybackStart = { onTtsLoadingChange(false) },
-                        ) {
-                            onSpeakingChange(false)
-                            onTtsLoadingChange(false)
+                        edgeTtsGate.run {
+                            onTtsLoadingChange(true)
+                            onSpeakingChange(true)
+                            val voice =
+                                ttsPrefs?.getString(
+                                    com.bestjournal.app.util.Constants.PREF_EDGE_TTS_VOICE,
+                                    com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices()
+                                        .defaultVoiceId,
+                                )
+                                    ?: com.bestjournal.app.util.TtsVoiceRegistry.getLocaleVoices()
+                                        .defaultVoiceId
+                            tts.speak(
+                                text,
+                                voice = voice,
+                                onPlaybackStart = { onTtsLoadingChange(false) },
+                            ) {
+                                onSpeakingChange(false)
+                                onTtsLoadingChange(false)
+                            }
                         }
                     }
                 }

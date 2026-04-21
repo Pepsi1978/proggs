@@ -122,7 +122,10 @@ import com.bestjournal.app.ui.theme.NeonAmber
 import com.bestjournal.app.ui.theme.NeonEmerald
 import com.bestjournal.app.ui.theme.NeonRed
 import com.bestjournal.app.util.DateTimeFormatter
+import com.bestjournal.app.ui.components.PrivacyGateHost
+import com.bestjournal.app.ui.components.rememberPrivacyGateState
 import com.bestjournal.app.util.EdgeTtsPlayer
+import com.bestjournal.app.util.PrivacyGateHelper
 import com.bestjournal.app.util.rememberHapticAction
 import java.io.File
 import kotlinx.coroutines.delay
@@ -170,6 +173,24 @@ fun EntryDetailScreen(
             null
         }
     }
+
+    // NK1: Per-service consent gates (EDSA 03/2023, BGH Planet49).
+    val geminiGate = rememberPrivacyGateState(PrivacyGateHelper.CloudService.Gemini)
+    val edgeTtsGate = rememberPrivacyGateState(PrivacyGateHelper.CloudService.EdgeTts)
+    PrivacyGateHost(
+        state = geminiGate,
+        titleRes = R.string.privacy_gate_gemini_title,
+        bodyRes = R.string.privacy_gate_gemini_body,
+        acceptRes = R.string.privacy_gate_gemini_accept,
+        declineRes = R.string.privacy_gate_gemini_cancel,
+    )
+    PrivacyGateHost(
+        state = edgeTtsGate,
+        titleRes = R.string.privacy_gate_tts_title,
+        bodyRes = R.string.privacy_gate_tts_body,
+        acceptRes = R.string.privacy_gate_tts_accept,
+        declineRes = R.string.privacy_gate_tts_cancel,
+    )
 
     DisposableEffect(Unit) {
         onDispose {
@@ -523,7 +544,7 @@ fun EntryDetailScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Button(
-                                onClick = { viewModel.improveTextWithAi() },
+                                onClick = { geminiGate.run { viewModel.improveTextWithAi() } },
                                 enabled = !uiState.isImproving,
                                 shape = RoundedCornerShape(14.dp),
                                 colors =
@@ -741,29 +762,31 @@ fun EntryDetailScreen(
                                             )
                                             .show()
                                     } else {
-                                        isTtsLoading = true
-                                        isSpeaking = true
-                                        val speakText =
-                                            if (isShowingOriginal) entry.rawText
-                                            else entry.displayText
-                                        val voice =
-                                            ttsPrefs?.getString(
-                                                com.bestjournal.app.util.Constants
-                                                    .PREF_EDGE_TTS_VOICE,
-                                                com.bestjournal.app.util.TtsVoiceRegistry
-                                                    .getLocaleVoices()
-                                                    .defaultVoiceId,
-                                            )
-                                                ?: com.bestjournal.app.util.TtsVoiceRegistry
-                                                    .getLocaleVoices()
-                                                    .defaultVoiceId
-                                        tts.speak(
-                                            speakText,
-                                            voice = voice,
-                                            onPlaybackStart = { isTtsLoading = false },
-                                        ) {
-                                            isSpeaking = false
-                                            isTtsLoading = false
+                                        edgeTtsGate.run {
+                                            isTtsLoading = true
+                                            isSpeaking = true
+                                            val speakText =
+                                                if (isShowingOriginal) entry.rawText
+                                                else entry.displayText
+                                            val voice =
+                                                ttsPrefs?.getString(
+                                                    com.bestjournal.app.util.Constants
+                                                        .PREF_EDGE_TTS_VOICE,
+                                                    com.bestjournal.app.util.TtsVoiceRegistry
+                                                        .getLocaleVoices()
+                                                        .defaultVoiceId,
+                                                )
+                                                    ?: com.bestjournal.app.util.TtsVoiceRegistry
+                                                        .getLocaleVoices()
+                                                        .defaultVoiceId
+                                            tts.speak(
+                                                speakText,
+                                                voice = voice,
+                                                onPlaybackStart = { isTtsLoading = false },
+                                            ) {
+                                                isSpeaking = false
+                                                isTtsLoading = false
+                                            }
                                         }
                                     }
                                 }
