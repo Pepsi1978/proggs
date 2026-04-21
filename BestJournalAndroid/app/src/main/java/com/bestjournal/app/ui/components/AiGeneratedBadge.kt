@@ -32,6 +32,34 @@ import androidx.compose.ui.unit.sp
 import com.bestjournal.app.R
 
 /**
+ * Inline variant — no background pill, no click, same typography as labelSmall.
+ * Designed to sit next to a timestamp on the same baseline. Use wherever the user
+ * sees "Letzte Aktualisierung am ..." so the AI provenance is always visible
+ * whenever fresh AI content is shown.
+ */
+@Composable
+fun AiGeneratedBadgeInline(modifier: Modifier = Modifier) {
+    val fg = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.AutoAwesome,
+            contentDescription = null,
+            tint = fg,
+            modifier = Modifier.size(12.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = stringResource(R.string.ai_generated_badge),
+            style = MaterialTheme.typography.labelSmall,
+            color = fg,
+        )
+    }
+}
+
+/**
  * In-App-Kennzeichnung fuer KI-generierten Inhalt (H4 — EU AI Act Art. 50, Pflicht ab 02.08.2026).
  *
  * Platziert man oberhalb oder neben jedem KI-Output:

@@ -241,11 +241,19 @@ fun DashboardScreen(viewModel: DashboardViewModel, onNavigateToPaywall: (String)
                 }
                 val lastUpdated = remember(uiState.isLoading) { viewModel.getLastUpdatedText() }
                 if (lastUpdated != null) {
-                    Text(
-                        text = lastUpdated,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = lastUpdated,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        // AI Act Art. 50 inline marker — right-aligned under the info + refresh icons
+                        com.bestjournal.app.ui.components.AiGeneratedBadgeInline()
+                    }
                 }
             }
 
@@ -2622,15 +2630,7 @@ private fun SummaryKeyInsightsBlock(actions: List<TopAction>) {
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
             )
-            Spacer(modifier = Modifier.height(10.dp))
-            // H4 — In-App KI-Kennzeichnung (AI Act Art. 50, Pflicht ab 02.08.2026)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                com.bestjournal.app.ui.components.AiGeneratedBadge(compact = true)
-            }
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             actions.forEachIndexed { index, action ->
                 Row(
                     modifier =

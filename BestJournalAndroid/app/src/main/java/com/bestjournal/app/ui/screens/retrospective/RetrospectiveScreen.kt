@@ -290,11 +290,19 @@ fun RetrospectiveScreen(
                 // Last-updated timestamp (same format + string resource as Dashboard)
                 val lastUpdated = remember(weekly, monthly, yearly) { viewModel.getLastUpdatedText() }
                 if (lastUpdated != null) {
-                    Text(
-                        text = lastUpdated,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = lastUpdated,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        // AI Act Art. 50 inline marker — right-aligned under the info icon
+                        com.bestjournal.app.ui.components.AiGeneratedBadgeInline()
+                    }
                 }
             }
 
