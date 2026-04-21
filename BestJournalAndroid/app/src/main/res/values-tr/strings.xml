@@ -1150,4 +1150,46 @@ Ne yapmak istersin?</string>
     <string name="legal_title_datenschutz">Gizlilik Politikası</string>
     <string name="legal_title_nutzungsbedingungen">Kullanım Koşulları</string>
     <string name="legal_title_impressum">Yasal Bilgi</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Best Journal’a hoş geldin</string>
+    <string name="consent_welcome_intro">Başlamadan önce gizlilik tercihlerini burada hızlıca ayarlayalım.</string>
+    <string name="consent_promise_local">Gizlilik yasaları onayını gerektirir.</string>
+    <string name="consent_promise_no_training">Hangi özelliklerin aktif olacağına burada sen karar verirsin.</string>
+    <string name="consent_promise_optional_ai">Ayarlar’dan istediğin zaman değiştirilebilir.</string>
+    <string name="consent_btn_manual_selection">Manuel seçim</string>
+    <string name="privacy_sheet_title">Gizliliği özelleştir</string>
+    <string name="privacy_sheet_subtitle">Tek tek özellikleri sana uygun şekilde etkinleştir. Her şey istediğin zaman değiştirilebilir.</string>
+    <string name="privacy_sheet_save">Seçimi kaydet</string>
+    <string name="privacy_sheet_all_on">Tümünü aç</string>
+    <string name="privacy_sheet_all_off">Tümünü kapat</string>
+    <string name="consent_toggle_analytics_title">Anonim kullanım analizi</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — uygulamayı iyileştirmemize yardımcı olur. Kişisel içerik yok, yalnızca anonim dokunma sayıları. Veri aktarımı: Google ABD (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">Konuşmadan metne (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">Girdilerin dikte edilmesini sağlar. Ses kaydın şifreli olarak Groq’a (ABD) gönderilir, metne dönüştürülür ve ardından silinir. Kayıtların eğitim için KULLANILMAZ.</string>
+    <string name="consent_toggle_gemini_title">YZ yansımaları (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">Panel YZ’si, özetler, geri dönüşler ve metin iyileştirme. Metin parçalarını Google Gemini’ye (ABD) gönderir. Girdilerin eğitim için KULLANILMAZ.</string>
+    <string name="consent_toggle_tts_title">Sesli okuma (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">Girdileri doğal sesle okur. Metni Microsoft’a (ABD) gönderir. Alternatif: çevrimdışı sistem TTS.</string>
+    <string name="consent_toggle_drive_title">Google Drive yedekleme</string>
+    <string name="consent_toggle_drive_body">Girdileri kendi Google Drive’ına şifreli olarak kaydeder. Tam kontrol sende — dosya senin hesabında, bizde değil.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">Kaliforniya devre dışı bırakma (CCPA/CPRA 2026). Aktifken tüm isteğe bağlı veri işlemleri devre dışıdır — yalnızca yerel özellikler kalır.</string>
+    <string name="consent_btn_accept_all">Tümünü kabul et</string>
+    <string name="consent_btn_save_selection">Seçimimi kaydet</string>
+    <string name="consent_btn_minimum_only">Tümünü reddet</string>
+    <string name="consent_saved_snackbar">Ayar kaydedildi</string>
+    <string name="consent_revoke_snackbar">Onay geri alındı</string>
+    <string name="consent_footer_version">Seçimini istediğin zaman Ayarlar’dan değiştirebilirsin.</string>
+    <string name="consent_details_expand">Ayrıntılar</string>
+    <string name="settings_open_privacy_sheet">Gizlilik ayarlarını özelleştir</string>
+    <string name="settings_privacy_section_header">Gizlilik ve onaylar</string>
+    <string name="settings_ai_groq_title">Konuşmadan metne (Groq)</string>
+    <string name="settings_ai_groq_subtitle">Ses kayıtlarını yazıya dökmek için Groq ABD’ye gönder</string>
+    <string name="settings_ai_gemini_title">YZ yansımaları (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">YZ özetleri için metinleri Google ABD’ye gönder</string>
+    <string name="settings_ai_tts_title">Sesli okuma (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">Sesli çıktı için metinleri Microsoft ABD’ye gönder</string>
+    <string name="settings_drive_backup_title">Google Drive yedekleme</string>
+    <string name="settings_drive_backup_subtitle">Girdileri Drive’ına şifreli olarak kaydet</string>
 </resources>
