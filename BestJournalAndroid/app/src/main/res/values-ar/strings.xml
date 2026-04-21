@@ -1166,4 +1166,46 @@
     <string name="legal_title_datenschutz">سياسة الخصوصية</string>
     <string name="legal_title_nutzungsbedingungen">شروط الاستخدام</string>
     <string name="legal_title_impressum">المعلومات القانونية</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">مرحبًا بك في Best Journal</string>
+    <string name="consent_welcome_intro">قبل أن تبدأ، لنضبط تفضيلات الخصوصية الخاصة بك هنا بسرعة.</string>
+    <string name="consent_promise_local">تتطلب قوانين الخصوصية موافقتك.</string>
+    <string name="consent_promise_no_training">تقرر هنا أي الميزات تكون نشطة.</string>
+    <string name="consent_promise_optional_ai">قابل للتغيير في أي وقت في الإعدادات.</string>
+    <string name="consent_btn_manual_selection">اختيار يدوي</string>
+    <string name="privacy_sheet_title">تخصيص الخصوصية</string>
+    <string name="privacy_sheet_subtitle">فعّل الميزات الفردية بالطريقة التي تناسبك. يمكن تغيير كل شيء في أي وقت.</string>
+    <string name="privacy_sheet_save">حفظ الاختيار</string>
+    <string name="privacy_sheet_all_on">تشغيل الكل</string>
+    <string name="privacy_sheet_all_off">إيقاف الكل</string>
+    <string name="consent_toggle_analytics_title">تحليلات استخدام مجهولة الهوية</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — يساعدنا على تحسين التطبيق. لا يوجد محتوى شخصي، فقط عدد نقرات مجهولة. نقل البيانات: Google الولايات المتحدة (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">تحويل الكلام إلى نص (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">يسمح بإملاء المدخلات. يتم إرسال تسجيلك الصوتي مشفرًا إلى Groq (الولايات المتحدة)، وتحويله إلى نص ثم حذفه. لا تُستخدم تسجيلاتك للتدريب.</string>
+    <string name="consent_toggle_gemini_title">تأملات الذكاء الاصطناعي (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">ذكاء اصطناعي للوحة المعلومات، الملخصات، المراجعات وتحسين النص. يرسل مقتطفات نصية إلى Google Gemini (الولايات المتحدة). لا تُستخدم مدخلاتك للتدريب.</string>
+    <string name="consent_toggle_tts_title">القراءة بصوت عالٍ (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">يقرأ المدخلات بصوت طبيعي. يرسل النص إلى Microsoft (الولايات المتحدة). البديل: TTS النظام دون اتصال.</string>
+    <string name="consent_toggle_drive_title">نسخ احتياطي على Google Drive</string>
+    <string name="consent_toggle_drive_body">يحفظ المدخلات مشفرة في Google Drive الخاص بك. تحتفظ بالتحكم الكامل — يوجد الملف في حسابك، وليس لدينا.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">إلغاء الاشتراك في كاليفورنيا (CCPA/CPRA 2026). عند التفعيل، يتم تعطيل جميع معالجات البيانات الاختيارية — تبقى الميزات المحلية فقط.</string>
+    <string name="consent_btn_accept_all">قبول الكل</string>
+    <string name="consent_btn_save_selection">حفظ اختياري</string>
+    <string name="consent_btn_minimum_only">رفض الكل</string>
+    <string name="consent_saved_snackbar">تم حفظ الإعداد</string>
+    <string name="consent_revoke_snackbar">تم سحب الموافقة</string>
+    <string name="consent_footer_version">يمكن تغيير اختيارك في أي وقت في الإعدادات.</string>
+    <string name="consent_details_expand">التفاصيل</string>
+    <string name="settings_open_privacy_sheet">تخصيص إعدادات الخصوصية</string>
+    <string name="settings_privacy_section_header">الخصوصية والموافقات</string>
+    <string name="settings_ai_groq_title">تحويل الكلام إلى نص (Groq)</string>
+    <string name="settings_ai_groq_subtitle">إرسال التسجيلات الصوتية إلى Groq الولايات المتحدة للنسخ</string>
+    <string name="settings_ai_gemini_title">تأملات الذكاء الاصطناعي (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">إرسال النصوص إلى Google الولايات المتحدة للملخصات الذكية</string>
+    <string name="settings_ai_tts_title">القراءة بصوت عالٍ (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">إرسال النصوص إلى Microsoft الولايات المتحدة للإخراج الصوتي</string>
+    <string name="settings_drive_backup_title">نسخ احتياطي على Google Drive</string>
+    <string name="settings_drive_backup_subtitle">حفظ المدخلات مشفرة على Drive الخاص بك</string>
 </resources>
