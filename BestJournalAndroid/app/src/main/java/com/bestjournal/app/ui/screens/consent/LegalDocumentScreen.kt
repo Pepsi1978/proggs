@@ -155,6 +155,7 @@ enum class LegalDocument(
             "nl",
             "pl",
             "uk",
+            "tr",
         )
 
         private fun String.onlyIfTranslated(): String? =
