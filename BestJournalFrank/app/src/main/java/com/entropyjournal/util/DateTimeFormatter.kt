@@ -56,8 +56,7 @@ object DateTimeFormatter {
 
     /**
      * Groups timestamps into section labels for the journal timeline.
-     * Hierarchy: Heute > Gestern > Vorgestern > Diese Woche > Letzte Woche >
-     * Vor 2/3/4 Wochen > Monatsname > Jahr — Monatsname.
+     * Hierarchy: Diese Woche > Letzte Woche > Vor 2/3/4 Wochen > Monatsname > Jahr — Monatsname.
      * Weeks use ISO convention: Monday = first day, Sunday = last day.
      * Week labels only apply within the current month — once entries cross
      * into a previous month, the month name is shown instead.
@@ -70,8 +69,6 @@ object DateTimeFormatter {
             set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
         }
-        val yesterdayStart = (todayStart.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -1) }
-        val vorgesternStart = (todayStart.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, -2) }
 
         // Monday of current ISO week (Mon=first day, Sun=last day)
         val dow = todayStart.get(Calendar.DAY_OF_WEEK)
@@ -87,9 +84,6 @@ object DateTimeFormatter {
             entry.get(Calendar.YEAR) == now.get(Calendar.YEAR)
 
         return when {
-            timestamp >= todayStart.timeInMillis -> "Heute"
-            timestamp >= yesterdayStart.timeInMillis -> "Gestern"
-            timestamp >= vorgesternStart.timeInMillis -> "Vorgestern"
             timestamp >= thisWeekMonday.timeInMillis && sameMonth -> "Diese Woche"
             timestamp >= lastWeekMonday.timeInMillis && sameMonth -> "Letzte Woche"
             timestamp >= twoWeeksAgo.timeInMillis && sameMonth -> "Vor 2 Wochen"
