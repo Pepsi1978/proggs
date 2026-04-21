@@ -305,8 +305,9 @@ fun ConsentScreen(
                 Spacer(Modifier.height(28.dp))
 
                 // Three equally prominent buttons (EDSA 03/2023 + UWG EmpCo-RL 27.09.2026 — no dark patterns).
-                // Visually identical outlined buttons. Order: Accept all | Minimum only | Manual selection.
-                // No gradient, no glow, no elevation — the three choices are cosmetically interchangeable.
+                // Visually identical COPPER-FILLED buttons — same gradient, same height/width, same text style,
+                // no glow, no breathing animation, no elevation highlight for a single option.
+                // "Equally prominent" per EDSA means visually interchangeable, not necessarily monochrome.
                 Column(
                     modifier = Modifier.fillMaxWidth().graphicsLayer {
                         alpha = btnAlpha.value
@@ -316,72 +317,27 @@ fun ConsentScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     // Accept all
-                    OutlinedButton(
+                    ConsentFilledButton(
+                        label = stringResource(R.string.consent_btn_accept_all),
                         onClick = {
                             if (isExiting.value == null) isExiting.value = ExitMode.AcceptAll
                         },
-                        modifier = Modifier.width(280.dp).height(54.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.5.dp, CopperLight.copy(alpha = 0.6f)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color.Transparent,
-                            contentColor = OnSurface,
-                        ),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.consent_btn_accept_all),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 0.4.sp,
-                        )
-                    }
+                    )
 
                     // Required only
-                    OutlinedButton(
+                    ConsentFilledButton(
+                        label = stringResource(R.string.consent_btn_minimum_only),
                         onClick = {
                             if (isExiting.value == null) isExiting.value = ExitMode.MinimumOnly
                         },
-                        modifier = Modifier.width(280.dp).height(54.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.5.dp, CopperLight.copy(alpha = 0.6f)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color.Transparent,
-                            contentColor = OnSurface,
-                        ),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.consent_btn_minimum_only),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 0.4.sp,
-                        )
-                    }
+                    )
 
                     // Manual selection (opens bottom sheet)
-                    OutlinedButton(
+                    ConsentFilledButton(
+                        label = stringResource(R.string.consent_btn_manual_selection),
+                        leadingIcon = Icons.Rounded.Tune,
                         onClick = { showSheet = true },
-                        modifier = Modifier.width(280.dp).height(54.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.5.dp, CopperLight.copy(alpha = 0.6f)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color.Transparent,
-                            contentColor = OnSurface,
-                        ),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Tune,
-                            contentDescription = null,
-                            tint = OnSurface,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.consent_btn_manual_selection),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 0.4.sp,
-                        )
-                    }
+                    )
                 }
 
                 Spacer(Modifier.height(22.dp))
@@ -450,6 +406,64 @@ fun ConsentScreen(
 }
 
 private enum class ExitMode { AcceptAll, MinimumOnly, SaveSelection }
+
+/**
+ * Visually-identical copper-filled button used for all three consent options.
+ *
+ * Same gradient, same height, same text style, same optional leading icon slot —
+ * no breathing animation, no glow halo, no elevation highlight for any single option.
+ * This keeps the three choices equally prominent (EDSA Guideline 03/2023 §3.1.2 and
+ * § 5 Abs. 6 UWG / UWG EmpCo-RL).
+ */
+@Composable
+private fun ConsentFilledButton(
+    label: String,
+    onClick: () -> Unit,
+    leadingIcon: ImageVector? = null,
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.width(280.dp).height(54.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+        contentPadding = PaddingValues(0.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.horizontalGradient(listOf(CopperLight, CopperDeep)),
+                    shape = RoundedCornerShape(16.dp),
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                if (leadingIcon != null) {
+                    Icon(
+                        imageVector = leadingIcon,
+                        contentDescription = null,
+                        tint = OnPrimaryDark,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.4.sp,
+                        fontSize = 15.sp,
+                    ),
+                    color = OnPrimaryDark,
+                )
+            }
+        }
+    }
+}
 
 @Composable
 private fun PromiseBullet(icon: ImageVector, text: String) {

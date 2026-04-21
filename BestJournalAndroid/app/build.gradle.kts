@@ -11,7 +11,7 @@ plugins {
 
 android {
     namespace = "com.bestjournal.app"
-    compileSdk = 35
+    compileSdk = 36
 
     signingConfigs {
         getByName("debug") {
@@ -36,9 +36,9 @@ android {
     defaultConfig {
         applicationId = "com.bestjournal.app"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 144
-        versionName = "0.12.34"
+        targetSdk = 36
+        versionCode = 145
+        versionName = "0.12.35"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
