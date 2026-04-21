@@ -1,5 +1,8 @@
 package com.bestjournal.app.domain.model
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class JournalEntry(
     val id: Long = 0,
     val timestamp: Long,

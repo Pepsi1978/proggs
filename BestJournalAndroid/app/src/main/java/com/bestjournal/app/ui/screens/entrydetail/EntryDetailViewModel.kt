@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+@androidx.compose.runtime.Immutable
 data class EntryDetailUiState(
     val entry: JournalEntry? = null,
     val editedDisplayText: String = "",
