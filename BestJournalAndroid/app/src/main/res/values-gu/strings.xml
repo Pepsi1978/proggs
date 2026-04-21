@@ -1107,4 +1107,46 @@
     <string name="legal_title_datenschutz">ગોપનીયતા નીતિ</string>
     <string name="legal_title_nutzungsbedingungen">ઉપયોગની શરતો</string>
     <string name="legal_title_impressum">કાનૂની માહિતી</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Best Journal માં આપનું સ્વાગત છે</string>
+    <string name="consent_welcome_intro">શરૂ કરતા પહેલાં, અહીં ઝડપથી તમારી ગોપનીયતા પસંદગીઓ સેટ કરીએ.</string>
+    <string name="consent_promise_local">ગોપનીયતા કાયદાઓને તમારી સંમતિની જરૂર છે.</string>
+    <string name="consent_promise_no_training">કયા લક્ષણો સક્રિય રહેશે તે તમે અહીં નક્કી કરો છો.</string>
+    <string name="consent_promise_optional_ai">સેટિંગ્સમાં ગમે ત્યારે બદલી શકાય છે.</string>
+    <string name="consent_btn_manual_selection">મેન્યુઅલ પસંદગી</string>
+    <string name="privacy_sheet_title">ગોપનીયતા કસ્ટમાઇઝ કરો</string>
+    <string name="privacy_sheet_subtitle">તમને અનુકૂળ હોય તે રીતે વ્યક્તિગત લક્ષણો સક્ષમ કરો. બધું ગમે ત્યારે બદલી શકાય છે.</string>
+    <string name="privacy_sheet_save">પસંદગી સાચવો</string>
+    <string name="privacy_sheet_all_on">બધું ચાલુ</string>
+    <string name="privacy_sheet_all_off">બધું બંધ</string>
+    <string name="consent_toggle_analytics_title">અનામી ઉપયોગ વિશ્લેષણ</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — એપ્લિકેશનને સુધારવામાં અમને મદદ કરે છે. કોઈ વ્યક્તિગત સામગ્રી નથી, ફક્ત અનામી ટેપ ગણતરીઓ. ડેટા ટ્રાન્સફર: Google USA (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">વાણી-થી-ટેક્સ્ટ (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">એન્ટ્રીઓ શ્રુતલેખન કરવાની મંજૂરી આપે છે. તમારું વૉઇસ રેકોર્ડિંગ એન્ક્રિપ્ટેડ રીતે Groq (USA) ને મોકલવામાં આવે છે, ટેક્સ્ટમાં રૂપાંતરિત થાય છે, પછી કાઢી નાખવામાં આવે છે. તમારા રેકોર્ડિંગ્સ તાલીમ માટે ઉપયોગમાં લેવાતા નથી.</string>
+    <string name="consent_toggle_gemini_title">AI પ્રતિબિંબ (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">ડેશબોર્ડ AI, સારાંશ, સમીક્ષાઓ અને ટેક્સ્ટ સુધારણા. ટેક્સ્ટ ટુકડાઓ Google Gemini (USA) ને મોકલે છે. તમારી એન્ટ્રીઓ તાલીમ માટે ઉપયોગમાં લેવાતી નથી.</string>
+    <string name="consent_toggle_tts_title">મોટેથી વાંચન (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">કુદરતી અવાજમાં એન્ટ્રીઓ વાંચે છે. ટેક્સ્ટને Microsoft (USA) ને મોકલે છે. વૈકલ્પિક: ઑફલાઇન સિસ્ટમ TTS.</string>
+    <string name="consent_toggle_drive_title">Google Drive બેકઅપ</string>
+    <string name="consent_toggle_drive_body">એન્ટ્રીઓને એન્ક્રિપ્ટેડ રીતે તમારા પોતાના Google Drive માં સાચવે છે. તમે સંપૂર્ણ નિયંત્રણ જાળવી રાખો છો — ફાઇલ તમારા ખાતામાં છે, અમારી પાસે નથી.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">કેલિફોર્નિયા ઑપ્ટ-આઉટ (CCPA/CPRA 2026). સક્રિય હોય ત્યારે, બધી વૈકલ્પિક ડેટા પ્રક્રિયા નિષ્ક્રિય થાય છે — ફક્ત સ્થાનિક લક્ષણો રહે છે.</string>
+    <string name="consent_btn_accept_all">બધું સ્વીકારો</string>
+    <string name="consent_btn_save_selection">મારી પસંદગી સાચવો</string>
+    <string name="consent_btn_minimum_only">બધું નકારો</string>
+    <string name="consent_saved_snackbar">સેટિંગ સાચવી</string>
+    <string name="consent_revoke_snackbar">સંમતિ પાછી ખેંચી</string>
+    <string name="consent_footer_version">તમારી પસંદગી સેટિંગ્સમાં ગમે ત્યારે બદલી શકાય છે.</string>
+    <string name="consent_details_expand">વિગતો</string>
+    <string name="settings_open_privacy_sheet">ગોપનીયતા સેટિંગ્સ કસ્ટમાઇઝ કરો</string>
+    <string name="settings_privacy_section_header">ગોપનીયતા અને સંમતિઓ</string>
+    <string name="settings_ai_groq_title">વાણી-થી-ટેક્સ્ટ (Groq)</string>
+    <string name="settings_ai_groq_subtitle">ટ્રાન્સક્રિપ્શન માટે વૉઇસ રેકોર્ડિંગ્સ Groq USA ને મોકલો</string>
+    <string name="settings_ai_gemini_title">AI પ્રતિબિંબ (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">AI સારાંશ માટે Google USA ને ટેક્સ્ટ મોકલો</string>
+    <string name="settings_ai_tts_title">મોટેથી વાંચન (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">વૉઇસ આઉટપુટ માટે Microsoft USA ને ટેક્સ્ટ મોકલો</string>
+    <string name="settings_drive_backup_title">Google Drive બેકઅપ</string>
+    <string name="settings_drive_backup_subtitle">તમારા Drive માં એન્ક્રિપ્ટેડ એન્ટ્રીઓ સાચવો</string>
 </resources>
