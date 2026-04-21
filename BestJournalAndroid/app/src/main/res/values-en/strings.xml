@@ -1077,16 +1077,18 @@
 
     <!-- Consent-Screen v4: friendly welcome + layered consent -->
     <string name="consent_welcome_title">Welcome to Best Journal</string>
-    <string name="consent_welcome_intro">Your journal is a private space. So you can start in peace, here\'s a quick and honest overview of what you should know.</string>
-    <string name="consent_promise_local">All entries stay on your device — always.</string>
-    <string name="consent_promise_no_training">Your data is NEVER used to train AI models.</string>
-    <string name="consent_promise_optional_ai">AI features are optional — you decide.</string>
+    <string name="consent_welcome_intro">Before you start, let\'s quickly set your privacy preferences right here.</string>
+    <string name="consent_promise_local">Privacy laws require your consent.</string>
+    <string name="consent_promise_no_training">You decide here which features are active.</string>
+    <string name="consent_promise_optional_ai">Changeable any time in Settings.</string>
     <string name="consent_btn_manual_selection">Manual selection</string>
 
     <!-- Detail sheet: Privacy Preferences (reused in Consent + Settings) -->
     <string name="privacy_sheet_title">Customize privacy</string>
     <string name="privacy_sheet_subtitle">Enable individual features however it suits you. Everything can be changed any time.</string>
     <string name="privacy_sheet_save">Save selection</string>
+    <string name="privacy_sheet_all_on">Turn all on</string>
+    <string name="privacy_sheet_all_off">Turn all off</string>
 
     <!-- Consent-Screen v3: granular toggles (Phase A) -->
     <string name="consent_section_essential">Required (always on)</string>
@@ -1095,9 +1097,7 @@
     <string name="consent_toggle_local_body">All entries stay on your device. This core function is always on and cannot be disabled.</string>
     <string name="consent_toggle_analytics_title">Anonymous usage analytics</string>
     <string name="consent_toggle_analytics_body">Firebase Analytics — helps us improve the app. No personal content, just anonymous tap counts. Data transfer: Google USA (Data Privacy Framework).</string>
-    <string name="consent_toggle_crashlytics_title">Crash reports</string>
-    <string name="consent_toggle_crashlytics_body">Firebase Crashlytics — sends anonymous crash reports to Google so bugs get fixed faster. Data transfer: Google USA.</string>
-    <string name="consent_toggle_groq_title">Speech-to-text (Groq Whisper)</string>
+<string name="consent_toggle_groq_title">Speech-to-text (Groq Whisper)</string>
     <string name="consent_toggle_groq_body">Allows dictating entries. Your voice recording is sent encrypted to Groq (USA), converted to text, then deleted. Your recordings are NOT used for training.</string>
     <string name="consent_toggle_gemini_title">AI reflections (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">Dashboard AI, summaries, reviews and text improvement. Sends text snippets to Google Gemini (USA). Your entries are NOT used for training.</string>
@@ -1111,10 +1111,10 @@
     <string name="consent_no_training_badge">Your data is NOT used to train AI models</string>
     <string name="consent_btn_accept_all">Accept all</string>
     <string name="consent_btn_save_selection">Save my selection</string>
-    <string name="consent_btn_minimum_only">Required only</string>
+    <string name="consent_btn_minimum_only">Reject all</string>
     <string name="consent_saved_snackbar">Setting saved</string>
     <string name="consent_revoke_snackbar">Consent revoked</string>
-    <string name="consent_footer_version">Privacy policy v%1$s · All settings changeable any time in Settings.</string>
+    <string name="consent_footer_version">Your selection can be changed any time in Settings.</string>
     <string name="consent_details_expand">Details</string>
 
     <!-- Settings-Screen v4: Layered consent — sheet opener + revoke -->
@@ -1129,9 +1129,7 @@
     <string name="settings_privacy_revoke_done">All consents revoked.</string>
     <string name="settings_privacy_last_changed">Last changed: %1$s</string>
     <string name="settings_privacy_policy_version">Privacy policy v%1$s</string>
-    <string name="settings_crashlytics_title">Crash reports</string>
-    <string name="settings_crashlytics_subtitle">Firebase Crashlytics (anonymous crash reports to Google USA)</string>
-    <string name="settings_ai_groq_title">Speech-to-text (Groq)</string>
+<string name="settings_ai_groq_title">Speech-to-text (Groq)</string>
     <string name="settings_ai_groq_subtitle">Send voice recordings to Groq USA for transcription</string>
     <string name="settings_ai_gemini_title">AI reflections (Gemini)</string>
     <string name="settings_ai_gemini_subtitle">Send texts to Google USA for AI summaries</string>

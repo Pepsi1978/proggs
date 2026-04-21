@@ -555,16 +555,18 @@
 
     <!-- Consent-Screen v4: freundliche Einleitung + Layered Consent -->
     <string name="consent_welcome_title">Willkommen bei Best Journal</string>
-    <string name="consent_welcome_intro">Dein Tagebuch ist ein privater Ort. Damit du ruhig loslegen kannst, hier kurz und ehrlich, was du wissen solltest.</string>
-    <string name="consent_promise_local">Alle Einträge bleiben auf deinem Gerät — immer.</string>
-    <string name="consent_promise_no_training">Deine Daten werden NIE für KI-Training verwendet.</string>
-    <string name="consent_promise_optional_ai">KI-Funktionen sind optional — du entscheidest selbst.</string>
+    <string name="consent_welcome_intro">Bevor es losgeht, klären wir kurz hier deine Datenschutz-Einstellungen.</string>
+    <string name="consent_promise_local">Die Datenschutzgesetze verlangen deine Einwilligung.</string>
+    <string name="consent_promise_no_training">Du entscheidest hier, welche Funktionen aktiv sind.</string>
+    <string name="consent_promise_optional_ai">Jederzeit in den Einstellungen änderbar.</string>
     <string name="consent_btn_manual_selection">Manuelle Auswahl</string>
 
     <!-- Detail-Sheet: Privacy Preferences (wiederverwendet in Consent + Settings) -->
     <string name="privacy_sheet_title">Datenschutz anpassen</string>
     <string name="privacy_sheet_subtitle">Aktiviere einzelne Funktionen so, wie es für dich passt. Alles kann jederzeit geändert werden.</string>
     <string name="privacy_sheet_save">Auswahl speichern</string>
+    <string name="privacy_sheet_all_on">Alle an</string>
+    <string name="privacy_sheet_all_off">Alle aus</string>
 
     <!-- Consent-Screen v3: granulare Toggles (Phase A) -->
     <string name="consent_section_essential">Notwendig (immer aktiv)</string>
@@ -573,9 +575,7 @@
     <string name="consent_toggle_local_body">Alle Einträge bleiben auf deinem Gerät. Diese Grundfunktion ist immer aktiv und kann nicht deaktiviert werden.</string>
     <string name="consent_toggle_analytics_title">Anonyme Nutzungsanalyse</string>
     <string name="consent_toggle_analytics_body">Firebase Analytics — hilft uns die App zu verbessern. Keine persönlichen Inhalte, nur anonyme Klick-Zahlen. Datenübertragung: Google USA (Data Privacy Framework).</string>
-    <string name="consent_toggle_crashlytics_title">Fehlerberichte</string>
-    <string name="consent_toggle_crashlytics_body">Firebase Crashlytics — sendet anonyme Absturzberichte an Google, damit Fehler schneller gefixt werden. Datenübertragung: Google USA.</string>
-    <string name="consent_toggle_groq_title">Sprache-zu-Text (Groq Whisper)</string>
+<string name="consent_toggle_groq_title">Sprache-zu-Text (Groq Whisper)</string>
     <string name="consent_toggle_groq_body">Erlaubt das Diktieren von Einträgen. Die Sprachaufnahme wird verschlüsselt an Groq (USA) gesendet, in Text umgewandelt und anschließend gelöscht. Deine Aufnahmen werden NICHT zum Training verwendet.</string>
     <string name="consent_toggle_gemini_title">KI-Reflexionen (Google Gemini)</string>
     <string name="consent_toggle_gemini_body">Dashboard-KI, Zusammenfassungen, Rückblicke und Textverbesserung. Sendet Textausschnitte an Google Gemini (USA). Deine Einträge werden NICHT zum Training verwendet.</string>
@@ -589,10 +589,10 @@
     <string name="consent_no_training_badge">KI-Modelle werden mit deinen Daten NICHT trainiert</string>
     <string name="consent_btn_accept_all">Alle akzeptieren</string>
     <string name="consent_btn_save_selection">Meine Auswahl speichern</string>
-    <string name="consent_btn_minimum_only">Nur Erforderliches</string>
+    <string name="consent_btn_minimum_only">Alle ablehnen</string>
     <string name="consent_saved_snackbar">Einstellung gespeichert</string>
     <string name="consent_revoke_snackbar">Einwilligung widerrufen</string>
-    <string name="consent_footer_version">Datenschutzerklärung v%1$s · Alle Einstellungen jederzeit in den Einstellungen änderbar.</string>
+    <string name="consent_footer_version">Deine Auswahl ist jederzeit in den Einstellungen änderbar.</string>
     <string name="consent_details_expand">Details</string>
 
     <!-- Settings-Screen v4: Layered consent — sheet opener + revoke -->
@@ -607,9 +607,7 @@
     <string name="settings_privacy_revoke_done">Alle Einwilligungen widerrufen.</string>
     <string name="settings_privacy_last_changed">Zuletzt geändert: %1$s</string>
     <string name="settings_privacy_policy_version">Datenschutzerklärung v%1$s</string>
-    <string name="settings_crashlytics_title">Fehlerberichte</string>
-    <string name="settings_crashlytics_subtitle">Firebase Crashlytics (anonyme Absturzberichte an Google USA)</string>
-    <string name="settings_ai_groq_title">Sprache-zu-Text (Groq)</string>
+<string name="settings_ai_groq_title">Sprache-zu-Text (Groq)</string>
     <string name="settings_ai_groq_subtitle">Sprachaufnahmen zur Transkription an Groq USA senden</string>
     <string name="settings_ai_gemini_title">KI-Reflexionen (Gemini)</string>
     <string name="settings_ai_gemini_subtitle">Texte für KI-Zusammenfassungen an Google USA senden</string>

@@ -2443,11 +2443,6 @@ fun SettingsScreen(
                         privacyPrefs.getBoolean(Constants.PREF_ANALYTICS_ENABLED, false)
                     )
                 }
-                var crashlyticsEnabled by remember {
-                    mutableStateOf(
-                        privacyPrefs.getBoolean(Constants.PREF_CRASHLYTICS_ENABLED, false)
-                    )
-                }
                 var driveBackupEnabled by remember {
                     mutableStateOf(
                         privacyPrefs.getBoolean(Constants.PREF_DRIVE_BACKUP_ENABLED, false)
@@ -2478,15 +2473,7 @@ fun SettingsScreen(
                     )
                 }
                 var showDeleteDialog by remember { mutableStateOf(false) }
-                var showRevokeAllDialog by remember { mutableStateOf(false) }
                 var showPrivacySheet by remember { mutableStateOf(false) }
-                val consentTimestamp =
-                    privacyPrefs.getLong(Constants.PREF_CONSENT_TIMESTAMP, 0L)
-                val consentPolicyVersion =
-                    privacyPrefs.getString(
-                        Constants.PREF_CONSENT_POLICY_VERSION,
-                        Constants.CURRENT_POLICY_VERSION,
-                    )
 
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
@@ -2540,54 +2527,6 @@ fun SettingsScreen(
                                 )
                             }
                         }
-
-                        // Revoke all + metadata footer
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            OutlinedButton(
-                                onClick = {
-                                    doHaptic(HapticFeedbackType.LongPress)
-                                    showRevokeAllDialog = true
-                                },
-                                colors =
-                                    ButtonDefaults.outlinedButtonColors(
-                                        contentColor = MaterialTheme.colorScheme.secondary
-                                    ),
-                            ) {
-                                Text(stringResource(R.string.settings_privacy_revoke_all))
-                            }
-                        }
-                        if (consentTimestamp > 0L) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            val formatted =
-                                java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
-                                    .format(java.util.Date(consentTimestamp))
-                            Text(
-                                text =
-                                    stringResource(
-                                        R.string.settings_privacy_last_changed,
-                                        formatted,
-                                    ),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                        Text(
-                            text =
-                                stringResource(
-                                    R.string.settings_privacy_policy_version,
-                                    consentPolicyVersion ?: Constants.CURRENT_POLICY_VERSION,
-                                ),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                        )
 
                         // NH2: CCPA/CPRA 2026 "Do Not Sell My Personal Information" toggle.
                         // Only shown for California residents (English US locale). When active,
@@ -2893,7 +2832,6 @@ fun SettingsScreen(
                     visible = showPrivacySheet,
                     initial = com.bestjournal.app.ui.components.PrivacyPreferences(
                         analytics = analyticsEnabled,
-                        crashlytics = crashlyticsEnabled,
                         groq = groqConsented,
                         gemini = geminiConsented,
                         tts = ttsConsented,
@@ -2903,7 +2841,6 @@ fun SettingsScreen(
                     onDismiss = { showPrivacySheet = false },
                     onSave = { prefs ->
                         analyticsEnabled = prefs.analytics
-                        crashlyticsEnabled = prefs.crashlytics
                         driveBackupEnabled = prefs.driveBackup
                         groqConsented = prefs.groq
                         geminiConsented = prefs.gemini
@@ -2911,7 +2848,6 @@ fun SettingsScreen(
                         privacyPrefs
                             .edit()
                             .putBoolean(Constants.PREF_ANALYTICS_ENABLED, prefs.analytics)
-                            .putBoolean(Constants.PREF_CRASHLYTICS_ENABLED, prefs.crashlytics)
                             .putBoolean(Constants.PREF_DRIVE_BACKUP_ENABLED, prefs.driveBackup)
                             .putBoolean(Constants.PREF_DO_NOT_SELL, prefs.doNotSell)
                             .putLong(
@@ -2943,67 +2879,6 @@ fun SettingsScreen(
                         loc.language == "en" && loc.country == "US"
                     },
                 )
-
-                if (showRevokeAllDialog) {
-                    androidx.compose.material3.AlertDialog(
-                        onDismissRequest = { showRevokeAllDialog = false },
-                        title = {
-                            Text(stringResource(R.string.settings_privacy_revoke_confirm_title))
-                        },
-                        text = {
-                            Text(stringResource(R.string.settings_privacy_revoke_confirm_body))
-                        },
-                        confirmButton = {
-                            androidx.compose.material3.TextButton(
-                                onClick = {
-                                    // Revoke every optional data flow in one tap.
-                                    privacyPrefs
-                                        .edit()
-                                        .putBoolean(Constants.PREF_ANALYTICS_ENABLED, false)
-                                        .putBoolean(Constants.PREF_CRASHLYTICS_ENABLED, false)
-                                        .putBoolean(Constants.PREF_DRIVE_BACKUP_ENABLED, false)
-                                        .putLong(
-                                            Constants.PREF_CONSENT_TIMESTAMP,
-                                            System.currentTimeMillis(),
-                                        )
-                                        .apply()
-                                    com.bestjournal.app.util.PrivacyGateHelper.revokeAll(context)
-                                    com.google.firebase.analytics.FirebaseAnalytics.getInstance(
-                                            context
-                                        )
-                                        .setAnalyticsCollectionEnabled(false)
-                                    analyticsEnabled = false
-                                    crashlyticsEnabled = false
-                                    driveBackupEnabled = false
-                                    groqConsented = false
-                                    geminiConsented = false
-                                    ttsConsented = false
-                                    android.widget.Toast.makeText(
-                                            context,
-                                            context.getString(
-                                                R.string.settings_privacy_revoke_done
-                                            ),
-                                            android.widget.Toast.LENGTH_SHORT,
-                                        )
-                                        .show()
-                                    showRevokeAllDialog = false
-                                }
-                            ) {
-                                Text(
-                                    stringResource(R.string.settings_privacy_revoke_confirm_yes),
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            }
-                        },
-                        dismissButton = {
-                            androidx.compose.material3.TextButton(
-                                onClick = { showRevokeAllDialog = false }
-                            ) {
-                                Text(stringResource(R.string.settings_delete_account_cancel))
-                            }
-                        },
-                    )
-                }
 
                 if (showDeleteDialog) {
                     androidx.compose.material3.AlertDialog(

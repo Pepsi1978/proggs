@@ -24,7 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Backup
-import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.InsertChart
@@ -84,7 +83,6 @@ fun PrivacyPreferencesSheet(
 
     // Local working copy — user can flip toggles freely, we only persist on Save.
     var analytics by rememberSaveable(initial) { mutableStateOf(initial.analytics) }
-    var crashlytics by rememberSaveable(initial) { mutableStateOf(initial.crashlytics) }
     var groq by rememberSaveable(initial) { mutableStateOf(initial.groq) }
     var gemini by rememberSaveable(initial) { mutableStateOf(initial.gemini) }
     var tts by rememberSaveable(initial) { mutableStateOf(initial.tts) }
@@ -102,14 +100,50 @@ fun PrivacyPreferencesSheet(
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
         ) {
-            Text(
-                text = stringResource(R.string.privacy_sheet_title),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                ),
-                color = Color(0xFFE5E2E1),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = stringResource(R.string.privacy_sheet_title),
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                    ),
+                    color = Color(0xFFE5E2E1),
+                )
+                val anyOn = analytics || groq || gemini || tts || driveBackup
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        if (anyOn) {
+                            analytics = false
+                            groq = false
+                            gemini = false
+                            tts = false
+                            driveBackup = false
+                        } else {
+                            analytics = true
+                            groq = true
+                            gemini = true
+                            tts = true
+                            driveBackup = true
+                            doNotSell = false
+                        }
+                    },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        text = stringResource(
+                            if (anyOn) R.string.privacy_sheet_all_off
+                            else R.string.privacy_sheet_all_on
+                        ),
+                        color = Color(0xFFECC165),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
             Spacer(Modifier.height(4.dp))
             Text(
                 text = stringResource(R.string.privacy_sheet_subtitle),
@@ -126,15 +160,6 @@ fun PrivacyPreferencesSheet(
                 checked = analytics,
                 enabled = !lockedByDnS,
                 onCheckedChange = { analytics = it },
-            )
-            Spacer(Modifier.height(8.dp))
-            PrefToggleCard(
-                icon = Icons.Rounded.BugReport,
-                title = stringResource(R.string.consent_toggle_crashlytics_title),
-                body = stringResource(R.string.consent_toggle_crashlytics_body),
-                checked = crashlytics,
-                enabled = !lockedByDnS,
-                onCheckedChange = { crashlytics = it },
             )
             Spacer(Modifier.height(8.dp))
             PrefToggleCard(
@@ -187,7 +212,6 @@ fun PrivacyPreferencesSheet(
                         if (newVal) {
                             // Cascade off
                             analytics = false
-                            crashlytics = false
                             groq = false
                             gemini = false
                             tts = false
@@ -204,7 +228,6 @@ fun PrivacyPreferencesSheet(
                     onSave(
                         PrivacyPreferences(
                             analytics = analytics,
-                            crashlytics = crashlytics,
                             groq = groq,
                             gemini = gemini,
                             tts = tts,
@@ -234,7 +257,6 @@ fun PrivacyPreferencesSheet(
 /** Snapshot of all user-controllable privacy toggles. */
 data class PrivacyPreferences(
     val analytics: Boolean,
-    val crashlytics: Boolean,
     val groq: Boolean,
     val gemini: Boolean,
     val tts: Boolean,

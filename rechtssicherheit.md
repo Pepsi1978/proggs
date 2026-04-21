@@ -180,6 +180,7 @@ Praesenz im Zielland sind praktisch nahezu null.
 | 2026-04-20 | BestJournalAndroid | Release-faehig nach Fixes | 0 | 1 | TTDSG zu TDDDG (behoben), Zweit-Kontakt (behoben), DSA-Kontaktstelle (behoben) |
 | 2026-04-20 | BestJournalAndroid (Tiefpruefung) | **NICHT release-faehig** | **5** | **6** | K1 ODR-Links (aktive Abmahnwelle), K2 LegalDocumentScreen laedt falschen Pfad, K3 PRIVACY.en fehlt, K4 Consent nicht granular, K5 Laenderspezifische Rights-Sections. Vollbericht: `BestJournalAndroid/docs/audit/RECHTSSICHERHEIT-AUDIT-2026-04-20.md` |
 | 2026-04-20 | BestJournalAndroid (v2 nach Fixes) | **BEDINGT release-faehig** | **1** | **2** | K1-K5 + H6 + M1 + M2 gefixt. Rest: NK1 Gemini+Edge-TTS Gate fehlt, NH1 Sprachdeckung (TR/KR/SA/BR/VN/CN ausschliessen), NH2 CCPA-2026 Opt-Out-Bestaetigung. Vollbericht: `BestJournalAndroid/docs/audit/RECHTSSICHERHEIT-AUDIT-2026-04-20-v2.md` |
+| 2026-04-21 | BestJournalAndroid (v3 nach Consent-v4-Umbau) | **BEDINGT release-faehig** | **1** | **0** | NK1/NH1/NH2 alle gefixt. NEU: KRIT-1 Crashlytics-Attrappe (Toggle existiert, SDK nicht) + falsche Erwaehnung in account-deletion.html:94. MITTEL-1: Drive-Backup-Toggle wird im Manager nicht geprueft. Gesamt 1 KRIT-Fix (~10-15 Min), dann release-faehig. Vollbericht: `BestJournalAndroid/docs/audit/RECHTSSICHERHEIT-AUDIT-2026-04-21-v3.md` |
 
 ## Neue Hotspots-Erkenntnisse 2026-04-20
 

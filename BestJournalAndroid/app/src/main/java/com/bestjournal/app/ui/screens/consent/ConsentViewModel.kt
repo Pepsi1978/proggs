@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
  *  - Provable (timestamp + policy version persisted for audit trail)
  *
  * Toggle truth sources:
- *  - Analytics / Crashlytics / Drive-Backup → SharedPreferences keys in [Constants]
+ *  - Analytics / Drive-Backup → SharedPreferences keys in [Constants]
  *  - Groq / Gemini / Edge TTS → [PrivacyGateHelper] keys (one source of truth; the
  *    per-use PrivacyGateDialog automatically skips when already consented here).
  *
@@ -44,9 +44,6 @@ constructor(
     private val _analyticsEnabled = MutableStateFlow(false)
     val analyticsEnabled: StateFlow<Boolean> = _analyticsEnabled.asStateFlow()
 
-    private val _crashlyticsEnabled = MutableStateFlow(false)
-    val crashlyticsEnabled: StateFlow<Boolean> = _crashlyticsEnabled.asStateFlow()
-
     private val _groqEnabled = MutableStateFlow(false)
     val groqEnabled: StateFlow<Boolean> = _groqEnabled.asStateFlow()
 
@@ -64,10 +61,6 @@ constructor(
 
     fun setAnalytics(enabled: Boolean) {
         _analyticsEnabled.value = enabled
-    }
-
-    fun setCrashlytics(enabled: Boolean) {
-        _crashlyticsEnabled.value = enabled
     }
 
     fun setGroq(enabled: Boolean) {
@@ -94,7 +87,6 @@ constructor(
         _doNotSellEnabled.value = enabled
         if (enabled) {
             _analyticsEnabled.value = false
-            _crashlyticsEnabled.value = false
             _groqEnabled.value = false
             _geminiEnabled.value = false
             _ttsEnabled.value = false
@@ -105,7 +97,6 @@ constructor(
     /** One-tap accept: flip every optional toggle to on, then persist. */
     fun acceptAll() {
         _analyticsEnabled.value = true
-        _crashlyticsEnabled.value = true
         _groqEnabled.value = true
         _geminiEnabled.value = true
         _ttsEnabled.value = true
@@ -117,7 +108,6 @@ constructor(
     /** One-tap reject: keep every optional toggle off, persist, continue. */
     fun acceptMinimumOnly() {
         _analyticsEnabled.value = false
-        _crashlyticsEnabled.value = false
         _groqEnabled.value = false
         _geminiEnabled.value = false
         _ttsEnabled.value = false
@@ -136,7 +126,6 @@ constructor(
             putString(Constants.PREF_CONSENT_POLICY_VERSION, Constants.CURRENT_POLICY_VERSION)
             putLong(Constants.PREF_CONSENT_TIMESTAMP, System.currentTimeMillis())
             putBoolean(Constants.PREF_ANALYTICS_ENABLED, _analyticsEnabled.value)
-            putBoolean(Constants.PREF_CRASHLYTICS_ENABLED, _crashlyticsEnabled.value)
             putBoolean(Constants.PREF_DRIVE_BACKUP_ENABLED, _driveBackupEnabled.value)
             putBoolean(Constants.PREF_DO_NOT_SELL, _doNotSellEnabled.value)
         }

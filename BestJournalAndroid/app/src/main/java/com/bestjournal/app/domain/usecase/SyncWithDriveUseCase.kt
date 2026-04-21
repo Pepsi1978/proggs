@@ -17,6 +17,14 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import javax.inject.Inject
 
+/**
+ * Thrown when [SyncWithDriveUseCase.backup] is called while the user has
+ * turned off PREF_DRIVE_BACKUP_ENABLED. Restore/merge/download operations
+ * are NOT gated — users must be able to retrieve previously uploaded data.
+ */
+class DriveBackupDisabledException :
+    Exception("Drive backup is disabled in privacy settings")
+
 class SyncWithDriveUseCase
 @Inject
 constructor(
@@ -29,6 +37,11 @@ constructor(
     private val dbName = "entropy_journal_db"
 
     suspend fun backup(): Result<Unit> {
+        // Respect the user's Drive-Backup consent toggle — if off, no upload.
+        // This mirrors the promise made on the ConsentScreen/Settings-Sheet.
+        if (!encryptedPrefs.getBoolean(Constants.PREF_DRIVE_BACKUP_ENABLED, false)) {
+            return Result.failure(DriveBackupDisabledException())
+        }
         val dbFile = context.getDatabasePath(dbName)
         if (!dbFile.exists()) return Result.failure(Exception("Datenbank nicht gefunden"))
 

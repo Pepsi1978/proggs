@@ -31,10 +31,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Gavel
 import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -109,7 +108,6 @@ fun ConsentScreen(
 
     // Current toggle state (starts all off — EDSA 03/2023 default).
     val analyticsOn by viewModel.analyticsEnabled.collectAsState()
-    val crashlyticsOn by viewModel.crashlyticsEnabled.collectAsState()
     val groqOn by viewModel.groqEnabled.collectAsState()
     val geminiOn by viewModel.geminiEnabled.collectAsState()
     val ttsOn by viewModel.ttsEnabled.collectAsState()
@@ -289,17 +287,17 @@ fun ConsentScreen(
                     modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = bulletsAlpha.value },
                 ) {
                     PromiseBullet(
-                        icon = Icons.Rounded.Lock,
+                        icon = Icons.Rounded.Gavel,
                         text = stringResource(R.string.consent_promise_local),
                     )
                     Spacer(Modifier.height(10.dp))
                     PromiseBullet(
-                        icon = Icons.Rounded.VerifiedUser,
+                        icon = Icons.Rounded.Tune,
                         text = stringResource(R.string.consent_promise_no_training),
                     )
                     Spacer(Modifier.height(10.dp))
                     PromiseBullet(
-                        icon = Icons.Rounded.AutoAwesome,
+                        icon = Icons.Rounded.Favorite,
                         text = stringResource(R.string.consent_promise_optional_ai),
                     )
                 }
@@ -439,7 +437,7 @@ fun ConsentScreen(
                 Spacer(Modifier.height(10.dp))
 
                 Text(
-                    text = stringResource(R.string.consent_footer_version, Constants.CURRENT_POLICY_VERSION),
+                    text = stringResource(R.string.consent_footer_version),
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontSize = 10.sp,
                         lineHeight = 14.sp,
@@ -456,7 +454,6 @@ fun ConsentScreen(
         visible = showSheet,
         initial = PrivacyPreferences(
             analytics = analyticsOn,
-            crashlytics = crashlyticsOn,
             groq = groqOn,
             gemini = geminiOn,
             tts = ttsOn,
@@ -466,7 +463,6 @@ fun ConsentScreen(
         onDismiss = { showSheet = false },
         onSave = { prefs ->
             viewModel.setAnalytics(prefs.analytics)
-            viewModel.setCrashlytics(prefs.crashlytics)
             viewModel.setGroq(prefs.groq)
             viewModel.setGemini(prefs.gemini)
             viewModel.setTts(prefs.tts)

@@ -155,9 +155,8 @@ object Constants {
     // Firebase Analytics opt-in — default false.
     // Toggle in ConsentScreen AND Settings → Datenschutz switches it at runtime.
     const val PREF_ANALYTICS_ENABLED = "analytics_enabled"
-    // Firebase Crashlytics opt-in — default false (sends anonymous crash reports to Google USA).
-    const val PREF_CRASHLYTICS_ENABLED = "crashlytics_enabled"
-    // Google Drive backup opt-in — default false.
+    // Google Drive backup opt-in — default false. Checked by DriveBackupManager
+    // before every sync operation to prevent background sync when off.
     const val PREF_DRIVE_BACKUP_ENABLED = "drive_backup_enabled"
 
     // CCPA/CPRA 2026 (California): "Do Not Sell My Personal Information" toggle.
