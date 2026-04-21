@@ -1048,16 +1048,47 @@
     <string name="settings_delete_account_force_local">Delete locally only (Drive backup stays for now)</string>
     <string name="settings_delete_account_abort">Cancel operation</string>
 
-    <!-- Settings → Privacy → Withdrawal (§ 355 BGB for DE, Directive 2011/83/EU for EU) -->
-    <string name="settings_revoke_title">Withdrawal</string>
-    <string name="settings_revoke_subtitle">Premium purchase</string>
-    <string name="settings_revoke_confirm_title">Open email to support?</string>
-    <string name="settings_revoke_confirm_body">Your email app will open with a prepared message to dev.app.support@gmail.com. We respond within 24 hours on business days.\n\nThe full withdrawal instructions (for EU and UK consumers) are in the Terms of Use, Section 16. Subscriptions must also be cancelled through Google Play → Subscriptions.</string>
+    <!-- Withdrawal button § 356a BGB (mandatory from 19.06.2026). Two-stage, direct in-app. -->
+    <string name="settings_revoke_title">Withdraw contract</string>
+    <string name="settings_revoke_subtitle">§ 356a BGB — withdraw directly from the app</string>
+    <string name="settings_revoke_confirm_title">Withdraw contract?</string>
+    <string name="settings_revoke_confirm_body">By clicking "Confirm withdrawal" we send your withdrawal directly to dev.app.support@gmail.com. You will immediately receive a receipt confirmation via email.\n\nThe full withdrawal instructions are in the Terms of Use, Section 16. To stop further billing, please also cancel your subscription in Google Play → Subscriptions.</string>
     <string name="settings_revoke_cancel">Cancel</string>
-    <string name="settings_revoke_confirm">Create withdrawal</string>
-    <string name="settings_revoke_no_email">No email app found. Please send the withdrawal to dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_confirm">Confirm withdrawal</string>
     <string name="settings_revoke_email_subject">Withdrawal Premium contract Best Journal</string>
-    <string name="settings_revoke_email_body">Hello,\n\nI hereby give notice of withdrawal from my Best Journal Premium contract.\n\nPurchase: [please specify]\nDate of purchase: [please specify]\nGoogle account email: [please specify]\n\nThank you.</string>
+    <string name="settings_revoke_email_body">I hereby give notice of withdrawal from my Best Journal Premium contract.\n\nSender (Google account): %1$s\nTime of withdrawal: %2$s\n\nThis withdrawal was triggered two-stage via the § 356a BGB-compliant withdrawal button in the app and sent automatically via the Gmail API.</string>
+    <string name="settings_revoke_confirm_subject">Your receipt: Withdrawal at Best Journal</string>
+    <string name="settings_revoke_confirm_user_body">Hello,\n\nwe have received your withdrawal of %1$s. This is your receipt confirmation under § 356a BGB.\n\nWe will process your withdrawal as soon as possible and will contact you at dev.app.support@gmail.com if there are questions.\n\nTo stop any further billing, please also cancel your subscription in the Google Play Store under "Subscriptions".\n\nThank you and best regards\nBest Journal (Frank Barwandt)</string>
+    <string name="settings_revoke_no_account">No signed-in Google account found. Please sign in with your Google account in Settings, or send the withdrawal manually to dev.app.support@gmail.com.</string>
+    <string name="settings_revoke_sending">Sending withdrawal …</string>
+    <string name="settings_revoke_success_title">Withdrawal received</string>
+    <string name="settings_revoke_success_body">Your withdrawal has been sent to dev.app.support@gmail.com. The receipt confirmation is also in your inbox.</string>
+    <string name="settings_revoke_success_close">Close</string>
+    <string name="settings_revoke_error_title">Could not send withdrawal</string>
+    <string name="settings_revoke_error_body">Automatic sending failed: %1$s\n\nYou can alternatively send a manual email to dev.app.support@gmail.com. Click "Open email app" for that.</string>
+    <string name="settings_revoke_error_email_fallback">Open email app</string>
+    <string name="settings_revoke_no_email">No email app found. Please send the withdrawal to dev.app.support@gmail.com.</string>
+
+    <!-- Crisis Support / Mental Health Disclaimer (H5 — SB 243, industry standard) -->
+    <string name="settings_crisis_title">Crisis Support</string>
+    <string name="settings_crisis_subtitle">Important hotlines for emergencies</string>
+    <string name="settings_crisis_dialog_title">You are not alone</string>
+    <string name="settings_crisis_dialog_body">Best Journal is a journal app and does not replace professional psychological or medical advice. AI-generated analyses are not therapy.\n\nIf you are in an acute crisis, or having thoughts of self-harm or suicide: you do not have to go through this alone. Free, anonymous help is available — around the clock.</string>
+    <string name="settings_crisis_hotline_de_name">Telefonseelsorge Germany</string>
+    <string name="settings_crisis_hotline_de_hours">Free, 24/7, anonymous</string>
+    <string name="settings_crisis_call_de">Call 0800 111 0 111</string>
+    <string name="settings_crisis_call_de_alt">Call 0800 111 0 222</string>
+    <string name="settings_crisis_emergency_name">Emergency</string>
+    <string name="settings_crisis_call_emergency">Call 112</string>
+    <string name="settings_crisis_international_name">International hotlines</string>
+    <string name="settings_crisis_open_findahelpline">Open findahelpline.com</string>
+    <string name="settings_crisis_close">Close</string>
+    <string name="settings_crisis_no_dialer">No phone app found.</string>
+    <string name="settings_crisis_no_browser">No browser found.</string>
+
+    <!-- AI-generated content badge (H4 — AI Act Art. 50, mandatory from 02.08.2026) -->
+    <string name="ai_generated_badge">AI-generated</string>
+    <string name="ai_generated_tooltip">This content was created by an AI system (Google Gemini) and may contain errors. Please verify independently.</string>
 
     <!-- ════════════════════════════════════════════════════════════════════
          CONSENT SCREEN (pre-onboarding) + legal document titles
@@ -1143,8 +1174,8 @@
     <string name="privacy_gate_groq_local">Use local instead</string>
 
     <string name="privacy_gate_gemini_title">Enable AI feature</string>
-    <string name="privacy_gate_gemini_body">Great that you want to use Best Journal\'s intelligent features! For summaries, reviews, dashboard insights, and text improvements, your text is sent encrypted to Google Gemini.\n\n✓ Never used to train AI models\n✓ Requests are deleted immediately after processing\n✓ Encrypted under EU-US Data Privacy Framework\n\nYou can change this any time in Settings.</string>
-    <string name="privacy_gate_gemini_accept">Enable</string>
+    <string name="privacy_gate_gemini_body">Great that you want to use Best Journal\'s intelligent features! For summaries, reviews, dashboard insights, and text improvements, your text is sent encrypted to Google Gemini.\n\n✓ Never used to train AI models\n✓ Requests are deleted immediately after processing\n✓ Encrypted under EU-US Data Privacy Framework\n\nImportant notice: Since your journal entries may contain especially sensitive data (health, religion, personal relationships — GDPR Art. 9 / special categories), we ask here for your explicit consent to AI processing. AI outputs are suggestions, not professional advice, and do not replace a qualified expert.\n\nYou can change this any time in Settings.</string>
+    <string name="privacy_gate_gemini_accept">Give explicit consent</string>
     <string name="privacy_gate_gemini_cancel">Later</string>
 
     <string name="privacy_gate_tts_title">Enable premium voices</string>

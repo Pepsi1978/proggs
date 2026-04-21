@@ -938,6 +938,11 @@ private fun SummaryDetailDialog(
                             .padding(horizontal = 20.dp)
                             .padding(top = 24.dp, bottom = 120.dp)
                 ) {
+                    // H4 — In-App KI-Kennzeichnung (AI Act Art. 50, Pflicht ab 02.08.2026)
+                    com.bestjournal.app.ui.components.AiGeneratedBadge(
+                        modifier = Modifier.padding(bottom = 12.dp),
+                    )
+
                     // Bullet point summary card
                     if (parsed.bulletPoints.isNotEmpty()) {
                         Card(

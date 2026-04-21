@@ -162,9 +162,10 @@ sunset times are calculated entirely on your device.</p>
 <strong>Processing:</strong> Locally only, no data transmission.</p>
 <hr />
 <h2>3a. Scope and international availability</h2>
-<p>The app is available in <strong>more than 25 languages</strong> (including English, German,<br />
-French, Spanish, Italian, Dutch, Portuguese, Polish, Czech, Turkish, Russian,<br />
-Chinese, Japanese, Korean, Arabic, Hindi, and others) in the Google Play Store. The<br />
+<p>The app is available in <strong>27 languages</strong> (English, German, French, Spanish,<br />
+Italian, Dutch, Polish, Portuguese [Brazil and Portugal], Ukrainian, Turkish, Arabic,<br />
+Hindi, Bengali, Gujarati, Kannada, Malayalam, Marathi, Tamil, Telugu, Urdu, Indonesian,<br />
+Thai, Japanese, Korean, and Chinese [Simplified and Traditional]) in the Google Play Store. The<br />
 language is chosen automatically based on your Android system language<br />
 (<code>Locale.getDefault()</code>), and the timezone from Android settings (<code>TimeZone.getDefault()</code>).<br />
 Both happen <strong>on the device only</strong>, <strong>no additional location, language, or timezone<br />
@@ -566,9 +567,12 @@ amended by the California Privacy Rights Act (CPRA), grants you the following ri
 <li><strong>Right to correct:</strong> Correction of inaccurate personal information.</li>
 <li><strong>Right to opt out of sale or sharing:</strong> We do <strong>not sell or share</strong> your personal<br />
   information in the meaning of the CCPA. No cross-context behavioral advertising<br />
-  takes place. Because there is no sale or sharing, there is no "Do Not Sell or<br />
-  Share My Personal Information" link needed, but you may still opt out of any<br />
-  analytics data processing under Section 5.7.</li>
+  takes place. Although no sale or sharing occurs, <strong>as a transparency measure we<br />
+  nevertheless provide a "Do Not Sell or Share My Personal Information" toggle</strong> in<br />
+  Settings → Privacy → California Privacy Choices. Activating it revokes all optional<br />
+  cloud consents (Groq, Gemini, Edge TTS, Google Drive) and disables Firebase<br />
+  Analytics via <code>setAnalyticsCollectionEnabled(false)</code>. This toggle is shown<br />
+  automatically for users with the en-US locale.</li>
 <li><strong>Right to limit the use of sensitive personal information (SPI):</strong> Journal content<br />
   may contain SPI (for example, health information, religious beliefs, sexual<br />
   orientation). You can limit our use of such information by disabling cloud AI<br />
@@ -800,7 +804,26 @@ Personal Information Protection Commission (PPC): https://www.ppc.go.jp</p>
 <p>Under the Protection of Personal Information Act (POPIA), South African users have<br />
 rights of access, correction, and objection. Regulator: Information Regulator,<br />
 https://inforegulator.org.za</p>
-<h3>8a.12 Other jurisdictions</h3>
+<h3>8a.12 Rights of Mexican residents (LFPDPPP, March 2026 reform)</h3>
+<p>Under the Ley Federal de Protección de Datos Personales en Posesión de los Particulares<br />
+(LFPDPPP), Mexican users have ARCO rights: Access, Rectification, Cancellation,<br />
+Opposition. Following the March 2026 reform, we provide a <strong>Simplified Privacy Notice</strong><br />
+(Aviso de Privacidad Simplificado) — the short Spanish-language summary of this<br />
+Privacy Policy fulfills this requirement. The competent authority is the<br />
+<strong>Secretaría Anti-Corrupción y Buen Gobierno (SABG)</strong>, successor of INAI.</p>
+<h3>8a.13 Rights of Chilean residents (LPPD, fully effective December 2026)</h3>
+<p>From December 2026, Chile's new data protection law (LPPD) applies. Chilean users<br />
+then receive rights of access, rectification, deletion, portability, and objection. The<br />
+new supervisory authority may impose fines of 2–4% of annual revenue. Once the law is<br />
+fully in force, we will extend the Chile-specific portions of this Privacy Policy<br />
+accordingly.</p>
+<h3>8a.14 Children's privacy (Australia Children's Online Privacy Code, expected 10.12.2026)</h3>
+<p>The Australian OAIC is finalizing a Children's Online Privacy Code that must be<br />
+registered by 10 December 2026. The Code applies to "online services likely accessed by<br />
+children" and introduces obligations such as age-assurance, privacy-by-default, and no<br />
+direct marketing without consent. Best Journal is intended for users aged 13+; once the<br />
+Code is final, we will review our age-assurance and parental-consent flows accordingly.</p>
+<h3>8a.15 Other jurisdictions</h3>
 <p>For users from jurisdictions not specifically named, the GDPR-compliant rights above<br />
 apply as a voluntary self-commitment, as well as any mandatory rights under local<br />
 law. For questions or to exercise local rights, email dev.app.support@gmail.com.</p>
@@ -895,7 +918,7 @@ children under 13 (COPPA compliance, 15 U.S.C. §§ 6501-6506).</p>
 legal effect on you or significantly affects you. AI features only generate texts or<br />
 summaries that are not legally binding for you.</p>
 <hr />
-<h2>12a. Notice on AI systems (Art. 50 AI Act)</h2>
+<h2>12a. Notice on AI systems (Art. 50 AI Act, California SB 243)</h2>
 <p>This app uses AI systems to process your input:</p>
 <ul>
 <li><strong>Google Gemini</strong> (Firebase AI): AI-powered text analysis, summaries, dashboard,<br />
@@ -903,13 +926,32 @@ summaries that are not legally binding for you.</p>
 <li><strong>Groq Whisper</strong>: Speech-to-text transcription</li>
 <li><strong>Microsoft Edge Text-to-Speech</strong>: Text-to-speech read-aloud</li>
 </ul>
-<p>Pursuant to Art. 50 of Regulation (EU) 2024/1689 (AI Act), we inform you that the<br />
-features listed above are based on artificial intelligence. AI systems can produce<br />
-<strong>inaccurate, incomplete, or misleading outputs</strong> ("hallucinations"). Verify<br />
-important statements independently and consult qualified professionals for health,<br />
-legal, or financial concerns.</p>
+<p>Pursuant to Art. 50 of Regulation (EU) 2024/1689 (AI Act, applicable from<br />
+02 August 2026), we inform you that the features listed above are based on artificial<br />
+intelligence. AI systems can produce <strong>inaccurate, incomplete, or misleading<br />
+outputs</strong> ("hallucinations"). Verify important statements independently and<br />
+consult qualified professionals for health, legal, or financial concerns. In-app, we<br />
+label AI-generated content with an "AI-generated" badge directly at the output<br />
+(dashboard summary, weekly/monthly reviews).</p>
 <p>AI outputs are <strong>not binding statements</strong>. They are suggestions and summaries to<br />
-support your own reflection.</p>
+support your own reflection. <strong>Best Journal is not a "companion chatbot" under<br />
+California SB 243</strong>: the AI does not simulate a social relationship and is not<br />
+designed to directly address emotional needs. It merely produces summaries and<br />
+analyses of entries you have written yourself. Nevertheless, as a precaution and out<br />
+of consideration for vulnerable users, we provide crisis resources in the app<br />
+(Settings → Crisis Support) and point to them in the disclaimer below.</p>
+
+<h2>12b. Mental health disclaimer</h2>
+<p>Best Journal is a digital journal and <strong>not a medical product</strong>. AI-generated<br />
+analyses and reviews are <strong>not psychological, psychiatric, or therapeutic advice</strong><br />
+and do not replace a qualified professional. If you are in an acute crisis, please<br />
+contact professional help immediately:</p>
+<ul>
+<li><strong>Emergency (Germany/EU):</strong> 112 — <strong>USA/Canada:</strong> 988 Suicide & Crisis Lifeline — <strong>UK:</strong> 116 123 (Samaritans)</li>
+<li><strong>Telefonseelsorge Germany (free, 24/7, anonymous):</strong> 0800 111 0 111 or 0800 111 0 222</li>
+<li><strong>International directory:</strong> <a href="https://findahelpline.com">findahelpline.com</a></li>
+</ul>
+<p>These numbers are also directly dial-able in the app under "Settings → Crisis Support".</p>
 <hr />
 <h2>13. Obligation to provide personal data</h2>
 <p>You are not obliged to provide us with personal data. The app is fully usable without<br />

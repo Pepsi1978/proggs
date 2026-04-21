@@ -304,7 +304,9 @@ fun ConsentScreen(
 
                 Spacer(Modifier.height(28.dp))
 
-                // Three equally prominent buttons (EDSA 03/2023 — no dark patterns)
+                // Three equally prominent buttons (EDSA 03/2023 + UWG EmpCo-RL 27.09.2026 — no dark patterns).
+                // Visually identical outlined buttons. Order: Accept all | Minimum only | Manual selection.
+                // No gradient, no glow, no elevation — the three choices are cosmetically interchangeable.
                 Column(
                     modifier = Modifier.fillMaxWidth().graphicsLayer {
                         alpha = btnAlpha.value
@@ -313,56 +315,28 @@ fun ConsentScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    // Primary: Accept all (filled gradient, breathing glow)
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.width(280.dp).graphicsLayer {
-                            scaleX = btnBreathScale
-                            scaleY = btnBreathScale
+                    // Accept all
+                    OutlinedButton(
+                        onClick = {
+                            if (isExiting.value == null) isExiting.value = ExitMode.AcceptAll
                         },
+                        modifier = Modifier.width(280.dp).height(54.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.5.dp, CopperLight.copy(alpha = 0.6f)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = OnSurface,
+                        ),
                     ) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth()
-                                .height(54.dp)
-                                .graphicsLayer { alpha = glowAlpha }
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(CopperDeep)
+                        Text(
+                            text = stringResource(R.string.consent_btn_accept_all),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.4.sp,
                         )
-                        Button(
-                            onClick = {
-                                if (isExiting.value == null) isExiting.value = ExitMode.AcceptAll
-                            },
-                            modifier = Modifier.fillMaxWidth().height(54.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                            contentPadding = PaddingValues(0.dp),
-                            elevation = ButtonDefaults.buttonElevation(
-                                defaultElevation = 10.dp,
-                                pressedElevation = 2.dp,
-                            ),
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize()
-                                    .background(
-                                        brush = Brush.horizontalGradient(listOf(CopperLight, CopperDeep)),
-                                        shape = RoundedCornerShape(16.dp),
-                                    ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.consent_btn_accept_all),
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 0.5.sp,
-                                        fontSize = 15.sp,
-                                    ),
-                                    color = OnPrimaryDark,
-                                )
-                            }
-                        }
                     }
 
-                    // Secondary: Required only (outlined, same size/height)
+                    // Required only
                     OutlinedButton(
                         onClick = {
                             if (isExiting.value == null) isExiting.value = ExitMode.MinimumOnly
@@ -383,12 +357,12 @@ fun ConsentScreen(
                         )
                     }
 
-                    // Tertiary: Manual selection (outlined, same size/height — opens bottom sheet)
+                    // Manual selection (opens bottom sheet)
                     OutlinedButton(
                         onClick = { showSheet = true },
                         modifier = Modifier.width(280.dp).height(54.dp),
                         shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.5.dp, OnSurfaceMuted.copy(alpha = 0.55f)),
+                        border = BorderStroke(1.5.dp, CopperLight.copy(alpha = 0.6f)),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = Color.Transparent,
                             contentColor = OnSurface,
@@ -403,9 +377,9 @@ fun ConsentScreen(
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = stringResource(R.string.consent_btn_manual_selection),
-                            fontSize = 14.5.sp,
-                            fontWeight = FontWeight.Medium,
-                            letterSpacing = 0.3.sp,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.4.sp,
                         )
                     }
                 }

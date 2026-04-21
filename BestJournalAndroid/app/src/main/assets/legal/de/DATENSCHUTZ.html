@@ -101,7 +101,7 @@
 <strong>Verarbeitung:</strong> Ausschließlich lokal, keine Datenübertragung.</p>
 
 <h2>3a. Geltungsbereich und internationale Verfügbarkeit</h2>
-<p>Die App ist in <strong>mehr als 25 Sprachen</strong> (u. a. Deutsch, Englisch, Französisch, Spanisch, Italienisch, Niederländisch, Portugiesisch, Polnisch, Tschechisch, Türkisch, Russisch, Chinesisch, Japanisch, Koreanisch, Arabisch, Hindi und weitere) im Google Play Store verfügbar. Die Sprache wird automatisch auf Basis deiner Android-Systemsprache gewählt (<code>Locale.getDefault()</code>), die Zeitzone aus der Android-Systemeinstellung (<code>TimeZone.getDefault()</code>). Beides erfolgt ausschließlich <strong>auf dem Gerät</strong>, <strong>es findet keine zusätzliche Standort-, Sprach- oder Zeitzonen-Abfrage bei Servern statt</strong>.</p>
+<p>Die App ist in <strong>27 Sprachen</strong> (Deutsch, Englisch, Französisch, Spanisch, Italienisch, Niederländisch, Polnisch, Portugiesisch [Brasilien und Portugal], Ukrainisch, Türkisch, Arabisch, Hindi, Bengalisch, Gujarati, Kannada, Malayalam, Marathi, Tamil, Telugu, Urdu, Indonesisch, Thailändisch, Japanisch, Koreanisch, Chinesisch [vereinfacht und traditionell]) im Google Play Store verfügbar. Die Sprache wird automatisch auf Basis deiner Android-Systemsprache gewählt (<code>Locale.getDefault()</code>), die Zeitzone aus der Android-Systemeinstellung (<code>TimeZone.getDefault()</code>). Beides erfolgt ausschließlich <strong>auf dem Gerät</strong>, <strong>es findet keine zusätzliche Standort-, Sprach- oder Zeitzonen-Abfrage bei Servern statt</strong>.</p>
 <p>Weitere Sprachen und Länder werden fortlaufend ergänzt, damit die App in immer mehr lokalen Play-Store-Regionen in der jeweiligen Landessprache verfügbar ist.</p>
 <p>Diese Datenschutzerklärung gilt unabhängig von deinem Wohnsitz. Für Nutzer innerhalb der <strong>Europäischen Union</strong> und des <strong>EWR</strong> kommt die DSGVO zur Anwendung; für Nutzer außerhalb gelten die hier genannten Schutzstandards freiwillig als Selbstverpflichtung des Verantwortlichen.</p>
 
@@ -370,11 +370,37 @@ Unter <strong>„Einstellungen → KI-Funktionen"</strong> kannst du einzeln dea
 <h3>Brasilien (LGPD)</h3>
 <p>Nutzer in Brasilien haben nach der Lei Geral de Proteção de Dados (LGPD, Lei Nr. 13.709/2018) Rechte auf Auskunft, Berichtigung, Anonymisierung, Sperrung oder Löschung, Datenportabilität und Widerspruch. Diese werden entsprechend der DSGVO-Rechte behandelt. Aufsichtsbehörde: ANPD (Autoridade Nacional de Proteção de Dados).</p>
 
+<h3>Illinois, USA (BIPA)</h3>
+<p>Der Illinois Biometric Information Privacy Act (BIPA) schützt biometrische Kennungen einschließlich Stimmabdrücken (Voiceprints). Zur Klarstellung:</p>
+<ul>
+  <li><strong>Sprachaufnahmen</strong> die du für die Cloud-Transkription nutzt (siehe 5.1) werden bei Groq mit dem Whisper-Modell <strong>ausschließlich für Sprache-zu-Text</strong> verarbeitet. Nach unserem Kenntnisstand erstellt Groq Whisper <strong>keinen Voiceprint</strong> (biometrische Vorlage zur Personenerkennung anhand der Stimme). Es findet nur Transkription statt. Sollte sich das ändern, aktualisieren wir diesen Hinweis und holen vor jeder Voiceprint-Verarbeitung eine schriftliche Einwilligung ein.</li>
+  <li><strong>Biometrische App-Sperre</strong> (Fingerabdruck, Gesichtserkennung) wird ausschließlich vom Android-Betriebssystem in der gesicherten Hardware-Enklave verarbeitet. Wir erhalten niemals biometrische Daten.</li>
+  <li><strong>Aufbewahrung:</strong> An Groq übermittelte Sprachaufnahmen werden nach der Transkription nicht gespeichert (gemäß Groq-Richtlinie). Lokale Aufnahmen auf deinem Gerät bleiben bis zu deiner Löschung erhalten, maximal 3 Jahre wie von BIPA verlangt.</li>
+</ul>
+
 <h3>Kanada (PIPEDA)</h3>
 <p>Nutzer in Kanada haben nach dem Personal Information Protection and Electronic Documents Act (PIPEDA) Rechte auf Zugang und Korrektur. Beschwerdestelle: Office of the Privacy Commissioner of Canada (OPC), <a href="https://www.priv.gc.ca">https://www.priv.gc.ca</a>.</p>
 
+<h3>Quebec (Loi 25 / Gesetz 25)</h3>
+<p>Nutzer mit Wohnsitz in Quebec haben nach dem „Act respecting the protection of personal information in the private sector" (Loi 25, CQLR c. P-39.1) zusätzliche Rechte: Auskunft, Berichtigung, Löschung und De-Indexierung online verfügbarer personenbezogener Daten, Datenübertragbarkeit sowie ein Recht auf Information über automatisierte Entscheidungen mit erheblichen Auswirkungen (die wir nicht treffen, siehe Abschnitt 12). Beschwerdestelle: Commission d'accès à l'information du Québec (CAI), <a href="https://www.cai.gouv.qc.ca">https://www.cai.gouv.qc.ca</a>.</p>
+
 <h3>Australien (Australian Privacy Principles)</h3>
-<p>Nutzer in Australien haben nach dem Privacy Act 1988 und den Australian Privacy Principles (APPs) Rechte auf Zugang, Berichtigung und Beschwerde bei der Office of the Australian Information Commissioner (OAIC), <a href="https://www.oaic.gov.au">https://www.oaic.gov.au</a>.</p>
+<p>Nutzer in Australien haben nach dem Privacy Act 1988 und den Australian Privacy Principles (APPs) Rechte auf Zugang (APP 12), Berichtigung (APP 13) und Beschwerde bei der Office of the Australian Information Commissioner (OAIC), <a href="https://www.oaic.gov.au">https://www.oaic.gov.au</a>. Deine Daten werden an Anbieter in den USA (Groq, Google/Gemini, Microsoft) und Irland (Google) übermittelt (APP 8 — Cross-Border-Disclosure). Wir setzen hierfür vertragliche Schutzmaßnahmen ein. Mit der Nutzung der Cloud-Funktionen stimmst du dieser Drittlandübermittlung zu.</p>
+
+<h3>Neuseeland (Privacy Act 2020, IPP 3A seit 01.05.2026)</h3>
+<p>Nutzer in Neuseeland haben nach dem Privacy Act 2020 Rechte auf Zugang (IPP 6) und Berichtigung (IPP 7). Beschwerdestelle: Privacy Commissioner, <a href="https://www.privacy.org.nz">https://www.privacy.org.nz</a>. Nach dem Privacy Amendment Act 2025 (IPP 3A, in Kraft seit 01.05.2026) weisen wir darauf hin, dass die KI-Dienste (Google Gemini, Groq Whisper, Microsoft Edge TTS) deine Eingaben verarbeiten und Ergebnisse zurückliefern — dies gilt als indirekte Erhebung. Dieser Hinweis erfüllt die IPP-3A-Benachrichtigungspflicht.</p>
+
+<h3>Japan (APPI)</h3>
+<p>Nutzer in Japan haben nach dem Act on the Protection of Personal Information (APPI) Rechte auf Offenlegung, Berichtigung, Nutzungseinschränkung und Löschung. Für grenzüberschreitende Übermittlungen in die USA weisen wir darauf hin, dass die USA nicht auf der PPC-Whitelist für gleichwertigen Schutz stehen; Übermittlungen erfolgen auf Grundlage deiner Einwilligung und vertraglicher Schutzmaßnahmen mit den Empfängern. Beschwerdestelle: Personal Information Protection Commission (PPC), <a href="https://www.ppc.go.jp">https://www.ppc.go.jp</a>.</p>
+
+<h3>Südafrika (POPIA)</h3>
+<p>Nutzer in Südafrika haben nach dem Protection of Personal Information Act (POPIA) Rechte auf Zugang, Berichtigung und Widerspruch. Regulator: Information Regulator, <a href="https://inforegulator.org.za">https://inforegulator.org.za</a>.</p>
+
+<h3>Mexiko (LFPDPPP, Reform März 2026)</h3>
+<p>Nutzer in Mexiko haben nach dem Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) die sogenannten ARCO-Rechte (Acceso, Rectificación, Cancelación, Oposición). Mit der Reform von März 2026 wurde eine <strong>Pflicht zu einem „Simplified Privacy Notice"</strong> (Aviso de Privacidad Simplificado) eingeführt, die diese Kurzfassung unserer spanischen Datenschutzhinweise erfüllt. Zuständig ist seit März 2026 die <strong>Secretaría Anti-Corrupción y Buen Gobierno (SABG)</strong> (Nachfolger der INAI).</p>
+
+<h3>Chile (LPPD, vollständig in Kraft ab Dezember 2026)</h3>
+<p>Ab Dezember 2026 gilt das neue chilenische Datenschutzgesetz (LPPD). Nutzer in Chile erhalten dann Rechte auf Zugang, Berichtigung, Löschung, Portabilität und Widerspruch. Die neue Aufsichtsbehörde kann Bußgelder von 2–4% des Jahresumsatzes verhängen. Sobald das Gesetz vollständig in Kraft ist, werden wir die Chile-spezifischen Abschnitte dieser Datenschutzerklärung entsprechend erweitern.</p>
 
 <h3>Andere Jurisdiktionen</h3>
 <p>Für Nutzer aus Ländern ohne speziell benannten Abschnitt gelten die oben aufgeführten DSGVO-konformen Rechte als freiwillige Selbstverpflichtung, sowie alle zwingenden Rechte nach dem jeweiligen lokalen Recht.</p>
@@ -419,10 +445,19 @@ Unter <strong>„Einstellungen → KI-Funktionen"</strong> kannst du einzeln dea
 <h2>12. Keine automatisierte Entscheidungsfindung</h2>
 <p>Es findet <strong>keine automatisierte Entscheidungsfindung</strong> im Sinne von Art. 22 DSGVO statt. KI-Funktionen erstellen lediglich Texte oder Zusammenfassungen, die dich in keiner Weise rechtlich binden.</p>
 
-<h2>12a. Hinweis auf KI-Systeme (Art. 50 KI-Verordnung)</h2>
+<h2>12a. Hinweis auf KI-Systeme (Art. 50 KI-Verordnung, California SB 243)</h2>
 <p>Diese App verwendet KI-Systeme zur Verarbeitung deiner Eingaben: <strong>Google Gemini</strong> (Firebase AI) für Textanalyse, Zusammenfassungen, Dashboard, Rückblicke und stilistische Textverbesserung; <strong>Groq Whisper</strong> für Sprach-zu-Text-Transkription; <strong>Microsoft Edge Text-to-Speech</strong> für die Vorlesefunktion.</p>
-<p>Gemäß Art. 50 der Verordnung (EU) 2024/1689 (KI-Verordnung) weisen wir darauf hin, dass die genannten Funktionen auf künstlicher Intelligenz basieren. KI-Systeme können <strong>ungenaue, unvollständige oder irreführende Ausgaben</strong> erzeugen ("Halluzinationen"). Prüfe wichtige Aussagen selbstständig und verlasse dich bei gesundheitlichen, rechtlichen oder finanziellen Fragen auf qualifizierte Fachkräfte.</p>
-<p>Die KI-Ausgaben sind <strong>keine verbindlichen Aussagen</strong>, sondern Vorschläge und Zusammenfassungen zur Unterstützung deiner eigenen Reflexion.</p>
+<p>Gemäß Art. 50 der Verordnung (EU) 2024/1689 (KI-Verordnung, ab 02.08.2026) weisen wir darauf hin, dass die genannten Funktionen auf künstlicher Intelligenz basieren. KI-Systeme können <strong>ungenaue, unvollständige oder irreführende Ausgaben</strong> erzeugen ("Halluzinationen"). Prüfe wichtige Aussagen selbstständig und verlasse dich bei gesundheitlichen, rechtlichen oder finanziellen Fragen auf qualifizierte Fachkräfte. In der App kennzeichnen wir KI-generierte Inhalte mit einem „KI-generiert"-Badge direkt am Output (Dashboard-Zusammenfassung, Wochen-/Monatsrückblicke).</p>
+<p>Die KI-Ausgaben sind <strong>keine verbindlichen Aussagen</strong>, sondern Vorschläge und Zusammenfassungen zur Unterstützung deiner eigenen Reflexion. <strong>Best Journal ist kein Companion-Chatbot im Sinne des California SB 243</strong>: Die KI simuliert keine soziale Beziehung und ist nicht darauf ausgelegt, emotionale Bedürfnisse direkt zu adressieren. Sie erstellt lediglich Zusammenfassungen und Analysen deiner selbst verfassten Einträge. Dennoch bieten wir, vorsichtshalber und im Interesse verletzlicher Nutzer, Krisen-Ressourcen in der App an (Einstellungen → Krisenhilfe) und weisen in diesem Absatz darauf hin.</p>
+
+<h2>12b. Mental-Health-Disclaimer</h2>
+<p>Best Journal ist ein digitales Tagebuch und <strong>kein medizinisches Produkt</strong>. KI-generierte Analysen und Rückblicke sind <strong>keine psychologische, psychiatrische oder therapeutische Beratung</strong> und ersetzen keine Fachkraft. Wenn du dich in einer akuten Krise befindest, kontaktiere bitte sofort professionelle Hilfe:</p>
+<ul>
+  <li><strong>Notruf (Deutschland/EU):</strong> 112</li>
+  <li><strong>Telefonseelsorge Deutschland (kostenlos, 24/7, anonym):</strong> 0800 111 0 111 oder 0800 111 0 222</li>
+  <li><strong>International:</strong> <a href="https://findahelpline.com">findahelpline.com</a></li>
+</ul>
+<p>Diese Nummern sind auch in der App unter „Einstellungen → Krisenhilfe" direkt wählbar.</p>
 
 <h2>13. Pflicht zur Bereitstellung personenbezogener Daten</h2>
 <p>Du bist nicht verpflichtet, uns personenbezogene Daten bereitzustellen. Die App ist auch ohne Anmeldung, ohne Cloud-Dienste und ohne Analytics vollständig nutzbar. Ohne die optionalen Cloud-Funktionen stehen dir lediglich die entsprechenden Komfortfunktionen (Cloud-Transkription, Cloud-Backup, geräteübergreifende Nutzung, KI-Funktionen) nicht zur Verfügung.</p>

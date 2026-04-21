@@ -2475,6 +2475,17 @@ fun SettingsScreen(
                 var showDeleteDialog by remember { mutableStateOf(false) }
                 var showPrivacySheet by remember { mutableStateOf(false) }
 
+                // H5 — Crisis-Intervention-Dialog
+                var showCrisisDialog by remember { mutableStateOf(false) }
+
+                // M1 — § 356a BGB Widerrufsbutton: Gmail-API statt mailto
+                val revokeScope = androidx.compose.runtime.rememberCoroutineScope()
+                val revokeUserEmail = uiState.userProfile?.email
+                var isRevokeSending by remember { mutableStateOf(false) }
+                var revokeSuccessShown by remember { mutableStateOf(false) }
+                var revokeError by remember { mutableStateOf<String?>(null) }
+                var revokeNeedsEmail by remember { mutableStateOf(false) }
+
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Column {
                         Row(
@@ -2655,7 +2666,7 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Widerrufsbutton (§ 355 BGB) - zweistufig via mailto-Intent
+                        // M1 — § 356a BGB Widerrufsbutton (ab 19.06.2026): zweistufig + direkter Versand via Gmail-API.
                         var showRevokeDialog by remember { mutableStateOf(false) }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -2666,6 +2677,7 @@ fun SettingsScreen(
                                     doHaptic(HapticFeedbackType.LongPress)
                                     showRevokeDialog = true
                                 },
+                                enabled = !isRevokeSending,
                             ) {
                                 Text(stringResource(R.string.settings_revoke_title))
                             }
@@ -2679,56 +2691,123 @@ fun SettingsScreen(
                             textAlign = TextAlign.Center,
                         )
 
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // H5 — Crisis-Intervention-Eintrag (Mental-Health-Disclaimer + Hotlines)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    doHaptic(HapticFeedbackType.LongPress)
+                                    showCrisisDialog = true
+                                },
+                                colors =
+                                    ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                            ) {
+                                Icon(
+                                    androidx.compose.material.icons.Icons.Rounded.Favorite,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.settings_crisis_title))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            stringResource(R.string.settings_crisis_subtitle),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                        )
+
                         if (showRevokeDialog) {
-                            val revokeSubject = stringResource(R.string.settings_revoke_email_subject)
-                            val revokeBody = stringResource(R.string.settings_revoke_email_body)
-                            val revokeNoEmail = stringResource(R.string.settings_revoke_no_email)
                             androidx.compose.material3.AlertDialog(
-                                onDismissRequest = { showRevokeDialog = false },
+                                onDismissRequest = {
+                                    if (!isRevokeSending) showRevokeDialog = false
+                                },
                                 title = {
                                     Text(stringResource(R.string.settings_revoke_confirm_title))
                                 },
                                 text = {
-                                    Text(stringResource(R.string.settings_revoke_confirm_body))
+                                    if (isRevokeSending) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            androidx.compose.material3.CircularProgressIndicator(
+                                                modifier = Modifier.size(20.dp),
+                                                strokeWidth = 2.dp,
+                                            )
+                                            Spacer(Modifier.width(12.dp))
+                                            Text(stringResource(R.string.settings_revoke_sending))
+                                        }
+                                    } else {
+                                        Text(stringResource(R.string.settings_revoke_confirm_body))
+                                    }
                                 },
                                 confirmButton = {
                                     androidx.compose.material3.TextButton(
+                                        enabled = !isRevokeSending,
                                         onClick = {
-                                            showRevokeDialog = false
-                                            // URL-encoded mailto so Gmail/Samsung Mail
-                                            // actually load subject + body.
-                                            val mailtoUri =
-                                                android.net.Uri.parse(
-                                                    "mailto:dev.app.support@gmail.com" +
-                                                        "?subject=" +
-                                                        android.net.Uri.encode(revokeSubject) +
-                                                        "&body=" +
-                                                        android.net.Uri.encode(revokeBody)
+                                            val email = revokeUserEmail
+                                            if (email.isNullOrBlank()) {
+                                                revokeError = context.getString(R.string.settings_revoke_no_account)
+                                                showRevokeDialog = false
+                                                return@TextButton
+                                            }
+                                            isRevokeSending = true
+                                            revokeScope.launch {
+                                                val timestamp = java.text.SimpleDateFormat(
+                                                    "yyyy-MM-dd HH:mm:ss z",
+                                                    java.util.Locale.getDefault(),
+                                                ).format(java.util.Date())
+                                                val body = context.getString(
+                                                    R.string.settings_revoke_email_body,
+                                                    email,
+                                                    timestamp,
                                                 )
-                                            val intent =
-                                                android.content.Intent(
-                                                        android.content.Intent.ACTION_SENDTO,
-                                                        mailtoUri,
-                                                    )
-                                                    .apply {
-                                                        putExtra(
-                                                            android.content.Intent.EXTRA_SUBJECT,
-                                                            revokeSubject,
+                                                val confirmSubject = context.getString(
+                                                    R.string.settings_revoke_confirm_subject,
+                                                )
+                                                val confirmBody = context.getString(
+                                                    R.string.settings_revoke_confirm_user_body,
+                                                    timestamp,
+                                                )
+                                                val subject = context.getString(
+                                                    R.string.settings_revoke_email_subject,
+                                                )
+                                                try {
+                                                    val error =
+                                                        com.bestjournal.app.data.remote.RevokeSender.send(
+                                                            context = context,
+                                                            accountEmail = email,
+                                                            subject = subject,
+                                                            devBody = body,
+                                                            userSubject = confirmSubject,
+                                                            userBody = confirmBody,
                                                         )
-                                                        putExtra(
-                                                            android.content.Intent.EXTRA_TEXT,
-                                                            revokeBody,
-                                                        )
+                                                    isRevokeSending = false
+                                                    showRevokeDialog = false
+                                                    if (error == null) {
+                                                        revokeSuccessShown = true
+                                                    } else {
+                                                        revokeError = error
                                                     }
-                                            try {
-                                                context.startActivity(intent)
-                                            } catch (e: android.content.ActivityNotFoundException) {
-                                                android.widget.Toast.makeText(
-                                                        context,
-                                                        revokeNoEmail,
-                                                        android.widget.Toast.LENGTH_LONG,
+                                                } catch (
+                                                    e: com.bestjournal.app.data.remote.FeedbackNeedConsentException
+                                                ) {
+                                                    isRevokeSending = false
+                                                    showRevokeDialog = false
+                                                    try {
+                                                        context.startActivity(e.consentIntent)
+                                                    } catch (_: Exception) {}
+                                                    revokeError = context.getString(
+                                                        R.string.settings_feedback_allow_gmail,
                                                     )
-                                                    .show()
+                                                }
                                             }
                                         }
                                     ) {
@@ -2737,11 +2816,91 @@ fun SettingsScreen(
                                 },
                                 dismissButton = {
                                     androidx.compose.material3.TextButton(
-                                        onClick = { showRevokeDialog = false }
+                                        enabled = !isRevokeSending,
+                                        onClick = { showRevokeDialog = false },
                                     ) {
                                         Text(stringResource(R.string.settings_revoke_cancel))
                                     }
                                 },
+                            )
+                        }
+
+                        // Success dialog — "Widerruf empfangen"
+                        if (revokeSuccessShown) {
+                            androidx.compose.material3.AlertDialog(
+                                onDismissRequest = { revokeSuccessShown = false },
+                                title = { Text(stringResource(R.string.settings_revoke_success_title)) },
+                                text = { Text(stringResource(R.string.settings_revoke_success_body)) },
+                                confirmButton = {
+                                    androidx.compose.material3.TextButton(
+                                        onClick = { revokeSuccessShown = false },
+                                    ) {
+                                        Text(stringResource(R.string.settings_revoke_success_close))
+                                    }
+                                },
+                            )
+                        }
+
+                        // Error dialog — Fallback auf mailto wenn Gmail-API fehlschlaegt
+                        revokeError?.let { err ->
+                            val revokeSubjectFallback = stringResource(R.string.settings_revoke_email_subject)
+                            val revokeBodyFallback = stringResource(
+                                R.string.settings_revoke_email_body,
+                                revokeUserEmail ?: "",
+                                java.text.SimpleDateFormat(
+                                    "yyyy-MM-dd HH:mm:ss z",
+                                    java.util.Locale.getDefault(),
+                                ).format(java.util.Date()),
+                            )
+                            val revokeNoEmail = stringResource(R.string.settings_revoke_no_email)
+                            androidx.compose.material3.AlertDialog(
+                                onDismissRequest = { revokeError = null },
+                                title = { Text(stringResource(R.string.settings_revoke_error_title)) },
+                                text = {
+                                    Text(stringResource(R.string.settings_revoke_error_body, err))
+                                },
+                                confirmButton = {
+                                    androidx.compose.material3.TextButton(
+                                        onClick = {
+                                            revokeError = null
+                                            val mailtoUri = android.net.Uri.parse(
+                                                "mailto:dev.app.support@gmail.com" +
+                                                    "?subject=" +
+                                                    android.net.Uri.encode(revokeSubjectFallback) +
+                                                    "&body=" +
+                                                    android.net.Uri.encode(revokeBodyFallback)
+                                            )
+                                            val intent = android.content.Intent(
+                                                android.content.Intent.ACTION_SENDTO,
+                                                mailtoUri,
+                                            )
+                                            try {
+                                                context.startActivity(intent)
+                                            } catch (_: android.content.ActivityNotFoundException) {
+                                                android.widget.Toast.makeText(
+                                                    context,
+                                                    revokeNoEmail,
+                                                    android.widget.Toast.LENGTH_LONG,
+                                                ).show()
+                                            }
+                                        },
+                                    ) {
+                                        Text(stringResource(R.string.settings_revoke_error_email_fallback))
+                                    }
+                                },
+                                dismissButton = {
+                                    androidx.compose.material3.TextButton(
+                                        onClick = { revokeError = null },
+                                    ) {
+                                        Text(stringResource(R.string.action_close))
+                                    }
+                                },
+                            )
+                        }
+
+                        if (showCrisisDialog) {
+                            com.bestjournal.app.ui.components.CrisisHelpDialog(
+                                onDismiss = { showCrisisDialog = false },
                             )
                         }
                     }
