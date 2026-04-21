@@ -1146,4 +1146,46 @@
     <string name="legal_title_datenschutz">นโยบายความเป็นส่วนตัว</string>
     <string name="legal_title_nutzungsbedingungen">เงื่อนไขการใช้งาน</string>
     <string name="legal_title_impressum">ข้อมูลทางกฎหมาย</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">ยินดีต้อนรับสู่ Best Journal</string>
+    <string name="consent_welcome_intro">ก่อนเริ่ม เรามาตั้งค่าความเป็นส่วนตัวของคุณที่นี่กันอย่างรวดเร็ว</string>
+    <string name="consent_promise_local">กฎหมายความเป็นส่วนตัวกำหนดให้ต้องได้รับความยินยอมจากคุณ</string>
+    <string name="consent_promise_no_training">คุณเป็นผู้ตัดสินใจที่นี่ว่าจะเปิดใช้งานฟีเจอร์ใด</string>
+    <string name="consent_promise_optional_ai">เปลี่ยนแปลงได้ทุกเมื่อในการตั้งค่า</string>
+    <string name="consent_btn_manual_selection">เลือกด้วยตนเอง</string>
+    <string name="privacy_sheet_title">ปรับแต่งความเป็นส่วนตัว</string>
+    <string name="privacy_sheet_subtitle">เปิดใช้งานแต่ละฟีเจอร์ตามที่คุณต้องการ ทุกอย่างสามารถเปลี่ยนแปลงได้ทุกเมื่อ</string>
+    <string name="privacy_sheet_save">บันทึกการเลือก</string>
+    <string name="privacy_sheet_all_on">เปิดทั้งหมด</string>
+    <string name="privacy_sheet_all_off">ปิดทั้งหมด</string>
+    <string name="consent_toggle_analytics_title">การวิเคราะห์การใช้งานแบบไม่ระบุตัวตน</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — ช่วยให้เราปรับปรุงแอปได้ดีขึ้น ไม่มีเนื้อหาส่วนตัว มีเพียงจำนวนการแตะแบบไม่ระบุตัวตน การถ่ายโอนข้อมูล: Google สหรัฐอเมริกา (Data Privacy Framework)</string>
+    <string name="consent_toggle_groq_title">คำพูดเป็นข้อความ (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">อนุญาตให้พิมพ์ด้วยเสียง การบันทึกเสียงของคุณจะถูกส่งแบบเข้ารหัสไปยัง Groq (สหรัฐอเมริกา) แปลงเป็นข้อความ จากนั้นลบทิ้ง การบันทึกของคุณจะไม่ถูกใช้สำหรับการฝึก</string>
+    <string name="consent_toggle_gemini_title">การสะท้อนความคิด AI (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">AI แดชบอร์ด สรุป การย้อนดู และการปรับปรุงข้อความ ส่งข้อความบางส่วนไปยัง Google Gemini (สหรัฐอเมริกา) รายการของคุณจะไม่ถูกใช้สำหรับการฝึก</string>
+    <string name="consent_toggle_tts_title">อ่านออกเสียง (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">อ่านรายการด้วยเสียงที่เป็นธรรมชาติ ส่งข้อความไปยัง Microsoft (สหรัฐอเมริกา) ทางเลือก: TTS ระบบออฟไลน์</string>
+    <string name="consent_toggle_drive_title">การสำรองข้อมูล Google Drive</string>
+    <string name="consent_toggle_drive_body">บันทึกรายการแบบเข้ารหัสใน Google Drive ของคุณเอง คุณรักษาการควบคุมเต็มรูปแบบ — ไฟล์อยู่ในบัญชีของคุณ ไม่ใช่ที่เรา</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">การเลือกไม่เข้าร่วมของแคลิฟอร์เนีย (CCPA/CPRA 2026) เมื่อเปิดใช้งาน การประมวลผลข้อมูลเสริมทั้งหมดจะถูกปิดใช้งาน — เหลือเพียงฟีเจอร์ภายในเครื่อง</string>
+    <string name="consent_btn_accept_all">ยอมรับทั้งหมด</string>
+    <string name="consent_btn_save_selection">บันทึกการเลือกของฉัน</string>
+    <string name="consent_btn_minimum_only">ปฏิเสธทั้งหมด</string>
+    <string name="consent_saved_snackbar">บันทึกการตั้งค่าแล้ว</string>
+    <string name="consent_revoke_snackbar">เพิกถอนความยินยอมแล้ว</string>
+    <string name="consent_footer_version">การเลือกของคุณสามารถเปลี่ยนแปลงได้ทุกเมื่อในการตั้งค่า</string>
+    <string name="consent_details_expand">รายละเอียด</string>
+    <string name="settings_open_privacy_sheet">ปรับแต่งการตั้งค่าความเป็นส่วนตัว</string>
+    <string name="settings_privacy_section_header">ความเป็นส่วนตัวและการยินยอม</string>
+    <string name="settings_ai_groq_title">คำพูดเป็นข้อความ (Groq)</string>
+    <string name="settings_ai_groq_subtitle">ส่งการบันทึกเสียงไปยัง Groq สหรัฐอเมริกา เพื่อถอดเสียง</string>
+    <string name="settings_ai_gemini_title">การสะท้อนความคิด AI (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">ส่งข้อความไปยัง Google สหรัฐอเมริกา สำหรับสรุป AI</string>
+    <string name="settings_ai_tts_title">อ่านออกเสียง (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">ส่งข้อความไปยัง Microsoft สหรัฐอเมริกา เพื่อส่งออกเสียง</string>
+    <string name="settings_drive_backup_title">การสำรองข้อมูล Google Drive</string>
+    <string name="settings_drive_backup_subtitle">บันทึกรายการแบบเข้ารหัสใน Drive ของคุณ</string>
 </resources>
