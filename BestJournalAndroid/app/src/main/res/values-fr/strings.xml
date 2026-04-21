@@ -1154,4 +1154,46 @@ Que veux-tu faire ?</string>
     <string name="legal_title_datenschutz">Politique de confidentialité</string>
     <string name="legal_title_nutzungsbedingungen">Conditions d’utilisation</string>
     <string name="legal_title_impressum">Mentions légales</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Bienvenue sur Best Journal</string>
+    <string name="consent_welcome_intro">Avant de commencer, définissons rapidement tes préférences de confidentialité.</string>
+    <string name="consent_promise_local">Les lois sur la confidentialité exigent ton consentement.</string>
+    <string name="consent_promise_no_training">Tu décides ici quelles fonctions sont actives.</string>
+    <string name="consent_promise_optional_ai">Modifiable à tout moment dans les Paramètres.</string>
+    <string name="consent_btn_manual_selection">Sélection manuelle</string>
+    <string name="privacy_sheet_title">Personnaliser la confidentialité</string>
+    <string name="privacy_sheet_subtitle">Active les fonctions individuellement, comme cela te convient. Tout est modifiable à tout moment.</string>
+    <string name="privacy_sheet_save">Enregistrer la sélection</string>
+    <string name="privacy_sheet_all_on">Tout activer</string>
+    <string name="privacy_sheet_all_off">Tout désactiver</string>
+    <string name="consent_toggle_analytics_title">Analyse d’utilisation anonyme</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — nous aide à améliorer l’application. Aucun contenu personnel, uniquement des compteurs de clics anonymes. Transfert de données : Google USA (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">Parole-vers-texte (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">Permet la dictée d’entrées. Ton enregistrement vocal est envoyé chiffré à Groq (USA), converti en texte puis supprimé. Tes enregistrements ne sont PAS utilisés pour l’entraînement.</string>
+    <string name="consent_toggle_gemini_title">Réflexions IA (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">IA du tableau de bord, résumés, rétrospectives et amélioration de texte. Envoie des extraits de texte à Google Gemini (USA). Tes entrées ne sont PAS utilisées pour l’entraînement.</string>
+    <string name="consent_toggle_tts_title">Lecture vocale (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">Lit les entrées avec une voix naturelle. Envoie le texte à Microsoft (USA). Alternative : TTS système hors ligne.</string>
+    <string name="consent_toggle_drive_title">Sauvegarde Google Drive</string>
+    <string name="consent_toggle_drive_body">Sauvegarde les entrées chiffrées dans ton propre Google Drive. Tu gardes le contrôle total — le fichier est dans ton compte, pas chez nous.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">Opt-out Californie (CCPA/CPRA 2026). Si activé, tous les traitements de données optionnels sont désactivés — seules les fonctions locales restent.</string>
+    <string name="consent_btn_accept_all">Tout accepter</string>
+    <string name="consent_btn_save_selection">Enregistrer ma sélection</string>
+    <string name="consent_btn_minimum_only">Tout refuser</string>
+    <string name="consent_saved_snackbar">Paramètre enregistré</string>
+    <string name="consent_revoke_snackbar">Consentement révoqué</string>
+    <string name="consent_footer_version">Ta sélection est modifiable à tout moment dans les Paramètres.</string>
+    <string name="consent_details_expand">Détails</string>
+    <string name="settings_open_privacy_sheet">Personnaliser les paramètres de confidentialité</string>
+    <string name="settings_privacy_section_header">Confidentialité &amp; Consentements</string>
+    <string name="settings_ai_groq_title">Parole-vers-texte (Groq)</string>
+    <string name="settings_ai_groq_subtitle">Envoyer les enregistrements vocaux à Groq USA pour transcription</string>
+    <string name="settings_ai_gemini_title">Réflexions IA (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">Envoyer les textes à Google USA pour les résumés IA</string>
+    <string name="settings_ai_tts_title">Lecture vocale (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">Envoyer les textes à Microsoft USA pour la synthèse vocale</string>
+    <string name="settings_drive_backup_title">Sauvegarde Google Drive</string>
+    <string name="settings_drive_backup_subtitle">Sauvegarder les entrées chiffrées sur ton Drive</string>
 </resources>
