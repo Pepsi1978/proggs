@@ -1,8 +1,8 @@
 # rechtssicherheit.md — Wissensbasis fuer Android-App-Rechtsprüfungen
 
-**Letzte Recherche:** 2026-04-20 (v2 — nach Fixes, 5 parallele Researcher)
-**Naechste Pflicht-Pruefung:** 2026-07-20 (+90 Tage)
-**Status BestJournalAndroid:** Bedingt release-faehig (1 KRIT-Rest + 2 HOCH)
+**Letzte Recherche:** 2026-04-21 (v4 — 5 parallele Researcher, neue Rechtsprechung Q1/Q2 2026)
+**Naechste Pflicht-Pruefung:** 2026-07-21 (+90 Tage)
+**Status BestJournalAndroid:** Bedingt release-faehig (0 KRIT + 5 HOCH + 8 MITTEL). Vor 19.06.2026 fixen: H1-H5 + M1. Siehe v4-Vollbericht.
 
 ---
 
@@ -182,6 +182,126 @@ Praesenz im Zielland sind praktisch nahezu null.
 | 2026-04-20 | BestJournalAndroid (v2 nach Fixes) | **BEDINGT release-faehig** | **1** | **2** | K1-K5 + H6 + M1 + M2 gefixt. Rest: NK1 Gemini+Edge-TTS Gate fehlt, NH1 Sprachdeckung (TR/KR/SA/BR/VN/CN ausschliessen), NH2 CCPA-2026 Opt-Out-Bestaetigung. Vollbericht: `BestJournalAndroid/docs/audit/RECHTSSICHERHEIT-AUDIT-2026-04-20-v2.md` |
 | 2026-04-21 | BestJournalAndroid (v3 nach Consent-v4-Umbau) | **BEDINGT release-faehig** | **1** | **0** | NK1/NH1/NH2 alle gefixt. NEU: KRIT-1 Crashlytics-Attrappe (Toggle existiert, SDK nicht) + falsche Erwaehnung in account-deletion.html:94. MITTEL-1: Drive-Backup-Toggle wird im Manager nicht geprueft. Gesamt 1 KRIT-Fix (~10-15 Min), dann release-faehig. Vollbericht: `BestJournalAndroid/docs/audit/RECHTSSICHERHEIT-AUDIT-2026-04-21-v3.md` |
 | 2026-04-21 | BestJournalAndroid (v3.1 Deep Audit 5 Laeufe) | **RELEASE-FAEHIG** | **0** | **0** | 5 iterative Laeufe durchgefuehrt. Neu gefunden: OCR-Attrappe in DSE 12a (DE+EN+HTML-Assets — innerer Widerspruch zu 5.6 "nie Fotos/Audios" an Gemini). Gefixt in 4 Dateien (MD+HTML). 13 tote Strings nach v4-Umbau entfernt (erspart 325 unnoetige Uebersetzungen in 25 Locales). Lauf 3+5 beide 0 Befunde → Abbruchkriterium erreicht. DE/EN DSE-Struktur identisch (18/18 Top-Level + 11/11 §5-Subsections). Alle 7 Manifest-Permissions in DSE dokumentiert. Alle Toggles → SDK-Steuerung verifiziert (4 setAnalyticsCollectionEnabled + 16 Gemini-Gate-Stellen). |
+| 2026-04-21 | BestJournalAndroid (v4 5 parallele Researcher) | **BEDINGT RELEASE-FAEHIG** | **0** | **5** | Umfassende Recherche mit 5 parallelen Agenten. 5 HOCH-Funde: H1 DSE Section 3a erwaehnt nicht-existierende Sprachen (Tschechisch/Russisch), H2 ConsentScreen Dark Pattern (Accept-All Gradient+Glow dominant — UWG EmpCo ab 27.09.2026), H3 CCPA-Widerspruch in EN PRIVACY 8a.1 (sagt "no Do-Not-Sell link needed" obwohl Toggle existiert), H4 In-App KI-Kennzeichnung fehlt (AI Act Art. 50 ab 02.08.2026), H5 Crisis-Intervention-Hinweis fehlt (SB 243). 8 MITTEL-Funde: M1 § 356a Widerrufsbutton ab 19.06.2026 (mailto-Implementation nicht konform), M2 OLG Frankfurt 12/2025 Firebase App Check/Remote Config Haftung, M3 Japanisch-Kurzfassung grenzwertig, M4 DE-DSE fehlt Quebec/NZ/JP/ZA/BIPA, M5 § 327r BGB fehlt in ToS, M6 SB 243 Companion Chatbot Grenzfall, M7 Art. 9 DSGVO explizite Einwilligung, M8 Play Console Health declaration pruefen. Vollbericht: `BestJournalAndroid/docs/audit/RECHTSSICHERHEIT-AUDIT-2026-04-21-v4.md` |
+
+## Neue Hotspots-Erkenntnisse 2026-04-21 (v4-Recherche)
+
+### OLG Frankfurt 6 U 81/23 (11.12.2025) — Cookie-Drittanbieter-Haftung
+
+Third-Party-SDK-Setzer haften direkt nach § 25 TDDDG, auch wenn sie nur Dritte sind.
+Schmerzensgeld 100 EUR (reduziert wegen Provokation des Klaegers, ausgehend von 1.500 EUR).
+**Praxis-Folge:** Firebase/Google Analytics/Remote Config als Third-Party-SDK-Setzer
+haften direkt. Opt-In Consent ist die Pflicht-Antwort. "Berechtigtes Interesse" nach
+Art. 6 Abs. 1 lit. f reicht NICHT fuer § 25 TDDDG Abs. 1 — nur "unbedingt erforderlich"
+nach Abs. 2 greift (App Check plausibel, Remote Config fragwuerdig).
+Quelle: kpw.law, piltz.legal.
+
+### EuGH C-526/24 "Brillen Rottler" (19.03.2026)
+
+Auskunftsantrag nach Art. 15 DSGVO kann als rechtsmissbraeuchlich abgelehnt werden
+wenn er erkennbar Schadensverschaffung bezweckt (z.B. DSGVO-Hopping). Entlastet Solo-
+Entwickler gegen Industrie-Klaeger.
+Quelle: Curia, KPMG-Law.
+
+### UWG 3. Aenderungsgesetz (EmpCo-RL) — Stichtag 27.09.2026
+
+BGBl 19.02.2026. Dark Patterns konkret verboten:
+- Hervorheben bestimmter Auswahloptionen (farbig markierte Consent-Buttons)
+- Wiederholungsanfragen nach bereits getroffenen Entscheidungen
+- Unverhaelinismaessig aufwendige Kuendigungsprozesse
+§ 5 Abs. 6 UWG-neu bereits ab 19.06.2026 teilweise in Kraft.
+**Praxis-Folge:** Consent-Dialoge muessen gleich-prominente Buttons haben.
+Gradient/Glow/Elevation auf "Accept all" = Abmahn-Risiko ab 19.06.2026.
+Quelle: Wettbewerbszentrale, Shopbetreiber-Blog.
+
+### COPPA-Update — Enforcement 22.04.2026
+
+Voiceprints + Government-ID-Nummern sind jetzt "personal information".
+Separate Eltern-Einwilligung bei Drittanbieter-Datenweitergabe Pflicht.
+Formales Information Security Program Pflicht.
+**Praxis-Folge fuer Journaling-Apps:** Whisper (Groq) ohne Speaker-Diarization = kein
+Voiceprint = kein COPPA-Trigger. ABER: "This app is not intended for children under 13"
+sollte deutlich in App-Store-Beschreibung stehen (Mixed-Audience Safe Harbor).
+Quelle: Toy Association, FTC.
+
+### Maryland MODPA — Enforcement 01.04.2026
+
+Strengstes US-Datenschutzgesetz: Data Minimization als echte Pflicht.
+Schwelle: 35.000 Einwohner/Jahr. Unter Schwelle fuer Solo-Entwickler.
+
+### Universal Opt-Out (GPC) — neue Staaten 01.01.2026
+
+Connecticut, Oregon honor GPC zusaetzlich zu bestehender Liste (CA, CO, DE, MD, MN, MT, NJ, NH, TX).
+**Praxis:** Native Apps senden keine GPC-Header — EN DSE sollte klarstellen dass GPC
+nur bei Web-Interaktionen relevant ist.
+
+### Texas Responsible AI Governance Act (HB 149, 01.01.2026)
+
+Wendet TDPSA auf KI-Datenverarbeitung an. Begrenzte biometrische Ausnahmen fuer
+KI-Modelltraining. TDPSA keine Schwelle = gilt bei jedem TX-Nutzer.
+
+### Chile LPPD — Dez 2026
+
+Neue DPA mit Sanktionsbefugnissen. Bussgelder 2-4% Jahresumsatz. Nationales
+Infraktions-Register. Vorbereitung fuer Solo-Entwickler empfohlen.
+
+### Neuseeland IPP 3A — Seit 01.05.2026
+
+Neue Informationspflicht bei indirekter Datenerhebung von Dritten/oeffentlichen Quellen.
+**Praxis-Folge:** Wenn Firebase/Analytics Drittdaten aggregiert, Benachrichtigung der
+betroffenen Person. Ausnahme wenn Benachteiligung unwahrscheinlich.
+
+### Australia Children's Online Privacy Code
+
+OAIC Exposure Draft April 2026. Konsultation bis 05.06.2026. Registrierung bis
+10.12.2026. Gilt fuer "online services likely accessed by children". Bussgelder bis
+$50 Mio AUD oder 30% Umsatz.
+
+### Mexiko LFPDPPP-Reform Maerz 2026
+
+Neue Behoerde SABG ersetzt INAI. Pflicht "Simplified Privacy Notice" bei App-Datenerhebung.
+
+### California SB 243 — Companion Chatbot Law (01.01.2026)
+
+KI mit "sustained interactions" zu sozialen/emotionalen Beduerfnissen muss:
+1. beim ersten Kontakt als KI gekennzeichnet sein
+2. Crisis-Protokoll bei Suizid-Ideation
+3. keine "menschliche Beziehung"-Suggestion
+**Praxis:** Journaling-App mit Gemini-Rueckblicken ist Grenzfall. Vorsichtshalber
+Crisis-Hinweis + klare KI-Kennzeichnung. Auch ohne SB 243 haftungs- und rufrelevant.
+
+### § 356a BGB Widerrufsbutton — Stichtag 19.06.2026
+
+Pflicht-Label Stufe 1: **"Vertrag widerrufen"** (NICHT "Widerruf", "Stornieren", "Kuendigen")
+Pflicht-Label Stufe 2: **"Widerruf bestaetigen"**
+Pflicht: automatische Eingangsbestaetigung per E-Mail
+**Praxis-Folge:** mailto-Intent reicht wahrscheinlich NICHT — Widerruf muss direkt
+ausgeloest werden. Fuer App-Entwickler: Gmail-API-Versand aus der App heraus ist
+pragmatische Loesung (App hat bereits Gmail-API fuer Feedback). Rechtssicherheit noch
+nicht gerichtlich bestaetigt.
+Quelle: Noerr, IT-Recht Kanzlei, Datenschutz-Generator, TelemetryDeck.
+
+### Google Play Policy Update 15.04.2026 (Enforcement 15.05.2026)
+
+- Contacts Permissions: Android Contact Picker Pflicht bei Teil-Zugriff
+- Location: Location Button empfohlen, Geofencing NICHT mehr als Foreground-Service
+- Account Transfer: Nur offizieller Play Console Workflow (ab 27.05.2026)
+- Health Connect: neue Kategorien Menstruationszyklus/Alkoholkonsum/Symptome
+- News/Magazine Self-Declaration Pflicht (ab 27.05.2026)
+Fuer Journaling-App meist nicht direkt relevant.
+
+### Google Play Health Content Policy (seit August 2025)
+
+Health apps declaration form im Play Console Pflicht wenn App Gesundheitsdaten
+verarbeitet — auch INFERIERT durch KI-Stimmungsanalyse. Bei Journaling-Apps mit
+KI-Analyse: Form ausfuellen empfohlen.
+
+### Flo-Health-Praezedenz ($56M Urteil 2025)
+
+Meta jury verdict fuer Gesichtserkennung/Biometrik bei Flo-Period-Tracker.
+Warnsignal fuer jede App mit (auch inferierten) Gesundheitsdaten.
+
+---
 
 ## Neue Hotspots-Erkenntnisse 2026-04-20
 
