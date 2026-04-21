@@ -146,8 +146,8 @@ enum class LegalDocument(
          * Add the folder name here the moment its asset is committed; until then the caller
          * falls back to the English full versions, so users never see a blank WebView.
          */
-        private val TRANSLATED_SUMMARIES = setOf<String>(
-            // filled in commit-by-commit as translations land
+        private val TRANSLATED_SUMMARIES = setOf(
+            "fr",
         )
 
         private fun String.onlyIfTranslated(): String? =
