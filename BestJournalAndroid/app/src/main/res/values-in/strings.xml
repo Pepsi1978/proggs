@@ -1146,4 +1146,46 @@ Apa yang ingin kamu lakukan?</string>
     <string name="legal_title_datenschutz">Kebijakan Privasi</string>
     <string name="legal_title_nutzungsbedingungen">Ketentuan Penggunaan</string>
     <string name="legal_title_impressum">Informasi Hukum</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Selamat datang di Best Journal</string>
+    <string name="consent_welcome_intro">Sebelum kamu mulai, mari kita atur preferensi privasimu dengan cepat di sini.</string>
+    <string name="consent_promise_local">Undang-undang privasi memerlukan persetujuanmu.</string>
+    <string name="consent_promise_no_training">Kamu memutuskan di sini fitur mana yang aktif.</string>
+    <string name="consent_promise_optional_ai">Dapat diubah kapan saja di Pengaturan.</string>
+    <string name="consent_btn_manual_selection">Pilihan manual</string>
+    <string name="privacy_sheet_title">Sesuaikan privasi</string>
+    <string name="privacy_sheet_subtitle">Aktifkan fitur satu per satu sesuai keinginanmu. Semuanya dapat diubah kapan saja.</string>
+    <string name="privacy_sheet_save">Simpan pilihan</string>
+    <string name="privacy_sheet_all_on">Aktifkan semua</string>
+    <string name="privacy_sheet_all_off">Nonaktifkan semua</string>
+    <string name="consent_toggle_analytics_title">Analisis penggunaan anonim</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — membantu kami meningkatkan aplikasi. Tidak ada konten pribadi, hanya jumlah ketukan anonim. Transfer data: Google AS (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">Ucapan-ke-teks (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">Memungkinkan dikte entri. Rekaman suaramu dikirim terenkripsi ke Groq (AS), diubah menjadi teks, lalu dihapus. Rekamanmu TIDAK digunakan untuk pelatihan.</string>
+    <string name="consent_toggle_gemini_title">Refleksi AI (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">AI dasbor, ringkasan, tinjauan, dan peningkatan teks. Mengirim potongan teks ke Google Gemini (AS). Entrimu TIDAK digunakan untuk pelatihan.</string>
+    <string name="consent_toggle_tts_title">Baca keras (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">Membaca entri dengan suara alami. Mengirim teks ke Microsoft (AS). Alternatif: TTS sistem offline.</string>
+    <string name="consent_toggle_drive_title">Cadangan Google Drive</string>
+    <string name="consent_toggle_drive_body">Menyimpan entri terenkripsi di Google Drive milikmu sendiri. Kamu tetap memegang kendali penuh — file berada di akunmu, bukan di tempat kami.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">Opsi keluar California (CCPA/CPRA 2026). Jika aktif, semua pemrosesan data opsional dinonaktifkan — hanya fitur lokal yang tersisa.</string>
+    <string name="consent_btn_accept_all">Terima semua</string>
+    <string name="consent_btn_save_selection">Simpan pilihanku</string>
+    <string name="consent_btn_minimum_only">Tolak semua</string>
+    <string name="consent_saved_snackbar">Pengaturan tersimpan</string>
+    <string name="consent_revoke_snackbar">Persetujuan dicabut</string>
+    <string name="consent_footer_version">Pilihanmu dapat diubah kapan saja di Pengaturan.</string>
+    <string name="consent_details_expand">Detail</string>
+    <string name="settings_open_privacy_sheet">Sesuaikan pengaturan privasi</string>
+    <string name="settings_privacy_section_header">Privasi &amp; Persetujuan</string>
+    <string name="settings_ai_groq_title">Ucapan-ke-teks (Groq)</string>
+    <string name="settings_ai_groq_subtitle">Kirim rekaman suara ke Groq AS untuk transkripsi</string>
+    <string name="settings_ai_gemini_title">Refleksi AI (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">Kirim teks ke Google AS untuk ringkasan AI</string>
+    <string name="settings_ai_tts_title">Baca keras (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">Kirim teks ke Microsoft AS untuk keluaran suara</string>
+    <string name="settings_drive_backup_title">Cadangan Google Drive</string>
+    <string name="settings_drive_backup_subtitle">Simpan entri terenkripsi di Drive-mu</string>
 </resources>
