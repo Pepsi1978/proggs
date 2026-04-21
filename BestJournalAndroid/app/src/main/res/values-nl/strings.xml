@@ -1150,4 +1150,46 @@ Wat wil je doen?</string>
     <string name="legal_title_datenschutz">Privacybeleid</string>
     <string name="legal_title_nutzungsbedingungen">Gebruiksvoorwaarden</string>
     <string name="legal_title_impressum">Juridische kennisgeving</string>
+
+    <!-- Consent-Screen v4 + Privacy Sheet + Settings -->
+    <string name="consent_welcome_title">Welkom bij Best Journal</string>
+    <string name="consent_welcome_intro">Voordat je begint, stellen we hier snel je privacyvoorkeuren in.</string>
+    <string name="consent_promise_local">Privacywetgeving vereist jouw toestemming.</string>
+    <string name="consent_promise_no_training">Jij beslist hier welke functies actief zijn.</string>
+    <string name="consent_promise_optional_ai">Altijd aanpasbaar in Instellingen.</string>
+    <string name="consent_btn_manual_selection">Handmatige selectie</string>
+    <string name="privacy_sheet_title">Privacy aanpassen</string>
+    <string name="privacy_sheet_subtitle">Activeer afzonderlijke functies zoals het jou past. Alles kan op elk moment worden gewijzigd.</string>
+    <string name="privacy_sheet_save">Selectie opslaan</string>
+    <string name="privacy_sheet_all_on">Alles aan</string>
+    <string name="privacy_sheet_all_off">Alles uit</string>
+    <string name="consent_toggle_analytics_title">Anonieme gebruiksanalyse</string>
+    <string name="consent_toggle_analytics_body">Firebase Analytics — helpt ons de app te verbeteren. Geen persoonlijke inhoud, alleen anonieme tel-tikken. Gegevensoverdracht: Google VS (Data Privacy Framework).</string>
+    <string name="consent_toggle_groq_title">Spraak-naar-tekst (Groq Whisper)</string>
+    <string name="consent_toggle_groq_body">Maakt het dicteren van notities mogelijk. Je spraakopname wordt versleuteld verzonden naar Groq (VS), omgezet in tekst en daarna verwijderd. Je opnames worden NIET gebruikt voor training.</string>
+    <string name="consent_toggle_gemini_title">AI-reflecties (Google Gemini)</string>
+    <string name="consent_toggle_gemini_body">Dashboard-AI, samenvattingen, terugblikken en tekstverbetering. Stuurt tekstfragmenten naar Google Gemini (VS). Je notities worden NIET gebruikt voor training.</string>
+    <string name="consent_toggle_tts_title">Voorlezen (Microsoft Edge TTS)</string>
+    <string name="consent_toggle_tts_body">Leest notities voor met een natuurlijke stem. Stuurt de tekst naar Microsoft (VS). Alternatief: systeem-TTS offline.</string>
+    <string name="consent_toggle_drive_title">Google Drive back-up</string>
+    <string name="consent_toggle_drive_body">Slaat notities versleuteld op in je eigen Google Drive. Jij behoudt de volledige controle — het bestand staat in jouw account, niet bij ons.</string>
+    <string name="consent_toggle_do_not_sell_title">Do Not Sell My Personal Information</string>
+    <string name="consent_toggle_do_not_sell_body">Californische opt-out (CCPA/CPRA 2026). Indien actief worden alle optionele gegevensverwerkingen uitgeschakeld — alleen lokale functies blijven.</string>
+    <string name="consent_btn_accept_all">Alles accepteren</string>
+    <string name="consent_btn_save_selection">Mijn selectie opslaan</string>
+    <string name="consent_btn_minimum_only">Alles weigeren</string>
+    <string name="consent_saved_snackbar">Instelling opgeslagen</string>
+    <string name="consent_revoke_snackbar">Toestemming ingetrokken</string>
+    <string name="consent_footer_version">Je selectie kan op elk moment worden gewijzigd in Instellingen.</string>
+    <string name="consent_details_expand">Details</string>
+    <string name="settings_open_privacy_sheet">Privacy-instellingen aanpassen</string>
+    <string name="settings_privacy_section_header">Privacy &amp; Toestemmingen</string>
+    <string name="settings_ai_groq_title">Spraak-naar-tekst (Groq)</string>
+    <string name="settings_ai_groq_subtitle">Spraakopnames naar Groq VS sturen voor transcriptie</string>
+    <string name="settings_ai_gemini_title">AI-reflecties (Gemini)</string>
+    <string name="settings_ai_gemini_subtitle">Teksten naar Google VS sturen voor AI-samenvattingen</string>
+    <string name="settings_ai_tts_title">Voorlezen (Edge TTS)</string>
+    <string name="settings_ai_tts_subtitle">Teksten naar Microsoft VS sturen voor spraakuitvoer</string>
+    <string name="settings_drive_backup_title">Google Drive back-up</string>
+    <string name="settings_drive_backup_subtitle">Notities versleuteld opslaan in je Drive</string>
 </resources>
