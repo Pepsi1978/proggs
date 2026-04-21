@@ -65,18 +65,6 @@ if [ -n "$work_dir" ] && [ -d "$work_dir/app/src" ]; then
     todos=$(grep -rl "TODO\|FIXME" "$work_dir/app/src" --include="*.kt" 2>/dev/null | wc -l | tr -d ' ')
 fi
 
-# CPU und RAM via PowerShell (einmaliger Aufruf fuer beide)
-cpu_ram=""
-if command -v pwsh.exe &>/dev/null; then
-    cpu_ram=$(pwsh.exe -NoProfile -Command \
-        '$c=[math]::Round((Get-CimInstance Win32_Processor|Measure-Object LoadPercentage -Average).Average);$o=Get-CimInstance Win32_OperatingSystem;$f=[math]::Round($o.FreePhysicalMemory/1MB,1);$t=[math]::Round($o.TotalVisibleMemorySize/1MB,1);Write-Output "CPU:${c}% RAM:${f}/${t}G"' \
-        2>/dev/null | tr -d '\r')
-elif command -v powershell.exe &>/dev/null; then
-    cpu_ram=$(powershell.exe -NoProfile -Command \
-        '$c=[math]::Round((Get-CimInstance Win32_Processor|Measure-Object LoadPercentage -Average).Average);$o=Get-CimInstance Win32_OperatingSystem;$f=[math]::Round($o.FreePhysicalMemory/1MB,1);$t=[math]::Round($o.TotalVisibleMemorySize/1MB,1);Write-Output "CPU:${c}% RAM:${f}/${t}G"' \
-        2>/dev/null | tr -d '\r')
-fi
-
 # Uhrzeit
 time=$(date +%H:%M)
 
@@ -89,7 +77,7 @@ M='\033[38;2;136;57;239m'    # Lila   — Context
 RL='\033[38;2;0;200;150m'    # Teal   — Rate normal (<70%)
 RW='\033[38;2;255;140;0m'    # Orange — Rate Warnung (70-89%)
 RC='\033[38;2;220;50;50m'    # Rot    — Rate kritisch (>=90%)
-T='\033[38;2;76;79;105m'     # Grau   — Modell, Version, System
+T='\033[38;2;76;79;105m'     # Grau   — Modell, Version, Commit
 C='\033[38;2;100;180;255m'   # Cyan   — Token-Zaehler
 A='\033[38;2;255;100;200m'   # Pink   — Aktiver Agent
 R='\033[0m'                  # Reset
@@ -161,9 +149,6 @@ fi
 if [ -n "$todos" ] && [ "$todos" -gt 0 ] 2>/dev/null; then
     printf " ${Y}TODO:${todos}${R}"
 fi
-
-# CPU und RAM
-[ -n "$cpu_ram" ] && printf " ${T}${cpu_ram}${R}"
 
 # Letzter Commit
 [ -n "$last_commit" ] && printf " ${T}${last_commit}${R}"
